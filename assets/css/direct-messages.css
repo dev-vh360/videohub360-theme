@@ -1,0 +1,171 @@
+/**
+ * Direct Messages CSS
+ *
+ * Additional styles for direct messaging system.
+ * Most styles are inline in the template for self-contained component.
+ *
+ * @package Videohub360_Theme
+ * @since 1.0.0
+ */
+
+/* Empty conversations state */
+.vh360-dm-empty-conversations {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    color: #6b7280;
+}
+
+.vh360-dm-empty-conversations p:first-child {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+/* Error state */
+.vh360-dm-error {
+    text-align: center;
+    padding: 2rem;
+    color: #dc2626;
+}
+
+/* No messages state */
+.vh360-dm-no-messages {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    color: #9ca3af;
+}
+
+/* No search results */
+.vh360-dm-no-results {
+    text-align: center;
+    padding: 2rem;
+    color: #6b7280;
+}
+
+/* Smooth scrolling */
+.vh360-dm-messages-area {
+    scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for webkit browsers */
+.vh360-dm-messages-area::-webkit-scrollbar,
+.vh360-dm-conversation-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.vh360-dm-messages-area::-webkit-scrollbar-track,
+.vh360-dm-conversation-list::-webkit-scrollbar-track {
+    background: #f3f4f6;
+}
+
+.vh360-dm-messages-area::-webkit-scrollbar-thumb,
+.vh360-dm-conversation-list::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 3px;
+}
+
+.vh360-dm-messages-area::-webkit-scrollbar-thumb:hover,
+.vh360-dm-conversation-list::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Fade in animation for messages */
+.vh360-dm-message {
+    animation: vh360-dm-fade-in 0.3s ease-in;
+}
+
+@keyframes vh360-dm-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Focus states */
+.vh360-dm-search-input:focus,
+.vh360-dm-message-input:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Button focus states */
+.vh360-dm-send-btn:focus,
+.vh360-dm-new-conversation-btn:focus,
+.vh360-dm-back-btn:focus,
+.vh360-dm-delete-conversation-btn:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+/* Tablet responsive */
+@media (max-width: 1024px) {
+    .vh360-dm-sidebar {
+        width: 35%;
+        min-width: 250px;
+    }
+}
+
+/* Small tablet */
+@media (max-width: 900px) {
+    .vh360-dm-sidebar {
+        width: 40%;
+    }
+    
+    .vh360-dm-message {
+        max-width: 80%;
+    }
+}
+
+/* Print styles */
+@media print {
+    .vh360-dm-container {
+        display: none;
+    }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .vh360-dm-message {
+        animation: none;
+    }
+    
+    .vh360-dm-messages-area {
+        scroll-behavior: auto;
+    }
+}
+
+/* Dark mode support (if theme implements it) */
+@media (prefers-color-scheme: dark) {
+    .vh360-dm-container {
+        background: #1f2937;
+    }
+    
+    .vh360-dm-sidebar {
+        border-right-color: #374151;
+    }
+    
+    .vh360-dm-sidebar-header,
+    .vh360-dm-conversation-header,
+    .vh360-dm-compose-area {
+        border-color: #374151;
+    }
+    
+    .vh360-dm-conversation-item:hover {
+        background: #374151;
+    }
+    
+    .vh360-dm-conversation-item.active {
+        background: #1e40af;
+    }
+    
+    .vh360-dm-message-content {
+        background: #374151;
+    }
+    
+    .vh360-dm-message.sent .vh360-dm-message-content {
+        background: #3b82f6;
+    }
+}

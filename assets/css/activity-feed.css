@@ -1,0 +1,3327 @@
+/**
+ * Activity Feed Styles
+ *
+ * Styles for the activity feed page template.
+ *
+ * @package Videohub360_Theme
+ * @since 1.0.0
+ */
+
+/* Container */
+.vh360-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+}
+
+/* Activity Feed Header - Styles controlled by dynamic-css.php via CSS variables */
+/* Note: background, color, padding, text-align, margin-bottom are set in dynamic-css.php */
+
+.vh360-activity-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem;
+}
+
+.vh360-activity-description {
+    font-size: 1.125rem;
+    margin: 0 0 1.5rem;
+    opacity: 0.95;
+}
+
+/* Activity Stats */
+.vh360-activity-stats {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.vh360-activity-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 1rem 2rem;
+    border-radius: 0.75rem;
+    backdrop-filter: blur(10px);
+    min-width: 120px;
+}
+
+.vh360-stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+
+.vh360-stat-label {
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.95;
+}
+
+/* Filter Tabs */
+.vh360-activity-filters {
+    background: var(--surface-1);
+    border-bottom: 1px solid var(--border-1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Sticky feed tabs (My Feed/Explore) */
+.vh360-feed-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--surface-1);
+    border-bottom: 1px solid var(--border-1);
+    transition: box-shadow 0.2s ease;
+    display: flex;
+    gap: 0;
+    padding: 0;
+}
+
+/* Add shadow when scrolling */
+.vh360-feed-tabs.is-sticky {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Adjust for WordPress admin bar if present */
+.admin-bar .vh360-feed-tabs {
+    top: 32px;
+}
+
+@media screen and (max-width: 782px) {
+    .admin-bar .vh360-feed-tabs {
+        top: 46px;
+    }
+}
+
+/* Feed tab buttons */
+.vh360-feed-tab {
+    flex: 1;
+    text-align: center;
+    padding: 14px 20px;
+    color: var(--feed-tab-color);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 15px;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease;
+    background: transparent;
+}
+
+.vh360-feed-tab:hover {
+    background: var(--surface-3);
+    color: var(--feed-tab-hover-color);
+}
+
+.vh360-feed-tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.vh360-filter-tabs {
+    display: flex;
+    gap: 0.5rem;
+    padding: 1rem 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.vh360-filter-tabs::-webkit-scrollbar {
+    height: 4px;
+}
+
+.vh360-filter-tabs::-webkit-scrollbar-track {
+    background: var(--surface-3);
+}
+
+.vh360-filter-tabs::-webkit-scrollbar-thumb {
+    background: var(--border-1);
+    border-radius: 2px;
+}
+
+.vh360-filter-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: transparent;
+    border: 1px solid var(--border-1);
+    border-radius: 50px;
+    color: var(--text-2);
+    font-size: 0.875rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.vh360-filter-tab:hover {
+    background: var(--surface-3);
+    border-color: var(--border-1);
+    color: var(--text-1);
+}
+
+.vh360-filter-tab.active {
+    background: linear-gradient(135deg, var(--accent-color) 0%, var(--error-color) 100%);
+    border-color: transparent;
+    color: #ffffff;
+}
+
+.vh360-filter-tab svg {
+    flex-shrink: 0;
+}
+
+/* Activity Content */
+.vh360-activity-content {
+    padding: 2rem 0 3rem;
+}
+
+/* Activity Stream */
+.vh360-activity-stream {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* Activity Item */
+.vh360-activity-item {
+    display: flex;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: var(--surface-1);
+    border: 1px solid var(--border-1);
+    border-radius: 0.75rem;
+    margin-bottom: 1rem;
+    transition: all 0.2s ease;
+    animation: vh360-fadeInUp 0.5s ease;
+}
+
+.vh360-activity-item:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+.vh360-activity-avatar {
+    flex-shrink: 0;
+}
+
+.vh360-activity-avatar img {
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    border: 2px solid var(--border-1);
+}
+
+.vh360-activity-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.vh360-activity-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.vh360-activity-icon {
+    color: var(--accent-color);
+    flex-shrink: 0;
+}
+
+.vh360-activity-user {
+    font-weight: 600;
+    color: var(--text-1);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.vh360-activity-user:hover {
+    color: var(--error-color);
+}
+
+.vh360-activity-time {
+    font-size: 0.875rem;
+    color: var(--text-2);
+    margin-left: auto;
+}
+
+.vh360-activity-body {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--text-1);
+}
+
+.vh360-activity-body p {
+    margin: 0;
+}
+
+.vh360-activity-body a {
+    color: var(--error-color);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.vh360-activity-body a:hover {
+    color: var(--accent-color);
+    text-decoration: underline;
+}
+
+/* Loading State */
+.vh360-loading {
+    text-align: center;
+    padding: 3rem 0;
+}
+
+.vh360-spinner {
+    display: inline-block;
+    width: 3rem;
+    height: 3rem;
+    border: 4px solid var(--surface-3);
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    animation: vh360-spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes vh360-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Empty State */
+.vh360-empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: var(--surface-1);
+    border: 1px solid var(--border-1);
+    border-radius: 0.75rem;
+}
+
+.vh360-empty-icon {
+    margin-bottom: 1.5rem;
+}
+
+.vh360-empty-icon svg {
+    color: var(--border-1);
+}
+
+.vh360-empty-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-1);
+    margin: 0 0 0.5rem;
+}
+
+.vh360-empty-text {
+    font-size: 1rem;
+    color: var(--text-2);
+    margin: 0;
+}
+
+/* Load More Button */
+.vh360-load-more-wrapper {
+    text-align: center;
+    padding: 2rem 0;
+}
+
+.vh360-load-more-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem 2rem;
+    background: linear-gradient(135deg, var(--accent-color) 0%, var(--error-color) 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 50px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(240, 147, 251, 0.3);
+}
+
+.vh360-load-more-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(240, 147, 251, 0.4);
+}
+
+/* Community Post Composer */
+.vh360-community-post--composer {
+    background: var(--surface-1);
+    border: 2px solid var(--border-1);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.vh360-community-post--composer:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+    transform: translateY(-1px);
+}
+
+/* Remove inner textarea border */
+.vh360-post-textarea {
+    border: none !important;
+    padding: 0.75rem 0;
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    min-height: 60px;
+    resize: none;
+    width: 100%;
+}
+
+.vh360-post-textarea:focus {
+    outline: none;
+}
+
+.vh360-post-textarea::placeholder {
+    color: var(--text-2);
+    font-weight: 400;
+}
+
+/* Actions divider */
+.vh360-composer-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--surface-3);
+    margin-top: 0.5rem;
+}
+
+/* Media upload button with icon */
+.vh360-post-media-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--surface-3);
+    border-radius: 8px;
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.vh360-post-media-label:hover {
+    background: var(--border-1);
+    color: var(--primary-color);
+}
+
+.vh360-post-media-label input {
+    display: none;
+}
+
+/* Gradient Post button */
+.vh360-post-submit {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    color: #ffffff;
+    border: none;
+    padding: 0.625rem 1.75rem;
+    border-radius: 9999px; /* Fully rounded pill */
+    font-weight: 700;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+    transition: all 0.3s ease;
+}
+
+.vh360-post-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.vh360-post-submit:active {
+    transform: translateY(0);
+}
+
+.vh360-post-submit:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Trending Topics Section */
+.vh360-trending-section {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, var(--warning-color) 100%);
+    border: 1px solid var(--warning-color);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.vh360-trending-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.vh360-trending-icon {
+    font-size: 1.25rem;
+}
+
+.vh360-trending-title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #92400e;
+    margin: 0;
+}
+
+.vh360-trending-topics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.vh360-trending-tag {
+    display: inline-block;
+    padding: 0.375rem 0.75rem;
+    background: var(--surface-1);
+    border: 1px solid var(--warning-color);
+    border-radius: 20px;
+    color: #92400e;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.vh360-trending-tag:hover {
+    background: rgba(245, 158, 11, 0.1);
+    transform: translateY(-2px);
+}
+
+/* Empty State */
+.vh360-empty-feed-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: var(--surface-1);
+    border: 2px dashed var(--border-1);
+    border-radius: 12px;
+    margin: 2rem 0;
+}
+
+.vh360-empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+}
+
+.vh360-empty-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-1);
+    margin: 0 0 0.5rem;
+}
+
+.vh360-empty-message {
+    font-size: 1rem;
+    color: var(--text-2);
+    margin: 0 0 1.5rem;
+}
+
+.vh360-empty-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 9999px;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.vh360-empty-cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.vh360-post-composer-wrapper {
+    margin: 2rem 0;
+    background: var(--surface-1);
+    border: 1px solid var(--border-1);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+.vh360-post-form .vh360-post-textarea {
+    width: 100%;
+    border: 1px solid var(--border-1);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    resize: vertical;
+    min-height: 80px;
+    font-size: 1rem;
+}
+.vh360-post-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.75rem;
+}
+.vh360-post-image-label {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    color: var(--primary-color);
+}
+.vh360-post-image-label input {
+    display: none;
+}
+.vh360-post-image-label span {
+    margin-left: 0.25rem;
+}
+
+/* Community Posts Feed */
+.vh360-community-feed {
+    margin: 2rem 0;
+}
+.vh360-community-post {
+    display: flex;
+    gap: 1rem;
+    background: var(--surface-1);
+    border: 1px solid var(--border-1);
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    position: relative;
+    overflow: hidden;
+    animation: fadeInSlide 0.4s ease-out;
+}
+
+.vh360-community-post:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+    border-color: var(--border-1);
+}
+
+/* Top accent bar (appears on hover) */
+.vh360-community-post::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-color) 0%, var(--accent-color) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.vh360-community-post:hover::before {
+    opacity: 1;
+}
+
+/* Fade-in animation */
+@keyframes fadeInSlide {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Stagger animation for multiple posts */
+.vh360-community-post:nth-child(1) { animation-delay: 0.05s; }
+.vh360-community-post:nth-child(2) { animation-delay: 0.1s; }
+.vh360-community-post:nth-child(3) { animation-delay: 0.15s; }
+.vh360-community-post:nth-child(4) { animation-delay: 0.2s; }
+.vh360-community-post:nth-child(5) { animation-delay: 0.25s; }
+.vh360-community-avatar img {
+    border-radius: 50%;
+}
+.vh360-community-content {
+    flex: 1;
+}
+.vh360-community-header {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 0.25rem;
+    font-size: 0.875rem;
+    color: var(--text-2);
+}
+.vh360-community-author {
+    font-weight: 600;
+    color: #111827;
+}
+.vh360-community-time {
+    font-size: 0.75rem;
+    color: var(--text-2);
+}
+.vh360-community-body {
+    font-size: 1.0625rem; /* Increased from 0.9375rem */
+    margin-bottom: 0.5rem;
+    line-height: 1.6; /* Increased from 1.5 */
+    color: var(--text-1); /* Darker for better readability */
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.vh360-community-text {
+    font-size: 1.0625rem; /* Match body size */
+    line-height: 1.6;
+    color: var(--text-1);
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+.vh360-community-image img {
+    width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+/* Post Stats Row */
+.vh360-post-stats {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-1);
+    font-size: 13px;
+    color: var(--text-2);
+}
+
+.vh360-post-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.vh360-stat-icon { /* Updated for SVG icons */
+    font-size: 16px;
+    line-height: 1;
+}
+
+.vh360-stat-count {
+    font-weight: 500;
+    color: var(--text-1);
+}
+
+.vh360-stat-label {
+    color: var(--text-2);
+}
+
+.vh360-stat-separator {
+    color: var(--text-2);
+    margin: 0 4px;
+}
+
+/* Clickable comment stat */
+.vh360-stat-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    text-decoration: none;
+    color: inherit;
+    transition: color 0.2s ease;
+}
+
+.vh360-stat-link:hover {
+    color: var(--primary-color);
+}
+
+.vh360-stat-link:hover .vh360-stat-count,
+.vh360-stat-link:hover .vh360-stat-label {
+    color: var(--primary-color);
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    .vh360-post-stats {
+        font-size: 12px;
+        padding: 10px 0;
+    }
+    
+    .vh360-stat-icon { /* Updated for SVG icons */
+        font-size: 14px;
+    }
+}
+
+.vh360-community-footer {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--surface-3);
+    margin-top: 0.75rem;
+}
+
+.vh360-engagement-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: var(--text-2);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.vh360-engagement-stat:hover {
+    color: var(--primary-color);
+}
+
+.vh360-engagement-icon {
+    font-size: 1.125rem;
+}
+
+.vh360-engagement-count {
+    font-weight: 600;
+}
+.vh360-like-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--text-2);
+    font-size: 0.875rem;
+    padding: 0;
+}
+.vh360-like-btn .vh360-like-icon {
+    font-size: 1rem;
+    line-height: 1;
+}
+.vh360-like-btn.liked {
+    color: var(--error-color);
+}
+.vh360-comment-link {
+    color: var(--text-2);
+    text-decoration: none;
+}
+.vh360-comment-link:hover {
+    text-decoration: underline;
+}
+.vh360-empty-community-feed {
+    text-align: center;
+    color: var(--text-2);
+    font-size: 0.9375rem;
+    padding: 2rem 0;
+}
+
+/* Share button */
+.vh360-share-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--text-2);
+    font-size: 0.875rem;
+    padding: 0;
+}
+.vh360-share-icon {
+    font-size: 1rem;
+    line-height: 1;
+}
+.vh360-share-btn:hover {
+    text-decoration: underline;
+}
+
+.vh360-load-more-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.vh360-load-more-btn.loading::after {
+    content: '';
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: vh360-spin 0.8s linear infinite;
+    margin-left: 0.5rem;
+}
+
+/* Animations */
+@keyframes vh360-fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Timeline Style (Optional Enhancement) */
+.vh360-activity-stream.timeline-style {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.vh360-activity-stream.timeline-style::before {
+    content: '';
+    position: absolute;
+    left: 20px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--accent-color), var(--error-color));
+    opacity: 0.3;
+}
+
+.vh360-activity-stream.timeline-style .vh360-activity-avatar {
+    position: relative;
+}
+
+.vh360-activity-stream.timeline-style .vh360-activity-avatar::before {
+    content: '';
+    position: absolute;
+    left: -32px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 12px;
+    background: var(--accent-color);
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px rgba(240, 147, 251, 0.1);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .vh360-activity-title {
+        font-size: 2rem;
+    }
+    
+    .vh360-activity-description {
+        font-size: 1rem;
+    }
+    
+    .vh360-activity-stats {
+        gap: 1rem;
+    }
+    
+    .vh360-activity-stat {
+        padding: 0.75rem 1.5rem;
+        min-width: 100px;
+    }
+    
+    .vh360-stat-value {
+        font-size: 1.5rem;
+    }
+    
+    .vh360-filter-tabs {
+        padding: 0.75rem 0;
+    }
+    
+    .vh360-filter-tab {
+        padding: 0.625rem 1.25rem;
+        font-size: 0.8125rem;
+    }
+    
+    .vh360-activity-item {
+        padding: 1rem;
+    }
+    
+    .vh360-activity-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .vh360-activity-time {
+        margin-left: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .vh360-activity-header {
+        padding: 2rem 0 1.5rem;
+    }
+    
+    .vh360-activity-title {
+        font-size: 1.75rem;
+    }
+    
+    .vh360-activity-stats {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .vh360-activity-stat {
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-between;
+    }
+    
+    .vh360-filter-tab {
+        font-size: 0.75rem;
+        padding: 0.5rem 1rem;
+    }
+    
+    .vh360-activity-item {
+        flex-direction: column;
+    }
+    
+    .vh360-activity-avatar {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .vh360-load-more-btn {
+        width: 100%;
+        padding: 0.875rem 1.5rem;
+    }
+}
+
+/* Loading State for Stream */
+.vh360-activity-stream.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Smooth scroll */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Focus styles for accessibility */
+.vh360-filter-tab:focus,
+.vh360-load-more-btn:focus {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
+/* Print styles */
+@media print {
+    .vh360-activity-filters,
+    .vh360-load-more-wrapper {
+        display: none;
+    }
+    
+    .vh360-activity-item {
+        page-break-inside: avoid;
+    }
+}
+
+
+/* ========================================
+   Community Post Comments Base Styles
+   ======================================== */
+
+.vh360-comments-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-1);
+}
+
+.vh360-comments-thread {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* ========================================
+   Reply Composer Polish (PR #6)
+   ======================================== */
+
+/* Reply form container - ALWAYS display below comment (vertical, full width) */
+.vh360-comment-reply-form {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    clear: both;
+    margin-top: 8px;
+    margin-left: 0;
+    margin-right: 0;
+    padding: 0;
+    background: transparent;
+    box-sizing: border-box;
+    position: relative;
+    z-index: 10;
+}
+
+.vh360-reply-composer {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    padding-left: 50px; /* Move padding here to affect only the composer, not the full form width */
+    padding-right: 0;
+}
+
+.vh360-reply-avatar {
+    flex-shrink: 0;
+}
+
+.vh360-reply-avatar img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+}
+
+/* Reply textarea with position relative for send button positioning */
+.vh360-reply-input-wrapper {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: flex-start;
+    min-width: 0; /* Allow shrinking */
+    max-width: 100%;
+}
+
+.vh360-reply-textarea {
+    width: 100%;
+    min-height: 40px;
+    max-height: 150px;
+    padding: 8px 50px 8px 12px; /* Right padding for send button */
+    border: 1px solid var(--border-1);
+    border-radius: 20px;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: none;
+    overflow-y: auto;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    background: var(--surface-1);
+}
+
+.vh360-reply-textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.1);
+}
+
+.vh360-reply-textarea:disabled {
+    background: #f5f5f5;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Make textarea scrollable when content exceeds max height */
+.vh360-reply-textarea.vh360-textarea-scrollable {
+    overflow-y: scroll;
+}
+
+/* Send button - positioned absolute inside textarea wrapper */
+.vh360-reply-send-btn {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.vh360-reply-send-btn:hover:not(:disabled) {
+    background: #166fe5;
+}
+
+.vh360-reply-send-btn:active:not(:disabled) {
+    transform: translateY(-50%) scale(0.95);
+}
+
+.vh360-reply-send-btn:disabled {
+    background: var(--border-1);
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.vh360-reply-send-btn.vh360-btn-active {
+    background: var(--primary-color);
+    opacity: 1;
+}
+
+/* Send icon (SVG) */
+.vh360-reply-send-icon {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+/* Loading spinner in send button */
+.vh360-btn-spinner {
+    display: none;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #fff;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: vh360-spin 0.6s linear infinite;
+}
+
+.vh360-btn-loading .vh360-btn-spinner {
+    display: block;
+}
+
+/* Error message */
+.vh360-reply-error {
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    background: #ffebe8;
+    border: 1px solid #f02849;
+    border-radius: 6px;
+    color: #d3180c;
+    font-size: 13px;
+}
+
+/* Success flash animation (subtle) */
+.vh360-comment-success-flash {
+    animation: vh360-success-pulse 1s ease;
+}
+
+@keyframes vh360-success-pulse {
+    0%, 100% {
+        background-color: transparent;
+    }
+    50% {
+        background-color: rgba(24, 119, 242, 0.05);
+    }
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+    .vh360-reply-textarea {
+        font-size: 16px; /* Prevent iOS zoom on focus */
+        padding-right: 40px; /* Adjust for send button (36px + 4px margin) */
+    }
+    
+    .vh360-reply-send-btn {
+        width: 36px;
+        height: 36px;
+        right: 2px;
+    }
+    
+    .vh360-reply-composer {
+        padding-left: 40px; /* Reduce indent on mobile to save space */
+        padding-right: 0;
+    }
+    
+    .vh360-comment-reply-form {
+        padding: 0;
+    }
+    
+    /* Main comment form mobile styles */
+    .vh360-comment-textarea {
+        font-size: 16px; /* Prevent iOS zoom on focus */
+        padding-right: 44px; /* Adjust for send button */
+    }
+    
+    .vh360-comment-send-btn {
+        width: 36px;
+        height: 36px;
+        right: 4px;
+    }
+    
+    .vh360-comment-form {
+        padding: 10px 12px;
+    }
+}
+
+/* Accessibility - focus visible for keyboard users */
+.vh360-reply-send-btn:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+
+/* Modern inline reply composer enhancements */
+.vh360-reply-form .vh360-comment-input,
+.vh360-reply-form .vh360-reply-input-wrapper{
+    flex: 1;
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+    min-width: 0;
+}
+
+.vh360-reply-form textarea[name="comment"]{
+    flex: 1;
+    min-width: 0;
+    resize: none;
+    border-radius: 999px;
+    padding: 0.5rem 0.75rem;
+    line-height: 1.2;
+    max-height: 140px;
+    overflow-y: auto;
+}
+
+.vh360-reply-form.vh360-reply-form-expanded textarea[name="comment"]{
+    border-radius: 16px;
+    padding: 0.65rem 0.85rem;
+}
+
+.vh360-reply-send{
+    display: none;
+    border: none;
+    background: transparent;
+    padding: 0.4rem;
+    line-height: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+
+.vh360-reply-form.vh360-reply-form-expanded .vh360-reply-send.is-visible{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.vh360-reply-send svg{
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+/* Reply form */
+.vh360-reply-form {
+    display: none;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    margin-left: 2.5rem;
+}
+
+.vh360-reply-form.vh360-reply-form-visible {
+    display: flex;
+}
+
+.vh360-reply-form-avatar img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+}
+
+.vh360-reply-input-wrapper {
+    flex: 1;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.vh360-reply-input {
+    flex: 1;
+    border: 1px solid var(--border-1);
+    border-radius: 20px;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-family: inherit;
+    transition: all 0.2s ease;
+}
+
+.vh360-reply-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.vh360-reply-submit {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 0.5rem 1.25rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.vh360-reply-submit:hover {
+    background: var(--primary-color);
+}
+
+.vh360-reply-submit:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Load more comments link */
+.vh360-load-more-comments {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-2);
+    font-weight: 600;
+    font-size: 0.875rem;
+    background: none;
+    border: none;
+    padding: 0.75rem 0;
+    cursor: pointer;
+    margin-left: 2.5rem;
+    transition: color 0.2s ease;
+}
+
+.vh360-load-more-comments:hover {
+    color: var(--primary-color);
+}
+
+/* Comment form at bottom of post */
+.vh360-comment-form {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    margin-top: 1rem;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border-1);
+}
+
+.vh360-comment-avatar {
+    flex-shrink: 0;
+}
+
+.vh360-comment-avatar img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+}
+
+/* Main comment input wrapper (contains textarea + send button) */
+.vh360-comment-input-wrapper {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: flex-start;
+}
+
+.vh360-comment-textarea {
+    width: 100%;
+    min-height: 40px;
+    max-height: 150px;
+    padding: 8px 50px 8px 12px; /* Right padding for send button */
+    border: 1px solid var(--border-1);
+    border-radius: 20px;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: none;
+    overflow-y: auto;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    background: var(--surface-3);
+}
+
+.vh360-comment-textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.1);
+    background: var(--surface-1);
+}
+
+/* Comment send button - positioned inside textarea */
+.vh360-comment-send-btn {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+}
+
+.vh360-comment-send-btn:hover:not(:disabled) {
+    background: #166fe5;
+}
+
+.vh360-comment-send-btn:disabled {
+    background: var(--border-1);
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.vh360-comment-send-btn.vh360-btn-active {
+    background: var(--primary-color);
+    opacity: 1;
+}
+
+.vh360-comment-send-btn.vh360-btn-loading .vh360-btn-text {
+    display: none;
+}
+
+.vh360-comment-send-btn.vh360-btn-loading .vh360-btn-spinner {
+    display: block !important;
+}
+
+.vh360-comment-send-icon {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+/* Loading spinner in send button */
+.vh360-btn-spinner {
+    display: none;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #fff;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: vh360-spin 0.6s linear infinite;
+}
+
+/* Remove old Post button styles */
+.vh360-post-comment-btn,
+.vh360-comment-submit {
+    display: none !important;
+}
+
+/* Legacy comment input styles (keep for compatibility) */
+.vh360-comment-input {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--surface-3);
+    border-radius: 20px;
+    padding: 0.25rem 0.5rem;
+}
+
+.vh360-comment-input textarea {
+    flex: 1;
+    border: none;
+    background: transparent;
+    resize: none;
+    width: 100%;
+    font-size: 0.9375rem;
+    outline: none;
+    padding: 0.375rem 0.75rem;
+    font-family: inherit;
+    transition: all 0.2s ease;
+}
+
+.vh360-comment-input:focus-within {
+    background: var(--surface-1);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.vh360-comment-submit {
+    border: none;
+    background: transparent;
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 0.8125rem;
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+    transition: all 0.2s ease;
+}
+
+.vh360-comment-submit:hover {
+    color: var(--primary-color);
+}
+
+.vh360-comments-login-hint {
+    font-size: 0.8125rem;
+    color: var(--text-2);
+    margin-top: 0.5rem;
+    text-align: center;
+    padding: 1rem;
+}
+
+/* Activity layout: 2-column layout (main feed + right sidebar) */
+.vh360-activity-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 2.5rem;
+    align-items: flex-start;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.vh360-activity-sidebar {
+    position: sticky;
+    top: 80px;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+
+/* Right sidebar specific styles */
+.vh360-activity-sidebar--right {
+    width: 320px;
+}
+
+.vh360-activity-main {
+    flex: 1 1 auto;
+    max-width: 100%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid var(--border-1);
+    border-right: 1px solid var(--border-1);
+    padding: 0 1.5rem;
+    background: var(--surface-3);
+    min-height: 100vh;
+}
+
+/* Feed main content wrapper - constrain width for readability */
+.vh360-feed-main {
+    width: 100%;
+    max-width: 680px;
+    margin: 0 auto;
+}
+
+/* Right Sidebar Widgets */
+.vh360-sidebar-widgets {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.vh360-sidebar-widget {
+    background: var(--surface-1);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: var(--border-radius, 8px);
+    overflow: hidden;
+}
+
+.vh360-widget-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.125rem;
+    font-weight: 700;
+    padding: 1rem;
+    margin: 0;
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.vh360-widget-title svg {
+    color: var(--primary-color, #3b82f6);
+    flex-shrink: 0;
+}
+
+.vh360-widget-content {
+    padding: 0;
+}
+
+/* Who to Follow Widget */
+.vh360-follow-user-item {
+    display: flex;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    align-items: flex-start;
+}
+
+.vh360-follow-user-item:last-of-type {
+    border-bottom: none;
+}
+
+/* Scoped to Who to Follow widget to avoid conflicts with user-menu.css (36px) and channel.css */
+.vh360-follow-user-item .vh360-user-avatar {
+    display: block;
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    line-height: 0;
+    font-size: 0;
+}
+
+.vh360-follow-user-item .vh360-user-avatar img,
+.vh360-follow-user-item .vh360-user-avatar .avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: block;
+    margin: 0;
+    padding: 0;
+}
+
+.vh360-follow-user-item .vh360-user-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+/* User identity container (name + username stacked vertically) */
+.vh360-follow-user-item .vh360-user-identity {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+    width: 100%;
+}
+
+.vh360-follow-user-item .vh360-user-name {
+    font-weight: 600;
+    font-size: 0.9375rem; /* 15px - matches Twitter/X */
+    line-height: 1.3;
+    color: var(--text-color, #1f2937);
+    text-decoration: none;
+    width: 100%;
+    /* Allow name to wrap instead of truncating */
+    word-break: break-word;
+    overflow-wrap: break-word;
+    /* Limit to 2 lines maximum for very long names */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.vh360-follow-user-item .vh360-user-name:hover {
+    text-decoration: underline;
+}
+
+.vh360-follow-user-item .vh360-user-username {
+    font-size: 0.8125rem; /* 13px - matches Twitter/X */
+    line-height: 1.2;
+    color: var(--text-light, #6b7280);
+    width: 100%;
+    /* Truncate username only if extremely long (rare edge case) */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.vh360-follow-user-item .vh360-user-bio {
+    font-size: 0.875rem;
+    line-height: 1.4;
+    color: var(--text-color, #4b5563);
+    margin-top: 0.125rem;
+    /* Limit bio to 2 lines */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.vh360-follow-btn {
+    background: var(--primary-color, #3b82f6);
+    color: #ffffff;
+    border: none;
+    padding: 0.375rem 1rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.vh360-follow-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.vh360-follow-btn.following {
+    background: var(--text-light, #9ca3af);
+}
+
+.vh360-show-more-link {
+    display: block;
+    text-align: center;
+    padding: 0.75rem 1rem;
+    color: var(--primary-color, #3b82f6);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-top: 1px solid var(--border-color, #e5e7eb);
+}
+
+.vh360-show-more-link:hover {
+    text-decoration: underline;
+    background-color: var(--bg-light, #f9fafb);
+}
+
+/* Ad Slot Widget - edge-to-edge */
+.vh360-ad-slot .vh360-widget-content {
+    padding: 0;
+    min-height: auto;
+}
+
+/* Force first element in the ad widget to span full width */
+.vh360-ad-slot .vh360-widget-content > *:first-child {
+    display: block;
+    width: 100%;
+}
+
+/* Hardening: prevent ad markup from breaking layout */
+.vh360-ad-slot {
+    overflow: hidden;
+}
+
+.vh360-ad-slot img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+.vh360-ad-slot iframe {
+    max-width: 100%;
+    display: block;
+}
+
+.vh360-ad-slot * {
+    word-break: break-word;
+}
+
+/* Placeholder only: reserve space for visibility when empty */
+.vh360-ad-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 250px;
+    background-color: var(--surface-3);
+    border-radius: 0;
+}
+
+.vh360-ad-placeholder p {
+    color: var(--text-light, #6b7280);
+    font-size: 0.875rem;
+    text-align: center;
+    margin: 0;
+    padding: 1rem;
+}
+
+/* Sidebar Footer */
+.vh360-sidebar-footer {
+    padding: 1rem;
+    font-size: 0.75rem;
+    color: var(--text-light, #6b7280);
+}
+
+.vh360-footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.vh360-footer-links a {
+    color: var(--text-light, #6b7280);
+    text-decoration: none;
+}
+
+.vh360-footer-links a:hover {
+    text-decoration: underline;
+}
+
+.vh360-separator {
+    color: var(--text-light, #9ca3af);
+    margin: 0 0.25rem;
+}
+
+/* Widget Empty State */
+.vh360-widget-empty-state {
+    padding: 1.5rem 1rem;
+    text-align: center;
+    color: var(--text-light, #6b7280);
+}
+
+.vh360-widget-empty-state p {
+    margin: 0 0 0.5rem;
+    font-size: 0.875rem;
+}
+
+.vh360-widget-empty-state p:last-child {
+    margin-bottom: 0;
+}
+
+.vh360-admin-hint {
+    color: var(--text-light, #9ca3af);
+    font-style: italic;
+}
+
+.vh360-admin-hint small {
+    font-size: 0.75rem;
+    line-height: 1.4;
+}
+
+/* Mobile compose elements - hidden by default on desktop */
+.vh360-mobile-compose-fab,
+.vh360-mobile-compose-modal {
+    display: none;
+}
+
+/* Responsive Breakpoints */
+
+/* Laptop (1024px - 1200px): Narrower right sidebar */
+@media (max-width: 1200px) {
+    .vh360-activity-layout {
+        grid-template-columns: 1fr 280px;
+        gap: 1.5rem;
+    }
+    
+    .vh360-activity-sidebar--right {
+        width: 280px;
+    }
+}
+
+/* Tablet (768px - 1024px): Keep 2-column */
+@media (max-width: 1024px) {
+    .vh360-activity-layout {
+        grid-template-columns: 1fr 280px;
+    }
+    
+    .vh360-activity-main {
+        border-left: none;
+        padding-left: 0;
+    }
+    
+    .vh360-activity-sidebar--right {
+        position: sticky;
+        width: 280px;
+    }
+}
+
+/* Mobile (<768px): Hide right sidebar, show only main feed */
+@media (max-width: 768px) {
+    /* Remove container padding for full-width posts on mobile */
+    .vh360-container {
+        padding: 0;
+    }
+    
+    .vh360-activity-layout {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+    
+    .vh360-activity-sidebar--right {
+        display: none;
+    }
+    
+    .vh360-activity-main {
+        border-left: none;
+        border-right: none;
+        padding: 0; /* Remove all padding for edge-to-edge posts */
+        max-width: 100%;
+        width: 100%;
+        background: var(--surface-1); /* Change to white for cleaner mobile look */
+    }
+    
+    .vh360-feed-main {
+        max-width: 100%; /* Remove width constraint on mobile */
+    }
+    
+    .vh360-feed-tabs {
+        margin-left: 0;
+        margin-right: 0;
+        border-radius: 0;
+    }
+    
+    .vh360-comment--reply {
+        margin-left: 1rem; /* Reduced from 1.75rem */
+    }
+    
+    .vh360-comment-replies {
+        margin-left: 1rem; /* Reduced from 1.75rem */
+        padding-left: 0.5rem; /* Reduced from 0.75rem */
+    }
+    
+    .vh360-reply-form {
+        margin-left: 1rem; /* Reduced from 2.5rem */
+    }
+    
+    /* Reduce comment padding on mobile */
+    .vh360-comment {
+        gap: 0.5rem; /* Reduced from 0.75rem */
+    }
+    
+    .vh360-comment-avatar img {
+        width: 28px; /* Reduced from 32px */
+        height: 28px;
+    }
+    
+    /* Hide composer on mobile initially */
+    .vh360-community-post--composer {
+        display: none;
+    }
+    
+    /* Floating + button - show on mobile */
+    .vh360-mobile-compose-fab {
+        display: flex;
+        position: fixed;
+        bottom: 80px; /* Above mobile bottom nav */
+        right: 1rem;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        color: #ffffff;
+        border: none;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 1000;
+        transition: all 0.3s ease;
+        font-size: 2rem;
+        font-weight: 300;
+        line-height: 1;
+    }
+    
+    .vh360-mobile-compose-fab:hover {
+        transform: scale(1.1);
+    }
+    
+    .vh360-mobile-compose-fab svg {
+        width: 24px;
+        height: 24px;
+    }
+    
+    /* Mobile composer modal */
+    .vh360-mobile-compose-modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 9999;
+        display: none;
+        align-items: flex-end;
+    }
+    
+    .vh360-mobile-compose-modal.active {
+        display: flex;
+    }
+    
+    .vh360-mobile-compose-sheet {
+        background: var(--surface-1);
+        width: 100%;
+        border-radius: 16px 16px 0 0;
+        padding: 1.5rem;
+        max-height: 80vh;
+        overflow-y: auto;
+        animation: slideUp 0.3s ease-out;
+    }
+    
+    @keyframes slideUp {
+        from {
+            transform: translateY(100%);
+        }
+        to {
+            transform: translateY(0);
+        }
+    }
+}
+
+/* @mention autocomplete dropdown */
+.vh360-mention-menu {
+    position: absolute;
+    min-width: 240px;
+    max-width: 320px;
+    max-height: 260px;
+    overflow-y: auto;
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);
+    background-color: var(--surface-1);
+    padding: 0.25rem 0;
+    z-index: 9999;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.vh360-mention-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.75rem;
+    cursor: pointer;
+}
+
+.vh360-mention-item img {
+    width: 28px;
+    height: 28px;
+    border-radius: 9999px;
+    flex-shrink: 0;
+}
+
+.vh360-mention-meta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.vh360-mention-name {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--vh360-body-color, #111827);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.vh360-mention-handle {
+    font-size: 0.8rem;
+    color: var(--text-2);
+}
+
+.vh360-mention-item:hover,
+.vh360-mention-item.is-selected {
+    background-color: rgba(59, 130, 246, 0.06);
+}
+
+/* Inline mention link styling inside content */
+.vh360-mention {
+    color: var(--mention-color);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.vh360-mention:hover {
+    text-decoration: underline;
+}
+
+
+/* Ensure long URLs & text wrap nicely in posts & comments */
+.vh360-community-body,
+.vh360-community-text,
+.vh360-comment-content,
+.vh360-comment-content p,
+.vh360-link-preview-url {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+
+/* Prevent long usernames/emails from breaking the layout */
+.vh360-community-header,
+.vh360-comment-meta {
+    flex-wrap: wrap;
+}
+
+.vh360-community-author,
+.vh360-comment-author {
+    max-width: 100%;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+
+
+/* ================================
+ * Mobile comment/reply overflow fixes
+ * + FB/Twitter-style comment bubble
+ * (Added by ChatGPT - 2026-01-13)
+ * ================================ */
+
+/* Don't clip interactive UI (comment composer/buttons) inside the post card */
+.vh360-community-post{
+    overflow: visible;
+}
+
+/* Flex children must be allowed to shrink (prevents horizontal overflow on mobile) */
+.vh360-community-content,
+.vh360-comment-input{
+    min-width: 0;
+}
+
+/* Textarea inside flex row: width:100% can cause overflow. Let flex sizing control it. */
+.vh360-comment-input textarea{
+    width: auto;
+    min-width: 0;
+}
+
+/* Keep submit buttons from forcing overflow */
+.vh360-comment-submit{
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+
+/* ======================================
+   Interactive Stats Row (Facebook-Style)
+   ====================================== */
+
+/* Interactive stats row - replaces old like/share buttons */
+.vh360-post-stats {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 0;
+    border-top: 1px solid var(--border-1);
+    border-bottom: 1px solid var(--border-1);
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.vh360-stat-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 0.75rem;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: var(--text-2);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.vh360-stat-item:hover {
+    background: var(--surface-3);
+    color: var(--primary-color);
+}
+
+/* Remove focus outline to prevent blue box on click */
+.vh360-stat-item:focus {
+    outline: none;
+}
+
+.vh360-stat-item.vh360-stat-active,
+.vh360-stat-item.vh360-stat-active:hover {
+    color: var(--primary-color);
+}
+
+.vh360-stat-icon { /* Updated for SVG icons */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    line-height: 1;
+    flex-shrink: 0; /* Prevent icon from shrinking */
+}
+
+.vh360-stat-icon svg {
+    width: 100%;
+    height: 100%;
+    display: block; /* Ensure SVG always displays */
+}
+
+.vh360-stat-count {
+    font-weight: 700;
+    color: inherit;
+    min-width: 10px; /* Ensure count always takes up space */
+    display: inline-block;
+}
+
+.vh360-stat-label {
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: inherit;
+}
+
+.vh360-stat-separator {
+    color: var(--border-1);
+    font-size: 0.875rem;
+    padding: 0 0.25rem;
+}
+
+/* Remove old community footer buttons */
+.vh360-community-footer {
+    display: none;
+}
+
+/* ======================================
+   Shared Post Styles (Facebook-Style)
+   ====================================== */
+
+.vh360-shared-post {
+    /* Shared posts have same styling as regular posts */
+}
+
+.vh360-share-indicator {
+    color: var(--text-2);
+    font-size: 0.875rem;
+    font-weight: 400;
+}
+
+.vh360-share-comment {
+    margin-bottom: 1rem;
+}
+
+/* Original post card (embedded in shared post) */
+.vh360-original-card-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s ease;
+}
+
+.vh360-original-card-link:hover {
+    transform: translateY(-2px);
+}
+
+.vh360-original-post-card {
+    border: 1px solid var(--border-1);
+    border-radius: 8px;
+    padding: 1rem;
+    background: var(--surface-3);
+    margin-top: 0.75rem;
+    transition: all 0.2s ease;
+}
+
+.vh360-original-card-link:hover .vh360-original-post-card {
+    border-color: var(--border-1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.vh360-original-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.vh360-original-card-avatar img {
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+}
+
+.vh360-original-card-meta {
+    flex: 1;
+    min-width: 0;
+}
+
+.vh360-original-card-author {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--text-1);
+}
+
+.vh360-original-card-time {
+    font-size: 0.8125rem;
+    color: var(--text-2);
+}
+
+.vh360-original-card-content {
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: var(--text-1);
+    margin-bottom: 0.75rem;
+}
+
+.vh360-original-card-image img,
+.vh360-original-card-video video {
+    width: 100%;
+    height: auto;
+    border-radius: 6px;
+    margin-top: 0.75rem;
+}
+
+/* Deleted original post placeholder */
+.vh360-original-post-deleted {
+    background: var(--surface-3);
+    border: 1px dashed var(--border-1);
+    padding: 2rem;
+    text-align: center;
+    color: var(--text-2);
+    font-style: italic;
+}
+
+.vh360-original-post-deleted p {
+    margin: 0;
+}
+
+/* ======================================
+   Share Modal Styles
+   ====================================== */
+
+#vh360-share-modal .vh360-modal {
+    max-width: 550px;
+}
+
+.vh360-share-modal .vh360-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-1);
+    margin-bottom: 1.5rem;
+}
+
+.vh360-share-modal .vh360-modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-1);
+}
+
+.vh360-modal-close {
+    background: transparent;
+    border: none;
+    color: var(--text-2);
+    cursor: pointer;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.vh360-modal-close:hover {
+    background: var(--surface-3);
+    color: var(--text-1);
+}
+
+.vh360-share-composer {
+    margin-bottom: 1.5rem;
+}
+
+.vh360-share-user {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.vh360-share-user img {
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+}
+
+.vh360-share-user-name {
+    font-weight: 600;
+    color: var(--text-1);
+}
+
+.vh360-share-textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 0.75rem;
+    border: 1px solid var(--border-1);
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    font-family: inherit;
+    line-height: 1.5;
+    resize: vertical;
+    transition: border-color 0.2s ease;
+}
+
+.vh360-share-textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.1);
+}
+
+.vh360-share-preview {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-1);
+}
+
+.vh360-share-preview .vh360-original-post-card {
+    margin-top: 0;
+}
+
+.vh360-modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center; /* Center buttons */
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-1);
+}
+
+.vh360-btn {
+    padding: 0.625rem 1.25rem;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+    min-width: 140px; /* Ensure buttons have consistent width */
+}
+
+.vh360-btn-primary {
+    background: linear-gradient(135deg, var(--accent-color) 0%, var(--error-color) 100%);
+    color: #ffffff;
+}
+
+.vh360-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(245, 87, 108, 0.3);
+}
+
+.vh360-btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.vh360-btn-secondary {
+    background: var(--surface-3);
+    color: var(--text-1);
+    border: 1px solid var(--border-1);
+}
+
+.vh360-btn-secondary:hover:not(:disabled) {
+    background: var(--border-1);
+    border-color: var(--border-1);
+}
+
+.vh360-btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ======================================
+   Mobile Responsive Improvements (PR #9)
+   ====================================== */
+
+@media (max-width: 768px) {
+    
+    /* CRITICAL: Override base comment content min-width to prevent squishing */
+    /* This fixes the flex: 1; min-width: 0; issue from the base styles */
+    .vh360-comments-section .vh360-comment-content,
+    .vh360-comments-section .vh360-comment-body {
+        min-width: 200px !important;
+        flex: 1 1 auto !important;
+    }
+    
+    /* Full width posts on mobile (edge-to-edge like Facebook) */
+    .vh360-community-post,
+    .vh360-activity-item {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        border-radius: 0 !important;
+        margin-bottom: 8px;
+        border-left: none !important;
+        border-right: none !important;
+    }
+    
+    /* Activity stream container */
+    .vh360-activity-stream {
+        padding: 0;
+    }
+    
+    /* Post content padding */
+    .vh360-community-content,
+    .vh360-post-content {
+        padding: 12px 16px;
+    }
+    
+    /* Post header */
+    .vh360-community-header,
+    .vh360-post-header {
+        padding: 12px 16px;
+    }
+    
+    /* Post media full width */
+    .vh360-community-image,
+    .vh360-post-media {
+        margin: 0;
+        border-radius: 0;
+    }
+    
+    /* Stats row */
+    .vh360-post-stats {
+        padding: 10px 16px;
+        font-size: 12px;
+        gap: 0.25rem;
+    }
+    
+    .vh360-stat-item {
+        padding: 4px 6px;
+        font-size: 12px;
+    }
+    
+    .vh360-stat-label {
+        display: none; /* Hide labels on mobile to save space */
+    }
+    
+    /* Comments section */
+    .vh360-comments-section {
+        padding: 0;
+    }
+    
+    /* Main comment form at bottom of post */
+    .vh360-comment-form {
+        padding: 12px 16px;
+    }
+    
+    .vh360-comment-textarea {
+        font-size: 16px; /* Prevent iOS zoom */
+    }
+    
+    /* Share modal */
+    .vh360-original-post-card {
+        padding: 0.75rem;
+    }
+    
+    #vh360-share-modal .vh360-modal {
+        width: 95%;
+        max-width: none;
+    }
+    
+    .vh360-modal-actions {
+        flex-direction: column-reverse;
+    }
+    
+    .vh360-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Extra small devices (iPhone SE, small Android) */
+@media (max-width: 374px) {
+    
+    /* Further reduce reply indentation for extra small screens */
+    .vh360-comment-replies {
+        margin-left: 8px !important;
+        padding-left: 6px;
+    }
+    
+    .vh360-comment-replies .vh360-comment-replies {
+        margin-left: 6px !important;
+        padding-left: 4px;
+    }
+    
+    /* Tighter padding */
+    .vh360-comment {
+        padding: 10px 12px;
+        gap: 8px;
+    }
+    
+    /* Smaller avatars on extra small devices */
+    .vh360-comment-avatar {
+        width: 32px !important;
+    }
+    
+    .vh360-comment-replies .vh360-comment-avatar {
+        width: 24px !important;
+    }
+    
+    .vh360-comment-replies .vh360-comment-replies .vh360-comment-avatar {
+        width: 20px !important;
+    }
+    
+    /* Adjust min-width for extra small screens */
+    .vh360-comment-content,
+    .vh360-comment-body {
+        min-width: 160px !important;
+    }
+    
+    .vh360-comment-replies .vh360-comment-content,
+    .vh360-comment-replies .vh360-comment-body {
+        min-width: 140px !important;
+    }
+    
+    .vh360-community-content,
+    .vh360-post-content,
+    .vh360-community-header,
+    .vh360-post-header {
+        padding: 10px 12px;
+    }
+}
+
+/* ======================================
+   Accessibility Improvements
+   ====================================== */
+
+/* Focus outline removed for stat items to prevent blue box on click */
+
+.vh360-modal-close:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+.vh360-share-textarea:focus {
+    outline: none;
+}
+
+/* Screen reader only text */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* ========================================
+   Single Community Post Page (PR #9)
+   ======================================== */
+
+.vh360-single-post-page {
+    background: var(--surface-3);
+    min-height: calc(100vh - 200px);
+    padding-bottom: 40px;
+}
+
+/* Back to Feed Button */
+.vh360-single-post-header {
+    background: var(--surface-1);
+    border-bottom: 1px solid var(--border-1);
+    padding: 12px 0;
+    margin-bottom: 20px;
+}
+
+.vh360-back-button-wrapper {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 0 16px;
+}
+
+.vh360-back-to-feed {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--surface-3);
+    border-radius: 6px;
+    color: #050505;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 15px;
+    transition: background-color 0.2s ease;
+}
+
+.vh360-back-to-feed:hover {
+    background: var(--border-1);
+    color: var(--primary-color);
+}
+
+.vh360-back-to-feed svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Post Container */
+.vh360-single-post-container {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 0 16px;
+}
+
+.vh360-single-post-wrapper {
+    background: var(--surface-1);
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+/* Single post should have no bottom margin */
+.vh360-single-post-wrapper .vh360-community-post {
+    margin-bottom: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+/* Hide WordPress default "Leave a Reply" section */
+body.single-vh360_post .vh360-single-post-page .comment-respond,
+body.single-vh360_post .vh360-single-post-page #respond,
+body.single-vh360_post .vh360-single-post-page .comment-reply-title {
+    display: none !important;
+}
+
+/* Hide default WordPress comments list */
+body.single-vh360_post .vh360-single-post-page .comment-list:not(.vh360-comments-list) {
+    display: none !important;
+}
+
+/* Hide WordPress comment form */
+body.single-vh360_post .vh360-single-post-page .comment-form {
+    display: none !important;
+}
+
+/* Hide WordPress comment navigation */
+body.single-vh360_post .vh360-single-post-page .comment-navigation,
+body.single-vh360_post .vh360-single-post-page .comments-title {
+    display: none !important;
+}
+
+/* Ensure our custom comments are visible */
+body.single-vh360_post .vh360-single-post-page .vh360-comments-section {
+    display: block !important;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .vh360-single-post-page {
+        background: var(--surface-1);
+        padding-bottom: 0;
+    }
+    
+    .vh360-single-post-header {
+        margin-bottom: 0;
+    }
+    
+    .vh360-single-post-container {
+        padding: 0;
+    }
+    
+    .vh360-single-post-wrapper {
+        border-radius: 0;
+        box-shadow: none;
+    }
+    
+    .vh360-back-button-wrapper {
+        padding: 0 12px;
+    }
+}
+
+/* ======================================
+   Modal Overlay Base Styles
+   Ensures share modal appears above footer
+   ====================================== */
+
+.vh360-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.vh360-modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.vh360-modal {
+    background: var(--surface-1);
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    max-width: 500px;
+    max-height: 90vh;
+    width: 90%;
+    padding: 2rem;
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
+    overflow-y: auto;
+    position: relative;
+}
+
+.vh360-modal-overlay.show .vh360-modal {
+    transform: scale(1);
+}
+
+/* Prevent body scroll when modal is open */
+body.vh360-modal-open {
+    overflow: hidden;
+}
+
+/* ========================================
+   VH360 Comments v2 - Mobile-First Grid Layout (PR #10)
+   Facebook-Style Two-Column Structure
+   ======================================== */
+
+/* Comment Item Container */
+.vh360-comment-item {
+    margin-bottom: 12px;
+}
+
+/* Comment Row - Two Column Layout */
+.vh360-comment-row {
+    display: grid;
+    grid-template-columns: 40px 1fr; /* Fixed avatar + flexible content */
+    column-gap: 10px;
+    align-items: start;
+}
+
+/* Left Column - Avatar */
+.vh360-comment-avatar {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+}
+
+.vh360-comment-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* Right Column - Content */
+.vh360-comment-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0; /* Allow flex shrinking */
+    width: 100%;
+}
+
+/* Header Row (OUTSIDE bubble) - Name + Kebab */
+.vh360-comment-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-left: 12px; /* Align with bubble text */
+    min-height: 20px;
+}
+
+/* Comment Bubble (text ONLY) */
+.vh360-comment-bubble {
+    background: var(--surface-3);
+    border-radius: 16px;
+    padding: 7px 14px;
+    width: fit-content;
+    max-width: 480px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.vh360-comment-author {
+    font-size: 13px;
+    font-weight: 600;
+    color: #050505;
+    line-height: 1.2;
+}
+
+/* Kebab menu wrapper in comment header */
+.vh360-comment-actions-menu-wrapper {
+    position: relative;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.vh360-kebab-toggle {
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    color: #65676b;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    transition: background-color 0.2s ease;
+}
+
+.vh360-kebab-toggle:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.vh360-kebab-dot {
+    width: 3px;
+    height: 3px;
+    background-color: #65676b;
+    border-radius: 50%;
+}
+
+/* Actions menu dropdown */
+.vh360-actions-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: var(--surface-1);
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+    min-width: 120px;
+    z-index: 1000;
+    margin-top: 4px;
+    overflow: hidden;
+    display: none;
+}
+
+.vh360-actions-menu.vh360-actions-menu--open {
+    display: block;
+}
+
+.vh360-actions-menu-item {
+    display: block;
+    width: 100%;
+    padding: 10px 16px;
+    text-align: left;
+    border: none;
+    background: none;
+    color: #050505;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.vh360-actions-menu-item:hover {
+    background-color: var(--surface-3);
+}
+
+.vh360-actions-menu-item.vh360-comment-delete-btn {
+    color: var(--error-color);
+}
+
+.vh360-actions-menu-item.vh360-comment-delete-btn:hover {
+    background-color: #fee;
+}
+
+/* Comment Text */
+.vh360-comment-text {
+    font-size: 15px;
+    line-height: 1.3333;
+    color: #050505;
+    word-break: break-word;
+}
+
+/* Actions Row (UNDER bubble) */
+.vh360-comment-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding-left: 12px; /* Align with bubble content */
+    font-size: 12px;
+    color: #65676b;
+}
+
+.vh360-comment-time {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.vh360-action-separator {
+    color: #ccc;
+    user-select: none;
+}
+
+.vh360-action-like,
+.vh360-action-reply {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: #65676b;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.vh360-action-like:hover,
+.vh360-action-reply:hover {
+    text-decoration: underline;
+}
+
+.vh360-action-like.vh360-liked {
+    color: var(--primary-color);
+}
+
+.vh360-like-count {
+    font-size: 11px;
+    color: #65676b;
+}
+
+/* Replies Container */
+.vh360-comment-replies {
+    margin-top: 8px;
+    margin-left: 16px; /* Mobile indent - small */
+    padding-left: 12px;
+    border-left: 2px solid var(--border-1);
+}
+
+/* Toggle Replies Button */
+.vh360-toggle-replies {
+    background: none;
+    border: none;
+    padding: 4px 0;
+    margin-bottom: 8px;
+    margin-left: 50px; /* Align with comment text (40px avatar + 10px gap) */
+    font-size: 13px;
+    font-weight: 600;
+    color: #65676b;
+    cursor: pointer;
+}
+
+.vh360-toggle-replies:hover {
+    text-decoration: underline;
+}
+
+/* Reply Items */
+.vh360-comment-reply .vh360-comment-avatar {
+    width: 32px; /* Slightly smaller for replies */
+    height: 32px;
+}
+
+.vh360-comment-reply .vh360-comment-row {
+    grid-template-columns: 32px 1fr;
+}
+
+/* Desktop Adjustments */
+@media (min-width: 769px) {
+    .vh360-comment-row {
+        grid-template-columns: 48px 1fr; /* Larger avatar on desktop */
+        column-gap: 12px;
+    }
+    
+    .vh360-comment-avatar {
+        width: 48px;
+        height: 48px;
+    }
+    
+    .vh360-comment-bubble {
+        max-width: 480px; /* Constrain bubble width on desktop */
+    }
+    
+    .vh360-comment-replies {
+        margin-left: 24px; /* Larger indent on desktop */
+        padding-left: 16px;
+    }
+    
+    .vh360-toggle-replies {
+        margin-left: 60px; /* Adjust for larger avatar */
+    }
+    
+    .vh360-comment-reply .vh360-comment-avatar {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .vh360-comment-reply .vh360-comment-row {
+        grid-template-columns: 40px 1fr;
+    }
+}
+
+/* Mobile Optimizations */
+@media (max-width: 480px) {
+    .vh360-comment-row {
+        column-gap: 8px;
+    }
+    
+    .vh360-comment-bubble {
+        padding: 8px 16px;
+        border-radius: 16px;
+    }
+    
+    .vh360-comment-header {
+        padding-left: 8px;
+    }
+    
+    .vh360-comment-actions {
+        padding-left: 8px;
+        gap: 6px;
+        font-size: 12px;
+    }
+    
+    .vh360-comment-replies {
+        margin-left: 12px; /* Reduced on very small screens */
+        padding-left: 8px;
+    }
+}
+
+/* Ensure no horizontal scroll */
+.vh360-comment-item,
+.vh360-comment-row,
+.vh360-comment-main,
+.vh360-comment-bubble {
+    max-width: 100%;
+    overflow: hidden;
+}
+
+/* Override Legacy Styles */
+.vh360-comment {
+    padding-left: 0 !important;
+    position: static !important;
+}
+
+.vh360-comment-avatar {
+    position: static !important;
+}
+
+.vh360-comment-actions {
+    position: static !important;
+    margin-left: 0 !important;
+}
+
+/* Hidden state classes */
+.vh360-actions-menu--hidden {
+    display: none;
+}
+
+.vh360-replies-list--hidden {
+    display: none;
+}
+
+/* ============================================
+   YouTube Inline Preview Styles
+   ============================================ */
+
+.vh360-youtube-preview {
+    position: relative;
+    width: 100%;
+    margin: 0.75rem 0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #000;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.vh360-youtube-preview:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.vh360-youtube-preview:focus {
+    outline: 3px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+/* Remove focus outline when video is playing */
+.vh360-youtube-preview.vh360-youtube-playing:focus {
+    outline: none;
+}
+
+.vh360-youtube-thumbnail {
+    position: relative;
+    width: 100%;
+    padding-top: 56.25%; /* 16:9 aspect ratio */
+    background: #000;
+    overflow: hidden;
+}
+
+.vh360-youtube-thumbnail img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.vh360-youtube-play-button {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 68px;
+    height: 48px;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.vh360-youtube-preview:hover .vh360-youtube-play-button {
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
+.vh360-youtube-preview:active .vh360-youtube-play-button {
+    transform: translate(-50%, -50%) scale(0.95);
+}
+
+.vh360-youtube-play-button svg {
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
+}
+
+.vh360-youtube-title {
+    padding: 0.75rem 1rem;
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+/* Embedded iframe styling (after click) */
+.vh360-youtube-preview iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+/* When iframe is loaded, hide thumbnail image and play button but keep container for aspect ratio */
+.vh360-youtube-preview.vh360-youtube-playing .vh360-youtube-thumbnail img,
+.vh360-youtube-preview.vh360-youtube-playing .vh360-youtube-play-button {
+    display: none;
+}
+
+/* Keep title visually hidden but accessible to screen readers when playing */
+.vh360-youtube-preview.vh360-youtube-playing .vh360-youtube-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .vh360-youtube-play-button {
+        width: 56px;
+        height: 40px;
+    }
+    
+    .vh360-youtube-title {
+        font-size: 0.875rem;
+        padding: 0.625rem 0.875rem;
+    }
+}
+
+

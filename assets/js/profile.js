@@ -1,0 +1,22 @@
+/**
+ * Profile Page JavaScript
+ * 
+ * Handles profile-related interactions including video sorting.
+ *
+ * @package Videohub360_Theme
+ * @since 1.0.0
+ */
+
+(function() {
+    'use strict';
+    
+    // Handle video sort dropdown
+    var sortSelect = document.getElementById('vh360-video-sort');
+    if (sortSelect) {
+        sortSelect.addEventListener('change', function() {
+            if (this.value) {
+                window.location.href = this.value;
+            }
+        });
+    }
+})();

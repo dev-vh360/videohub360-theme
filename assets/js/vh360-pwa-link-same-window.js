@@ -1,0 +1,37 @@
+(function () {
+  function isInternalLink(a) {
+    try {
+      var href = a.getAttribute('href');
+      if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:') || href.startsWith('javascript:')) return false;
+      var url = new URL(href, window.location.href);
+      return url.origin === window.location.origin;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a') : null;
+    if (!a) return;
+
+    // If it's an internal link, never allow _blank/new-window behavior.
+    if (isInternalLink(a)) {
+      var target = (a.getAttribute('target') || '').toLowerCase();
+      if (target === '_blank') {
+        e.preventDefault();
+        a.setAttribute('target', '_self');
+        window.location.assign(a.href);
+      }
+    }
+  }, true);
+
+  // Also normalize any internal <a target="_blank"> on load.
+  document.addEventListener('DOMContentLoaded', function () {
+    var links = document.querySelectorAll('a[target="_blank"]');
+    links.forEach(function (a) {
+      if (isInternalLink(a)) {
+        a.setAttribute('target', '_self');
+      }
+    });
+  });
+})();

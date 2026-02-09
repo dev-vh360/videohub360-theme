@@ -1,0 +1,407 @@
+/**
+ * Authentication Pages Styles
+ * 
+ * Styling for login and registration page templates
+ *
+ * @package Videohub360_Theme
+ * @since 1.0.0
+ */
+
+/* Auth Page Container */
+.vh360-auth-page {
+    min-height: calc(100vh - 200px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    background: var(--auth-page-bg);
+}
+
+.vh360-auth-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    max-width: 1200px;
+    width: 100%;
+    background: var(--auth-form-bg);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    min-height: 600px;
+}
+
+/* Welcome Section (Left Side) */
+.vh360-auth-welcome {
+    background: linear-gradient(135deg, var(--auth-welcome-bg-start) 0%, var(--auth-welcome-bg-end) 100%);
+    color: var(--auth-welcome-text);
+    padding: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.vh360-auth-welcome-content {
+    max-width: 400px;
+}
+
+.vh360-auth-logo {
+    margin-bottom: 2rem;
+}
+
+.vh360-auth-logo img {
+    max-width: 200px;
+    height: auto;
+    filter: brightness(0) invert(1);
+}
+
+.vh360-auth-site-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    color: var(--auth-welcome-text);
+}
+
+.vh360-auth-heading {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    line-height: 1.2;
+    color: var(--auth-welcome-text);
+}
+
+.vh360-auth-description {
+    font-size: 1.125rem;
+    margin-bottom: 2rem;
+    opacity: 0.9;
+    line-height: 1.6;
+    color: var(--auth-welcome-text);
+}
+
+/* Features List */
+.vh360-auth-features {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.vh360-auth-feature {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.vh360-auth-feature-icon {
+    font-size: 1.5rem;
+}
+
+.vh360-auth-feature-text {
+    font-size: 1rem;
+}
+
+/* Benefits List */
+.vh360-auth-benefits {
+    margin-top: 2rem;
+}
+
+.vh360-auth-benefits-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.vh360-auth-benefits-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.vh360-auth-benefits-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.vh360-auth-benefit-icon {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.875rem;
+}
+
+/* Form Section (Right Side) */
+.vh360-auth-form-wrapper {
+    padding: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--auth-form-bg);
+}
+
+.vh360-auth-form-content {
+    width: 100%;
+    max-width: 400px;
+}
+
+.vh360-auth-form-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--auth-form-title);
+}
+
+/* Messages */
+.vh360-auth-error,
+.vh360-auth-success {
+    padding: 0.875rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.vh360-auth-error {
+    background: var(--auth-error-bg);
+    color: var(--auth-error-text);
+    border-left: 4px solid var(--auth-error-text);
+}
+
+.vh360-auth-success {
+    background: var(--auth-success-bg);
+    color: var(--auth-error-text);
+    border-left: 4px solid var(--auth-error-text);
+}
+
+/* Form Styles */
+.vh360-auth-form,
+#vh360-loginform {
+    margin-top: 1.5rem;
+}
+
+.vh360-auth-field,
+#vh360-loginform p {
+    margin-bottom: 1.25rem;
+}
+
+.vh360-auth-field label,
+#vh360-loginform label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--auth-label);
+    font-size: 0.95rem;
+}
+
+.required {
+    color: var(--auth-error-text);
+    margin-left: 2px;
+}
+
+.vh360-auth-input,
+#vh360-loginform input[type="text"],
+#vh360-loginform input[type="password"] {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--auth-input-border);
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.2s;
+    box-sizing: border-box;
+    color: var(--text-color);
+    background-color: var(--bg-color);
+}
+
+.vh360-auth-input:focus,
+#vh360-loginform input[type="text"]:focus,
+#vh360-loginform input[type="password"]:focus {
+    outline: none;
+    border-color: var(--auth-input-focus-border);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.vh360-auth-hint {
+    display: block;
+    margin-top: 0.375rem;
+    font-size: 0.85rem;
+    color: var(--text-light);
+}
+
+/* Checkbox Field */
+.vh360-auth-checkbox label,
+#vh360-loginform .login-remember label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    font-weight: 400;
+    cursor: pointer;
+}
+
+.vh360-auth-checkbox input[type="checkbox"],
+#vh360-loginform input[type="checkbox"] {
+    margin-top: 0.25rem;
+    cursor: pointer;
+}
+
+.vh360-auth-checkbox a {
+    color: var(--auth-link);
+    text-decoration: none;
+}
+
+.vh360-auth-checkbox a:hover {
+    text-decoration: underline;
+    color: var(--auth-link);
+}
+
+/* Submit Button */
+.vh360-auth-submit,
+#vh360-loginform .button-primary {
+    width: 100%;
+    padding: 0.875rem 1.5rem;
+    background: linear-gradient(135deg, var(--auth-button-bg-start) 0%, var(--auth-button-bg-end) 100%);
+    color: var(--auth-button-text);
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-top: 0.5rem;
+}
+
+.vh360-auth-submit:hover,
+#vh360-loginform .button-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+}
+
+.vh360-auth-submit:active,
+#vh360-loginform .button-primary:active {
+    transform: translateY(0);
+}
+
+/* Auth Links */
+.vh360-auth-links {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.95rem;
+    color: var(--text-light);
+}
+
+.vh360-auth-link {
+    color: var(--auth-link);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.vh360-auth-link:hover {
+    color: var(--auth-link);
+    text-decoration: underline;
+}
+
+.vh360-auth-separator {
+    margin: 0 0.5rem;
+}
+
+/* WordPress Login Form Overrides */
+#vh360-loginform {
+    margin-top: 0;
+}
+
+#vh360-loginform p.login-remember {
+    margin-bottom: 0.5rem;
+}
+
+#vh360-loginform p.login-submit {
+    margin-bottom: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 968px) {
+    .vh360-auth-container {
+        grid-template-columns: 1fr;
+        max-width: 600px;
+    }
+    
+    .vh360-auth-welcome {
+        padding: 2rem;
+    }
+    
+    .vh360-auth-heading {
+        font-size: 2rem;
+    }
+    
+    .vh360-auth-features,
+    .vh360-auth-benefits {
+        display: none;
+    }
+}
+
+@media (max-width: 576px) {
+    .vh360-auth-page {
+        padding: 1rem 0.5rem;
+    }
+    
+    .vh360-auth-container {
+        border-radius: 12px;
+    }
+    
+    .vh360-auth-welcome {
+        padding: 1.5rem;
+    }
+    
+    .vh360-auth-form-wrapper {
+        padding: 1.5rem;
+    }
+    
+    .vh360-auth-heading {
+        font-size: 1.75rem;
+    }
+    
+    .vh360-auth-description {
+        font-size: 1rem;
+    }
+    
+    .vh360-auth-form-title {
+        font-size: 1.5rem;
+    }
+}
+
+/* Dark Mode Support (Optional) */
+@media (prefers-color-scheme: dark) {
+    .vh360-auth-container {
+        background: var(--auth-form-bg);
+    }
+    
+    .vh360-auth-form-wrapper {
+        background: var(--auth-form-bg);
+    }
+    
+    .vh360-auth-form-title {
+        color: var(--auth-form-title);
+    }
+    
+    .vh360-auth-field label,
+    #vh360-loginform label {
+        color: var(--auth-label);
+    }
+    
+    .vh360-auth-input,
+    #vh360-loginform input[type="text"],
+    #vh360-loginform input[type="password"] {
+        background: var(--bg-color);
+        border-color: var(--auth-input-border);
+        color: var(--text-color);
+    }
+    
+    .vh360-auth-links {
+        color: var(--text-light);
+    }
+}

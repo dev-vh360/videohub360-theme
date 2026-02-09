@@ -1,0 +1,185 @@
+/**
+ * Sidebar Layout CSS
+ * 
+ * Styles for flexible sidebar positioning (left/right)
+ * and responsive sidebar behavior.
+ *
+ * @package Videohub360_Theme
+ * @since 1.0.0
+ */
+
+/* ==========================================================================
+   Container Layout with Sidebar
+   ========================================================================== */
+
+.container.has-sidebar {
+    display: grid;
+    gap: 2rem;
+    align-items: start;
+}
+
+/* Two-column layout: content + sidebar */
+.container.has-sidebar.sidebar-right {
+    grid-template-columns: 1fr 300px;
+}
+
+.container.has-sidebar.sidebar-left {
+    grid-template-columns: 300px 1fr;
+}
+
+/* ==========================================================================
+   Sidebar Styles
+   ========================================================================== */
+
+.widget-area {
+    position: sticky;
+    top: 2rem;
+}
+
+.widget-area .widget {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: var(--bg-light, #f9fafb);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: var(--border-radius, 8px);
+}
+
+.widget-area .widget:last-child {
+    margin-bottom: 0;
+}
+
+.widget-area .widget-title {
+    margin: 0 0 1rem 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-color, #1f2937);
+}
+
+.widget-area ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.widget-area ul li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.widget-area ul li:last-child {
+    border-bottom: none;
+}
+
+.widget-area a {
+    color: var(--text-color, #1f2937);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.widget-area a:hover {
+    color: var(--primary-color, #2563eb);
+}
+
+/* ==========================================================================
+   Content Area Adjustments
+   ========================================================================== */
+
+.content-area {
+    min-width: 0; /* Prevents overflow in grid layout */
+}
+
+/* Full width when no sidebar */
+.container.no-sidebar {
+    max-width: var(--max-width, 1280px);
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+.container.no-sidebar .content-area {
+    max-width: 100%;
+}
+
+/* ==========================================================================
+   Responsive Layout
+   ========================================================================== */
+
+@media (max-width: 1024px) {
+    /* Stack sidebar below content on tablets */
+    .container.has-sidebar.sidebar-right,
+    .container.has-sidebar.sidebar-left {
+        grid-template-columns: 1fr;
+    }
+    
+    /* Sidebar comes after content on mobile */
+    .widget-area {
+        position: relative;
+        top: 0;
+        order: 2;
+    }
+    
+    .content-area {
+        order: 1;
+    }
+    
+    /* Left sidebar still goes to bottom on mobile */
+    .container.has-sidebar.sidebar-left .widget-area {
+        order: 2;
+    }
+}
+
+@media (max-width: 768px) {
+    .container.has-sidebar {
+        gap: 1.5rem;
+    }
+    
+    .widget-area .widget {
+        padding: 1rem;
+    }
+}
+
+/* ==========================================================================
+   Special Page Overrides
+   ========================================================================== */
+
+/* Ensure certain templates don't show sidebars regardless of settings */
+.page-template-template-dashboard .widget-area,
+.page-template-template-activity-feed .widget-area.sidebar-1,
+.single-videohub360 .widget-area,
+.post-type-archive-videohub360 .widget-area {
+    display: none;
+}
+
+/* Activity feed template uses its own sidebar styling */
+.page-template-template-activity-feed .widget-area.activity-feed-sidebar {
+    display: block;
+}
+
+/* ==========================================================================
+   WooCommerce Compatibility
+   ========================================================================== */
+
+/* Hide sidebars on checkout and cart */
+.woocommerce-checkout .widget-area,
+.woocommerce-cart .widget-area,
+.woocommerce-account .widget-area {
+    display: none;
+}
+
+/* WooCommerce shop pages can have sidebars */
+.woocommerce.archive .container.has-sidebar {
+    display: grid;
+}
+
+/* ==========================================================================
+   Elementor Compatibility
+   ========================================================================== */
+
+/* Hide sidebar for Elementor canvas pages */
+.elementor-template-canvas .widget-area {
+    display: none;
+}
+
+/* Adjust Elementor full-width pages */
+.elementor-page-full .widget-area {
+    display: none;
+}
