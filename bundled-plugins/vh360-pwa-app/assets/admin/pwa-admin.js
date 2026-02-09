@@ -1,0 +1,86 @@
+(function($){
+  function initColorPickers(){
+    $('.vh360-color').wpColorPicker();
+  }
+
+  function bindMediaButtons(){
+    let frame;
+    $('.vh360-media-upload').on('click', function(e){
+      e.preventDefault();
+      const key = $(this).data('target');
+      const $input = $(`input[name="vh360_pwa_options[${key}]"]`);
+      if (frame) frame.open();
+      frame = wp.media({
+        title: 'Select an image',
+        button: { text: 'Use this image' },
+        multiple: false
+      });
+      frame.on('select', function(){
+        const attachment = frame.state().get('selection').first().toJSON();
+        if (attachment && attachment.url){
+          $input.val(attachment.url);
+        }
+      });
+      frame.open();
+    });
+
+    $('.vh360-media-clear').on('click', function(e){
+      e.preventDefault();
+      const key = $(this).data('target');
+      const $input = $(`input[name="vh360_pwa_options[${key}]"]`);
+      $input.val('');
+    });
+  }
+
+  function runHealthCheck(){
+    $('#vh360-pwa-run-health').on('click', function(){
+      const $out = $('#vh360-pwa-health-results');
+      $out.html('<p>Running...</p>');
+      $.post(VH360PWAAdmin.ajaxurl, {
+        action: 'vh360_pwa_health_check',
+        nonce: VH360PWAAdmin.nonce
+      }).done(function(resp){
+        if (!resp || !resp.success){
+          const msg = resp && resp.data && resp.data.message ? resp.data.message : 'Unknown error';
+          $out.html(`<div class="notice notice-error"><p>${msg}</p></div>`);
+          return;
+        }
+        const d = resp.data;
+        const ok = (v) => v ? '<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#d1fae5;color:#065f46;font-weight:600;">OK</span>' : '<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#fee2e2;color:#991b1b;font-weight:600;">Needs attention</span>';
+
+        let html = '';
+        html += '<div style="display:grid;gap:10px;max-width:920px;">';
+
+        html += `<div><strong>Theme compatibility</strong> ${ok(d.theme_ok)}<div class="description">${d.theme_ok ? 'Videohub360 Theme detected.' : 'Activate the Videohub360 Theme to enable frontend scripts and endpoints.'}</div></div>`;
+        html += `<div><strong>HTTPS</strong> ${ok(d.https)}<div class="description">${d.https ? 'Your site is running over HTTPS.' : 'PWAs require HTTPS. Enable SSL for your domain.'}</div></div>`;
+        html += `<div><strong>PWA enabled</strong> ${ok(d.enabled)}<div class="description">${d.enabled ? 'PWA features are enabled in the plugin settings.' : 'Enable PWA on the General tab to turn on endpoints and frontend behavior.'}</div></div>`;
+
+        html += '<div><strong>Endpoints</strong><div class="description">All endpoints should return 200.</div>';
+        html += '<ul style="margin:6px 0 0 18px;">';
+        Object.keys(d.endpoints).forEach(function(k){
+          const r = d.endpoints[k];
+          if (r.ok){
+            html += `<li><strong>${k}</strong>: <span style="color:#065f46;">200 OK</span> <code>${(r.content_type || '').replace(/</g,'&lt;')}</code></li>`;
+          } else {
+            const reason = r.error ? r.error : ('HTTP ' + (r.code || '')); 
+            html += `<li><strong>${k}</strong>: <span style="color:#991b1b;">Not OK</span> <span class="description">${reason}</span></li>`;
+          }
+        });
+        html += '</ul></div>';
+
+        html += `<div><strong>Cache preset</strong> <code>${d.options.cache_strategy}</code> <span class="description">version <code>${d.options.cache_version}</code></span><div class="description">If users report stale behavior, use Tools → Clear PWA Caches / Unregister Service Worker on the affected device.</div></div>`;
+        html += '</div>';
+
+        $out.html(html);
+      }).fail(function(xhr){
+        $out.html('<div class="notice notice-error"><p>Request failed.</p></div>');
+      });
+    });
+  }
+
+  $(function(){
+    initColorPickers();
+    bindMediaButtons();
+    runHealthCheck();
+  });
+})(jQuery);
