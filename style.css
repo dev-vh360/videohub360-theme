@@ -1,0 +1,1173 @@
+/*
+Theme Name: Videohub360 Theme
+Theme URI: https://videohub360.com/theme
+Author: vh360
+Author URI: https://videohub360.com
+Description: A lightweight, fast theme built specifically for Videohub360 plugin with full Elementor support. Optimized for video content with minimal CSS/JS loading, clean semantic HTML5, and excellent Core Web Vitals performance.
+Version: 1.2.0
+Requires at least: 5.0
+Tested up to: 6.8
+Requires PHP: 7.4
+License: GPL v2 or later
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
+Text Domain: videohub360-theme
+Tags: video, custom-post-types, elementor, one-column, two-columns, wide-blocks, block-styles, flexible-header, custom-colors, custom-menu, featured-images, threaded-comments, translation-ready, rtl-language-support, accessibility-ready, gallery, photo-gallery, lightbox
+
+This theme is designed specifically for the Videohub360 plugin and includes full Elementor Page Builder compatibility.
+*/
+
+/* ==========================================================================
+   Base Styles & Reset
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+:root {
+    /* Base Colors */
+    --primary-color: #2563eb;
+    --secondary-color: #1e40af;
+    --text-color: #1f2937;
+    --text-light: #6b7280;
+    --bg-color: #ffffff;
+    --bg-light: #f9fafb;
+    --border-color: #e5e7eb;
+    
+    /* Layout */
+    --max-width: 1280px;
+    --spacing: 1rem;
+    --border-radius: 8px;
+    --transition: all 0.3s ease;
+    
+    /* Profile Page Variables */
+    --profile-cover-height: 300px;
+    --profile-avatar-size: 150px;
+    --profile-avatar-border: 5px;
+    --profile-spacing: 2rem;
+    
+    /* Dashboard Variables */
+    --dashboard-sidebar-width: 280px;
+    --dashboard-gap: 2rem;
+    --dashboard-widget-padding: 1.5rem;
+    
+    /* Group Card Variables */
+    --group-cover-height: 180px;
+    --group-card-padding: 1.5rem;
+    --group-border-radius: var(--border-radius);
+    
+    /* Gallery Variables */
+    --gallery-grid-gap: 1rem;
+    --gallery-item-radius: var(--border-radius);
+    --gallery-masonry-columns: 4;
+    
+    /* Status Colors */
+    --success-color: #10b981;
+    --error-color: #ef4444;
+    --warning-color: #f59e0b;
+    --info-color: #6366f1;
+    
+    /* Accent Colors */
+    --accent-red: #ef4444;
+    --accent-green: #10b981;
+    --accent-yellow: #f59e0b;
+    --accent-purple: #8b5cf6;
+    
+    /* Shadow Variables */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1);
+}
+
+html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--text-color);
+    background-color: var(--bg-color);
+}
+
+/* ==========================================================================
+   Typography
+   ========================================================================== */
+
+h1, h2, h3, h4, h5, h6 {
+    margin: 0 0 1rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--text-color);
+}
+
+h1 { font-size: 2.5rem; }
+h2 { font-size: 2rem; }
+h3 { font-size: 1.75rem; }
+h4 { font-size: 1.5rem; }
+h5 { font-size: 1.25rem; }
+h6 { font-size: 1rem; }
+
+p {
+    margin: 0 0 1rem;
+}
+
+a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+a:hover,
+a:focus {
+    color: var(--secondary-color);
+    outline: none;
+}
+
+/* ==========================================================================
+   Layout
+   ========================================================================== */
+
+.site {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.site > .site-content {
+    flex: 1 0 auto;
+    padding: 0 0 2rem 0;
+}
+
+.container {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 0 var(--spacing);
+    width: 100%;
+}
+
+/* ==========================================================================
+   Header
+   ========================================================================== */
+
+/* Header styles are now managed by /assets/css/header-layout.css
+   The modular header system provides full customization via WordPress Customizer. */
+
+/* ==========================================================================
+   Footer
+   ========================================================================== */
+
+.site-footer {
+    flex-shrink: 0;
+    background-color: var(--text-color);
+    color: var(--bg-light);
+    padding: 2rem 0 1rem;
+    margin-top: auto;
+}
+
+.site-footer a {
+    color: var(--bg-light);
+}
+
+.site-footer a:hover {
+    color: var(--bg-color);
+}
+
+.site-info {
+    text-align: center;
+    padding: 1rem 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin-top: 1rem;
+    font-size: 0.875rem;
+}
+
+/* ==========================================================================
+   Footer Widgets - Horizontal 4-Column Layout
+   ========================================================================== */
+
+.footer-widgets {
+    margin-bottom: 2rem;
+    padding: 0 1rem;
+}
+
+.footer-widget-area {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 3rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 0;
+}
+
+/* Widget Titles */
+.footer-widget .widget-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--footer-text-color, #f9fafb);
+    text-transform: none;
+}
+
+/* Widget Lists */
+.footer-widget ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.footer-widget li {
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+}
+
+.footer-widget a {
+    color: var(--footer-link-color, #f9fafb);
+    text-decoration: none;
+    font-size: 0.938rem;
+    transition: color 0.2s ease;
+    opacity: 0.9;
+}
+
+.footer-widget a:hover {
+    color: var(--footer-link-hover-color, #ffffff);
+    opacity: 1;
+}
+
+/* Remove borders from navigation menus in footer */
+.footer-widget .menu {
+    border: none;
+}
+
+.footer-widget .menu-item {
+    border: none;
+    padding: 0;
+}
+
+/* Responsive Breakpoints */
+
+/* Tablet: 2 columns */
+@media (max-width: 768px) and (min-width: 481px) {
+    .footer-widget-area {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 2rem;
+    }
+}
+
+/* Mobile: 1 column (stacked) */
+@media (max-width: 480px) {
+    .footer-widget-area {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    
+    .footer-widgets {
+        padding: 0 0.5rem;
+    }
+}
+
+/* ==========================================================================
+   Content Area
+   ========================================================================== */
+
+.entry-content {
+    margin-top: 1.5rem;
+}
+
+.entry-header {
+    margin-bottom: 2rem;
+}
+
+.entry-title {
+    margin-bottom: 0.5rem;
+}
+
+.entry-meta {
+    font-size: 0.875rem;
+    color: var(--text-light);
+}
+
+.post-thumbnail {
+    margin-bottom: 2rem;
+}
+
+.post-thumbnail img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: var(--border-radius);
+}
+
+/* ==========================================================================
+   Single Post Layout with Sidebar
+   ========================================================================== */
+
+/* Two-column grid layout: content + sidebar */
+.single:not(.single-vh360_gallery):not(.single-vh360_bulletin) .site-content .container {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 3rem;
+    align-items: start;
+}
+
+/* Content area takes available space */
+.single .site-content .content-area {
+    max-width: 100%;
+    min-width: 0; /* Prevents grid blowout */
+}
+
+/* Constrain text content for optimal readability (65-75 characters per line) */
+.single .entry-content p,
+.single .entry-content h1,
+.single .entry-content h2,
+.single .entry-content h3,
+.single .entry-content h4,
+.single .entry-content h5,
+.single .entry-content h6,
+.single .entry-content ul,
+.single .entry-content ol,
+.single .entry-content blockquote,
+.single .entry-content li {
+    max-width: 720px;
+}
+
+/* Keep media elements full content width */
+.single .entry-content img,
+.single .entry-content figure,
+.single .entry-content iframe,
+.single .entry-content video,
+.single .entry-content .wp-block-image,
+.single .entry-content .wp-block-video,
+.single .entry-content .wp-block-embed,
+.single .entry-content .wp-block-gallery {
+    max-width: 100%;
+}
+
+/* Sidebar styling */
+.widget-area {
+    position: sticky;
+    top: 2rem;
+    align-self: start;
+    max-height: calc(100vh - 4rem);
+    overflow-y: auto;
+}
+
+/* Sidebar scrollbar styling */
+.widget-area::-webkit-scrollbar {
+    width: 6px;
+}
+
+.widget-area::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.widget-area::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 3px;
+}
+
+.widget-area::-webkit-scrollbar-thumb:hover {
+    background: var(--text-light);
+}
+
+/* If no sidebar is active, center the content */
+.single .site-content .container:not(:has(.widget-area)) .content-area {
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+    grid-column: 1 / -1;
+}
+
+/* Responsive: Stack sidebar below content on tablets */
+@media (max-width: 968px) {
+    .single .site-content .container {
+        grid-template-columns: 1fr !important;
+        gap: 2rem;
+    }
+    
+    .single .site-content .content-area {
+        max-width: 720px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
+    .widget-area {
+        position: static;
+        max-height: none;
+        max-width: 720px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+}
+
+/* Mobile: Full width with padding */
+@media (max-width: 768px) {
+    .single .content-area,
+    .widget-area {
+        max-width: 100%;
+    }
+    
+    .single .entry-content p,
+    .single .entry-content h1,
+    .single .entry-content h2,
+    .single .entry-content h3,
+    .single .entry-content h4,
+    .single .entry-content h5,
+    .single .entry-content h6,
+    .single .entry-content ul,
+    .single .entry-content ol,
+    .single .entry-content blockquote {
+        max-width: 100%;
+    }
+}
+
+/* ==========================================================================
+   Video Grid Layout
+   ========================================================================== */
+
+.video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.video-item {
+    background: var(--bg-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    transition: var(--transition);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.video-item:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.video-thumbnail {
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 aspect ratio */
+    overflow: hidden;
+    background: var(--bg-light);
+}
+
+.video-thumbnail img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ==========================================================================
+   Comments
+   ========================================================================== */
+
+.comments-area {
+    margin-top: 3rem;
+    padding-top: 3rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.comment-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.comment {
+    margin-bottom: 2rem;
+}
+
+.comment-respond {
+    margin-top: 2rem;
+}
+
+/* ==========================================================================
+   Widgets
+   ========================================================================== */
+
+.widget {
+    margin-bottom: 2rem;
+}
+
+.widget-title {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.widget ul {
+    list-style: none;
+    padding: 0;
+}
+
+.widget li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* ==========================================================================
+   Pagination
+   ========================================================================== */
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 3rem 0;
+}
+
+/* Target only the actual clickable elements (a/span), not the UL wrapper */
+a.page-numbers,
+span.page-numbers {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    color: var(--text-color);
+    text-decoration: none;
+}
+
+a.page-numbers:hover,
+span.page-numbers.current {
+    background: var(--primary-color);
+    color: var(--bg-color);
+    border-color: var(--primary-color);
+}
+
+/* ==========================================================================
+   Forms
+   ========================================================================== */
+
+input[type="text"],
+input[type="email"],
+input[type="url"],
+input[type="password"],
+input[type="search"],
+input[type="number"],
+input[type="tel"],
+textarea,
+select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-family: inherit;
+    font-size: 1rem;
+}
+
+input[type="submit"],
+button[type="submit"],
+.button {
+    padding: 0.75rem 1.5rem;
+    background: var(--button-bg-color, var(--primary-color));
+    color: var(--button-text-color, #ffffff);
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+input[type="submit"]:hover,
+button[type="submit"]:hover,
+.button:hover {
+    background: var(--button-hover-bg-color, var(--secondary-color));
+    color: var(--button-hover-text-color, #ffffff);
+}
+
+/* ==========================================================================
+   Elementor Compatibility
+   ========================================================================== */
+
+/* Ensure Elementor sections are full width */
+.elementor-section.elementor-section-boxed > .elementor-container {
+    max-width: var(--max-width);
+}
+
+/* Canvas template support */
+.elementor-template-canvas {
+    margin: 0;
+}
+
+.elementor-template-canvas .site-header,
+.elementor-template-canvas .site-footer {
+    display: none;
+}
+
+/* ==========================================================================
+   Utility Classes
+   ========================================================================== */
+
+.screen-reader-text {
+    border: 0;
+    clip: rect(1px, 1px, 1px, 1px);
+    clip-path: inset(50%);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    width: 1px;
+    word-wrap: normal !important;
+}
+
+.alignleft {
+    float: left;
+    margin-right: 1.5rem;
+}
+
+.alignright {
+    float: right;
+    margin-left: 1.5rem;
+}
+
+.aligncenter {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.alignwide {
+    max-width: 1200px;
+}
+
+.alignfull {
+    max-width: 100%;
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+}
+
+/* ==========================================================================
+   Utility Classes
+   ========================================================================== */
+
+/* Status Colors */
+.text-success { color: var(--success-color); }
+.text-error { color: var(--error-color); }
+.text-warning { color: var(--warning-color); }
+.text-info { color: var(--info-color); }
+
+.bg-success { background-color: var(--success-color); }
+.bg-error { background-color: var(--error-color); }
+.bg-warning { background-color: var(--warning-color); }
+.bg-info { background-color: var(--info-color); }
+
+/* Spacing Utilities */
+.mt-1 { margin-top: 0.5rem; }
+.mt-2 { margin-top: 1rem; }
+.mt-3 { margin-top: 1.5rem; }
+.mt-4 { margin-top: 2rem; }
+
+.mb-1 { margin-bottom: 0.5rem; }
+.mb-2 { margin-bottom: 1rem; }
+.mb-3 { margin-bottom: 1.5rem; }
+.mb-4 { margin-bottom: 2rem; }
+
+.p-1 { padding: 0.5rem; }
+.p-2 { padding: 1rem; }
+.p-3 { padding: 1.5rem; }
+.p-4 { padding: 2rem; }
+
+/* Display Utilities */
+.d-none { display: none; }
+.d-block { display: block; }
+.d-flex { display: flex; }
+.d-grid { display: grid; }
+
+/* Text Utilities */
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+.font-bold { font-weight: 700; }
+.font-semibold { font-weight: 600; }
+.font-normal { font-weight: 400; }
+
+.text-sm { font-size: 0.875rem; }
+.text-base { font-size: 1rem; }
+.text-lg { font-size: 1.125rem; }
+.text-xl { font-size: 1.25rem; }
+
+/* Loading Spinner */
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--border-color);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Button Base Styles */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+    text-decoration: none;
+    border: none;
+}
+
+.btn-primary {
+    background: var(--button-bg-color, var(--primary-color));
+    color: var(--button-text-color, #ffffff);
+}
+
+.btn-primary:hover {
+    background: var(--button-hover-bg-color, var(--secondary-color));
+    color: var(--button-hover-text-color, #ffffff);
+}
+
+.btn-secondary {
+    background: var(--bg-light);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+    background: var(--bg-color);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+/* Card Component */
+.card {
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+}
+
+.card-header {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.card-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.card-body {
+    line-height: 1.6;
+}
+
+/* Badge Component */
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 9999px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-primary {
+    background: var(--primary-color);
+    color: #ffffff;
+}
+
+.badge-success {
+    background: var(--success-color);
+    color: #ffffff;
+}
+
+.badge-error {
+    background: var(--error-color);
+    color: #ffffff;
+}
+
+.badge-warning {
+    background: var(--warning-color);
+    color: #ffffff;
+}
+
+/* Alert Component */
+.alert {
+    padding: 1rem 1.5rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
+}
+
+.alert-success {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.alert-error {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.alert-warning {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+
+.alert-info {
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    :root {
+        --profile-cover-height: 200px;
+        --profile-avatar-size: 120px;
+        --dashboard-sidebar-width: 100%;
+        --gallery-masonry-columns: 2;
+    }
+    
+    h1 { font-size: 2rem; }
+    h2 { font-size: 1.75rem; }
+    h3 { font-size: 1.5rem; }
+    
+    .video-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ==========================================================================
+   Print Styles
+   ========================================================================== */
+
+@media print {
+    .site-header,
+    .site-footer,
+    .main-navigation,
+    .comments-area,
+    .widget {
+        display: none;
+    }
+}
+
+
+/* Community post/comment actions: three-dot (kebab) menus */
+.vh360-community-actions,
+.vh360-comment-actions-menu-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    margin-left: auto;
+}
+
+.vh360-kebab-toggle {
+    border: none;
+    background: transparent;
+    padding: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 2px;
+}
+
+.vh360-kebab-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background-color: currentColor;
+    display: block;
+}
+
+.vh360-actions-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    min-width: 120px;
+    padding: 4px 0;
+    margin-top: 6px;
+    border-radius: 6px;
+    background-color: #111;
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    z-index: 20;
+    display: none;
+}
+
+.vh360-actions-menu.vh360-actions-menu--open {
+    display: block;
+}
+
+.vh360-actions-menu-item {
+    width: 100%;
+    text-align: left;
+    padding: 6px 12px;
+    border: none;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.vh360-actions-menu-item:hover {
+    background-color: rgba(255,255,255,0.08);
+}
+
+
+/* Activity link previews for posts & comments */
+.vh360-link-previews {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.vh360-link-preview-card {
+    color: var(--text-color);
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    display: flex;
+    align-items: stretch;
+    text-decoration: none;
+    max-width: 520px;
+}
+
+.vh360-link-preview-card--generic {
+    padding: 8px 12px;
+}
+
+.vh360-link-preview-thumbnail {
+    flex: 0 0 120px;
+    max-width: 120px;
+    overflow: hidden;
+}
+
+.vh360-link-preview-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.vh360-link-preview-meta {
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.vh360-link-preview-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-color);
+    line-height: 1.3;
+}
+
+.vh360-link-preview-url {
+    font-size: 12px;
+    opacity: 0.8;
+    word-break: break-all;
+}
+
+.vh360-link-preview-card a {
+    color: inherit;
+}
+
+/* ============================================================================
+   Live Room Community Post Styles
+   ============================================================================ */
+
+/* LIVE badge container for community posts */
+.vh360-live-badge-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding: 12px;
+    background: linear-gradient(135deg, #ff0844 0%, #ff4444 100%);
+    border-radius: 8px;
+}
+
+.vh360-live-badge {
+    display: inline-flex;
+    align-items: center;
+    font-weight: 700;
+    font-size: 14px;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.vh360-join-live-button {
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #ff0844;
+    font-weight: 600;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.vh360-join-live-button:hover {
+    background: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    color: #ff0844;
+}
+
+.vh360-live-ended-container {
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    background: #f5f5f5;
+    border-radius: 6px;
+}
+
+.vh360-ended-badge {
+    font-size: 13px;
+    color: #666;
+    font-weight: 500;
+}
+
+/* ============================================================================
+   Profile Header Live Indicator - Compact Version
+   Used in: template-parts/profile/header.php
+   Purpose: Shows when user has active Live Room
+   ============================================================================ */
+
+.vh360-profile-live-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;                    /* Reduced from 10px */
+    margin-top: 8px;             /* Reduced from 12px */
+    padding: 6px 10px;           /* Reduced from 10px 16px */
+    background: linear-gradient(135deg, #ff0844 0%, #ff4444 100%);
+    border-radius: 6px;          /* Reduced from 8px */
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.vh360-profile-live-badge {
+    font-weight: 700;
+    font-size: 11px;             /* Reduced from 13px */
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;       /* Reduced from 0.5px */
+}
+
+.vh360-profile-join-button {
+    padding: 4px 10px;           /* Reduced from 6px 14px */
+    background: rgba(255, 255, 255, 0.95);
+    color: #ff0844;
+    font-weight: 600;
+    font-size: 11px;             /* Reduced from 13px */
+    border-radius: 4px;          /* Reduced from 5px */
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.vh360-profile-join-button:hover {
+    background: #ffffff;
+    transform: scale(1.05);
+    color: #ff0844;
+}
+
+@keyframes pulse-glow {
+    0%, 100% { 
+        box-shadow: 0 0 8px rgba(255, 8, 68, 0.4);   /* Reduced glow intensity */
+    }
+    50% { 
+        box-shadow: 0 0 12px rgba(255, 8, 68, 0.6);  /* Reduced glow intensity */
+    }
+}
+
+/* ============================================
+   Authentication Pages
+   ============================================ */
+
+/**
+ * Hide header on auth pages when setting is enabled
+ * This is a safety measure - the header shouldn't render at all due to
+ * early return in header-layout.php, but this CSS ensures no visual
+ * artifacts appear if something bypasses the PHP logic.
+ * 
+ * Note: !important is justified here as this is an explicit user-controlled
+ * override for specific auth pages and acts as a defensive safety net.
+ */
+body.vh360-auth-hide-header #masthead,
+body.vh360-auth-hide-header .site-header {
+    display: none !important;
+}
+
+/**
+ * Hide footer on auth pages when setting is enabled
+ * This is a safety measure - the footer shouldn't render at all due to
+ * early return in footer.php, but this CSS ensures no visual
+ * artifacts appear if something bypasses the PHP logic.
+ */
+body.vh360-auth-hide-footer #colophon,
+body.vh360-auth-hide-footer .site-footer {
+    display: none !important;
+}
+
+/**
+ * Remove top padding/margin that might leave empty space
+ * where header would normally be
+ */
+body.vh360-auth-hide-header .site-content {
+    padding-top: 0;
+    margin-top: 0;
+}
+
+/**
+ * Ensure auth page content starts at the top of viewport
+ */
+body.vh360-auth-hide-header {
+    padding-top: 0;
+}
+
+/**
+ * Remove bottom padding from site content when footer is hidden
+ */
+body.vh360-auth-hide-footer .site-content {
+    padding-bottom: 0;
+}
+
+/**
+ * Adjust page height when both header and footer are hidden on auth pages
+ * This prevents white space at the bottom of the page
+ */
+body.is-auth-page.vh360-auth-hide-header.vh360-auth-hide-footer .site {
+    min-height: auto;
+}
+
+/**
+ * Adjust auth page container height when header and footer are hidden
+ * Makes it fill the full viewport for a cleaner appearance
+ */
+body.is-auth-page.vh360-auth-hide-header.vh360-auth-hide-footer .vh360-auth-page {
+    min-height: 100vh;
+}
