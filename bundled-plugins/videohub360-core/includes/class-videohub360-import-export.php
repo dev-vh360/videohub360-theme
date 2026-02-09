@@ -1,0 +1,743 @@
+<?php
+/**
+ * VideoHub360 Import/Export Class
+ * 
+ * Handles video import and export functionality for transferring videos between WordPress sites
+ * 
+ * @since 1.0.0
+ */
+
+if (!defined('ABSPATH')) exit;
+
+class VideoHub360_Import_Export {
+    
+    /**
+     * Maximum file size for imports (in bytes)
+     * Default: 10MB
+     */
+    const MAX_IMPORT_FILE_SIZE = 10485760; // 10 * 1024 * 1024
+    
+    /**
+     * Transient expiration time for bulk exports (in seconds)
+     * Default: 5 minutes
+     */
+    const EXPORT_TRANSIENT_EXPIRATION = 300;
+    
+    /**
+     * Constructor
+     */
+    public function __construct() {
+        $this->init_hooks();
+    }
+    
+    /**
+     * Initialize hooks
+     */
+    private function init_hooks() {
+        // Allow JSON file uploads for import
+        add_filter('upload_mimes', array($this, 'allow_json_upload'));
+        
+        // AJAX handlers for export
+        add_action('wp_ajax_vh360_export_videos', array($this, 'ajax_export_videos'));
+        add_action('wp_ajax_vh360_export_all_videos', array($this, 'ajax_export_all_videos'));
+        
+        // AJAX handlers for import
+        add_action('wp_ajax_vh360_import_videos', array($this, 'ajax_import_videos'));
+        
+        // Bulk action handlers
+        add_filter('bulk_actions-edit-videohub360', array($this, 'add_bulk_export_action'));
+        add_filter('handle_bulk_actions-edit-videohub360', array($this, 'handle_bulk_export'), 10, 3);
+        add_action('admin_notices', array($this, 'bulk_export_admin_notice'));
+    }
+    
+    /**
+     * Allow JSON file uploads
+     * 
+     * @param array $mimes Existing MIME types
+     * @return array Modified MIME types
+     */
+    public function allow_json_upload($mimes) {
+        // Only allow for users with edit_posts capability
+        if (current_user_can('edit_posts')) {
+            $mimes['json'] = 'application/json';
+        }
+        return $mimes;
+    }
+    
+    /**
+     * Export a single video to JSON format
+     * 
+     * @param int $post_id Video post ID
+     * @return array|WP_Error Video data array or error
+     */
+    public function export_video($post_id) {
+        // Verify post exists and is a videohub360 post
+        $post = get_post($post_id);
+        if (!$post || $post->post_type !== 'videohub360') {
+            return new WP_Error('invalid_post', __('Invalid video post ID', 'videohub360'));
+        }
+        
+        // Get post data
+        $post_data = array(
+            'title' => $post->post_title,
+            'content' => $post->post_content,
+            'excerpt' => $post->post_excerpt,
+            'status' => $post->post_status,
+            'post_date' => $post->post_date,
+            'post_date_gmt' => $post->post_date_gmt,
+            'post_modified' => $post->post_modified,
+            'post_modified_gmt' => $post->post_modified_gmt,
+            'slug' => $post->post_name,
+        );
+        
+        // Get all meta data
+        $meta_data = array(
+            // Video URLs
+            'video_url' => get_post_meta($post_id, 'video_url', true),
+            'ad_video_url' => get_post_meta($post_id, 'ad_video_url', true),
+            'midroll_ad_video_url' => get_post_meta($post_id, 'midroll_ad_video_url', true),
+            'midroll_ad_timing' => get_post_meta($post_id, 'midroll_ad_timing', true),
+            'postroll_ad_video_url' => get_post_meta($post_id, 'postroll_ad_video_url', true),
+            'postroll_ad_enabled' => get_post_meta($post_id, 'postroll_ad_enabled', true),
+            
+            // Custom HTML
+            'videohub360_custom_html' => get_post_meta($post_id, 'videohub360_custom_html', true),
+            
+            // View count
+            '_videohub360_post_views_count' => get_post_meta($post_id, '_videohub360_post_views_count', true),
+            
+            // Ad click-through URLs
+            '_vh360_ad_click_url' => get_post_meta($post_id, '_vh360_ad_click_url', true),
+            '_vh360_midroll_ad_click_url' => get_post_meta($post_id, '_vh360_midroll_ad_click_url', true),
+            '_vh360_postroll_ad_click_url' => get_post_meta($post_id, '_vh360_postroll_ad_click_url', true),
+            
+            // Livestream fields
+            '_vh360_is_live' => get_post_meta($post_id, '_vh360_is_live', true),
+            '_vh360_type' => get_post_meta($post_id, '_vh360_type', true),
+            '_vh360_embed_code' => get_post_meta($post_id, '_vh360_embed_code', true),
+            '_vh360_stream_url' => get_post_meta($post_id, '_vh360_stream_url', true),
+            '_vh360_api_url' => get_post_meta($post_id, '_vh360_api_url', true),
+            '_vh360_poster' => get_post_meta($post_id, '_vh360_poster', true),
+            '_vh360_viewer_count' => get_post_meta($post_id, '_vh360_viewer_count', true),
+            '_vh360_live_badge' => get_post_meta($post_id, '_vh360_live_badge', true),
+            '_vh360_badge_text' => get_post_meta($post_id, '_vh360_badge_text', true),
+            '_vh360_badge_color' => get_post_meta($post_id, '_vh360_badge_color', true),
+            '_vh360_offline_message' => get_post_meta($post_id, '_vh360_offline_message', true),
+            '_vh360_live_start_time' => get_post_meta($post_id, '_vh360_live_start_time', true),
+            '_vh360_stream_stopped' => get_post_meta($post_id, '_vh360_stream_stopped', true),
+            '_vh360_chat_enabled' => get_post_meta($post_id, '_vh360_chat_enabled', true),
+            '_vh360_chat_placement' => get_post_meta($post_id, '_vh360_chat_placement', true),
+            '_vh360_agora_channel_name' => get_post_meta($post_id, '_vh360_agora_channel_name', true),
+            '_vh360_agora_mode' => get_post_meta($post_id, '_vh360_agora_mode', true),
+            '_vh360_agora_everyone_is_host' => get_post_meta($post_id, '_vh360_agora_everyone_is_host', true),
+            '_vh360_host_passcode' => get_post_meta($post_id, '_vh360_host_passcode', true),
+            
+            // Video quality settings
+            '_vh360_video_quality' => get_post_meta($post_id, '_vh360_video_quality', true),
+            '_vh360_video_mirror' => get_post_meta($post_id, '_vh360_video_mirror', true),
+            '_vh360_override_quality_settings' => get_post_meta($post_id, '_vh360_override_quality_settings', true),
+            
+            // Sidebar configuration
+            '_vh360_sidebar_config' => get_post_meta($post_id, '_vh360_sidebar_config', true),
+        );
+        
+        // Get taxonomies
+        $taxonomies = array(
+            'videohub360_category' => wp_get_post_terms($post_id, 'videohub360_category', array('fields' => 'all')),
+            'videohub360_series' => wp_get_post_terms($post_id, 'videohub360_series', array('fields' => 'all')),
+            'videohub360_location' => wp_get_post_terms($post_id, 'videohub360_location', array('fields' => 'all')),
+            'videohub360_tag' => wp_get_post_terms($post_id, 'videohub360_tag', array('fields' => 'all')),
+        );
+        
+        // Get featured image URL
+        $featured_image_url = '';
+        if (has_post_thumbnail($post_id)) {
+            $featured_image_url = get_the_post_thumbnail_url($post_id, 'full');
+        }
+        
+        // Build video data array
+        $video_data = array(
+            'post_data' => $post_data,
+            'meta_data' => $meta_data,
+            'taxonomies' => $taxonomies,
+            'featured_image_url' => $featured_image_url,
+        );
+        
+        return $video_data;
+    }
+    
+    /**
+     * Export multiple videos to JSON format
+     * 
+     * @param array $post_ids Array of video post IDs
+     * @return array Array of video data
+     */
+    public function export_videos($post_ids) {
+        $videos = array();
+        
+        foreach ($post_ids as $post_id) {
+            $video_data = $this->export_video($post_id);
+            if (!is_wp_error($video_data)) {
+                $videos[] = $video_data;
+            }
+        }
+        
+        return $videos;
+    }
+    
+    /**
+     * Generate properly formatted JSON export
+     * 
+     * @param array $videos_data Array of video data
+     * @return string JSON string
+     */
+    public function generate_json_export($videos_data) {
+        $current_user = wp_get_current_user();
+        
+        $export_data = array(
+            'videohub360_export' => array(
+                'version' => '1.0.0',
+                'export_date' => current_time('mysql'),
+                'exported_by' => $current_user->user_login,
+                'videos' => $videos_data,
+            )
+        );
+        
+        return wp_json_encode($export_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    }
+    
+    /**
+     * Validate import data structure
+     * 
+     * @param array $json_data Decoded JSON data
+     * @return bool|WP_Error True if valid, WP_Error otherwise
+     */
+    public function validate_import_data($json_data) {
+        // Check if data is an array
+        if (!is_array($json_data)) {
+            return new WP_Error('invalid_format', __('Invalid JSON format', 'videohub360'));
+        }
+        
+        // Check for main structure
+        if (!isset($json_data['videohub360_export'])) {
+            return new WP_Error('invalid_structure', __('Missing videohub360_export key', 'videohub360'));
+        }
+        
+        $export_data = $json_data['videohub360_export'];
+        
+        // Check required fields
+        if (!isset($export_data['version']) || !isset($export_data['videos'])) {
+            return new WP_Error('missing_fields', __('Missing required fields in export data', 'videohub360'));
+        }
+        
+        // Check if videos is an array
+        if (!is_array($export_data['videos'])) {
+            return new WP_Error('invalid_videos', __('Videos data must be an array', 'videohub360'));
+        }
+        
+        // Validate each video has required structure
+        foreach ($export_data['videos'] as $index => $video) {
+            if (!isset($video['post_data']) || !is_array($video['post_data'])) {
+                return new WP_Error('invalid_video_data', sprintf(__('Invalid post data for video at index %d', 'videohub360'), $index));
+            }
+            
+            if (!isset($video['post_data']['title'])) {
+                return new WP_Error('missing_title', sprintf(__('Missing title for video at index %d', 'videohub360'), $index));
+            }
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Handle duplicate video based on options
+     * 
+     * @param array $post_data Post data being imported (passed by reference)
+     * @param string $duplicate_action Action to take: 'skip', 'update', 'create_new'
+     * @return int|bool|WP_Error Post ID, false if no duplicate, or WP_Error
+     */
+    public function handle_duplicate(&$post_data, $duplicate_action = 'skip') {
+        // Check for existing post by slug
+        $existing_post = get_page_by_path($post_data['slug'], OBJECT, 'videohub360');
+        
+        // If no duplicate, return false to indicate new post should be created
+        if (!$existing_post) {
+            // Also check by title as fallback
+            $args = array(
+                'post_type' => 'videohub360',
+                'title' => $post_data['title'],
+                'posts_per_page' => 1,
+                'post_status' => 'any',
+            );
+            $posts = get_posts($args);
+            
+            if (empty($posts)) {
+                return false; // No duplicate found
+            }
+            
+            $existing_post = $posts[0];
+        }
+        
+        // Handle based on action
+        switch ($duplicate_action) {
+            case 'skip':
+                return new WP_Error('duplicate_skipped', sprintf(__('Video "%s" already exists and was skipped', 'videohub360'), $post_data['title']));
+                
+            case 'update':
+                // Return existing post ID to update it
+                return $existing_post->ID;
+                
+            case 'create_new':
+                // Modify slug to make it unique
+                $base_slug = $post_data['slug'];
+                $counter = 1;
+                do {
+                    $new_slug = $base_slug . '-' . $counter;
+                    $check = get_page_by_path($new_slug, OBJECT, 'videohub360');
+                    $counter++;
+                } while ($check);
+                
+                $post_data['slug'] = $new_slug;
+                return false; // Proceed with creation with modified slug
+                
+            default:
+                return new WP_Error('invalid_action', __('Invalid duplicate action', 'videohub360'));
+        }
+    }
+    
+    /**
+     * Import videos from JSON data
+     * 
+     * @param array $json_data Decoded JSON data
+     * @param array $options Import options (duplicate_action, etc.)
+     * @return array Success/error report
+     */
+    public function import_videos($json_data, $options = array()) {
+        // Validate data first
+        $validation = $this->validate_import_data($json_data);
+        if (is_wp_error($validation)) {
+            return array(
+                'success' => false,
+                'error' => $validation->get_error_message(),
+            );
+        }
+        
+        // Default options
+        $defaults = array(
+            'duplicate_action' => 'skip', // skip, update, create_new
+        );
+        $options = wp_parse_args($options, $defaults);
+        
+        $videos = $json_data['videohub360_export']['videos'];
+        $results = array(
+            'success' => true,
+            'imported' => 0,
+            'updated' => 0,
+            'skipped' => 0,
+            'errors' => array(),
+            'warnings' => array(),
+        );
+        
+        foreach ($videos as $index => $video_data) {
+            try {
+                $result = $this->import_single_video($video_data, $options);
+                
+                if (is_wp_error($result)) {
+                    if ($result->get_error_code() === 'duplicate_skipped') {
+                        $results['skipped']++;
+                        $results['warnings'][] = $result->get_error_message();
+                    } else {
+                        $results['errors'][] = sprintf(__('Video %d: %s', 'videohub360'), $index + 1, $result->get_error_message());
+                    }
+                } elseif (isset($result['updated']) && $result['updated']) {
+                    $results['updated']++;
+                } else {
+                    $results['imported']++;
+                }
+            } catch (Exception $e) {
+                $results['errors'][] = sprintf(__('Video %d: %s', 'videohub360'), $index + 1, $e->getMessage());
+            }
+        }
+        
+        return $results;
+    }
+    
+    /**
+     * Import a single video
+     * 
+     * @param array $video_data Video data to import
+     * @param array $options Import options
+     * @return int|array|WP_Error Post ID, array with 'updated' flag, or WP_Error
+     */
+    private function import_single_video($video_data, $options) {
+        $post_data = $video_data['post_data'];
+        
+        // Check for duplicates
+        $duplicate_check = $this->handle_duplicate($post_data, $options['duplicate_action']);
+        
+        if (is_wp_error($duplicate_check)) {
+            return $duplicate_check; // Return error (likely skipped)
+        }
+        
+        $updating = false;
+        if ($duplicate_check !== false) {
+            // We're updating an existing post
+            $post_id = $duplicate_check;
+            $updating = true;
+            
+            $post_args = array(
+                'ID' => $post_id,
+                'post_title' => sanitize_text_field($post_data['title']),
+                'post_content' => wp_kses_post($post_data['content']),
+                'post_excerpt' => sanitize_textarea_field($post_data['excerpt']),
+                'post_status' => sanitize_key($post_data['status']),
+            );
+            
+            $result = wp_update_post($post_args, true);
+        } else {
+            // Create new post
+            $post_args = array(
+                'post_type' => 'videohub360',
+                'post_title' => sanitize_text_field($post_data['title']),
+                'post_content' => wp_kses_post($post_data['content']),
+                'post_excerpt' => sanitize_textarea_field($post_data['excerpt']),
+                'post_status' => sanitize_key($post_data['status']),
+                'post_name' => sanitize_title($post_data['slug']),
+                'post_date' => sanitize_text_field($post_data['post_date']),
+                'post_date_gmt' => sanitize_text_field($post_data['post_date_gmt']),
+            );
+            
+            $result = wp_insert_post($post_args, true);
+            $post_id = $result;
+        }
+        
+        if (is_wp_error($result)) {
+            return $result;
+        }
+        
+        // Import meta data
+        if (isset($video_data['meta_data']) && is_array($video_data['meta_data'])) {
+            foreach ($video_data['meta_data'] as $meta_key => $meta_value) {
+                // Sanitize meta values based on type
+                $sanitized_value = $this->sanitize_meta_value($meta_key, $meta_value);
+                update_post_meta($post_id, $meta_key, $sanitized_value);
+            }
+        }
+        
+        // Import taxonomies
+        if (isset($video_data['taxonomies']) && is_array($video_data['taxonomies'])) {
+            foreach ($video_data['taxonomies'] as $taxonomy => $terms) {
+                if (is_array($terms) && !empty($terms)) {
+                    $term_ids = array();
+                    
+                    foreach ($terms as $term_data) {
+                        // Check if term exists
+                        $term = get_term_by('slug', $term_data->slug, $taxonomy);
+                        
+                        if (!$term) {
+                            // Create term if it doesn't exist
+                            $new_term = wp_insert_term(
+                                $term_data->name,
+                                $taxonomy,
+                                array(
+                                    'slug' => $term_data->slug,
+                                    'description' => isset($term_data->description) ? $term_data->description : '',
+                                )
+                            );
+                            
+                            if (!is_wp_error($new_term)) {
+                                $term_ids[] = $new_term['term_id'];
+                            }
+                        } else {
+                            $term_ids[] = $term->term_id;
+                        }
+                    }
+                    
+                    // Assign terms to post
+                    if (!empty($term_ids)) {
+                        wp_set_object_terms($post_id, $term_ids, $taxonomy);
+                    }
+                }
+            }
+        }
+        
+        // Note: Featured image URL is stored but not downloaded/imported
+        // User would need to manually set featured images or use a plugin
+        
+        if ($updating) {
+            return array('updated' => true, 'post_id' => $post_id);
+        }
+        
+        return $post_id;
+    }
+    
+    /**
+     * Sanitize meta value based on key
+     * 
+     * @param string $meta_key Meta key
+     * @param mixed $meta_value Meta value
+     * @return mixed Sanitized value
+     */
+    private function sanitize_meta_value($meta_key, $meta_value) {
+        // URL fields
+        $url_fields = array(
+            'video_url',
+            'ad_video_url',
+            'midroll_ad_video_url',
+            'postroll_ad_video_url',
+            '_vh360_ad_click_url',
+            '_vh360_midroll_ad_click_url',
+            '_vh360_postroll_ad_click_url',
+            '_vh360_stream_url',
+            '_vh360_api_url',
+            '_vh360_poster',
+        );
+        
+        if (in_array($meta_key, $url_fields)) {
+            return esc_url_raw($meta_value);
+        }
+        
+        // Numeric fields
+        if ($meta_key === '_videohub360_post_views_count') {
+            return absint($meta_value);
+        }
+        
+        // HTML/text areas
+        if ($meta_key === 'videohub360_custom_html' || $meta_key === '_vh360_embed_code') {
+            return wp_kses_post($meta_value);
+        }
+        
+        // Array/JSON fields
+        if ($meta_key === '_vh360_sidebar_config') {
+            if (is_array($meta_value)) {
+                return $meta_value;
+            }
+            return maybe_unserialize($meta_value);
+        }
+        
+        // Default: sanitize as text
+        return sanitize_text_field($meta_value);
+    }
+    
+    /**
+     * AJAX handler for exporting videos
+     */
+    public function ajax_export_videos() {
+        // Verify nonce
+        check_ajax_referer('vh360_import_export_nonce', 'nonce');
+        
+        // Check capabilities
+        if (!current_user_can('edit_posts')) {
+            wp_send_json_error(array('message' => __('Insufficient permissions', 'videohub360')));
+        }
+        
+        // Get post IDs
+        $post_ids = isset($_POST['post_ids']) ? array_map('intval', $_POST['post_ids']) : array();
+        
+        if (empty($post_ids)) {
+            wp_send_json_error(array('message' => __('No videos selected', 'videohub360')));
+        }
+        
+        // Export videos
+        $videos_data = $this->export_videos($post_ids);
+        $json = $this->generate_json_export($videos_data);
+        
+        wp_send_json_success(array(
+            'json' => $json,
+            'count' => count($videos_data),
+        ));
+    }
+    
+    /**
+     * AJAX handler for exporting all videos
+     */
+    public function ajax_export_all_videos() {
+        // Verify nonce
+        check_ajax_referer('vh360_import_export_nonce', 'nonce');
+        
+        // Check capabilities (consistent with single video export)
+        if (!current_user_can('edit_posts')) {
+            wp_send_json_error(array('message' => __('Insufficient permissions', 'videohub360')));
+        }
+        
+        // Get all published videos
+        $args = array(
+            'post_type' => 'videohub360',
+            'post_status' => 'any',
+            'posts_per_page' => -1,
+            'fields' => 'ids',
+        );
+        
+        $post_ids = get_posts($args);
+        
+        if (empty($post_ids)) {
+            wp_send_json_error(array('message' => __('No videos found to export', 'videohub360')));
+        }
+        
+        // Export videos
+        $videos_data = $this->export_videos($post_ids);
+        $json = $this->generate_json_export($videos_data);
+        
+        wp_send_json_success(array(
+            'json' => $json,
+            'count' => count($videos_data),
+        ));
+    }
+    
+    /**
+     * AJAX handler for importing videos
+     */
+    public function ajax_import_videos() {
+        // Verify nonce
+        check_ajax_referer('vh360_import_export_nonce', 'nonce');
+        
+        // Check capabilities
+        if (!current_user_can('edit_posts')) {
+            wp_send_json_error(array('message' => __('Insufficient permissions', 'videohub360')));
+        }
+        
+        // Check if file was uploaded
+        if (!isset($_FILES['import_file']) || $_FILES['import_file']['error'] !== UPLOAD_ERR_OK) {
+            wp_send_json_error(array('message' => __('No file uploaded or upload error', 'videohub360')));
+        }
+        
+        // Validate file type - check both extension and MIME type
+        $filename = $_FILES['import_file']['name'];
+        $file_type = wp_check_filetype($filename, array('json' => 'application/json'));
+        
+        // Also check the extension directly as a fallback
+        $filename_parts = explode('.', $filename);
+        $extension = strtolower(end($filename_parts));
+        
+        if ($file_type['ext'] !== 'json' && $extension !== 'json') {
+            wp_send_json_error(array('message' => __('Invalid file type. Please upload a JSON file.', 'videohub360')));
+        }
+        
+        // Validate file size to prevent memory exhaustion
+        if ($_FILES['import_file']['size'] > self::MAX_IMPORT_FILE_SIZE) {
+            $max_size_mb = self::MAX_IMPORT_FILE_SIZE / (1024 * 1024);
+            wp_send_json_error(array('message' => sprintf(__('File is too large. Maximum size is %dMB.', 'videohub360'), $max_size_mb)));
+        }
+        
+        // Read file contents
+        $json_content = file_get_contents($_FILES['import_file']['tmp_name']);
+        $json_data = json_decode($json_content, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            wp_send_json_error(array('message' => __('Invalid JSON format', 'videohub360')));
+        }
+        
+        // Get import options
+        $options = array(
+            'duplicate_action' => isset($_POST['duplicate_action']) ? sanitize_key($_POST['duplicate_action']) : 'skip',
+        );
+        
+        // Import videos
+        $results = $this->import_videos($json_data, $options);
+        
+        if ($results['success']) {
+            wp_send_json_success($results);
+        } else {
+            wp_send_json_error($results);
+        }
+    }
+    
+    /**
+     * Add bulk export action to videos list
+     * 
+     * @param array $actions Existing bulk actions
+     * @return array Modified bulk actions
+     */
+    public function add_bulk_export_action($actions) {
+        $actions['vh360_export'] = __('Export Selected', 'videohub360');
+        return $actions;
+    }
+    
+    /**
+     * Handle bulk export action
+     * 
+     * @param string $redirect_to Redirect URL
+     * @param string $doaction Action being taken
+     * @param array $post_ids Selected post IDs
+     * @return string Modified redirect URL
+     */
+    public function handle_bulk_export($redirect_to, $doaction, $post_ids) {
+        if ($doaction !== 'vh360_export') {
+            return $redirect_to;
+        }
+        
+        // Check capabilities
+        if (!current_user_can('edit_posts')) {
+            return $redirect_to;
+        }
+        
+        // Export videos
+        $videos_data = $this->export_videos($post_ids);
+        $json = $this->generate_json_export($videos_data);
+        
+        // Store in transient for download
+        $transient_key = 'vh360_bulk_export_' . wp_get_current_user()->ID;
+        set_transient($transient_key, $json, self::EXPORT_TRANSIENT_EXPIRATION);
+        
+        // Add query arg to trigger download
+        $redirect_to = add_query_arg(
+            array(
+                'vh360_bulk_export' => 'success',
+                'vh360_export_count' => count($videos_data),
+                'vh360_export_key' => $transient_key,
+            ),
+            $redirect_to
+        );
+        
+        return $redirect_to;
+    }
+    
+    /**
+     * Display admin notice after bulk export
+     */
+    public function bulk_export_admin_notice() {
+        if (!isset($_GET['vh360_bulk_export']) || $_GET['vh360_bulk_export'] !== 'success') {
+            return;
+        }
+        
+        $count = isset($_GET['vh360_export_count']) ? intval($_GET['vh360_export_count']) : 0;
+        $transient_key = isset($_GET['vh360_export_key']) ? sanitize_key($_GET['vh360_export_key']) : '';
+        
+        if ($count > 0 && $transient_key) {
+            $json = get_transient($transient_key);
+            
+            if ($json) {
+                // Output download script
+                ?>
+                <div class="notice notice-success is-dismissible">
+                    <p>
+                        <?php 
+                        printf(
+                            _n('%d video exported successfully.', '%d videos exported successfully.', $count, 'videohub360'),
+                            $count
+                        );
+                        ?>
+                    </p>
+                </div>
+                <script>
+                    (function() {
+                        var json = <?php echo wp_json_encode($json, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+                        var blob = new Blob([json], {type: 'application/json'});
+                        var url = URL.createObjectURL(blob);
+                        var a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'videohub360-export-<?php echo esc_attr(date('Y-m-d-His')); ?>.json';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    })();
+                </script>
+                <?php
+                
+                // Delete transient
+                delete_transient($transient_key);
+            }
+        }
+    }
+}

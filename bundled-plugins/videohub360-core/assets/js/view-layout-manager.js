@@ -1,0 +1,673 @@
+/* VideoHub360 patched: debug flag + vh360 namespace (non-destructive) */
+if (typeof window !== 'undefined') {
+  window.vh360 = window.vh360 || {};
+  window.__VH360_DEBUG = window.__VH360_DEBUG || false;
+}
+
+/**
+ * VideoHub360 View Layout Manager
+ * 
+ * Modular view management system for Speaker View
+ * Extracted from frontend.js for better maintainability and reduced complexity
+ * 
+ * @since 2.0.1
+ */
+
+class ViewLayoutManager {
+    constructor(agoraMode = 'interactive', isAdmin = false) {
+        this.agoraMode = agoraMode; // 'interactive' or 'broadcast'
+        this.isAdmin = isAdmin;
+        this.currentView = 'speaker'; // Default view mode
+        this.participantCount = 0;
+        this.containerElement = null;
+        this.remoteContainer = null;
+        this.localContainer = null;
+        this.viewSelector = null;
+        this.isTransitioning = false; // Guard against race conditions during view transitions
+        this.transitionTimeout = null;
+        this.fullscreenBtn = null;
+        
+        // Initialize the layout system
+        this.init();
+        
+        // Add fullscreen event listeners
+        this.initializeFullscreenHandlers();
+    }
+    
+    init() {
+        this.loadUserPreference();
+        
+        // For broadcast mode, only create view selector (no multi-view containers)
+        // This prevents aspect ratio issues in broadcast mode
+        if (this.agoraMode === 'broadcast') {
+            this.createViewSelector();
+            // Skip setupContainers to avoid adding multi-view classes that break aspect ratio
+        } else {
+            // Interactive mode: full functionality
+            this.createViewSelector();
+            this.setupContainers();
+        }
+    }
+    
+    // Utility function to determine if video elements can be moved safely
+    shouldAllowVideoMovement() {
+        return !this.isTransitioning;
+    }
+    
+    // Debug logging utility
+    debugLog(message, ...args) {
+        if (window.__VH360_DEBUG) {
+            if (window.__VH360_DEBUG) console.log(`[VH360 Layout Manager] ${message}`, ...args);
+        }
+    }
+    
+    loadUserPreference() {
+        try {
+            const saved = localStorage.getItem('vh360-layout-view-preference');
+            // Migrate removed gallery and focus preferences to 'speaker' for backward compatibility
+            if (saved === 'gallery' || saved === 'large-gallery' || saved === 'focus') {
+                if (window.__VH360_DEBUG) console.log('Migrating legacy preference to speaker view');
+                this.currentView = 'speaker';
+                this.saveUserPreference(); // Update localStorage with new preference
+            } else if (saved && saved === 'speaker') {
+                this.currentView = saved;
+            }
+            // Add defensive cleanup - remove any old gallery classes from container
+            this.cleanupLegacyGalleryClasses();
+        } catch (e) {
+            if (window.__VH360_DEBUG) console.log('Could not load layout view preference:', e);
+        }
+    }
+    
+    saveUserPreference() {
+        try {
+            localStorage.setItem('vh360-layout-view-preference', this.currentView);
+        } catch (e) {
+            if (window.__VH360_DEBUG) console.log('Could not save layout view preference:', e);
+        }
+    }
+    
+    cleanupLegacyGalleryClasses() {
+        // Defensive cleanup to remove any old gallery classes from container
+        if (this.containerElement) {
+            this.containerElement.classList.remove('vh360-gallery-view', 'vh360-large-gallery-view');
+            
+            // Remove any gallery grid wrappers
+            const gridWrapper = this.containerElement.querySelector('.vh360-grid-wrapper');
+            if (gridWrapper) {
+                gridWrapper.remove();
+            }
+            
+            // Remove any pagination controls
+            const paginationControls = this.containerElement.querySelector('#vh360-pagination-controls');
+            if (paginationControls) {
+                paginationControls.remove();
+            }
+        }
+    }
+    
+    createViewSelector() {
+        // Check if selector already exists
+        if (document.getElementById('vh360-view-selector')) return;
+        
+        const controlsContainer = document.getElementById('vh360-agora-controls');
+        if (!controlsContainer) return;
+        
+        // Check if we're on mobile (768px or less)
+        const isMobile = window.innerWidth <= 768;
+        
+        if (isMobile) {
+            // Create mobile-friendly view buttons instead of dropdown
+            this.createMobileViewButtons(controlsContainer);
+        } else {
+            // Create desktop dropdown
+            this.createDesktopViewSelector(controlsContainer);
+        }
+        
+        // Fullscreen button is now created in PHP template - just bind events
+        this.bindFullscreenEvents();
+    }
+    
+    createMobileViewButtons(controlsContainer) {
+        // View selector removed - only speaker view is available
+        this.viewSelector = null;
+    }
+    
+    createDesktopViewSelector(controlsContainer) {
+        // View selector removed - only speaker view is available
+        this.viewSelector = null;
+    }
+    
+    bindFullscreenEvents() {
+        // Find the existing fullscreen button created in PHP
+        const fullscreenBtn = document.getElementById('vh360-agora-fullscreen-btn');
+        
+        if (!fullscreenBtn) {
+            if (window.__VH360_DEBUG) console.log('VideoHub360: No fullscreen button found to bind events');
+            return;
+        }
+        
+        // Check if the standard fullscreen API is supported. If not, we normally
+        // hide the button. However, on iOS devices running in Agora broadcast
+        // mode we still show the button because we will use the native video
+        // fullscreen methods instead. To detect iOS we replicate the helper
+        // logic from frontend.js here (cannot rely on vh360IsIOSDevice in this
+        // scope).
+        if (!this.isFullscreenSupported()) {
+            const ua = navigator.userAgent || navigator.vendor || window.opera;
+            const iOSIdentifiers = /iPad|iPhone|iPod/;
+            const isiPadOS13 = ua.includes('Mac') && 'ontouchend' in document;
+            const isiOS = iOSIdentifiers.test(ua) || isiPadOS13;
+            // For iOS devices we keep the button visible regardless of broadcast
+            // mode because native video fullscreen can still be used. Only hide
+            // on non-iOS devices when the Fullscreen API is unsupported.
+            if (!isiOS) {
+                if (window.__VH360_DEBUG) console.log('VideoHub360: Fullscreen API not supported, hiding fullscreen button');
+                fullscreenBtn.style.display = 'none';
+                return;
+            }
+        }
+        
+        // Check if mobile events are already bound - don't override mobile functionality
+        if (fullscreenBtn.dataset.mobileEventsbound === 'true') {
+            if (window.__VH360_DEBUG) console.log('VideoHub360: Mobile fullscreen events already bound, skipping desktop binding');
+            this.fullscreenBtn = fullscreenBtn;
+            return;
+        }
+        
+        // On mobile devices, don't bind desktop events - wait for mobile events to be bound
+        if (window.innerWidth <= 768) {
+            if (window.__VH360_DEBUG) console.log('VideoHub360: Mobile device detected, skipping desktop fullscreen binding');
+            this.fullscreenBtn = fullscreenBtn;
+            return;
+        }
+        
+        if (window.__VH360_DEBUG) console.log('VideoHub360: Binding desktop fullscreen button events...');
+        
+        // Add click handler with error handling
+        fullscreenBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (window.__VH360_DEBUG) console.log('VideoHub360: Desktop fullscreen button clicked');
+            this.toggleFullscreen();
+        });
+        
+        // Mark as desktop events bound
+        fullscreenBtn.dataset.desktopEventsbound = 'true';
+        
+        this.fullscreenBtn = fullscreenBtn;
+        if (window.__VH360_DEBUG) console.log('VideoHub360: Desktop fullscreen button events bound successfully');
+    }
+    
+    isFullscreenSupported() {
+        return ViewLayoutManager.isFullscreenSupported();
+    }
+    
+    // Static method for fullscreen support detection - can be used anywhere
+    static isFullscreenSupported() {
+        return !!(
+            document.fullscreenEnabled ||
+            document.webkitFullscreenEnabled ||
+            document.mozFullScreenEnabled ||
+            document.msFullscreenEnabled ||
+            document.documentElement.requestFullscreen ||
+            document.documentElement.webkitRequestFullscreen ||
+            document.documentElement.mozRequestFullScreen ||
+            document.documentElement.msRequestFullscreen
+        );
+    }
+    
+    toggleFullscreen() {
+        // Check if fullscreen API is supported
+        if (!this.isFullscreenSupported()) {
+            if (window.__VH360_DEBUG) console.warn('VideoHub360: Fullscreen API not supported');
+            alert('Fullscreen is not supported in this browser.');
+            return;
+        }
+        
+        // Try to find the best element for fullscreen
+        let targetElement = document.getElementById('vh360-agora-player');
+        if (!targetElement) {
+            // Fallback to local player
+            targetElement = document.getElementById('vh360-agora-local-player');
+        }
+        if (!targetElement) {
+            // Fallback to any agora container
+            targetElement = document.querySelector('.vh360-agora-player, .vh360-multi-view-container');
+        }
+        
+        if (!targetElement) {
+            if (window.__VH360_DEBUG) console.error('VideoHub360: No suitable element found for fullscreen');
+            alert('Video player not found for fullscreen mode.');
+            return;
+        }
+        
+        if (window.__VH360_DEBUG) console.log('VideoHub360: Attempting to toggle fullscreen on element:', targetElement);
+        if (window.__VH360_DEBUG) console.log('VideoHub360: Element details:', {
+            id: targetElement.id,
+            className: targetElement.className,
+            offsetWidth: targetElement.offsetWidth,
+            offsetHeight: targetElement.offsetHeight,
+            style: targetElement.style.cssText,
+            display: window.getComputedStyle(targetElement).display,
+            visibility: window.getComputedStyle(targetElement).visibility
+        });
+        
+        try {
+            if (window.isInFullscreen()) {
+                if (window.__VH360_DEBUG) console.log('VideoHub360: Currently in fullscreen, attempting to exit...');
+                window.exitFullscreen().then(() => {
+                    this.updateFullscreenButton(false);
+                    if (window.__VH360_DEBUG) console.log('VideoHub360: Exited fullscreen successfully');
+                }).catch(err => {
+                    if (window.__VH360_DEBUG) console.error('VideoHub360: Failed to exit fullscreen:', err);
+                    // Try to update button state anyway
+                    this.updateFullscreenButton(false);
+                });
+            } else {
+                if (window.__VH360_DEBUG) console.log('VideoHub360: Not in fullscreen, attempting to enter...');
+                
+                // Add a temporary class to indicate fullscreen attempt
+                targetElement.classList.add('vh360-entering-fullscreen');
+                
+                window.enterFullscreen(targetElement).then(() => {
+                    targetElement.classList.remove('vh360-entering-fullscreen');
+                    this.updateFullscreenButton(true);
+                    if (window.__VH360_DEBUG) console.log('VideoHub360: Entered fullscreen successfully');
+                }).catch(err => {
+                    targetElement.classList.remove('vh360-entering-fullscreen');
+                    if (window.__VH360_DEBUG) console.error('VideoHub360: Failed to enter fullscreen:', err);
+                    if (window.__VH360_DEBUG) console.error('VideoHub360: Error details:', {
+                        name: err.name,
+                        message: err.message,
+                        stack: err.stack
+                    });
+                    
+                    // Provide user feedback based on error type
+                    let errorMessage = 'Fullscreen failed: ';
+                    if (err.name === 'NotAllowedError') {
+                        errorMessage += 'Browser blocked fullscreen. Try clicking the fullscreen button again.';
+                    } else if (err.name === 'TypeError') {
+                        errorMessage += 'Fullscreen not supported for this element.';
+                    } else {
+                        errorMessage += err.message || 'Unknown error occurred.';
+                    }
+                    
+                    // Show user-friendly error
+                    if (this.fullscreenBtn) {
+                        this.fullscreenBtn.title = errorMessage;
+                        setTimeout(() => {
+                            this.fullscreenBtn.title = 'Toggle fullscreen (F key)';
+                        }, 5000);
+                    }
+                    
+                    // Also show console log for debugging
+                    if (window.__VH360_DEBUG) console.log('VideoHub360: Fullscreen error shown to user:', errorMessage);
+                });
+            }
+        } catch (error) {
+            if (window.__VH360_DEBUG) console.error('VideoHub360: Unexpected error in toggleFullscreen:', error);
+            alert('An unexpected error occurred while trying to toggle fullscreen.');
+        }
+    }
+    
+    updateFullscreenButton(isFullscreen) {
+        if (!this.fullscreenBtn) return;
+        
+        const textSpan = this.fullscreenBtn.querySelector('.vh360-fullscreen-text');
+        const svg = this.fullscreenBtn.querySelector('svg');
+        
+        if (isFullscreen) {
+            // Exit fullscreen icon - standardized
+            svg.innerHTML = '<path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>';
+            if (textSpan) textSpan.textContent = 'Exit Fullscreen';
+            this.fullscreenBtn.title = 'Exit fullscreen';
+        } else {
+            // Enter fullscreen icon - standardized
+            svg.innerHTML = '<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>';
+            if (textSpan) textSpan.textContent = 'Fullscreen';
+            this.fullscreenBtn.title = 'Toggle fullscreen';
+        }
+    }
+    
+    initializeFullscreenHandlers() {
+        // Only add fullscreen change listeners once globally
+        if (!window.vh360FullscreenListenersAdded) {
+            // Handle fullscreen change events (for when user exits with Escape key or browser controls)
+            document.addEventListener('fullscreenchange', () => {
+                const isFullscreen = window.isInFullscreen();
+                // Update desktop button if ViewLayoutManager instance exists
+                if (window.viewLayoutManager && window.viewLayoutManager.updateFullscreenButton) {
+                    window.viewLayoutManager.updateFullscreenButton(isFullscreen);
+                }
+                // Update mobile button if it exists
+                if (typeof window.updateMobileFullscreenButton === 'function') {
+                    window.updateMobileFullscreenButton(isFullscreen);
+                }
+            });
+            document.addEventListener('webkitfullscreenchange', () => {
+                const isFullscreen = window.isInFullscreen();
+                if (window.viewLayoutManager && window.viewLayoutManager.updateFullscreenButton) {
+                    window.viewLayoutManager.updateFullscreenButton(isFullscreen);
+                }
+                if (typeof window.updateMobileFullscreenButton === 'function') {
+                    window.updateMobileFullscreenButton(isFullscreen);
+                }
+            });
+            document.addEventListener('mozfullscreenchange', () => {
+                const isFullscreen = window.isInFullscreen();
+                if (window.viewLayoutManager && window.viewLayoutManager.updateFullscreenButton) {
+                    window.viewLayoutManager.updateFullscreenButton(isFullscreen);
+                }
+                if (typeof window.updateMobileFullscreenButton === 'function') {
+                    window.updateMobileFullscreenButton(isFullscreen);
+                }
+            });
+            document.addEventListener('msfullscreenchange', () => {
+                const isFullscreen = window.isInFullscreen();
+                if (window.viewLayoutManager && window.viewLayoutManager.updateFullscreenButton) {
+                    window.viewLayoutManager.updateFullscreenButton(isFullscreen);
+                }
+                if (typeof window.updateMobileFullscreenButton === 'function') {
+                    window.updateMobileFullscreenButton(isFullscreen);
+                }
+            });
+            
+            window.vh360FullscreenListenersAdded = true;
+        }
+        
+        // Add keyboard support for F key and Escape
+        document.addEventListener('keydown', (e) => {
+            // Only handle if Agora player exists and user is not typing in an input
+            const agoraPlayer = document.getElementById('vh360-agora-player');
+            if (!agoraPlayer || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                return;
+            }
+            
+            // F key to toggle fullscreen
+            if (e.key === 'f' || e.key === 'F') {
+                e.preventDefault();
+                this.toggleFullscreen();
+            }
+            
+            // Escape key to exit fullscreen (browser handles this but we update our button)
+            if (e.key === 'Escape' && window.isInFullscreen()) {
+                setTimeout(() => {
+                    this.updateFullscreenButton(false);
+                }, 100);
+            }
+        });
+    }
+    
+    setupContainers() {
+        // Look for the main Agora player container first
+        this.containerElement = document.getElementById('vh360-agora-player') || 
+                              document.getElementById('vh360-agora-interactive-container') || 
+                              document.querySelector('.vh360-agora-interactive');
+        this.remoteContainer = document.getElementById('vh360-agora-remote-players');
+        this.localContainer = document.getElementById('vh360-agora-local-player');
+        
+        // Debug logging for mobile issues
+        if (window.__VH360_DEBUG) console.log('ViewLayoutManager: Container setup', {
+            containerElement: this.containerElement?.id || 'not found',
+            remoteContainer: this.remoteContainer?.id || 'not found', 
+            localContainer: this.localContainer?.id || 'not found',
+            isMobile: window.innerWidth <= 768
+        });
+        
+        if (!this.containerElement) {
+            if (window.__VH360_DEBUG) console.warn('ViewLayoutManager: Main container not found, layout management will be disabled');
+            return;
+        }
+        
+        if (!this.remoteContainer) {
+            if (window.__VH360_DEBUG) console.warn('ViewLayoutManager: Remote players container not found');
+        }
+        
+        if (!this.localContainer) {
+            if (window.__VH360_DEBUG) console.warn('ViewLayoutManager: Local player container not found');
+        }
+        
+        // Add layout class to main container
+        this.containerElement.classList.add('vh360-multi-view-container');
+        
+        // Add multi-view active class to remote container to prevent CSS conflicts
+        if (this.remoteContainer) {
+            this.remoteContainer.classList.add('vh360-multi-view-active');
+        }
+        
+        // Apply initial layout to ensure proper setup
+        this.applyLayout();
+    }
+    
+    switchView(viewType) {
+        // Only speaker view is supported
+        if (viewType !== 'speaker') {
+            if (window.__VH360_DEBUG) console.log(`View type ${viewType} not supported, defaulting to speaker`);
+            viewType = 'speaker';
+        }
+        
+        const oldView = this.currentView;
+        
+        // Prevent rapid switching during transitions
+        if (this.isTransitioning) {
+            this.debugLog(`Ignoring view switch to ${viewType} - transition in progress`);
+            return;
+        }
+        
+        // Set transition guard
+        this.isTransitioning = true;
+        this.debugLog(`Starting view transition from ${oldView} to ${viewType}`);
+        
+        this.currentView = viewType;
+        
+        // Save preference
+        this.saveUserPreference();
+        
+        // Safe cleanup of previous view without removing live video nodes/tracks
+        this.safeCleanupPreviousView();
+        
+        // Apply layout immediately - CSS handles transitions
+        this.applyLayout();
+        
+        // Short timeout to allow CSS transitions to start, then re-enable switching
+        setTimeout(() => {
+            this.isTransitioning = false;
+            this.debugLog(`Completed view transition to ${viewType}`);
+        }, 100);
+        
+        if (window.__VH360_DEBUG) console.log(`Switched from ${oldView} to ${viewType} view`);
+    }
+    
+    updateLayout(participants) {
+        this.participantCount = participants ? Object.keys(participants).length : 0;
+        this.applyLayout();
+    }
+    
+    // Safe cleanup that reparents existing video DOM nodes instead of removing them
+    // This prevents video tracks from being destroyed during view transitions
+    safeCleanupPreviousView() {
+        if (!this.containerElement) return;
+        
+        this.debugLog('Starting safe cleanup of previous view');
+        
+        // Instead of removing elements, just reparent them back to their default containers
+        // This preserves video tracks and prevents race conditions
+        
+        // Move all remote players back to remote container if they're elsewhere
+        if (this.remoteContainer) {
+            const misplacedRemotePlayers = this.containerElement.querySelectorAll('[id^="player-"]:not(.vh360-agora-local-player [id^="player-"])');
+            misplacedRemotePlayers.forEach(player => {
+                if (!this.remoteContainer.contains(player)) {
+                    this.debugLog('Reparenting remote player back to remote container:', player.id);
+                    // Use unified video manager if available
+                    if (window.videoElementManager) {
+                        window.videoElementManager.moveVideoElement(player, this.remoteContainer, true);
+                    } else {
+                        this.remoteContainer.appendChild(player);
+                    }
+                }
+            });
+        }
+        
+        // Ensure local player is in its proper container
+        if (this.localContainer) {
+            const localPlayer = document.getElementById('vh360-agora-local-player');
+            if (localPlayer && !this.localContainer.contains(localPlayer)) {
+                this.debugLog('Reparenting local player back to local container');
+                // Use unified video manager if available
+                if (window.videoElementManager) {
+                    window.videoElementManager.moveVideoElement(localPlayer, this.localContainer, true);
+                } else {
+                    this.localContainer.appendChild(localPlayer);
+                }
+            }
+        }
+        
+        this.debugLog('Safe cleanup completed');
+    }
+    
+    applyLayout() {
+        if (!this.containerElement) return;
+        
+        // Clean up previous view-specific elements first
+        this.cleanupViewElements();
+        
+        // Reset any inline styles that might conflict with CSS
+        this.resetInlineStyles();
+        
+        // Remove all previous layout classes
+        this.containerElement.classList.remove(
+            'vh360-speaker-view', 
+            'vh360-gallery-view', 
+            'vh360-large-gallery-view'
+        );
+        
+        // Only speaker view is supported
+        this.currentView = 'speaker';
+        this.containerElement.classList.add('vh360-speaker-view');
+        this.applySpeakerView();
+        
+        this.debugLog(`Applied ${this.currentView} layout`);
+    }
+    
+    cleanupViewElements() {
+        if (!this.containerElement) return;
+        
+        // Remove initial class from remote players if present
+        if (this.remoteContainer) {
+            this.remoteContainer.classList.remove('vh360-remote-players-initial');
+        }
+        
+        // Remove grid wrapper if present (legacy cleanup)
+        const gridWrapper = this.containerElement.querySelector('.vh360-grid-wrapper');
+        if (gridWrapper) {
+            // Move participants back to their containers before removing wrapper
+            const participants = gridWrapper.querySelectorAll('[id^="player-"], #vh360-agora-local-player');
+            participants.forEach(participant => {
+                if (participant.id === 'vh360-agora-local-player') {
+                    if (window.videoElementManager) {
+                        window.videoElementManager.moveVideoElement(participant, this.containerElement, true);
+                    } else {
+                        this.containerElement.appendChild(participant);
+                    }
+                } else if (participant.id.startsWith('player-') && this.remoteContainer) {
+                    if (window.videoElementManager) {
+                        window.videoElementManager.moveVideoElement(participant, this.remoteContainer, true);
+                    } else {
+                        this.remoteContainer.appendChild(participant);
+                    }
+                }
+            });
+            gridWrapper.remove();
+        }
+        
+        // Remove pagination controls if present (legacy cleanup)
+        const pagination = this.containerElement.querySelector('.vh360-pagination-controls');
+        if (pagination) {
+            pagination.remove();
+        }
+        
+        this.debugLog('View elements cleanup completed');
+    }
+    
+    // Clean up inline styles that may conflict with CSS during view transitions
+    resetInlineStyles() {
+        if (!this.remoteContainer) return;
+        
+        // Remove inline width/height styles from all remote player elements
+        const remotePlayerElements = this.remoteContainer.querySelectorAll('[id^="player-"]');
+        remotePlayerElements.forEach(element => {
+            // Clear dimension-related inline styles but preserve other positioning/background styles
+            element.style.width = '';
+            element.style.height = '';
+            element.style.maxWidth = '';
+            element.style.maxHeight = '';
+            element.style.minWidth = '';
+            element.style.minHeight = '';
+        });
+        
+        // Clear container max-width
+        this.remoteContainer.style.maxWidth = '';
+        
+        this.debugLog('Inline styles reset for CSS consistency');
+    }
+    
+    applySpeakerView() {
+        // Speaker view is handled entirely by CSS - no JavaScript style manipulation needed
+        // The .vh360-speaker-view class on the container will trigger all necessary styling
+        this.debugLog('Applied speaker view - layout handled by CSS');
+    }
+    
+    getOptimalView(participantCount) {
+        // Only speaker view is supported
+        return 'speaker';
+    }
+    
+    // Cleanup method to be called when layout manager is destroyed
+    destroy() {
+        // Clear any pending timeouts
+        if (this.transitionTimeout) {
+            clearTimeout(this.transitionTimeout);
+            this.transitionTimeout = null;
+        }
+        
+        // Note: Fullscreen event listeners are now global and managed centrally
+        // They should not be removed when ViewLayoutManager is destroyed
+        // as they update both desktop and mobile buttons
+        
+        // Reset container classes
+        if (this.containerElement) {
+            this.containerElement.classList.remove(
+                'vh360-speaker-view', 
+                'vh360-gallery-view', 
+                'vh360-large-gallery-view',
+                'vh360-multi-view-container'
+            );
+        }
+        
+        // Remove multi-view active class from remote container
+        if (this.remoteContainer) {
+            this.remoteContainer.classList.remove('vh360-multi-view-active');
+        }
+        
+        if (window.__VH360_DEBUG) console.log('ViewLayoutManager destroyed');
+    }
+}
+
+// Export for module usage (if supported)
+if (typeof window !== 'undefined') {
+    window.ViewLayoutManager = ViewLayoutManager;
+}
+
+// Export for Node.js compatibility
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = ViewLayoutManager;
+}
+
+/* Namespacing compatibility: copy any existing window.* functions into window.vh360 (non-destructive) */
+;(function(){
+  window.vh360 = window.vh360 || {};
+  var _names = ['ViewLayoutManager', 'enterFullscreen', 'exitFullscreen', 'getComputedStyle', 'innerWidth', 'isInFullscreen', 'videoElementManager'];
+  _names.forEach(function(n){ try{ if (window[n] && !window.vh360[n]) window.vh360[n] = window[n]; }catch(e){} });
+})();

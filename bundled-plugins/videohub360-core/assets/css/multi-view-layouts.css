@@ -1,0 +1,708 @@
+/**
+ * VideoHub360 Multi-View Layouts CSS
+ * 
+ * Modern CSS for multi-view system using Flexbox and Grid
+ * Centralized video styling - NO JavaScript inline styles needed
+ * 
+ * CSS custom properties are now defined in variables.css which is loaded first.
+ * 
+ * @since 2.0.1
+ */
+
+/* === VIDEO ELEMENT BASE CLASSES - Replace JavaScript inline styles === */
+
+/* Remote video thumbnail base styling - replaces JavaScript cssText */
+.vh360-video-remote {
+    background: #000;
+    border-radius: var(--vh360-radius-md);
+    overflow: hidden;
+    border: 2px solid var(--vh360-mv-border);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Ensure video elements within remote video containers display properly */
+.vh360-video-remote video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* Allow portrait/mobile videos to display properly */
+    border-radius: 6px;
+}
+
+/* HIGH SPECIFICITY OVERRIDE: Ensure vh360-video-remote class properties apply in speaker view */
+.vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote {
+    background: #000;
+    border-radius: var(--vh360-radius-md);
+    overflow: hidden !important; /* Critical: Force overflow hidden to prevent content spillage */
+    border: 2px solid var(--vh360-mv-border);
+    position: relative;
+    /* Remove flex centering that conflicts with video filling */
+    /* Maintain sizing from the base selector */
+    flex: 0 0 auto;
+    width: var(--vh360-mv-thumbnail-lg);
+    aspect-ratio: var(--vh360-mv-aspect-standard); /* Critical: Ensure 16:9 aspect ratio */
+    z-index: 15;
+    transition: border-color var(--vh360-mv-transition-smooth), 
+                transform var(--vh360-mv-transition-fast);
+}
+
+/* Main player video styling - replaces JavaScript cssText for main player */
+.vh360-video-main {
+    width: 100%;
+    height: 100%;
+    background: #000;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: var(--vh360-radius-md);
+    overflow: hidden;
+}
+
+/* Placeholder base styling - replaces JavaScript cssText */
+.vh360-video-placeholder {
+    background: #1a1a1a;
+    border-radius: var(--vh360-radius-md);
+    overflow: hidden;
+    border: 2px solid var(--vh360-mv-border);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Main player placeholder - replaces JavaScript cssText */
+.vh360-video-placeholder.vh360-main-placeholder {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+
+
+/* Username overlay positioned in bottom-left corner - BASE STYLES FOR ALL CONTEXTS */
+.vh360-user-info,
+.vh360-video-name-overlay {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    background: rgba(0, 0, 0, 0.75);
+    color: var(--vh360-color-white);
+    padding: 6px 10px;
+    font-size: 0.85em;
+    font-weight: 500;
+    border-radius: var(--vh360-radius-sm);
+    z-index: 100;
+    max-width: calc(100% - 16px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    pointer-events: none;
+}
+
+/* REMOTE VIDEO THUMBNAILS IN SPEAKER VIEW - Zoom-like minimal style */
+.vh360-speaker-view .vh360-video-remote .vh360-user-info,
+.vh360-speaker-view .vh360-video-remote .vh360-video-name-overlay {
+    bottom: 0;
+    left: 0;
+    padding: 2px 4px;
+    font-size: 0.5em;
+    font-weight: 400;
+    border-radius: 0 3px 0 0;
+    z-index: 101 !important;
+}
+
+/* Move username to top-left in main video area to avoid overlapping controls */
+.vh360-video-main .vh360-user-info,
+.vh360-video-main .vh360-video-name-overlay,
+#vh360-agora-local-player > .vh360-video-main .vh360-user-info,
+#vh360-agora-local-player > .vh360-video-main .vh360-video-name-overlay {
+    top: 8px;
+    bottom: auto;
+}
+
+/* Video content container - only visible in placeholders */
+.vh360-video-content {
+    display: none; /* Hidden by default */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--vh360-color-white);
+    width: 100%;
+    height: 100%;
+}
+
+/* Show video-content only inside placeholder elements */
+.vh360-video-placeholder .vh360-video-content {
+    display: flex;
+    z-index: 5;
+}
+
+/* Camera icon responsive sizing */
+.vh360-camera-icon {
+    margin-bottom: 8px;
+    opacity: 0.8;
+}
+
+.vh360-camera-icon.vh360-icon-small {
+    font-size: 24px;
+}
+
+.vh360-camera-icon.vh360-icon-medium {
+    font-size: 40px;
+}
+
+.vh360-camera-icon.vh360-icon-large {
+    font-size: 48px;
+}
+
+/* Placeholder text styling */
+.vh360-placeholder-text {
+    color: #ccc;
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+/* Context-specific text sizing */
+.vh360-main-placeholder .vh360-placeholder-text {
+    font-size: 14px;
+}
+
+.video-placeholder .vh360-placeholder-text {
+    font-size: 10px;
+}
+
+/* Waiting message container - replaces JavaScript cssText */
+.vh360-waiting-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--vh360-color-white);
+    font-size: 1.2em;
+    background: #333;
+    flex-direction: column;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.vh360-waiting-text {
+    font-size: 0.8em;
+    margin-top: 8px;
+}
+
+/* Remove all conflicting inline styles from JavaScript using high specificity */
+.vh360-multi-view-container [id^="player-"],
+.videohub360-content-area [id^="player-"],
+body #vh360-agora-remote-players [id^="player-"] {
+    /* Let CSS handle all sizing and positioning with high specificity */
+    width: auto;
+    height: auto;
+    position: static;
+    top: auto;
+    left: auto;
+    right: auto;
+    bottom: auto;
+}
+
+/* Override only when explicitly needed for main player with maximum specificity */
+body #vh360-agora-local-player [id^="player-"].vh360-video-main,
+.videohub360-content-area #vh360-agora-local-player [id^="player-"].vh360-video-main {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+/* === View Selector Styling === */
+.vh360-view-selector {
+    background: transparent;
+    border: 1px solid #fff;
+    padding: 6px 12px;
+    font-size: 0.8em;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;    
+    border-radius: var(--vh360-radius-sm);
+    appearance: none;
+    cursor: pointer;
+    transition: background-color var(--vh360-mv-transition-smooth);
+    color: var(--vh360-color-white);
+    box-sizing: border-box;
+}
+
+.vh360-view-selector:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.vh360-view-selector:focus {
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.3);
+}
+
+.vh360-view-selector option {
+    background: var(--vh360-mv-bg-medium);
+    color: var(--vh360-color-white);
+}
+
+/* === Multi-View Container Base === */
+.vh360-multi-view-container {
+    position: relative;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    background: var(--vh360-mv-bg-dark);
+    border-radius: var(--vh360-radius-lg);
+    overflow: hidden;
+    transition: all var(--vh360-mv-transition-slow);
+}
+
+/* === Initial state for remote players before ViewLayoutManager loads === */
+.vh360-remote-players-initial {
+    position: absolute;
+    top: 50px;
+    right: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 200px;
+    z-index: 10;
+}
+
+/* === Speaker View Layout === */
+.vh360-speaker-view {
+    display: flex;
+    flex-direction: column;
+    min-height: 600px;
+    aspect-ratio: var(--vh360-mv-aspect-square);
+}
+
+/* Remote players container - shows thumbnails at top */
+.vh360-speaker-view #vh360-agora-remote-players {
+    position: relative;
+    top: auto;
+    right: auto;
+    display: flex;
+    flex-direction: row;
+    gap: var(--vh360-mv-gap-md);
+    max-width: 100%;
+    height: auto;
+    overflow-x: auto;
+    overflow-y: visible;
+    order: 1;
+    padding: var(--vh360-mv-padding-md) var(--vh360-mv-padding-lg);
+    background: var(--vh360-mv-bg-dark);
+    flex-shrink: 0;
+    /* Prevent desktop scrollbars by hiding scrollbar while maintaining functionality */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+}
+
+/* Hide scrollbars for webkit browsers (Chrome, Safari) */
+.vh360-speaker-view #vh360-agora-remote-players::-webkit-scrollbar {
+    display: none;
+}
+
+/* Main player area - shows active speaker */
+.vh360-speaker-view #vh360-agora-local-player {
+    order: 2;
+    flex: 1;
+    position: relative;
+    background: var(--vh360-mv-bg-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: var(--vh360-mv-padding-md) 0 0 0;
+    padding: 0;
+}
+
+.vh360-speaker-view #vh360-agora-local-player > div,
+.vh360-speaker-view #vh360-agora-local-player video {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain; /* Allow portrait/mobile videos to display properly */
+    border-radius: var(--vh360-radius-md);
+    aspect-ratio: var(--vh360-mv-aspect-standard);
+}
+
+/* REMOVED: Duplicate/competing selector that was overriding .vh360-video-remote class
+   This selector was causing CSS specificity conflicts and preventing proper video sizing.
+   All player divs now use .vh360-video-remote class for consistent styling. */
+
+.vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote:hover {
+    border-color: var(--vh360-mv-border-hover);
+    transform: scale(1.05);
+}
+
+/* Admin-specific positioning fixes for WordPress admin bar compatibility */
+body.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote,
+html.wp-toolbar .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote,
+.wp-admin .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote,
+body.admin-color-fresh .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote,
+body[class*="admin"] .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote,
+#wpadminbar ~ * .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote,
+body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote {
+    position: relative; /* Ensure positioning context is explicitly set for admin users */
+}
+
+/* REMOVED: Duplicate/competing video selector - consolidated into .vh360-video-remote class selector above */
+
+/* HIGH SPECIFICITY OVERRIDE: Ensure proper video/div sizing within vh360-video-remote containers */
+.vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote video,
+.vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote > div:not(.vh360-user-info):not(.vh360-video-name-overlay):not(.vh360-participant-menu-container):not(.vh360-participant-menu):not(.vh360-moderation-menu){
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* Allow portrait/mobile videos to display properly */
+    border-radius: 6px;
+    position: absolute; /* Position absolutely to fill container */
+    top: 0;
+    left: 0;
+    z-index: 20;
+}
+
+/* Admin-specific fixes for WordPress admin bar compatibility - comprehensive background override */
+body.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote video,
+body.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote > div,
+html.wp-toolbar .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote video,
+html.wp-toolbar .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote > div,
+.wp-admin .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote video,
+.wp-admin .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote > div,
+body.admin-color-fresh .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote video,
+body.admin-color-fresh .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote > div,
+body[class*="admin"] .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote video,
+body[class*="admin"] .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote > div,
+#wpadminbar ~ * .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote video,
+#wpadminbar ~ * .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote > div:not(.vh360-user-info):not(.vh360-video-name-overlay):not(.vh360-participant-menu-container):not(.vh360-moderation-menu):not(.vh360-participant-menu),
+body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote video,
+body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote > div:not(.vh360-user-info):not(.vh360-video-name-overlay):not(.vh360-participant-menu-container):not(.vh360-participant-menu):not(.vh360-moderation-menu){
+    background: transparent; /* Override any admin-specific background styles */
+    background-color: transparent;
+    background-image: none;
+}
+
+/* Clear any pseudo-elements that might be adding overlays */
+body.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote::before,
+body.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote::after,
+html.wp-toolbar .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote::before,
+html.wp-toolbar .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote::after,
+.wp-admin .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote::before,
+.wp-admin .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote::after,
+body.admin-color-fresh .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote::before,
+body.admin-color-fresh .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote::after,
+body[class*="admin"] .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote::before,
+body[class*="admin"] .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote::after,
+#wpadminbar ~ * .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote::before,
+#wpadminbar ~ * .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote::after,
+body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote::before,
+body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote::after {
+    display: none;
+    content: none;
+    background: transparent;
+}
+
+/* === Speaker View Controls Positioning === */
+.vh360-speaker-view #vh360-agora-controls,
+.vh360-speaker-view .vh360-agora-controls {
+    order: 3;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: 0;
+    padding: 8px 16px;
+    background: rgba(26, 26, 26, 0.95);
+    border-top: 1px solid var(--vh360-mv-border);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+/* Compact Zoom-style control buttons for Speaker View */
+.vh360-speaker-view #vh360-agora-controls button,
+.vh360-speaker-view .vh360-agora-controls button {
+    min-height: 24px;
+    padding: 4px 8px;
+    font-size: 0.75em;
+    border-radius: var(--vh360-radius-sm);
+}
+
+/* === Active Speaker Indicators === */
+.vh360-multi-view-container .active-speaker {
+    border: 3px solid var(--vh360-mv-border-active);
+    box-shadow: none;
+}
+
+/* Enhanced active speaker for thumbnails in Speaker View */
+.vh360-speaker-view #vh360-agora-remote-players > div.active-speaker {
+    border: 3px solid var(--vh360-mv-border-active);
+    box-shadow: 0 0 15px rgba(76, 175, 80, 0.8);
+    transform: scale(1.05);
+}
+
+/* === Desktop Auto-Hide Controls === */
+@media (min-width: 769px) {
+    .vh360-multi-view-container .vh360-agora-controls,
+    .vh360-multi-view-container #vh360-agora-controls {
+        transition: opacity var(--vh360-mv-transition-smooth), 
+                    visibility var(--vh360-mv-transition-smooth);
+        opacity: 1;
+        visibility: visible;
+    }
+    
+    .vh360-multi-view-container.vh360-controls-hidden .vh360-agora-controls,
+    .vh360-multi-view-container.vh360-controls-hidden #vh360-agora-controls {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+    }
+
+    /* Also support broadcast container root */
+    #vh360-agora-player .vh360-agora-controls,
+    #vh360-agora-player #vh360-agora-controls {
+        transition: opacity var(--vh360-mv-transition-smooth), 
+                    visibility var(--vh360-mv-transition-smooth);
+        opacity: 1;
+        visibility: visible;
+    }
+    #vh360-agora-player.vh360-controls-hidden .vh360-agora-controls,
+    #vh360-agora-player.vh360-controls-hidden #vh360-agora-controls {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+    }
+}
+
+/* === Responsive Design === */
+
+/* Mobile Responsive (768px and below) */
+@media (max-width: 768px) {
+    .vh360-multi-view-container {
+        max-width: 100%;
+        border-radius: var(--vh360-radius-md);
+    }
+    
+    .vh360-speaker-view {
+        min-height: 500px;
+        aspect-ratio: var(--vh360-mv-aspect-mobile);
+    }
+    
+    .vh360-speaker-view #vh360-agora-remote-players {
+        height: auto;
+        padding: var(--vh360-mv-padding-sm) var(--vh360-mv-padding-md);
+        gap: var(--vh360-mv-gap-sm);
+    }
+    
+    /* REMOVED: Competing mobile selector without .vh360-video-remote class that was overriding proper sizing */
+    
+    /* HIGH SPECIFICITY MOBILE OVERRIDE: Ensure vh360-video-remote properties apply */
+    .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote {
+        width: var(--vh360-mv-thumbnail-mobile-lg);
+        aspect-ratio: var(--vh360-mv-aspect-standard); /* Critical: 16:9 aspect ratio */
+        overflow: hidden; /* Critical: Proper video clipping */
+    }
+    
+    /* REMOVED: Duplicate/competing mobile selector - consolidated into .vh360-video-remote class */
+    
+    /* HIGH SPECIFICITY MOBILE VIDEO OVERRIDE: Ensure proper video filling */
+    .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote video,
+    .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote > div:not(.vh360-user-info):not(.vh360-video-name-overlay):not(.vh360-participant-menu-container):not(.vh360-participant-menu):not(.vh360-moderation-menu){
+        width: 100%;
+        height: 100%;
+        object-fit: contain; /* Allow portrait/mobile videos to display properly */
+        border-radius: 6px;
+        position: absolute; /* Position absolutely to fill container */
+        top: 0;
+        left: 0;
+        z-index: 20;
+        background: #000;
+    }
+    
+    .vh360-speaker-view #vh360-agora-local-player {
+        padding: var(--vh360-mv-padding-md);
+    }
+    
+    /* Mobile adjustments for name overlays - applies to main video area only */
+    .vh360-video-main .vh360-user-info,
+    .vh360-video-main .vh360-video-name-overlay {
+        bottom: 6px;
+        left: 6px;
+        padding: 4px 8px;
+        font-size: 0.75em;
+        border-radius: 3px;
+    }
+}
+
+/* Tablet Responsive (769px to 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .vh360-speaker-view {
+        min-height: 550px;
+        aspect-ratio: var(--vh360-mv-aspect-square);
+    }
+    
+    .vh360-speaker-view #vh360-agora-remote-players {
+        height: auto;
+        padding: 12px 18px;
+    }
+    
+    /* REMOVED: Competing tablet selector without .vh360-video-remote class that was overriding proper sizing */
+    
+    /* HIGH SPECIFICITY TABLET OVERRIDE: Ensure vh360-video-remote properties apply */
+    .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote {
+        width: var(--vh360-mv-thumbnail-tablet-lg);
+        aspect-ratio: var(--vh360-mv-aspect-standard); /* Critical: 16:9 aspect ratio */
+        overflow: hidden; /* Critical: Proper video clipping */
+    }
+}
+
+/* Desktop Responsive (1025px and up) */
+@media (min-width: 1025px) {
+    .vh360-speaker-view {
+        min-height: 600px;
+        aspect-ratio: var(--vh360-mv-aspect-square);
+    }
+    
+    .vh360-speaker-view #vh360-agora-remote-players {
+        height: auto;
+        padding: var(--vh360-mv-padding-md) var(--vh360-mv-padding-lg);
+    }
+    
+    /* REMOVED: Duplicate/competing desktop selector - consolidated into .vh360-video-remote class */
+    
+    /* HIGH SPECIFICITY DESKTOP OVERRIDE: Ensure vh360-video-remote properties apply */
+    .vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active > div[id^="player-"].vh360-video-remote {
+        width: var(--vh360-mv-thumbnail-lg);
+        height: auto;
+        min-width: var(--vh360-mv-thumbnail-lg);
+        max-width: var(--vh360-mv-thumbnail-lg);
+        aspect-ratio: var(--vh360-mv-aspect-standard); /* Critical: 16:9 aspect ratio */
+        overflow: hidden; /* Critical: Proper video clipping */
+    }
+}
+
+/* === High-specificity overrides to resolve CSS conflicts === */
+/* Remove initial positioning when layout manager is active */
+.vh360-multi-view-container .vh360-remote-players-initial {
+    position: static;
+    top: auto;
+    right: auto;
+    max-width: none;
+}
+
+/* Speaker view positioning - now works cleanly without conflicts */
+.vh360-multi-view-container.vh360-speaker-view #vh360-agora-remote-players.vh360-multi-view-active {
+    position: relative;
+    top: auto;
+    right: auto;
+    display: flex;
+    flex-direction: row;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: visible;
+    max-width: 100%;
+    z-index: auto;
+    order: 1;
+}
+
+/* === Smooth Transitions === */
+.vh360-multi-view-container #vh360-agora-remote-players {
+    transition: all var(--vh360-mv-transition-fast);
+}
+
+/* === Accessibility Improvements === */
+@media (prefers-reduced-motion: reduce) {
+    .vh360-multi-view-container,
+    .vh360-multi-view-container * {
+        transition: none;
+    }
+}
+
+@media (prefers-contrast: high) {
+    :root {
+        --vh360-mv-border: #666;
+        --vh360-mv-border-hover: #00aaff;
+        --vh360-mv-border-active: #66DD66;
+    }
+}
+
+/* === RTL Support === */
+[dir="rtl"] .vh360-speaker-view #vh360-agora-remote-players {
+    flex-direction: row-reverse;
+}
+
+/* --- VH360 patch: ensure 3-dot moderation menus render above video --- */
+.vh360-video-remote .vh360-participant-menu,
+.vh360-video-remote .vh360-moderation-menu {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 102 !important;
+    pointer-events: auto;
+}
+
+/* --- VH360 patch (v2): ensure 3-dot moderation trigger is clickable and above video/labels --- */
+.vh360-video-remote .vh360-participant-menu-container {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 103 !important; /* above name overlays (101) and video (20) */
+    pointer-events: auto;
+}
+
+.vh360-video-remote .vh360-participant-menu-btn {
+    position: relative;
+    z-index: 104 !important; /* keep the button itself highest in the stack */
+    pointer-events: auto;
+}
+
+
+
+/* === Mobile Auto-Hide Controls (<=768px) === */
+@media (max-width: 768px) {
+    /* default visible */
+    .vh360-multi-view-container .vh360-agora-controls,
+    .vh360-multi-view-container #vh360-agora-controls,
+    #vh360-agora-player .vh360-agora-controls,
+    #vh360-agora-player #vh360-agora-controls {
+        transition: opacity var(--vh360-mv-transition-smooth), 
+                    visibility var(--vh360-mv-transition-smooth);
+        opacity: 1;
+        visibility: visible;
+    }
+    /* hidden when container gets .vh360-controls-hidden */
+    .vh360-multi-view-container.vh360-controls-hidden .vh360-agora-controls,
+    .vh360-multi-view-container.vh360-controls-hidden #vh360-agora-controls,
+    #vh360-agora-player.vh360-controls-hidden .vh360-agora-controls,
+    #vh360-agora-player.vh360-controls-hidden #vh360-agora-controls {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+    }
+}
+
+
+/* === VideoHub360: Hide Agora controls until stream starts (universal) === */
+.vh360-multi-view-container:not(.vh360-stream-live) .vh360-agora-controls,
+.vh360-multi-view-container:not(.vh360-stream-live) #vh360-agora-controls,
+#vh360-agora-player:not(.vh360-stream-live) .vh360-agora-controls,
+#vh360-agora-player:not(.vh360-stream-live) #vh360-agora-controls {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}

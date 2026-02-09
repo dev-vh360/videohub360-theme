@@ -1,0 +1,4806 @@
+
+// == Share Modal Logic ==
+/**
+ * VideoHub360 frontend script
+ *
+ * This file powers much of the runtime behaviour for VideoHub360.  A
+ * number of debug statements are scattered throughout the codebase to
+ * aid development and troubleshooting.  To prevent those messages
+ * from cluttering end‑user browser consoles in production, this
+ * wrapper checks for a global `__VH360_DEBUG` flag.  When the flag is
+ * undefined or falsy, it temporarily overrides `console.log` and
+ * `console.warn` so that debug statements become no‑ops.  Errors
+ * (`console.error`) are left untouched so that critical issues still
+ * surface during execution.
+ */
+
+(function() {
+    // Guard against double initialization
+    if (window.__vh360ShareModalInitialized) {
+        return;
+    }
+    window.__vh360ShareModalInitialized = true;
+
+    // Suppress verbose console logging unless debug mode is enabled.
+    (function suppressDebugLogs() {
+        try {
+            if (typeof window !== 'undefined' && !window.__VH360_DEBUG) {
+                window.__vh360Console = window.__vh360Console || {};
+                if (!window.__vh360Console.log) {
+                    window.__vh360Console.log = console.log;
+                }
+                if (!window.__vh360Console.warn) {
+                    window.__vh360Console.warn = console.warn;
+                }
+                console.log = function() {};
+                console.warn = function() {};
+            }
+        } catch (e) {
+            // In case of any unexpected error, fail silently to avoid blocking
+        }
+    })();
+    
+    var shareBtn = document.getElementById('videohub360-share-btn');
+    var modalOverlay = document.getElementById('videohub360-modal-overlay');
+    var modalClose = document.getElementById('videohub360-modal-close');
+    var copyBtn = document.getElementById('videohub360-copy-btn');
+    var linkInput = document.getElementById('videohub360-link-input');
+    var emailForm = document.getElementById('videohub360-email-form');
+    var emailInput = document.getElementById('videohub360-email-input');
+    var fromNameInput = document.getElementById('videohub360-from-name-input');
+    var messageInput = document.getElementById('videohub360-message-input');
+    var sendBtn = document.getElementById('videohub360-send-btn');
+
+    /**
+     * Detect if the current device is running iOS. This helper checks the user
+     * agent for iPhone/iPad/iPod identifiers and also accounts for iPadOS 13+
+     * devices which report themselves as "Mac" but expose touch events. We
+     * intentionally avoid caching the result in case the page is loaded in
+     * different contexts (e.g. inside an iframe) where the user agent string
+     * could differ. Using a dedicated helper keeps the detection logic in one
+     * place and makes it easy to update in the future.
+     *
+     * @returns {boolean} True if the device appears to be running iOS.
+     */
+    function vh360IsIOSDevice() {
+        try {
+            const ua = navigator.userAgent || navigator.vendor || window.opera;
+            // Standard iOS detection (iPhone, iPad, iPod)
+            const iOSIdentifiers = /iPad|iPhone|iPod/;
+            // iPad on iOS 13+ reports itself as Mac; use touch support to detect
+            const isiPadOS13 = ua.includes('Mac') && 'ontouchend' in document;
+            return iOSIdentifiers.test(ua) || isiPadOS13;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // Expose the iOS detection helper globally so that other modules and
+    // closures (e.g. bindMobileFullscreenEvents in the Agora code) can
+    // reference it. Without this assignment, vh360IsIOSDevice remains scoped
+    // to this IIFE and calls outside of this closure will result in a
+    // ReferenceError, as observed on iOS when the fullscreen button was
+    // clicked. Attaching it to the window makes it accessible globally.
+    window.vh360IsIOSDevice = vh360IsIOSDevice;
+    var emailMessage = document.getElementById('videohub360-email-message');
+    var emailToggle = document.getElementById('videohub360-email-toggle');
+    var emailFormContainer = document.getElementById('videohub360-email-form-container');
+
+    if (shareBtn) {
+        shareBtn.addEventListener('click', function() {
+            modalOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        });
+    }
+    function closeModal() {
+        modalOverlay.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+    if (modalClose) modalClose.addEventListener('click', closeModal);
+    if (modalOverlay) {
+        modalOverlay.addEventListener('click', function(e) {
+            if (e.target === modalOverlay) closeModal();
+        });
+    }
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modalOverlay.classList.contains('active')) closeModal();
+    });
+    if (copyBtn && linkInput) {
+        copyBtn.addEventListener('click', function() {
+            linkInput.select();
+            linkInput.setSelectionRange(0, 99999);
+            try {
+                document.execCommand('copy');
+                copyBtn.textContent = 'Copied!';
+                copyBtn.classList.add('copied');
+                setTimeout(function() {
+                    copyBtn.textContent = 'Copy';
+                    copyBtn.classList.remove('copied');
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy: ', err);
+            }
+        });
+    }
+    
+    // Email form toggle functionality
+    if (emailToggle && emailFormContainer) {
+        emailToggle.addEventListener('click', function() {
+            var isExpanded = emailFormContainer.classList.contains('expanded');
+            
+            if (isExpanded) {
+                emailFormContainer.classList.remove('expanded');
+                emailToggle.classList.remove('expanded');
+            } else {
+                emailFormContainer.classList.add('expanded');
+                emailToggle.classList.add('expanded');
+                // Focus on first input when expanded
+                setTimeout(function() {
+                    if (fromNameInput) fromNameInput.focus();
+                }, 300);
+            }
+        });
+    }
+    
+    if (emailForm) {
+        emailForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            var email = emailInput.value.trim();
+            var fromName = fromNameInput.value.trim();
+            var message = messageInput.value.trim();
+            
+            if (!email) {
+                showEmailMessage('Please enter an email address.', 'error');
+                return;
+            }
+            if (!fromName) {
+                showEmailMessage('Please enter your name.', 'error');
+                return;
+            }
+            
+            // Provide default message if none provided
+            if (!message) {
+                message = 'Check out this video I thought you might enjoy!';
+            }
+            
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Sending...';
+            var formData = new FormData();
+            formData.append('action', 'videohub360_share_email');
+            formData.append('to_email', email);
+            formData.append('from_name', fromName);
+            formData.append('message', message);
+            formData.append('post_id', vh360Data.postId);
+            formData.append('nonce', vh360Data.shareEmailNonce);
+            fetch(vh360Data.ajaxUrl, { method: 'POST', body: formData })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    showEmailMessage(data.data || 'Email sent successfully!', 'success');
+                    emailInput.value = '';
+                    messageInput.value = 'Check out this video I thought you might enjoy!'; // Reset to default
+                    
+                    // Change button text to indicate success
+                    sendBtn.textContent = 'Sent!';
+                    
+                    // Auto-close modal after showing success message briefly
+                    setTimeout(function() {
+                        closeModal();
+                    }, 1500);
+                } else {
+                    // Enhanced error handling with specific messages
+                    let errorMsg = data.data || 'Failed to send email. Please try again.';
+                    
+                    // Provide more helpful error messages
+                    if (errorMsg.includes('Rate limit')) {
+                        showEmailMessage(errorMsg, 'warning');
+                    } else if (errorMsg.includes('SMTP')) {
+                        showEmailMessage(errorMsg + ' Check the email configuration in admin settings.', 'error');
+                    } else if (errorMsg.includes('configuration error')) {
+                        showEmailMessage(errorMsg + ' Please contact the site administrator.', 'error');
+                    } else {
+                        showEmailMessage(errorMsg, 'error');
+                    }
+                }
+            })
+            .catch(function(error) {
+                console.error('Email sharing error:', error);
+                showEmailMessage('Network error while sending email. Please check your connection and try again.', 'error');
+            })
+            .finally(function() {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Send Link';
+            });
+        });
+    }
+    function showEmailMessage(message, type) {
+        emailMessage.textContent = message;
+        emailMessage.className = 'videohub360-email-message ' + type;
+        emailMessage.style.display = 'block';
+        
+        // Add accessibility attribute for screen readers
+        emailMessage.setAttribute('role', 'alert');
+        emailMessage.setAttribute('aria-live', 'polite');
+        
+        // Ensure email form container is expanded so message is visible
+        if (emailFormContainer && !emailFormContainer.classList.contains('expanded')) {
+            emailFormContainer.classList.add('expanded');
+            emailToggle.classList.add('expanded');
+        }
+        
+        // Different timeout for different message types
+        let timeout = 5000; // Default 5 seconds
+        if (type === 'warning') timeout = 8000; // 8 seconds for warnings
+        if (type === 'error') timeout = 10000; // 10 seconds for errors
+        
+        setTimeout(function() {
+            emailMessage.style.display = 'none';
+            emailMessage.removeAttribute('role');
+            emailMessage.removeAttribute('aria-live');
+        }, timeout);
+    }
+})();
+
+
+
+// == Participant Moderation System ==
+/**
+ * Adds 3-dot moderation menu to participant video containers
+ * Only visible to hosts and allows timeout/ban actions
+ */
+function addParticipantModerationMenu(playerElement, uid, displayName) {
+    // Only add menu if user has moderation permissions
+    console.log('VideoHub360: addParticipantModerationMenu called', {
+        uid,
+        displayName,
+        canModerate: window.config?.canModerate,
+        securityCanModerate: window.config?.security?.can_moderate
+    });
+    
+    if (!window.config?.canModerate && !window.config?.security?.can_moderate) {
+        console.log('VideoHub360: User does not have moderation permissions, menu not added');
+        return;
+    }
+    
+    // Ensure we have valid parameters
+    if (!playerElement || !uid) {
+        console.warn('VideoHub360: Invalid parameters for moderation menu');
+        return;
+    }
+    
+    // Ensure display name is valid
+    const participantName = displayName || `User ${uid}`;
+    
+    // Don't add menu if one already exists
+    if (playerElement.querySelector('.vh360-participant-menu-container')) {
+        return;
+    }
+    
+    // Create menu button container
+    const menuContainer = document.createElement('div');
+    menuContainer.className = 'vh360-participant-menu-container';
+    
+    // Create 3-dot menu button
+    const menuButton = document.createElement('button');
+    menuButton.className = 'vh360-participant-menu-btn';
+    menuButton.innerHTML = '⋯';
+    menuButton.setAttribute('aria-label', `Moderate ${displayName}`);
+    
+    // Create dropdown menu
+    const dropdownMenu = document.createElement('div');
+    dropdownMenu.className = 'vh360-participant-dropdown';
+    
+    // Create menu options
+    const menuOptions = [
+        { id: 'timeout', icon: '⏱️', text: 'Timeout 5min', color: '#ff5722' },
+        { id: 'ban', icon: '🚫', text: 'Ban', color: '#f44336' }
+    ];
+    
+    menuOptions.forEach(option => {
+        const menuItem = document.createElement('button');
+        menuItem.className = 'vh360-participant-menu-option';
+        menuItem.innerHTML = `
+            <span class="menu-icon">${option.icon}</span>
+            <span>${option.text}</span>
+        `;
+        
+        // Click handler
+        menuItem.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            hideParticipantMenu();
+            isDropdownOpen = false;
+            
+            // Get current display name (try to get updated name from remoteUsers if available)
+            let currentDisplayName = displayName;
+            if (typeof window.getCurrentDisplayName === 'function') {
+                currentDisplayName = window.getCurrentDisplayName(uid) || displayName;
+            }
+            
+            showModerationConfirmation(uid, currentDisplayName, option.id);
+        });
+        
+        dropdownMenu.appendChild(menuItem);
+    });
+    
+    menuContainer.appendChild(menuButton);
+    playerElement.appendChild(menuContainer);
+    
+    // Append dropdown to document body to avoid clipping
+    document.body.appendChild(dropdownMenu);
+    
+    // State tracking for menu visibility
+    let menuHideTimeout = null;
+    let isDropdownOpen = false;
+    
+    // Show menu button on player hover
+    playerElement.addEventListener('mouseenter', () => {
+        menuContainer.style.opacity = '1';
+        // Clear any pending hide timeout
+        if (menuHideTimeout) {
+            clearTimeout(menuHideTimeout);
+            menuHideTimeout = null;
+        }
+    });
+    
+    // Hide menu button and dropdown when leaving player (with delay)
+    playerElement.addEventListener('mouseleave', () => {
+        menuContainer.style.opacity = '0';
+        // Add delay before hiding dropdown to allow user to reach it
+        if (isDropdownOpen) {
+            menuHideTimeout = setTimeout(() => {
+                hideParticipantMenu();
+                isDropdownOpen = false;
+                menuHideTimeout = null;
+            }, 300); // 300ms delay to allow mouse movement to dropdown
+        }
+    });
+    
+    // Keep menu open when hovering over dropdown
+    dropdownMenu.addEventListener('mouseenter', () => {
+        // Cancel hide timeout when mouse enters dropdown
+        if (menuHideTimeout) {
+            clearTimeout(menuHideTimeout);
+            menuHideTimeout = null;
+        }
+    });
+    
+    // Hide menu when leaving dropdown
+    dropdownMenu.addEventListener('mouseleave', () => {
+        hideParticipantMenu();
+        isDropdownOpen = false;
+    });
+    
+    // Menu button click handler
+    menuButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Hide other open menus
+        hideParticipantMenu();
+        
+        // Set dropdown as open
+        isDropdownOpen = true;
+        
+        // Clear any pending hide timeout
+        if (menuHideTimeout) {
+            clearTimeout(menuHideTimeout);
+            menuHideTimeout = null;
+        }
+        
+        // Calculate position based on button location
+        const buttonRect = menuButton.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const dropdownWidth = 140;
+        const dropdownHeight = 80; // Approximate height for 2 items
+        
+        // Calculate initial position (below and to the right of button)
+        let left = buttonRect.right - dropdownWidth;
+        let top = buttonRect.bottom + 4;
+        
+        // Adjust if dropdown would go off-screen to the right
+        if (left + dropdownWidth > viewportWidth) {
+            left = buttonRect.left - dropdownWidth + 8;
+        }
+        
+        // Adjust if dropdown would go off-screen to the left
+        if (left < 8) {
+            left = 8;
+        }
+        
+        // Adjust if dropdown would go off-screen at the bottom
+        if (top + dropdownHeight > viewportHeight) {
+            top = buttonRect.top - dropdownHeight - 4;
+        }
+        
+        // Apply calculated position
+        dropdownMenu.style.left = left + 'px';
+        dropdownMenu.style.top = top + 'px';
+        dropdownMenu.style.display = 'block';
+        
+        // Add click outside listener to hide menu
+        const hideOnClickOutside = (event) => {
+            if (!menuButton.contains(event.target) && !dropdownMenu.contains(event.target)) {
+                hideParticipantMenu();
+                isDropdownOpen = false;
+                document.removeEventListener('click', hideOnClickOutside);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', hideOnClickOutside), 0);
+    });
+    
+    // Store reference for cleanup
+    playerElement._moderationMenu = menuContainer;
+    playerElement._moderationDropdown = dropdownMenu;
+}
+
+/**
+ * Hides all open participant dropdown menus
+ */
+function hideParticipantMenu() {
+    const openMenus = document.querySelectorAll('.vh360-participant-dropdown');
+    openMenus.forEach(menu => {
+        menu.style.display = 'none';
+    });
+}
+
+/**
+ * Shows confirmation dialog for moderation actions
+ */
+function showModerationConfirmation(uid, displayName, actionType) {
+    const actionMessages = {
+        timeout: `timeout "${displayName}" for 5 minutes?`,
+        ban: `permanently ban "${displayName}" from the stream?`
+    };
+    
+    const message = `Are you sure you want to ${actionMessages[actionType]}`;
+    
+    // Create custom confirmation modal
+    const modal = document.createElement('div');
+    modal.className = 'vh360-moderation-confirm-modal';
+    
+    const modalContent = document.createElement('div');
+    modalContent.className = 'vh360-moderation-confirm-content';
+    
+    // Warning icon
+    const iconDiv = document.createElement("div");
+    iconDiv.className = 'vh360-moderation-modal-icon';
+    iconDiv.textContent = "⚠️";
+    modalContent.appendChild(iconDiv);
+
+    // Title
+    const title = document.createElement("h3");
+    title.className = 'vh360-moderation-modal-title';
+    title.textContent = "Confirm Moderation Action";
+    modalContent.appendChild(title);
+
+    // Message
+    const msgP = document.createElement("p");
+    msgP.className = 'vh360-moderation-modal-message';
+    msgP.textContent = message;
+    modalContent.appendChild(msgP);
+
+    // Buttons container
+    const btnWrap = document.createElement("div");
+    btnWrap.className = 'vh360-moderation-modal-buttons';
+
+    // Cancel button
+    const cancelBtn = document.createElement("button");
+    cancelBtn.id = "vh360-confirm-cancel";
+    cancelBtn.textContent = "Cancel";
+    btnWrap.appendChild(cancelBtn);
+
+    // Action button
+    const actionBtn = document.createElement("button");
+    actionBtn.id = "vh360-confirm-action";
+    actionBtn.className = `vh360-action-${actionType}`;
+    actionBtn.textContent = actionType.charAt(0).toUpperCase() + actionType.slice(1);
+    btnWrap.appendChild(actionBtn);
+
+    // Append buttons container
+    modalContent.appendChild(btnWrap);
+    
+    modal.appendChild(modalContent);
+    
+    // Check if we're in fullscreen mode and append to appropriate parent
+    const isInFullscreen = !!(document.fullscreenElement || 
+                             document.webkitFullscreenElement || 
+                             document.mozFullScreenElement || 
+                             document.msFullscreenElement);
+    
+    if (isInFullscreen) {
+        const fullscreenElement = document.fullscreenElement || 
+                               document.webkitFullscreenElement || 
+                               document.mozFullScreenElement || 
+                               document.msFullscreenElement;
+        
+        if (fullscreenElement && fullscreenElement.id === 'vh360-agora-player') {
+            fullscreenElement.appendChild(modal);
+            if (window.__VH360_DEBUG) console.log('VideoHub360: Moderation confirmation modal appended to fullscreen element');
+        } else {
+            document.body.appendChild(modal);
+        }
+    } else {
+        document.body.appendChild(modal);
+    }
+    
+    // Event handlers
+    const closeModal = () => {
+        try {
+            if (modal && modal.parentNode) {
+                modal.parentNode.removeChild(modal);
+            }
+        } catch (error) {
+            console.error('Error closing moderation modal:', error);
+            // Force modal removal if normal removal fails
+            const existingModal = document.querySelector('.vh360-moderation-confirm-modal');
+            if (existingModal && existingModal.parentNode) {
+                existingModal.parentNode.removeChild(existingModal);
+            }
+        }
+    };
+    
+    cancelBtn.addEventListener('click', closeModal);
+    
+    actionBtn.addEventListener('click', () => {
+        try {
+            executeParticipantModeration(uid, displayName, actionType);
+            closeModal();
+        } catch (error) {
+            console.error('Error executing moderation:', error);
+            closeModal(); // Still close modal even if there's an error
+        }
+    });
+    
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+    
+    // Close on Escape key
+    const escapeHandler = (e) => {
+        if (e.key === 'Escape') {
+            closeModal();
+            document.removeEventListener('keydown', escapeHandler);
+        }
+    };
+    document.addEventListener('keydown', escapeHandler);
+}
+
+
+
+// sendModerationCommand function moved inside initializeAgoraPlayer scope to access security variable
+
+/**
+ * Removes participant from UI
+ */
+function removeParticipantFromUI(uid) {
+    const playerElement = document.getElementById(`player-${uid}`);
+    if (playerElement) {
+        console.log('Agora: Removing participant from UI:', uid);
+        
+        // Smooth removal animation
+        playerElement.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        playerElement.style.opacity = '0';
+        playerElement.style.transform = 'scale(0.8)';
+        
+        setTimeout(() => {
+            if (playerElement.parentNode) {
+                // Clean up video track binding before removing element
+                if (window.videoElementManager) {
+                    window.videoElementManager.unregisterTrackBinding(playerElement.id);
+                }
+                
+                playerElement.parentNode.removeChild(playerElement);
+                console.log('Agora: Participant element removed from DOM:', uid);
+            }
+            
+            // Clean up from remoteUsers tracking
+            if (window.remoteUsers && window.remoteUsers[uid]) {
+                delete window.remoteUsers[uid];
+                console.log('Agora: Participant removed from remoteUsers tracking:', uid);
+            }
+            
+            // Update layout manager if available
+            if (window.vh360LayoutManager) {
+                window.vh360LayoutManager.updateLayout(window.remoteUsers || {});
+                console.log('Agora: Layout manager updated after participant removal');
+            }
+            
+        }, 300);
+    } else {
+        console.log('Agora: Player element not found for removal:', uid);
+    }
+}
+
+/**
+ * Shows moderation toast messages
+ */
+function showModerationToast(message, type = 'info') {
+    // Remove existing toasts
+    const existingToasts = document.querySelectorAll('.vh360-moderation-toast');
+    existingToasts.forEach(toast => toast.remove());
+    
+    const toast = document.createElement('div');
+    toast.className = `vh360-moderation-toast toast-${type}`;
+    
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    // Auto-remove after 4 seconds
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.style.animation = 'slideOutRight 0.3s ease-out';
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 300);
+        }
+    }, 4000);
+}
+
+// == Agora Player Initialization ==
+window.initializeAgoraPlayer = function(config) {
+    // === Responsive Constants and Utilities ===
+    const BREAKPOINTS = {
+        MOBILE: 768,
+        TABLET: 1024,
+        DESKTOP: 1200
+    };
+
+    // Responsive detection utilities
+    function getScreenSize() {
+        const width = window.innerWidth;
+        if (width < BREAKPOINTS.MOBILE) return 'mobile';
+        if (width < BREAKPOINTS.TABLET) return 'tablet';
+        return 'desktop';
+    }
+
+    function isMobile() {
+        return window.innerWidth < BREAKPOINTS.MOBILE;
+    }
+
+    // === Multi-View Layout Manager ===
+    // ViewLayoutManager has been moved to separate module for better maintainability
+    // Import the new ViewLayoutManager from view-layout-manager.js
+    
+    // Check if ViewLayoutManager is available (loaded from separate module)
+    if (typeof ViewLayoutManager === 'undefined') {
+        console.error('ViewLayoutManager not found. Make sure view-layout-manager.js is loaded.');
+        // Create a minimal fallback class to prevent errors
+        window.ViewLayoutManager = class {
+            constructor() {
+                console.warn('Using fallback ViewLayoutManager. Some features may not work.');
+                this.currentView = 'speaker';
+                this.isTransitioning = false;
+            }
+            init() {}
+            switchView() {}
+            updateLayout() {}
+            destroy() {}
+        };
+    }
+    
+    // Initialize layout manager
+    let viewLayoutManager = null;
+
+    // === Early Error Handler ===
+    function showEarlyAgoraError(message) {
+        console.error('Agora Error:', message);
+        const playerContainer = document.getElementById('vh360-agora-player') || document.getElementById('vh360-agora-local-player');
+        if (playerContainer) {
+            playerContainer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 200px; color: #fff; font-size: 1.1em; background: #333; border-radius: 8px; text-align: center; padding: 20px;">' + message + '</div>';
+        }
+    }
+
+    // === SDK and DOM Validation ===
+    if (typeof AgoraRTC === 'undefined') {
+        console.error('Agora: SDK not loaded');
+        showEarlyAgoraError('Livestream service unavailable. Please refresh the page.');
+        return null;
+    }
+
+    // Validate required DOM containers
+    const requiredContainers = ['vh360-agora-player', 'vh360-agora-local-player'];
+    const missingContainers = requiredContainers.filter(id => !document.getElementById(id));
+    if (missingContainers.length > 0) {
+        console.error('Agora: Missing required DOM containers:', missingContainers);
+        showEarlyAgoraError('Video player not properly initialized. Please refresh the page.');
+        return null;
+    }
+
+    // Validate configuration
+    if (!config.appId || !config.channelName) {
+        console.error('Agora: Missing required configuration', { appId: !!config.appId, channelName: !!config.channelName });
+        showEarlyAgoraError('Livestream configuration incomplete. Please contact the administrator.');
+        return null;
+    }
+
+    console.log('Agora: Initialization started with config:', {
+        mode: config.mode,
+        agoraMode: config.agoraMode,
+        appId: config.appId ? 'present' : 'missing',
+        channelName: config.channelName ? 'present' : 'missing'
+    });
+
+    let client = null;
+    let localTracks = { videoTrack: null, audioTrack: null };
+
+    let remoteUsers = {};
+    let isAudioMuted = false;
+    let isVideoMuted = false;
+    let isPresenter = false;
+    let currentUserUID = null; // Store the current user's Agora UID after joining
+    
+    // Voice-activated video switching variables
+    let activeSpeakerUid = null;
+    let lastActiveSpeakerChange = 0;
+    let activeSpeakerDebounceTimeout = null;
+    
+    // Original host tracking for initial view preference
+    let originalHostUID = null; // Store the original host's UID for initial view display
+    
+    // Simplified video element management system
+    // Note: Agora tracks stay bound to elements even when moved in DOM,
+    // so we don't need rebinding logic anymore
+    const videoElementManager = {
+        // Track active video element bindings for reference only
+        elementTrackBindings: new Map(),
+        
+        // Register a video track binding
+        registerTrackBinding(elementId, isLocal, remoteTrack = null) {
+            this.elementTrackBindings.set(elementId, {
+                isLocal,
+                remoteTrack,
+                timestamp: Date.now()
+            });
+        },
+        
+        // Clean up track binding
+        unregisterTrackBinding(elementId) {
+            this.elementTrackBindings.delete(elementId);
+        },
+        
+        // Get current video element in main player
+        getCurrentMainVideoElement() {
+            const mainPlayer = document.getElementById("vh360-agora-local-player");
+            return mainPlayer ? mainPlayer.querySelector('[id^="player-"]') : null;
+        },
+        
+        // Check if element is local user's video
+        isLocalUserElement(element) {
+            return element && element.id === `player-${currentUserUID}`;
+        }
+    };
+    
+    // Expose video manager globally for other modules
+    window.videoElementManager = videoElementManager;
+    let volumeThreshold = 30; // Minimum volume level to consider as speaking
+    let switchingCooldown = 1000; // 1 second cooldown to prevent rapid switching on desktop
+    let isVolumenIndicationEnabled = false;
+    
+    // Display name resolution tracking
+    let userInfoBroadcastInterval = null;
+    let userInfoBroadcastEndTime = null;
+    let pendingDisplayNameRequests = new Set();
+    
+    // Moderation state tracking
+    let isBeingModerated = false; // Flag to prevent UI updates after moderation action
+    
+    // Apply allowEveryoneIsHost logic for Interactive mode
+    let isHost = config.isHost;
+    let currentRole = config.role;
+    
+    // Initialize stream started flag - controls should not show until stream begins
+    window.vh360StreamStarted = false;
+    
+    console.log("VideoHub360: Initial role setup in initializeAgoraPlayer:");
+    console.log("- Config role:", config.role);
+    console.log("- Config isHost:", config.isHost);
+    console.log("- Config agoraMode:", config.agoraMode);
+    console.log("- Config allowEveryoneIsHost:", config.allowEveryoneIsHost);
+    console.log("- Config isOriginalHost:", config.isOriginalHost);
+    
+    if (config.allowEveryoneIsHost && config.agoraMode === 'interactive') {
+        isHost = true;
+        currentRole = 'host';
+        console.log("VideoHub360: Everyone-is-host mode enabled, setting role to host");
+    }
+    
+    console.log("VideoHub360: Final role setup:");
+    console.log("- currentRole:", currentRole);
+    console.log("- isHost:", isHost);
+    
+    let isOriginalHost = config.isOriginalHost;
+    let canModerate = config.canModerate;
+    let security = config.security;
+
+    // === Helper Functions ===
+    
+    /**
+     * Get current display name for a UID from remoteUsers
+     */
+    function getCurrentDisplayName(uid) {
+        if (remoteUsers[uid] && remoteUsers[uid].displayName && !remoteUsers[uid].displayName.startsWith('User ')) {
+            return remoteUsers[uid].displayName;
+        }
+        return null;
+    }
+    
+    // Make getCurrentDisplayName available globally
+    window.getCurrentDisplayName = getCurrentDisplayName;
+
+    // === Participant Moderation Functions ===
+    
+    /**
+     * Sends moderation command via Agora data stream for real-time communication
+     */
+    function sendModerationCommand(commandData) {
+        console.log('Agora: ⚡ CRITICAL: Sending moderation command:', commandData);
+        
+        if (!window.sendDataStreamMessage) {
+            console.error('Agora: sendDataStreamMessage function not available');
+            // If data stream messaging is not available, try direct approach for self-moderation
+            if (commandData.target_user_id && commandData.target_user_id == security.user_id && window.handleModerationAction) {
+                console.log('Agora: Attempting direct self-moderation fallback');
+                window.handleModerationAction(commandData);
+            }
+            return;
+        }
+        
+        try {
+            // Use the existing sendDataStreamMessage function which handles connection checks
+            const messageData = {
+                type: 'moderation_action',
+                ...commandData
+            };
+            
+            console.log('Agora: ⚡ CRITICAL: Broadcasting moderation message:', messageData);
+            window.sendDataStreamMessage(messageData);
+            console.log('Agora: Moderation command sent successfully');
+            
+            // Additional fallback: if we're moderating ourselves, handle it directly too
+            if (commandData.target_user_id && commandData.target_user_id == security.user_id && window.handleModerationAction) {
+                console.log('Agora: Handling self-moderation directly as fallback');
+                setTimeout(() => {
+                    window.handleModerationAction(commandData);
+                }, 200); // Reduced delay for faster self-moderation
+            }
+            
+            // Enhanced retry pattern with more aggressive initial attempts
+            const retries = [500, 1200, 2500, 4500, 7500]; // 5 retries with faster initial attempts
+            
+            retries.forEach((delay, index) => {
+                setTimeout(() => {
+                    try {
+                        console.log(`Agora: ⚡ CRITICAL: Sending moderation command retry #${index + 1}`);
+                        window.sendDataStreamMessage(messageData);
+                    } catch (error) {
+                        console.error(`Agora: Retry #${index + 1} failed:`, error);
+                    }
+                }, delay);
+            });
+            
+            // More aggressive immediate fallback checks
+            setTimeout(() => {
+                if (window.triggerImmediateModerationCheck) {
+                    console.log('Agora: Triggering immediate moderation check after 1.5s');
+                    window.triggerImmediateModerationCheck();
+                }
+            }, 1500);
+            
+            setTimeout(() => {
+                if (window.triggerImmediateModerationCheck) {
+                    console.log('Agora: Triggering second immediate moderation check after 4s');
+                    window.triggerImmediateModerationCheck();
+                }
+            }, 4000);
+            
+            setTimeout(() => {
+                if (window.triggerImmediateModerationCheck) {
+                    console.log('Agora: Triggering final fallback moderation check after 8s');
+                    window.triggerImmediateModerationCheck();
+                }
+            }, 8000);
+            
+        } catch (error) {
+            console.error('Agora: ⚡ CRITICAL: Failed to send moderation command:', error);
+            
+            // Fallback: if we're moderating ourselves, handle it directly
+            if (commandData.target_user_id && commandData.target_user_id == security.user_id && window.handleModerationAction) {
+                console.log('Agora: Falling back to direct self-moderation due to send failure');
+                window.handleModerationAction(commandData);
+            }
+        }
+    }
+    /**
+     * Executes the moderation action via AJAX and real-time communication
+     */
+    function executeParticipantModeration(uid, displayName, actionType) {
+        // Validate parameters
+        if (!uid || !actionType) {
+            showModerationToast('Invalid moderation parameters', 'error');
+            return;
+        }
+        
+        console.log('Agora: Executing moderation - UID:', uid, 'Action:', actionType, 'Display Name:', displayName);
+        console.log('Agora: Current remoteUsers data:', remoteUsers);
+        
+        // Ensure we have a proper display name
+        const participantName = displayName || `User ${uid}`;
+        
+        // Show loading state
+        showModerationToast(`${actionType.charAt(0).toUpperCase() + actionType.slice(1)}ing ${participantName}...`, 'info');
+        
+        // Get target user ID (if available from remoteUsers data)
+        let targetUserId = 0;
+        if (remoteUsers[uid] && remoteUsers[uid].wordpressUserId) {
+            targetUserId = remoteUsers[uid].wordpressUserId;
+            console.log('Agora: Found WordPress user ID for UID', uid, ':', targetUserId);
+        } else if (uid === currentUserUID) {
+            // If moderating self
+            targetUserId = security.user_id;
+            console.log('Agora: Self-moderation detected, using own WordPress ID:', targetUserId);
+        } else {
+            console.log('Agora: No WordPress user ID found for UID', uid, 'in remoteUsers:', remoteUsers);
+        }
+        
+        console.log('Agora: Final targetUserId for moderation:', targetUserId);
+        
+        // Validate required data
+        if (!vh360Data.postId || !vh360Data.moderationNonce) {
+            console.error('Agora: Missing required moderation data:', { 
+                postId: vh360Data.postId, 
+                moderationNonce: vh360Data.moderationNonce ? 'present' : 'missing' 
+            });
+            showModerationToast('Missing required moderation data', 'error');
+            return;
+        }
+        
+        // Enhanced debug logging
+        console.log('Agora: Preparing moderation AJAX request:', {
+            action: 'vh360_remove_participant',
+            postId: vh360Data.postId,
+            targetUid: uid,
+            targetUserId: targetUserId,
+            actionType: actionType,
+            displayName: participantName,
+            hasNonce: !!vh360Data.moderationNonce
+        });
+        
+        // Prepare AJAX data
+        const formData = new FormData();
+        formData.append('action', 'vh360_remove_participant');
+        formData.append('nonce', vh360Data.moderationNonce);
+        formData.append('post_id', vh360Data.postId);
+        formData.append('target_uid', uid);
+        formData.append('target_user_id', targetUserId);
+        formData.append('action_type', actionType);
+        formData.append('display_name', participantName);
+        formData.append('reason', `Moderated via 3-dot menu (${actionType})`);
+        
+        // Send AJAX request
+        fetch(vh360Data.ajaxUrl, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Agora: Moderation AJAX response:', data);
+            
+            if (data.success) {
+                // Show success message
+                console.log('Agora: Moderation action successful:', data.data);
+                showModerationToast(data.data.message, 'success');
+                
+                // Send real-time moderation command via Agora data stream
+                if (window.sendDataStreamMessage && data.data.realtime_data) {
+                    sendModerationCommand(data.data.realtime_data);
+                }
+                
+                // Also trigger the standard immediate checks
+                if (window.triggerImmediateModerationCheck) {
+                    setTimeout(() => window.triggerImmediateModerationCheck(), 2000); // First check after 2 seconds 
+                    setTimeout(() => window.triggerImmediateModerationCheck(), 5000); // Second check after 5 seconds
+                    setTimeout(() => window.triggerImmediateModerationCheck(), 10000); // Third check after 10 seconds
+                }
+                
+                // Remove participant from UI after short delay
+                setTimeout(() => {
+                    removeParticipantFromUI(uid);
+                }, 1000);
+                
+            } else {
+                // Enhanced error message for debugging
+                const errorMessage = data.data || 'Failed to moderate participant';
+                console.error('Agora: Moderation AJAX failed:', {
+                    fullResponse: data,
+                    errorMessage: errorMessage,
+                    success: data.success
+                });
+                showModerationToast(errorMessage, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Moderation error:', error);
+            console.error('Moderation request details:', {
+                url: vh360Data.ajaxUrl,
+                postId: vh360Data.postId,
+                targetUid: uid,
+                actionType: actionType,
+                nonce: vh360Data.moderationNonce ? 'present' : 'missing'
+            });
+            
+            if (error.message.includes('Failed to fetch')) {
+                showModerationToast('Network error - please check your connection', 'error');
+            } else {
+                showModerationToast('An error occurred during moderation: ' + error.message, 'error');
+            }
+        });
+    }
+
+    // Make executeParticipantModeration available globally from within this scope
+    window.executeParticipantModeration = executeParticipantModeration;
+
+    // Get control elements
+    const muteAudioBtn = document.getElementById('vh360-agora-mute-audio');
+    const muteVideoBtn = document.getElementById('vh360-agora-mute-video');
+    const joinAsPresenterBtn = document.getElementById('vh360-agora-join-presenter');
+    const leaveBtn = document.getElementById('vh360-agora-leave');
+    const endStreamBtn = document.getElementById('vh360-agora-end-stream');
+    const controlsContainer = document.getElementById('vh360-agora-controls');
+    
+    // Get the new join livestream button
+    const joinLivestreamBtn = document.getElementById('vh360-join-livestream-btn');
+    const joinOverlay = document.getElementById('vh360-join-livestream-overlay');
+
+    // === Permission Helper Functions ===
+    function isUserAdministrator() {
+        return window.vh360Data && window.vh360Data.user_role === 'administrator';
+    }
+
+    function shouldShowControlsForUser() {
+        // Show controls to all users in all modes
+        // Individual buttons will be filtered by role and permissions
+        return true;
+    }
+
+    function shouldShowModerationButton() {
+        // Moderation button for users who can moderate
+        return canModerate || isOriginalHost;
+    }
+
+    function shouldShowEndStreamButton() {
+        // End stream button only for original host
+        return isOriginalHost;
+    }
+
+    function getAllButtonElements() {
+        // Return array of all button elements that might need transformation
+        return [muteAudioBtn, muteVideoBtn, joinAsPresenterBtn, leaveBtn, endStreamBtn, moderationBtn].filter(btn => btn);
+    }
+
+    // == Agora Client Setup ==
+    try {
+        client = AgoraRTC.createClient({ mode: config.mode, codec: "vp8" });
+        console.log("Agora: Client created successfully with mode:", config.mode, "Initial role:", currentRole);
+        
+        // Make client globally available for moderation checks
+        window.agoraClient = client;
+    } catch (error) {
+        console.error("Agora: Failed to create client", error);
+        showEarlyAgoraError("Failed to initialize livestream client. Please refresh the page.");
+        return null;
+    }
+
+    // Enable audio volume indication for voice-activated switching in interactive mode
+    if (config.agoraMode === 'interactive') {
+        enableVolumeIndication();
+    }
+
+    // In SDK v4, setClientRole is deprecated for rtc mode
+    // Role management is now handled via join options and publishing state
+
+    // == Voice-Activated Video Switching Functions ==
+    
+    function enableVolumeIndication() {
+        try {
+            // Enable volume indication with reporting interval of 200ms and smoothing factor of 3
+            client.enableAudioVolumeIndicator(200, 3);
+            isVolumenIndicationEnabled = true;
+            console.log("Agora: Audio volume indication enabled for voice-activated switching");
+            
+            // Listen for volume indication events
+            client.on("volume-indicator", handleVolumeIndication);
+        } catch (error) {
+            console.warn("Agora: Failed to enable volume indication", error);
+            isVolumenIndicationEnabled = false;
+        }
+    }
+    
+    function handleVolumeIndication(volumes) {
+        if (!isVolumenIndicationEnabled || config.agoraMode !== 'interactive') {
+            return;
+        }
+        
+        // Guard against race conditions during view transitions
+        // Continue updating visual indicators but don't trigger speaker changes
+        const allowSpeakerChange = window.vh360LayoutManager ? window.vh360LayoutManager.shouldAllowVideoMovement() : true;
+        
+        // Find the user with the highest volume above threshold
+        let newActiveSpeaker = null;
+        let maxVolume = volumeThreshold;
+        
+        volumes.forEach((volumeInfo) => {
+            const { uid, level } = volumeInfo;
+            
+            // Update visual indicator for this user (this can continue during transitions)
+            updateVolumeIndicator(uid, level);
+            
+            // Check if this user has the highest volume and is above threshold
+            // Only consider for speaker switching if transitions are allowed
+            if (allowSpeakerChange && level > maxVolume) {
+                maxVolume = level;
+                newActiveSpeaker = uid;
+            }
+        });
+        
+        // Skip speaker switching logic if view is transitioning
+        if (!allowSpeakerChange) {
+            if (window.__VH360_DEBUG) {
+                console.log('[VH360 Debug] Blocking speaker detection during view transition');
+            }
+            return;
+        }
+        
+        // If no one is speaking above threshold, clear active speaker after a delay
+        if (!newActiveSpeaker && activeSpeakerUid) {
+            if (activeSpeakerDebounceTimeout) {
+                clearTimeout(activeSpeakerDebounceTimeout);
+            }
+            
+            // Use shorter timeout on mobile for better responsiveness
+            const isMobileDevice = window.innerWidth <= 768;
+            const clearDelay = isMobileDevice ? 800 : 2000; // 800ms on mobile, 2s on desktop
+            
+            activeSpeakerDebounceTimeout = setTimeout(() => {
+                if (activeSpeakerUid) {
+                    setActiveSpeaker(null);
+                }
+            }, clearDelay);
+            return;
+        }
+        
+        // If we have a new active speaker and enough time has passed since last change
+        if (newActiveSpeaker && newActiveSpeaker !== activeSpeakerUid) {
+            const now = Date.now();
+            // Use shorter cooldown on mobile for better responsiveness
+            const isMobileDevice = window.innerWidth <= 768;
+            const currentCooldown = isMobileDevice ? 500 : switchingCooldown; // 500ms on mobile, 1s on desktop
+            
+            if (now - lastActiveSpeakerChange >= currentCooldown) {
+                setActiveSpeaker(newActiveSpeaker);
+            }
+        }
+    }
+    
+    function setActiveSpeaker(uid) {
+        // Guard against race conditions during view transitions
+        if (window.vh360LayoutManager && !window.vh360LayoutManager.shouldAllowVideoMovement()) {
+            if (window.__VH360_DEBUG) {
+                console.log('[VH360 Debug] Blocking speaker change during view transition:', uid);
+            }
+            return;
+        }
+        
+        // Clear any pending debounce timeout
+        if (activeSpeakerDebounceTimeout) {
+            clearTimeout(activeSpeakerDebounceTimeout);
+            activeSpeakerDebounceTimeout = null;
+        }
+        
+        // Remove active speaker styling from previous speaker
+        if (activeSpeakerUid) {
+            updateActiveSpeakerVisuals(activeSpeakerUid, false);
+        }
+        
+        // Set new active speaker
+        activeSpeakerUid = uid;
+        lastActiveSpeakerChange = Date.now();
+        
+        if (uid) {
+            console.log("Agora: Active speaker changed to UID:", uid);
+            if (window.__VH360_DEBUG) {
+                console.log('[VH360 Debug] Setting active speaker:', uid);
+            }
+            
+            // Add active speaker styling to new speaker
+            updateActiveSpeakerVisuals(uid, true);
+            
+            // Switch main video to active speaker (unless it's the host viewing themselves)
+            if (shouldSwitchToSpeaker(uid)) {
+                switchMainVideoToSpeaker(uid);
+            }
+        } else {
+            console.log("Agora: No active speaker");
+            if (window.__VH360_DEBUG) {
+                console.log('[VH360 Debug] Clearing active speaker');
+            }
+            
+            // When active speaker is cleared (silence), return to original host view in interactive mode
+            const mainPlayer = document.getElementById("vh360-agora-local-player");
+            const currentMainElement = mainPlayer ? mainPlayer.querySelector('[id^="player-"]') : null;
+            
+            // In interactive mode, non-original hosts should always return to viewing the original host during silence
+            if (config.agoraMode === 'interactive' && !isOriginalHost && originalHostUID && remoteUsers[originalHostUID]) {
+                const isOriginalHostInMain = currentMainElement && currentMainElement.id === `player-${originalHostUID}`;
+                
+                if (!isOriginalHostInMain) {
+                    console.log("Agora: Silence detected - returning to original host view");
+                    switchMainVideoToSpeaker(originalHostUID);
+                }
+            }
+        }
+    }
+    
+    function shouldSwitchToSpeaker(uid) {
+        // Don't switch if the speaker is already in the main view
+        const mainPlayer = document.getElementById("vh360-agora-local-player");
+        const currentMainElement = mainPlayer ? mainPlayer.querySelector('[id^="player-"]') : null;
+         if (currentMainElement) {
+          const currentMainUid = currentMainElement.id.replace('player-', '');
+           if (currentMainUid === uid.toString()) {
+            return false;
+          }
+       }
+    
+            return true;
+    }
+    
+    function switchMainVideoToSpeaker(uid) {
+        // Guard against race conditions during view transitions
+        if (window.vh360LayoutManager && !window.vh360LayoutManager.shouldAllowVideoMovement()) {
+            if (window.__VH360_DEBUG) {
+                console.log('[VH360 Debug] Blocking main video switch during view transition:', uid);
+            }
+            return;
+        }
+        
+        if (window.__VH360_DEBUG) {
+            console.log('[VH360 Debug] Switching main video to speaker:', uid);
+        }
+        
+        const mainPlayer = document.getElementById("vh360-agora-local-player");
+        const remotePlayersContainer = document.getElementById("vh360-agora-remote-players");
+        
+        if (!mainPlayer || !remotePlayersContainer) {
+            console.warn("Agora: Missing main player or remote container");
+            return;
+        }
+        
+        // SIMPLIFIED APPROACH: Move elements but DON'T rebind tracks
+        // The tracks stay bound to the original elements even when DOM position changes
+        
+        // Step 1: Move any current main element back to remote players
+        const currentMainElement = mainPlayer.querySelector('[id^="player-"]');
+        if (currentMainElement && currentMainElement.id !== `player-${uid}`) {
+            if (window.__VH360_DEBUG) {
+                console.log('[VH360 Debug] Moving current main back to remote:', currentMainElement.id);
+            }
+            
+            // Update classes for remote display
+            currentMainElement.classList.remove('vh360-video-main', 'vh360-main-placeholder');
+            currentMainElement.classList.add('vh360-video-remote');
+            
+            // Just move it - track stays bound
+            remotePlayersContainer.appendChild(currentMainElement);
+        }
+        
+        // Handle local user video: If local user isn't the speaker and has video in main player,
+        // create a player element for them in remote players
+        if (currentUserUID && uid !== currentUserUID.toString()) {
+            // Check if local video track exists and is playing in main player
+            const hasLocalVideoInMain = mainPlayer.querySelector('video') && 
+                                       !mainPlayer.querySelector('[id^="player-"]');
+            
+            if (hasLocalVideoInMain && localTracks.videoTrack) {
+                // Create a player element for local user
+                let localPlayerElement = document.getElementById(`player-${currentUserUID}`);
+                if (!localPlayerElement) {
+                    localPlayerElement = document.createElement('div');
+                    localPlayerElement.id = `player-${currentUserUID}`;
+                    localPlayerElement.classList.add('vh360-video-remote');
+                    
+                    // Add display name BEFORE playing video (so it renders properly)
+                    if (config.displayName) {
+                        const nameOverlay = document.createElement('div');
+                        nameOverlay.className = 'vh360-video-name-overlay';
+                        nameOverlay.textContent = config.displayName;
+                        localPlayerElement.appendChild(nameOverlay);
+                    }
+                    
+                    // Add to remote players first
+                    remotePlayersContainer.appendChild(localPlayerElement);
+                    
+                    // Now play local video on this new element
+                    if (typeof localTracks.videoTrack.play === 'function') {
+                        localTracks.videoTrack.play(localPlayerElement.id, { mirror: false });
+                        videoElementManager.registerTrackBinding(localPlayerElement.id, true);
+                        if (window.__VH360_DEBUG) {
+                            console.log('[VH360 Debug] Created player element for local user in remote players');
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Step 2: Handle speaker element - could be local user or remote user
+        let speakerElement = document.getElementById(`player-${uid}`);
+        
+        // If speaker is local user and element doesn't exist, create it
+        if (!speakerElement && currentUserUID && uid === currentUserUID.toString()) {
+            // Local user is the speaker but doesn't have a player element yet
+            if (localTracks.videoTrack && typeof localTracks.videoTrack.play === 'function') {
+                speakerElement = document.createElement('div');
+                speakerElement.id = `player-${currentUserUID}`;
+                
+                // Add display name
+                if (config.displayName) {
+                    const nameOverlay = document.createElement('div');
+                    nameOverlay.className = 'vh360-video-name-overlay';
+                    nameOverlay.textContent = config.displayName;
+                    speakerElement.appendChild(nameOverlay);
+                }
+                
+                // Add to main first, then play
+                mainPlayer.innerHTML = '';
+                speakerElement.classList.add('vh360-video-main');
+                mainPlayer.appendChild(speakerElement);
+                
+                // Play local video on this element
+                localTracks.videoTrack.play(speakerElement.id, { mirror: false });
+                videoElementManager.registerTrackBinding(speakerElement.id, true);
+                
+                if (window.__VH360_DEBUG) {
+                    console.log('[VH360 Debug] Created player element for local user as main speaker');
+                }
+                console.log("Agora: Switched main video to local user UID:", uid);
+                return;
+            }
+        }
+        
+        // If speaker element still doesn't exist, log and wait
+        if (!speakerElement) {
+            console.warn("Agora: Speaker element not found for UID:", uid);
+            return;
+        }
+        
+        // Move speaker to main (if not already there)
+        if (speakerElement.parentElement !== mainPlayer) {
+            if (window.__VH360_DEBUG) {
+                console.log('[VH360 Debug] Moving speaker to main:', uid);
+            }
+            
+            // Clear main player completely before adding speaker
+            mainPlayer.innerHTML = '';
+            
+            // Update classes for main display
+            speakerElement.classList.remove('vh360-video-remote');
+            speakerElement.classList.add('vh360-video-main');
+            
+            // Just move it - track stays bound, no rebinding needed!
+            mainPlayer.appendChild(speakerElement);
+            console.log("Agora: Switched main video to active speaker UID:", uid);
+        }
+    }
+    
+    function updateVolumeIndicator(uid, level) {
+        const playerElement = document.getElementById(`player-${uid}`);
+        if (!playerElement) return;
+        
+        let volumeIndicator = playerElement.querySelector('.volume-indicator');
+        if (!volumeIndicator) {
+            volumeIndicator = document.createElement('div');
+            volumeIndicator.className = 'volume-indicator';
+            volumeIndicator.style.cssText = `
+                position: absolute;
+                top: 4px;
+                right: 4px;
+                width: 16px;
+                height: 16px;
+                background: rgba(76, 175, 80, 0.8);
+                border-radius: 50%;
+                display: none;
+                z-index: 15;
+            `;
+            
+            // Add microphone icon
+            volumeIndicator.innerHTML = '🎤';
+            volumeIndicator.style.fontSize = '8px';
+            volumeIndicator.style.display = 'flex';
+            volumeIndicator.style.alignItems = 'center';
+            volumeIndicator.style.justifyContent = 'center';
+            volumeIndicator.style.color = '#fff';
+            
+            playerElement.appendChild(volumeIndicator);
+        }
+        
+        // Show/hide indicator based on volume level
+        if (level > volumeThreshold) {
+            volumeIndicator.style.display = 'flex';
+            // Scale opacity based on volume level (30-100 maps to 0.5-1.0)
+            const opacity = Math.min(1.0, 0.5 + (level - volumeThreshold) / 140);
+            volumeIndicator.style.background = `rgba(76, 175, 80, ${opacity})`;
+        } else {
+            volumeIndicator.style.display = 'none';
+        }
+    }
+    
+    function updateActiveSpeakerVisuals(uid, isActive) {
+        const playerElement = document.getElementById(`player-${uid}`);
+        if (!playerElement) return;
+        
+        // Skip visual indicators for original host
+        if (uid === originalHostUID) {
+            return;
+        }
+        
+        if (isActive) {
+            // Add green border for active speaker (works for both video and placeholder)
+            playerElement.style.border = '3px solid #4CAF50';
+            playerElement.style.boxShadow = '0 0 12px rgba(76, 175, 80, 0.6)';
+            
+            // Add active speaker badge only for placeholders in thumbnails, not for actual video
+            let speakerBadge = playerElement.querySelector('.active-speaker-badge');
+            
+            // Only show text badge for audio-only participants (placeholders)
+            const shouldShowBadge = playerElement.classList.contains('video-placeholder');
+            
+            if (shouldShowBadge) {
+                if (!speakerBadge) {
+                    speakerBadge = document.createElement('div');
+                    speakerBadge.className = 'active-speaker-badge';
+                    speakerBadge.style.cssText = `
+                        position: absolute;
+                        top: 4px;
+                        left: 4px;
+                        background: rgba(76, 175, 80, 0.9);
+                        color: #fff;
+                        padding: 2px 6px;
+                        border-radius: 4px;
+                        font-size: 10px;
+                        font-weight: bold;
+                        z-index: 25;
+                        text-transform: uppercase;
+                    `;
+                    
+                    // Only show "SPEAKING" text for audio-only participants
+                    speakerBadge.textContent = 'SPEAKING (AUDIO)';
+                    playerElement.appendChild(speakerBadge);
+                }
+                speakerBadge.style.display = 'block';
+            } else {
+                // For video participants, just rely on the border indicator
+                if (speakerBadge) {
+                    speakerBadge.style.display = 'none';
+                }
+            }
+        } else {
+            // Remove green border
+            playerElement.style.border = '2px solid #333';
+            playerElement.style.boxShadow = '';
+            
+            // Hide active speaker badge
+            const speakerBadge = playerElement.querySelector('.active-speaker-badge');
+            if (speakerBadge) {
+                speakerBadge.style.display = 'none';
+            }
+        }
+    }
+
+    // == Camera-Off Placeholder Functions ==
+    function createVideoPlaceholder(uid, displayName, isMainPlayer = false) {
+        const placeholderElement = document.createElement("div");
+        placeholderElement.id = `player-${uid}`;
+        placeholderElement.className = 'video-placeholder';
+        
+        // Apply styling based on player type and context
+        if (isMainPlayer) {
+            placeholderElement.classList.add('vh360-main-placeholder');
+        } else {
+            // Regular remote placeholder - let CSS handle all styling
+            // CSS classes will handle responsive sizing automatically
+        }
+        
+        // Create placeholder content container
+        const contentContainer = document.createElement("div");
+        contentContainer.className = 'vh360-video-content';
+        
+        // Add camera-off icon with responsive sizing
+        const cameraIcon = document.createElement("div");
+        cameraIcon.className = 'vh360-camera-icon';
+        if (isMainPlayer) {
+            cameraIcon.classList.add('vh360-icon-large');
+        } else {
+            cameraIcon.classList.add('vh360-icon-small');
+        }
+        cameraIcon.innerHTML = "📹";
+        
+        // Add camera-off text
+        const cameraText = document.createElement("div");
+        cameraText.className = 'vh360-placeholder-text';
+        cameraText.textContent = "Camera Off";
+        
+        // Add user info overlay (same as video players)
+        const userInfo = document.createElement("div");
+        userInfo.className = 'vh360-user-info';
+        userInfo.textContent = displayName || `User ${uid}`;
+        
+        contentContainer.appendChild(cameraIcon);
+        contentContainer.appendChild(cameraText);
+        placeholderElement.appendChild(contentContainer);
+        placeholderElement.appendChild(userInfo);
+        
+        // Add 3-dot moderation menu for remote participants (host or moderators only)
+        if (!isMainPlayer && (isOriginalHost || config.canModerate) && uid !== security.user_id) {
+            addParticipantModerationMenu(placeholderElement, uid, displayName || `User ${uid}`);
+        }
+        
+        return placeholderElement;
+    }
+    
+    function showVideoPlaceholder(uid, displayName) {
+        // Check if we need to create placeholder in main player or remote players
+        const mainPlayer = document.getElementById("vh360-agora-local-player");
+        const remotePlayersContainer = document.getElementById("vh360-agora-remote-players");
+        
+        // Determine target container and styling
+        let targetContainer;
+        let isMainPlayer = false;
+        
+        if (currentRole === 'audience') {
+            const hasMainContent = mainPlayer && mainPlayer.children.length > 0 && !mainPlayer.querySelector('.waiting-message');
+            if (!hasMainContent || Object.keys(remoteUsers).length === 0) {
+                targetContainer = mainPlayer;
+                isMainPlayer = true;
+            } else {
+                targetContainer = remotePlayersContainer;
+            }
+        } else {
+            targetContainer = remotePlayersContainer;
+        }
+        
+        if (!targetContainer) return null;
+        
+        // Clear main player if using it for placeholder
+        if (isMainPlayer) {
+            targetContainer.innerHTML = '';
+        }
+        
+        const placeholderElement = createVideoPlaceholder(uid, displayName, isMainPlayer);
+        targetContainer.appendChild(placeholderElement);
+        
+        return placeholderElement;
+    }
+    
+    function transitionToVideo(uid, videoTrack) {
+        const playerElement = document.getElementById(`player-${uid}`);
+        if (!playerElement) return false;
+        
+        // Remove placeholder-specific content
+        const contentContainer = playerElement.querySelector('div:not([style*="position: absolute"])');
+        if (contentContainer) {
+            contentContainer.remove();
+        }
+        
+        // Remove placeholder class and update styling for video
+        playerElement.classList.remove('video-placeholder');
+        playerElement.classList.remove('vh360-main-placeholder');
+        
+        // Determine if this is main player or remote player
+        const isMainPlayer = playerElement.parentElement && playerElement.parentElement.id === 'vh360-agora-local-player';
+        
+        if (isMainPlayer) {
+            // Remove any existing video classes first
+            playerElement.classList.remove('vh360-video-remote');
+            playerElement.classList.add('vh360-video-main');
+        } else {
+            // Regular remote video
+            playerElement.classList.remove('vh360-video-main');
+            playerElement.classList.add('vh360-video-remote');
+        }
+        
+        // Play the video track with null check
+        if (videoTrack && typeof videoTrack.play === 'function') {
+            videoTrack.play(playerElement);
+            
+            // Remove Agora SDK inline styles that interfere with CSS
+            setTimeout(() => {
+                const videoElement = playerElement.querySelector('video');
+                if (videoElement) {
+                    // Remove inline width/height that Agora SDK might add
+                    videoElement.style.width = '';
+                    videoElement.style.height = '';
+                    videoElement.style.maxWidth = '';
+                    videoElement.style.maxHeight = '';
+                    videoElement.style.objectFit = '';
+                    // Remove width/height attributes
+                    videoElement.removeAttribute('width');
+                    videoElement.removeAttribute('height');
+                    console.log("Agora: Cleaned video element inline styles for transition to video, UID:", uid);
+                }
+            }, 100);
+            
+            // Register the track binding with the video manager
+            videoElementManager.registerTrackBinding(playerElement.id, false, videoTrack);
+        } else {
+            console.warn("Agora: Invalid video track for transition to video");
+        }
+        
+        return true;
+    }
+    
+    function transitionToPlaceholder(uid, displayName) {
+        const playerElement = document.getElementById(`player-${uid}`);
+        if (!playerElement) return false;
+        
+        // Stop any existing video playback
+        const videoElement = playerElement.querySelector('video');
+        if (videoElement) {
+            videoElement.remove();
+        }
+        
+        // Determine if this is main player or remote player
+        const isMainPlayer = playerElement.parentElement && playerElement.parentElement.id === 'vh360-agora-local-player';
+        
+        // Add placeholder class while preserving existing classes (like vh360-video-remote)
+        playerElement.classList.add('video-placeholder');
+        
+        if (isMainPlayer) {
+            playerElement.classList.add('vh360-main-placeholder');
+        } else {
+            // Regular remote placeholder - CSS will handle styling
+            // Keep existing classes like vh360-video-remote for proper sizing
+        }
+        
+        // Create and add placeholder content
+        const contentContainer = document.createElement("div");
+        contentContainer.className = 'vh360-video-content';
+        
+        // Add camera-off icon with responsive sizing
+        const cameraIcon = document.createElement("div");
+        cameraIcon.className = 'vh360-camera-icon';
+        if (isMainPlayer) {
+            cameraIcon.classList.add('vh360-icon-large');
+        } else {
+            cameraIcon.classList.add('vh360-icon-small');
+        }
+        cameraIcon.innerHTML = "📹";
+        
+        const cameraText = document.createElement("div");
+        cameraText.className = 'vh360-placeholder-text';
+        cameraText.textContent = "Camera Off";
+        
+        contentContainer.appendChild(cameraIcon);
+        contentContainer.appendChild(cameraText);
+        
+        // Insert before user info (if it exists)
+        const userInfo = playerElement.querySelector('.vh360-user-info');
+        if (userInfo) {
+            playerElement.insertBefore(contentContainer, userInfo);
+        } else {
+            playerElement.appendChild(contentContainer);
+        }
+        
+        return true;
+    }
+
+    // Data stream for audience/host requests
+    let dataStream = null;
+    
+    // Fix for frontend.js data stream error
+    async function initDataStream() {
+        // Check for client object
+        if (!client) {
+            return;
+        }
+        
+        // Check for SDK version compatibility
+        if (typeof client.createDataStream === 'function') {
+            try {
+                const createdDataStream = await client.createDataStream({ reliable: true, ordered: true });
+                dataStream = createdDataStream;
+                console.log('Agora: Data stream created successfully');
+            } catch (err) {
+                console.log('Agora: Data stream not available - using polling for moderation');
+                dataStream = null;
+            }
+        } else if (typeof client.createDataChannel === 'function') {
+            try {
+                const dataChannel = client.createDataChannel();
+                dataStream = {
+                    send: function(message) {
+                        dataChannel.send(message);
+                    }
+                };
+                console.log('Agora: Data channel created successfully');
+            } catch (err) {
+                console.log('Agora: Data channel not available - using polling for moderation');
+                dataStream = null;
+            }
+        } else {
+            console.log('Agora: Data stream not supported by SDK - using polling for moderation');
+            dataStream = null;
+        }
+    }
+
+    // -- Controls UI handling --
+    function updateControlsVisibility() {
+        if (!controlsContainer) return;
+        
+        // Check if user should see controls at all
+        const shouldShow = shouldShowControlsForUser();
+        if (!shouldShow) {
+            controlsContainer.style.display = 'none';
+            return;
+        }
+        
+        controlsContainer.style.display = 'flex';
+        if (muteAudioBtn) muteAudioBtn.style.display = 'none';
+        if (muteVideoBtn) muteVideoBtn.style.display = 'none';
+        if (joinAsPresenterBtn) joinAsPresenterBtn.style.display = 'none';
+
+        if (currentRole === 'host') {
+            if (muteAudioBtn) {
+                muteAudioBtn.style.display = 'inline-block';
+            }
+            if (muteVideoBtn) {
+                muteVideoBtn.style.display = 'inline-block';
+            }
+        } else if (currentRole === 'audience') {
+            if (config.agoraMode === 'interactive' && joinAsPresenterBtn && security.is_logged_in && !isOriginalHost) {
+                joinAsPresenterBtn.style.display = 'inline-block';
+            }
+        }
+
+        if (leaveBtn) leaveBtn.style.display = 'inline-block';
+        if (endStreamBtn) endStreamBtn.style.display = shouldShowEndStreamButton() ? 'inline-block' : 'none';
+        
+        // Handle moderation button visibility
+        const moderationBtn = document.getElementById('vh360-moderation-panel-btn');
+        if (moderationBtn) {
+            moderationBtn.style.display = shouldShowModerationButton() ? 'inline-block' : 'none';
+        }
+    }
+
+    // -- Data Stream Messaging --
+    async function sendDataStreamMessage(data) {
+        try {
+            // Enhanced validation for moderation messages
+            if (data.type === 'moderation_action') {
+                console.log('Agora: Sending moderation message');
+                
+                // Validate required fields
+                if (!data.action || (!data.target_uid && !data.target_user_id)) {
+                    console.error('Agora: Invalid moderation data - missing required fields:', data);
+                    return;
+                }
+            }
+            
+            if (client && client.connectionState === 'CONNECTED') {
+                const message = JSON.stringify({
+                    ...data,
+                    timestamp: Date.now(),
+                    fromUserId: security.user_id,
+                    fromDisplayName: security.display_name
+                });
+                
+                if (dataStream !== null) {
+                    try {
+                        client.sendStreamMessage(dataStream, message);
+                        console.log("Agora: Data stream message sent successfully", data.type);
+                        
+                        // For moderation actions, also trigger local event as backup
+                        if (data.type === 'moderation_action') {
+                            window.dispatchEvent(new CustomEvent('agoraDataMessage', { detail: JSON.parse(message) }));
+                        }
+                    } catch (streamError) {
+                        console.warn("Agora: Failed to send data stream message:", streamError);
+                        // Fallback to local event when stream message fails
+                        window.dispatchEvent(new CustomEvent('agoraDataMessage', { detail: JSON.parse(message) }));
+                    }
+                } else {
+                    // Data stream not available - polling will handle moderation
+                    window.dispatchEvent(new CustomEvent('agoraDataMessage', { detail: JSON.parse(message) }));
+                }
+            } else {
+                console.warn("Agora: Client not connected, cannot send data stream message");
+                // Graceful degradation - still trigger local handling for non-critical messages
+                if (data.type !== 'user_info') {
+                    window.dispatchEvent(new CustomEvent('agoraDataMessage', { detail: data }));
+                }
+            }
+        } catch (error) {
+            console.error('Agora: Failed to send data stream message', error);
+        }
+    }
+
+    // Make sendDataStreamMessage globally available for moderation system
+    window.sendDataStreamMessage = sendDataStreamMessage;
+    // Make handleModerationAction globally available for fallback scenarios
+    window.handleModerationAction = handleModerationAction;
+
+    client.on("stream-message", (uid, stream, message) => {
+        try {
+            console.log('Agora: Raw data stream message received from UID:', uid);
+            const data = JSON.parse(message);
+            console.log('Agora: Parsed data stream message:', data);
+            
+            // Validate critical message fields
+            if (data.type === 'moderation_action') {
+                console.log('Agora: Processing critical moderation message:', {
+                    type: data.type,
+                    action: data.action,
+                    target_uid: data.target_uid,
+                    target_user_id: data.target_user_id,
+                    currentUserUID: currentUserUID,
+                    myWordPressID: security.user_id
+                });
+            }
+            
+            handleDataMessage(data);
+        } catch (error) {
+            console.error('Agora: Failed to parse data stream message', error);
+            console.error('Agora: Raw message that failed to parse:', message);
+            
+            // For critical moderation messages, still try to trigger a check
+            if (message.includes('moderation_action') && window.triggerImmediateModerationCheck) {
+                console.log('Agora: Detected moderation message despite parse error, triggering check');
+                setTimeout(() => window.triggerImmediateModerationCheck(), 500);
+            }
+        }
+    });
+    window.addEventListener('agoraDataMessage', (event) => {
+        const data = event.detail;
+        console.log('Agora: Received local data event:', data);
+        
+        // Enhanced logging for moderation actions
+        if (data.type === 'moderation_action') {
+            console.log('Agora: ⚡ CRITICAL: Received moderation action via local event:', data);
+        }
+        
+        handleDataMessage(data);
+        
+        // Additional safety: For ANY data message activity, schedule a moderation check for all users
+        // This catches cases where messages are received but processed incorrectly
+        if (window.triggerImmediateModerationCheck) {
+            setTimeout(() => {
+                console.log('Agora: Running safety moderation check after local data event');
+                window.triggerImmediateModerationCheck();
+            }, 1500);
+        }
+    });
+
+    function broadcastUserInfo() {
+        if (currentUserUID && security.user_id) {
+            const userInfo = { 
+                type: 'user_info', 
+                displayName: security.display_name, 
+                fromUserId: security.user_id,
+                fromUID: currentUserUID,
+                isOriginalHost: isOriginalHost // Include original host status
+            };
+            
+            console.log('VideoHub360: Broadcasting user info:', userInfo);
+            sendDataStreamMessage(userInfo);
+        }
+    }
+
+    // New: Robust display name resolution functions
+    async function lookupDisplayNameByUID(uid) {
+        // Check if we already have a pending request for this UID
+        if (pendingDisplayNameRequests.has(uid)) {
+            return null;
+        }
+        
+        pendingDisplayNameRequests.add(uid);
+        
+        try {
+            // First try to find WordPress user ID from remoteUsers data
+            let wordpressUserId = null;
+            if (remoteUsers[uid] && remoteUsers[uid].wordpressUserId) {
+                wordpressUserId = remoteUsers[uid].wordpressUserId;
+                console.log('VideoHub360: Found WordPress user ID for UID', uid, ':', wordpressUserId);
+            }
+            
+            const formData = new FormData();
+            formData.append('action', 'videohub360_lookup_display_name');
+            formData.append('uid', uid);
+            formData.append('wordpress_user_id', wordpressUserId || 0);
+            
+            const response = await fetch(vh360Data.ajaxUrl, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.data.display_name) {
+                console.log('VideoHub360: Successfully looked up display name for UID', uid, ':', data.data.display_name);
+                
+                // If we got a valid WordPress user ID, store it in remoteUsers
+                if (data.data.wordpress_user_id && remoteUsers[uid]) {
+                    remoteUsers[uid].wordpressUserId = data.data.wordpress_user_id;
+                    console.log('VideoHub360: Updated WordPress user ID for UID', uid, ':', data.data.wordpress_user_id);
+                }
+                
+                return data.data.display_name;
+            }
+            
+            return null;
+        } catch (error) {
+            console.error('VideoHub360: Failed to lookup display name for UID', uid, error);
+            return null;
+        } finally {
+            pendingDisplayNameRequests.delete(uid);
+        }
+    }
+    
+    async function resolveAndUpdateDisplayName(uid) {
+        // Skip if we already have a good display name
+        if (remoteUsers[uid] && remoteUsers[uid].displayName && !remoteUsers[uid].displayName.startsWith('User ')) {
+            return;
+        }
+        
+        // Try to lookup display name via AJAX
+        const displayName = await lookupDisplayNameByUID(uid);
+        
+        if (displayName && remoteUsers[uid]) {
+            remoteUsers[uid].displayName = displayName;
+            updateRemoteUserDisplayName(uid, displayName);
+            console.log('VideoHub360: Resolved display name for UID', uid, ':', displayName);
+        }
+    }
+    
+    function startUserInfoBroadcasting() {
+        // Broadcast user info for 60 seconds after joining to ensure late joiners get it (extended from 30s)
+        userInfoBroadcastEndTime = Date.now() + 60000; // 60 seconds
+        
+        // Initial broadcast
+        broadcastUserInfo();
+        
+        // Set up interval for periodic broadcasting
+        userInfoBroadcastInterval = setInterval(() => {
+            if (Date.now() < userInfoBroadcastEndTime) {
+                broadcastUserInfo();
+            } else {
+                stopUserInfoBroadcasting();
+            }
+        }, 3000); // Broadcast every 3 seconds (more frequent)
+        
+        console.log('VideoHub360: Started periodic user info broadcasting for 60 seconds (every 3 seconds)');
+    }
+    
+    function stopUserInfoBroadcasting() {
+        if (userInfoBroadcastInterval) {
+            clearInterval(userInfoBroadcastInterval);
+            userInfoBroadcastInterval = null;
+            console.log('VideoHub360: Stopped periodic user info broadcasting');
+        }
+    }
+
+    function updateRemoteUserDisplayName(uid, displayName) {
+        const playerElement = document.getElementById(`player-${uid}`);
+        if (playerElement) {
+            const userInfo = playerElement.querySelector('div');
+            if (userInfo) {
+                userInfo.textContent = displayName;
+            }
+        }
+    }
+    
+    /**
+     * Switch to original host view when they become available
+     * This handles cases where original host joins after other participants
+     */
+    function checkAndSetInitialHostView() {
+        // Only applies in interactive mode for non-host participants
+        if (isOriginalHost || config.agoraMode !== 'interactive') {
+            return;
+        }
+        
+        // Check if original host UID is available and they have published video
+        if (!originalHostUID || !remoteUsers[originalHostUID]) {
+            return;
+        }
+        
+        const mainPlayer = document.getElementById("vh360-agora-local-player");
+        if (!mainPlayer) {
+            return;
+        }
+        
+        // Check if original host is already in main view - if so, we're done
+        const currentMainElement = mainPlayer.querySelector('[id^="player-"]');
+        const hasOriginalHostInMain = currentMainElement && currentMainElement.id === `player-${originalHostUID}`;
+        if (hasOriginalHostInMain) {
+            return;
+        }
+        
+        // Original host is available but not in main view - switch to them
+        const originalHostElement = document.getElementById(`player-${originalHostUID}`);
+        if (originalHostElement && originalHostElement.parentElement) {
+            console.log('VideoHub360: Original host now available - switching to main view');
+            switchMainVideoToSpeaker(originalHostUID);
+        }
+    }
+    function handleDataMessage(data) {
+        // Trigger immediate moderation check whenever ANY data stream activity is detected
+        // This ensures all users (logged-in and guests) quickly detect if they've been moderated
+        if (window.triggerImmediateModerationCheck) {
+            console.log('Agora: Data stream activity detected, triggering immediate moderation check');
+            // Delay slightly to allow current message processing to complete first
+            setTimeout(() => {
+                window.triggerImmediateModerationCheck();
+            }, 200);
+        }
+        
+        if (data.type === 'user_info') {
+            console.log('Agora: Received user_info data:', data);
+            
+            // Track original host UID when we receive their user_info broadcast
+            if (data.isOriginalHost && !originalHostUID) {
+                originalHostUID = data.fromUID;
+                console.log('VideoHub360: Original host UID identified:', originalHostUID);
+                
+                // If we're not the original host and haven't set up initial view yet, 
+                // check if we should show the original host in main view
+                if (!isOriginalHost && config.agoraMode === 'interactive') {
+                    checkAndSetInitialHostView();
+                }
+            }
+            
+            // Find the remote user by their Agora UID (data sent contains fromUserId which is WordPress ID)
+            let targetUID = null;
+            
+            // First try to find by fromUID (direct UID match)
+            if (data.fromUID && remoteUsers[data.fromUID]) {
+                targetUID = data.fromUID;
+                console.log('Agora: Found user by fromUID:', targetUID);
+            }
+            
+            // Look for this user's UID by checking if any remote user has this WordPress user ID
+            if (!targetUID) {
+                for (const uid in remoteUsers) {
+                    if (remoteUsers[uid].wordpressUserId === data.fromUserId) {
+                        targetUID = uid;
+                        console.log('Agora: Found user by WordPress user ID match:', uid);
+                        break;
+                    }
+                }
+            }
+            
+            if (targetUID && remoteUsers[targetUID]) {
+                console.log('Agora: Updating user info for UID:', targetUID, 'WordPress ID:', data.fromUserId);
+                remoteUsers[targetUID].displayName = data.displayName;
+                remoteUsers[targetUID].wordpressUserId = data.fromUserId;
+                updateRemoteUserDisplayName(targetUID, data.displayName);
+            } else {
+                // If we can't find an existing remote user, store the info for when they join
+                console.log('Agora: Storing user info for future use:', data);
+                if (!window.pendingUserInfo) {
+                    window.pendingUserInfo = {};
+                }
+                window.pendingUserInfo[data.fromUID] = {
+                    displayName: data.displayName,
+                    wordpressUserId: data.fromUserId,
+                    isOriginalHost: data.isOriginalHost
+                };
+            }
+        } else if (data.type === 'moderation_action') {
+            console.log('Agora: ⚡ CRITICAL: Received moderation_action data:', data);
+            handleModerationAction(data);
+            
+            // Trigger immediate checks for all users
+            if (window.triggerImmediateModerationCheck) {
+                setTimeout(() => window.triggerImmediateModerationCheck(), 100);
+                setTimeout(() => window.triggerImmediateModerationCheck(), 1000);
+                setTimeout(() => window.triggerImmediateModerationCheck(), 3000);
+                setTimeout(() => window.triggerImmediateModerationCheck(), 7000);
+            }
+        }
+    }
+
+    // -- Remote User Events --
+    client.on("user-published", async (user, mediaType) => {
+        // Prevent any UI updates if user is being moderated
+        if (isBeingModerated) {
+            console.log('Agora: Ignoring user-published event - user is being moderated');
+            return;
+        }
+        
+        await client.subscribe(user, mediaType);
+        if (mediaType === "video") {
+            const remoteVideoTrack = user.videoTrack;
+            
+            // Validate video track before proceeding
+            if (!remoteVideoTrack) {
+                console.warn("Agora: No video track available for user:", user.uid);
+                return;
+            }
+            let targetContainer;
+            let shouldUseMainPlayer = false;
+            
+            // Check if this is the original host publishing video
+            const isOriginalHostPublishing = user.uid === originalHostUID;
+            
+            if (currentRole === 'audience') {
+                const mainPlayer = document.getElementById("vh360-agora-local-player");
+                const hasMainContent = mainPlayer && mainPlayer.children.length > 0 && !mainPlayer.querySelector('.waiting-message');
+                if (!hasMainContent || Object.keys(remoteUsers).length === 0) {
+                    targetContainer = mainPlayer;
+                    shouldUseMainPlayer = true;
+                } else {
+                    targetContainer = document.getElementById("vh360-agora-remote-players");
+                }
+            } else if (config.agoraMode === 'interactive' && !isOriginalHost) {
+                // In interactive mode, non-original hosts should check if main player is empty
+                const mainPlayer = document.getElementById("vh360-agora-local-player");
+                
+                // Check if main player has actual video content (not just waiting/joining messages)
+                const hasPlayerElement = mainPlayer && mainPlayer.querySelector('[id^="player-"]');
+                const hasJoiningMessage = mainPlayer && mainPlayer.textContent.includes('Joining as host');
+                const hasWaitingMessage = mainPlayer && mainPlayer.querySelector('.waiting-message');
+                const hasMainContent = hasPlayerElement && !hasJoiningMessage && !hasWaitingMessage;
+                
+                // If main player is empty or just has joining/waiting message, put remote video there
+                // Strongly prefer original host if we know who they are
+                if (!hasMainContent) {
+                    console.log('VideoHub360: Main player empty/waiting - placing remote video -', isOriginalHostPublishing ? 'ORIGINAL HOST' : 'remote user');
+                    targetContainer = mainPlayer;
+                    shouldUseMainPlayer = true;
+                } else if (isOriginalHostPublishing) {
+                    // Original host should replace whoever is in main player
+                    console.log('VideoHub360: Original host detected - replacing current main view');
+                    targetContainer = mainPlayer;
+                    shouldUseMainPlayer = true;
+                } else {
+                    targetContainer = document.getElementById("vh360-agora-remote-players");
+                }
+            } else {
+                targetContainer = document.getElementById("vh360-agora-remote-players");
+            }
+            if (!targetContainer) return;
+            
+            let playerElement = document.getElementById(`player-${user.uid}`);
+            
+            // Check if this is a placeholder that needs to transition to video
+            if (playerElement && playerElement.classList.contains('video-placeholder')) {
+                console.log("Agora: Transitioning from placeholder to video for UID:", user.uid);
+                transitionToVideo(user.uid, remoteVideoTrack);
+            } else if (!playerElement) {
+                // Create new video player element
+                playerElement = document.createElement("div");
+                playerElement.id = `player-${user.uid}`;
+                if (shouldUseMainPlayer) {
+                    targetContainer.innerHTML = '';
+                    playerElement.className = 'vh360-video-main';
+                } else {
+                    // Use existing CSS class instead of inline styles
+                    playerElement.className = 'vh360-video-remote';
+                }
+                const userInfo = document.createElement("div");
+                userInfo.className = 'vh360-user-info';
+                
+                // Improved display name resolution
+                let displayName = `User ${user.uid}`;
+                
+                // Check if we already have this user with a good display name
+                if (remoteUsers[user.uid] && remoteUsers[user.uid].displayName && !remoteUsers[user.uid].displayName.startsWith('User ')) {
+                    displayName = remoteUsers[user.uid].displayName;
+                } else if (user.uid == security.user_id) {
+                    displayName = security.display_name;
+                } else if (shouldUseMainPlayer) {
+                    displayName = isOriginalHost ? security.display_name : "Host";
+                } else {
+                    // For new users, try to resolve display name asynchronously
+                    resolveAndUpdateDisplayName(user.uid);
+                }
+                
+                userInfo.textContent = displayName;
+                playerElement.appendChild(userInfo);
+                
+                // Add 3-dot moderation menu for remote participants (host or moderators only)
+                if (!shouldUseMainPlayer && (isOriginalHost || config.canModerate) && user.uid !== security.user_id) {
+                    addParticipantModerationMenu(playerElement, user.uid, displayName);
+                }
+                
+                targetContainer.appendChild(playerElement);
+                
+                // Play the video track with null check
+                if (remoteVideoTrack && typeof remoteVideoTrack.play === 'function') {
+                    remoteVideoTrack.play(playerElement);
+                    
+                    // Register track binding so video manager can preserve tracks during DOM movements
+                    videoElementManager.registerTrackBinding(playerElement.id, false, remoteVideoTrack);
+                    
+                    // Remove Agora SDK inline styles that interfere with CSS
+                    // Increased timeout to ensure Agora SDK has finished applying styles
+                    setTimeout(() => {
+                        const videoElement = playerElement.querySelector('video');
+                        if (videoElement) {
+                            // Remove inline width/height that Agora SDK might add
+                            videoElement.style.width = '';
+                            videoElement.style.height = '';
+                            videoElement.style.maxWidth = '';
+                            videoElement.style.maxHeight = '';
+                            videoElement.style.objectFit = '';
+                            // Remove width/height attributes
+                            videoElement.removeAttribute('width');
+                            videoElement.removeAttribute('height');
+                            if (window.__VH360_DEBUG) {
+                                console.log("Agora: Cleaned video element inline styles for UID:", user.uid);
+                            }
+                            
+                            // Additional cleanup pass to ensure container bounds are respected
+                            if (playerElement.classList.contains('vh360-video-remote')) {
+                                // Ensure parent container has proper overflow handling
+                                playerElement.style.overflow = '';
+                                if (window.__VH360_DEBUG) {
+                                    console.log("Agora: Applied container bounds check for UID:", user.uid);
+                                }
+                            }
+                        }
+                    }, 200); // Increased from 100ms to 200ms for better reliability
+                } else {
+                    console.warn("Agora: Invalid video track for UID:", user.uid);
+                }
+                
+
+            }
+            if (!remoteUsers[user.uid]) {
+                let initialDisplayName = `User ${user.uid}`;
+                let wordpressUserId = null;
+                let isUserOriginalHost = false;
+                
+                // Check for pending user info first
+                if (window.pendingUserInfo && window.pendingUserInfo[user.uid]) {
+                    const pendingInfo = window.pendingUserInfo[user.uid];
+                    initialDisplayName = pendingInfo.displayName;
+                    wordpressUserId = pendingInfo.wordpressUserId;
+                    isUserOriginalHost = pendingInfo.isOriginalHost || false;
+                    console.log('Agora: Using pending user info for UID', user.uid, ':', pendingInfo);
+                    
+                    // Track original host UID if this is them
+                    if (isUserOriginalHost && !originalHostUID) {
+                        originalHostUID = user.uid;
+                        console.log('VideoHub360: Original host UID identified from pending info:', originalHostUID);
+                    }
+                    
+                    // Clean up used pending info
+                    delete window.pendingUserInfo[user.uid];
+                } else if (user.uid == currentUserUID) {
+                    // This is actually the local user showing up as remote (shouldn't happen normally)
+                    initialDisplayName = security.display_name;
+                    wordpressUserId = security.user_id;
+                }
+                
+                remoteUsers[user.uid] = { 
+                    ...user, 
+                    displayName: initialDisplayName,
+                    wordpressUserId: wordpressUserId
+                };
+                
+                // Start AJAX lookup for display name if we don't have a good one
+                if (initialDisplayName.startsWith('User ')) {
+                    resolveAndUpdateDisplayName(user.uid);
+                }
+                
+                // Always broadcast user info when a new remote user joins
+                broadcastUserInfo();
+                
+                // Check if we should set initial view to original host
+                if (!isOriginalHost && user.uid === originalHostUID && config.agoraMode === 'interactive') {
+                    console.log('VideoHub360: Original host video published, checking initial view setup');
+                    // Delay slightly to ensure video element is fully set up
+                    setTimeout(() => {
+                        checkAndSetInitialHostView();
+                    }, 500);
+                }
+            } else {
+                remoteUsers[user.uid] = { ...remoteUsers[user.uid], ...user };
+                // Always check for existing display name on render
+                if (remoteUsers[user.uid].displayName && remoteUsers[user.uid].displayName !== `User ${user.uid}`) {
+                    updateRemoteUserDisplayName(user.uid, remoteUsers[user.uid].displayName);
+                } else {
+                    // Try to resolve display name if we still don't have a good one
+                    resolveAndUpdateDisplayName(user.uid);
+                }
+            }
+        }
+        if (mediaType === "audio") {
+            if (user.audioTrack && typeof user.audioTrack.play === 'function') {
+                user.audioTrack.play();
+            } else {
+                console.warn("Agora: Invalid audio track for user:", user.uid);
+            }
+            
+            // Initialize volume tracking for this user in interactive mode
+            if (config.agoraMode === 'interactive' && isVolumenIndicationEnabled) {
+                // Volume indication will automatically track this user's audio
+                console.log("Agora: Audio track subscribed for UID:", user.uid, "- Volume tracking enabled");
+            }
+            
+            // Check if user has no video track but we should show a placeholder
+            if (!user.videoTrack && !document.getElementById(`player-${user.uid}`)) {
+                console.log("Agora: Audio-only user joined, creating placeholder for UID:", user.uid);
+                
+                // Get display name for placeholder
+                let displayName = `User ${user.uid}`;
+                if (remoteUsers[user.uid] && remoteUsers[user.uid].displayName) {
+                    displayName = remoteUsers[user.uid].displayName;
+                } else if (user.uid == security.user_id) {
+                    displayName = security.display_name;
+                }
+                
+                // Create placeholder for audio-only user
+                const placeholderElement = showVideoPlaceholder(user.uid, displayName);
+                
+                // Store user information
+                if (!remoteUsers[user.uid]) {
+                    let wordpressUserId = null;
+                    
+                    // Check for pending user info first
+                    if (window.pendingUserInfo && window.pendingUserInfo[user.uid]) {
+                        const pendingInfo = window.pendingUserInfo[user.uid];
+                        displayName = pendingInfo.displayName;
+                        wordpressUserId = pendingInfo.wordpressUserId;
+                        console.log('Agora: Using pending user info for audio-only UID', user.uid, ':', pendingInfo);
+                        // Clean up used pending info
+                        delete window.pendingUserInfo[user.uid];
+                    } else if (user.uid == currentUserUID) {
+                        wordpressUserId = security.user_id;
+                    }
+                    
+                    remoteUsers[user.uid] = { 
+                        ...user, 
+                        displayName: displayName,
+                        wordpressUserId: wordpressUserId
+                    };
+                    
+                    // Try to resolve display name if needed
+                    if (displayName.startsWith('User ')) {
+                        resolveAndUpdateDisplayName(user.uid);
+                    }
+                    
+                    // Broadcast user info when a new remote user joins
+                    broadcastUserInfo();
+                } else {
+                    remoteUsers[user.uid] = { ...remoteUsers[user.uid], ...user };
+                }
+            }
+        }
+    });
+
+    client.on("user-unpublished", (user, mediaType) => {
+        if (mediaType === "video") {
+            const playerElement = document.getElementById(`player-${user.uid}`);
+            if (playerElement) {
+                // Get display name for placeholder
+                let displayName = `User ${user.uid}`;
+                if (remoteUsers[user.uid] && remoteUsers[user.uid].displayName) {
+                    displayName = remoteUsers[user.uid].displayName;
+                } else if (user.uid == security.user_id) {
+                    displayName = security.display_name;
+                }
+                
+                // Transition to placeholder instead of removing the element
+                transitionToPlaceholder(user.uid, displayName);
+                console.log("Agora: User camera off, showing placeholder for UID:", user.uid);
+            }
+            // Keep the user in remoteUsers since they're still connected (just camera off)
+        }
+        
+        // Handle audio unpublished - check for cleaning up active speaker
+        if (mediaType === "audio") {
+            console.log("Agora: User unpublished audio, UID:", user.uid);
+            
+            // Clean up active speaker if this user was the active speaker and now has no audio
+            if (user.uid === activeSpeakerUid) {
+                setActiveSpeaker(null);
+                console.log("Agora: Active speaker lost audio track, clearing active speaker");
+            }
+        }
+        
+        // Keep active speaker status if this user was the active speaker with remaining tracks
+        if (user.uid === activeSpeakerUid && (user.audioTrack || user.videoTrack)) {
+            console.log("Agora: Active speaker still has tracks after unpublishing", mediaType);
+        }
+    });
+
+    client.on("user-left", (user) => {
+        const playerElement = document.getElementById(`player-${user.uid}`);
+        if (playerElement) {
+            const wasMainPlayer = playerElement.parentElement && playerElement.parentElement.id === 'vh360-agora-local-player';
+            
+            // Clean up moderation dropdown if it exists
+            if (playerElement._moderationDropdown) {
+                playerElement._moderationDropdown.remove();
+            }
+            
+            // Clean up video track binding before removing element
+            if (window.videoElementManager) {
+                window.videoElementManager.unregisterTrackBinding(playerElement.id);
+            }
+            
+            playerElement.remove(); // Remove completely when user leaves
+            if (currentRole === 'audience' && wasMainPlayer) {
+                setTimeout(() => {
+                    const remainingUsers = Object.keys(remoteUsers).filter(uid => uid != user.uid);
+                    if (remainingUsers.length === 0) {
+                        showAudienceWaitingMessage();
+                    }
+                }, 100);
+            }
+        }
+        if (remoteUsers[user.uid]) delete remoteUsers[user.uid];
+        
+        // Clean up active speaker if this user was the active speaker
+        if (user.uid === activeSpeakerUid) {
+            setActiveSpeaker(null);
+        }
+    });
+
+    client.on("client-role-changed", (oldRole, newRole) => {
+        currentRole = newRole;
+        updateControlsVisibility();
+        if (newRole === 'host') {
+            startPublishing();
+        } else {
+            stopPublishing();
+        }
+    });
+
+    /**
+     * Enhanced cleanup functions for better user experience
+     */
+    function cleanupFrozenVideoFrames() {
+        console.log("Agora: Cleaning up frozen video frames");
+        
+        // Find all video elements in remote player containers
+        const videoSelectors = [
+            '#vh360-agora-remote-players video',
+            '.vh360-remote-player video',
+            '[id*="player-"] video',
+            'video[src^="blob:"]'
+        ];
+        
+        videoSelectors.forEach(selector => {
+            const videos = document.querySelectorAll(selector);
+            videos.forEach(video => {
+                try {
+                    // Check for stale/frozen video streams
+                    if (video.srcObject) {
+                        const tracks = video.srcObject.getTracks();
+                        const hasLiveTracks = tracks.some(track => track.readyState === 'live');
+                        
+                        if (!hasLiveTracks) {
+                            console.log("Agora: Cleaning up frozen video element with dead tracks");
+                            video.pause();
+                            video.srcObject = null;
+                            // Leave the video element but clear its source
+                        }
+                    }
+                } catch (error) {
+                    console.warn("Agora: Error cleaning video element:", error);
+                }
+            });
+        });
+    }
+
+    function cleanupStaleVideoElements() {
+        console.log("Agora: Cleaning up stale video elements");
+        
+        // Get all player elements
+        const playerElements = document.querySelectorAll('[id^="player-"]');
+        
+        playerElements.forEach(playerElement => {
+            const uid = playerElement.id.replace('player-', '');
+            
+            // Check if this player corresponds to a current remote user
+            if (!remoteUsers[uid]) {
+                console.log(`Agora: Removing stale player element for UID ${uid}`);
+                
+                // Clean up video element first to prevent frozen frames
+                const videoElement = playerElement.querySelector('video');
+                if (videoElement) {
+                    videoElement.pause();
+                    videoElement.srcObject = null;
+                }
+                
+                // Remove the entire player element
+                if (window.videoElementManager) {
+                    window.videoElementManager.unregisterTrackBinding(playerElement.id);
+                }
+                playerElement.remove();
+            }
+        });
+    }
+
+    // Page navigation detection for faster cleanup
+    window.addEventListener('beforeunload', () => {
+        console.log("Agora: Page navigation detected, cleaning up immediately");
+        
+        // Clean up any frozen frames immediately when user navigates away
+        cleanupFrozenVideoFrames();
+        
+        // If we're connected to the stream, attempt immediate cleanup
+        if (client && client.connectionState === 'CONNECTED') {
+            try {
+                // Quick cleanup without waiting for normal disconnect flow
+                cleanupStaleVideoElements();
+            } catch (error) {
+                console.log("Agora: Error during page navigation cleanup:", error);
+            }
+        }
+    });
+
+    // -- Enhanced Network and Connection Event Handlers --
+    client.on("connection-state-change", (curState, prevState, reason) => {
+        console.log("Agora: Connection state changed", { prevState, curState, reason });
+        
+        if (curState === "DISCONNECTED") {
+            // Clean up frozen video frames immediately on disconnect
+            cleanupFrozenVideoFrames();
+            
+            let errorMessage = "Connection lost. ";
+            if (reason === "NETWORK_ERROR") {
+                errorMessage += "Please check your internet connection and refresh the page.";
+            } else if (reason === "SERVER_ERROR") {
+                errorMessage += "Server connection failed. Please try again later.";
+            } else if (reason === "LEAVE") {
+                // Normal disconnection, don't show error
+                console.log("Agora: Normal disconnection");
+                return;
+            } else {
+                errorMessage += "Please refresh the page and try again.";
+            }
+            showAgoraError(errorMessage);
+        } else if (curState === "RECONNECTING") {
+            console.log("Agora: Attempting to reconnect...");
+            // Clean up any stale video elements during reconnection
+            cleanupStaleVideoElements();
+        } else if (curState === "CONNECTED" && prevState === "RECONNECTING") {
+            console.log("Agora: Successfully reconnected");
+            // Clear any error messages
+            const localPlayer = document.getElementById("vh360-agora-local-player");
+            if (localPlayer) {
+                const errorOverlay = localPlayer.querySelector('#agora-error-overlay');
+                if (errorOverlay) errorOverlay.remove();
+            }
+        }
+    });
+
+    client.on("exception", (evt) => {
+        console.warn("Agora: Exception occurred", evt);
+        
+        if (evt.code === "WEBSOCKET_DISCONNECTED") {
+            // Clean up frozen frames when websocket disconnects
+            cleanupFrozenVideoFrames();
+            showAgoraError("Connection interrupted. Please check your network and refresh the page.");
+        } else if (evt.code === "NETWORK_QUALITY_POOR") {
+            console.warn("Agora: Poor network quality detected");
+            // Could show a network quality warning here
+        } else if (evt.code.includes("DISCONNECT") || evt.code.includes("CONNECTION")) {
+            // Handle various connection-related exceptions
+            cleanupFrozenVideoFrames();
+            console.log("Agora: Connection exception handled with cleanup");
+        }
+    });
+
+    // -- Quality Configuration Functions --
+    /**
+     * Get Agora video encoder configuration from quality management system
+     */
+    function getAgoraVideoConfig() {
+        // Check if quality manager is available
+        if (!window.vh360QualityManager) {
+            console.log('Quality manager not available, using default video config');
+            return {
+                encoderConfig: {
+                    width: 1280,
+                    height: 720,
+                    frameRate: 30,
+                    bitrateMax: 2500
+                }
+            };
+        }
+        
+        const currentQuality = window.vh360QualityManager.getCurrentQuality();
+        if (!currentQuality || !currentQuality.data) {
+            return { encoderConfig: { width: 1280, height: 720, frameRate: 30, bitrateMax: 2500 } };
+        }
+        
+        const quality = currentQuality.data;
+        const [width, height] = quality.resolution.split('x').map(Number);
+        
+        return {
+            encoderConfig: {
+                width: width || 1280,
+                height: height || 720,
+                frameRate: quality.fps || 30,
+                bitrateMin: Math.floor(quality.bitrate * 0.4 / 1000), // 40% of max as minimum
+                bitrateMax: Math.floor(quality.bitrate / 1000) // Convert bps to kbps for Agora
+            }
+        };
+    }
+
+    /**
+     * Get Agora audio encoder configuration
+     */
+    function getAgoraAudioConfig() {
+        return {
+            encoderConfig: {
+                sampleRate: 48000,
+                stereo: true,
+                bitrate: 128
+            }
+        };
+    }
+
+    /**
+     * Update video quality for active Agora stream
+     */
+    async function updateLiveStreamQuality(quality, qualityData) {
+        if (!localTracks.videoTrack || !client) {
+            throw new Error('No active video track or client available');
+        }
+        
+        console.log('Updating live stream quality to:', quality);
+        
+        // Parse resolution
+        const [width, height] = qualityData.resolution.split('x').map(Number);
+        
+        // Create new video track with updated configuration
+        const newVideoConfig = {
+            encoderConfig: {
+                width: width || 1280,
+                height: height || 720,
+                frameRate: qualityData.fps || 30,
+                bitrateMin: Math.floor(qualityData.bitrate * 0.4 / 1000),
+                bitrateMax: Math.floor(qualityData.bitrate / 1000)
+            }
+        };
+        
+        try {
+            // Create new video track
+            const newVideoTrack = await AgoraRTC.createCameraVideoTrack(newVideoConfig);
+            
+            // Stop and unpublish old track
+            await client.unpublish([localTracks.videoTrack]);
+            localTracks.videoTrack.stop();
+            localTracks.videoTrack.close();
+            
+            // Replace with new track
+            localTracks.videoTrack = newVideoTrack;
+            
+            // Restart video display
+            if (localTracks.videoTrack && typeof localTracks.videoTrack.play === 'function') {
+                localTracks.videoTrack.play("vh360-agora-local-player", { mirror: false });
+                
+                // Register local track binding with video manager
+                videoElementManager.registerTrackBinding("vh360-agora-local-player", true);
+            } else {
+                console.warn("Agora: Invalid local video track for restart");
+            }
+            
+            // Publish new track
+            await client.publish([localTracks.videoTrack]);
+            
+            console.log('Successfully updated live stream quality to:', quality);
+            
+            // Update UI to reflect successful change
+            if (typeof showAgoraSuccess === 'function') {
+                showAgoraSuccess(`Stream quality updated to ${quality.toUpperCase()}`);
+            }
+            
+        } catch (error) {
+            console.error('Error during quality update:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Show success message for quality changes
+     */
+    function showAgoraSuccess(message) {
+        // Create or update success overlay
+        const localPlayer = document.getElementById("vh360-agora-local-player");
+        if (localPlayer) {
+            const existingOverlay = localPlayer.querySelector('#agora-success-overlay');
+            if (existingOverlay) existingOverlay.remove();
+            
+            const overlay = document.createElement('div');
+            overlay.id = 'agora-success-overlay';
+            overlay.style.cssText = `
+                position: absolute; top: 10px; right: 10px; 
+                background: rgba(76, 175, 80, 0.9); color: white; 
+                padding: 8px 12px; border-radius: 4px; 
+                font-size: 12px; z-index: 1000;
+            `;
+            overlay.textContent = message;
+            localPlayer.style.position = 'relative';
+            localPlayer.appendChild(overlay);
+            
+            // Auto-remove after 3 seconds
+            setTimeout(() => overlay.remove(), 3000);
+        }
+    }
+
+    // -- Publishing (Host) --
+    async function startPublishing() {
+        try {
+            console.log("VideoHub360: startPublishing() called");
+            console.log("VideoHub360: Current role at publish time:", currentRole);
+            console.log("VideoHub360: Config details:", {
+                role: config.role,
+                mode: config.mode,
+                agoraMode: config.agoraMode,
+                isHost: isHost,
+                isOriginalHost: isOriginalHost
+            });
+            
+            console.log("Agora: Starting to publish tracks");
+            
+            if (!localTracks.audioTrack || !localTracks.videoTrack) {
+                try {
+                    // Get quality configuration from the quality management system
+                    const videoConfig = getAgoraVideoConfig();
+                    const audioConfig = getAgoraAudioConfig();
+                    
+                    [localTracks.audioTrack, localTracks.videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(audioConfig, videoConfig);
+                    console.log("Agora: Successfully created audio and video tracks");
+                    
+                    if (!isOriginalHost) {
+                        isAudioMuted = true;
+                        await localTracks.audioTrack.setMuted(true);
+                    }
+                } catch (deviceError) {
+                    console.error("Agora: Device access failed", deviceError);
+                    
+                    // Provide graceful degradation - try audio-only if possible
+                    let fallbackMessage = "Camera/microphone access failed. ";
+                    if (deviceError.code === 'PERMISSION_DENIED' || deviceError.message.includes('Permission denied')) {
+                        fallbackMessage += "Please allow camera and microphone access in your browser settings.";
+                    } else if (deviceError.code === 'NOT_FOUND' || deviceError.message.includes('not found')) {
+                        fallbackMessage += "No camera or microphone found. Please connect your devices.";
+                    } else if (deviceError.code === 'NOT_READABLE' || deviceError.message.includes('in use')) {
+                        fallbackMessage += "Your camera/microphone is being used by another application.";
+                    } else {
+                        fallbackMessage += "Please check your browser settings and device connections.";
+                    }
+                    
+                    showAgoraError(fallbackMessage);
+                    
+                    // Try to maintain basic viewer functionality
+                    const localPlayerContainer = document.getElementById("vh360-agora-local-player");
+                    if (localPlayerContainer) {
+                        localPlayerContainer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #fff; font-size: 1.1em; background: #333; text-align: center; padding: 20px;">Device Access Failed<br><small style="font-size: 0.8em; opacity: 0.7;">' + fallbackMessage + '</small></div>';
+                    }
+                    return; // Don't try to publish if we can't get tracks
+                }
+            }
+            
+            // Determine where to place local video based on user role in interactive mode
+            const shouldPlaceInRemote = !isOriginalHost && config.agoraMode === 'interactive';
+            
+            if (shouldPlaceInRemote) {
+                console.log('VideoHub360: Non-original host in interactive mode - placing local video in remote players');
+                
+                // Create player element for local user in remote players
+                const remotePlayersContainer = document.getElementById("vh360-agora-remote-players");
+                if (remotePlayersContainer && localTracks.videoTrack && typeof localTracks.videoTrack.play === 'function') {
+                    let localPlayerElement = document.createElement('div');
+                    localPlayerElement.id = `player-${currentUserUID}`;
+                    localPlayerElement.classList.add('vh360-video-remote');
+                    
+                    // Add display name overlay
+                    if (config.displayName) {
+                        const nameOverlay = document.createElement('div');
+                        nameOverlay.className = 'vh360-video-name-overlay';
+                        nameOverlay.textContent = config.displayName;
+                        localPlayerElement.appendChild(nameOverlay);
+                    }
+                    
+                    remotePlayersContainer.appendChild(localPlayerElement);
+                    localTracks.videoTrack.play(localPlayerElement.id, { mirror: false });
+                    videoElementManager.registerTrackBinding(localPlayerElement.id, true);
+                    console.log('VideoHub360: Local video placed in remote players');
+                }
+            } else {
+                console.log('VideoHub360: Original host or broadcast mode - placing local video in main player');
+                
+                const localPlayerContainer = document.getElementById("vh360-agora-local-player");
+                if (localPlayerContainer) {
+                    const existingOverlay = localPlayerContainer.querySelector('#agora-error-overlay');
+                    if (existingOverlay) existingOverlay.remove();
+                    localPlayerContainer.innerHTML = '';
+                }
+                
+                if (localTracks.videoTrack && typeof localTracks.videoTrack.play === 'function') {
+                    localTracks.videoTrack.play("vh360-agora-local-player", { mirror: false });
+                    
+                    // Register local track binding with video manager
+                    videoElementManager.registerTrackBinding("vh360-agora-local-player", true);
+                } else {
+                    console.warn("Agora: Invalid local video track for publishing");
+                }
+            }
+            
+            // Critical check: Verify we have the right role before publishing
+            console.log("VideoHub360: About to publish with current role:", currentRole);
+            console.log("VideoHub360: Config mode:", config.mode);
+            console.log("VideoHub360: Config agoraMode:", config.agoraMode);
+            
+            if (currentRole !== "host") {
+                console.error("CRITICAL ERROR: Attempting to publish with non-host role!");
+                console.error("Current role:", currentRole);
+                console.error("This will cause 'audience can not publish stream' error");
+                
+                // Attempt to fix the role before publishing in live mode
+                if (config.mode === 'live' && typeof client.setClientRole === 'function') {
+                    console.log("VideoHub360: Attempting emergency role correction to host...");
+                    try {
+                        await client.setClientRole('host');
+                        currentRole = 'host';
+                        console.log("VideoHub360: Emergency role correction successful");
+                    } catch (roleError) {
+                        console.error("VideoHub360: Emergency role correction failed:", roleError);
+                        throw new Error("Cannot publish: user role is '" + currentRole + "' but should be 'host'");
+                    }
+                } else {
+                    throw new Error("Cannot publish: user role is '" + currentRole + "' but should be 'host'");
+                }
+            }
+            
+            await client.publish([localTracks.audioTrack, localTracks.videoTrack]);
+            console.log("Agora: Successfully published tracks");
+            
+            if (muteAudioBtn) {
+                muteAudioBtn.textContent = isAudioMuted ? '🔇 Unmute' : '🎤 Mute';
+                muteAudioBtn.style.backgroundColor = isAudioMuted ? '#e53935' : 'transparent';
+            }
+            if (muteVideoBtn) {
+                muteVideoBtn.textContent = isVideoMuted ? '📹 Turn On' : '📹 Camera';
+                muteVideoBtn.style.backgroundColor = isVideoMuted ? '#e53935' : 'transparent';
+            }
+        } catch (error) {
+            console.error("Agora: Publishing failed", error);
+            
+            // Provide specific error messages for publishing failures
+            let errorMessage = "Failed to start streaming. ";
+            if (error.code === 'PUBLISH_REQUEST_INVALID') {
+                errorMessage += "Invalid streaming request. Please refresh and try again.";
+            } else if (error.code === 'NETWORK_ERROR') {
+                errorMessage += "Network connection issue. Please check your internet and try again.";
+            } else {
+                errorMessage += "Please check your connection and device settings.";
+            }
+            
+            showAgoraError(errorMessage);
+            throw error;
+        }
+    }
+    async function stopPublishing() {
+        try {
+            if (localTracks.audioTrack) {
+                localTracks.audioTrack.stop();
+                localTracks.audioTrack.close();
+                localTracks.audioTrack = null;
+            }
+            if (localTracks.videoTrack) {
+                localTracks.videoTrack.stop();
+                localTracks.videoTrack.close();
+                localTracks.videoTrack = null;
+            }
+            const localPlayer = document.getElementById("vh360-agora-local-player");
+            if (localPlayer) localPlayer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #fff; font-size: 1.2em; background: #333;">Camera Off</div>';
+        } catch (error) {}
+    }
+
+    // -- Controls --
+    if (muteAudioBtn) {
+        muteAudioBtn.addEventListener('click', async () => {
+            if (localTracks.audioTrack) {
+                await localTracks.audioTrack.setMuted(!isAudioMuted);
+                isAudioMuted = !isAudioMuted;
+                muteAudioBtn.textContent = isAudioMuted ? '🔇 Unmute' : '🎤 Mute';
+                muteAudioBtn.style.backgroundColor = isAudioMuted ? '#e53935' : 'transparent';
+            }
+        });
+    }
+    if (muteVideoBtn) {
+        muteVideoBtn.addEventListener('click', async () => {
+            if (localTracks.videoTrack) {
+                await localTracks.videoTrack.setMuted(!isVideoMuted);
+                isVideoMuted = !isVideoMuted;
+                muteVideoBtn.textContent = isVideoMuted ? '📹 Turn On' : '📹 Camera';
+                muteVideoBtn.style.backgroundColor = isVideoMuted ? '#e53935' : 'transparent';
+            }
+        });
+    }
+    // Join as Presenter button handler (replaces raise hand functionality)
+    if (joinAsPresenterBtn && config.agoraMode === 'interactive') {
+        joinAsPresenterBtn.addEventListener('click', async () => {
+            if (config.agoraMode !== 'interactive') {
+                showAgoraError('Join as presenter is only available in Interactive mode.');
+                return;
+            }
+            if (!security.is_logged_in) {
+                showAgoraError('Please log in to join as a presenter.');
+                return;
+            }
+            if (isOriginalHost) {
+                showAgoraError('Administrators are already hosts and cannot join as presenters.');
+                return;
+            }
+            
+            // Check access control - passcode and "Allow Everyone" are mutually exclusive
+            if (config.hostPasscode && config.hostPasscode.trim() !== '') {
+                // Passcode is required - prompt for it
+                const userPasscode = prompt('Enter the host passcode to join as a presenter:');
+                if (!userPasscode) {
+                    // User cancelled the prompt
+                    return;
+                }
+                if (userPasscode.trim() !== config.hostPasscode.trim()) {
+                    showAgoraError('Invalid passcode. Access denied.');
+                    return;
+                }
+            } else if (config.allowEveryoneIsHost) {
+                // Allow Everyone to be Host is enabled - direct access allowed
+                // No additional checks needed
+            } else {
+                // Neither passcode nor "Allow Everyone" is enabled - access denied
+                showAgoraError('Access denied. The host has not enabled "Allow Everyone to be Host" or set up a passcode for joining as presenter.');
+                return;
+            }
+            
+            // If we reach here, either no passcode was required or the correct passcode was entered
+            if (currentRole === 'audience') {
+                try {
+                    joinAsPresenterBtn.disabled = true;
+                    joinAsPresenterBtn.textContent = '⏳ Joining...';
+                    
+                    // Directly promote to host without approval system
+                    await promoteToHost();
+                    
+                    joinAsPresenterBtn.textContent = '⬇️ Leave Presenter';
+                    joinAsPresenterBtn.style.backgroundColor = '#4CAF50';
+                    joinAsPresenterBtn.disabled = false;
+                } catch (error) {
+                    joinAsPresenterBtn.disabled = false;
+                    joinAsPresenterBtn.textContent = '🎭 Go Live';
+                    joinAsPresenterBtn.style.backgroundColor = 'transparent';
+                    showAgoraError("Failed to join as presenter. Please check your camera/microphone permissions and try again.");
+                }
+            } else if (currentRole === 'host' && !isOriginalHost) {
+                // Allow leaving presenter mode
+                try {
+                    joinAsPresenterBtn.disabled = true;
+                    joinAsPresenterBtn.textContent = '⏳ Leaving...';
+                    await stopPublishing();
+                    // In SDK v4, role changes are handled via publishing state, not setClientRole
+                    // The user becomes audience by simply stopping publishing
+                    currentRole = 'audience';
+                    isPresenter = false;
+                    isAudioMuted = false;
+                    isVideoMuted = false;
+                    joinAsPresenterBtn.textContent = '🎭 Go Live';
+                    joinAsPresenterBtn.style.backgroundColor = 'transparent';
+                    joinAsPresenterBtn.disabled = false;
+                    updateControlsVisibility();
+                    console.log("Agora: User role changed to audience via unpublishing");
+                    
+                    // Update mobile controls visibility when role changes
+                    if (typeof window.updateMobileControlsVisibility === 'function') {
+                        window.updateMobileControlsVisibility();
+                    }
+                    
+                    setTimeout(() => {
+                        const remainingRemoteUsers = Object.keys(remoteUsers).length;
+                        if (remainingRemoteUsers === 0) showAudienceWaitingMessage();
+                    }, 100);
+                } catch (error) {
+                    joinAsPresenterBtn.disabled = false;
+                    joinAsPresenterBtn.textContent = '⬇️ Leave Presenter';
+                    console.error("Agora: Failed to leave presenter mode", error);
+                    showAgoraError("Failed to leave presenter mode. Please try again.");
+                }
+            }
+        });
+    }
+    async function promoteToHost() {
+        try {
+            let audioTrack, videoTrack;
+            try {
+                const videoConfig = getAgoraVideoConfig();
+                const audioConfig = getAgoraAudioConfig();
+                [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(audioConfig, videoConfig);
+                isAudioMuted = true;
+                await audioTrack.setMuted(true);
+            } catch (deviceError) {
+                let deviceErrorMessage = "Cannot access camera/microphone. ";
+                if (deviceError.code === 'PERMISSION_DENIED' || deviceError.message.includes('Permission denied')) {
+                    deviceErrorMessage += "Please allow camera and microphone access in your browser settings, then request to join again.";
+                } else if (deviceError.code === 'NOT_FOUND' || deviceError.message.includes('not found')) {
+                    deviceErrorMessage += "No camera or microphone found. Please connect your devices and try again.";
+                } else if (deviceError.code === 'NOT_READABLE' || deviceError.message.includes('in use')) {
+                    deviceErrorMessage += "Your camera/microphone is being used by another application. Please close other apps and try again.";
+                } else {
+                    deviceErrorMessage += "Please check your browser settings and try again.";
+                }
+                throw new Error(deviceErrorMessage);
+            }
+            localTracks.audioTrack = audioTrack;
+            localTracks.videoTrack = videoTrack;
+            // In SDK v4, role changes are handled via publishing state, not setClientRole
+            // The user becomes host by starting to publish
+            currentRole = 'host';
+            isPresenter = true;
+            console.log("Agora: User role changed to host via publishing");
+            
+            // Update mobile controls visibility when role changes
+            if (typeof window.updateMobileControlsVisibility === 'function') {
+                window.updateMobileControlsVisibility();
+            }
+            
+            if (joinAsPresenterBtn) {
+                joinAsPresenterBtn.textContent = '⬇️ Leave Presenter';
+                joinAsPresenterBtn.style.backgroundColor = '#4CAF50';
+                joinAsPresenterBtn.disabled = false;
+            }
+            await startPublishing();
+            updateControlsVisibility();
+        } catch (error) {
+            if (localTracks.audioTrack) {
+                localTracks.audioTrack.stop();
+                localTracks.audioTrack.close();
+                localTracks.audioTrack = null;
+            }
+            if (localTracks.videoTrack) {
+                localTracks.videoTrack.stop();
+                localTracks.videoTrack.close();
+                localTracks.videoTrack = null;
+            }
+            if (joinAsPresenterBtn) {
+                joinAsPresenterBtn.disabled = false;
+                joinAsPresenterBtn.textContent = '🎭 Go Live';
+                joinAsPresenterBtn.style.backgroundColor = 'transparent';
+            }
+            isPresenter = false;
+            showAgoraError(error.message || "Failed to join as host. Please check your camera/microphone permissions and try again.");
+        }
+    }
+    
+    /**
+     * Handles incoming moderation actions from the host
+     */
+    function handleModerationAction(data) {
+        console.log('Agora: Processing moderation action:', data);
+        console.log('Agora: Current user info - UID:', currentUserUID, 'WordPress ID:', security.user_id);
+        
+        // Enhanced validation of moderation data
+        if (!data.action || !data.target_uid && !data.target_user_id) {
+            console.warn('Agora: Invalid moderation data received:', data);
+            return;
+        }
+        
+        // Check if this moderation action is targeted at the current user
+        // Compare both target_uid (Agora UID) and target_user_id (WordPress user ID)
+        const isTargetedByUID = data.target_uid && currentUserUID && data.target_uid == currentUserUID;
+        const isTargetedByWordPressID = data.target_user_id && data.target_user_id == security.user_id;
+        const isTargetedAtMe = isTargetedByUID || isTargetedByWordPressID;
+        
+        console.log('Agora: Moderation target check:', {
+            target_uid: data.target_uid,
+            target_user_id: data.target_user_id,
+            my_agora_uid: currentUserUID,
+            my_wordpress_id: security.user_id,
+            isTargetedByUID,
+            isTargetedByWordPressID,
+            isTargetedAtMe
+        });
+        
+        if (isTargetedAtMe) {
+            console.log('Agora: ⚡ CRITICAL: Received moderation action targeted at current user:', data);
+            
+            // Set moderation flag to prevent any further UI updates
+            isBeingModerated = true;
+            
+            // IMMEDIATE UI FREEZE: Immediately freeze the video display to show disconnection is happening
+            const localPlayer = document.getElementById('vh360-agora-local-player');
+            const remotePlayersContainer = document.getElementById('vh360-agora-remote-players');
+            
+            // Add visual freeze effect immediately
+            if (localPlayer) {
+                localPlayer.style.filter = 'grayscale(100%) blur(3px)';
+                localPlayer.style.opacity = '0.5';
+                localPlayer.style.pointerEvents = 'none'; // Prevent any interaction
+            }
+            if (remotePlayersContainer) {
+                remotePlayersContainer.style.filter = 'grayscale(100%) blur(3px)';
+                remotePlayersContainer.style.opacity = '0.5';
+                remotePlayersContainer.style.pointerEvents = 'none'; // Prevent any interaction
+            }
+            
+            // Immediately show notification
+            const actionText = data.action.charAt(0).toUpperCase() + data.action.slice(1);
+            const moderatorName = data.moderator_name || 'the host';
+            
+            let message = '';
+            let notificationType = 'warning';
+            
+            switch (data.action) {
+                case 'kick':
+                    message = `You have been kicked from the stream by ${moderatorName}.`;
+                    break;
+                case 'timeout':
+                    const duration = data.expiration_time ? new Date(data.expiration_time) : null;
+                    if (duration) {
+                        const minutes = Math.ceil((duration.getTime() - Date.now()) / (1000 * 60));
+                        message = `You have been timed out for ${minutes} minute${minutes > 1 ? 's' : ''} by ${moderatorName}.`;
+                    } else {
+                        message = `You have been timed out for 5 minutes by ${moderatorName}.`;
+                    }
+                    break;
+                case 'ban':
+                    message = `You have been permanently banned from this stream by ${moderatorName}.`;
+                    notificationType = 'error';
+                    break;
+                default:
+                    message = `You have been moderated (${data.action}) by ${moderatorName}.`;
+            }
+            
+            // Show notification immediately
+            showModerationNotification(message, notificationType);
+            
+            // Disconnect immediately with minimal delay - no need to wait for server checks
+            setTimeout(() => {
+                console.log('Agora: ⚡ CRITICAL: Disconnecting user due to moderation action');
+                if (window.agoraClient) {
+                    const disconnectReason = data.action === 'kick' ? 'You were kicked from the stream' :
+                                           data.action === 'timeout' ? 'You are currently timed out' :
+                                           'You have been banned from this stream';
+                    disconnectFromStream(disconnectReason);
+                }
+            }, 300); // Reduced to 300ms for even faster response
+            
+        } else {
+            console.log('Agora: Received moderation action for another user:', data);
+        }
+    }
+    
+    /**
+     * Shows moderation notification to the user
+     */
+    function showModerationNotification(message, type = 'info') {
+        // Remove existing moderation notifications
+        const existingNotifications = document.querySelectorAll('.vh360-moderation-notification');
+        existingNotifications.forEach(notification => notification.remove());
+        
+        const notification = document.createElement('div');
+        notification.className = `vh360-moderation-notification notification-${type}`;
+        
+        const icons = {
+            error: '🚫',
+            warning: '⚠️',
+            info: 'ℹ️'
+        };
+        
+        notification.innerHTML = `
+            <div class="notification-icon">${icons[type]}</div>
+            <div style="line-height: 1.4;">${message}</div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto-remove after 5 seconds for non-error notifications
+        if (type !== 'error') {
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.style.animation = 'moderationNotificationFadeOut 0.3s ease-out';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.parentNode.removeChild(notification);
+                        }
+                    }, 300);
+                }
+            }, 5000);
+        }
+    }
+    
+    /**
+     * Safely disconnects from the stream with cleanup
+     */
+    function disconnectFromStream(reason) {
+        try {
+            console.log('Agora: Disconnecting from stream -', reason);
+            
+            // Set moderation flag
+            isBeingModerated = true;
+            
+            // IMMEDIATE UI UPDATE: Hide video players first for instant visual feedback
+            const localPlayer = document.getElementById('vh360-agora-local-player');
+            const remotePlayersContainer = document.getElementById('vh360-agora-remote-players');
+            
+            if (localPlayer) {
+                localPlayer.style.opacity = '0';
+                localPlayer.style.pointerEvents = 'none';
+                localPlayer.innerHTML = '';
+            }
+            if (remotePlayersContainer) {
+                remotePlayersContainer.style.opacity = '0';
+                remotePlayersContainer.style.pointerEvents = 'none';
+                remotePlayersContainer.innerHTML = '';
+            }
+            
+            // Stop all moderation polling intervals
+            if (moderationPollingIntervals && moderationPollingIntervals.length > 0) {
+                console.log('Agora: Clearing', moderationPollingIntervals.length, 'moderation polling intervals');
+                moderationPollingIntervals.forEach(intervalId => {
+                    clearInterval(intervalId);
+                });
+                moderationPollingIntervals = [];
+            }
+            
+            // Set disconnect flag to prevent further polling
+            isDisconnected = true;
+            
+            // Reset polling guards
+            periodicCheckRunning = false;
+            
+            // Stop periodic moderation checks
+            if (window.triggerImmediateModerationCheck) {
+                window.triggerImmediateModerationCheck = null;
+            }
+            
+            // Stop user info broadcasting
+            stopUserInfoBroadcasting();
+            
+            // IMMEDIATE: Show disconnection overlay on top of everything
+            const joinOverlay = document.getElementById('vh360-join-livestream-overlay');
+            if (joinOverlay) {
+                joinOverlay.style.display = 'flex';
+                joinOverlay.style.zIndex = '99999'; // Ensure it's on top
+                joinOverlay.innerHTML = `
+                    <div style="text-align:center;color:#fff;max-width:400px;padding:20px;">
+                        <div style="font-size:2.5em;margin-bottom:16px;">🔴</div>
+                        <h3 style="color:#fff;margin-bottom:16px;font-size:1.4em;">Disconnected</h3>
+                        <p style="margin-bottom:20px;color:#ccc;line-height:1.4;">${reason}</p>
+                        <button onclick="location.reload()" style="background:#666;color:#fff;border:none;padding:12px 24px;border-radius:6px;font-size:1.1em;font-weight:600;cursor:pointer;">Refresh Page</button>
+                    </div>
+                `;
+            }
+            
+            // Leave the channel
+            if (window.agoraClient) {
+                window.agoraClient.leave().catch(error => {
+                    console.warn('Agora: Error leaving channel:', error);
+                });
+            }
+            
+            // Clean up local tracks
+            if (localVideoTrack) {
+                localVideoTrack.stop();
+                localVideoTrack.close();
+                localVideoTrack = null;
+            }
+            if (localAudioTrack) {
+                localAudioTrack.stop();
+                localAudioTrack.close();
+                localAudioTrack = null;
+            }
+            
+            // Reset UI state
+            isJoined = false;
+            currentRole = null;
+            remoteUsers = {};
+            currentUserUID = null; // Clear stored UID
+            
+            // Clear pending user info
+            if (window.pendingUserInfo) {
+                window.pendingUserInfo = {};
+            }
+            
+            // Clear all remote user elements
+            const remotePlayerElements = document.querySelectorAll('[id^="player-"]');
+            remotePlayerElements.forEach(element => {
+                element.remove();
+            });
+            
+            // Reset layout manager if available
+            if (window.vh360LayoutManager && typeof window.vh360LayoutManager.updateLayout === 'function') {
+                try {
+                    window.vh360LayoutManager.updateLayout(0);
+                } catch (error) {
+                    console.warn('Agora: Error resetting layout manager:', error);
+                }
+            }
+            
+            console.log('Agora: Disconnection and cleanup completed');
+            
+        } catch (error) {
+            console.error('Agora: Error during disconnection:', error);
+        }
+    }
+
+    if (leaveBtn) {
+        leaveBtn.addEventListener('click', async () => {
+            if (confirm('Leave the livestream?')) {
+                await leaveChannel();
+            }
+        });
+    }
+    if (endStreamBtn && canModerate) {
+        endStreamBtn.addEventListener('click', async () => {
+            if (confirm('End the entire livestream for all participants? This action cannot be undone.')) {
+                endStreamBtn.disabled = true;
+                endStreamBtn.textContent = 'Ending...';
+                try {
+                    const formData = new FormData();
+                    formData.append('action', 'vh360_end_stream');
+                    formData.append('nonce', vh360Data.endStreamNonce);
+                    formData.append('post_id', vh360Data.postId);
+                    const response = await fetch(vh360Data.ajaxUrl, { method: 'POST', body: formData });
+                    const data = await response.json();
+                    if (data.success) {
+                        const localPlayer = document.getElementById("vh360-agora-local-player");
+                        if (localPlayer) {
+                            const moderatorHtml = vh360Data?.livestreamMessages?.endedByModeratorHtml;
+                            localPlayer.innerHTML = (moderatorHtml && moderatorHtml.trim()) 
+                                ? moderatorHtml 
+                                : '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #fff; font-size: 1.2em; background: #333; flex-direction: column;"><div>📴 Stream Ended</div><div style="font-size: 0.8em; margin-top: 8px; text-align: center;">The livestream has been ended by the moderator</div></div>';
+                        }
+                        if (controlsContainer) {
+                            controlsContainer.innerHTML = '<div style="color: #fff; text-align: center; width: 100%; padding: 10px;">Stream ended. <a href="#" onclick="location.reload()" style="color: #4CAF50;">Refresh page</a> to see updated status.</div>';
+                        }
+                        await leaveChannel();
+                    } else {
+                        alert('Failed to end stream: ' + (data.data || 'Unknown error'));
+                        endStreamBtn.disabled = false;
+                        endStreamBtn.textContent = 'End Stream';
+                    }
+                } catch (error) {
+                    alert('Failed to end stream due to network error. Please try again or use the admin panel.');
+                    endStreamBtn.disabled = false;
+                    endStreamBtn.textContent = 'End Stream';
+                }
+            }
+        });
+    }
+    function showAudienceWaitingMessage() {
+        const localPlayer = document.getElementById("vh360-agora-local-player");
+        if (localPlayer) {
+            localPlayer.innerHTML = '';
+            const messageContainer = document.createElement('div');
+            messageContainer.className = 'waiting-message vh360-waiting-container';
+            if (config.agoraMode === 'interactive') {
+                messageContainer.innerHTML = '<div class="vh360-waiting-text">Click "Go Live" to join as host</div>';
+            } else {
+                messageContainer.innerHTML = '<div class="vh360-waiting-text">Waiting for host to start stream...</div>';
+            }
+            localPlayer.appendChild(messageContainer);
+        }
+    }
+    // Function to request token from server
+    // NEW: Dynamic token generation per join request (Scenario 2)
+    // - No static tokens stored anywhere
+    // - Uses global App ID/Certificate + per-video Channel Name
+    // - Fresh token generated for each user joining the stream
+    async function requestTokenFromServer(channelName, uid, role) {
+        try {
+            console.log('VideoHub360: Requesting token with role:', role);
+            console.log('VideoHub360: Token request params:', { channelName, uid, role });
+            
+            const formData = new FormData();
+            formData.append('action', 'vh360_generate_agora_token');
+            formData.append('nonce', vh360Data.agoraTokenNonce); // Use dedicated Agora token nonce
+            formData.append('post_id', vh360Data.postId);
+            formData.append('channel_name', channelName);
+            formData.append('uid', uid || 0);
+            formData.append('role', role || 'audience');
+            
+            const response = await fetch(vh360Data.ajaxUrl, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Handle different response types
+                console.log('VideoHub360: Token response received:', data.data);
+                
+                if (data.data.placeholder_token) {
+                    // For testing/demo purposes, return the placeholder
+                    console.log('VideoHub360: Using placeholder token');
+                    return data.data.placeholder_token;
+                } else if (data.data.token) {
+                    // Real token implementation
+                    console.log('VideoHub360: Token generated with role:', data.data.role);
+                    console.log('VideoHub360: Requested role was:', role);
+                    
+                    if (data.data.role !== role) {
+                        console.error('VideoHub360: Token role mismatch! Requested:', role, 'Got:', data.data.role);
+                    }
+                    
+                    return data.data.token;
+                } else {
+                    // No token needed for testing
+                    console.log('VideoHub360: Token generation ready but not implemented. Using tokenless mode for testing.');
+                    return null;
+                }
+            } else {
+                console.error('VideoHub360: Token request failed:', data.data);
+                throw new Error(data.data || 'Token request failed');
+            }
+        } catch (error) {
+            console.error('VideoHub360: Token request error:', error);
+            // For testing purposes, continue without token
+            return null;
+        }
+    }
+
+    // Function to check user moderation status
+    async function checkModerationStatus() {
+        try {
+            const formData = new FormData();
+            formData.append('action', 'videohub360_check_moderation_status');
+            formData.append('post_id', vh360Data.postId);
+            
+            // For guest users, send their Agora UID
+            if (currentUserUID) {
+                formData.append('agora_uid', currentUserUID);
+            }
+            
+            const response = await fetch(vh360Data.ajaxUrl, {
+                method: 'POST',
+                body: formData
+            });
+            
+            // Check if user was disconnected during the request OR got auth error
+            if (isDisconnected || isBeingModerated) {
+                throw new Error('User disconnected');
+            }
+            
+            // Check for HTTP errors (403/401 mean user is unauthorized/banned)
+            if (response.status === 403 || response.status === 401) {
+                throw new Error('User unauthorized');
+            }
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                return data.data;
+            } else {
+                console.error('VideoHub360: Moderation status check failed:', data.data);
+                throw new Error(data.data || 'Moderation status check failed');
+            }
+        } catch (error) {
+            // Only log if not disconnected (prevents console spam)
+            if (!isDisconnected && !isBeingModerated) {
+                console.error('VideoHub360: Moderation status check error:', error);
+            }
+            throw error;
+        }
+    }
+    
+
+    
+    // Moderation polling intervals - store globally so they can be cleared
+    let moderationPollingIntervals = [];
+    let isDisconnected = false; // Flag to prevent polling after disconnect
+    let periodicCheckRunning = false; // Guard to prevent multiple polling loops
+    
+    // Periodic moderation check for active participants
+    function startPeriodicModerationCheck() {
+        // Guard: Prevent multiple polling loops from running
+        if (periodicCheckRunning) {
+            console.log('Agora: Periodic moderation check already running, skipping');
+            return;
+        }
+        periodicCheckRunning = true;
+        // Ultra-aggressive moderation check - polling is critical for moderation detection
+        let checkCount = 0;
+        const rapidChecks = 20; // First 20 checks will be every 500ms = 10 seconds total
+        const moderateChecks = 30; // Next 10 checks will be every 2 seconds = 20 seconds total
+        
+        const performCheck = async () => {
+            if (currentUserUID && window.agoraClient && !isDisconnected && !isBeingModerated) {
+                try {
+                    const moderationStatus = await checkModerationStatus();
+                    
+                    if (!moderationStatus.can_join_stream) {
+                        const errorMessage = moderationStatus.message || 'You are no longer allowed in this stream.';
+                        console.log('Agora: User is moderated - disconnecting');
+                        
+                        // Apply visual freeze effect
+                        const localPlayer = document.getElementById('vh360-agora-local-player');
+                        const remotePlayersContainer = document.getElementById('vh360-agora-remote-players');
+                        
+                        if (localPlayer) {
+                            localPlayer.style.filter = 'grayscale(100%) blur(3px)';
+                            localPlayer.style.opacity = '0.5';
+                        }
+                        if (remotePlayersContainer) {
+                            remotePlayersContainer.style.filter = 'grayscale(100%) blur(3px)';
+                            remotePlayersContainer.style.opacity = '0.5';
+                        }
+                        
+                        // Show notification and disconnect
+                        showModerationNotification(errorMessage, moderationStatus.status === 'banned' ? 'error' : 'warning');
+                        setTimeout(() => {
+                            disconnectFromStream(errorMessage);
+                        }, 500);
+                    }
+                } catch (error) {
+                    // Silently ignore errors if user is disconnected (prevents console spam)
+                    if (!isDisconnected && !isBeingModerated) {
+                        console.warn('Agora: Moderation check failed:', error);
+                    }
+                }
+            }
+        };
+        
+        // Make the check function available for immediate triggering
+        window.triggerImmediateModerationCheck = performCheck;
+        
+        // Immediate first check
+        performCheck();
+        
+        // Rapid checks: Every 500ms for first 10 seconds
+        const rapidInterval = setInterval(() => {
+            checkCount++;
+            performCheck();
+            
+            if (checkCount >= rapidChecks) {
+                clearInterval(rapidInterval);
+                
+                // Moderate frequency: Every 2 seconds for next 20 seconds
+                const moderateInterval = setInterval(() => {
+                    checkCount++;
+                    performCheck();
+                    
+                    if (checkCount >= moderateChecks) {
+                        clearInterval(moderateInterval);
+                        // Regular checks every 10 seconds
+                        const regularInterval = setInterval(performCheck, 10000);
+                        moderationPollingIntervals.push(regularInterval);
+                    }
+                }, 2000);
+                moderationPollingIntervals.push(moderateInterval);
+            }
+        }, 500);
+        moderationPollingIntervals.push(rapidInterval);
+    }
+
+    async function joinChannel() {
+        try {
+            console.log('VideoHub360: joinChannel() called with currentRole:', currentRole);
+            console.log('VideoHub360: Config role at join time:', config.role);
+            console.log('VideoHub360: isHost flag:', isHost);
+            console.log('VideoHub360: isOriginalHost flag:', isOriginalHost);
+            console.log('VideoHub360: Mode:', config.agoraMode);
+            
+            console.log('Agora: Attempting to join channel', config.channelName, 'as', currentRole);
+            
+            // Check moderation status before joining (for all users)
+            console.log('Agora: Checking moderation status before joining...');
+            
+            try {
+                const moderationStatus = await checkModerationStatus();
+                if (!moderationStatus.can_join_stream) {
+                    const errorMessage = moderationStatus.message || 'You are not allowed to join this stream.';
+                    showAgoraError(errorMessage);
+                    return;
+                }
+            } catch (error) {
+                console.warn('Agora: Failed to check moderation status, proceeding with join:', error);
+                // Continue with join attempt even if moderation check fails
+            }
+            
+            // Request token dynamically before joining
+            const token = await requestTokenFromServer(config.channelName, config.uid, currentRole);
+            console.log('VideoHub360: Token received for role:', currentRole);
+            
+            // Additional verification: if we're supposed to be host, double-check before join
+            if (currentRole === 'host' && config.mode === 'live') {
+                console.log('VideoHub360: Verified host role before join - mode:', config.mode, 'role:', currentRole);
+            }
+            
+            const uid = await client.join(config.appId, config.channelName, token, config.uid);
+            console.log('Agora: Successfully joined channel with UID:', uid);
+            console.log('VideoHub360: Role after successful join:', currentRole);
+            currentUserUID = uid; // Store the current user's UID for later use
+            
+            // If we are the original host, set our UID as the original host UID
+            if (isOriginalHost) {
+                originalHostUID = uid;
+                console.log('VideoHub360: Current user is original host, setting originalHostUID:', originalHostUID);
+            }
+            
+            // Start periodic moderation check for all users
+            console.log('Agora: Starting periodic moderation check...');
+            startPeriodicModerationCheck();
+            
+            // Initialize layout manager after successful join and controls setup
+            // Initialize ViewLayoutManager for all modes and users
+            // It handles fullscreen functionality which should be available to everyone
+            if (!viewLayoutManager) {
+                const isAdmin = isUserAdministrator();
+                
+                // Always initialize - fullscreen and other basic functionality needed by all users
+                viewLayoutManager = new ViewLayoutManager(config.agoraMode, isAdmin);
+                
+                // Make layout manager globally accessible
+                window.vh360LayoutManager = viewLayoutManager;
+                
+                // Ensure controls are still visible after layout manager setup
+                setTimeout(() => {
+                    updateControlsVisibility();
+                }, 100);
+            }
+            
+            // POTENTIAL FIX: In SDK v4 with live mode, we may need to explicitly set client role after join
+            if (config.mode === 'live' && typeof client.setClientRole === 'function') {
+                try {
+                    console.log("VideoHub360: Setting explicit client role after join for live mode:", currentRole);
+                    await client.setClientRole(currentRole);
+                    console.log("VideoHub360: Client role set successfully after join to:", currentRole);
+                } catch (roleError) {
+                    console.warn("VideoHub360: Failed to set client role after join, continuing anyway:", roleError);
+                }
+            }
+            
+            await initDataStream();
+            
+            // Start periodic user info broadcasting for 30 seconds
+            startUserInfoBroadcasting();
+            
+            if (currentRole === "host") {
+                console.log('VideoHub360: User is host, starting publishing...');
+                await startPublishing();
+            } else {
+                console.log('VideoHub360: User is audience, showing waiting message...');
+                showAudienceWaitingMessage();
+            }
+            updateControlsVisibility();
+            
+            // Update mobile controls visibility after joining
+            if (typeof window.updateMobileControlsVisibility === 'function') {
+                window.updateMobileControlsVisibility();
+            }
+        } catch (error) {
+            console.error('Agora: Join channel failed:', error);
+            
+            let errorMessage = "Failed to connect to livestream.";
+            
+            // Provide specific error messages based on error type
+            if (error.code === 'INVALID_VENDOR_KEY') {
+                errorMessage = "Invalid Agora credentials. Please contact the administrator.";
+            } else if (error.code === 'INVALID_CHANNEL_NAME') {
+                errorMessage = "Invalid channel configuration. Please contact the administrator.";
+            } else if (error.code === 'OPERATION_ABORTED' || error.code === 'NETWORK_ERROR') {
+                errorMessage = "Network connection failed. Please check your internet connection and try again.";
+            } else if (error.code === 'WEBSOCKET_DISCONNECTED') {
+                errorMessage = "Connection lost. Please refresh the page and try again.";
+            } else if (error.message && error.message.includes('WebSocket')) {
+                errorMessage = "Connection failed. Please check your network and refresh the page.";
+            } else {
+                errorMessage = "Failed to connect to livestream. Please refresh and try again.";
+            }
+            
+            showAgoraError(errorMessage);
+        }
+    }
+    async function leaveChannel() {
+        try {
+            // Stop stream status polling
+            stopStreamStatusPolling();
+            
+            // Stop user info broadcasting
+            stopUserInfoBroadcasting();
+            
+            // Clean up voice-activated switching
+            if (isVolumenIndicationEnabled) {
+                client.off("volume-indicator", handleVolumeIndication);
+                isVolumenIndicationEnabled = false;
+                activeSpeakerUid = null;
+                if (activeSpeakerDebounceTimeout) {
+                    clearTimeout(activeSpeakerDebounceTimeout);
+                    activeSpeakerDebounceTimeout = null;
+                }
+            }
+            
+            await stopPublishing();
+            await client.leave();
+            const localPlayer = document.getElementById("vh360-agora-local-player");
+            if (localPlayer) localPlayer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #fff; font-size: 1.2em; background: #333;">Disconnected</div>';
+            const remoteContainer = document.getElementById("vh360-agora-remote-players");
+            if (remoteContainer) remoteContainer.innerHTML = '';
+        } catch (error) {}
+    }
+    function showAgoraError(message) {
+        const localPlayer = document.getElementById("vh360-agora-local-player");
+        let errorOverlay = document.getElementById('agora-error-overlay');
+        if (!errorOverlay) {
+            errorOverlay = document.createElement('div');
+            errorOverlay.id = 'agora-error-overlay';
+            errorOverlay.style.cssText = `
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.9);
+                color: #fff;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 15;
+                text-align: center;
+                padding: 20px;
+                font-size: 1em;
+                line-height: 1.4;
+            `;
+            localPlayer.appendChild(errorOverlay);
+        }
+        errorOverlay.innerHTML = `
+            <div>
+                <div style="color: #ff6b6b; margin-bottom: 12px; font-size: 1.2em;">⚠️ Error</div>
+                <div style="margin-bottom: 16px;">${message}</div>
+                <button onclick="this.parentElement.parentElement.style.display='none'"
+                        style="background: #4CAF50; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+                    Dismiss
+                </button>
+            </div>
+        `;
+        errorOverlay.style.display = 'flex';
+        setTimeout(() => {
+            if (errorOverlay && errorOverlay.style.display !== 'none') {
+                errorOverlay.style.display = 'none';
+            }
+        }, 10000);
+    }
+
+    // Stream status polling for audience users
+    let streamStatusPollInterval = null;
+    let isStreamStatusPollingActive = false;
+    
+    function startStreamStatusPolling() {
+        if (!isOriginalHost && currentRole === 'audience' && !isStreamStatusPollingActive) {
+            isStreamStatusPollingActive = true;
+            streamStatusPollInterval = setInterval(checkStreamStatus, 3000); // Poll every 3 seconds
+            checkStreamStatus(); // Check immediately
+            console.log('VideoHub360: Started stream status polling for audience user');
+        }
+    }
+    
+    function stopStreamStatusPolling() {
+        if (streamStatusPollInterval) {
+            clearInterval(streamStatusPollInterval);
+            streamStatusPollInterval = null;
+        }
+        isStreamStatusPollingActive = false;
+        console.log('VideoHub360: Stopped stream status polling');
+    }
+    
+    // Pause polling when page is not visible to save resources
+    function handleVisibilityChange() {
+        if (document.hidden) {
+            if (isStreamStatusPollingActive && streamStatusPollInterval) {
+                clearInterval(streamStatusPollInterval);
+                streamStatusPollInterval = null;
+                console.log('VideoHub360: Paused stream status polling (page hidden)');
+            }
+        } else {
+            if (isStreamStatusPollingActive && !streamStatusPollInterval) {
+                streamStatusPollInterval = setInterval(checkStreamStatus, 3000);
+                checkStreamStatus(); // Check immediately when page becomes visible
+                console.log('VideoHub360: Resumed stream status polling (page visible)');
+            }
+        }
+    }
+    
+    // Listen for visibility changes
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    function checkStreamStatus() {
+        if (!vh360Data || !vh360Data.postId) return;
+        
+        var formData = new FormData();
+        formData.append('action', 'vh360_get_stream_status');
+        formData.append('post_id', vh360Data.postId);
+        
+        fetch(vh360Data.ajaxUrl, {
+            method: 'POST',
+            body: formData
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (data.success) {
+                if (data.data.is_live) {
+                    // Stream is now live, stop polling and join
+                    console.log('VideoHub360: Stream detected as live, joining...');
+                    stopStreamStatusPolling();
+                    
+                    // Hide the join overlay
+                    if (joinOverlay) {
+                        joinOverlay.style.display = 'none';
+                    }
+                    
+                    // Mark stream as started and show controls now that live stream has begun
+                    window.vh360StreamStarted = true;
+                    const mobileControls = document.getElementById('vh360-agora-controls');
+                    if (mobileControls) {
+                        mobileControls.style.display = 'flex';
+                    }
+                    
+                    // Update desktop controls visibility for broadcast mode hosts
+                    updateControlsVisibility();
+                    
+                    // Show loading message
+                    const localPlayer = document.getElementById("vh360-agora-local-player");
+                    if (localPlayer) {
+                        localPlayer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#fff;font-size:1.2em;"><div style="text-align:center;"><div style="margin-bottom:12px;">🔄</div><div>Connecting to livestream...</div></div></div>';
+                    }
+                    
+                    // Start the connection
+                    joinChannel().catch(error => {
+                        console.error('Failed to join livestream:', error);
+                        showAgoraError('Failed to connect to livestream. Please refresh and try again.');
+                    });
+                } else {
+                    // Stream is not live yet, keep polling
+                    // Optionally update the waiting message
+                    const localPlayer = document.getElementById("vh360-agora-local-player");
+                    if (localPlayer && !localPlayer.querySelector('.waiting-message')) {
+                        showAudienceWaitingMessage();
+                    }
+                }
+            } else {
+                console.warn('VideoHub360: Stream status check failed:', data.data);
+            }
+        })
+        .catch(function(error) {
+            console.error('VideoHub360: Stream status check error:', error);
+            // Continue polling even on error - temporary network issues shouldn't stop the process
+        });
+    }
+    
+    function setStreamStatus(status) {
+        if (!vh360Data || !vh360Data.postId) return Promise.reject('No post ID available');
+        
+        console.log('VideoHub360: Setting stream status to:', status);
+        
+        var formData = new FormData();
+        formData.append('action', 'vh360_set_stream_status');
+        formData.append('nonce', vh360Data.agoraTokenNonce);
+        formData.append('post_id', vh360Data.postId);
+        formData.append('status', status);
+        
+        return fetch(vh360Data.ajaxUrl, {
+            method: 'POST',
+            body: formData
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (data.success) {
+                console.log('VideoHub360: Stream status updated successfully to:', status);
+                return data;
+            } else {
+                throw new Error(data.data || 'Failed to update stream status');
+            }
+        })
+        .catch(function(error) {
+            console.error('VideoHub360: Failed to set stream status:', error);
+            throw error;
+        });
+    }
+
+    // Simple join livestream button functionality
+    function handleJoinLivestream() {
+        console.log('VideoHub360: handleJoinLivestream() called');
+        console.log('VideoHub360: Current role at button click:', currentRole);
+        console.log('VideoHub360: isOriginalHost:', isOriginalHost);
+        console.log('VideoHub360: Config:', config);
+        
+        // Check if login is required based on admin setting and everyone-is-host mode
+        var loginRequired = true;
+        
+        // If everyone-is-host mode is enabled and admin setting allows guest join, login is not required
+        if (config.allowEveryoneIsHost && config.agoraMode === 'interactive' && vh360Data.forceLoginEveryoneHost == 0) {
+            loginRequired = false;
+            console.log('VideoHub360: Guest join allowed - everyone-is-host mode enabled and login not required by admin setting');
+        }
+        
+        if (!security.is_logged_in && loginRequired) {
+            console.log('VideoHub360: Redirecting to login - user not logged in and login is required');
+            window.location.href = vh360Data.userLoginUrl;
+            return;
+        }
+        if (isOriginalHost) {
+            setStreamStatus('yes').then(function(data) {
+                // PATCH: Update badges and "Started x ago" instantly
+                if (data && data.success && data.data && data.data.live_start_time) {
+                    // Show live badge
+                    var liveBadge = document.querySelector('.videohub360-live-badge');
+                    if (liveBadge) liveBadge.style.display = 'inline-block';
+                    // Show watching now badge
+                    var viewersBadge = document.querySelector('.videohub360-live-viewers');
+                    if (viewersBadge) viewersBadge.style.display = 'inline-block';
+                    // Set the start time meta and start its timer
+                    var startMeta = document.getElementById('vh360-stream-started-meta');
+                    if (startMeta) {
+                        startMeta.dataset.start = data.data.live_start_time;
+                        startMeta.style.display = 'inline-block';
+                        function updateStarted() {
+                            var start = startMeta.dataset.start;
+                            var startTime = new Date(start.replace(' ', 'T'));
+                            var now = new Date();
+                            var diffMs = now - startTime;
+                            if (isNaN(diffMs) || diffMs < 0) {
+                                startMeta.textContent = '';
+                                return;
+                            }
+                            var totalSeconds = Math.floor(diffMs / 1000);
+                            var totalMinutes = Math.floor(totalSeconds / 60);
+                            var hours = Math.floor(totalMinutes / 60);
+                            var days = Math.floor(hours / 24);
+                            var display = 'Started streaming ';
+                            if (days > 0) display += days + ' day' + (days > 1 ? 's' : '') + ' ago';
+                            else if (hours > 0) display += hours + ' hour' + (hours > 1 ? 's' : '') + ' ago';
+                            else if (totalMinutes > 0) display += totalMinutes + ' minute' + (totalMinutes > 1 ? 's' : '') + ' ago';
+                            else display += 'just now';
+                            startMeta.textContent = display;
+                        }
+                        updateStarted();
+                        setInterval(updateStarted, 60000);
+                    }
+                }
+                // Hide the join overlay
+                if (joinOverlay) {
+                    joinOverlay.style.display = 'none';
+                }
+                
+                // Mark stream as started and show controls now that live stream has begun
+                window.vh360StreamStarted = true;
+                const mobileControls = document.getElementById('vh360-agora-controls');
+                if (mobileControls) {
+                    mobileControls.style.display = 'flex';
+                }
+                
+                // Update desktop controls visibility for broadcast mode hosts
+                updateControlsVisibility();
+                
+                // Show loading message
+                const localPlayer = document.getElementById("vh360-agora-local-player");
+                if (localPlayer) {
+                    localPlayer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#fff;font-size:1.2em;"><div style="text-align:center;"><div style="margin-bottom:12px;">🔄</div><div>Starting livestream...</div></div></div>';
+                }
+                joinChannel().catch(error => {
+                    console.error('Failed to start livestream:', error);
+                    showAgoraError('Failed to start livestream. Please refresh and try again.');
+                    setStreamStatus('no');
+                });
+            }).catch(function(error) {
+                console.error('Failed to set stream status:', error);
+                // Check if the error is because stream has been ended
+                var errorMessage = error.message || error.toString();
+                if (errorMessage.includes('Stream has been ended') || errorMessage.includes('stream has been ended')) {
+                    // Display stream ended message instead of error
+                    const localPlayer = document.getElementById("vh360-agora-local-player");
+                    if (localPlayer) {
+                        const needsRestartHtml = vh360Data?.livestreamMessages?.endedNeedsRestartHtml;
+                        localPlayer.innerHTML = (needsRestartHtml && needsRestartHtml.trim()) 
+                            ? needsRestartHtml 
+                            : '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #fff; font-size: 1.2em; background: #333; flex-direction: column;"><div>📴 Stream Ended</div><div style="font-size: 0.8em; margin-top: 8px; text-align: center;">This stream has ended. The host needs to restart it to go live again.</div></div>';
+                    }
+                    // Hide join overlay if it exists
+                    if (joinOverlay) {
+                        joinOverlay.style.display = 'none';
+                    }
+                } else {
+                    showAgoraError('Failed to start livestream. Please try again.');
+                }
+            });
+        } else {
+            // Check if everyone should join as hosts in interactive mode (Zoom-style)
+            if (config.allowEveryoneIsHost && config.agoraMode === 'interactive') {
+                console.log('VideoHub360: Everyone-as-host mode enabled, joining immediately as host');
+                if (joinOverlay) {
+                    joinOverlay.style.display = 'none';
+                }
+                
+                // Mark stream as started and show controls now that live stream has begun
+                window.vh360StreamStarted = true;
+                const mobileControls = document.getElementById('vh360-agora-controls');
+                if (mobileControls) {
+                    mobileControls.style.display = 'flex';
+                }
+                
+                // Update desktop controls visibility for broadcast mode hosts
+                updateControlsVisibility();
+                
+                const localPlayer = document.getElementById("vh360-agora-local-player");
+                if (localPlayer) {
+                    localPlayer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#fff;font-size:1.2em;"><div style="text-align:center;"><div style="margin-bottom:12px;">🔄</div><div>Joining as host...</div></div></div>';
+                }
+                // Join immediately as host without waiting for stream status
+                joinChannel().catch(error => {
+                    console.error('Failed to join livestream as host:', error);
+                    showAgoraError('Failed to join livestream. Please refresh and try again.');
+                });
+            } else {
+                // Standard behavior: start polling for stream status or join directly
+                if (joinOverlay) {
+                    joinOverlay.style.display = 'none';
+                }
+                
+                // Mark stream as started and show controls now that live stream has begun
+                window.vh360StreamStarted = true;
+                const mobileControls = document.getElementById('vh360-agora-controls');
+                if (mobileControls) {
+                    mobileControls.style.display = 'flex';
+                }
+                
+                // Update desktop controls visibility for broadcast mode hosts
+                updateControlsVisibility();
+                
+                const localPlayer = document.getElementById("vh360-agora-local-player");
+                if (localPlayer) {
+                    localPlayer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#fff;font-size:1.2em;"><div style="text-align:center;"><div style="margin-bottom:12px;">🔄</div><div>Connecting to livestream...</div></div></div>';
+                }
+                joinChannel().catch(error => {
+                    console.error('Failed to join livestream:', error);
+                    showAgoraError('Failed to connect to livestream. Please refresh and try again.');
+                });
+            }
+        }
+    }
+
+    // Add event listener for join button
+    if (joinLivestreamBtn) {
+        joinLivestreamBtn.addEventListener('click', handleJoinLivestream);
+        joinLivestreamBtn.addEventListener('mouseenter', function() {
+            this.style.background = '#d32f2f';
+        });
+        joinLivestreamBtn.addEventListener('mouseleave', function() {
+            this.style.background = '#e53935';
+        });
+    }
+
+    // Don't auto-join anymore - wait for user to click the button OR stream status changes
+    // The old code was: joinChannel();
+    // Now we show the join overlay for hosts and start polling for audience
+    // UNLESS allowEveryoneIsHost is enabled in interactive mode
+    
+    if (isOriginalHost) {
+        // Host sees the "Start Live Stream" button and waits for click
+        console.log('VideoHub360: Host detected, waiting for Start Live Stream button click');
+    } else if (config.allowEveryoneIsHost && config.agoraMode === 'interactive') {
+        // In everyone-as-host mode with interactive streaming, users can join immediately
+        console.log('VideoHub360: Everyone-as-host mode enabled, showing join button for immediate host access');
+        // Keep the join overlay visible so users can click to join as hosts
+    } else {
+        // Audience users start polling for stream status
+        console.log('VideoHub360: Audience user detected, starting stream status polling');
+        startStreamStatusPolling();
+    }
+
+    // Debug/cleanup global
+    window.vh360AgoraPlayer = {
+        client,
+        localTracks,
+        remoteUsers,
+        config,
+        currentRole: () => currentRole,
+        isHost: () => isHost,
+        leaveChannel,
+        startPublishing,
+        stopPublishing,
+        startStreamStatusPolling,
+        stopStreamStatusPolling,
+        setStreamStatus,
+        // Voice-activated switching functions
+        enableVolumeIndication,
+        activeSpeaker: () => activeSpeakerUid,
+        setActiveSpeaker,
+        isVolumeIndicationEnabled: () => isVolumenIndicationEnabled,
+        volumeThreshold,
+        switchingCooldown
+    };
+    
+    // Initialize debug flag for view transition logging
+    // Set window.__VH360_DEBUG = true in console to enable debug logging
+    if (typeof window.__VH360_DEBUG === 'undefined') {
+        window.__VH360_DEBUG = false;
+    }
+    
+    // Mobile Zoom-style controls with auto-hide functionality
+        if (window.innerWidth <= 768) {
+            setTimeout(function() {
+                if (!window.vh360MobileControlsInitialized) {
+                    initializeMobileControls();
+                }
+            }, 1000);
+        }
+        
+        // Also check on window resize
+        window.addEventListener('resize', function() {
+            if (window.innerWidth <= 768) {
+                setTimeout(function() {
+                    if (!window.vh360MobileControlsInitialized) {
+                        initializeMobileControls();
+                    }
+                }, 100);
+            } else {
+                // Reset initialization flag when switching to desktop
+                window.vh360MobileControlsInitialized = false;
+            }
+        });
+
+    // Initialize simplified mobile controls
+    function initializeMobileControls() {
+        // Use simplified mobile controls implementation
+        const mobileConfig = {
+            agoraMode: config.agoraMode,
+            currentRole: currentRole,
+            isHost: isHost,
+            isOriginalHost: isOriginalHost,
+            canModerate: canModerate
+        };
+        
+        const result = initializeSimplifiedMobileControls(mobileConfig);
+        
+        // Always try to bind mobile fullscreen events on mobile devices, regardless of layout manager state
+        if (window.innerWidth <= 768) {
+            console.log('VideoHub360: Mobile device detected, ensuring mobile fullscreen binding...');
+            
+            // Use multiple attempts to ensure binding happens
+            setTimeout(() => bindMobileFullscreenEvents(), 50);
+            setTimeout(() => bindMobileFullscreenEvents(), 200);
+            setTimeout(() => bindMobileFullscreenEvents(), 500);
+        }
+        
+        return result;
+    }
+    
+    // Helper function to bind fullscreen events specifically for mobile
+    function bindMobileFullscreenEvents() {
+        console.log('VideoHub360 Mobile: bindMobileFullscreenEvents() called, window width:', window.innerWidth);
+        
+        // Find the existing fullscreen button created in PHP
+        const fullscreenBtn = document.getElementById('vh360-agora-fullscreen-btn');
+        
+        if (!fullscreenBtn) {
+            console.log('VideoHub360 Mobile: No fullscreen button found to bind events');
+            return;
+        }
+        
+        // Check if already has mobile event listeners (to avoid double binding)
+        if (fullscreenBtn.dataset.mobileEventsbound === 'true') {
+            console.log('VideoHub360 Mobile: Mobile fullscreen events already bound');
+            return;
+        }
+        
+        // Check if desktop events are bound - if so, remove them for mobile
+        if (fullscreenBtn.dataset.desktopEventsbound === 'true') {
+            console.log('VideoHub360 Mobile: Desktop events detected, removing for mobile binding');
+            // Clone the button to remove all event listeners
+            const newButton = fullscreenBtn.cloneNode(true);
+            fullscreenBtn.parentNode.replaceChild(newButton, fullscreenBtn);
+            // Update reference
+            const refreshedBtn = document.getElementById('vh360-agora-fullscreen-btn');
+            if (refreshedBtn) {
+                refreshedBtn.dataset.desktopEventsbound = 'false';
+            }
+        }
+        
+        // Re-get button reference in case it was cloned
+        const mobileFullscreenBtn = document.getElementById('vh360-agora-fullscreen-btn');
+        if (!mobileFullscreenBtn) {
+            console.log('VideoHub360 Mobile: Button not found after cleanup');
+            return;
+        }
+        
+        // Check if the standard fullscreen API is supported. Normally, if it's not
+        // supported we would hide the fullscreen button. However, on iOS devices
+        // we still show the button because we can use native video fullscreen
+        // methods even when the Fullscreen API is unavailable.
+        if (!ViewLayoutManager.isFullscreenSupported()) {
+            const isiOS = vh360IsIOSDevice();
+            if (!isiOS) {
+                console.log('VideoHub360 Mobile: Fullscreen API not supported, hiding fullscreen button');
+                mobileFullscreenBtn.style.display = 'none';
+                return;
+            }
+        }
+        
+        console.log('VideoHub360 Mobile: Binding mobile fullscreen button events...');
+        
+        // Add click handler with error handling
+        mobileFullscreenBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('VideoHub360 Mobile: Mobile fullscreen button clicked');
+            toggleMobileFullscreen();
+        });
+        
+        // Mark as bound to avoid double binding
+        mobileFullscreenBtn.dataset.mobileEventsbound = 'true';
+        
+        // Note: Fullscreen change event listeners are now centralized in ViewLayoutManager
+        // to avoid duplication. The updateMobileFullscreenButton function is exposed globally
+        // so ViewLayoutManager can call it from centralized event listeners.
+        
+        console.log('VideoHub360 Mobile: Mobile fullscreen button events bound successfully');
+    }
+    
+    // Mobile-specific fullscreen toggle function
+    function toggleMobileFullscreen() {
+        console.log('VideoHub360 Mobile: toggleMobileFullscreen() called');
+
+        // Determine if we are on an iOS device (including iPadOS reporting as Mac)
+        const isiOS = vh360IsIOSDevice();
+        // Determine if we should restrict fullscreen to broadcast mode
+        // Use the local `config` passed to initializeAgoraPlayer rather than
+        // expecting a global window.config. When this function executes inside
+        // initializeAgoraPlayer, `config` is available via closure. Referencing
+        // window.config caused `undefined` on iOS and prevented broadcast
+        // detection, so use the captured config directly.
+        const isBroadcast = config && config.agoraMode === 'broadcast';
+
+        // If we're on iOS and not in broadcast mode, show a message and abort
+        if (isiOS && !isBroadcast) {
+            console.warn('VideoHub360 Mobile: Fullscreen is only available in broadcast mode on iOS');
+            alert('Fullscreen is only available on mobile in broadcast mode.');
+            return;
+        }
+
+        // If we're already in fullscreen, attempt to exit regardless of platform
+        if (window.isInFullscreen && window.isInFullscreen()) {
+            console.log('VideoHub360 Mobile: Currently in fullscreen, attempting to exit...');
+            // Attempt to exit using the generic exitFullscreen API if available
+            if (window.exitFullscreen) {
+                window.exitFullscreen().then(() => {
+                    updateMobileFullscreenButton(false);
+                    console.log('VideoHub360 Mobile: Exited fullscreen successfully');
+                }).catch((err) => {
+                    console.error('VideoHub360 Mobile: Failed to exit fullscreen:', err);
+                    updateMobileFullscreenButton(false);
+                });
+            }
+            return;
+        }
+
+        // At this point we know we're not currently fullscreen
+        if (isiOS && isBroadcast) {
+            // On iOS in broadcast mode: use the native video fullscreen method
+            console.log('VideoHub360 Mobile: iOS device in broadcast mode, attempting native video fullscreen');
+            // Possible selectors for Agora video elements
+            const videoSelectors = [
+                '#vh360-agora-player video',
+                '.vh360-stream-player video',
+                '.agora_video_player video',
+                'video'
+            ];
+            let videoElement = null;
+            for (const selector of videoSelectors) {
+                const candidate = document.querySelector(selector);
+                if (candidate && candidate.offsetWidth > 0 && candidate.offsetHeight > 0) {
+                    if (window.__VH360_DEBUG) console.log(`VideoHub360 Mobile: Found video element for fullscreen: ${selector}`);
+                    videoElement = candidate;
+                    break;
+                }
+            }
+            if (videoElement) {
+                // Prefer webkitEnterFullscreen if available
+                try {
+                    if (typeof videoElement.webkitEnterFullscreen === 'function') {
+                        videoElement.webkitEnterFullscreen();
+                        updateMobileFullscreenButton(true);
+                        return;
+                    } else if (typeof videoElement.webkitEnterFullScreen === 'function') {
+                        videoElement.webkitEnterFullScreen();
+                        updateMobileFullscreenButton(true);
+                        return;
+                    } else {
+                        console.warn('VideoHub360 Mobile: iOS fullscreen not supported on this video element');
+                        alert('Fullscreen is not supported on this video.');
+                        return;
+                    }
+                } catch (iosErr) {
+                    console.error('VideoHub360 Mobile: Error attempting iOS native fullscreen:', iosErr);
+                    alert('An error occurred while trying to enter fullscreen on this device.');
+                    return;
+                }
+            } else {
+                console.warn('VideoHub360 Mobile: No video element found for iOS fullscreen');
+                alert('Video not found for fullscreen.');
+                return;
+            }
+        }
+
+        // For non-iOS devices (or iOS outside broadcast), use the standard Fullscreen API
+        // First find the best element to fullscreen
+        let targetElement = null;
+        const containerSelectors = [
+            '#vh360-agora-player',
+            '.vh360-multi-view-container',
+            '.vh360-video-container',
+            '.videohub360-container',
+            '#videohub360-main-container',
+            '.vh360-container'
+        ];
+        for (const selector of containerSelectors) {
+            const el = document.querySelector(selector);
+            if (el && el.offsetWidth > 0 && el.offsetHeight > 0) {
+                targetElement = el;
+                if (window.__VH360_DEBUG) console.log(`VideoHub360 Mobile: Found fullscreen target element: ${selector}`);
+                break;
+            }
+        }
+        // Fallback to document.body if no element found
+        if (!targetElement) {
+            targetElement = document.body;
+            if (window.__VH360_DEBUG) console.log('VideoHub360 Mobile: Using document.body as fullscreen target fallback');
+        }
+        // If still not found, show error
+        if (!targetElement) {
+            console.error('VideoHub360 Mobile: No suitable element found for fullscreen');
+            alert('Video player not found for fullscreen mode.');
+            return;
+        }
+        // Attempt to enter fullscreen on the chosen element
+        try {
+            // Indicate we're attempting fullscreen to prevent double clicks
+            targetElement.classList.add('vh360-entering-fullscreen');
+            // Use standard API; do not delay for user gesture compliance
+            window.enterFullscreen(targetElement).then(() => {
+                targetElement.classList.remove('vh360-entering-fullscreen');
+                updateMobileFullscreenButton(true);
+                if (window.__VH360_DEBUG) console.log('VideoHub360 Mobile: Entered fullscreen successfully');
+            }).catch((err) => {
+                targetElement.classList.remove('vh360-entering-fullscreen');
+                console.error('VideoHub360 Mobile: Failed to enter fullscreen:', err);
+                let errorMessage = 'Fullscreen failed. ';
+                if (err.name === 'NotAllowedError') {
+                    errorMessage += 'Please try tapping the fullscreen button again.';
+                } else if (err.name === 'TypeError') {
+                    errorMessage += 'Fullscreen not available for this content.';
+                } else {
+                    errorMessage += 'Please try again.';
+                }
+                alert(errorMessage);
+                if (window.__VH360_DEBUG) console.log('VideoHub360 Mobile: Fullscreen error shown to user:', errorMessage);
+            });
+        } catch (error) {
+            console.error('VideoHub360 Mobile: Unexpected error in toggleMobileFullscreen:', error);
+            alert('An error occurred while trying to toggle fullscreen.');
+        }
+    }
+    
+    // Update fullscreen button appearance for mobile
+    // Exposed globally so ViewLayoutManager can call it from centralized event listeners
+    window.updateMobileFullscreenButton = function(isFullscreen) {
+        const fullscreenBtn = document.getElementById('vh360-agora-fullscreen-btn');
+        if (!fullscreenBtn) return;
+        
+        const svg = fullscreenBtn.querySelector('svg');
+        if (!svg) return;
+        
+        if (isFullscreen) {
+            // Exit fullscreen icon - standardized
+            svg.innerHTML = '<path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>';
+            fullscreenBtn.title = 'Exit fullscreen';
+        } else {
+            // Enter fullscreen icon - standardized
+            svg.innerHTML = '<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>';
+            fullscreenBtn.title = 'Toggle fullscreen';
+        }
+    }
+
+    // Function to update mobile controls visibility when role changes
+    function updateMobileControlsVisibility() {
+        // Use simplified mobile controls if available, otherwise fallback to legacy behavior
+        if (window.vh360SimplifiedMobileControls) {
+            // Update the config with current values
+            window.vh360SimplifiedMobileControls.config = {
+                agoraMode: config.agoraMode,
+                currentRole: currentRole,
+                isHost: isHost,
+                isOriginalHost: isOriginalHost,
+                canModerate: canModerate
+            };
+            window.vh360SimplifiedMobileControls.updateVisibility();
+            return;
+        }
+        
+        // Legacy fallback - should not be needed with simplified implementation
+        if (window.innerWidth > 768) {
+            return; // Not mobile
+        }
+
+        const controlsContainer = document.getElementById('vh360-agora-controls');
+        if (!controlsContainer) {
+            return;
+        }
+
+        // Don't show controls until stream has actually started
+        if (!window.vh360StreamStarted) {
+            controlsContainer.style.display = 'none';
+            console.log('Legacy controls: Stream not started yet, keeping controls hidden');
+            return;
+        }
+
+        if (!shouldShowControlsForUser()) {
+            controlsContainer.style.display = 'none';
+        } else {
+            controlsContainer.style.display = 'flex';
+        }
+    }
+
+    // Make updateMobileControlsVisibility globally available
+    window.updateMobileControlsVisibility = updateMobileControlsVisibility;
+
+    // Listen for quality changes from the quality management system
+    document.addEventListener('vh360:qualityChanged', async (event) => {
+        const { quality, qualityData } = event.detail;
+        console.log('Quality change requested:', quality, qualityData);
+        
+        // Only update if we're currently streaming
+        if (localTracks.videoTrack && currentRole === 'host') {
+            try {
+                await updateLiveStreamQuality(quality, qualityData);
+            } catch (error) {
+                console.error('Failed to update live stream quality:', error);
+                // Show user-friendly error message
+                if (typeof showAgoraError === 'function') {
+                    showAgoraError('Failed to change stream quality. Please try again.');
+                }
+            }
+        } else {
+            console.log('Quality preference saved for next stream session');
+        }
+    });
+};
+
+// == Desktop Auto-Hide Controls for Interactive Mode ==
+function initializeDesktopAutoHideControls() {
+    // Only apply to desktop devices (>768px)
+    if (window.innerWidth <= 768) {
+        return;
+    }
+    
+    const multiViewContainer = document.querySelector('.vh360-multi-view-container');
+    const videoArea = document.querySelector('#vh360-agora-local-player');
+    
+    if (!multiViewContainer || !videoArea) {
+        return;
+    }
+    
+    let autoHideTimeout;
+    
+    // Function to show controls
+    function showControls() {
+        multiViewContainer.classList.remove('vh360-controls-hidden');
+        resetAutoHideTimer();
+    }
+    
+    // Function to hide controls  
+    function hideControls() {
+        multiViewContainer.classList.add('vh360-controls-hidden');
+        clearTimeout(autoHideTimeout);
+    }
+    
+    // Function to reset the auto-hide timer
+    function resetAutoHideTimer() {
+        clearTimeout(autoHideTimeout);
+        autoHideTimeout = setTimeout(hideControls, 3000); // Hide after 3 seconds
+    }
+    
+    // Show controls when video area is clicked
+    videoArea.addEventListener('click', function(e) {
+        // Prevent event from bubbling to avoid conflicts
+        e.stopPropagation();
+        showControls();
+    });
+    
+    // Show controls on mouse movement within the container
+    multiViewContainer.addEventListener('mousemove', showControls);
+    
+    // Show controls when hovering over control elements themselves
+    const controlsContainer = document.querySelector('#vh360-agora-controls, .vh360-agora-controls');
+    if (controlsContainer) {
+        controlsContainer.addEventListener('mouseenter', function() {
+            clearTimeout(autoHideTimeout);
+            multiViewContainer.classList.remove('vh360-controls-hidden');
+        });
+        
+        controlsContainer.addEventListener('mouseleave', resetAutoHideTimer);
+    }
+    
+    // Start the auto-hide timer initially
+    resetAutoHideTimer();
+    
+    console.log('Desktop auto-hide controls initialized');
+}
+
+// Initialize desktop auto-hide when ViewLayoutManager is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Delay initialization to ensure ViewLayoutManager has created the layout
+    setTimeout(function() {
+        if (window.innerWidth > 768 && document.querySelector('.vh360-multi-view-container')) {
+            initializeDesktopAutoHideControls();
+        }
+    }, 1500);
+});
+
+// Also initialize on window resize if switching to desktop
+window.addEventListener('resize', function() {
+    if (window.innerWidth > 768 && document.querySelector('.vh360-multi-view-container')) {
+        setTimeout(initializeDesktopAutoHideControls, 500);
+    }
+});
+
+// == Global Fullscreen Handler for Participant Dropdowns ==
+// This handles moving all participant dropdown menus when entering/exiting fullscreen
+(function() {
+    const agoraPlayer = document.getElementById('vh360-agora-player');
+    if (!agoraPlayer) {
+        return; // No Agora player found
+    }
+    
+    // Helper function to check if we're in fullscreen mode
+    function isInFullscreenMode() {
+        return !!(document.fullscreenElement || 
+                 document.webkitFullscreenElement || 
+                 document.mozFullScreenElement || 
+                 document.msFullscreenElement);
+    }
+    
+    // Helper function to handle fullscreen change for all participant dropdowns
+    function handleParticipantDropdownsFullscreen() {
+        const allDropdowns = document.querySelectorAll('.vh360-participant-dropdown');
+        
+        if (isInFullscreenMode()) {
+            // Entering fullscreen - move all dropdowns inside the fullscreen element
+            const fullscreenElement = document.fullscreenElement || 
+                                   document.webkitFullscreenElement || 
+                                   document.mozFullScreenElement || 
+                                   document.msFullscreenElement;
+            
+            if (fullscreenElement && fullscreenElement.id === 'vh360-agora-player') {
+                allDropdowns.forEach(dropdown => {
+                    if (dropdown.parentNode !== fullscreenElement) {
+                        fullscreenElement.appendChild(dropdown);
+                    }
+                });
+                if (window.__VH360_DEBUG && allDropdowns.length > 0) {
+                    console.log(`VideoHub360: ${allDropdowns.length} participant dropdown(s) moved inside fullscreen element`);
+                }
+            }
+        } else {
+            // Exiting fullscreen - move all dropdowns back to document.body
+            allDropdowns.forEach(dropdown => {
+                if (dropdown.parentNode !== document.body) {
+                    document.body.appendChild(dropdown);
+                }
+            });
+            if (window.__VH360_DEBUG && allDropdowns.length > 0) {
+                console.log(`VideoHub360: ${allDropdowns.length} participant dropdown(s) moved back to document.body`);
+            }
+        }
+    }
+    
+    // Listen for all fullscreen change events (cross-browser)
+    document.addEventListener('fullscreenchange', handleParticipantDropdownsFullscreen);
+    document.addEventListener('webkitfullscreenchange', handleParticipantDropdownsFullscreen);
+    document.addEventListener('mozfullscreenchange', handleParticipantDropdownsFullscreen);
+    document.addEventListener('MSFullscreenChange', handleParticipantDropdownsFullscreen);
+    
+    if (window.__VH360_DEBUG) console.log('VideoHub360: Global fullscreen change listeners added for participant dropdowns');
+})();
+
+
+
+/* === VideoHub360: Unified Auto‑Hide for Agora Controls (desktop & mobile, broadcast & interactive) === */
+(function() {
+    try {
+        const root = document.getElementById('vh360-agora-player') || document.querySelector('.vh360-multi-view-container');
+        if (!root) return;
+        const controls = root.querySelector('#vh360-agora-controls, .vh360-agora-controls');
+        if (!controls) return;
+
+        let hideT = null;
+        const HIDE_AFTER_MS = 3000;
+        const HIDDEN_CLASS = 'vh360-controls-hidden';
+
+        function show() {
+            root.classList.remove(HIDDEN_CLASS);
+            reset();
+        }
+        function hide() {
+            root.classList.add(HIDDEN_CLASS);
+        }
+        function reset() {
+            if (hideT) clearTimeout(hideT);
+            hideT = setTimeout(hide, HIDE_AFTER_MS);
+        }
+        // Interaction events that should reveal controls
+        const reveal = () => show();
+        ['mousemove','pointermove','touchstart','click','keydown','wheel'].forEach(evt => {
+            root.addEventListener(evt, reveal, {passive: true});
+        });
+
+        // Keep visible while hovering over the controls themselves
+        controls.addEventListener('mouseenter', () => {
+            if (hideT) clearTimeout(hideT);
+        });
+        controls.addEventListener('mouseleave', reset);
+
+        // Initialize
+        show();
+
+        // Reinitialize on resize (layout can change between broadcast/interactive)
+        window.addEventListener('resize', () => {
+            // simple reset on resize
+            show();
+        });
+
+        if (window.__VH360_DEBUG) console.log('VideoHub360: Unified auto-hide initialized');
+    } catch (e) {
+        if (window && window.__VH360_DEBUG) console.warn('VideoHub360: auto-hide init error', e);
+    }
+})();
+
+/* === VideoHub360: Unified Auto-Hide for Agora Controls (desktop & mobile, broadcast & interactive) === */
+(function() {
+    try {
+        const root = document.getElementById('vh360-agora-player') || document.querySelector('.vh360-multi-view-container');
+        if (!root) return;
+        const controls = root.querySelector('#vh360-agora-controls, .vh360-agora-controls');
+        if (!controls) return;
+
+        let hideT = null;
+        const HIDE_AFTER_MS = 3000;
+        const HIDDEN_CLASS = 'vh360-controls-hidden';
+        const LIVE_CLASS = 'vh360-stream-live';
+
+        function show() {
+            if (!root.classList.contains(LIVE_CLASS)) return;
+            root.classList.remove(HIDDEN_CLASS);
+            reset();
+        }
+        function hide() { root.classList.add(HIDDEN_CLASS); }
+        function reset() {
+            if (hideT) clearTimeout(hideT);
+            hideT = setTimeout(hide, HIDE_AFTER_MS);
+        }
+
+        root.classList.add(HIDDEN_CLASS);
+
+        const reveal = () => show();
+        ['mousemove','pointermove','touchstart','click','keydown','wheel'].forEach(evt => {
+            root.addEventListener(evt, reveal, {passive: true});
+        });
+
+        controls.addEventListener('mouseenter', () => { if (hideT) clearTimeout(hideT); });
+        controls.addEventListener('mouseleave', reset);
+
+        function markLiveAndShow() {
+            if (!root.classList.contains(LIVE_CLASS)) {
+                root.classList.add(LIVE_CLASS);
+                show();
+            } else {
+                show();
+            }
+        }
+
+        function watchVideoEl(video) {
+            if (!video || video.__vh360_watched) return;
+            video.__vh360_watched = true;
+            if ((video.readyState || 0) >= 2 && !video.paused) markLiveAndShow();
+            video.addEventListener('playing', markLiveAndShow, { once: true });
+            video.addEventListener('loadeddata', () => { if (!video.paused) markLiveAndShow(); });
+        }
+
+        const mo = new MutationObserver((muts) => {
+            muts.forEach(m => {
+                m.addedNodes && m.addedNodes.forEach(node => {
+                    if (node.tagName === 'VIDEO') watchVideoEl(node);
+                    else if (node.querySelectorAll) node.querySelectorAll('video').forEach(watchVideoEl);
+                });
+            });
+        });
+        mo.observe(root, { childList: true, subtree: true });
+
+        root.querySelectorAll('video').forEach(watchVideoEl);
+        root.addEventListener('vh360:agora:stream-live', markLiveAndShow);
+        window.addEventListener('resize', () => { show(); });
+        if (window.__VH360_DEBUG) console.log('VideoHub360: Unified auto-hide + prestart hide initialized (appended)');
+    } catch (e) {
+        if (window && window.__VH360_DEBUG) console.warn('VideoHub360: auto-hide init error', e);
+    }
+})();
+
+// == Apply Custom Badge Colors ==
+/**
+ * Apply custom badge colors from data attributes
+ * This follows CodeCanyon best practices by avoiding inline styles
+ */
+(function applyCustomBadgeColors() {
+    'use strict';
+    
+    function applyBadgeColors() {
+        const badges = document.querySelectorAll('.videohub360-live-badge[data-badge-color]');
+        badges.forEach(function(badge) {
+            const customColor = badge.getAttribute('data-badge-color');
+            if (customColor) {
+                badge.style.backgroundColor = customColor;
+            }
+        });
+    }
+    
+    // Apply on DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', applyBadgeColors);
+    } else {
+        applyBadgeColors();
+    }
+    
+    // Also observe for dynamically added badges
+    if (typeof MutationObserver !== 'undefined') {
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeType === 1) { // Element node
+                        if (node.classList && node.classList.contains('videohub360-live-badge') && node.hasAttribute('data-badge-color')) {
+                            const customColor = node.getAttribute('data-badge-color');
+                            if (customColor) {
+                                node.style.backgroundColor = customColor;
+                            }
+                        }
+                        // Check children
+                        const badges = node.querySelectorAll && node.querySelectorAll('.videohub360-live-badge[data-badge-color]');
+                        if (badges) {
+                            badges.forEach(function(badge) {
+                                const customColor = badge.getAttribute('data-badge-color');
+                                if (customColor) {
+                                    badge.style.backgroundColor = customColor;
+                                }
+                            });
+                        }
+                    }
+                });
+            });
+        });
+        
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+    
+    if (window.__VH360_DEBUG) {
+        console.log('VideoHub360: Custom badge color handler initialized');
+    }
+})();

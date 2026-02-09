@@ -1,0 +1,136 @@
+THIRD-PARTY COMPONENTS AND LICENSES
+
+This plugin incorporates or integrates with third-party components and services. Users are responsible for complying with the respective terms and licenses of these components.
+
+================================================================================
+
+AGORA SDK
+--------
+This plugin integrates with Agora Web SDK for live streaming functionality.
+
+**License**: Agora SDK License
+**Website**: https://www.agora.io/
+**Documentation**: https://docs.agora.io/
+
+**User Responsibilities**:
+- You must create your own Agora account at https://console.agora.io/
+- You are responsible for managing your Agora account, including billing and usage
+- You must comply with Agora's Terms of Service: https://www.agora.io/en/terms-of-service/
+- You are responsible for Agora SDK usage costs and limitations
+- You must implement proper security measures for Agora tokens and credentials
+- You must comply with Agora's Privacy Policy: https://www.agora.io/en/privacy-policy/
+
+**Integration Notes**:
+- Agora SDK is loaded dynamically when needed
+- The plugin provides integration code but does not include Agora SDK files
+- All Agora-related functionality requires valid Agora credentials
+- Agora features are optional and the plugin functions without them
+
+================================================================================
+
+ELEMENTOR INTEGRATION
+--------------------
+This plugin provides optional integration with the Elementor page builder.
+
+**License**: Elementor's license terms apply
+**Website**: https://elementor.com/
+**Requirements**: Elementor plugin must be separately installed and licensed
+
+**User Responsibilities**:
+- You must separately install and license Elementor
+- You must comply with Elementor's terms and conditions
+- Elementor integration is optional and not required for basic functionality
+
+================================================================================
+
+WORDPRESS DEPENDENCIES
+----------------------
+This plugin is built for WordPress and uses WordPress APIs and functions.
+
+**License**: GNU General Public License v2 or later
+**Website**: https://wordpress.org/
+**License URL**: https://www.gnu.org/licenses/gpl-2.0.html
+
+**Components Used**:
+- WordPress Custom Post Type API
+- WordPress Hook System
+- WordPress Database API
+- WordPress User Authentication
+- WordPress Nonce System
+- WordPress Internationalization (i18n)
+- WordPress Media Handling
+
+================================================================================
+
+JQUERY (VIA WORDPRESS)
+---------------------
+This plugin uses jQuery for frontend functionality, loaded through WordPress.
+
+**License**: MIT License
+**Website**: https://jquery.com/
+**License URL**: https://jquery.org/license/
+
+================================================================================
+
+CSS AND JAVASCRIPT LIBRARIES
+----------------------------
+The plugin may use additional CSS and JavaScript utilities:
+
+**Responsive Design**: Custom CSS for mobile compatibility
+**Frontend Interactions**: Custom JavaScript for user interface
+**AJAX Functionality**: WordPress AJAX for dynamic content loading
+
+================================================================================
+
+VIDEO PLATFORM INTEGRATIONS
+---------------------------
+This plugin supports embedding videos from various platforms:
+
+**Supported Platforms** (examples):
+- YouTube (https://www.youtube.com/)
+- Vimeo (https://vimeo.com/)
+- Mux (https://mux.com/)
+- AWS IVS (https://aws.amazon.com/ivs/)
+- Custom streaming servers
+
+**User Responsibilities**:
+- You are responsible for complying with each platform's terms of service
+- You must have appropriate rights to embed and display video content
+- You are responsible for any costs associated with video hosting/streaming services
+- You must comply with content policies of respective platforms
+
+================================================================================
+
+IMPORTANT LEGAL NOTICES
+-----------------------
+
+**No Warranty**: The integration with third-party services is provided "as is" without any warranties.
+
+**User Responsibility**: It is your responsibility to:
+- Read and understand the terms and conditions of all third-party services
+- Maintain valid accounts and licenses for all required services  
+- Keep third-party service credentials secure
+- Monitor usage and costs of third-party services
+- Ensure compliance with all applicable laws and regulations
+
+**Service Availability**: Third-party services may change their terms, APIs, or availability at any time. The plugin authors are not responsible for changes made by third-party service providers.
+
+**Data Privacy**: When using third-party services, user data may be transmitted to those services. You are responsible for ensuring compliance with applicable privacy laws (GDPR, CCPA, etc.) and informing users about data collection and usage.
+
+**Support Limitations**: The plugin authors provide support for the plugin itself but cannot provide support for third-party services. For issues with third-party services, contact the respective service providers directly.
+
+================================================================================
+
+UPDATES TO THIS NOTICE
+----------------------
+
+This notice may be updated to reflect changes in third-party integrations or licenses. The most current version will be included with the latest plugin release.
+
+Last updated: 2024
+
+For questions regarding third-party components and licenses, please:
+1. Consult the official documentation of the respective third-party service
+2. Contact the third-party service provider directly for service-specific questions
+3. Contact plugin support for integration-related questions only
+
+================================================================================

@@ -1,0 +1,164 @@
+/**
+ * VideoHub360 Hero Banner/Slider Styles
+ * 
+ * Base styles for hero banner component
+ * Additional inline styles are added per instance for customization
+ * 
+ * @since 1.0.0
+ */
+
+/* Hero Container */
+.vh360-hero-single,
+.vh360-hero-slider {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+}
+
+/* Theme: Transparent */
+.vh360-hero-theme-transparent .vh360-hero-slide {
+    background: transparent;
+    color: inherit;
+}
+
+/* Theme: Custom (using CSS variables) */
+.vh360-hero-theme-custom .vh360-hero-slide {
+    background: var(--vh360-hero-bg-color, #ffffff);
+    color: var(--vh360-hero-text-color, #000000);
+}
+
+/* Hero Icon */
+.vh360-hero-icon .vh360-hero-icon-img {
+    width: 60px;
+    max-width: 60px;
+    height: auto;
+    margin-bottom: 16px;
+    display: block;
+}
+
+/* Poster Placeholder */
+.vh360-hero-poster-placeholder {
+    background: #ccc;
+    width: 100%;
+    height: 100%;
+}
+
+/* Focus styles for accessibility - removed from containers to prevent unwanted outlines */
+
+/* Focus styles for interactive elements */
+.vh360-hero-cta:focus,
+.vh360-hero-arrow:focus,
+.vh360-hero-dot:focus {
+    outline: 2px solid #e53935;
+    outline-offset: 2px;
+}
+
+/* Ensure proper tap targets on mobile */
+@media (max-width: 768px) {
+    .vh360-hero-arrow,
+    .vh360-hero-dot {
+        min-width: 44px;
+        min-height: 44px;
+    }
+}
+
+/* Loading state */
+.vh360-hero-video-area.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #e53935;
+    border-radius: 50%;
+    animation: vh360-hero-spin 0.8s linear infinite;
+}
+
+@keyframes vh360-hero-spin {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Smooth transitions */
+.vh360-hero-video,
+.vh360-hero-iframe,
+.vh360-hero-poster {
+    transition: opacity 0.3s ease;
+}
+
+/* Hide scrollbar for slider */
+.vh360-hero-track {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.vh360-hero-track::-webkit-scrollbar {
+    display: none;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .vh360-hero-track {
+        scroll-behavior: auto;
+    }
+    
+    .vh360-hero-play-overlay,
+    .vh360-hero-arrow,
+    .vh360-hero-cta,
+    .vh360-hero-dot {
+        transition: none;
+    }
+    
+    .vh360-hero-slide {
+        transition: none;
+    }
+    
+    @keyframes vh360-hero-spin {
+        to { transform: translate(-50%, -50%) rotate(0deg); }
+    }
+}
+
+/* Print styles */
+@media print {
+    .vh360-hero-arrows,
+    .vh360-hero-dots,
+    .vh360-hero-play-overlay {
+        display: none;
+    }
+    
+    .vh360-hero-track {
+        overflow: visible;
+    }
+    
+    .vh360-hero-slide {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    
+    /* Hide non-active slides in fade mode when printing */
+    [data-transition-type="fade"] .vh360-hero-slide:not(.vh360-active) {
+        display: none;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .vh360-hero-arrow,
+    .vh360-hero-cta {
+        border: 2px solid currentColor;
+    }
+    
+    .vh360-hero-dot {
+        border: 2px solid currentColor;
+    }
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+    .vh360-hero-theme-light .vh360-hero-slide {
+        background: #2a2a2a;
+        color: #f5f5f5;
+    }
+}
