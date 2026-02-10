@@ -20,10 +20,6 @@ if (typeof window !== 'undefined') {
     if (window.__VH360_DEBUG) console.error(...args); 
   });
 }
-// Create local references for convenience
-const vh360Log = window.vh360Log;
-const vh360Warn = window.vh360Warn;
-const vh360Error = window.vh360Error;
 
 document.addEventListener("DOMContentLoaded", function() {
     // Check if bootstrap data is available from wp_localize_script
@@ -32,11 +28,11 @@ document.addEventListener("DOMContentLoaded", function() {
         window.config = window.vh360Livestream;
         
         // Debug logging
-        vh360Log("VideoHub360: Global variables initialized from wp_localize_script");
-        vh360Log("Debug info from PHP:", window.vh360Livestream.debugInfo);
-        vh360Log("Current role:", window.currentRole);
-        vh360Log("Config:", window.config);
-        vh360Log("vh360Data available:", typeof window.vh360Data !== "undefined");
+        window.vh360Log("VideoHub360: Global variables initialized from wp_localize_script");
+        window.vh360Log("Debug info from PHP:", window.vh360Livestream.debugInfo);
+        window.vh360Log("Current role:", window.currentRole);
+        window.vh360Log("Config:", window.config);
+        window.vh360Log("vh360Data available:", typeof window.vh360Data !== "undefined");
         
         // Validate that admin users are getting host role in broadcast mode
         if (window.config.agoraMode === "broadcast" && window.config.isOriginalHost && window.currentRole !== "host") {
@@ -48,7 +44,7 @@ document.addEventListener("DOMContentLoaded", function() {
         if (typeof window.initializeAgoraPlayer === "function") {
             window.initializeAgoraPlayer(window.config);
         } else {
-            vh360Warn("VideoHub360: initializeAgoraPlayer function not yet available, waiting...");
+            window.vh360Warn("VideoHub360: initializeAgoraPlayer function not yet available, waiting...");
             var playerElement = document.getElementById("vh360-agora-player");
             if (playerElement) {
                 playerElement.innerHTML = "<div class=\"vh360-loading-message\">Loading...</div>";
@@ -64,6 +60,6 @@ document.addEventListener("DOMContentLoaded", function() {
             }, 3000);
         }
     } else {
-        vh360Warn("VideoHub360: No livestream bootstrap data found (window.vh360Livestream is undefined)");
+        window.vh360Warn("VideoHub360: No livestream bootstrap data found (window.vh360Livestream is undefined)");
     }
 });

@@ -17,10 +17,6 @@ if (typeof window !== 'undefined') {
     if (window.__VH360_DEBUG) console.error(...args); 
   });
 }
-// Create local references for convenience
-const vh360Log = window.vh360Log;
-const vh360Warn = window.vh360Warn;
-const vh360Error = window.vh360Error;
 
 // == Live Chat JS ==
 (function() {
@@ -48,7 +44,7 @@ const vh360Error = window.vh360Error;
     var chatMode = chatPopup ? 'popup' : (chatInline ? 'inline' : null);
     
     if (window.__VH360_DEBUG) {
-        vh360Log('VideoHub360: Chat mode detected:', chatMode);
+        window.vh360Log('VideoHub360: Chat mode detected:', chatMode);
     }
     
     // For popup mode, move chat popup to document.body to ensure it appears above all WordPress theme elements
@@ -371,7 +367,7 @@ const vh360Error = window.vh360Error;
             })
             .catch(error => {
                 if (window.__VH360_DEBUG) {
-                    vh360Error('Login error:', error);
+                    window.vh360Error('Login error:', error);
                 }
                 
                 // Show generic error message
