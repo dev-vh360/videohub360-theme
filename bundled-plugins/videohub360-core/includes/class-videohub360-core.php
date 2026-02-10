@@ -262,7 +262,7 @@ class VideoHub360_Core {
             }
             
         } catch (Exception $e) {
-            error_log('VideoHub360 Error in ' . __METHOD__ . ': ' . $e->getMessage());
+            videohub360_debug_log('VideoHub360 Error in ' . __METHOD__ . ': ' . $e->getMessage());
         }
     }
     

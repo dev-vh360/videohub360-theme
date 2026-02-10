@@ -103,31 +103,27 @@ class VH360_PWA_Push_Theme_Notification_Bridge {
 		try {
 			$result = $this->push_manager->send( $push_message, $audience );
 			
-			// Log result for debugging (optional)
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG && function_exists( 'error_log' ) ) {
-				if ( $result['success'] ) {
-					error_log( sprintf(
-						'[VH360 Push Bridge] Push sent for notification #%d (type: %s, user: %d)',
-						$notification_id,
-						$payload['type'],
-						$payload['user_id']
-					) );
-				} else {
-					error_log( sprintf(
-						'[VH360 Push Bridge] Push failed for notification #%d: %s',
-						$notification_id,
-						$result['message'] ?? 'Unknown error'
-					) );
-				}
+			// Log result for debugging
+			if ( $result['success'] ) {
+				vh360_pwa_debug_log( sprintf(
+					'[VH360 Push Bridge] Push sent for notification #%d (type: %s, user: %d)',
+					$notification_id,
+					$payload['type'],
+					$payload['user_id']
+				) );
+			} else {
+				vh360_pwa_debug_log( sprintf(
+					'[VH360 Push Bridge] Push failed for notification #%d: %s',
+					$notification_id,
+					$result['message'] ?? 'Unknown error'
+				) );
 			}
 		} catch ( Exception $e ) {
 			// Silently fail - don't break notification creation
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG && function_exists( 'error_log' ) ) {
-				error_log( sprintf(
-					'[VH360 Push Bridge] Exception sending push: %s',
-					$e->getMessage()
-				) );
-			}
+			vh360_pwa_debug_log( sprintf(
+				'[VH360 Push Bridge] Exception sending push: %s',
+				$e->getMessage()
+			) );
 		}
 	}
 	

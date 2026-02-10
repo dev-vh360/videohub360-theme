@@ -269,7 +269,7 @@ function vh360_generate_event_ics($event_id) {
         }
     } catch (Exception $e) {
         // Log error for debugging
-        error_log('VH360 Event ICS Generation Error: ' . $e->getMessage() . ' for event ID: ' . $event_id);
+        vh360_debug_log('VH360 Event ICS Generation Error: ' . $e->getMessage() . ' for event ID: ' . $event_id);
         // If date parsing fails, return empty
         return '';
     }

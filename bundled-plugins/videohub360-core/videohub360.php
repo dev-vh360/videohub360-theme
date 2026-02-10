@@ -39,6 +39,27 @@ if (!defined('VIDEOHUB360_LICENSE_SERVER_URL')) {
 }
 
 /**
+ * Debug logging helper for VideoHub360 plugin
+ * Only logs when WP_DEBUG is enabled
+ *
+ * @param string $message Log message
+ * @param array $context Optional context data
+ */
+if (!function_exists('videohub360_debug_log')) {
+    function videohub360_debug_log($message, $context = array()) {
+        if (!defined('WP_DEBUG') || !WP_DEBUG || !function_exists('error_log')) {
+            return;
+        }
+        
+        if (!empty($context)) {
+            $message .= ': ' . print_r($context, true);
+        }
+        
+        error_log($message);
+    }
+}
+
+/**
  * Load the main plugin class
  */
 function videohub360_init() {

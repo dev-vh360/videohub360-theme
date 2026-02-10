@@ -42,6 +42,27 @@ if ( ! function_exists( 'vh360_pwa_license_required_message' ) ) {
     }
 }
 
+/**
+ * Debug logging helper for VH360 PWA plugin
+ * Only logs when WP_DEBUG is enabled
+ *
+ * @param string $message Log message
+ * @param array $context Optional context data
+ */
+if ( ! function_exists( 'vh360_pwa_debug_log' ) ) {
+    function vh360_pwa_debug_log( $message, $context = array() ) {
+        if ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG || ! function_exists( 'error_log' ) ) {
+            return;
+        }
+        
+        if ( ! empty( $context ) ) {
+            $message .= ': ' . print_r( $context, true );
+        }
+        
+        error_log( $message );
+    }
+}
+
 add_action(
     'admin_init',
     function () {
@@ -434,7 +455,7 @@ final class VH360_PWA_App {
 			: 90;
 
 		$deleted = $this->token_manager->cleanup_old_tokens( $cleanup_days );
-		error_log( sprintf( 'VH360 Push: Cleaned up %d old tokens', $deleted ) );
+		vh360_pwa_debug_log( sprintf( 'VH360 Push: Cleaned up %d old tokens', $deleted ) );
 	}
 }
 } // end class_exists check

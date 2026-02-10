@@ -26,11 +26,7 @@ class VideoHub360_Ajax {
      */
     private function debug_log($message, $data = null) {
         if (defined('WP_DEBUG') && WP_DEBUG && current_user_can('manage_options')) {
-            if ($data !== null) {
-                error_log($message . ': ' . print_r($data, true));
-            } else {
-                error_log($message);
-            }
+            videohub360_debug_log($message, $data !== null ? $data : array());
         }
     }
     
@@ -491,7 +487,7 @@ class VideoHub360_Ajax {
             ));
             
         } catch (Exception $e) {
-            error_log('VideoHub360 Error in ' . __METHOD__ . ': ' . $e->getMessage());
+            videohub360_debug_log('VideoHub360 Error in ' . __METHOD__ . ': ' . $e->getMessage());
             wp_send_json_error(__('Failed to update stream status. Please try again.', 'videohub360'));
         }
     }
@@ -578,7 +574,7 @@ class VideoHub360_Ajax {
             ));
             
         } catch (Exception $e) {
-            error_log('VideoHub360 Error in ' . __METHOD__ . ': ' . $e->getMessage());
+            videohub360_debug_log('VideoHub360 Error in ' . __METHOD__ . ': ' . $e->getMessage());
             wp_send_json_error(__('Failed to update stream status. Please try again.', 'videohub360'));
         }
     }
@@ -614,7 +610,7 @@ class VideoHub360_Ajax {
             ));
             
         } catch (Exception $e) {
-            error_log('VideoHub360 Error in ' . __METHOD__ . ': ' . $e->getMessage());
+            videohub360_debug_log('VideoHub360 Error in ' . __METHOD__ . ': ' . $e->getMessage());
             wp_send_json_error(__('Failed to get stream status. Please try again.', 'videohub360'));
         }
     }
@@ -735,7 +731,7 @@ class VideoHub360_Ajax {
             }
             
             // Log the action
-            error_log(sprintf(
+            videohub360_debug_log(sprintf(
                 'VideoHub360: Stream ended for post %d (context: %s, stopped: yes, live_mode: preserved)',
                 $post_id,
                 $context ?: 'default'
@@ -750,7 +746,7 @@ class VideoHub360_Ajax {
             ));
             
         } catch (Exception $e) {
-            error_log('VideoHub360 Error in ' . __METHOD__ . ': ' . $e->getMessage());
+            videohub360_debug_log('VideoHub360 Error in ' . __METHOD__ . ': ' . $e->getMessage());
             wp_send_json_error(__('Failed to end stream. Please try again.', 'videohub360'));
         }
     }
