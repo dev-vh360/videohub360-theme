@@ -1,202 +1,130 @@
-# Videohub360 Theme
+# VideoHub360 Theme
 
-A lightweight, fast WordPress theme built specifically for the Videohub360 plugin with full Elementor support.
+VideoHub360 is a modern, performance-focused WordPress theme designed as the visual and layout foundation for the VideoHub360 platform. It is built for video-first websites and online communities, supporting live streaming, on-demand video, and social interaction at scale.
 
-## Description
+The theme works seamlessly with the VideoHub360 plugin suite and integrates fully with Elementor for flexible, no-code customization.
 
-Videohub360 Theme is a modern, performance-optimized WordPress theme designed to perfectly complement the Videohub360 plugin. It features clean, semantic HTML5 markup, minimal CSS/JS loading, and comprehensive Elementor Page Builder integration.
+---
 
-## Features
+## Overview
 
-### Core Features
-- **Lightweight & Fast**: Minimal CSS/JS footprint for optimal performance
-- **Elementor Compatible**: Full support for Elementor Page Builder with custom locations
-- **Videohub360 Integration**: Optimized styling for video players, galleries, and archives
-- **Responsive Design**: Mobile-first approach with fluid layouts
-- **Accessibility Ready**: Semantic HTML5 and ARIA landmarks
-- **Performance Optimized**: Async/defer scripts, no jQuery dependency
+The VideoHub360 Theme provides the presentation layer for the VideoHub360 platform, focusing on clean UI, performance, and scalability. It is optimized for creators, communities, and platforms where video and engagement are central.
 
-### Theme Support
-- Custom Logo
-- Custom Header
-- Custom Background
-- Navigation Menus (Primary & Footer)
-- Widget Areas (Sidebar + 3 Footer Areas)
-- Post Thumbnails with custom sizes
-- HTML5 markup
-- Editor Styles
-- Responsive Embeds
-- Wide & Full Alignment
+---
 
-### Elementor Integration
-- Canvas template support
-- Theme location registration (header, footer, single, archive)
-- Custom video widget styling
-- Live preview compatibility
+## Key Capabilities
 
-### Video Features
-- Optimized video player layouts
-- Grid-based video galleries
-- Large thumbnail support
-- Video-specific single post templates
-- Video archive pages with filtering
-- Live badge support for livestreams
+### Video & Live Streaming
+- Video-first layouts optimized for livestreams and on-demand content
+- Dedicated templates for video archives and single video pages
+- Large thumbnail and grid-based video layouts
+- Visual indicators for live content
 
-### Dashboard Features
-- Complete frontend dashboard with 5 tabs
-- User stats (videos, views, subscribers, likes)
-- Video management (view, edit, delete)
-- Profile quick edit with cover upload
-- Activity feed with filters
-- Settings management (account, privacy, notifications)
-- Mobile responsive design
-- AJAX operations for smooth UX
-- Custom notification and modal systems
+### Community & Social
+- Styled support for activity feeds, profiles, and social interactions
+- Integrated notification and messaging UI
+- Creator- and community-focused layouts
+- Responsive designs for mobile and desktop users
+
+### Customization & Layout
+- Full Elementor compatibility
+- Support for custom headers, footers, and templates
+- WordPress Customizer controls for branding and layout
+- Flexible navigation and widget areas
+
+### Performance & Accessibility
+- Lightweight front-end with minimal CSS and JavaScript
+- Clean semantic HTML5 structure
+- Optimized for Core Web Vitals
+- Accessibility-ready and translation-ready with RTL support
+
+### Platform & App Readiness
+- Designed to work with the official VideoHub360 plugin suite
+- Progressive Web App (PWA) and install support via bundled plugins
+- Scalable architecture suitable for large communities
+
+---
+
+## Requirements
+
+- WordPress 6.0 or higher
+- PHP 8.0 or higher
+- HTTPS recommended
+- VideoHub360 plugin suite (installed automatically when prompted)
+
+---
 
 ## Installation
 
-1. Download the theme ZIP file or clone from repository
-2. Upload to `/wp-content/themes/` directory
-3. Activate the theme through 'Appearance > Themes' in WordPress
-4. Install and activate the Videohub360 plugin
-5. (Optional) Install Elementor Page Builder for enhanced functionality
+1. Upload the `videohub360-theme` folder to `/wp-content/themes/`
+2. Activate **VideoHub360** from **Appearance → Themes**
+3. When prompted, install and activate the required VideoHub360 plugins
+4. Configure global options via **Appearance → Customize**
+5. (Optional) Use Elementor to customize layouts and templates
 
-## Configuration
+---
 
-### Customizer Options
+## Customization
 
-Navigate to **Appearance > Customize** to configure:
+### WordPress Customizer
+Use **Appearance → Customize** to configure:
+- Site identity and branding
+- Global colors and layout options
+- Header and footer behavior
+- Navigation menus
+- Widget areas
 
-- **Site Identity**: Logo, site title, tagline
-- **Theme Colors**: Primary and secondary colors
-- **Layout Options**: Container width
-- **Header Options**: Custom header image
-- **Background**: Custom background color or image
-- **Menus**: Configure primary and footer navigation
-- **Widgets**: Configure sidebar and footer widget areas
+### Elementor
+The theme supports Elementor for:
+- Custom headers and footers
+- Video and content templates
+- Landing pages and creator layouts
 
-### Widget Areas
+---
 
-The theme includes 4 widget areas:
-- **Sidebar**: Appears on blog posts and pages
-- **Footer 1-3**: Three footer columns
+## Translation
 
-### Menu Locations
+The theme is fully translation-ready.
 
-- **Primary Menu**: Main navigation in header
-- **Footer Menu**: Footer navigation links
-
-## Elementor Setup
-
-1. Install and activate Elementor (free or Pro)
-2. Go to **Elementor > Settings**
-3. Configure theme locations as needed
-4. Build custom headers, footers, or single post templates
-
-## Video Archive Setup
-
-The theme automatically styles video archives created by the Videohub360 plugin:
-
-- Video custom post type archives
-- Video category archives
-- Video series archives
-- Video location archives
-
-## Performance
-
-The theme is optimized for Core Web Vitals:
-
-- Minimal HTTP requests
-- Deferred non-critical scripts
-- Optimized CSS delivery
-- No emoji scripts
-- Lazy loading support
-- Semantic HTML for faster parsing
-
-## Browser Support
-
-- Chrome (latest)
-- Firefox (latest)
-- Safari (latest)
-- Edge (latest)
-- iOS Safari
-- Chrome Mobile
-
-## Development
-
-### File Structure
-
+Language files are located in:
 ```
-videohub360-theme/
-├── assets/
-│   ├── css/
-│   │   ├── elementor-preview.css
-│   │   └── videohub360-integration.css
-│   ├── js/
-│   │   ├── customizer.js
-│   │   └── theme.js
-│   └── images/
-├── includes/
-│   ├── customizer.php
-│   ├── elementor-support.php
-│   └── template-tags.php
-├── template-parts/
-│   ├── content.php
-│   ├── content-none.php
-│   ├── content-page.php
-│   ├── content-single.php
-│   ├── content-video.php
-│   └── content-videohub360-single.php
-├── 404.php
-├── archive.php
-├── footer.php
-├── functions.php
-├── header.php
-├── index.php
-├── page.php
-├── sidebar.php
-├── single.php
-└── style.css
+/languages
 ```
+
+---
 
 ## Changelog
 
-### Version 1.0.0
-- Initial release
-- Full Elementor support
-- Videohub360 plugin integration
-- Responsive design
-- Performance optimizations
-- Customizer options
-- Widget areas
-- Navigation menus
+### 1.0.0 – Initial Release
 
-## Credits
+#### Added
+- Video-first WordPress theme for the VideoHub360 platform
+- Support for live streaming and on-demand video experiences
+- Community-oriented layouts for profiles, activity feeds, and social interaction
+- Integrated notification and messaging UI
+- Elementor-compatible templates and layouts
+- Customizer options for branding, layout, and navigation
+- Performance-optimized front-end architecture
+- Translation-ready and RTL support
+- PWA and app-ready integration via bundled plugins
 
-- Theme: Videohub360 Theme
-- Author: vh360
-- License: GPL v2 or later
-- License URI: https://www.gnu.org/licenses/gpl-2.0.html
+---
 
-## Support
+## Support & Documentation
 
-For support, please visit:
-- Theme Documentation: https://videohub360.com/theme-docs
-- Videohub360 Plugin: https://videohub360.com
-- Support Forum: https://videohub360.com/support
+Documentation, updates, and support resources are available at:
+
+https://videohub360.com
+
+---
 
 ## License
 
-This theme is licensed under GPL v2 or later.
+This theme is licensed under the GNU General Public License v2 or later.
 
-Copyright (C) 2024 vh360
+Copyright © 2024–2026 VideoHub360
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation; either version 2 of the License, or
 (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
