@@ -11,6 +11,9 @@
 (function($) {
     'use strict';
 
+    // Debug logging helper - only log when __VH360_DEBUG is enabled
+    const vh360Warn = (...args) => { if (window.__VH360_DEBUG) console.warn(...args); };
+
     // Ensure vh360Gallery object exists with defaults
     if (typeof window.vh360Gallery === 'undefined') {
         window.vh360Gallery = {
@@ -201,7 +204,7 @@
 
             // Check if Dropzone is available
             if (typeof Dropzone === 'undefined') {
-                console.warn('Dropzone.js is not loaded');
+                vh360Warn('Dropzone.js is not loaded');
                 return;
             }
 
@@ -329,7 +332,7 @@
 
             // Check if Sortable is available
             if (typeof Sortable === 'undefined') {
-                console.warn('Sortable.js is not loaded');
+                vh360Warn('Sortable.js is not loaded');
                 return;
             }
 
@@ -907,7 +910,7 @@
             try {
                 VH360GalleryDashboard.init();
             } catch (e) {
-                console.warn('Gallery Dashboard initialization error:', e);
+                vh360Warn('Gallery Dashboard initialization error:', e);
             }
         }
     });
