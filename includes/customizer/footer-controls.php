@@ -61,7 +61,7 @@ function vh360_register_footer_controls($wp_customize) {
         'label'       => __('Developed By Text', 'videohub360-theme'),
         'section'     => 'vh360_footer_settings',
         'type'        => 'text',
-        'description' => __('Use {videohub360} for Videohub360.com link.', 'videohub360-theme'),
+        'description' => __('Use {videohub360} for VideoHub360.com link.', 'videohub360-theme'),
     ));
 }
 add_action('customize_register', 'vh360_register_footer_controls');
@@ -84,8 +84,8 @@ function vh360_process_footer_placeholders($text) {
     // WordPress link
     $wordpress_link = '<a href="' . esc_url('https://wordpress.org/') . '">WordPress</a>';
     
-    // Videohub360 link
-    $videohub360_link = '<a href="' . esc_url('https://videohub360.com') . '">Videohub360</a>';
+    // VideoHub360 link
+    $videohub360_link = '<a href="' . esc_url('https://videohub360.com') . '">VideoHub360</a>';
     
     // Replace placeholders
     $text = str_replace('{year}', $year, $text);

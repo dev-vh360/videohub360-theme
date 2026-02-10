@@ -7,6 +7,20 @@
  * The configuration is passed through window.vh360Livestream object.
  */
 
+// Debug logging helpers - only log when __VH360_DEBUG is enabled
+// Define on window to avoid redeclaration errors when multiple scripts load
+if (typeof window !== 'undefined') {
+  window.vh360Log = window.vh360Log || ((...args) => { 
+    if (window.__VH360_DEBUG) console.log(...args); 
+  });
+  window.vh360Warn = window.vh360Warn || ((...args) => { 
+    if (window.__VH360_DEBUG) console.warn(...args); 
+  });
+  window.vh360Error = window.vh360Error || ((...args) => { 
+    if (window.__VH360_DEBUG) console.error(...args); 
+  });
+}
+
 document.addEventListener("DOMContentLoaded", function() {
     // Check if bootstrap data is available from wp_localize_script
     if (typeof window.vh360Livestream !== 'undefined') {
@@ -14,11 +28,11 @@ document.addEventListener("DOMContentLoaded", function() {
         window.config = window.vh360Livestream;
         
         // Debug logging
-        console.log("VideoHub360: Global variables initialized from wp_localize_script");
-        console.log("Debug info from PHP:", window.vh360Livestream.debugInfo);
-        console.log("Current role:", window.currentRole);
-        console.log("Config:", window.config);
-        console.log("vh360Data available:", typeof window.vh360Data !== "undefined");
+        window.vh360Log("VideoHub360: Global variables initialized from wp_localize_script");
+        window.vh360Log("Debug info from PHP:", window.vh360Livestream.debugInfo);
+        window.vh360Log("Current role:", window.currentRole);
+        window.vh360Log("Config:", window.config);
+        window.vh360Log("vh360Data available:", typeof window.vh360Data !== "undefined");
         
         // Validate that admin users are getting host role in broadcast mode
         if (window.config.agoraMode === "broadcast" && window.config.isOriginalHost && window.currentRole !== "host") {
@@ -30,7 +44,7 @@ document.addEventListener("DOMContentLoaded", function() {
         if (typeof window.initializeAgoraPlayer === "function") {
             window.initializeAgoraPlayer(window.config);
         } else {
-            console.warn("VideoHub360: initializeAgoraPlayer function not yet available, waiting...");
+            window.vh360Warn("VideoHub360: initializeAgoraPlayer function not yet available, waiting...");
             var playerElement = document.getElementById("vh360-agora-player");
             if (playerElement) {
                 playerElement.innerHTML = "<div class=\"vh360-loading-message\">Loading...</div>";
@@ -46,6 +60,6 @@ document.addEventListener("DOMContentLoaded", function() {
             }, 3000);
         }
     } else {
-        console.warn("VideoHub360: No livestream bootstrap data found (window.vh360Livestream is undefined)");
+        window.vh360Warn("VideoHub360: No livestream bootstrap data found (window.vh360Livestream is undefined)");
     }
 });

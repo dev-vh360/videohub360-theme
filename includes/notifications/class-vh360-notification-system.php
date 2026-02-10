@@ -469,13 +469,11 @@ class VH360_Notification_System {
             }
         } while ($deleted === $batch_size);
         
-        // Log cleanup (optional)
-        if (function_exists('error_log') && defined('WP_DEBUG') && WP_DEBUG) {
-            error_log(sprintf(
-                'VH360 Notification cleanup completed - deleted %d notifications older than %d days',
-                $total_deleted,
-                $retention_days
-            ));
-        }
+        // Log cleanup
+        vh360_debug_log(sprintf(
+            'VH360 Notification cleanup completed - deleted %d notifications older than %d days',
+            $total_deleted,
+            $retention_days
+        ));
     }
 }

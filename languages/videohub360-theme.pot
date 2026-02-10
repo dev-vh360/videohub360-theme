@@ -1,0 +1,21 @@
+# Copyright (C) 2026 VideoHub360
+# This file is distributed under the GPL v2 or later.
+msgid ""
+msgstr ""
+"Project-Id-Version: VideoHub360 1.0.0\n"
+"Report-Msgid-Bugs-To: https://videohub360.com\n"
+"POT-Creation-Date: 2026-02-10 18:23:35+00:00\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2026-MO-DA HO:MI+ZONE\n"
+"Last-Translator: VideoHub360 <support@videohub360.com>\n"
+"Language-Team: VideoHub360 <support@videohub360.com>\n"
+
+#: Theme Name
+msgid "VideoHub360"
+msgstr ""
+
+#: Theme Description
+msgid "VideoHub360 is a modern, performance-focused WordPress theme built for video platforms and online communities. Designed to work seamlessly with the VideoHub360 plugin suite, it supports live streaming, on-demand video, and social interaction with full Elementor compatibility and a clean, scalable architecture."
+msgstr ""

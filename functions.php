@@ -28,9 +28,33 @@ define('VH360_THEME_DIR', get_template_directory());
 define('VH360_THEME_URI', get_template_directory_uri());
 
 /**
+ * Debug logging helper for VideoHub360 theme
+ * Only logs when WP_DEBUG is enabled
+ *
+ * @param string $message Log message
+ * @param array $context Optional context data
+ */
+if (!function_exists('vh360_debug_log')) {
+    function vh360_debug_log($message, $context = array()) {
+        if (!defined('WP_DEBUG') || !WP_DEBUG || !function_exists('error_log')) {
+            return;
+        }
+        
+        if (!empty($context)) {
+            $message .= ': ' . print_r($context, true);
+        }
+        
+        error_log($message);
+    }
+}
+
+/**
  * Theme setup
  */
 function videohub360_theme_setup() {
+    // Load theme textdomain for translation support
+    load_theme_textdomain('videohub360-theme', get_template_directory() . '/languages');
+    
     // Add default posts and comments RSS feed links to head
     add_theme_support('automatic-feed-links');
 

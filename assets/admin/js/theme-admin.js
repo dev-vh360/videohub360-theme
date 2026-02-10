@@ -8,6 +8,9 @@
 (function($) {
     'use strict';
     
+    // Debug logging helper - only log when __VH360_DEBUG is enabled
+    const vh360Log = (...args) => { if (window.__VH360_DEBUG) console.log(...args); };
+    
     /**
      * Initialize admin functionality
      */
@@ -186,7 +189,7 @@
             },
             success: function(response) {
                 if (response.success) {
-                    console.log('Cache cleared successfully');
+                    vh360Log('Cache cleared successfully');
                 }
             }
         });

@@ -1,13 +1,16 @@
 <?php
 /**
  * Plugin Name: VH360 PWA & App
+ * Plugin URI: https://videohub360.com
  * Description: Adds PWA capabilities (manifest, service worker, offline fallback, install prompt) for the Videohub360 Theme.
  * Version: 1.0.0
- * Author: VH360
+ * Author: VideoHub360
+ * Author URI: https://videohub360.com
  * Text Domain: vh360-pwa-app
  * Requires at least: 5.0
  * Requires PHP: 7.4
- * License: GPLv2 or later
+ * License: GPL v2 or later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -36,6 +39,27 @@ if ( ! function_exists( 'vh360_pwa_is_licensed' ) ) {
 if ( ! function_exists( 'vh360_pwa_license_required_message' ) ) {
     function vh360_pwa_license_required_message() : string {
         return __( 'This feature requires an active VideoHub360 license (VideoHub360 → License).', 'vh360-pwa-app' );
+    }
+}
+
+/**
+ * Debug logging helper for VH360 PWA plugin
+ * Only logs when WP_DEBUG is enabled
+ *
+ * @param string $message Log message
+ * @param array $context Optional context data
+ */
+if ( ! function_exists( 'vh360_pwa_debug_log' ) ) {
+    function vh360_pwa_debug_log( $message, $context = array() ) {
+        if ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG || ! function_exists( 'error_log' ) ) {
+            return;
+        }
+        
+        if ( ! empty( $context ) ) {
+            $message .= ': ' . print_r( $context, true );
+        }
+        
+        error_log( $message );
     }
 }
 
@@ -431,7 +455,7 @@ final class VH360_PWA_App {
 			: 90;
 
 		$deleted = $this->token_manager->cleanup_old_tokens( $cleanup_days );
-		error_log( sprintf( 'VH360 Push: Cleaned up %d old tokens', $deleted ) );
+		vh360_pwa_debug_log( sprintf( 'VH360 Push: Cleaned up %d old tokens', $deleted ) );
 	}
 }
 } // end class_exists check

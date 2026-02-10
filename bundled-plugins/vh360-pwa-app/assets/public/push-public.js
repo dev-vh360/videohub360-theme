@@ -5,6 +5,9 @@
 (function() {
 	'use strict';
 
+	// Debug logging helper - only log when __VH360_DEBUG is enabled
+	const vh360Log = (...args) => { if (window.__VH360_DEBUG) console.log(...args); };
+
 	if (typeof VH360Push === 'undefined') {
 		return;
 	}
@@ -161,7 +164,7 @@
 				if (VH360Push.currentUserId && VH360Push.currentUserId > 0) {
 					try {
 						await OneSignal.login(String(VH360Push.currentUserId));
-						console.log('[VH360 Push] OneSignal external user ID set:', VH360Push.currentUserId);
+						vh360Log('[VH360 Push] OneSignal external user ID set:', VH360Push.currentUserId);
 					} catch (err) {
 						console.error('[VH360 Push] Failed to set OneSignal external user ID:', err);
 					}

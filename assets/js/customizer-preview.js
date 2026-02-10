@@ -767,7 +767,7 @@
         var year = new Date().getFullYear();
         var siteName = wp.customize('blogname')();
         var wordpressLink = '<a href="https://wordpress.org/">WordPress</a>';
-        var videohub360Link = '<a href="https://videohub360.com">Videohub360</a>';
+        var videohub360Link = '<a href="https://videohub360.com">VideoHub360</a>';
         
         text = text.replace('{year}', year);
         text = text.replace('{site_name}', siteName);

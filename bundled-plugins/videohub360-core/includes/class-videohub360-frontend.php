@@ -77,7 +77,7 @@ class VideoHub360_Frontend {
             }
             
         } catch (Exception $e) {
-            error_log('VideoHub360 Error in ' . __METHOD__ . ': ' . $e->getMessage());
+            videohub360_debug_log('VideoHub360 Error in ' . __METHOD__ . ': ' . $e->getMessage());
         }
     }
     
@@ -231,6 +231,10 @@ class VideoHub360_Frontend {
         
         // Also localize for frontend.js (needed for share functionality, etc.)
         wp_localize_script('vh360-frontend', 'vh360Data', $this->get_localized_data());
+        
+        // Set debug flag globally for JS console logging control
+        $debug_enabled = defined('WP_DEBUG') && WP_DEBUG;
+        wp_add_inline_script('vh360-frontend', 'window.__VH360_DEBUG = ' . ($debug_enabled ? 'true' : 'false') . ';', 'before');
     }
     
     /**

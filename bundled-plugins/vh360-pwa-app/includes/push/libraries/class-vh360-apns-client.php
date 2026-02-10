@@ -96,7 +96,7 @@ class VH360_APNs_Client {
 		// Load private key
 		$key = openssl_pkey_get_private( $this->private_key );
 		if ( false === $key ) {
-			error_log( 'VH360 APNs: Failed to load private key: ' . openssl_error_string() );
+			vh360_pwa_debug_log( 'VH360 APNs: Failed to load private key: ' . openssl_error_string() );
 			return false;
 		}
 
@@ -105,7 +105,7 @@ class VH360_APNs_Client {
 		openssl_free_key( $key );
 
 		if ( ! $success ) {
-			error_log( 'VH360 APNs: Failed to sign data: ' . openssl_error_string() );
+			vh360_pwa_debug_log( 'VH360 APNs: Failed to sign data: ' . openssl_error_string() );
 			return false;
 		}
 

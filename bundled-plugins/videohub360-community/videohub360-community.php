@@ -4,7 +4,7 @@
  * Plugin URI: https://videohub360.com
  * Description: Community engagement features for VideoHub360 - handles comment likes, share tracking, and activity data
  * Version: 1.0.0
- * Author: vh360
+ * Author: VideoHub360
  * Author URI: https://videohub360.com
  * Requires at least: 5.8
  * Requires PHP: 7.4
