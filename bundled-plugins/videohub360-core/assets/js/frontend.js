@@ -15,20 +15,27 @@
  */
 
 // Debug logging helpers - only log when __VH360_DEBUG is enabled
-const vh360IsDebug = () =>
-  (typeof window !== 'undefined' && window.__VH360_DEBUG === true);
+// Define on window to avoid redeclaration errors when multiple scripts load
+if (typeof window !== 'undefined') {
+  window.vh360IsDebug = window.vh360IsDebug || (() =>
+    (typeof window !== 'undefined' && window.__VH360_DEBUG === true));
 
-const vh360Log = (...args) => {
-  if (vh360IsDebug()) {
-    console.log(...args);
-  }
-};
+  window.vh360Log = window.vh360Log || ((...args) => {
+    if (window.vh360IsDebug()) {
+      console.log(...args);
+    }
+  });
 
-const vh360Warn = (...args) => {
-  if (vh360IsDebug()) {
-    console.warn(...args);
-  }
-};
+  window.vh360Warn = window.vh360Warn || ((...args) => {
+    if (window.vh360IsDebug()) {
+      console.warn(...args);
+    }
+  });
+}
+// Create local references for convenience
+const vh360IsDebug = window.vh360IsDebug;
+const vh360Log = window.vh360Log;
+const vh360Warn = window.vh360Warn;
 
 (function() {
     // Guard against double initialization

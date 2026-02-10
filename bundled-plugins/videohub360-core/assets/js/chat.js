@@ -5,9 +5,22 @@ if (typeof window !== 'undefined') {
 }
 
 // Debug logging helpers - only log when __VH360_DEBUG is enabled
-const vh360Log = (...args) => { if (window.__VH360_DEBUG) console.log(...args); };
-const vh360Warn = (...args) => { if (window.__VH360_DEBUG) console.warn(...args); };
-const vh360Error = (...args) => { if (window.__VH360_DEBUG) console.error(...args); };
+// Define on window to avoid redeclaration errors when multiple scripts load
+if (typeof window !== 'undefined') {
+  window.vh360Log = window.vh360Log || ((...args) => { 
+    if (window.__VH360_DEBUG) console.log(...args); 
+  });
+  window.vh360Warn = window.vh360Warn || ((...args) => { 
+    if (window.__VH360_DEBUG) console.warn(...args); 
+  });
+  window.vh360Error = window.vh360Error || ((...args) => { 
+    if (window.__VH360_DEBUG) console.error(...args); 
+  });
+}
+// Create local references for convenience
+const vh360Log = window.vh360Log;
+const vh360Warn = window.vh360Warn;
+const vh360Error = window.vh360Error;
 
 // == Live Chat JS ==
 (function() {
