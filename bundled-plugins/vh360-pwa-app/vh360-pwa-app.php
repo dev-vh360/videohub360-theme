@@ -1,13 +1,16 @@
 <?php
 /**
  * Plugin Name: VH360 PWA & App
+ * Plugin URI: https://videohub360.com
  * Description: Adds PWA capabilities (manifest, service worker, offline fallback, install prompt) for the Videohub360 Theme.
  * Version: 1.0.0
- * Author: VH360
+ * Author: VideoHub360
+ * Author URI: https://videohub360.com
  * Text Domain: vh360-pwa-app
  * Requires at least: 5.0
  * Requires PHP: 7.4
- * License: GPLv2 or later
+ * License: GPL v2 or later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

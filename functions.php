@@ -31,6 +31,9 @@ define('VH360_THEME_URI', get_template_directory_uri());
  * Theme setup
  */
 function videohub360_theme_setup() {
+    // Load theme textdomain for translation support
+    load_theme_textdomain('videohub360-theme', get_template_directory() . '/languages');
+    
     // Add default posts and comments RSS feed links to head
     add_theme_support('automatic-feed-links');
 
