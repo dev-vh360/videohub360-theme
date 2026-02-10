@@ -15,9 +15,20 @@
  */
 
 // Debug logging helpers - only log when __VH360_DEBUG is enabled
-const vh360Log = (...args) => { if (window.__VH360_DEBUG) console.log(...args); };
-const vh360Warn = (...args) => { if (window.__VH360_DEBUG) console.warn(...args); };
-const vh360Error = (...args) => { if (window.__VH360_DEBUG) console.error(...args); };
+const vh360IsDebug = () =>
+  (typeof window !== 'undefined' && window.__VH360_DEBUG === true);
+
+const vh360Log = (...args) => {
+  if (vh360IsDebug()) {
+    console.log(...args);
+  }
+};
+
+const vh360Warn = (...args) => {
+  if (vh360IsDebug()) {
+    console.warn(...args);
+  }
+};
 
 (function() {
     // Guard against double initialization
@@ -504,7 +515,7 @@ function showModerationConfirmation(uid, displayName, actionType) {
         
         if (fullscreenElement && fullscreenElement.id === 'vh360-agora-player') {
             fullscreenElement.appendChild(modal);
-            if (window.__VH360_DEBUG) console.log('VideoHub360: Moderation confirmation modal appended to fullscreen element');
+            vh360Log('VideoHub360: Moderation confirmation modal appended to fullscreen element');
         } else {
             document.body.appendChild(modal);
         }
@@ -1141,9 +1152,7 @@ window.initializeAgoraPlayer = function(config) {
         
         // Skip speaker switching logic if view is transitioning
         if (!allowSpeakerChange) {
-            if (window.__VH360_DEBUG) {
-                console.log('[VH360 Debug] Blocking speaker detection during view transition');
-            }
+            vh360Log('[VH360 Debug] Blocking speaker detection during view transition');
             return;
         }
         
@@ -1181,9 +1190,7 @@ window.initializeAgoraPlayer = function(config) {
     function setActiveSpeaker(uid) {
         // Guard against race conditions during view transitions
         if (window.vh360LayoutManager && !window.vh360LayoutManager.shouldAllowVideoMovement()) {
-            if (window.__VH360_DEBUG) {
-                console.log('[VH360 Debug] Blocking speaker change during view transition:', uid);
-            }
+            vh360Log('[VH360 Debug] Blocking speaker change during view transition:', uid);
             return;
         }
         
@@ -1204,9 +1211,7 @@ window.initializeAgoraPlayer = function(config) {
         
         if (uid) {
             vh360Log("Agora: Active speaker changed to UID:", uid);
-            if (window.__VH360_DEBUG) {
-                console.log('[VH360 Debug] Setting active speaker:', uid);
-            }
+            vh360Log('[VH360 Debug] Setting active speaker:', uid);
             
             // Add active speaker styling to new speaker
             updateActiveSpeakerVisuals(uid, true);
@@ -1217,9 +1222,7 @@ window.initializeAgoraPlayer = function(config) {
             }
         } else {
             vh360Log("Agora: No active speaker");
-            if (window.__VH360_DEBUG) {
-                console.log('[VH360 Debug] Clearing active speaker');
-            }
+            vh360Log('[VH360 Debug] Clearing active speaker');
             
             // When active speaker is cleared (silence), return to original host view in interactive mode
             const mainPlayer = document.getElementById("vh360-agora-local-player");
@@ -1254,15 +1257,11 @@ window.initializeAgoraPlayer = function(config) {
     function switchMainVideoToSpeaker(uid) {
         // Guard against race conditions during view transitions
         if (window.vh360LayoutManager && !window.vh360LayoutManager.shouldAllowVideoMovement()) {
-            if (window.__VH360_DEBUG) {
-                console.log('[VH360 Debug] Blocking main video switch during view transition:', uid);
-            }
+            vh360Log('[VH360 Debug] Blocking main video switch during view transition:', uid);
             return;
         }
         
-        if (window.__VH360_DEBUG) {
-            console.log('[VH360 Debug] Switching main video to speaker:', uid);
-        }
+        vh360Log('[VH360 Debug] Switching main video to speaker:', uid);
         
         const mainPlayer = document.getElementById("vh360-agora-local-player");
         const remotePlayersContainer = document.getElementById("vh360-agora-remote-players");
@@ -1278,9 +1277,7 @@ window.initializeAgoraPlayer = function(config) {
         // Step 1: Move any current main element back to remote players
         const currentMainElement = mainPlayer.querySelector('[id^="player-"]');
         if (currentMainElement && currentMainElement.id !== `player-${uid}`) {
-            if (window.__VH360_DEBUG) {
-                console.log('[VH360 Debug] Moving current main back to remote:', currentMainElement.id);
-            }
+            vh360Log('[VH360 Debug] Moving current main back to remote:', currentMainElement.id);
             
             // Update classes for remote display
             currentMainElement.classList.remove('vh360-video-main', 'vh360-main-placeholder');
@@ -1320,9 +1317,7 @@ window.initializeAgoraPlayer = function(config) {
                     if (typeof localTracks.videoTrack.play === 'function') {
                         localTracks.videoTrack.play(localPlayerElement.id, { mirror: false });
                         videoElementManager.registerTrackBinding(localPlayerElement.id, true);
-                        if (window.__VH360_DEBUG) {
-                            console.log('[VH360 Debug] Created player element for local user in remote players');
-                        }
+                        vh360Log('[VH360 Debug] Created player element for local user in remote players');
                     }
                 }
             }
@@ -1355,9 +1350,7 @@ window.initializeAgoraPlayer = function(config) {
                 localTracks.videoTrack.play(speakerElement.id, { mirror: false });
                 videoElementManager.registerTrackBinding(speakerElement.id, true);
                 
-                if (window.__VH360_DEBUG) {
-                    console.log('[VH360 Debug] Created player element for local user as main speaker');
-                }
+                vh360Log('[VH360 Debug] Created player element for local user as main speaker');
                 vh360Log("Agora: Switched main video to local user UID:", uid);
                 return;
             }
@@ -1371,9 +1364,7 @@ window.initializeAgoraPlayer = function(config) {
         
         // Move speaker to main (if not already there)
         if (speakerElement.parentElement !== mainPlayer) {
-            if (window.__VH360_DEBUG) {
-                console.log('[VH360 Debug] Moving speaker to main:', uid);
-            }
+            vh360Log('[VH360 Debug] Moving speaker to main:', uid);
             
             // Clear main player completely before adding speaker
             mainPlayer.innerHTML = '';
@@ -2231,17 +2222,13 @@ window.initializeAgoraPlayer = function(config) {
                             // Remove width/height attributes
                             videoElement.removeAttribute('width');
                             videoElement.removeAttribute('height');
-                            if (window.__VH360_DEBUG) {
-                                console.log("Agora: Cleaned video element inline styles for UID:", user.uid);
-                            }
+                            vh360Log("Agora: Cleaned video element inline styles for UID:", user.uid);
                             
                             // Additional cleanup pass to ensure container bounds are respected
                             if (playerElement.classList.contains('vh360-video-remote')) {
                                 // Ensure parent container has proper overflow handling
                                 playerElement.style.overflow = '';
-                                if (window.__VH360_DEBUG) {
-                                    console.log("Agora: Applied container bounds check for UID:", user.uid);
-                                }
+                                vh360Log("Agora: Applied container bounds check for UID:", user.uid);
                             }
                         }
                     }, 200); // Increased from 100ms to 200ms for better reliability
@@ -4293,7 +4280,7 @@ window.initializeAgoraPlayer = function(config) {
             for (const selector of videoSelectors) {
                 const candidate = document.querySelector(selector);
                 if (candidate && candidate.offsetWidth > 0 && candidate.offsetHeight > 0) {
-                    if (window.__VH360_DEBUG) console.log(`VideoHub360 Mobile: Found video element for fullscreen: ${selector}`);
+                    vh360Log(`VideoHub360 Mobile: Found video element for fullscreen: ${selector}`);
                     videoElement = candidate;
                     break;
                 }
@@ -4341,14 +4328,14 @@ window.initializeAgoraPlayer = function(config) {
             const el = document.querySelector(selector);
             if (el && el.offsetWidth > 0 && el.offsetHeight > 0) {
                 targetElement = el;
-                if (window.__VH360_DEBUG) console.log(`VideoHub360 Mobile: Found fullscreen target element: ${selector}`);
+                vh360Log(`VideoHub360 Mobile: Found fullscreen target element: ${selector}`);
                 break;
             }
         }
         // Fallback to document.body if no element found
         if (!targetElement) {
             targetElement = document.body;
-            if (window.__VH360_DEBUG) console.log('VideoHub360 Mobile: Using document.body as fullscreen target fallback');
+            vh360Log('VideoHub360 Mobile: Using document.body as fullscreen target fallback');
         }
         // If still not found, show error
         if (!targetElement) {
@@ -4364,7 +4351,7 @@ window.initializeAgoraPlayer = function(config) {
             window.enterFullscreen(targetElement).then(() => {
                 targetElement.classList.remove('vh360-entering-fullscreen');
                 updateMobileFullscreenButton(true);
-                if (window.__VH360_DEBUG) console.log('VideoHub360 Mobile: Entered fullscreen successfully');
+                vh360Log('VideoHub360 Mobile: Entered fullscreen successfully');
             }).catch((err) => {
                 targetElement.classList.remove('vh360-entering-fullscreen');
                 vh360Error('VideoHub360 Mobile: Failed to enter fullscreen:', err);
@@ -4377,7 +4364,7 @@ window.initializeAgoraPlayer = function(config) {
                     errorMessage += 'Please try again.';
                 }
                 alert(errorMessage);
-                if (window.__VH360_DEBUG) console.log('VideoHub360 Mobile: Fullscreen error shown to user:', errorMessage);
+                vh360Log('VideoHub360 Mobile: Fullscreen error shown to user:', errorMessage);
             });
         } catch (error) {
             vh360Error('VideoHub360 Mobile: Unexpected error in toggleMobileFullscreen:', error);
@@ -4604,7 +4591,7 @@ window.addEventListener('resize', function() {
     document.addEventListener('mozfullscreenchange', handleParticipantDropdownsFullscreen);
     document.addEventListener('MSFullscreenChange', handleParticipantDropdownsFullscreen);
     
-    if (window.__VH360_DEBUG) console.log('VideoHub360: Global fullscreen change listeners added for participant dropdowns');
+    vh360Log('VideoHub360: Global fullscreen change listeners added for participant dropdowns');
 })();
 
 
@@ -4653,7 +4640,7 @@ window.addEventListener('resize', function() {
             show();
         });
 
-        if (window.__VH360_DEBUG) console.log('VideoHub360: Unified auto-hide initialized');
+        vh360Log('VideoHub360: Unified auto-hide initialized');
     } catch (e) {
         if (window && window.__VH360_DEBUG) vh360Warn('VideoHub360: auto-hide init error', e);
     }
@@ -4723,7 +4710,7 @@ window.addEventListener('resize', function() {
         root.querySelectorAll('video').forEach(watchVideoEl);
         root.addEventListener('vh360:agora:stream-live', markLiveAndShow);
         window.addEventListener('resize', () => { show(); });
-        if (window.__VH360_DEBUG) console.log('VideoHub360: Unified auto-hide + prestart hide initialized (appended)');
+        vh360Log('VideoHub360: Unified auto-hide + prestart hide initialized (appended)');
     } catch (e) {
         if (window && window.__VH360_DEBUG) vh360Warn('VideoHub360: auto-hide init error', e);
     }
@@ -4787,7 +4774,5 @@ window.addEventListener('resize', function() {
         });
     }
     
-    if (window.__VH360_DEBUG) {
-        console.log('VideoHub360: Custom badge color handler initialized');
-    }
+    vh360Log('VideoHub360: Custom badge color handler initialized');
 })();
