@@ -224,12 +224,12 @@
     cursor: pointer;
     transition: background-color 0.2s ease, transform 0.1s ease;
     margin-right: 8px;
-    white-space: nowrap;
 }
 
-/* Remove margin in header context (spacing handled by flex gap) */
+/* Header context styling (spacing handled by flex gap, prevent text wrapping) */
 .site-header__right .vh360-sign-in-btn {
     margin-right: 0;
+    white-space: nowrap;
 }
 
 .vh360-sign-in-btn:hover {
@@ -264,6 +264,10 @@
     text-decoration: none;
     cursor: pointer;
     transition: all 0.2s ease;
+}
+
+/* Header context styling (prevent text wrapping) */
+.site-header__right .vh360-register-btn {
     white-space: nowrap;
 }
 
