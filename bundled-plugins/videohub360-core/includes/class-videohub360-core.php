@@ -142,6 +142,18 @@ class VideoHub360_Core {
             });
         }
         
+        // Upgrade to version 2.7 - Add video reactions and playlists
+        if (version_compare($current_version, '2.7', '<')) {
+            self::create_database_tables();
+            
+            // Add admin notice about database update
+            add_action('admin_notices', function() {
+                echo '<div class="notice notice-success is-dismissible">';
+                echo '<p><strong>' . esc_html__('VideoHub360:', 'videohub360') . '</strong> ' . esc_html__('Database updated! Video reactions (Like/Dislike) and playlists are now available.', 'videohub360') . '</p>';
+                echo '</div>';
+            });
+        }
+        
         // Check for moderation columns only in admin context or during upgrade
         if (is_admin()) {
             $this->ensure_moderation_columns();
