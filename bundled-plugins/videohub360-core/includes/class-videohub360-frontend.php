@@ -485,7 +485,11 @@ class VideoHub360_Frontend {
             'debug' => array(
                 'version' => VIDEOHUB360_VERSION,
                 'isLivePage' => $post ? (get_post_meta($post->ID, '_vh360_is_live', true) === 'yes') : false,
-            )
+            ),
+            // Video reactions nonce
+            'videoReactionNonce' => wp_create_nonce('vh360_video_reaction'),
+            // Playlist nonce
+            'playlistNonce' => wp_create_nonce('vh360_playlist')
         );
         
         // Add built-in login form strings
