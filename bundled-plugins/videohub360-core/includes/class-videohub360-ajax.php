@@ -2007,8 +2007,8 @@ public function handle_restart_stream() {
      * Handle set video reaction AJAX request
      */
     public function handle_set_video_reaction() {
-        // Rate limiting
-        if (!$this->check_rate_limit('set_video_reaction', 30)) {
+        // Rate limiting - allow up to 10 reactions per 60 seconds
+        if (!$this->check_rate_limit('set_video_reaction', 10)) {
             wp_send_json_error(__('Rate limit exceeded. Please try again later.', 'videohub360'));
             return;
         }
@@ -2134,7 +2134,7 @@ public function handle_restart_stream() {
         }
         
         $title = sanitize_text_field($_POST['title'] ?? '');
-        $description = wp_kses_post($_POST['description'] ?? '');
+        $description = sanitize_textarea_field($_POST['description'] ?? '');
         $privacy = sanitize_text_field($_POST['privacy'] ?? 'private');
         $user_id = get_current_user_id();
         

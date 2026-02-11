@@ -16,7 +16,7 @@ class VideoHub360_Playlists {
      * 
      * @param int $user_id User ID
      * @param string $title Playlist title
-     * @param string $description Playlist description (optional)
+     * @param string $description Playlist description (optional, plain text only)
      * @param string $privacy Privacy setting (private, unlisted, public)
      * @return array Array with success status and playlist data
      */
@@ -25,7 +25,7 @@ class VideoHub360_Playlists {
         
         $user_id = absint($user_id);
         $title = sanitize_text_field($title);
-        $description = wp_kses_post($description);
+        $description = sanitize_textarea_field($description); // Plain text only
         $privacy = in_array($privacy, array('private', 'unlisted', 'public')) ? $privacy : 'private';
         
         if (!$user_id) {

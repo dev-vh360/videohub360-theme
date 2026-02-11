@@ -66,7 +66,7 @@ if ($viewing_playlist_id) {
 
         <?php if (!empty($viewing_playlist['description'])) : ?>
             <div class="vh360-playlist-description">
-                <p><?php echo wp_kses_post($viewing_playlist['description']); ?></p>
+                <p><?php echo esc_html($viewing_playlist['description']); ?></p>
             </div>
         <?php endif; ?>
 
