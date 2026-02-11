@@ -15,6 +15,14 @@
     z-index: 1000;
 }
 
+/* Header-specific layout: prevent auth buttons from wrapping */
+.site-header__right .vh360-user-menu {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+}
+
 /* ==========================================================================
    Avatar Button
    ========================================================================== */
@@ -218,6 +226,12 @@
     margin-right: 8px;
 }
 
+/* Header context styling (spacing handled by flex gap, prevent text wrapping) */
+.site-header__right .vh360-sign-in-btn {
+    margin-right: 0;
+    white-space: nowrap;
+}
+
 .vh360-sign-in-btn:hover {
     background-color: var(--secondary-color);
     color: var(--bg-color);
@@ -250,6 +264,11 @@
     text-decoration: none;
     cursor: pointer;
     transition: all 0.2s ease;
+}
+
+/* Header context styling (prevent text wrapping) */
+.site-header__right .vh360-register-btn {
+    white-space: nowrap;
 }
 
 .vh360-register-btn:hover {
@@ -292,6 +311,20 @@
 
 .vh360-user-menu-item.current-page .vh360-menu-icon {
     color: var(--primary-color);
+}
+
+/* ==========================================================================
+   Tablet / Small Desktop Compact Mode
+   ========================================================================== */
+
+/* Compact sizing for tablet/small-desktop range where horizontal header gets tight */
+@media (min-width: 769px) and (max-width: 1023px) {
+    .site-header__right .vh360-sign-in-btn,
+    .site-header__right .vh360-register-btn {
+        padding: 6px 10px;
+        font-size: 13px;
+        border-radius: 5px;
+    }
 }
 
 /* ==========================================================================
