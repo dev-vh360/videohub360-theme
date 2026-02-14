@@ -100,6 +100,16 @@ get_header();
                     </div>
                 <?php endif; ?>
                 
+                <!-- Liked Videos Tab -->
+                <div id="liked-videos" class="vh360-dashboard-tab-content">
+                    <?php get_template_part('template-parts/dashboard/liked-videos'); ?>
+                </div>
+                
+                <!-- Playlists Tab -->
+                <div id="playlists" class="vh360-dashboard-tab-content">
+                    <?php get_template_part('template-parts/dashboard/playlists'); ?>
+                </div>
+                
                 <!-- Settings Tab -->
                 <div id="settings" class="vh360-dashboard-tab-content">
                     <?php get_template_part('template-parts/dashboard/settings'); ?>

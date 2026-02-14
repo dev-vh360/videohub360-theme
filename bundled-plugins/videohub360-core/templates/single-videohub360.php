@@ -378,6 +378,64 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                 <?php endif; ?>
             <?php endif; ?>
 
+            <!-- Video Engagement Actions (Like, Dislike, Save, Share) -->
+            <div class="videohub360-engagement-bar">
+                <?php 
+                // Get reaction counts and user's reaction
+                $reaction_counts = VideoHub360_Video_Reactions::get_counts(get_the_ID());
+                $user_reaction = is_user_logged_in() ? VideoHub360_Video_Reactions::get_user_reaction(get_the_ID(), get_current_user_id()) : null;
+                ?>
+                
+                <!-- Like/Dislike Buttons -->
+                <div class="vh360-reactions-container">
+                    <button class="vh360-reaction-btn vh360-like-btn <?php echo ($user_reaction === 'like') ? 'active' : ''; ?>" 
+                            data-video-id="<?php echo esc_attr(get_the_ID()); ?>" 
+                            data-reaction="like"
+                            <?php echo !is_user_logged_in() ? 'data-login-required="true"' : ''; ?>>
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                            <path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/>
+                        </svg>
+                        <span class="vh360-reaction-count"><?php echo esc_html($reaction_counts['likes']); ?></span>
+                    </button>
+                    <button class="vh360-reaction-btn vh360-dislike-btn <?php echo ($user_reaction === 'dislike') ? 'active' : ''; ?>" 
+                            data-video-id="<?php echo esc_attr(get_the_ID()); ?>" 
+                            data-reaction="dislike"
+                            <?php echo !is_user_logged_in() ? 'data-login-required="true"' : ''; ?>>
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                            <path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/>
+                        </svg>
+                        <span class="vh360-reaction-count"><?php echo esc_html($reaction_counts['dislikes']); ?></span>
+                    </button>
+                </div>
+                
+                <!-- Save to Playlist Button -->
+                <button class="vh360-save-btn" id="vh360-save-btn" data-video-id="<?php echo esc_attr(get_the_ID()); ?>"
+                        <?php echo !is_user_logged_in() ? 'data-login-required="true"' : ''; ?>>
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
+                    </svg>
+                    Save
+                </button>
+                
+                <!-- Share Button -->
+                <button class="videohub360-share-btn" id="videohub360-share-btn">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.50-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/>
+                    </svg>
+                    Share
+                </button>
+                
+                <?php if ($chat_enabled && $chat_placement === 'popup'): ?>
+                <!-- Chat Button -->
+                <button class="videohub360-open-chat-btn" id="videohub360-open-chat-btn">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12,3C6.5,3 2,6.58 2,11C2.05,13.15 3.06,15.17 4.75,16.5C4.75,17.1 4.33,18.67 2,21C4.37,20.89 6.64,20 8.47,18.5C9.61,18.83 10.81,19 12,19C17.5,19 22,15.42 22,11C22,6.58 17.5,3 12,3M12,17C7.58,17 4,14.31 4,11C4,7.69 7.58,5 12,5C16.42,5 20,7.69 20,11C20,14.31 16.42,17 12,17Z"/>
+                    </svg>
+                    Chat
+                </button>
+                <?php endif; ?>
+            </div>
+
             <div class="videohub360-meta-container">
                 <h1 class="videohub360-title"><?php the_title(); ?></h1>
                 <?php 
@@ -422,22 +480,6 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                                 <span class="videohub360-published-date"><?php echo esc_html( $published_date ); ?></span>
                             </div>
                         <?php endif; ?>
-                    </div>
-                    <div class="videohub360-meta-right">
-                        <?php if ($chat_enabled && $chat_placement === 'popup'): ?>
-                        <button class="videohub360-open-chat-btn" id="videohub360-open-chat-btn">
-                            <svg viewBox="0 0 24 24">
-                                <path d="M12,3C6.5,3 2,6.58 2,11C2.05,13.15 3.06,15.17 4.75,16.5C4.75,17.1 4.33,18.67 2,21C4.37,20.89 6.64,20 8.47,18.5C9.61,18.83 10.81,19 12,19C17.5,19 22,15.42 22,11C22,6.58 17.5,3 12,3M12,17C7.58,17 4,14.31 4,11C4,7.69 7.58,5 12,5C16.42,5 20,7.69 20,11C20,14.31 16.42,17 12,17Z"/>
-                            </svg>
-                            Chat
-                        </button>
-                        <?php endif; ?>
-                        <button class="videohub360-share-btn" id="videohub360-share-btn">
-                            <svg viewBox="0 0 24 24">
-                                <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.50-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/>
-                            </svg>
-                            Share
-                        </button>
                     </div>
                 </div>
                 <div class="videohub360-meta-taxonomies">
@@ -665,6 +707,44 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                             <button type="submit" class="videohub360-send-btn" id="videohub360-send-btn"><?php esc_html_e('Send Link', 'videohub360'); ?></button>
                             <div class="videohub360-email-message" id="videohub360-email-message" style="display: none;"></div>
                         </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save to Playlist Modal -->
+    <div class="vh360-playlist-modal-overlay" id="vh360-playlist-modal-overlay" style="display: none;">
+        <div class="vh360-playlist-modal">
+            <div class="vh360-playlist-modal-header">
+                <h3 class="vh360-playlist-modal-title"><?php esc_html_e('Save to Playlist', 'videohub360'); ?></h3>
+                <button class="vh360-playlist-modal-close" id="vh360-playlist-modal-close">&times;</button>
+            </div>
+            <div class="vh360-playlist-modal-body">
+                <div class="vh360-playlist-list" id="vh360-playlist-list">
+                    <p class="vh360-playlist-loading"><?php esc_html_e('Loading playlists...', 'videohub360'); ?></p>
+                </div>
+                <div class="vh360-create-playlist-section">
+                    <button class="vh360-create-playlist-toggle" id="vh360-create-playlist-toggle">
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                        </svg>
+                        <?php esc_html_e('Create New Playlist', 'videohub360'); ?>
+                    </button>
+                    <div class="vh360-create-playlist-form" id="vh360-create-playlist-form" style="display: none;">
+                        <input type="text" 
+                               id="vh360-new-playlist-title" 
+                               class="vh360-playlist-input" 
+                               placeholder="<?php esc_attr_e('Playlist title', 'videohub360'); ?>" 
+                               maxlength="255">
+                        <div class="vh360-create-playlist-actions">
+                            <button class="vh360-btn vh360-btn-cancel" id="vh360-cancel-create-playlist">
+                                <?php esc_html_e('Cancel', 'videohub360'); ?>
+                            </button>
+                            <button class="vh360-btn vh360-btn-primary" id="vh360-submit-create-playlist">
+                                <?php esc_html_e('Create', 'videohub360'); ?>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

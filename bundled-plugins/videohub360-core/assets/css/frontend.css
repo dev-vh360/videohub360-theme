@@ -3607,3 +3607,418 @@ a.vh360-author-row:hover .vh360-author-name {
         font-size: 13px;
     }
 }
+
+/* ============================================
+   Video Reactions (Like/Dislike) Styles
+   ============================================ */
+
+.vh360-reactions-container {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--bg-light, #f5f5f5);
+    border-radius: 20px;
+    padding: 2px;
+}
+
+.vh360-reaction-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: transparent;
+    border: none;
+    border-radius: 18px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-color, #333);
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.vh360-reaction-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.vh360-reaction-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.vh360-reaction-btn svg {
+    fill: currentColor;
+}
+
+.vh360-reaction-btn.active {
+    background: var(--primary-color, #007bff);
+    color: white;
+}
+
+.vh360-reaction-btn.active:hover {
+    background: var(--primary-hover, #0056b3);
+}
+
+.vh360-reaction-count {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* Save to Playlist Button */
+.vh360-save-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: var(--bg-light, #f5f5f5);
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-color, #333);
+    transition: background-color 0.2s ease;
+}
+
+.vh360-save-btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.vh360-save-btn svg {
+    fill: currentColor;
+}
+
+/* Playlist Modal */
+.vh360-playlist-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.vh360-playlist-modal {
+    background: var(--bg-color, #fff);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 480px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.vh360-playlist-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
+}
+
+.vh360-playlist-modal-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-color, #333);
+}
+
+.vh360-playlist-modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    line-height: 1;
+    color: var(--text-light, #666);
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s ease;
+}
+
+.vh360-playlist-modal-close:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.vh360-playlist-modal-body {
+    padding: 20px 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.vh360-playlist-list {
+    margin-bottom: 20px;
+}
+
+.vh360-playlist-loading,
+.vh360-playlist-error,
+.vh360-playlist-empty {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-light, #666);
+}
+
+.vh360-playlist-items {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.vh360-playlist-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.vh360-playlist-item:hover {
+    background: var(--bg-light, #f5f5f5);
+}
+
+.vh360-playlist-checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--primary-color, #007bff);
+}
+
+.vh360-playlist-name {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-color, #333);
+}
+
+.vh360-playlist-count {
+    font-size: 13px;
+    color: var(--text-light, #666);
+}
+
+/* Create Playlist Section */
+.vh360-create-playlist-section {
+    border-top: 1px solid var(--border-color, #e0e0e0);
+    padding-top: 16px;
+}
+
+.vh360-create-playlist-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--primary-color, #007bff);
+    transition: background-color 0.2s ease;
+}
+
+.vh360-create-playlist-toggle:hover {
+    background: var(--bg-light, #f5f5f5);
+}
+
+.vh360-create-playlist-toggle svg {
+    fill: currentColor;
+}
+
+.vh360-create-playlist-form {
+    margin-top: 12px;
+}
+
+.vh360-playlist-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 12px;
+    font-family: inherit;
+}
+
+.vh360-playlist-input:focus {
+    outline: none;
+    border-color: var(--primary-color, #007bff);
+}
+
+.vh360-create-playlist-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.vh360-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.vh360-btn-cancel {
+    background: transparent;
+    color: var(--text-color, #333);
+}
+
+.vh360-btn-cancel:hover {
+    background: var(--bg-light, #f5f5f5);
+}
+
+.vh360-btn-primary {
+    background: var(--primary-color, #007bff);
+    color: white;
+}
+
+.vh360-btn-primary:hover {
+    background: var(--primary-hover, #0056b3);
+}
+
+.vh360-btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Dark theme support */
+.videohub360-dark-theme .vh360-reactions-container {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.videohub360-dark-theme .vh360-reaction-btn {
+    color: #f1f1f1;
+}
+
+.videohub360-dark-theme .vh360-reaction-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.videohub360-dark-theme .vh360-save-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: #f1f1f1;
+}
+
+.videohub360-dark-theme .vh360-save-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.videohub360-dark-theme .vh360-playlist-modal {
+    background: #1e1e1e;
+}
+
+.videohub360-dark-theme .vh360-playlist-modal-header {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.videohub360-dark-theme .vh360-playlist-modal-title,
+.videohub360-dark-theme .vh360-playlist-name {
+    color: #f1f1f1;
+}
+
+.videohub360-dark-theme .vh360-playlist-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.videohub360-dark-theme .vh360-create-playlist-section {
+    border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.videohub360-dark-theme .vh360-create-playlist-toggle:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.videohub360-dark-theme .vh360-playlist-input {
+    background: #2a2a2a;
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #f1f1f1;
+}
+
+.videohub360-dark-theme .vh360-btn-cancel {
+    color: #f1f1f1;
+}
+
+.videohub360-dark-theme .vh360-btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .vh360-reactions-container {
+        gap: 2px;
+    }
+    
+    .vh360-reaction-btn,
+    .vh360-save-btn {
+        padding: 6px 10px;
+        font-size: 13px;
+    }
+    
+    .vh360-reaction-btn svg,
+    .vh360-save-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .vh360-playlist-modal {
+        max-width: 100%;
+        max-height: 90vh;
+    }
+    
+    .vh360-playlist-modal-header,
+    .vh360-playlist-modal-body {
+        padding: 16px 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .videohub360-meta-right {
+        flex-wrap: wrap;
+    }
+    
+    .vh360-reactions-container {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ============================================
+   Video Engagement Bar (positioned after video player)
+   ============================================ */
+
+.videohub360-engagement-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
+    flex-wrap: wrap;
+}
+
+.videohub360-engagement-bar .vh360-reactions-container,
+.videohub360-engagement-bar .vh360-save-btn,
+.videohub360-engagement-bar .videohub360-share-btn,
+.videohub360-engagement-bar .videohub360-open-chat-btn {
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .videohub360-engagement-bar {
+        padding: 10px 0;
+        gap: 8px;
+    }
+}

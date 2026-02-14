@@ -138,6 +138,39 @@ $stats = vh360_get_user_stats($current_user_id);
             <?php endif; ?>
             
             <li class="vh360-dashboard-nav-item">
+                <a href="#liked-videos" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="liked-videos">
+                    <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/>
+                    </svg>
+                    <span class="vh360-dashboard-nav-text"><?php esc_html_e('Liked Videos', 'videohub360-theme'); ?></span>
+                    <?php
+                    $liked_count = VideoHub360_Video_Reactions::get_liked_videos_count($current_user_id);
+                    if ($liked_count > 0) :
+                    ?>
+                        <span class="vh360-dashboard-nav-badge"><?php echo esc_html($liked_count); ?></span>
+                    <?php endif; ?>
+                </a>
+            </li>
+            
+            <li class="vh360-dashboard-nav-item">
+                <a href="#playlists" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="playlists">
+                    <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="9" y1="9" x2="15" y2="9"></line>
+                        <line x1="9" y1="15" x2="15" y2="15"></line>
+                    </svg>
+                    <span class="vh360-dashboard-nav-text"><?php esc_html_e('My Playlists', 'videohub360-theme'); ?></span>
+                    <?php
+                    $playlists = VideoHub360_Playlists::get_user_playlists($current_user_id);
+                    $playlist_count = count($playlists);
+                    if ($playlist_count > 0) :
+                    ?>
+                        <span class="vh360-dashboard-nav-badge"><?php echo esc_html($playlist_count); ?></span>
+                    <?php endif; ?>
+                </a>
+            </li>
+            
+            <li class="vh360-dashboard-nav-item">
                 <a href="#create-post" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="create-post">
                     <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>

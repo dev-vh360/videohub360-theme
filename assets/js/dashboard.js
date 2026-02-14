@@ -1099,3 +1099,189 @@
     });
 
 })(jQuery);
+
+// Playlist Dashboard Functionality
+(function($) {
+    'use strict';
+    
+    var PlaylistDashboard = {
+        init: function() {
+            this.bindEvents();
+        },
+        
+        bindEvents: function() {
+            var self = this;
+            
+            // Create playlist button (dashboard version)
+            $(document).on('click', '.vh360-create-playlist-dashboard-btn', function(e) {
+                e.preventDefault();
+                self.showCreateModal();
+            });
+            
+            // Close create modal
+            $(document).on('click', '#vh360-create-playlist-dashboard-close, #vh360-dashboard-cancel-playlist', function(e) {
+                e.preventDefault();
+                self.hideCreateModal();
+            });
+            
+            // Submit create playlist
+            $(document).on('click', '#vh360-dashboard-submit-playlist', function(e) {
+                e.preventDefault();
+                self.createPlaylist();
+            });
+            
+            // Delete playlist
+            $(document).on('click', '.vh360-delete-playlist-btn', function(e) {
+                e.preventDefault();
+                var playlistId = $(this).data('playlist-id');
+                self.deletePlaylist(playlistId);
+            });
+            
+            // Remove video from playlist
+            $(document).on('click', '.vh360-remove-from-playlist-btn', function(e) {
+                e.preventDefault();
+                var $btn = $(this);
+                var playlistId = $btn.data('playlist-id');
+                var videoId = $btn.data('video-id');
+                self.removeFromPlaylist(playlistId, videoId, $btn);
+            });
+            
+            // Enter key submits create form
+            $(document).on('keypress', '#vh360-dashboard-playlist-title', function(e) {
+                if (e.which === 13) {
+                    e.preventDefault();
+                    self.createPlaylist();
+                }
+            });
+            
+            // Close modal on overlay click
+            $(document).on('click', '#vh360-create-playlist-dashboard-modal', function(e) {
+                if (e.target === this) {
+                    self.hideCreateModal();
+                }
+            });
+        },
+        
+        showCreateModal: function() {
+            $('#vh360-create-playlist-dashboard-modal').fadeIn(200);
+            $('#vh360-dashboard-playlist-title').focus();
+        },
+        
+        hideCreateModal: function() {
+            $('#vh360-create-playlist-dashboard-modal').fadeOut(200);
+            $('#vh360-dashboard-playlist-title').val('');
+            $('#vh360-dashboard-playlist-description').val('');
+        },
+        
+        createPlaylist: function() {
+            var title = $('#vh360-dashboard-playlist-title').val().trim();
+            var description = $('#vh360-dashboard-playlist-description').val().trim();
+            
+            if (!title) {
+                return;
+            }
+            
+            if (typeof vh360Dashboard === 'undefined' || !vh360Dashboard.ajaxurl) {
+                return;
+            }
+            
+            var $submitBtn = $('#vh360-dashboard-submit-playlist');
+            $submitBtn.prop('disabled', true);
+            
+            $.ajax({
+                url: vh360Dashboard.ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'vh360_create_playlist',
+                    title: title,
+                    description: description,
+                    nonce: vh360Dashboard.playlistNonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Reload page to show new playlist
+                        window.location.reload();
+                    }
+                },
+                error: function() {
+                    $submitBtn.prop('disabled', false);
+                },
+                complete: function() {
+                    $submitBtn.prop('disabled', false);
+                }
+            });
+        },
+        
+        deletePlaylist: function(playlistId) {
+            if (!confirm('Are you sure you want to delete this playlist? This action cannot be undone.')) {
+                return;
+            }
+            
+            if (typeof vh360Dashboard === 'undefined' || !vh360Dashboard.ajaxurl) {
+                return;
+            }
+            
+            $.ajax({
+                url: vh360Dashboard.ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'vh360_delete_playlist',
+                    playlist_id: playlistId,
+                    nonce: vh360Dashboard.playlistNonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Redirect back to playlists list
+                        window.location.href = '?tab=playlists';
+                    }
+                }
+            });
+        },
+        
+        removeFromPlaylist: function(playlistId, videoId, $btn) {
+            if (!confirm('Remove this video from the playlist?')) {
+                return;
+            }
+            
+            if (typeof vh360Dashboard === 'undefined' || !vh360Dashboard.ajaxurl) {
+                return;
+            }
+            
+            $btn.prop('disabled', true);
+            
+            $.ajax({
+                url: vh360Dashboard.ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'vh360_remove_from_playlist',
+                    playlist_id: playlistId,
+                    video_id: videoId,
+                    nonce: vh360Dashboard.playlistNonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Remove the video item from DOM
+                        $btn.closest('.vh360-playlist-video-item').fadeOut(300, function() {
+                            $(this).remove();
+                            // If no more videos, show empty state
+                            if ($('.vh360-playlist-video-item').length === 0) {
+                                window.location.reload();
+                            }
+                        });
+                    } else {
+                        $btn.prop('disabled', false);
+                    }
+                },
+                error: function() {
+                    $btn.prop('disabled', false);
+                }
+            });
+        }
+    };
+    
+    // Initialize on document ready
+    $(document).ready(function() {
+        PlaylistDashboard.init();
+    });
+    
+})(jQuery);

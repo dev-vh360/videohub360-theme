@@ -82,6 +82,8 @@ class VideoHub360_Core {
         require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-video-quality.php';
         require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-shortcode-builder.php';
         require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-import-export.php';
+        require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-video-reactions.php';
+        require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-playlists.php';
         // Licensing / updates client
         require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-license.php';
         require_once VIDEOHUB360_INCLUDES_DIR . 'vh360-license-gate.php';
@@ -136,6 +138,18 @@ class VideoHub360_Core {
             add_action('admin_notices', function() {
                 echo '<div class="notice notice-success is-dismissible">';
                 echo '<p><strong>' . esc_html__('VideoHub360:', 'videohub360') . '</strong> ' . esc_html__('Moderation database tables have been updated to fix enforcement issues. Moderation should now work correctly for both chat and streams.', 'videohub360') . '</p>';
+                echo '</div>';
+            });
+        }
+        
+        // Upgrade to version 2.7 - Add video reactions and playlists
+        if (version_compare($current_version, '2.7', '<')) {
+            self::create_database_tables();
+            
+            // Add admin notice about database update
+            add_action('admin_notices', function() {
+                echo '<div class="notice notice-success is-dismissible">';
+                echo '<p><strong>' . esc_html__('VideoHub360:', 'videohub360') . '</strong> ' . esc_html__('Database updated! Video reactions (Like/Dislike) and playlists are now available.', 'videohub360') . '</p>';
                 echo '</div>';
             });
         }
@@ -619,8 +633,65 @@ class VideoHub360_Core {
         // Execute moderation table creation
         $result_moderation = dbDelta($moderation_sql);
         
+        // Create video reactions table
+        $reactions_table_name = $wpdb->prefix . 'vh360_video_reactions';
+        
+        $reactions_sql = "CREATE TABLE IF NOT EXISTS $reactions_table_name (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            video_id bigint(20) unsigned NOT NULL,
+            user_id bigint(20) unsigned NOT NULL,
+            reaction enum('like','dislike') NOT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY unique_user_video (video_id, user_id),
+            KEY video_id (video_id),
+            KEY user_id (user_id),
+            KEY reaction (reaction),
+            KEY created_at (created_at)
+        ) $charset_collate;";
+        
+        $result_reactions = dbDelta($reactions_sql);
+        
+        // Create playlists table
+        $playlists_table_name = $wpdb->prefix . 'vh360_playlists';
+        
+        $playlists_sql = "CREATE TABLE IF NOT EXISTS $playlists_table_name (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) unsigned NOT NULL,
+            title varchar(255) NOT NULL,
+            description text,
+            privacy enum('private','unlisted','public') DEFAULT 'private',
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY user_id (user_id),
+            KEY privacy (privacy),
+            KEY created_at (created_at)
+        ) $charset_collate;";
+        
+        $result_playlists = dbDelta($playlists_sql);
+        
+        // Create playlist items table
+        $playlist_items_table_name = $wpdb->prefix . 'vh360_playlist_items';
+        
+        $playlist_items_sql = "CREATE TABLE IF NOT EXISTS $playlist_items_table_name (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            playlist_id bigint(20) unsigned NOT NULL,
+            video_id bigint(20) unsigned NOT NULL,
+            position int(11) DEFAULT 0,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY unique_playlist_video (playlist_id, video_id),
+            KEY playlist_id (playlist_id),
+            KEY video_id (video_id),
+            KEY position (position),
+            KEY created_at (created_at)
+        ) $charset_collate;";
+        
+        $result_playlist_items = dbDelta($playlist_items_sql);
+        
         // Set database version options
-        update_option('videohub360_chat_db_version', '2.6');
+        update_option('videohub360_chat_db_version', '2.7');
     }
     
     /**

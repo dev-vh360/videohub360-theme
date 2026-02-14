@@ -223,6 +223,7 @@ function vh360_enqueue_dashboard_assets() {
             'nonce' => wp_create_nonce('vh360_dashboard_nonce'),
             'bulletin_nonce' => wp_create_nonce('vh360_bulletin_nonce'),
             'videoUploadNonce' => wp_create_nonce('vh360_video_upload'),
+            'playlistNonce' => wp_create_nonce('vh360_playlist'),
             'strings' => array(
                 'loading' => esc_html__('Loading...', 'videohub360-theme'),
                 'error' => esc_html__('An error occurred. Please try again.', 'videohub360-theme'),

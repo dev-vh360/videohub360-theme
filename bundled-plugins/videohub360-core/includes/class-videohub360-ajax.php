@@ -147,6 +147,21 @@ class VideoHub360_Ajax {
         add_action('wp_ajax_vh360_track_ad_click', array($this, 'handle_track_ad_click'));
         add_action('wp_ajax_nopriv_vh360_track_ad_click', array($this, 'handle_track_ad_click'));
         
+        // === VIDEO REACTIONS HANDLERS ===
+        add_action('wp_ajax_vh360_set_video_reaction', array($this, 'handle_set_video_reaction'));
+        add_action('wp_ajax_vh360_clear_video_reaction', array($this, 'handle_clear_video_reaction'));
+        add_action('wp_ajax_nopriv_vh360_get_video_reaction_counts', array($this, 'handle_get_video_reaction_counts'));
+        add_action('wp_ajax_vh360_get_video_reaction_counts', array($this, 'handle_get_video_reaction_counts'));
+        
+        // === PLAYLIST HANDLERS ===
+        add_action('wp_ajax_vh360_create_playlist', array($this, 'handle_create_playlist'));
+        add_action('wp_ajax_vh360_add_to_playlist', array($this, 'handle_add_to_playlist'));
+        add_action('wp_ajax_vh360_remove_from_playlist', array($this, 'handle_remove_from_playlist'));
+        add_action('wp_ajax_vh360_get_my_playlists', array($this, 'handle_get_my_playlists'));
+        add_action('wp_ajax_vh360_get_playlist_contents', array($this, 'handle_get_playlist_contents'));
+        add_action('wp_ajax_vh360_delete_playlist', array($this, 'handle_delete_playlist'));
+        add_action('wp_ajax_vh360_get_playlists_with_video', array($this, 'handle_get_playlists_with_video'));
+        
         // === DASHBOARD HANDLERS ===
         add_action('wp_ajax_vh360_get_chart_data', array($this, 'handle_get_chart_data'));
         add_action('wp_ajax_vh360_refresh_stats', array($this, 'handle_refresh_stats'));
@@ -1986,5 +2001,369 @@ public function handle_restart_stream() {
     private function get_fresh_stats() {
         // Use the shared statistics calculation from the admin class
         return VideoHub360_Admin::calculate_statistics();
+    }
+    
+    /**
+     * Handle set video reaction AJAX request
+     */
+    public function handle_set_video_reaction() {
+        // Rate limiting - allow up to 10 reactions per 60 seconds
+        if (!$this->check_rate_limit('set_video_reaction', 10)) {
+            wp_send_json_error(__('Rate limit exceeded. Please try again later.', 'videohub360'));
+            return;
+        }
+        
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'vh360_video_reaction')) {
+            wp_send_json_error(__('Security check failed.', 'videohub360'));
+            return;
+        }
+        
+        // Check if user is logged in
+        if (!is_user_logged_in()) {
+            wp_send_json_error(__('You must be logged in to react to videos.', 'videohub360'));
+            return;
+        }
+        
+        $video_id = absint($_POST['video_id'] ?? 0);
+        $reaction = sanitize_text_field($_POST['reaction'] ?? '');
+        $user_id = get_current_user_id();
+        
+        if (!$video_id) {
+            wp_send_json_error(__('Invalid video ID.', 'videohub360'));
+            return;
+        }
+        
+        if (!in_array($reaction, array('like', 'dislike'))) {
+            wp_send_json_error(__('Invalid reaction type.', 'videohub360'));
+            return;
+        }
+        
+        $result = VideoHub360_Video_Reactions::set_reaction($video_id, $user_id, $reaction);
+        
+        if ($result['success']) {
+            wp_send_json_success($result);
+        } else {
+            wp_send_json_error($result['message']);
+        }
+    }
+    
+    /**
+     * Handle clear video reaction AJAX request
+     */
+    public function handle_clear_video_reaction() {
+        // Rate limiting
+        if (!$this->check_rate_limit('clear_video_reaction', 30)) {
+            wp_send_json_error(__('Rate limit exceeded. Please try again later.', 'videohub360'));
+            return;
+        }
+        
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'vh360_video_reaction')) {
+            wp_send_json_error(__('Security check failed.', 'videohub360'));
+            return;
+        }
+        
+        // Check if user is logged in
+        if (!is_user_logged_in()) {
+            wp_send_json_error(__('You must be logged in.', 'videohub360'));
+            return;
+        }
+        
+        $video_id = absint($_POST['video_id'] ?? 0);
+        $user_id = get_current_user_id();
+        
+        if (!$video_id) {
+            wp_send_json_error(__('Invalid video ID.', 'videohub360'));
+            return;
+        }
+        
+        $result = VideoHub360_Video_Reactions::clear_reaction($video_id, $user_id);
+        
+        if ($result['success']) {
+            wp_send_json_success($result);
+        } else {
+            wp_send_json_error($result['message']);
+        }
+    }
+    
+    /**
+     * Handle get video reaction counts AJAX request
+     */
+    public function handle_get_video_reaction_counts() {
+        $video_id = absint($_GET['video_id'] ?? 0);
+        
+        if (!$video_id) {
+            wp_send_json_error(__('Invalid video ID.', 'videohub360'));
+            return;
+        }
+        
+        $counts = VideoHub360_Video_Reactions::get_counts($video_id);
+        $user_reaction = null;
+        
+        if (is_user_logged_in()) {
+            $user_reaction = VideoHub360_Video_Reactions::get_user_reaction($video_id, get_current_user_id());
+        }
+        
+        wp_send_json_success(array(
+            'counts' => $counts,
+            'userReaction' => $user_reaction
+        ));
+    }
+    
+    /**
+     * Handle create playlist AJAX request
+     */
+    public function handle_create_playlist() {
+        // Rate limiting
+        if (!$this->check_rate_limit('create_playlist', 10)) {
+            wp_send_json_error(__('Rate limit exceeded. Please try again later.', 'videohub360'));
+            return;
+        }
+        
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'vh360_playlist')) {
+            wp_send_json_error(__('Security check failed.', 'videohub360'));
+            return;
+        }
+        
+        // Check if user is logged in
+        if (!is_user_logged_in()) {
+            wp_send_json_error(__('You must be logged in to create playlists.', 'videohub360'));
+            return;
+        }
+        
+        $title = sanitize_text_field($_POST['title'] ?? '');
+        $description = sanitize_textarea_field($_POST['description'] ?? '');
+        $privacy = sanitize_text_field($_POST['privacy'] ?? 'private');
+        $user_id = get_current_user_id();
+        
+        if (empty($title)) {
+            wp_send_json_error(__('Playlist title is required.', 'videohub360'));
+            return;
+        }
+        
+        $result = VideoHub360_Playlists::create_playlist($user_id, $title, $description, $privacy);
+        
+        if ($result['success']) {
+            wp_send_json_success($result);
+        } else {
+            wp_send_json_error($result['message']);
+        }
+    }
+    
+    /**
+     * Handle add to playlist AJAX request
+     */
+    public function handle_add_to_playlist() {
+        // Rate limiting
+        if (!$this->check_rate_limit('add_to_playlist', 30)) {
+            wp_send_json_error(__('Rate limit exceeded. Please try again later.', 'videohub360'));
+            return;
+        }
+        
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'vh360_playlist')) {
+            wp_send_json_error(__('Security check failed.', 'videohub360'));
+            return;
+        }
+        
+        // Check if user is logged in
+        if (!is_user_logged_in()) {
+            wp_send_json_error(__('You must be logged in.', 'videohub360'));
+            return;
+        }
+        
+        $playlist_id = absint($_POST['playlist_id'] ?? 0);
+        $video_id = absint($_POST['video_id'] ?? 0);
+        $user_id = get_current_user_id();
+        
+        if (!$playlist_id || !$video_id) {
+            wp_send_json_error(__('Invalid playlist or video ID.', 'videohub360'));
+            return;
+        }
+        
+        $result = VideoHub360_Playlists::add_video($playlist_id, $video_id, $user_id);
+        
+        if ($result['success']) {
+            wp_send_json_success($result);
+        } else {
+            wp_send_json_error($result['message']);
+        }
+    }
+    
+    /**
+     * Handle remove from playlist AJAX request
+     */
+    public function handle_remove_from_playlist() {
+        // Rate limiting
+        if (!$this->check_rate_limit('remove_from_playlist', 30)) {
+            wp_send_json_error(__('Rate limit exceeded. Please try again later.', 'videohub360'));
+            return;
+        }
+        
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'vh360_playlist')) {
+            wp_send_json_error(__('Security check failed.', 'videohub360'));
+            return;
+        }
+        
+        // Check if user is logged in
+        if (!is_user_logged_in()) {
+            wp_send_json_error(__('You must be logged in.', 'videohub360'));
+            return;
+        }
+        
+        $playlist_id = absint($_POST['playlist_id'] ?? 0);
+        $video_id = absint($_POST['video_id'] ?? 0);
+        $user_id = get_current_user_id();
+        
+        if (!$playlist_id || !$video_id) {
+            wp_send_json_error(__('Invalid playlist or video ID.', 'videohub360'));
+            return;
+        }
+        
+        $result = VideoHub360_Playlists::remove_video($playlist_id, $video_id, $user_id);
+        
+        if ($result['success']) {
+            wp_send_json_success($result);
+        } else {
+            wp_send_json_error($result['message']);
+        }
+    }
+    
+    /**
+     * Handle get my playlists AJAX request
+     */
+    public function handle_get_my_playlists() {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'vh360_playlist')) {
+            wp_send_json_error(__('Security check failed.', 'videohub360'));
+            return;
+        }
+        
+        // Check if user is logged in
+        if (!is_user_logged_in()) {
+            wp_send_json_error(__('You must be logged in.', 'videohub360'));
+            return;
+        }
+        
+        $user_id = get_current_user_id();
+        $playlists = VideoHub360_Playlists::get_user_playlists($user_id);
+        
+        wp_send_json_success(array(
+            'playlists' => $playlists
+        ));
+    }
+    
+    /**
+     * Handle get playlist contents AJAX request
+     */
+    public function handle_get_playlist_contents() {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'vh360_playlist')) {
+            wp_send_json_error(__('Security check failed.', 'videohub360'));
+            return;
+        }
+        
+        // Check if user is logged in
+        if (!is_user_logged_in()) {
+            wp_send_json_error(__('You must be logged in.', 'videohub360'));
+            return;
+        }
+        
+        $playlist_id = absint($_POST['playlist_id'] ?? 0);
+        $page = absint($_POST['page'] ?? 1);
+        $per_page = absint($_POST['per_page'] ?? 20);
+        $user_id = get_current_user_id();
+        
+        if (!$playlist_id) {
+            wp_send_json_error(__('Invalid playlist ID.', 'videohub360'));
+            return;
+        }
+        
+        // Verify ownership
+        $playlist = VideoHub360_Playlists::get_playlist($playlist_id, $user_id);
+        if (!$playlist) {
+            wp_send_json_error(__('Playlist not found or access denied.', 'videohub360'));
+            return;
+        }
+        
+        $video_ids = VideoHub360_Playlists::get_playlist_videos($playlist_id, $page, $per_page);
+        
+        wp_send_json_success(array(
+            'playlist' => $playlist,
+            'video_ids' => $video_ids
+        ));
+    }
+    
+    /**
+     * Handle delete playlist AJAX request
+     */
+    public function handle_delete_playlist() {
+        // Rate limiting
+        if (!$this->check_rate_limit('delete_playlist', 10)) {
+            wp_send_json_error(__('Rate limit exceeded. Please try again later.', 'videohub360'));
+            return;
+        }
+        
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'vh360_playlist')) {
+            wp_send_json_error(__('Security check failed.', 'videohub360'));
+            return;
+        }
+        
+        // Check if user is logged in
+        if (!is_user_logged_in()) {
+            wp_send_json_error(__('You must be logged in.', 'videohub360'));
+            return;
+        }
+        
+        $playlist_id = absint($_POST['playlist_id'] ?? 0);
+        $user_id = get_current_user_id();
+        
+        if (!$playlist_id) {
+            wp_send_json_error(__('Invalid playlist ID.', 'videohub360'));
+            return;
+        }
+        
+        $result = VideoHub360_Playlists::delete_playlist($playlist_id, $user_id);
+        
+        if ($result['success']) {
+            wp_send_json_success($result);
+        } else {
+            wp_send_json_error($result['message']);
+        }
+    }
+    
+    /**
+     * Handle get playlists with video AJAX request
+     */
+    public function handle_get_playlists_with_video() {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'vh360_playlist')) {
+            wp_send_json_error(__('Security check failed.', 'videohub360'));
+            return;
+        }
+        
+        // Check if user is logged in
+        if (!is_user_logged_in()) {
+            wp_send_json_error(__('You must be logged in.', 'videohub360'));
+            return;
+        }
+        
+        $video_id = absint($_POST['video_id'] ?? 0);
+        $user_id = get_current_user_id();
+        
+        if (!$video_id) {
+            wp_send_json_error(__('Invalid video ID.', 'videohub360'));
+            return;
+        }
+        
+        $playlist_ids = VideoHub360_Playlists::get_playlists_with_video($video_id, $user_id);
+        
+        wp_send_json_success(array(
+            'playlist_ids' => $playlist_ids
+        ));
     }
 }
