@@ -1181,7 +1181,7 @@
                 return;
             }
             
-            if (typeof vh360Data === 'undefined' || !vh360Data.ajaxUrl) {
+            if (typeof vh360Dashboard === 'undefined' || !vh360Dashboard.ajaxurl) {
                 return;
             }
             
@@ -1189,13 +1189,13 @@
             $submitBtn.prop('disabled', true);
             
             $.ajax({
-                url: vh360Data.ajaxUrl,
+                url: vh360Dashboard.ajaxurl,
                 type: 'POST',
                 data: {
                     action: 'vh360_create_playlist',
                     title: title,
                     description: description,
-                    nonce: vh360Data.playlistNonce
+                    nonce: vh360Dashboard.playlistNonce
                 },
                 success: function(response) {
                     if (response.success) {
@@ -1217,17 +1217,17 @@
                 return;
             }
             
-            if (typeof vh360Data === 'undefined' || !vh360Data.ajaxUrl) {
+            if (typeof vh360Dashboard === 'undefined' || !vh360Dashboard.ajaxurl) {
                 return;
             }
             
             $.ajax({
-                url: vh360Data.ajaxUrl,
+                url: vh360Dashboard.ajaxurl,
                 type: 'POST',
                 data: {
                     action: 'vh360_delete_playlist',
                     playlist_id: playlistId,
-                    nonce: vh360Data.playlistNonce
+                    nonce: vh360Dashboard.playlistNonce
                 },
                 success: function(response) {
                     if (response.success) {
@@ -1243,20 +1243,20 @@
                 return;
             }
             
-            if (typeof vh360Data === 'undefined' || !vh360Data.ajaxUrl) {
+            if (typeof vh360Dashboard === 'undefined' || !vh360Dashboard.ajaxurl) {
                 return;
             }
             
             $btn.prop('disabled', true);
             
             $.ajax({
-                url: vh360Data.ajaxUrl,
+                url: vh360Dashboard.ajaxurl,
                 type: 'POST',
                 data: {
                     action: 'vh360_remove_from_playlist',
                     playlist_id: playlistId,
                     video_id: videoId,
-                    nonce: vh360Data.playlistNonce
+                    nonce: vh360Dashboard.playlistNonce
                 },
                 success: function(response) {
                     if (response.success) {
