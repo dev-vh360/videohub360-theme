@@ -37,9 +37,6 @@ $total_count = VideoHub360_Video_Reactions::get_liked_videos_count($current_user
             </svg>
             <h3><?php esc_html_e('No liked videos yet', 'videohub360-theme'); ?></h3>
             <p><?php esc_html_e('Videos you like will appear here', 'videohub360-theme'); ?></p>
-            <a href="<?php echo esc_url(get_post_type_archive_link('videohub360')); ?>" class="vh360-btn vh360-btn-primary">
-                <?php esc_html_e('Browse Videos', 'videohub360-theme'); ?>
-            </a>
         </div>
     <?php else : ?>
         <div class="vh360-video-grid">

@@ -3994,3 +3994,31 @@ a.vh360-author-row:hover .vh360-author-name {
         justify-content: center;
     }
 }
+
+/* ============================================
+   Video Engagement Bar (positioned after video player)
+   ============================================ */
+
+.videohub360-engagement-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
+    flex-wrap: wrap;
+}
+
+.videohub360-engagement-bar .vh360-reactions-container,
+.videohub360-engagement-bar .vh360-save-btn,
+.videohub360-engagement-bar .videohub360-share-btn,
+.videohub360-engagement-bar .videohub360-open-chat-btn {
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .videohub360-engagement-bar {
+        padding: 10px 0;
+        gap: 8px;
+    }
+}
