@@ -2070,9 +2070,15 @@
     bottom: 0;
     background: rgba(0, 0, 0, 0.7);
     z-index: 10000;
+    padding: 20px;
+}
+
+/* When jQuery fadeIn() is used, it sets display: block, so we need to ensure flex layout */
+.vh360-create-playlist-modal-overlay[style*="display: block"],
+.vh360-create-playlist-modal-overlay[style*="display: flex"] {
+    display: flex !important;
     align-items: center;
     justify-content: center;
-    padding: 20px;
 }
 
 .vh360-create-playlist-modal-overlay .vh360-playlist-modal {
