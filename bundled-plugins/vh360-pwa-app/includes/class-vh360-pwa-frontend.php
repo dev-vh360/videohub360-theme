@@ -95,6 +95,7 @@ class VH360_PWA_Frontend {
 				'isAdmin'   => current_user_can( 'manage_options' ) ? 1 : 0,
 				// If OneSignal is active, it must own the root scope service worker.
 				'skipSWRegister'     => $this->should_skip_sw_registration() ? 1 : 0,
+				'appShortName'       => ! empty( $opts['short_name'] ) ? (string) $opts['short_name'] : get_bloginfo( 'name' ),
 			)
 		);
 

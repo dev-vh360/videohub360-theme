@@ -5,6 +5,7 @@
   var CFG = window.VH360PWA || {};
   var swUrl = CFG.swUrl || '/vh360-sw.js';
   var offlineUrl = CFG.offlineUrl || '/vh360-offline.html';
+  var appName = CFG.appShortName || 'this app'; // Use PWA short_name with fallback
 
   // Banner config
   var showBanner = !!CFG.showInstallBanner;
@@ -82,7 +83,7 @@
       '<div class="vh360-pwa-modal__backdrop" data-vh360-pwa-close="1"></div>' +
       '<div class="vh360-pwa-modal__panel" role="dialog" aria-modal="true" aria-labelledby="vh360-pwa-modal-title">' +
         '<button class="vh360-pwa-modal__close" type="button" aria-label="Close" data-vh360-pwa-close="1">×</button>' +
-        '<h3 id="vh360-pwa-modal-title" class="vh360-pwa-modal__title">Install VideoHub360</h3>' +
+        '<h3 id="vh360-pwa-modal-title" class="vh360-pwa-modal__title">Install ' + escapeHtml(appName) + '</h3>' +
         '<div class="vh360-pwa-modal__body" id="vh360-pwa-modal-body"></div>' +
       '</div>';
     document.body.appendChild(modal);
@@ -120,7 +121,7 @@
   function showChromeEdgeInstructions() {
     var html =
       '<p>Install the app from your browser menu.</p>' +
-      '<p>Click the <strong>Install</strong> icon in the address bar, or open the <strong>⋮</strong> menu → <strong>Install VideoHub360</strong>.</p>';
+      '<p>Click the <strong>Install</strong> icon in the address bar, or open the <strong>⋮</strong> menu → <strong>Install ' + escapeHtml(appName) + '</strong>.</p>';
     openModal(html);
   }
 
@@ -128,7 +129,7 @@
     // Firefox desktop does not offer a true PWA install flow.
     if (isFirefoxDesktop()) {
       var htmlDesktop =
-        '<p>For the best app experience, install VideoHub360 using <strong>Chrome</strong>, <strong>Edge</strong>, or <strong>Safari</strong>.</p>' +
+        '<p>For the best app experience, install ' + escapeHtml(appName) + ' using <strong>Chrome</strong>, <strong>Edge</strong>, or <strong>Safari</strong>.</p>' +
         '<p>You can still bookmark this page in Firefox for quick access.</p>';
       openModal(htmlDesktop);
       return;
@@ -136,7 +137,7 @@
 
     // Firefox on Android supports "Add to Home Screen".
     var html =
-      '<p>Add VideoHub360 to your home screen for quick access.</p>' +
+      '<p>Add ' + escapeHtml(appName) + ' to your home screen for quick access.</p>' +
       '<p>Open the browser menu → <strong>Add to Home Screen</strong>.</p>';
     openModal(html);
   }
