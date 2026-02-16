@@ -31,11 +31,22 @@ class VideoHub360_License {
     private $option_key = 'videohub360_license_data';
 
     /**
-     * Plugin file reference for update checks.
+     * Products array for update checks.
+     *
+     * @var array
+     */
+    private $products = array(
+        'videohub360-core'      => 'videohub360/videohub360.php',
+        'videohub360-community' => 'videohub360-community/videohub360-community.php',
+        'vh360-pwa-app'         => 'vh360-pwa-app/vh360-pwa-app.php',
+    );
+
+    /**
+     * Theme slug for update checks.
      *
      * @var string
      */
-    private $plugin_file = 'videohub360/videohub360.php';
+    private $theme_slug = 'videohub360-theme';
 
     /**
      * Constructor.
@@ -45,9 +56,16 @@ class VideoHub360_License {
             $this->init_admin_hooks();
         }
 
-        // Hook into WordPress' update system.
+        // Plugin updates
         add_filter( 'pre_set_site_transient_update_plugins', array( $this, 'filter_plugin_updates' ) );
         add_filter( 'plugins_api', array( $this, 'filter_plugin_info' ), 10, 3 );
+        
+        // Theme updates
+        add_filter( 'pre_set_site_transient_update_themes', array( $this, 'filter_theme_updates' ) );
+        add_filter( 'themes_api', array( $this, 'filter_theme_info' ), 10, 3 );
+        
+        // Clear cache when admin manually checks for updates
+        add_action( 'load-update-core.php', array( $this, 'clear_update_cache' ) );
     }
 
     /**
@@ -469,12 +487,145 @@ private function remote_validate_license( $license_key ) {
 
         $data = get_option( $this->option_key, array() );
         if ( empty( $data['license_key'] ) || 'valid' !== ( $data['status'] ?? '' ) ) {
-            // No valid license, don't advertise updates.
             return $transient;
         }
 
         $license_key = $data['license_key'];
-        $current_version = isset( $transient->checked[ $this->plugin_file ] ) ? $transient->checked[ $this->plugin_file ] : VIDEOHUB360_VERSION;
+        $server_url = $this->get_license_server_url();
+        $endpoint   = $server_url . '/wp-json/vh360/v1/update-check';
+
+        // Loop through all products
+        foreach ( $this->products as $product_slug => $plugin_file ) {
+            // Check cache first (12-hour cache)
+            $cache_key = 'vh360_update_check_' . $product_slug;
+            $cached = get_transient( $cache_key );
+            
+            if ( false !== $cached ) {
+                // Handle new response format with success field
+                if ( isset( $cached['success'] ) && $cached['success'] 
+                     && ! empty( $cached['new_version'] ) 
+                     && ! empty( $cached['download_url'] ) ) {
+                    $update = new stdClass();
+                    $update->slug        = $product_slug;
+                    $update->plugin      = $plugin_file;
+                    $update->new_version = $cached['new_version'];
+                    $update->package     = $cached['download_url'];
+                    $update->url         = 'https://videohub360.com';
+                    $transient->response[$plugin_file] = $update;
+                }
+                continue;
+            }
+            
+            // Get current version
+            $current_version = isset( $transient->checked[$plugin_file] ) 
+                ? $transient->checked[$plugin_file] 
+                : '0.0.0';
+
+            // Make API call with product_slug
+            $response = wp_remote_post( $endpoint, array(
+                'timeout' => 15,
+                'headers' => array( 'Accept' => 'application/json' ),
+                'body'    => array(
+                    'license_key'     => $license_key,
+                    'current_version' => $current_version,
+                    'product_slug'    => $product_slug,
+                    'site_url'        => home_url(),
+                ),
+            ) );
+
+            if ( is_wp_error( $response ) ) {
+                continue;
+            }
+
+            $code = wp_remote_retrieve_response_code( $response );
+            $body = wp_remote_retrieve_body( $response );
+
+            // Handle 403 (invalid license)
+            if ( $code === 403 ) {
+                set_transient( $cache_key, array( 'success' => false ), 1 * HOUR_IN_SECONDS );
+                continue;
+            }
+
+            if ( $code !== 200 || empty( $body ) ) {
+                continue;
+            }
+
+            $response_data = json_decode( $body, true );
+            
+            // Cache for 12 hours
+            set_transient( $cache_key, $response_data, 12 * HOUR_IN_SECONDS );
+
+            // Check new response format
+            if ( ! is_array( $response_data ) 
+                 || ! isset( $response_data['success'] ) 
+                 || ! $response_data['success'] 
+                 || empty( $response_data['new_version'] ) ) {
+                continue;
+            }
+
+            $new_version  = $response_data['new_version'];
+            $download_url = isset( $response_data['download_url'] ) ? $response_data['download_url'] : '';
+
+            if ( ! $download_url ) {
+                continue;
+            }
+
+            // Add update to transient
+            $update              = new stdClass();
+            $update->slug        = $product_slug;
+            $update->plugin      = $plugin_file;
+            $update->new_version = $new_version;
+            $update->package     = $download_url;
+            $update->url         = 'https://videohub360.com';
+
+            $transient->response[$plugin_file] = $update;
+        }
+
+        return $transient;
+    }
+
+    /**
+     * Hook into theme update checks for the VideoHub360 theme.
+     *
+     * @param object $transient
+     * @return object
+     */
+    public function filter_theme_updates( $transient ) {
+        if ( empty( $transient ) || ! isset( $transient->checked ) ) {
+            return $transient;
+        }
+
+        $data = get_option( $this->option_key, array() );
+        if ( empty( $data['license_key'] ) || 'valid' !== ( $data['status'] ?? '' ) ) {
+            return $transient;
+        }
+
+        $license_key = $data['license_key'];
+        $theme_slug = $this->theme_slug;
+        
+        // Check cache
+        $cache_key = 'vh360_update_check_' . $theme_slug;
+        $cached = get_transient( $cache_key );
+        
+        if ( false !== $cached ) {
+            // Handle new response format
+            if ( isset( $cached['success'] ) && $cached['success'] 
+                 && ! empty( $cached['new_version'] ) 
+                 && ! empty( $cached['download_url'] ) ) {
+                $transient->response[$theme_slug] = array(
+                    'theme'       => $theme_slug,
+                    'new_version' => $cached['new_version'],
+                    'url'         => 'https://videohub360.com',
+                    'package'     => $cached['download_url'],
+                );
+            }
+            return $transient;
+        }
+
+        // Get current theme version
+        $current_version = isset( $transient->checked[$theme_slug] ) 
+            ? $transient->checked[$theme_slug] 
+            : '0.0.0';
 
         $server_url = $this->get_license_server_url();
         $endpoint   = $server_url . '/wp-json/vh360/v1/update-check';
@@ -485,6 +636,8 @@ private function remote_validate_license( $license_key ) {
             'body'    => array(
                 'license_key'     => $license_key,
                 'current_version' => $current_version,
+                'product_slug'    => $theme_slug,
+                'site_url'        => home_url(),
             ),
         ) );
 
@@ -495,31 +648,41 @@ private function remote_validate_license( $license_key ) {
         $code = wp_remote_retrieve_response_code( $response );
         $body = wp_remote_retrieve_body( $response );
 
-        if ( 200 !== $code || empty( $body ) ) {
+        // Handle 403 (invalid license)
+        if ( $code === 403 ) {
+            set_transient( $cache_key, array( 'success' => false ), 1 * HOUR_IN_SECONDS );
             return $transient;
         }
 
-        $data = json_decode( $body, true );
-        if ( ! is_array( $data ) || empty( $data['new_version'] ) ) {
-            // No update available or malformed response.
+        if ( $code !== 200 || empty( $body ) ) {
             return $transient;
         }
 
-        $new_version  = $data['new_version'];
-        $download_url = isset( $data['download_url'] ) ? $data['download_url'] : '';
+        $response_data = json_decode( $body, true );
+        
+        set_transient( $cache_key, $response_data, 12 * HOUR_IN_SECONDS );
+
+        // Check new response format
+        if ( ! is_array( $response_data ) 
+             || ! isset( $response_data['success'] ) 
+             || ! $response_data['success'] 
+             || empty( $response_data['new_version'] ) ) {
+            return $transient;
+        }
+
+        $new_version  = $response_data['new_version'];
+        $download_url = isset( $response_data['download_url'] ) ? $response_data['download_url'] : '';
 
         if ( ! $download_url ) {
             return $transient;
         }
 
-        $update              = new stdClass();
-        $update->slug        = 'videohub360';
-        $update->plugin      = $this->plugin_file;
-        $update->new_version = $new_version;
-        $update->package     = $download_url;
-        $update->url         = 'https://videohub360.com';
-
-        $transient->response[ $this->plugin_file ] = $update;
+        $transient->response[$theme_slug] = array(
+            'theme'       => $theme_slug,
+            'new_version' => $new_version,
+            'url'         => 'https://videohub360.com',
+            'package'     => $download_url,
+        );
 
         return $transient;
     }
@@ -533,12 +696,163 @@ private function remote_validate_license( $license_key ) {
      * @return false|object|array
      */
     public function filter_plugin_info( $result, $action, $args ) {
-        if ( 'plugin_information' !== $action || empty( $args->slug ) || 'videohub360' !== $args->slug ) {
+        if ( 'plugin_information' !== $action || empty( $args->slug ) ) {
             return $result;
         }
 
-        // At minimum, return the existing result.
-        // You can expand this later to pull changelog and details from your server.
-        return $result;
+        $valid_slugs = array_keys( $this->products );
+        if ( ! in_array( $args->slug, $valid_slugs, true ) ) {
+            return $result;
+        }
+
+        // Check cache first
+        $cache_key = 'vh360_plugin_info_' . $args->slug;
+        $info = get_transient( $cache_key );
+        
+        if ( false !== $info ) {
+            return $info;
+        }
+
+        // Call dedicated product-info endpoint
+        $server_url = $this->get_license_server_url();
+        $endpoint   = $server_url . '/wp-json/vh360/v1/product-info';
+        
+        $response = wp_remote_post( $endpoint, array(
+            'timeout' => 10,
+            'headers' => array( 'Accept' => 'application/json' ),
+            'body'    => array(
+                'product_slug' => $args->slug,
+            ),
+        ) );
+        
+        if ( is_wp_error( $response ) ) {
+            return $result;
+        }
+        
+        $code = wp_remote_retrieve_response_code( $response );
+        $body = wp_remote_retrieve_body( $response );
+        
+        if ( $code !== 200 || empty( $body ) ) {
+            return $result;
+        }
+        
+        $data = json_decode( $body, true );
+        
+        // Check success field for consistency
+        if ( ! is_array( $data ) || ! isset( $data['success'] ) || ! $data['success'] ) {
+            return $result;
+        }
+        
+        // Convert to object format WordPress expects
+        $info = (object) array(
+            'name'          => isset( $data['name'] ) ? $data['name'] : '',
+            'slug'          => isset( $data['slug'] ) ? $data['slug'] : $args->slug,
+            'version'       => isset( $data['version'] ) ? $data['version'] : '',
+            'author'        => isset( $data['author'] ) ? $data['author'] : '',
+            'author_profile'=> isset( $data['author_url'] ) ? $data['author_url'] : '',
+            'homepage'      => isset( $data['homepage'] ) ? $data['homepage'] : '',
+            'requires'      => isset( $data['requires'] ) ? $data['requires'] : '',
+            'requires_php'  => isset( $data['requires_php'] ) ? $data['requires_php'] : '',
+            'tested'        => isset( $data['tested'] ) ? $data['tested'] : '',
+            'sections'      => isset( $data['sections'] ) ? $data['sections'] : array(),
+        );
+        
+        // Cache for 24 hours
+        set_transient( $cache_key, $info, 24 * HOUR_IN_SECONDS );
+        
+        return $info;
+    }
+
+    /**
+     * Filter theme information shown on the details modal.
+     *
+     * @param false|object|array $result
+     * @param string             $action
+     * @param object             $args
+     * @return false|object|array
+     */
+    public function filter_theme_info( $result, $action, $args ) {
+        if ( 'theme_information' !== $action || empty( $args->slug ) ) {
+            return $result;
+        }
+
+        if ( $this->theme_slug !== $args->slug ) {
+            return $result;
+        }
+
+        // Check cache
+        $cache_key = 'vh360_theme_info_' . $args->slug;
+        $info = get_transient( $cache_key );
+        
+        if ( false !== $info ) {
+            return $info;
+        }
+
+        // Call product-info endpoint
+        $server_url = $this->get_license_server_url();
+        $endpoint   = $server_url . '/wp-json/vh360/v1/product-info';
+        
+        $response = wp_remote_post( $endpoint, array(
+            'timeout' => 10,
+            'headers' => array( 'Accept' => 'application/json' ),
+            'body'    => array(
+                'product_slug' => $this->theme_slug,
+            ),
+        ) );
+        
+        if ( is_wp_error( $response ) ) {
+            return $result;
+        }
+        
+        $code = wp_remote_retrieve_response_code( $response );
+        $body = wp_remote_retrieve_body( $response );
+        
+        if ( $code !== 200 || empty( $body ) ) {
+            return $result;
+        }
+        
+        $data = json_decode( $body, true );
+        
+        // Check success field
+        if ( ! is_array( $data ) || ! isset( $data['success'] ) || ! $data['success'] ) {
+            return $result;
+        }
+        
+        // Convert to object
+        $info = (object) array(
+            'name'         => isset( $data['name'] ) ? $data['name'] : '',
+            'slug'         => isset( $data['slug'] ) ? $data['slug'] : $args->slug,
+            'version'      => isset( $data['version'] ) ? $data['version'] : '',
+            'author'       => isset( $data['author'] ) ? $data['author'] : '',
+            'homepage'     => isset( $data['homepage'] ) ? $data['homepage'] : '',
+            'requires'     => isset( $data['requires'] ) ? $data['requires'] : '',
+            'requires_php' => isset( $data['requires_php'] ) ? $data['requires_php'] : '',
+            'tested'       => isset( $data['tested'] ) ? $data['tested'] : '',
+            'sections'     => isset( $data['sections'] ) ? $data['sections'] : array(),
+        );
+        
+        // Cache for 24 hours
+        set_transient( $cache_key, $info, 24 * HOUR_IN_SECONDS );
+        
+        return $info;
+    }
+
+    /**
+     * Clear all update caches when user clicks "Check Again".
+     */
+    public function clear_update_cache() {
+        // Clear plugin update caches
+        foreach ( $this->products as $product_slug => $plugin_file ) {
+            delete_transient( 'vh360_update_check_' . $product_slug );
+            delete_transient( 'vh360_plugin_info_' . $product_slug );
+        }
+        
+        // Clear theme update cache
+        delete_transient( 'vh360_update_check_' . $this->theme_slug );
+        delete_transient( 'vh360_theme_info_' . $this->theme_slug );
+        
+        // Clear WordPress core update transients
+        delete_site_transient( 'update_plugins' );
+        delete_site_transient( 'update_themes' );
     }
 }

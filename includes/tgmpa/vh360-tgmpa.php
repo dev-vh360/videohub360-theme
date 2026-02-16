@@ -32,7 +32,7 @@ function vh360_register_required_plugins() {
         ),
         array(
             'name'     => 'VideoHub360 Core',
-            'slug'     => 'videohub360-core',
+            'slug'     => 'videohub360',
             'source'   => get_template_directory() . '/bundled-plugins/videohub360-core.zip',
             'required' => true,
             'version'  => '', // Optional.
