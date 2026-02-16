@@ -88,7 +88,8 @@ class VH360_YouTube_Comment_Walker extends Walker_Comment {
         $GLOBALS['comment_depth'] = $depth;
         $GLOBALS['comment'] = $comment;
         
-        // Bulk load like data once at depth 1
+        // Bulk load like data once (loads for ALL comments including nested replies)
+        // We check depth === 1 to ensure it only runs once on the first top-level comment
         if (!self::$likes_loaded && $depth === 1) {
             $this->bulk_load_like_data($args);
             self::$likes_loaded = true;
@@ -355,7 +356,7 @@ class VH360_YouTube_Comment_Walker extends Walker_Comment {
         $count = 0;
         if (isset($wp_query->comments) && is_array($wp_query->comments)) {
             foreach ($wp_query->comments as $comment) {
-                if ($comment->comment_parent == $comment_id) {
+                if ($comment->comment_parent === $comment_id) {
                     $count++;
                 }
             }

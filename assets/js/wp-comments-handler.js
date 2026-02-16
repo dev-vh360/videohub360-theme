@@ -138,7 +138,6 @@
             // Store current state
             var wasLiked = $button.hasClass('vh360-liked');
             var $likeCount = $('.vh360-like-count[data-comment-id="' + commentId + '"]');
-            var currentCount = parseInt($likeCount.text().match(/\d+/) || 0);
             
             // Optimistic UI update
             $button.toggleClass('vh360-liked');
@@ -267,7 +266,12 @@
         handleDelete: function($button) {
             var commentId = $button.data('comment-id');
             
-            if (!confirm('Are you sure you want to delete this comment? This action cannot be undone.')) {
+            // Use localized confirmation message
+            var confirmMessage = (typeof vh360CommentsData !== 'undefined' && vh360CommentsData.i18n && vh360CommentsData.i18n.deleteConfirm)
+                ? vh360CommentsData.i18n.deleteConfirm
+                : 'Are you sure you want to delete this comment? This action cannot be undone.';
+            
+            if (!confirm(confirmMessage)) {
                 return;
             }
             
