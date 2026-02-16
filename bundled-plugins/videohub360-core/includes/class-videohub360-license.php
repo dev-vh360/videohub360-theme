@@ -693,7 +693,7 @@ private function remote_validate_license( $license_key ) {
             return $result;
         }
 
-        $valid_slugs = array( 'videohub360-core', 'videohub360-community', 'vh360-pwa-app' );
+        $valid_slugs = array_keys( $this->products );
         if ( ! in_array( $args->slug, $valid_slugs, true ) ) {
             return $result;
         }
@@ -774,7 +774,7 @@ private function remote_validate_license( $license_key ) {
         }
 
         // Check cache
-        $cache_key = 'vh360_theme_info_videohub360-theme';
+        $cache_key = 'vh360_theme_info_' . $args->slug;
         $info = get_transient( $cache_key );
         
         if ( false !== $info ) {
@@ -834,16 +834,14 @@ private function remote_validate_license( $license_key ) {
      * Clear all update caches when user clicks "Check Again".
      */
     public function clear_update_cache() {
-        // Clear our custom API response caches
-        delete_transient( 'vh360_update_check_videohub360-core' );
-        delete_transient( 'vh360_update_check_videohub360-community' );
-        delete_transient( 'vh360_update_check_vh360-pwa-app' );
-        delete_transient( 'vh360_update_check_videohub360-theme' );
+        // Clear plugin update caches
+        foreach ( $this->products as $product_slug => $plugin_file ) {
+            delete_transient( 'vh360_update_check_' . $product_slug );
+            delete_transient( 'vh360_plugin_info_' . $product_slug );
+        }
         
-        // Clear product info caches
-        delete_transient( 'vh360_plugin_info_videohub360-core' );
-        delete_transient( 'vh360_plugin_info_videohub360-community' );
-        delete_transient( 'vh360_plugin_info_vh360-pwa-app' );
+        // Clear theme update cache
+        delete_transient( 'vh360_update_check_videohub360-theme' );
         delete_transient( 'vh360_theme_info_videohub360-theme' );
         
         // Clear WordPress core update transients
