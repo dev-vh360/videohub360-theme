@@ -47,6 +47,8 @@ The VideoHub360 Theme includes a custom YouTube-style comment system for native 
 - **Time ago** display (e.g., "5 minutes ago")
 - **Empty states** for posts without comments
 - **Loading indicators** during form submission
+- **Login prompt** for logged-out users ("Log in to comment faster")
+- **Login-only by default** - Theme automatically enables login requirement on activation
 
 ### Technical Features
 - **Bulk data loading** - Fetches all like data in a single query
@@ -298,6 +300,78 @@ The comment system integrates with:
 2. **videohub360-core** plugin
    - Uses debug logging helpers (`vh360Log`, `vh360Warn`)
    - Follows same security patterns
+
+## Login-Only Comments by Default
+
+VideoHub360 is a community-focused platform, so the theme automatically configures WordPress to require login for commenting.
+
+### Automatic Configuration
+
+When the theme is activated, it automatically sets:
+
+```php
+// functions.php - after_switch_theme hook
+update_option('comment_registration', 1); // Require login to comment
+update_option('require_name_email', 1);   // Require name/email if enabled later
+```
+
+This means:
+- **WP Admin → Settings → Discussion → "Users must be registered and logged in to comment"** becomes checked
+- Admins can still uncheck it later (this is not forced permanently)
+- If guest commenting is re-enabled, name/email will still be required
+
+### Login Prompt for Logged-Out Users
+
+Even when guest commenting is allowed, logged-out users see a prominent login link:
+
+**"Log in to comment faster"**
+
+This appears above the comment form via the `comment_notes_before` parameter and encourages users to join the community.
+
+#### Implementation Details
+
+```php
+// includes/comments/comment-form-youtube-style.php
+$login_url = wp_login_url(get_permalink($post_id));
+
+$vh360_login_prompt = '';
+if (!is_user_logged_in()) {
+    $vh360_login_prompt = sprintf(
+        '<p class="vh360-comments-login-prompt"><a href="%s" class="vh360-comments-login-link">%s</a></p>',
+        esc_url($login_url),
+        esc_html__('Log in to comment faster', 'videohub360-theme')
+    );
+}
+
+// Inject into form
+$args['comment_notes_before'] = $vh360_login_prompt;
+```
+
+#### CSS Styling
+
+```css
+.vh360-comments-login-prompt {
+    margin: 10px 0 14px;
+    font-size: 14px;
+    text-align: center;
+}
+
+.vh360-comments-login-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+}
+```
+
+### Why Login-Only?
+
+VideoHub360 is designed for:
+- **Community building** - Registered members create stronger connections
+- **Moderation** - Easier to manage spam and abuse with accounts
+- **Engagement tracking** - Better analytics and user behavior understanding
+- **Feature access** - Comment likes require authentication
+
+Admins who prefer guest commenting can still enable it in WordPress settings, but the login prompt will always encourage registration.
 
 ## Customization
 
