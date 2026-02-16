@@ -172,6 +172,23 @@
     text-decoration: underline;
 }
 
+/* Login prompt for logged-out users */
+.vh360-comments-login-prompt {
+    margin: 10px 0 14px;
+    font-size: 14px;
+    text-align: center;
+}
+
+.vh360-comments-login-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.vh360-comments-login-link:hover {
+    text-decoration: underline;
+}
+
 /* Hide default submit button (we use custom one in textarea wrapper) */
 .vh360-comment-submit-hidden {
     display: none !important;

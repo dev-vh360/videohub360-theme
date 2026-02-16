@@ -31,6 +31,19 @@ function vh360_youtube_style_comment_form($args = array(), $post_id = null) {
     $html_req = ($req ? " required='required'" : '');
     $html5 = 'html5';
     
+    // Login URL for the current page
+    $login_url = wp_login_url(get_permalink($post_id));
+    
+    // Login prompt for logged-out visitors
+    $vh360_login_prompt = '';
+    if (!is_user_logged_in()) {
+        $vh360_login_prompt = sprintf(
+            '<p class="vh360-comments-login-prompt"><a href="%s" class="vh360-comments-login-link">%s</a></p>',
+            esc_url($login_url),
+            esc_html__('Log in to comment faster', 'videohub360-theme')
+        );
+    }
+    
     // Custom fields matching activity feed style
     $fields = array(
         'author' => '<div class="vh360-comment-form-field">
@@ -83,7 +96,7 @@ function vh360_youtube_style_comment_form($args = array(), $post_id = null) {
                 wp_login_url(apply_filters('the_permalink', get_permalink($post_id)))
             ) . '</p>',
         'logged_in_as' => '',
-        'comment_notes_before' => '',
+        'comment_notes_before' => $vh360_login_prompt,
         'comment_notes_after' => '',
         'id_form' => 'commentform',
         'id_submit' => 'submit',

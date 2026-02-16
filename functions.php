@@ -139,6 +139,20 @@ function videohub360_theme_setup() {
 add_action('after_setup_theme', 'videohub360_theme_setup');
 
 /**
+ * Set default comment options on theme activation
+ *
+ * Automatically enables login-only commenting for a community-focused platform.
+ * Admins can still change these settings later in WP Admin → Settings → Discussion.
+ */
+add_action('after_switch_theme', function () {
+    // Default platform behavior: require login to comment
+    update_option('comment_registration', 1);
+    
+    // Keep WP's guest-comment requirements consistent if it's ever enabled later
+    update_option('require_name_email', 1);
+});
+
+/**
  * Add body class for Community Menu
  *
  * @param array $classes Existing body classes.
