@@ -42,6 +42,13 @@ class VideoHub360_License {
     );
 
     /**
+     * Theme slug for update checks.
+     *
+     * @var string
+     */
+    private $theme_slug = 'videohub360-theme';
+
+    /**
      * Constructor.
      */
     public function __construct() {
@@ -496,8 +503,8 @@ private function remote_validate_license( $license_key ) {
             if ( false !== $cached ) {
                 // Handle new response format with success field
                 if ( isset( $cached['success'] ) && $cached['success'] 
-                     && !empty( $cached['new_version'] ) 
-                     && !empty( $cached['download_url'] ) ) {
+                     && ! empty( $cached['new_version'] ) 
+                     && ! empty( $cached['download_url'] ) ) {
                     $update = new stdClass();
                     $update->slug        = $product_slug;
                     $update->plugin      = $plugin_file;
@@ -594,7 +601,7 @@ private function remote_validate_license( $license_key ) {
         }
 
         $license_key = $data['license_key'];
-        $theme_slug = 'videohub360-theme';
+        $theme_slug = $this->theme_slug;
         
         // Check cache
         $cache_key = 'vh360_update_check_' . $theme_slug;
@@ -603,8 +610,8 @@ private function remote_validate_license( $license_key ) {
         if ( false !== $cached ) {
             // Handle new response format
             if ( isset( $cached['success'] ) && $cached['success'] 
-                 && !empty( $cached['new_version'] ) 
-                 && !empty( $cached['download_url'] ) ) {
+                 && ! empty( $cached['new_version'] ) 
+                 && ! empty( $cached['download_url'] ) ) {
                 $transient->response[$theme_slug] = array(
                     'theme'       => $theme_slug,
                     'new_version' => $cached['new_version'],
@@ -769,7 +776,7 @@ private function remote_validate_license( $license_key ) {
             return $result;
         }
 
-        if ( 'videohub360-theme' !== $args->slug ) {
+        if ( $this->theme_slug !== $args->slug ) {
             return $result;
         }
 
@@ -789,7 +796,7 @@ private function remote_validate_license( $license_key ) {
             'timeout' => 10,
             'headers' => array( 'Accept' => 'application/json' ),
             'body'    => array(
-                'product_slug' => 'videohub360-theme',
+                'product_slug' => $this->theme_slug,
             ),
         ) );
         
@@ -841,8 +848,8 @@ private function remote_validate_license( $license_key ) {
         }
         
         // Clear theme update cache
-        delete_transient( 'vh360_update_check_videohub360-theme' );
-        delete_transient( 'vh360_theme_info_videohub360-theme' );
+        delete_transient( 'vh360_update_check_' . $this->theme_slug );
+        delete_transient( 'vh360_theme_info_' . $this->theme_slug );
         
         // Clear WordPress core update transients
         delete_site_transient( 'update_plugins' );
