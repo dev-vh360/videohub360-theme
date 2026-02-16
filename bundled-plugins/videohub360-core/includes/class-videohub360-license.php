@@ -738,16 +738,16 @@ private function remote_validate_license( $license_key ) {
         
         // Convert to object format WordPress expects
         $info = (object) array(
-            'name'          => $data['name'],
-            'slug'          => $data['slug'],
-            'version'       => $data['version'],
-            'author'        => $data['author'],
-            'author_profile'=> $data['author_url'],
-            'homepage'      => $data['homepage'],
-            'requires'      => $data['requires'],
-            'requires_php'  => $data['requires_php'],
-            'tested'        => $data['tested'],
-            'sections'      => $data['sections'],
+            'name'          => isset( $data['name'] ) ? $data['name'] : '',
+            'slug'          => isset( $data['slug'] ) ? $data['slug'] : $args->slug,
+            'version'       => isset( $data['version'] ) ? $data['version'] : '',
+            'author'        => isset( $data['author'] ) ? $data['author'] : '',
+            'author_profile'=> isset( $data['author_url'] ) ? $data['author_url'] : '',
+            'homepage'      => isset( $data['homepage'] ) ? $data['homepage'] : '',
+            'requires'      => isset( $data['requires'] ) ? $data['requires'] : '',
+            'requires_php'  => isset( $data['requires_php'] ) ? $data['requires_php'] : '',
+            'tested'        => isset( $data['tested'] ) ? $data['tested'] : '',
+            'sections'      => isset( $data['sections'] ) ? $data['sections'] : array(),
         );
         
         // Cache for 24 hours
@@ -813,15 +813,15 @@ private function remote_validate_license( $license_key ) {
         
         // Convert to object
         $info = (object) array(
-            'name'         => $data['name'],
-            'slug'         => $data['slug'],
-            'version'      => $data['version'],
-            'author'       => $data['author'],
-            'homepage'     => $data['homepage'],
-            'requires'     => $data['requires'],
-            'requires_php' => $data['requires_php'],
-            'tested'       => $data['tested'],
-            'sections'     => $data['sections'],
+            'name'         => isset( $data['name'] ) ? $data['name'] : '',
+            'slug'         => isset( $data['slug'] ) ? $data['slug'] : $args->slug,
+            'version'      => isset( $data['version'] ) ? $data['version'] : '',
+            'author'       => isset( $data['author'] ) ? $data['author'] : '',
+            'homepage'     => isset( $data['homepage'] ) ? $data['homepage'] : '',
+            'requires'     => isset( $data['requires'] ) ? $data['requires'] : '',
+            'requires_php' => isset( $data['requires_php'] ) ? $data['requires_php'] : '',
+            'tested'       => isset( $data['tested'] ) ? $data['tested'] : '',
+            'sections'     => isset( $data['sections'] ) ? $data['sections'] : array(),
         );
         
         // Cache for 24 hours
