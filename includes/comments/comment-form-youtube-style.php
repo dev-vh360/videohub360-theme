@@ -40,7 +40,7 @@ function vh360_youtube_style_comment_form($args = array(), $post_id = null) {
         $vh360_login_prompt = sprintf(
             '<p class="vh360-comments-login-prompt"><a href="%s" class="vh360-comments-login-link">%s</a></p>',
             esc_url($login_url),
-            esc_html__('Log in to comment faster', 'videohub360-theme')
+            esc_html__('Log in to comment?', 'videohub360-theme')
         );
     }
     
