@@ -564,3 +564,55 @@ function vh360_enqueue_admin_assets($hook) {
     // Add any admin-specific styles or scripts here if needed in the future
 }
 add_action('admin_enqueue_scripts', 'vh360_enqueue_admin_assets');
+
+/**
+ * Enqueue WordPress comments YouTube-style assets
+ */
+function vh360_enqueue_wp_comments_assets() {
+    // Only load on singular pages that support comments
+    if (!is_singular() || !comments_open() && !get_comments_number()) {
+        return;
+    }
+    
+    // Enqueue YouTube-style comments CSS
+    wp_enqueue_style(
+        'vh360-wp-comments',
+        VH360_THEME_URI . '/assets/css/comments-youtube-style.css',
+        array('videohub360-theme-style'),
+        VH360_THEME_VERSION
+    );
+    
+    // Enqueue activity feed CSS for comment styling (reuse existing styles)
+    wp_enqueue_style(
+        'vh360-activity-feed',
+        VH360_THEME_URI . '/assets/css/activity-feed.css',
+        array('videohub360-theme-style'),
+        VH360_THEME_VERSION
+    );
+    
+    // Enqueue WordPress comments handler JavaScript
+    wp_enqueue_script(
+        'vh360-wp-comments-handler',
+        VH360_THEME_URI . '/assets/js/wp-comments-handler.js',
+        array('jquery', 'comment-reply'),
+        VH360_THEME_VERSION,
+        true
+    );
+    
+    // Localize script with necessary data
+    wp_localize_script(
+        'vh360-wp-comments-handler',
+        'vh360CommentsData',
+        array(
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'activityNonce' => wp_create_nonce('vh360_activity_nonce'),
+            'adminUrl' => admin_url(),
+            'isUserLoggedIn' => is_user_logged_in(),
+            'i18n' => array(
+                'likeError' => __('Unable to like comment. Please try again.', 'videohub360-theme'),
+                'deleteConfirm' => __('Are you sure you want to delete this comment? This action cannot be undone.', 'videohub360-theme'),
+            ),
+        )
+    );
+}
+add_action('wp_enqueue_scripts', 'vh360_enqueue_wp_comments_assets', 20);
