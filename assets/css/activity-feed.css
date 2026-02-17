@@ -3330,7 +3330,7 @@ body.vh360-modal-open {
 @media (min-width: 1024px) {
 
   /* Expand outer container */
-  body.community-menu-compact.page-template-template-activity-feed-php 
+  body.community-menu-compact.page-template-template-activity-feed-php
   .vh360-community-feed > .vh360-container {
     max-width: 100%;
     padding-left: 2rem;
@@ -3338,7 +3338,7 @@ body.vh360-modal-open {
   }
 
   /* Expand grid layout */
-  body.community-menu-compact.page-template-template-activity-feed-php 
+  body.community-menu-compact.page-template-template-activity-feed-php
   .vh360-activity-layout {
     max-width: 1800px;
     grid-template-columns: minmax(0, 1fr) 340px;
