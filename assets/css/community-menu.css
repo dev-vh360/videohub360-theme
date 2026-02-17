@@ -12,6 +12,10 @@
    Default Behavior (Menu Disabled)
    ============================================ */
 
+:root {
+    --community-menu-drawer-width: 280px;
+}
+
 .site-layout-wrapper {
     /* No layout changes by default */
 }
@@ -116,8 +120,22 @@ body.community-menu-compact .vh360-community-menu__toggle {
    ============================================ */
 
 @media (min-width: 1024px) {
+    /* Increase outer container z-index in compact expanded mode */
     body.community-menu-compact.community-menu-expanded .vh360-community-menu {
-        width: 280px;
+        z-index: 1000;
+    }
+
+    /* Make the inner container an overlay panel in compact mode */
+    body.community-menu-compact.community-menu-expanded .vh360-community-menu__inner {
+        position: fixed;
+        top: var(--vh360-community-menu-top, 0px);
+        left: 0;
+        width: var(--community-menu-drawer-width, 280px);
+        height: calc(100vh - var(--vh360-community-menu-top, 0px));
+        background-color: inherit;
+        border-right: inherit;
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+        overflow-y: auto;
     }
 
     body.community-menu-compact.community-menu-expanded .vh360-community-menu__toggle-label {
@@ -404,6 +422,28 @@ body.community-menu-compact .vh360-cm-icon {
 .vh360-community-menu {
     scrollbar-width: thin;
     scrollbar-color: var(--border-1) var(--surface-3);
+}
+
+/* ============================================
+   Backdrop for Compact Mode Overlay
+   ============================================ */
+
+.vh360-community-menu-backdrop {
+    display: none;
+}
+
+@media (min-width: 1024px) {
+    body.community-menu-compact.community-menu-expanded .vh360-community-menu-backdrop {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 999; /* Below menu overlay (1000) but above content */
+        cursor: pointer;
+    }
 }
 
 /* ============================================

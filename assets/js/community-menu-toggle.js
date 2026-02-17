@@ -2,7 +2,8 @@
  * Community Menu Toggle
  * 
  * Handles expanding/collapsing the Community Menu when in compact mode.
- * Persists the user's preference across page loads using localStorage.
+ * In compact mode, the menu behaves as a drawer overlay (hamburger-style).
+ * Non-compact mode persists preference across page loads using localStorage.
  * 
  * @package Videohub360_Theme
  * @since 1.0.0
@@ -11,8 +12,20 @@
 (function($) {
     'use strict';
 
-    // Storage key for the expanded state
+    // Storage key for the expanded state (non-compact mode only)
     const STORAGE_KEY = 'vh360_community_menu_expanded';
+    
+    // Backdrop element
+    let $backdrop = null;
+
+    /**
+     * Check if we're in compact mode
+     * 
+     * @return {boolean} True if body has community-menu-compact class
+     */
+    function isCompactMode() {
+        return $('body').hasClass('community-menu-compact');
+    }
 
     /**
      * Safely get value from localStorage
@@ -44,6 +57,46 @@
     }
 
     /**
+     * Calculate and set the header offset CSS variable
+     */
+    function setHeaderOffset() {
+        const $header = $('.site-header--sticky');
+        if ($header.length) {
+            const headerHeight = $header.outerHeight() || 0;
+            document.documentElement.style.setProperty('--vh360-community-menu-top', headerHeight + 'px');
+        } else {
+            document.documentElement.style.setProperty('--vh360-community-menu-top', '0px');
+        }
+    }
+
+    /**
+     * Create backdrop element
+     */
+    function createBackdrop() {
+        if ($backdrop && $backdrop.length) {
+            return; // Already exists
+        }
+        
+        $backdrop = $('<div class="vh360-community-menu-backdrop"></div>');
+        $backdrop.on('click', function(e) {
+            e.preventDefault();
+            collapseMenu();
+        });
+        
+        $('body').append($backdrop);
+    }
+
+    /**
+     * Remove backdrop element
+     */
+    function removeBackdrop() {
+        if ($backdrop && $backdrop.length) {
+            $backdrop.remove();
+            $backdrop = null;
+        }
+    }
+
+    /**
      * Initialize the toggle functionality
      */
     function init() {
@@ -53,17 +106,38 @@
             return;
         }
 
-        // Check if menu should be expanded on page load
-        const isExpanded = getStorageItem(STORAGE_KEY) === '1';
+        // Set header offset on load
+        setHeaderOffset();
         
-        if (isExpanded) {
-            expandMenu();
+        // Update header offset on window resize
+        $(window).on('resize', setHeaderOffset);
+
+        // Check if menu should be expanded on page load
+        // Only restore state for non-compact mode
+        if (!isCompactMode()) {
+            const isExpanded = getStorageItem(STORAGE_KEY) === '1';
+            
+            if (isExpanded) {
+                expandMenu();
+            }
         }
+        // In compact mode, always start collapsed (drawer behavior)
 
         // Bind click handler
         $toggle.on('click', function(e) {
             e.preventDefault();
             toggleMenu();
+        });
+
+        // Bind Esc key handler to close drawer in compact mode
+        $(document).on('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const $body = $('body');
+                if (isCompactMode() && $body.hasClass('community-menu-expanded')) {
+                    e.preventDefault();
+                    collapseMenu();
+                }
+            }
         });
     }
 
@@ -92,8 +166,13 @@
         $toggle.attr('aria-expanded', 'true');
         $toggle.attr('aria-label', vh360CommunityMenuToggle.collapseLabel || 'Collapse community menu');
         
-        // Save preference
-        setStorageItem(STORAGE_KEY, '1');
+        // In compact mode, create backdrop
+        if (isCompactMode()) {
+            createBackdrop();
+        } else {
+            // Only persist state in non-compact mode
+            setStorageItem(STORAGE_KEY, '1');
+        }
     }
 
     /**
@@ -107,8 +186,13 @@
         $toggle.attr('aria-expanded', 'false');
         $toggle.attr('aria-label', vh360CommunityMenuToggle.expandLabel || 'Expand community menu');
         
-        // Save preference
-        setStorageItem(STORAGE_KEY, '0');
+        // In compact mode, remove backdrop
+        if (isCompactMode()) {
+            removeBackdrop();
+        } else {
+            // Only persist state in non-compact mode
+            setStorageItem(STORAGE_KEY, '0');
+        }
     }
 
     // Initialize on document ready
