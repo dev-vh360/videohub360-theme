@@ -166,9 +166,8 @@
         $toggle.attr('aria-expanded', 'true');
         $toggle.attr('aria-label', vh360CommunityMenuToggle.collapseLabel || 'Collapse community menu');
         
-        // In compact mode, create backdrop and set header offset
+        // In compact mode, create backdrop
         if (isCompactMode()) {
-            setHeaderOffset();
             createBackdrop();
         } else {
             // Only persist state in non-compact mode

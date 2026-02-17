@@ -120,20 +120,15 @@ body.community-menu-compact .vh360-community-menu__toggle {
    ============================================ */
 
 @media (min-width: 1024px) {
-    /* In compact mode, keep the outer container at 64px (no layout shift) */
-    body.community-menu-compact.community-menu-expanded .vh360-community-menu {
-        width: 64px; /* Keep fixed width, no expansion */
-    }
-
-    /* Make the inner container an overlay panel */
+    /* Make the inner container an overlay panel in compact mode */
     body.community-menu-compact.community-menu-expanded .vh360-community-menu__inner {
         position: fixed;
         top: var(--vh360-community-menu-top, 0px);
         left: 0;
         width: var(--community-menu-drawer-width, 280px);
         height: calc(100vh - var(--vh360-community-menu-top, 0px));
-        background-color: var(--community-menu-bg-color, #ffffff);
-        border-right: 1px solid var(--border-1);
+        background-color: inherit;
+        border-right: inherit;
         box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
         overflow-y: auto;
         z-index: 1000;
@@ -453,12 +448,6 @@ body.community-menu-compact .vh360-cm-icon {
 
 @media (prefers-color-scheme: dark) {
     body.has-community-menu .vh360-community-menu {
-        background-color: #1f2937;
-        border-right-color: #374151;
-    }
-
-    /* Dark mode for overlay inner container */
-    body.community-menu-compact.community-menu-expanded .vh360-community-menu__inner {
         background-color: #1f2937;
         border-right-color: #374151;
     }
