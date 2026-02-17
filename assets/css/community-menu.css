@@ -12,6 +12,10 @@
    Default Behavior (Menu Disabled)
    ============================================ */
 
+:root {
+    --community-menu-drawer-width: 280px;
+}
+
 .site-layout-wrapper {
     /* No layout changes by default */
 }
@@ -126,7 +130,7 @@ body.community-menu-compact .vh360-community-menu__toggle {
         position: fixed;
         top: var(--vh360-community-menu-top, 0px);
         left: 0;
-        width: 280px;
+        width: var(--community-menu-drawer-width, 280px);
         height: calc(100vh - var(--vh360-community-menu-top, 0px));
         background-color: var(--community-menu-bg-color, #ffffff);
         border-right: 1px solid var(--border-1);

@@ -131,7 +131,7 @@
 
         // Bind Esc key handler to close drawer in compact mode
         $(document).on('keydown', function(e) {
-            if (e.key === 'Escape' || e.keyCode === 27) {
+            if (e.key === 'Escape') {
                 const $body = $('body');
                 if (isCompactMode() && $body.hasClass('community-menu-expanded')) {
                     e.preventDefault();
