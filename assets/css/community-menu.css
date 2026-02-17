@@ -120,6 +120,11 @@ body.community-menu-compact .vh360-community-menu__toggle {
    ============================================ */
 
 @media (min-width: 1024px) {
+    /* Increase outer container z-index in compact expanded mode */
+    body.community-menu-compact.community-menu-expanded .vh360-community-menu {
+        z-index: 1000;
+    }
+
     /* Make the inner container an overlay panel in compact mode */
     body.community-menu-compact.community-menu-expanded .vh360-community-menu__inner {
         position: fixed;
@@ -131,7 +136,6 @@ body.community-menu-compact .vh360-community-menu__toggle {
         border-right: inherit;
         box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
         overflow-y: auto;
-        z-index: 1000;
     }
 
     body.community-menu-compact.community-menu-expanded .vh360-community-menu__toggle-label {
