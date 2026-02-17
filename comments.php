@@ -10,6 +10,10 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Load YouTube-style comment walker and form
+require_once get_template_directory() . '/includes/comments/class-vh360-youtube-comment-walker.php';
+require_once get_template_directory() . '/includes/comments/comment-form-youtube-style.php';
+
 /*
  * If the current post is protected by a password and
  * the visitor has not yet entered the password we will
@@ -20,58 +24,82 @@ if (post_password_required()) {
 }
 ?>
 
-<div id="comments" class="comments-area">
+<div id="comments" class="comments-area vh360-comments-section">
 
     <?php
     // You can start editing here -- including this comment!
     if (have_comments()) :
     ?>
-        <h2 class="comments-title">
+        <h2 class="comments-title vh360-comments-title">
             <?php
             $comment_count = get_comments_number();
             if ('1' === $comment_count) {
                 printf(
-                    /* translators: 1: title. */
-                    esc_html__('One comment on &ldquo;%1$s&rdquo;', 'videohub360-theme'),
-                    '<span>' . wp_kses_post(get_the_title()) . '</span>'
+                    /* translators: 1: comment count */
+                    esc_html__('%s Comment', 'videohub360-theme'),
+                    number_format_i18n($comment_count)
                 );
             } else {
                 printf(
-                    /* translators: 1: comment count number, 2: title. */
-                    esc_html(_nx('%1$s comment on &ldquo;%2$s&rdquo;', '%1$s comments on &ldquo;%2$s&rdquo;', $comment_count, 'comments title', 'videohub360-theme')),
-                    number_format_i18n($comment_count), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-                    '<span>' . wp_kses_post(get_the_title()) . '</span>'
+                    /* translators: 1: comment count */
+                    esc_html__('%s Comments', 'videohub360-theme'),
+                    number_format_i18n($comment_count)
                 );
             }
             ?>
         </h2><!-- .comments-title -->
 
-        <?php the_comments_navigation(); ?>
+        <?php
+        // Navigation above comments
+        if (get_comment_pages_count() > 1 && get_option('page_comments')) :
+        ?>
+            <nav class="vh360-comment-navigation" role="navigation" aria-label="<?php esc_attr_e('Comments navigation', 'videohub360-theme'); ?>">
+                <div class="nav-links">
+                    <div class="nav-previous"><?php previous_comments_link(esc_html__('Older Comments', 'videohub360-theme')); ?></div>
+                    <div class="nav-next"><?php next_comments_link(esc_html__('Newer Comments', 'videohub360-theme')); ?></div>
+                </div>
+            </nav>
+        <?php endif; ?>
 
-        <ol class="comment-list">
+        <div class="vh360-comments-thread">
             <?php
-            wp_list_comments(
-                array(
-                    'style'      => 'ol',
-                    'short_ping' => true,
-                )
-            );
+            wp_list_comments(vh360_get_youtube_comment_list_args());
             ?>
-        </ol><!-- .comment-list -->
+        </div><!-- .vh360-comments-thread -->
 
         <?php
-        the_comments_navigation();
+        // Navigation below comments
+        if (get_comment_pages_count() > 1 && get_option('page_comments')) :
+        ?>
+            <nav class="vh360-comment-navigation" role="navigation" aria-label="<?php esc_attr_e('Comments navigation', 'videohub360-theme'); ?>">
+                <div class="nav-links">
+                    <div class="nav-previous"><?php previous_comments_link(esc_html__('Older Comments', 'videohub360-theme')); ?></div>
+                    <div class="nav-next"><?php next_comments_link(esc_html__('Newer Comments', 'videohub360-theme')); ?></div>
+                </div>
+            </nav>
+        <?php endif; ?>
 
+        <?php
         // If comments are closed and there are comments, let's leave a little note, shall we?
         if (!comments_open()) :
         ?>
-            <p class="no-comments"><?php esc_html_e('Comments are closed.', 'videohub360-theme'); ?></p>
+            <p class="no-comments vh360-no-comments"><?php esc_html_e('Comments are closed.', 'videohub360-theme'); ?></p>
         <?php
         endif;
 
+    else :
+        // No comments yet
+        if (comments_open()) :
+        ?>
+            <p class="vh360-comments-empty"><?php esc_html_e('Be the first to comment.', 'videohub360-theme'); ?></p>
+        <?php
+        endif;
     endif; // Check for have_comments().
 
-    comment_form();
+    // Output YouTube-style comment form
+    if (comments_open()) {
+        vh360_youtube_style_comment_form();
+    }
     ?>
 
 </div><!-- #comments -->
