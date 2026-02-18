@@ -199,8 +199,9 @@ class VH360_Following_Videos_Widget extends \Elementor\Widget_Base {
             $query->the_post();
             
             // Use core plugin's card renderer
-            if (function_exists('VideoHub360') && isset(VideoHub360()->widgets)) {
-                echo VideoHub360()->widgets->render_video_card(get_the_ID(), $card_args);
+            $widgets = VideoHub360_Core::get_instance()->get_component('widgets');
+            if ($widgets) {
+                echo $widgets->render_video_card(get_the_ID(), $card_args);
             }
         }
         

@@ -217,7 +217,11 @@ class Elementor_VideoHub360_Continue_Watching_Widget extends \Elementor\Widget_B
                 'progress_percent' => $settings['show_progress_bar'] ? $progress_percent : 0,
             );
             
-            echo VideoHub360()->widgets->render_video_card($post_id, $card_args);
+            // Get widgets instance from core plugin
+            $widgets = VideoHub360_Core::get_instance()->get_component('widgets');
+            if ($widgets) {
+                echo $widgets->render_video_card($post_id, $card_args);
+            }
         }
         
         echo '</div>';

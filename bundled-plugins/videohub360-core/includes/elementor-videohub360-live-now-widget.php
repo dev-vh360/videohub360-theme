@@ -176,7 +176,12 @@ class Elementor_VideoHub360_Live_Now_Widget extends \Elementor\Widget_Base {
         
         while ($query->have_posts()) {
             $query->the_post();
-            echo VideoHub360()->widgets->render_video_card(get_the_ID(), $card_args);
+            
+            // Get widgets instance from core plugin
+            $widgets = VideoHub360_Core::get_instance()->get_component('widgets');
+            if ($widgets) {
+                echo $widgets->render_video_card(get_the_ID(), $card_args);
+            }
         }
         
         echo '</div>';
