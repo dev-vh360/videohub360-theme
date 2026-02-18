@@ -176,14 +176,7 @@ class Elementor_VideoHub360_Live_Now_Widget extends \Elementor\Widget_Base {
         
         while ($query->have_posts()) {
             $query->the_post();
-            
-            if ($settings['show_title']) {
-                echo VideoHub360()->widgets->render_video_card(get_the_ID(), $card_args);
-            } else {
-                // If title is hidden, we need to modify the card rendering
-                // For now, we'll still show it since hiding title doesn't make sense for video cards
-                echo VideoHub360()->widgets->render_video_card(get_the_ID(), $card_args);
-            }
+            echo VideoHub360()->widgets->render_video_card(get_the_ID(), $card_args);
         }
         
         echo '</div>';

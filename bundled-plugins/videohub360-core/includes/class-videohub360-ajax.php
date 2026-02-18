@@ -227,6 +227,9 @@ class VideoHub360_Ajax {
     /**
      * Handle batch live viewers AJAX
      * Returns viewer counts for multiple pages at once
+     * 
+     * Note: Reuses 'videohub360_chat_nonce' for consistency with single live_viewers endpoint
+     * and to avoid requiring separate nonce in JavaScript
      */
     public function handle_live_viewers_batch() {
         // Check capability - basic read permission required

@@ -533,20 +533,26 @@ if (typeof window !== 'undefined') {
     var lastSaveTime = 0;
     var saveThrottleMs = 10000; // Save at most once every 10 seconds
     
+    // Progress tracking thresholds (in seconds and percent)
+    var MIN_WATCH_TIME_SECONDS = 5;      // Don't save videos watched less than this
+    var MIN_COMPLETION_PERCENT = 5;       // Don't save if less than 5% complete
+    var MAX_COMPLETION_PERCENT = 95;      // Don't save if more than 95% complete (near end)
+    var END_BUFFER_SECONDS = 30;          // Don't save if within 30 seconds of end
+    
     function saveWatchProgress(currentTime, duration) {
         // Don't save if duration is not available or invalid
         if (!duration || duration <= 0 || !currentTime) {
             return;
         }
         
-        // Don't save at the very beginning (less than 5 seconds)
-        if (currentTime < 5) {
+        // Don't save at the very beginning
+        if (currentTime < MIN_WATCH_TIME_SECONDS) {
             return;
         }
         
         // Don't save near the end (last 30 seconds or 95% completion)
         var percentComplete = (currentTime / duration) * 100;
-        if (percentComplete >= 95 || (duration - currentTime) < 30) {
+        if (percentComplete >= MAX_COMPLETION_PERCENT || (duration - currentTime) < END_BUFFER_SECONDS) {
             return;
         }
         
