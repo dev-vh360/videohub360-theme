@@ -327,7 +327,7 @@
     }
     
     // Re-initialize on dynamic content (Elementor preview, AJAX)
-    if (window.elementorFrontend) {
+    if (window.elementorFrontend && window.elementorFrontend.hooks && typeof window.elementorFrontend.hooks.addAction === 'function') {
         window.elementorFrontend.hooks.addAction('frontend/element_ready/widget', initHeroBanners);
     }
     
