@@ -49,6 +49,10 @@ function vh360_handle_advanced_search() {
     
     // If a specific type is requested, validate it's available
     if ($type !== 'all' && !in_array($type, $available_types, true)) {
+        // Log for debugging purposes
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('VH360 Search: Invalid search type requested: ' . $type . '. Defaulting to "all".');
+        }
         // Treat invalid type as 'all' to prevent errors
         $type = 'all';
     }

@@ -168,6 +168,8 @@
             availableTypes.forEach(function(type) {
                 if (results[type] && results[type].length > 0) {
                     const group = $('<div class="vh360-search-bar-centered__result-group"></div>');
+                    // Use localized label or fallback to uppercased type
+                    // Note: Custom types added via filter should provide i18n labels
                     const title = $('<h3 class="vh360-search-bar-centered__result-group-title"></h3>')
                         .text(typeLabels[type] || type.toUpperCase());
                     group.append(title);

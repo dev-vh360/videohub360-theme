@@ -37,7 +37,7 @@ function vh360_get_available_search_types() {
     // Members - always available (WordPress users)
     $types['members'] = array(
         'key' => 'members',
-        'post_type' => 'user', // Special case - not a post type
+        'post_type' => 'user', // Special identifier for user-based search (not a WordPress post type)
         'label' => __('Members', 'videohub360-theme'),
     );
     
