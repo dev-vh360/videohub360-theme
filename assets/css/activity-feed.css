@@ -11,7 +11,7 @@
 .vh360-container {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 0 1.5rem;
+    
 }
 
 /* Activity Feed Header - Styles controlled by dynamic-css.php via CSS variables */
@@ -1577,7 +1577,7 @@ html {
 /* Activity layout: 2-column layout (main feed + right sidebar) */
 .vh360-activity-layout {
     display: grid;
-    grid-template-columns: 1fr 320px;
+    grid-template-columns: 1fr 250px;
     gap: 2.5rem;
     align-items: flex-start;
     max-width: 1400px;
@@ -1613,7 +1613,7 @@ html {
 /* Feed main content wrapper - constrain width for readability */
 .vh360-feed-main {
     width: 100%;
-    max-width: 680px;
+    max-width: 880px;
     margin: 0 auto;
 }
 
