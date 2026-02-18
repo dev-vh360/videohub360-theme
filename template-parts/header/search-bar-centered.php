@@ -11,6 +11,10 @@
 if (!defined('ABSPATH')) {
     exit;
 }
+
+// Get search settings
+$group_results = get_theme_mod('vh360_search_group_results', true);
+$available_types = vh360_get_available_search_types();
 ?>
 
 <div class="vh360-search-bar-centered">
@@ -53,30 +57,19 @@ if (!defined('ABSPATH')) {
         
         <!-- Search Results Dropdown -->
         <div class="vh360-search-bar-centered__dropdown" id="vh360-search-dropdown" aria-hidden="true">
-            <!-- Filter Tabs -->
+            <?php if ($group_results) : ?>
+            <!-- Filter Tabs - Only shown in Grouped mode and only for available types -->
             <div class="vh360-search-bar-centered__filters">
                 <button class="vh360-search-bar-centered__filter-tab active" data-filter="all">
                     <?php esc_html_e('All', 'videohub360-theme'); ?>
                 </button>
-                <button class="vh360-search-bar-centered__filter-tab" data-filter="videos">
-                    <?php esc_html_e('Videos', 'videohub360-theme'); ?>
+                <?php foreach ($available_types as $type_data) : ?>
+                <button class="vh360-search-bar-centered__filter-tab" data-filter="<?php echo esc_attr($type_data['key']); ?>">
+                    <?php echo esc_html($type_data['label']); ?>
                 </button>
-                <button class="vh360-search-bar-centered__filter-tab" data-filter="members">
-                    <?php esc_html_e('Members', 'videohub360-theme'); ?>
-                </button>
-                <button class="vh360-search-bar-centered__filter-tab" data-filter="events">
-                    <?php esc_html_e('Events', 'videohub360-theme'); ?>
-                </button>
-                <button class="vh360-search-bar-centered__filter-tab" data-filter="galleries">
-                    <?php esc_html_e('Galleries', 'videohub360-theme'); ?>
-                </button>
-                <button class="vh360-search-bar-centered__filter-tab" data-filter="bulletins">
-                    <?php esc_html_e('Bulletins', 'videohub360-theme'); ?>
-                </button>
-                <button class="vh360-search-bar-centered__filter-tab" data-filter="posts">
-                    <?php esc_html_e('Posts', 'videohub360-theme'); ?>
-                </button>
+                <?php endforeach; ?>
             </div>
+            <?php endif; ?>
             
             <!-- Results Container -->
             <div class="vh360-search-bar-centered__results" id="vh360-search-results">

@@ -158,6 +158,19 @@ function vh360_register_header_controls($wp_customize) {
         'description' => __('Display YouTube-style centered search bar with live results.', 'videohub360-theme'),
     ));
     
+    /* Group Search Results by Content Type */
+    $wp_customize->add_setting('vh360_search_group_results', array(
+        'default'           => true,
+        'sanitize_callback' => 'vh360_sanitize_checkbox',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control('vh360_search_group_results', array(
+        'label'       => __('Group Search Results by Content Type', 'videohub360-theme'),
+        'section'     => 'vh360_main_header_settings',
+        'type'        => 'checkbox',
+        'description' => __('When disabled, search results display as one unified list with no category headings or filter tabs. Only content types available on your site will be shown.', 'videohub360-theme'),
+    ));
+    
     /* Show Cart Icon */
     $wp_customize->add_setting('vh360_show_cart_icon', array(
         'default'           => false,

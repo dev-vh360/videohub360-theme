@@ -534,3 +534,39 @@
         font-size: 12px;
     }
 }
+
+/* ============================================
+   Unified Search Mode Styles
+   ============================================
+   When vh360_search_group_results is disabled,
+   hide filter tabs and adjust spacing
+   ============================================ */
+
+/* Hide filter tabs in unified mode */
+.vh360-search-unified .vh360-search-bar-centered__filters {
+    display: none;
+}
+
+/* Hide group titles in unified mode (defensive - JS won't render them) */
+.vh360-search-unified .vh360-search-bar-centered__result-group-title {
+    display: none;
+}
+
+/* Adjust dropdown padding when filters are hidden */
+.vh360-search-unified .vh360-search-bar-centered__dropdown {
+    /* Remove top padding normally reserved for filter tabs */
+    padding-top: 0;
+}
+
+/* Ensure result items maintain proper spacing without group separation */
+.vh360-search-unified .vh360-search-bar-centered__result-group {
+    margin-bottom: 0;
+}
+
+/* Ensure filter tabs can't be focused in unified mode (defensive) */
+.vh360-search-unified .vh360-search-bar-centered__filter-tab {
+    pointer-events: none;
+    visibility: hidden;
+    position: absolute;
+    left: -9999px;
+}

@@ -172,6 +172,24 @@ function vh360_community_menu_body_class($classes) {
 add_filter('body_class', 'vh360_community_menu_body_class');
 
 /**
+ * Add body class for unified search mode
+ *
+ * When search results are not grouped, add a class to the body element
+ * for CSS styling and to prevent hidden filter tabs from being focusable.
+ *
+ * @param array $classes Existing body classes
+ * @return array Modified body classes
+ */
+function vh360_search_mode_body_class($classes) {
+    $group_results = get_theme_mod('vh360_search_group_results', true);
+    if (!$group_results) {
+        $classes[] = 'vh360-search-unified';
+    }
+    return $classes;
+}
+add_filter('body_class', 'vh360_search_mode_body_class');
+
+/**
  * Required bundled plugins (install/activate).
  */
 require_once VH360_THEME_DIR . '/includes/tgmpa/class-tgm-plugin-activation.php';
@@ -555,6 +573,8 @@ function vh360_enqueue_header_assets() {
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('vh360_search_nonce'),
             'defaultAvatar' => get_avatar_url(0),
+            'groupResults' => (bool) get_theme_mod('vh360_search_group_results', true),
+            'availableTypes' => vh360_get_available_search_type_keys(),
             'i18n' => array(
                 'videos' => __('Videos', 'videohub360-theme'),
                 'members' => __('Members', 'videohub360-theme'),
@@ -979,6 +999,11 @@ require_once VH360_THEME_DIR . '/includes/media-helpers.php';
  * AJAX handlers
  */
 require_once VH360_THEME_DIR . '/includes/ajax-handlers.php';
+
+/**
+ * Search helper functions
+ */
+require_once VH360_THEME_DIR . '/includes/search/search-helpers.php';
 
 /**
  * Advanced search AJAX handlers
