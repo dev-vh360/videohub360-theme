@@ -189,7 +189,7 @@ class VH360_Following_Videos_Widget extends \Elementor\Widget_Base {
             'show_date' => $settings['show_date'] ? 'yes' : 'no',
             'show_excerpt' => 'no',
             'show_live_badge' => $settings['show_live_badge'] ? 'yes' : 'no',
-            'show_live_viewers' => 'no',
+            'show_live_viewers' => 'yes',
         );
         
         echo '<div class="videohub360-elementor-widget-wrapper vh360-following-videos-widget">';

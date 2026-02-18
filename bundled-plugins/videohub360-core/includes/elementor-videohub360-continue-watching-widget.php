@@ -213,7 +213,7 @@ class Elementor_VideoHub360_Continue_Watching_Widget extends \Elementor\Widget_B
                 'show_date' => $settings['show_date'] ? 'yes' : 'no',
                 'show_excerpt' => 'no',
                 'show_live_badge' => 'yes',
-                'show_live_viewers' => 'no',
+                'show_live_viewers' => 'yes',
                 'progress_percent' => $settings['show_progress_bar'] ? $progress_percent : 0,
             );
             

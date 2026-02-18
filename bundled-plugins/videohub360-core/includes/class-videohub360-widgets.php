@@ -476,7 +476,7 @@ class VideoHub360_Widgets {
             'show_date' => 'yes',
             'show_excerpt' => 'no',
             'show_live_badge' => 'yes',
-            'show_live_viewers' => 'no',
+            'show_live_viewers' => 'yes',
             'excerpt_length' => 120,
             'badge_text' => esc_html__('LIVE', 'videohub360'),
             'badge_color' => '#e53935',

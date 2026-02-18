@@ -298,6 +298,11 @@ $is_astra = function_exists('videohub360_is_astra_theme') && videohub360_is_astr
                             <?php echo esc_html($badge_text); ?>
                         </span>
                     <?php endif; ?>
+                    <?php if ($show_live_badge): ?>
+                        <span class="vh360-live-viewers-badge" data-post-id="<?php echo esc_attr(get_the_ID()); ?>">
+                            <span class="vh360-viewer-count">•</span> <?php echo esc_html__('watching', 'videohub360'); ?>
+                        </span>
+                    <?php endif; ?>
                     <span class="videohub360-videos-play-btn" aria-label="Play video">
                         <svg viewBox="0 0 60 60">
                             <circle cx="30" cy="30" r="28" opacity="0.18"/>
