@@ -123,13 +123,21 @@ if (typeof window !== 'undefined') {
         var badgeMap = {};
         
         // Collect all page IDs and map them to their badge elements
+        // Note: Multiple badges can have the same post ID if video appears multiple times
         badges.forEach(function(badge) {
             var postId = badge.getAttribute('data-post-id');
             if (postId) {
                 postId = parseInt(postId, 10);
                 if (!isNaN(postId) && postId > 0) {
-                    pageIds.push(postId);
-                    badgeMap[postId] = badge;
+                    // Add to pageIds array if not already present
+                    if (pageIds.indexOf(postId) === -1) {
+                        pageIds.push(postId);
+                    }
+                    // Store badges in an array for each post ID to handle duplicates
+                    if (!badgeMap[postId]) {
+                        badgeMap[postId] = [];
+                    }
+                    badgeMap[postId].push(badge);
                 }
             }
         });
@@ -150,10 +158,13 @@ if (typeof window !== 'undefined') {
                         for (var postId in counts) {
                             if (counts.hasOwnProperty(postId) && badgeMap[postId]) {
                                 var count = counts[postId];
-                                var countEl = badgeMap[postId].querySelector('.vh360-viewer-count');
-                                if (countEl) {
-                                    countEl.textContent = count;
-                                }
+                                // Update all badges for this post ID
+                                badgeMap[postId].forEach(function(badge) {
+                                    var countEl = badge.querySelector('.vh360-viewer-count');
+                                    if (countEl) {
+                                        countEl.textContent = count;
+                                    }
+                                });
                             }
                         }
                     }
