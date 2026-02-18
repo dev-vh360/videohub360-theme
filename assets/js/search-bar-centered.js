@@ -1,6 +1,9 @@
 /**
  * Centered Search Bar JavaScript
  * Handles live search functionality with debouncing and filtering
+ * Supports two modes:
+ * 1. Grouped Mode: Results organized by content type with filter tabs and headings
+ * 2. Unified Mode: Single flat list of all results without categories or filters
  *
  * @package Videohub360_Theme
  * @since 1.0.0
@@ -27,6 +30,15 @@
         let currentFilter = 'all';
         let lastResults = null;
         let isMobileSearchActive = false;
+        
+        // Get mode from localized settings
+        const isGroupedMode = vh360SearchBar.groupResults;
+        const availableTypes = vh360SearchBar.availableTypes || [];
+        
+        // In unified mode, force filter to 'all' and disable filter functionality
+        if (!isGroupedMode) {
+            currentFilter = 'all';
+        }
         
         // Mobile toggle handlers
         mobileToggle.on('click', function() {
@@ -103,6 +115,9 @@
         }
         
         // Display search results
+        // Supports two modes:
+        // - Grouped: Results organized by type with headings (current behavior)
+        // - Unified: Single flat list without type headings (new mode)
         function displayResults(results, query) {
             searchResults.empty();
             
@@ -127,7 +142,19 @@
             emptyState.hide();
             searchResults.show();
             
-            // Display results by type
+            if (isGroupedMode) {
+                // GROUPED MODE: Display results organized by type with headings
+                displayGroupedResults(results, query);
+            } else {
+                // UNIFIED MODE: Display results as a single flat list
+                displayUnifiedResults(results, query);
+            }
+            
+            showDropdown();
+        }
+        
+        // Display results in grouped mode (with category headings)
+        function displayGroupedResults(results, query) {
             const typeLabels = {
                 videos: vh360SearchBar.i18n.videos,
                 members: vh360SearchBar.i18n.members,
@@ -137,10 +164,14 @@
                 posts: vh360SearchBar.i18n.posts
             };
             
-            for (const type in results) {
-                if (results[type].length > 0) {
+            // Render groups in the order of availableTypes (not by object key iteration)
+            availableTypes.forEach(function(type) {
+                if (results[type] && results[type].length > 0) {
                     const group = $('<div class="vh360-search-bar-centered__result-group"></div>');
-                    const title = $('<h3 class="vh360-search-bar-centered__result-group-title"></h3>').text(typeLabels[type] || type);
+                    // Use localized label or fallback to uppercased type
+                    // Note: Custom types added via filter should provide i18n labels
+                    const title = $('<h3 class="vh360-search-bar-centered__result-group-title"></h3>')
+                        .text(typeLabels[type] || type.toUpperCase());
                     group.append(title);
                     
                     results[type].forEach(function(item) {
@@ -150,9 +181,27 @@
                     
                     searchResults.append(group);
                 }
-            }
+            });
+        }
+        
+        // Display results in unified mode (single flat list, no headings)
+        function displayUnifiedResults(results, query) {
+            // Flatten results into a single array, maintaining the order of availableTypes
+            const flatResults = [];
             
-            showDropdown();
+            availableTypes.forEach(function(type) {
+                if (results[type] && results[type].length > 0) {
+                    results[type].forEach(function(item) {
+                        flatResults.push(item);
+                    });
+                }
+            });
+            
+            // Render all results without group headings
+            flatResults.forEach(function(item) {
+                const resultItem = createResultItem(item, query);
+                searchResults.append(resultItem);
+            });
         }
         
         // Create result item HTML
@@ -271,22 +320,24 @@
             performSearch(query);
         });
         
-        // Handle filter tab clicks
-        filterTabs.on('click', function() {
-            const filter = $(this).data('filter');
-            
-            // Update active state
-            filterTabs.removeClass('active');
-            $(this).addClass('active');
-            
-            // Update current filter
-            currentFilter = filter;
-            
-            // Re-run search with new filter
-            if (currentQuery.length >= 2) {
-                performSearch(currentQuery);
-            }
-        });
+        // Handle filter tab clicks (only in grouped mode)
+        if (isGroupedMode) {
+            filterTabs.on('click', function() {
+                const filter = $(this).data('filter');
+                
+                // Update active state
+                filterTabs.removeClass('active');
+                $(this).addClass('active');
+                
+                // Update current filter
+                currentFilter = filter;
+                
+                // Re-run search with new filter
+                if (currentQuery.length >= 2) {
+                    performSearch(currentQuery);
+                }
+            });
+        }
         
         // Close dropdown when clicking outside (desktop only)
         $(document).on('click', function(e) {

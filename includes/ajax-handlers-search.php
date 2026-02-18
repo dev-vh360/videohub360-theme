@@ -21,6 +21,9 @@ add_action('wp_ajax_nopriv_vh360_advanced_search', 'vh360_handle_advanced_search
 
 /**
  * Handle advanced search AJAX request
+ *
+ * Queries only registered/available post types to support modular installs
+ * and reduce unnecessary database queries for content types not in use.
  */
 function vh360_handle_advanced_search() {
     // Verify nonce
@@ -41,36 +44,74 @@ function vh360_handle_advanced_search() {
         ));
     }
     
+    // Get available search types based on registered post types
+    $available_types = vh360_get_available_search_type_keys();
+    
+    // If a specific type is requested, validate it's available
+    if ($type !== 'all' && !in_array($type, $available_types, true)) {
+        // Log for debugging purposes
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('VH360 Search: Invalid search type requested: ' . $type . '. Defaulting to "all".');
+        }
+        // Treat invalid type as 'all' to prevent errors
+        $type = 'all';
+    }
+    
     $results = array();
     
-    // Search based on type
+    // Search based on type, only querying available types
     switch ($type) {
         case 'videos':
-            $results['videos'] = vh360_search_videos($query);
+            if (in_array('videos', $available_types, true)) {
+                $results['videos'] = vh360_search_videos($query);
+            }
             break;
         case 'members':
-            $results['members'] = vh360_search_members($query);
+            if (in_array('members', $available_types, true)) {
+                $results['members'] = vh360_search_members($query);
+            }
             break;
         case 'events':
-            $results['events'] = vh360_search_events($query);
+            if (in_array('events', $available_types, true)) {
+                $results['events'] = vh360_search_events($query);
+            }
             break;
         case 'galleries':
-            $results['galleries'] = vh360_search_galleries($query);
+            if (in_array('galleries', $available_types, true)) {
+                $results['galleries'] = vh360_search_galleries($query);
+            }
             break;
         case 'bulletins':
-            $results['bulletins'] = vh360_search_bulletins($query);
+            if (in_array('bulletins', $available_types, true)) {
+                $results['bulletins'] = vh360_search_bulletins($query);
+            }
             break;
         case 'posts':
-            $results['posts'] = vh360_search_community_posts($query);
+            if (in_array('posts', $available_types, true)) {
+                $results['posts'] = vh360_search_community_posts($query);
+            }
             break;
         case 'all':
         default:
-            $results['videos'] = vh360_search_videos($query);
-            $results['members'] = vh360_search_members($query);
-            $results['events'] = vh360_search_events($query);
-            $results['galleries'] = vh360_search_galleries($query);
-            $results['bulletins'] = vh360_search_bulletins($query);
-            $results['posts'] = vh360_search_community_posts($query);
+            // Only query available/registered types
+            if (in_array('videos', $available_types, true)) {
+                $results['videos'] = vh360_search_videos($query);
+            }
+            if (in_array('members', $available_types, true)) {
+                $results['members'] = vh360_search_members($query);
+            }
+            if (in_array('events', $available_types, true)) {
+                $results['events'] = vh360_search_events($query);
+            }
+            if (in_array('galleries', $available_types, true)) {
+                $results['galleries'] = vh360_search_galleries($query);
+            }
+            if (in_array('bulletins', $available_types, true)) {
+                $results['bulletins'] = vh360_search_bulletins($query);
+            }
+            if (in_array('posts', $available_types, true)) {
+                $results['posts'] = vh360_search_community_posts($query);
+            }
             break;
     }
     
