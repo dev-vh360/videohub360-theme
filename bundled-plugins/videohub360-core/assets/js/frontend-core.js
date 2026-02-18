@@ -123,21 +123,13 @@ if (typeof window !== 'undefined') {
         var badgeMap = {};
         
         // Collect all page IDs and map them to their badge elements
-        // Note: Multiple badges can have the same post ID if video appears multiple times
         badges.forEach(function(badge) {
             var postId = badge.getAttribute('data-post-id');
             if (postId) {
                 postId = parseInt(postId, 10);
                 if (!isNaN(postId) && postId > 0) {
-                    // Add to pageIds array if not already present
-                    if (pageIds.indexOf(postId) === -1) {
-                        pageIds.push(postId);
-                    }
-                    // Store badges in an array for each post ID to handle duplicates
-                    if (!badgeMap[postId]) {
-                        badgeMap[postId] = [];
-                    }
-                    badgeMap[postId].push(badge);
+                    pageIds.push(postId);
+                    badgeMap[postId] = badge;
                 }
             }
         });
@@ -152,25 +144,46 @@ if (typeof window !== 'undefined') {
             if (xhr.status === 200) {
                 try {
                     var data = JSON.parse(xhr.responseText);
+                    
+                    // Debug logging
+                    if (window.__VH360_DEBUG) {
+                        console.log('VH360: Batch live viewers response:', data);
+                        console.log('VH360: Requested IDs:', pageIds);
+                        console.log('VH360: Badge map:', badgeMap);
+                    }
+                    
                     if (data.success && data.data && data.data.counts) {
                         var counts = data.data.counts;
+                        
+                        // Debug: Check for missing counts
+                        if (window.__VH360_DEBUG) {
+                            pageIds.forEach(function(id) {
+                                if (!counts.hasOwnProperty(String(id))) {
+                                    console.warn('VH360: No count returned for post ID:', id);
+                                }
+                            });
+                        }
+                        
                         // Update each badge with its count
                         for (var postId in counts) {
                             if (counts.hasOwnProperty(postId) && badgeMap[postId]) {
                                 var count = counts[postId];
-                                // Update all badges for this post ID
-                                badgeMap[postId].forEach(function(badge) {
-                                    var countEl = badge.querySelector('.vh360-viewer-count');
-                                    if (countEl) {
-                                        countEl.textContent = count;
-                                    }
-                                });
+                                var countEl = badgeMap[postId].querySelector('.vh360-viewer-count');
+                                if (countEl) {
+                                    countEl.textContent = count;
+                                }
+                            } else if (window.__VH360_DEBUG && !badgeMap[postId]) {
+                                console.warn('VH360: No badge found for post ID:', postId);
                             }
                         }
+                    } else if (window.__VH360_DEBUG) {
+                        console.error('VH360: Invalid response structure:', data);
                     }
                 } catch(e) {
                     if (window.__VH360_DEBUG) console.error('VH360: Error parsing batch viewer count:', e);
                 }
+            } else if (window.__VH360_DEBUG) {
+                console.error('VH360: Batch live viewers request failed:', xhr.status, xhr.responseText);
             }
         };
         
