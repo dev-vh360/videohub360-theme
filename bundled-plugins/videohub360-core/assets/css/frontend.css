@@ -4022,3 +4022,92 @@ a.vh360-author-row:hover .vh360-author-name {
         gap: 8px;
     }
 }
+
+/* ==========================================================================
+   Live Viewer Badge & Progress Bar Styles
+   ========================================================================== */
+
+/* Live viewers badge */
+.vh360-live-viewers-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 10;
+    padding: 4px 8px;
+    border-radius: var(--vh360-radius-sm);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--vh360-color-white);
+    background-color: rgba(0, 0, 0, 0.7);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.vh360-live-viewers-badge .vh360-viewer-count {
+    font-weight: 600;
+}
+
+/* Continue watching progress bar */
+.vh360-progress-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background-color: rgba(0, 0, 0, 0.3);
+    z-index: 8;
+}
+
+.vh360-progress-fill {
+    height: 100%;
+    background-color: var(--vh360-color-primary, #0063b1);
+    transition: width 0.3s ease;
+}
+
+/* ==========================================================================
+   Video Card Hover Animations
+   ========================================================================== */
+
+/* Enhanced hover state for video cards */
+.videohub360-videos-item {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.videohub360-videos-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 24px rgba(0, 99, 177, 0.12);
+}
+
+/* Thumbnail zoom on hover */
+.videohub360-videos-thumb-wrap {
+    overflow: hidden;
+}
+
+.videohub360-videos-thumb {
+    transition: transform 0.3s ease;
+}
+
+.videohub360-videos-item:hover .videohub360-videos-thumb {
+    transform: scale(1.05);
+}
+
+/* Play button scale on hover */
+.videohub360-videos-play-btn {
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.videohub360-videos-item:hover .videohub360-videos-play-btn {
+    transform: scale(1.1);
+    opacity: 1;
+}
+
+/* Title color transition on hover */
+.videohub360-videos-title {
+    transition: color 0.2s ease;
+}
+
+.videohub360-videos-item:hover .videohub360-videos-title {
+    color: var(--vh360-color-primary, #0063b1);
+}

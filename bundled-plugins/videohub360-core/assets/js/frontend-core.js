@@ -111,3 +111,83 @@ if (typeof window !== 'undefined') {
   var _names = ['addEventListener'];
   _names.forEach(function(n){ try{ if (window[n] && !window.vh360[n]) window.vh360[n] = window[n]; }catch(e){} });
 })();
+
+// Batch Live Viewer Count Polling for Widget Cards
+(function(){
+    // Function to update live viewer counts for all visible badges
+    function updateBatchLiveViewers() {
+        var badges = document.querySelectorAll('.vh360-live-viewers-badge');
+        if (!badges || badges.length === 0) return;
+        
+        var pageIds = [];
+        var badgeMap = {};
+        
+        // Collect all page IDs and map them to their badge elements
+        badges.forEach(function(badge) {
+            var postId = badge.getAttribute('data-post-id');
+            if (postId) {
+                postId = parseInt(postId, 10);
+                if (!isNaN(postId) && postId > 0) {
+                    pageIds.push(postId);
+                    badgeMap[postId] = badge;
+                }
+            }
+        });
+        
+        if (pageIds.length === 0) return;
+        
+        // Send batch request
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', vh360Data.ajaxUrl);
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        xhr.onload = function(){
+            if (xhr.status === 200) {
+                try {
+                    var data = JSON.parse(xhr.responseText);
+                    if (data.success && data.data && data.data.counts) {
+                        var counts = data.data.counts;
+                        // Update each badge with its count
+                        for (var postId in counts) {
+                            if (counts.hasOwnProperty(postId) && badgeMap[postId]) {
+                                var count = counts[postId];
+                                var countEl = badgeMap[postId].querySelector('.vh360-viewer-count');
+                                if (countEl) {
+                                    countEl.textContent = count;
+                                }
+                            }
+                        }
+                    }
+                } catch(e) {
+                    if (window.__VH360_DEBUG) console.error('VH360: Error parsing batch viewer count:', e);
+                }
+            }
+        };
+        
+        // Encode page IDs as array
+        var params = 'action=vh360_live_viewers_batch&nonce=' + encodeURIComponent(vh360Data.chatNonce);
+        pageIds.forEach(function(id) {
+            params += '&page_ids[]=' + encodeURIComponent(id);
+        });
+        
+        xhr.send(params);
+    }
+    
+    // Run on DOM ready and then every 15 seconds
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            updateBatchLiveViewers();
+            (function(){ 
+                var __id = setInterval(updateBatchLiveViewers, 15000); 
+                (window.__vh360Intervals = window.__vh360Intervals || []).push(__id); 
+                return __id; 
+            })();
+        });
+    } else {
+        updateBatchLiveViewers();
+        (function(){ 
+            var __id = setInterval(updateBatchLiveViewers, 15000); 
+            (window.__vh360Intervals = window.__vh360Intervals || []).push(__id); 
+            return __id; 
+        })();
+    }
+})();

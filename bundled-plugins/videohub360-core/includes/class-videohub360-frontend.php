@@ -489,7 +489,9 @@ class VideoHub360_Frontend {
             // Video reactions nonce
             'videoReactionNonce' => wp_create_nonce('vh360_video_reaction'),
             // Playlist nonce
-            'playlistNonce' => wp_create_nonce('vh360_playlist')
+            'playlistNonce' => wp_create_nonce('vh360_playlist'),
+            // Watch progress nonce
+            'watchNonce' => wp_create_nonce('vh360_watch_progress_nonce')
         );
         
         // Add built-in login form strings

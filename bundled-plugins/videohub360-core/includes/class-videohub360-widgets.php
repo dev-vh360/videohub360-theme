@@ -59,6 +59,18 @@ class VideoHub360_Widgets {
         if (class_exists('Elementor_VideoHub360_Hero_Widget')) {
             $widgets_manager->register(new Elementor_VideoHub360_Hero_Widget());
         }
+        
+        // Load live now widget
+        require_once __DIR__ . '/elementor-videohub360-live-now-widget.php';
+        if (class_exists('Elementor_VideoHub360_Live_Now_Widget')) {
+            $widgets_manager->register(new Elementor_VideoHub360_Live_Now_Widget());
+        }
+        
+        // Load continue watching widget
+        require_once __DIR__ . '/elementor-videohub360-continue-watching-widget.php';
+        if (class_exists('Elementor_VideoHub360_Continue_Watching_Widget')) {
+            $widgets_manager->register(new Elementor_VideoHub360_Continue_Watching_Widget());
+        }
     }
     
     /**
@@ -274,91 +286,8 @@ class VideoHub360_Widgets {
         <div class="videohub360-videos-<?php echo esc_attr($display); ?> <?php echo esc_attr($column_class); ?> <?php echo esc_attr($ratio_class); ?>" style="--grid-gap: <?php echo esc_attr($grid_gap); ?>;">
             <?php if ($query->have_posts()): ?>
                 <?php while ($query->have_posts()): $query->the_post();
-                    $views = get_post_meta(get_the_ID(), '_videohub360_post_views_count', true);
-                    $views = $views ? $views : 0;
-                    
-                    // Check live badge settings - respect stream stopped status
-                    $is_live = get_post_meta(get_the_ID(), '_vh360_is_live', true);
-                    $stream_stopped = get_post_meta(get_the_ID(), '_vh360_stream_stopped', true);
-                    $live_badge = get_post_meta(get_the_ID(), '_vh360_live_badge', true);
-                    
-                    // Show live badge if:
-                    // 1. Live badge setting is not explicitly disabled AND
-                    // 2. Post is marked as live AND 
-                    // 3. Stream is not stopped AND
-                    // 4. Shortcode setting allows live badge
-                    $show_live_badge = $atts['show_live_badge'] === 'yes' && 
-                                      $live_badge !== 'no' && 
-                                      $is_live === 'yes' && 
-                                      $stream_stopped !== 'yes';
-                                      
-                    $badge_text = !empty($atts['badge_text']) ? $atts['badge_text'] : esc_html__('LIVE', 'videohub360');
-                    $badge_color = !empty($atts['badge_color']) ? $atts['badge_color'] : '#e53935';
-                ?>
-                    <div class="videohub360-videos-item">
-                        <a href="<?php the_permalink(); ?>" class="videohub360-videos-thumb-wrap">
-                            <?php if (has_post_thumbnail()) {
-                                the_post_thumbnail('medium', array('class' => 'videohub360-videos-thumb', 'alt' => get_the_title()));
-                            } else { ?>
-                                <div class="videohub360-videos-thumb" style="background:#ccc; width:100%; height:100%;"></div>
-                            <?php } ?>
-                            <?php if ($show_live_badge): ?>
-                                <span class="videohub360-live-badge" style="background-color: <?php echo esc_attr($badge_color); ?>;">
-                                    <?php echo esc_html($badge_text); ?>
-                                </span>
-                            <?php endif; ?>
-                            <span class="videohub360-videos-play-btn" aria-label="<?php echo esc_attr__('Play video', 'videohub360'); ?>">
-                                <svg viewBox="0 0 60 60">
-                                    <circle cx="30" cy="30" r="28" opacity="0.18"/>
-                                    <polygon points="24,18 46,30 24,42" />
-                                </svg>
-                            </span>
-                        </a>
-                        
-                        <div class="videohub360-videos-content">
-                            <a href="<?php the_permalink(); ?>" class="videohub360-videos-title">
-                                <?php the_title(); ?>
-                            </a>
-                            
-                            <?php if ($atts['show_author'] === 'yes'): ?>
-                                <?php 
-                                // videohub360_render_author_badge() handles all escaping internally
-                                echo videohub360_render_author_badge(get_the_ID(), array(
-                                    'variant' => 'compact',
-                                    'show_avatar' => $atts['show_avatar'] === 'yes',
-                                    'show_username' => false, // Only show display name
-                                    'avatar_size' => 32,
-                                )); 
-                                ?>
-                            <?php endif; ?>
-                            
-                            <?php if ($atts['show_views'] === 'yes' || $atts['show_date'] === 'yes'): ?>
-                                <div class="videohub360-videos-meta">
-                            <?php if ($atts['show_views'] === 'yes'): ?>
-                                        <span class="views-count"><?php echo videohub360_compact_views($views); ?> <?php echo esc_html__('views', 'videohub360'); ?></span>
-                                    <?php endif; ?>
-                                    <?php if ($atts['show_date'] === 'yes'): ?>
-                                        <?php if ($atts['show_views'] === 'yes') echo ' • '; ?>
-                                        <span class="publish-date"><?php echo get_the_date(); ?></span>
-                                    <?php endif; ?>
-                                </div>
-                            <?php endif; ?>
-                            
-                            <?php if ($atts['show_excerpt'] === 'yes'): ?>
-                                <div class="videohub360-videos-excerpt">
-                                    <?php 
-                                    $excerpt = get_the_excerpt();
-                                    if (strlen($excerpt) > $excerpt_length) {
-                                        echo esc_html(substr($excerpt, 0, $excerpt_length)) . '...';
-                                    } else {
-                                        echo esc_html($excerpt);
-                                    }
-                                    ?>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                <?php endwhile; ?>
+                    echo $this->render_video_card(get_the_ID(), $atts);
+                endwhile; ?>
             <?php endif; ?>
         </div>
         <?php
@@ -529,5 +458,148 @@ class VideoHub360_Widgets {
                 true
             );
         }
+    }
+    
+    /**
+     * Render a single video card
+     * 
+     * @param int $post_id The post ID to render
+     * @param array $args Configuration arguments
+     * @return string Rendered card HTML
+     */
+    public function render_video_card($post_id, $args = array()) {
+        // Default arguments
+        $defaults = array(
+            'show_author' => 'yes',
+            'show_avatar' => 'yes',
+            'show_views' => 'yes',
+            'show_date' => 'yes',
+            'show_excerpt' => 'no',
+            'show_live_badge' => 'yes',
+            'show_live_viewers' => 'no',
+            'excerpt_length' => 120,
+            'badge_text' => esc_html__('LIVE', 'videohub360'),
+            'badge_color' => '#e53935',
+            'progress_percent' => 0, // For continue watching
+        );
+        
+        $args = wp_parse_args($args, $defaults);
+        
+        // Get post data
+        $post = get_post($post_id);
+        if (!$post) {
+            return '';
+        }
+        
+        // Setup post data for template tags
+        global $post_backup;
+        $post_backup = $GLOBALS['post'];
+        $GLOBALS['post'] = $post;
+        setup_postdata($post);
+        
+        $views = get_post_meta($post_id, '_videohub360_post_views_count', true);
+        $views = $views ? $views : 0;
+        
+        // Check live badge settings - respect stream stopped status
+        $is_live = get_post_meta($post_id, '_vh360_is_live', true);
+        $stream_stopped = get_post_meta($post_id, '_vh360_stream_stopped', true);
+        $live_badge = get_post_meta($post_id, '_vh360_live_badge', true);
+        
+        // Show live badge if:
+        // 1. Live badge setting is not explicitly disabled AND
+        // 2. Post is marked as live AND 
+        // 3. Stream is not stopped AND
+        // 4. Args setting allows live badge
+        $show_live_badge = $args['show_live_badge'] === 'yes' && 
+                          $live_badge !== 'no' && 
+                          $is_live === 'yes' && 
+                          $stream_stopped !== 'yes';
+        
+        $badge_text = !empty($args['badge_text']) ? $args['badge_text'] : esc_html__('LIVE', 'videohub360');
+        $badge_color = !empty($args['badge_color']) ? $args['badge_color'] : '#e53935';
+        
+        ob_start();
+        ?>
+        <div class="videohub360-videos-item">
+            <a href="<?php the_permalink(); ?>" class="videohub360-videos-thumb-wrap">
+                <?php if (has_post_thumbnail()) {
+                    the_post_thumbnail('medium', array('class' => 'videohub360-videos-thumb', 'alt' => get_the_title()));
+                } else { ?>
+                    <div class="videohub360-videos-thumb" style="background:#ccc; width:100%; height:100%;"></div>
+                <?php } ?>
+                <?php if ($show_live_badge): ?>
+                    <span class="videohub360-live-badge" style="background-color: <?php echo esc_attr($badge_color); ?>;">
+                        <?php echo esc_html($badge_text); ?>
+                    </span>
+                <?php endif; ?>
+                <?php if ($args['show_live_viewers'] === 'yes' && $show_live_badge): ?>
+                    <span class="vh360-live-viewers-badge" data-post-id="<?php echo esc_attr($post_id); ?>">
+                        <span class="vh360-viewer-count">•</span> <?php echo esc_html__('watching', 'videohub360'); ?>
+                    </span>
+                <?php endif; ?>
+                <?php if ($args['progress_percent'] > 0 && $args['progress_percent'] < 100): ?>
+                    <div class="vh360-progress-bar">
+                        <div class="vh360-progress-fill" style="width: <?php echo esc_attr($args['progress_percent']); ?>%;"></div>
+                    </div>
+                <?php endif; ?>
+                <span class="videohub360-videos-play-btn" aria-label="<?php echo esc_attr__('Play video', 'videohub360'); ?>">
+                    <svg viewBox="0 0 60 60">
+                        <circle cx="30" cy="30" r="28" opacity="0.18"/>
+                        <polygon points="24,18 46,30 24,42" />
+                    </svg>
+                </span>
+            </a>
+            
+            <div class="videohub360-videos-content">
+                <a href="<?php the_permalink(); ?>" class="videohub360-videos-title">
+                    <?php the_title(); ?>
+                </a>
+                
+                <?php if ($args['show_author'] === 'yes'): ?>
+                    <?php 
+                    // videohub360_render_author_badge() handles all escaping internally
+                    echo videohub360_render_author_badge($post_id, array(
+                        'variant' => 'compact',
+                        'show_avatar' => $args['show_avatar'] === 'yes',
+                        'show_username' => false, // Only show display name
+                        'avatar_size' => 32,
+                    )); 
+                    ?>
+                <?php endif; ?>
+                
+                <?php if ($args['show_views'] === 'yes' || $args['show_date'] === 'yes'): ?>
+                    <div class="videohub360-videos-meta">
+                <?php if ($args['show_views'] === 'yes'): ?>
+                            <span class="views-count"><?php echo videohub360_compact_views($views); ?> <?php echo esc_html__('views', 'videohub360'); ?></span>
+                        <?php endif; ?>
+                        <?php if ($args['show_date'] === 'yes'): ?>
+                            <?php if ($args['show_views'] === 'yes') echo ' • '; ?>
+                            <span class="publish-date"><?php echo get_the_date(); ?></span>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+                
+                <?php if ($args['show_excerpt'] === 'yes'): ?>
+                    <div class="videohub360-videos-excerpt">
+                        <?php 
+                        $excerpt = get_the_excerpt();
+                        $excerpt_length = intval($args['excerpt_length']);
+                        if (strlen($excerpt) > $excerpt_length) {
+                            echo esc_html(substr($excerpt, 0, $excerpt_length)) . '...';
+                        } else {
+                            echo esc_html($excerpt);
+                        }
+                        ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php
+        
+        // Restore original post data
+        $GLOBALS['post'] = $post_backup;
+        wp_reset_postdata();
+        
+        return ob_get_clean();
     }
 }

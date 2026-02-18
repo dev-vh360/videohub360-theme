@@ -82,11 +82,13 @@ class VH360_Elementor_Integration {
 		require_once VH360_THEME_DIR . '/includes/elementor/widgets/class-vh360-gallery-widget.php';
 		require_once VH360_THEME_DIR . '/includes/elementor/widgets/class-vh360-gallery-grid-widget.php';
 		require_once VH360_THEME_DIR . '/includes/elementor/widgets/class-vh360-posts-widget.php';
+		require_once VH360_THEME_DIR . '/includes/elementor/widgets/class-vh360-following-videos-widget.php';
 
 		// Register widgets.
 		$widgets_manager->register( new VH360_Gallery_Widget() );
 		$widgets_manager->register( new VH360_Gallery_Grid_Widget() );
 		$widgets_manager->register( new VH360_Posts_Widget() );
+		$widgets_manager->register( new VH360_Following_Videos_Widget() );
 	}
 
 	/**

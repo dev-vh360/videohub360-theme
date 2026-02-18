@@ -520,6 +520,105 @@ if (typeof window !== 'undefined') {
     }
 })();
 
+// Watch Progress Tracking for Continue Watching Feature
+(function() {
+    var mainVideo = document.getElementById('videohub360-main-video');
+    
+    // Only track for logged-in users
+    if (!vh360Data || !vh360Data.isUserLoggedIn || !vh360Data.postId || !mainVideo) {
+        return;
+    }
+    
+    var postId = vh360Data.postId;
+    var lastSaveTime = 0;
+    var saveThrottleMs = 10000; // Save at most once every 10 seconds
+    
+    function saveWatchProgress(currentTime, duration) {
+        // Don't save if duration is not available or invalid
+        if (!duration || duration <= 0 || !currentTime) {
+            return;
+        }
+        
+        // Don't save at the very beginning (less than 5 seconds)
+        if (currentTime < 5) {
+            return;
+        }
+        
+        // Don't save near the end (last 30 seconds or 95% completion)
+        var percentComplete = (currentTime / duration) * 100;
+        if (percentComplete >= 95 || (duration - currentTime) < 30) {
+            return;
+        }
+        
+        // Throttle saves
+        var now = Date.now();
+        if (now - lastSaveTime < saveThrottleMs) {
+            return;
+        }
+        lastSaveTime = now;
+        
+        // Send AJAX request
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', vh360Data.ajaxUrl);
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        xhr.onload = function() {
+            if (xhr.status === 200 && window.__VH360_DEBUG) {
+                try {
+                    var data = JSON.parse(xhr.responseText);
+                    if (data.success) {
+                        console.log('VH360: Watch progress saved:', currentTime, '/', duration);
+                    }
+                } catch(e) {}
+            }
+        };
+        
+        var params = 'action=vh360_save_watch_progress' +
+                     '&post_id=' + encodeURIComponent(postId) +
+                     '&current_time=' + encodeURIComponent(currentTime) +
+                     '&duration=' + encodeURIComponent(duration) +
+                     '&nonce=' + encodeURIComponent(vh360Data.watchNonce);
+        
+        xhr.send(params);
+    }
+    
+    // Track on timeupdate (throttled)
+    var lastUpdateTime = 0;
+    var updateThrottleMs = 5000; // Check every 5 seconds
+    
+    mainVideo.addEventListener('timeupdate', function() {
+        var now = Date.now();
+        if (now - lastUpdateTime < updateThrottleMs) {
+            return;
+        }
+        lastUpdateTime = now;
+        
+        var currentTime = mainVideo.currentTime;
+        var duration = mainVideo.duration;
+        
+        if (currentTime && duration) {
+            saveWatchProgress(currentTime, duration);
+        }
+    });
+    
+    // Save on pause
+    mainVideo.addEventListener('pause', function() {
+        var currentTime = mainVideo.currentTime;
+        var duration = mainVideo.duration;
+        
+        if (currentTime && duration) {
+            // Bypass throttle on pause
+            lastSaveTime = 0;
+            saveWatchProgress(currentTime, duration);
+        }
+    });
+    
+    // Save on ended (even though we filter these out, good to have)
+    mainVideo.addEventListener('ended', function() {
+        // No need to save progress when video ends
+        // Continue watching widget filters out videos with >95% progress
+    });
+})();
+
 /* Namespacing compatibility: copy any existing window.* functions into window.vh360 (non-destructive) */
 ;(function(){
   window.vh360 = window.vh360 || {};
