@@ -30,6 +30,10 @@ class Elementor_VideoHub360_Live_Now_Widget extends \Elementor\Widget_Base {
     public function get_categories() { 
         return ['general']; 
     }
+    
+    public function get_style_depends() {
+        return ['vh360-frontend'];
+    }
 
     protected function register_controls() {
         // Content Tab - Settings Section
