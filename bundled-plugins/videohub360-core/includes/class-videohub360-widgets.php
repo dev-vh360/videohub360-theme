@@ -159,12 +159,16 @@ class VideoHub360_Widgets {
             true
         );
         
-        // Add localized data to frontend-core
-        // Get the frontend component to access get_localized_data()
-        $frontend = VideoHub360_Core::get_instance()->get_component('frontend');
-        if ($frontend && method_exists($frontend, 'get_localized_data')) {
-            wp_localize_script('vh360-frontend-core', 'vh360Data', $frontend->get_localized_data());
-        }
+        // Add minimal localized data needed for batch live viewer functionality
+        // Note: Full localized data is added by VideoHub360_Frontend::enqueue_frontend_assets()
+        // This minimal version ensures AJAX works even when widgets load via Elementor
+        wp_localize_script('vh360-frontend-core', 'vh360Data', array(
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'chatNonce' => wp_create_nonce('videohub360_chat_nonce'),
+            'watchNonce' => wp_create_nonce('vh360_watch_progress_nonce'),
+            'videoReactionNonce' => wp_create_nonce('vh360_video_reaction'),
+            'playlistNonce' => wp_create_nonce('vh360_playlist'),
+        ));
     }
     
     /**
