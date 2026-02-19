@@ -227,6 +227,7 @@ class VideoHub360_Ajax {
     /**
      * Handle batch live viewers AJAX
      * Returns viewer counts for multiple pages at once
+     * Also records the current visitor's session for each video
      * 
      * Note: Reuses 'videohub360_chat_nonce' for consistency with single live_viewers endpoint
      * and to avoid requiring separate nonce in JavaScript
@@ -262,6 +263,12 @@ class VideoHub360_Ajax {
         
         $now = time();
         $window = 60; // seconds to keep "active"
+        
+        // Generate session ID for this visitor (same as single endpoint)
+        $remote_addr = sanitize_text_field($_SERVER['REMOTE_ADDR'] ?? '');
+        $user_agent = sanitize_text_field($_SERVER['HTTP_USER_AGENT'] ?? '');
+        $session_id = md5($remote_addr . '|' . $user_agent . '|' . session_id());
+        
         $results = array();
         
         foreach ($page_ids as $page_id) {
@@ -283,6 +290,12 @@ class VideoHub360_Ajax {
                     unset($sessions[$id]);
                 }
             }
+            
+            // Add/update this visitor's session
+            $sessions[$session_id] = $now;
+            
+            // Save updated sessions
+            set_transient($transient_key, $sessions, $window);
             
             $results[$page_id] = count($sessions);
         }
