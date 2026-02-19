@@ -1,7 +1,6 @@
-/* VideoHub360 patched: debug flag + vh360 namespace (non-destructive) */
+/* VideoHub360 patched: vh360 namespace (non-destructive) */
 if (typeof window !== 'undefined') {
   window.vh360 = window.vh360 || {};
-  window.__VH360_DEBUG = window.__VH360_DEBUG || false;
 }
 
 /**
