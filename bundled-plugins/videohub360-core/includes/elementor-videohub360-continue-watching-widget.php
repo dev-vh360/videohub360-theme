@@ -34,6 +34,10 @@ class Elementor_VideoHub360_Continue_Watching_Widget extends \Elementor\Widget_B
     public function get_style_depends() {
         return ['vh360-frontend'];
     }
+    
+    public function get_script_depends() {
+        return ['vh360-frontend-core'];
+    }
 
     protected function register_controls() {
         // Content Tab - Settings Section

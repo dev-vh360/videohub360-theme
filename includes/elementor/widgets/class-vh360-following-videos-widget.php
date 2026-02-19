@@ -35,6 +35,10 @@ class VH360_Following_Videos_Widget extends \Elementor\Widget_Base {
     public function get_style_depends() {
         return ['vh360-frontend'];
     }
+    
+    public function get_script_depends() {
+        return ['vh360-frontend-core'];
+    }
 
     protected function register_controls() {
         // Content Tab - Settings Section
