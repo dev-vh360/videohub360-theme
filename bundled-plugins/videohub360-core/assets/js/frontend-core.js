@@ -153,24 +153,8 @@ if (typeof window !== 'undefined') {
                 try {
                     var data = JSON.parse(xhr.responseText);
                     
-                    // Debug logging
-                    if (window.__VH360_DEBUG) {
-                        console.log('VH360: Batch live viewers response:', data);
-                        console.log('VH360: Requested IDs:', pageIds);
-                        console.log('VH360: Badge map:', badgeMap);
-                    }
-                    
                     if (data.success && data.data && data.data.counts) {
                         var counts = data.data.counts;
-                        
-                        // Debug: Check for missing counts
-                        if (window.__VH360_DEBUG) {
-                            pageIds.forEach(function(id) {
-                                if (!counts.hasOwnProperty(String(id))) {
-                                    console.warn('VH360: No count returned for post ID:', id);
-                                }
-                            });
-                        }
                         
                         // Update each badge with its count
                         for (var postId in counts) {
@@ -183,18 +167,12 @@ if (typeof window !== 'undefined') {
                                         countEl.textContent = count;
                                     }
                                 });
-                            } else if (window.__VH360_DEBUG && !badgeMap[postId]) {
-                                console.warn('VH360: No badge found for post ID:', postId);
                             }
                         }
-                    } else if (window.__VH360_DEBUG) {
-                        console.error('VH360: Invalid response structure:', data);
                     }
                 } catch(e) {
-                    if (window.__VH360_DEBUG) console.error('VH360: Error parsing batch viewer count:', e);
+                    // Silently fail - badges will retry on next interval
                 }
-            } else if (window.__VH360_DEBUG) {
-                console.error('VH360: Batch live viewers request failed:', xhr.status, xhr.responseText);
             }
         };
         
