@@ -27,6 +27,9 @@ class VideoHub360_Widgets {
         
         // Register Elementor widgets - single registration point
         add_action('elementor/widgets/register', array($this, 'register_elementor_widgets'));
+        
+        // Register styles for Elementor to use in editor and frontend
+        add_action('elementor/frontend/after_register_styles', array($this, 'register_elementor_styles'));
     }
     
     /**
@@ -71,6 +74,38 @@ class VideoHub360_Widgets {
         if (class_exists('Elementor_VideoHub360_Continue_Watching_Widget')) {
             $widgets_manager->register(new Elementor_VideoHub360_Continue_Watching_Widget());
         }
+    }
+    
+    /**
+     * Register styles for Elementor widgets
+     * 
+     * This ensures vh360-frontend and vh360-variables are properly registered
+     * so Elementor can include them in its CSS generation for pages using our widgets.
+     */
+    public function register_elementor_styles() {
+        // Register variables.css
+        $variables_css_path = VIDEOHUB360_PLUGIN_DIR . 'assets/css/variables.css';
+        $variables_css_url = VIDEOHUB360_ASSETS_URL . 'css/variables.css';
+        $variables_ver = file_exists($variables_css_path) ? filemtime($variables_css_path) : VIDEOHUB360_VERSION;
+        
+        wp_register_style(
+            'vh360-variables',
+            $variables_css_url,
+            array(),
+            $variables_ver
+        );
+        
+        // Register frontend.css (depends on variables)
+        $css_path = VIDEOHUB360_PLUGIN_DIR . 'assets/css/frontend.css';
+        $css_url = VIDEOHUB360_ASSETS_URL . 'css/frontend.css';
+        $css_ver = file_exists($css_path) ? filemtime($css_path) : VIDEOHUB360_VERSION;
+        
+        wp_register_style(
+            'vh360-frontend',
+            $css_url,
+            array('vh360-variables'),
+            $css_ver
+        );
     }
     
     /**
