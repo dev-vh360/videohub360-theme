@@ -226,10 +226,13 @@ class VideoHub360_Ajax {
     
     /**
      * Handle batch live viewers AJAX
-     * Returns viewer counts for multiple pages at once
-     * Also records the current visitor's session for each video
+     * Returns viewer counts for multiple pages at once (READ-ONLY)
      * 
-     * Note: Reuses 'videohub360_chat_nonce' for consistency with single live_viewers endpoint
+     * Note: This endpoint only READS viewer counts, it does NOT record sessions.
+     * Sessions are only recorded on the video player page via handle_live_viewers().
+     * This prevents counting "page viewers" as "video watchers".
+     * 
+     * Reuses 'videohub360_chat_nonce' for consistency with single live_viewers endpoint
      * and to avoid requiring separate nonce in JavaScript
      */
     public function handle_live_viewers_batch() {
@@ -263,12 +266,6 @@ class VideoHub360_Ajax {
         
         $now = time();
         $window = 60; // seconds to keep "active"
-        
-        // Generate session ID for this visitor (same as single endpoint)
-        $remote_addr = sanitize_text_field($_SERVER['REMOTE_ADDR'] ?? '');
-        $user_agent = sanitize_text_field($_SERVER['HTTP_USER_AGENT'] ?? '');
-        $session_id = md5($remote_addr . '|' . $user_agent . '|' . session_id());
-        
         $results = array();
         
         foreach ($page_ids as $page_id) {
@@ -284,19 +281,14 @@ class VideoHub360_Ajax {
                 $sessions = array();
             }
             
-            // Remove expired sessions
+            // Remove expired sessions (cleanup only, don't modify transient)
             foreach ($sessions as $id => $timestamp) {
                 if ($timestamp < ($now - $window)) {
                     unset($sessions[$id]);
                 }
             }
             
-            // Add/update this visitor's session
-            $sessions[$session_id] = $now;
-            
-            // Save updated sessions
-            set_transient($transient_key, $sessions, $window);
-            
+            // Return count only - do NOT record this visitor's session
             $results[$page_id] = count($sessions);
         }
         
