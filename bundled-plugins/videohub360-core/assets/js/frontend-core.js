@@ -113,6 +113,8 @@ if (typeof window !== 'undefined') {
 
 // Batch Live Viewer Count Polling for Widget Cards
 (function(){
+    var updateInterval = null;
+    
     // Function to update live viewer counts for all visible badges
     function updateBatchLiveViewers() {
         var badges = document.querySelectorAll('.vh360-live-viewers-badge');
@@ -184,22 +186,40 @@ if (typeof window !== 'undefined') {
         xhr.send(params);
     }
     
-    // Run on DOM ready and then every 15 seconds
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-            updateBatchLiveViewers();
-            (function(){ 
-                var __id = setInterval(updateBatchLiveViewers, 15000); 
-                (window.__vh360Intervals = window.__vh360Intervals || []).push(__id); 
-                return __id; 
-            })();
-        });
-    } else {
+    // Function to start/restart the update interval
+    function startUpdates() {
+        // Clear existing interval if any
+        if (updateInterval) {
+            clearInterval(updateInterval);
+        }
+        
+        // Initial update
         updateBatchLiveViewers();
-        (function(){ 
-            var __id = setInterval(updateBatchLiveViewers, 15000); 
-            (window.__vh360Intervals = window.__vh360Intervals || []).push(__id); 
-            return __id; 
-        })();
+        
+        // Repeat every 15 seconds
+        updateInterval = setInterval(updateBatchLiveViewers, 15000);
+        (window.__vh360Intervals = window.__vh360Intervals || []).push(updateInterval);
     }
+    
+    // Run on DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', startUpdates);
+    } else {
+        startUpdates();
+    }
+    
+    // Re-scan when Elementor loads widgets dynamically
+    if (window.elementorFrontend && window.elementorFrontend.hooks && typeof window.elementorFrontend.hooks.addAction === 'function') {
+        window.elementorFrontend.hooks.addAction('frontend/element_ready/widget', function() {
+            // Delay briefly to ensure DOM is updated, then restart updates
+            setTimeout(function() {
+                updateBatchLiveViewers(); // Immediate update for new content
+            }, 100);
+        });
+    }
+    
+    // Expose global function to trigger re-scan from other scripts
+    window.vh360RefreshLiveViewers = function() {
+        updateBatchLiveViewers();
+    };
 })();
