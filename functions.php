@@ -1104,6 +1104,9 @@ if (is_admin()) {
     
     // Video upload settings page
     require_once VH360_THEME_DIR . '/includes/admin/video-upload-settings.php';
+    
+    // User account type and business profile fields
+    require_once VH360_THEME_DIR . '/includes/admin/user-account-type.php';
 }
 
 // -----------------------------------------------------------------------------
