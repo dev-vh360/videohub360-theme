@@ -986,6 +986,11 @@ require_once VH360_THEME_DIR . '/includes/performance.php';
 require_once VH360_THEME_DIR . '/includes/enqueue-manager.php';
 
 /**
+ * Account type helpers
+ */
+require_once VH360_THEME_DIR . '/includes/account-types.php';
+
+/**
  * Helper functions
  */
 require_once VH360_THEME_DIR . '/includes/helpers.php';
