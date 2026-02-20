@@ -1,7 +1,6 @@
-/* VideoHub360 patched: debug flag + vh360 namespace (non-destructive) */
+/* VideoHub360 patched: vh360 namespace (non-destructive) */
 if (typeof window !== 'undefined') {
   window.vh360 = window.vh360 || {};
-  window.__VH360_DEBUG = window.__VH360_DEBUG || false;
 }
 
 /**
@@ -110,4 +109,117 @@ if (typeof window !== 'undefined') {
   window.vh360 = window.vh360 || {};
   var _names = ['addEventListener'];
   _names.forEach(function(n){ try{ if (window[n] && !window.vh360[n]) window.vh360[n] = window[n]; }catch(e){} });
+})();
+
+// Batch Live Viewer Count Polling for Widget Cards
+(function(){
+    var updateInterval = null;
+    
+    // Function to update live viewer counts for all visible badges
+    function updateBatchLiveViewers() {
+        var badges = document.querySelectorAll('.vh360-live-viewers-badge');
+        if (!badges || badges.length === 0) return;
+        
+        var pageIds = [];
+        var badgeMap = {};
+        
+        // Collect all page IDs and map them to their badge elements
+        // Note: Multiple badges can have the same post ID if video appears in multiple widgets
+        badges.forEach(function(badge) {
+            var postId = badge.getAttribute('data-post-id');
+            if (postId) {
+                postId = parseInt(postId, 10);
+                if (!isNaN(postId) && postId > 0) {
+                    // Add to pageIds array if not already present (avoid duplicate AJAX requests)
+                    if (pageIds.indexOf(postId) === -1) {
+                        pageIds.push(postId);
+                    }
+                    // Store badges in an array for each post ID to handle duplicates
+                    if (!badgeMap[postId]) {
+                        badgeMap[postId] = [];
+                    }
+                    badgeMap[postId].push(badge);
+                }
+            }
+        });
+        
+        if (pageIds.length === 0) return;
+        
+        // Send batch request
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', vh360Data.ajaxUrl);
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        xhr.onload = function(){
+            if (xhr.status === 200) {
+                try {
+                    var data = JSON.parse(xhr.responseText);
+                    
+                    if (data.success && data.data && data.data.counts) {
+                        var counts = data.data.counts;
+                        
+                        // Update each badge with its count
+                        for (var postId in counts) {
+                            if (counts.hasOwnProperty(postId) && badgeMap[postId]) {
+                                var count = counts[postId];
+                                // Update all badges for this post ID (handles duplicates)
+                                badgeMap[postId].forEach(function(badge) {
+                                    var countEl = badge.querySelector('.vh360-viewer-count');
+                                    if (countEl) {
+                                        countEl.textContent = count;
+                                    }
+                                });
+                            }
+                        }
+                    }
+                } catch(e) {
+                    // Silently fail - badges will retry on next interval
+                }
+            }
+        };
+        
+        // Encode page IDs as array
+        var params = 'action=vh360_live_viewers_batch&nonce=' + encodeURIComponent(vh360Data.chatNonce);
+        pageIds.forEach(function(id) {
+            params += '&page_ids[]=' + encodeURIComponent(id);
+        });
+        
+        xhr.send(params);
+    }
+    
+    // Function to start/restart the update interval
+    function startUpdates() {
+        // Clear existing interval if any
+        if (updateInterval) {
+            clearInterval(updateInterval);
+        }
+        
+        // Initial update
+        updateBatchLiveViewers();
+        
+        // Repeat every 15 seconds
+        updateInterval = setInterval(updateBatchLiveViewers, 15000);
+        (window.__vh360Intervals = window.__vh360Intervals || []).push(updateInterval);
+    }
+    
+    // Run on DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', startUpdates);
+    } else {
+        startUpdates();
+    }
+    
+    // Re-scan when Elementor loads widgets dynamically
+    if (window.elementorFrontend && window.elementorFrontend.hooks && typeof window.elementorFrontend.hooks.addAction === 'function') {
+        window.elementorFrontend.hooks.addAction('frontend/element_ready/widget', function() {
+            // Delay briefly to ensure DOM is updated, then restart updates
+            setTimeout(function() {
+                updateBatchLiveViewers(); // Immediate update for new content
+            }, 100);
+        });
+    }
+    
+    // Expose global function to trigger re-scan from other scripts
+    window.vh360RefreshLiveViewers = function() {
+        updateBatchLiveViewers();
+    };
 })();

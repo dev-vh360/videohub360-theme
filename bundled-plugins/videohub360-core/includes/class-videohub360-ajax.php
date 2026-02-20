@@ -104,6 +104,11 @@ class VideoHub360_Ajax {
         add_action('wp_ajax_vh360_live_viewers', array($this, 'handle_live_viewers'));
         add_action('wp_ajax_nopriv_vh360_live_viewers', array($this, 'handle_live_viewers'));
         
+        add_action('wp_ajax_vh360_live_viewers_batch', array($this, 'handle_live_viewers_batch'));
+        add_action('wp_ajax_nopriv_vh360_live_viewers_batch', array($this, 'handle_live_viewers_batch'));
+        
+        add_action('wp_ajax_vh360_save_watch_progress', array($this, 'handle_save_watch_progress'));
+        
         add_action('wp_ajax_videohub360_share_email', array($this, 'handle_share_email'));
         add_action('wp_ajax_nopriv_videohub360_share_email', array($this, 'handle_share_email'));
         
@@ -217,6 +222,150 @@ class VideoHub360_Ajax {
         set_transient($transient_key, $sessions, $window);
 
         wp_send_json_success(array('count' => count($sessions)));
+    }
+    
+    /**
+     * Handle batch live viewers AJAX
+     * Returns viewer counts for multiple pages at once (READ-ONLY)
+     * 
+     * Note: This endpoint only READS viewer counts, it does NOT record sessions.
+     * Sessions are only recorded on the video player page via handle_live_viewers().
+     * This prevents counting "page viewers" as "video watchers".
+     * 
+     * Reuses 'videohub360_chat_nonce' for consistency with single live_viewers endpoint
+     * and to avoid requiring separate nonce in JavaScript
+     */
+    public function handle_live_viewers_batch() {
+        // Check capability - basic read permission required
+        if (is_user_logged_in() && !current_user_can('read')) {
+            wp_send_json_error(__('Insufficient permissions', 'videohub360'));
+            return;
+        }
+        
+        // Rate limiting check - one check for the entire batch
+        if (!$this->check_rate_limit('live_viewers_batch', 30)) { // 30 requests per minute for batch
+            wp_send_json_error(__('Rate limit exceeded. Please wait.', 'videohub360'));
+            return;
+        }
+        
+        // Security nonce verification (reuse chat nonce)
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'videohub360_chat_nonce')) {
+            wp_send_json_error(__('Security check failed. Please refresh the page.', 'videohub360'));
+            return;
+        }
+        
+        // Input sanitization and validation
+        $page_ids = isset($_POST['page_ids']) ? $_POST['page_ids'] : array();
+        if (!is_array($page_ids) || empty($page_ids)) {
+            wp_send_json_error(__('Invalid page IDs.', 'videohub360'));
+            return;
+        }
+        
+        // Limit batch size to prevent abuse
+        $page_ids = array_slice($page_ids, 0, 50);
+        
+        $now = time();
+        $window = 60; // seconds to keep "active"
+        $results = array();
+        
+        foreach ($page_ids as $page_id) {
+            $page_id = intval($page_id);
+            if (!$page_id) {
+                continue;
+            }
+            
+            $transient_key = 'vh360_live_viewers_' . absint($page_id);
+            $sessions = get_transient($transient_key);
+            
+            if (!is_array($sessions)) {
+                $sessions = array();
+            }
+            
+            // Remove expired sessions (cleanup only, don't modify transient)
+            foreach ($sessions as $id => $timestamp) {
+                if ($timestamp < ($now - $window)) {
+                    unset($sessions[$id]);
+                }
+            }
+            
+            // Return count only - do NOT record this visitor's session
+            $results[$page_id] = count($sessions);
+        }
+        
+        wp_send_json_success(array('counts' => $results));
+    }
+    
+    /**
+     * Handle save watch progress AJAX
+     * Saves video watch progress for logged-in users
+     */
+    public function handle_save_watch_progress() {
+        // Must be logged in
+        if (!is_user_logged_in()) {
+            wp_send_json_error(__('You must be logged in.', 'videohub360'));
+            return;
+        }
+        
+        // Check capability
+        if (!current_user_can('read')) {
+            wp_send_json_error(__('Insufficient permissions', 'videohub360'));
+            return;
+        }
+        
+        // Rate limiting check
+        if (!$this->check_rate_limit('save_watch_progress', 20)) { // 20 requests per minute
+            wp_send_json_error(__('Rate limit exceeded. Please wait.', 'videohub360'));
+            return;
+        }
+        
+        // Security nonce verification
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'vh360_watch_progress_nonce')) {
+            wp_send_json_error(__('Security check failed. Please refresh the page.', 'videohub360'));
+            return;
+        }
+        
+        // Input sanitization and validation
+        $post_id = intval($_POST['post_id'] ?? 0);
+        $current_time = floatval($_POST['current_time'] ?? 0);
+        $duration = floatval($_POST['duration'] ?? 0);
+        
+        if (!$post_id || $current_time < 0 || $duration <= 0) {
+            wp_send_json_error(__('Invalid input data', 'videohub360'));
+            return;
+        }
+        
+        // Verify post exists and is videohub360 type
+        $post = get_post($post_id);
+        if (!$post || $post->post_type !== 'videohub360') {
+            wp_send_json_error(__('Invalid video', 'videohub360'));
+            return;
+        }
+        
+        $user_id = get_current_user_id();
+        
+        // Get existing progress data
+        $progress_data = get_user_meta($user_id, 'vh360_watch_progress', true);
+        if (!is_array($progress_data)) {
+            $progress_data = array();
+        }
+        
+        // Update this video's progress
+        $progress_data[$post_id] = array(
+            'time' => $current_time,
+            'duration' => $duration,
+            'updated' => time(),
+        );
+        
+        // Sort by updated time (most recent first) and limit to 50 items
+        uasort($progress_data, function($a, $b) {
+            return $b['updated'] - $a['updated'];
+        });
+        $progress_data = array_slice($progress_data, 0, 50, true);
+        
+        // Save back to user meta
+        update_user_meta($user_id, 'vh360_watch_progress', $progress_data);
+        
+        wp_send_json_success(array('message' => 'Progress saved'));
     }
     
     /**
