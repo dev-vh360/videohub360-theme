@@ -222,6 +222,229 @@ function vh360_handle_registration() {
 add_action('template_redirect', 'vh360_handle_registration');
 
 /**
+ * Handle Business registration form submission (Professional/Client)
+ */
+function vh360_handle_business_registration() {
+    // Only process POST requests
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        return;
+    }
+    
+    // Only process if this is a business registration form submission
+    if (!isset($_POST['vh360_business_register_submit']) || !isset($_POST['vh360_business_register_nonce'])) {
+        return;
+    }
+    
+    // Get the current page URL safely
+    $current_url = get_permalink();
+    if (!$current_url) {
+        $current_url = home_url('/register-business/');
+    }
+    
+    // Verify nonce
+    if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['vh360_business_register_nonce'])), 'vh360_business_register')) {
+        $error_code = 'nonce_failed';
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        exit;
+    }
+    
+    // Get and validate account type (whitelist)
+    $account_type = isset($_POST['vh360_account_type']) ? sanitize_text_field(wp_unslash($_POST['vh360_account_type'])) : '';
+    $valid_types = array('professional', 'client');
+    
+    if (!in_array($account_type, $valid_types, true)) {
+        $error_code = 'invalid_account_type';
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        exit;
+    }
+    
+    // Get form data
+    $first_name = isset($_POST['vh360_first_name']) ? sanitize_text_field(wp_unslash($_POST['vh360_first_name'])) : '';
+    $last_name  = isset($_POST['vh360_last_name']) ? sanitize_text_field(wp_unslash($_POST['vh360_last_name'])) : '';
+    $username   = isset($_POST['vh360_username']) ? sanitize_user(wp_unslash($_POST['vh360_username'])) : '';
+    $email      = isset($_POST['vh360_email']) ? sanitize_email(wp_unslash($_POST['vh360_email'])) : '';
+    $password   = isset($_POST['vh360_password']) ? $_POST['vh360_password'] : ''; // Don't trim passwords
+    $terms_accepted = isset($_POST['vh360_terms']) && $_POST['vh360_terms'] === 'on';
+    
+    // Validate required fields
+    if (empty($first_name) || empty($last_name) || empty($username) || empty($email) || empty($password)) {
+        $error_code = 'empty_fields';
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        exit;
+    }
+    
+    // Validate terms acceptance
+    if (!$terms_accepted) {
+        $error_code = 'terms_not_accepted';
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        exit;
+    }
+    
+    // Validate password length
+    if (strlen($password) < 8) {
+        $error_code = 'password_too_short';
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        exit;
+    }
+    
+    // Validate email
+    if (!is_email($email)) {
+        $error_code = 'invalid_email';
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        exit;
+    }
+    
+    // Check if username exists
+    if (username_exists($username)) {
+        $error_code = 'username_exists';
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        exit;
+    }
+    
+    // Check if email exists
+    if (email_exists($email)) {
+        $error_code = 'email_exists';
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        exit;
+    }
+    
+    // Create the user
+    $display_name = trim($first_name . ' ' . $last_name);
+    if ('' === $display_name) {
+        $display_name = $username;
+    }
+
+    $user_id = wp_insert_user(array(
+        'user_login'   => $username,
+        'user_email'   => $email,
+        'user_pass'    => $password,
+        'first_name'   => $first_name,
+        'last_name'    => $last_name,
+        'display_name' => $display_name,
+        'role'         => 'subscriber',
+    ));
+    
+    // Check for errors
+    if (is_wp_error($user_id)) {
+        $error_code = $user_id->get_error_code();
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        exit;
+    }
+
+    // Set account type meta
+    update_user_meta($user_id, '_vh360_account_type', $account_type);
+    
+    // Set default profile visibility based on account type
+    if ($account_type === 'professional') {
+        update_user_meta($user_id, '_vh360_profile_visibility', 'public');
+    } elseif ($account_type === 'client') {
+        update_user_meta($user_id, '_vh360_profile_visibility', 'members');
+    }
+    
+    // Log the user in
+    wp_set_current_user($user_id);
+    wp_set_auth_cookie($user_id);
+
+    // Send registration notification if enabled
+    if (get_theme_mod('vh360_registration_notify', false)) {
+        $notification_email = get_theme_mod('vh360_registration_notify_email', get_option('admin_email'));
+        $notification_email = sanitize_email($notification_email);
+        if (!empty($notification_email)) {
+            /* translators: %s: Site name */
+            $subject = sprintf(__('[%s] New %s registration', 'videohub360-theme'), get_bloginfo('name'), ucfirst($account_type));
+            $message  = "";
+            $message .= sprintf(__('A new %s has registered on %s.', 'videohub360-theme'), $account_type, get_bloginfo('name')) . "\n\n";
+            $message .= __('Username:', 'videohub360-theme') . ' ' . $username . "\n";
+            $message .= __('Email:', 'videohub360-theme') . ' ' . $email . "\n";
+            $message .= __('Account Type:', 'videohub360-theme') . ' ' . ucfirst($account_type) . "\n";
+            wp_mail($notification_email, $subject, $message);
+        }
+    }
+    
+    // Redirect based on account type
+    if ($account_type === 'professional') {
+        // Redirect to dashboard with business profile tab
+        $redirect_to = home_url('/dashboard/');
+        if (get_page_by_path('dashboard')) {
+            $redirect_to = add_query_arg('tab', 'business-profile', $redirect_to);
+        }
+    } else {
+        // Redirect to dashboard for clients
+        $redirect_to = home_url('/dashboard/');
+        if (!get_page_by_path('dashboard')) {
+            $redirect_to = home_url('/');
+        }
+    }
+    
+    wp_safe_redirect($redirect_to);
+    exit;
+}
+add_action('template_redirect', 'vh360_handle_business_registration');
+
+/**
+ * Get the URL for the professional registration page
+ *
+ * @return string The professional registration page URL
+ */
+function vh360_get_professional_register_url() {
+    // Try to find a page with the professional register template
+    $pages = get_pages(array(
+        'meta_key' => '_wp_page_template',
+        'meta_value' => 'template-register-professional.php',
+        'number' => 1,
+    ));
+    
+    if (!empty($pages)) {
+        return get_permalink($pages[0]->ID);
+    }
+    
+    // Fallback to slug-based URL
+    return home_url('/register-professional/');
+}
+
+/**
+ * Get the URL for the client registration page
+ *
+ * @return string The client registration page URL
+ */
+function vh360_get_client_register_url() {
+    // Try to find a page with the client register template
+    $pages = get_pages(array(
+        'meta_key' => '_wp_page_template',
+        'meta_value' => 'template-register-client.php',
+        'number' => 1,
+    ));
+    
+    if (!empty($pages)) {
+        return get_permalink($pages[0]->ID);
+    }
+    
+    // Fallback to slug-based URL
+    return home_url('/register-client/');
+}
+
+/**
+ * Get the URL for the business registration landing page
+ *
+ * @return string The business registration landing page URL
+ */
+function vh360_get_business_register_url() {
+    // Try to find a page with the business register template
+    $pages = get_pages(array(
+        'meta_key' => '_wp_page_template',
+        'meta_value' => 'template-register-business.php',
+        'number' => 1,
+    ));
+    
+    if (!empty($pages)) {
+        return get_permalink($pages[0]->ID);
+    }
+    
+    // Fallback to slug-based URL
+    return home_url('/register-business/');
+}
+
+/**
  * Handle custom login form submission
  * 
  * Processes login attempts from the custom login template without touching wp-login.php.
