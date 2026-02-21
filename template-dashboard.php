@@ -68,6 +68,16 @@ get_header();
                     <?php get_template_part('template-parts/dashboard/profile'); ?>
                 </div>
                 
+                <!-- Business Profile Tab (for professionals/organizations only) -->
+                <?php
+                $user_account_type = function_exists('vh360_get_user_account_type') ? vh360_get_user_account_type($current_user_id) : 'creator';
+                if (in_array($user_account_type, array('professional', 'organization'), true)) :
+                ?>
+                <div id="business-profile" class="vh360-dashboard-tab-content">
+                    <?php get_template_part('template-parts/dashboard/business-profile'); ?>
+                </div>
+                <?php endif; ?>
+                
                 <!-- Galleries Tab -->
                 <div id="galleries" class="vh360-dashboard-tab-content">
                     <?php get_template_part('template-parts/dashboard/gallery'); ?>

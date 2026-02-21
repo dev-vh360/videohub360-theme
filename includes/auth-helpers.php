@@ -424,6 +424,122 @@ function vh360_get_client_register_url() {
 }
 
 /**
+ * Handle Business Profile form submission (front-end editor)
+ */
+function vh360_handle_business_profile_save() {
+    // Only process POST requests
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        return;
+    }
+    
+    // Only process if this is a business profile save
+    if (!isset($_POST['vh360_save_business_profile_submit']) || !isset($_POST['vh360_save_business_profile_nonce'])) {
+        return;
+    }
+    
+    // Require user to be logged in
+    if (!is_user_logged_in()) {
+        return;
+    }
+    
+    $current_user_id = get_current_user_id();
+    
+    // Only allow saving for professional/organization account types
+    $account_type = vh360_get_user_account_type($current_user_id);
+    if (!in_array($account_type, array('professional', 'organization'), true)) {
+        return;
+    }
+    
+    // Get the current page URL safely
+    $current_url = get_permalink();
+    if (!$current_url) {
+        $current_url = home_url('/dashboard/');
+    }
+    
+    // Verify nonce
+    if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['vh360_save_business_profile_nonce'])), 'vh360_save_business_profile')) {
+        wp_safe_redirect(add_query_arg('business_profile_updated', 'error', $current_url));
+        exit;
+    }
+    
+    // Sanitize and save business fields
+    
+    // Text fields
+    if (isset($_POST['business_name'])) {
+        update_user_meta($current_user_id, '_vh360_business_name', 
+            sanitize_text_field(wp_unslash($_POST['business_name'])));
+    }
+    
+    if (isset($_POST['business_type'])) {
+        update_user_meta($current_user_id, '_vh360_business_type', 
+            sanitize_text_field(wp_unslash($_POST['business_type'])));
+    }
+    
+    if (isset($_POST['credentials'])) {
+        update_user_meta($current_user_id, '_vh360_credentials', 
+            sanitize_text_field(wp_unslash($_POST['credentials'])));
+    }
+    
+    if (isset($_POST['location'])) {
+        update_user_meta($current_user_id, '_vh360_location', 
+            sanitize_text_field(wp_unslash($_POST['location'])));
+    }
+    
+    if (isset($_POST['contact_phone'])) {
+        update_user_meta($current_user_id, '_vh360_contact_phone', 
+            sanitize_text_field(wp_unslash($_POST['contact_phone'])));
+    }
+    
+    // Textarea fields
+    if (isset($_POST['specialties'])) {
+        update_user_meta($current_user_id, '_vh360_specialties', 
+            sanitize_textarea_field(wp_unslash($_POST['specialties'])));
+    }
+    
+    if (isset($_POST['pricing_info'])) {
+        update_user_meta($current_user_id, '_vh360_pricing_info', 
+            sanitize_textarea_field(wp_unslash($_POST['pricing_info'])));
+    }
+    
+    if (isset($_POST['insurance_info'])) {
+        update_user_meta($current_user_id, '_vh360_insurance_info', 
+            sanitize_textarea_field(wp_unslash($_POST['insurance_info'])));
+    }
+    
+    // Email field
+    if (isset($_POST['contact_email'])) {
+        update_user_meta($current_user_id, '_vh360_contact_email', 
+            sanitize_email(wp_unslash($_POST['contact_email'])));
+    }
+    
+    // URL field
+    if (isset($_POST['booking_url'])) {
+        update_user_meta($current_user_id, '_vh360_booking_url', 
+            esc_url_raw(wp_unslash($_POST['booking_url'])));
+    }
+    
+    // Checkboxes
+    update_user_meta($current_user_id, '_vh360_telehealth', 
+        isset($_POST['telehealth']) ? '1' : '0');
+    
+    update_user_meta($current_user_id, '_vh360_accepting_new_clients', 
+        isset($_POST['accepting_new_clients']) ? '1' : '0');
+    
+    // Redirect back with success flag
+    $redirect_url = add_query_arg(array(
+        'business_profile_updated' => 'success',
+        'tab' => 'business-profile'
+    ), $current_url);
+    
+    // Remove fragment if exists and add it back
+    $redirect_url .= '#business-profile';
+    
+    wp_safe_redirect($redirect_url);
+    exit;
+}
+add_action('template_redirect', 'vh360_handle_business_profile_save');
+
+/**
  * Get the URL for the business registration landing page
  *
  * @return string The business registration landing page URL
