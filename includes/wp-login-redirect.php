@@ -123,3 +123,45 @@ function vh360_redirect_admin_to_custom_login() {
     wp_safe_redirect($redirect_url, 302);
     exit;
 }
+
+/**
+ * Block wp-admin access for non-admin users
+ * 
+ * Redirects logged-in subscribers to the front-end dashboard
+ */
+add_action('admin_init', 'vh360_block_admin_for_non_admins');
+function vh360_block_admin_for_non_admins() {
+    // Only for logged-in users
+    if (!is_user_logged_in()) {
+        return;
+    }
+    
+    // Allow admins to access wp-admin
+    if (current_user_can('manage_options')) {
+        return;
+    }
+    
+    // Skip AJAX and REST
+    if (wp_doing_ajax() || (defined('REST_REQUEST') && REST_REQUEST)) {
+        return;
+    }
+    
+    // Redirect to front-end dashboard
+    $dashboard_url = home_url('/dashboard/');
+    if (!get_page_by_path('dashboard')) {
+        $dashboard_url = home_url('/');
+    }
+    
+    wp_safe_redirect($dashboard_url, 302);
+    exit;
+}
+
+/**
+ * Hide admin bar for non-admin users
+ */
+add_action('after_setup_theme', 'vh360_hide_admin_bar_for_non_admins');
+function vh360_hide_admin_bar_for_non_admins() {
+    if (!current_user_can('manage_options')) {
+        show_admin_bar(false);
+    }
+}
