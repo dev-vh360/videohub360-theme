@@ -1059,6 +1059,48 @@ require_once VH360_THEME_DIR . '/includes/events/class-vh360-event-ajax.php';
 require_once VH360_THEME_DIR . '/includes/events/event-functions.php';
 
 /**
+ * Exclude appointment-only events (availability and block) from public event archives
+ */
+function vh360_exclude_appointment_events_from_archives($query) {
+    // Only apply to main query on event archives (not admin, not in dashboard)
+    if (is_admin() || !$query->is_main_query()) {
+        return;
+    }
+    
+    // Only apply to vh360_event post type archives
+    if (!is_post_type_archive('vh360_event') && !($query->is_tax() && $query->get('post_type') === 'vh360_event')) {
+        return;
+    }
+    
+    // Don't apply if we're viewing a specific author's business profile (handled separately in business header)
+    if (is_author()) {
+        return;
+    }
+    
+    // Exclude availability and block kind events from public archives
+    $meta_query = $query->get('meta_query');
+    if (!is_array($meta_query)) {
+        $meta_query = array();
+    }
+    
+    $meta_query[] = array(
+        'relation' => 'OR',
+        array(
+            'key' => '_vh360_event_kind',
+            'compare' => 'NOT EXISTS'
+        ),
+        array(
+            'key' => '_vh360_event_kind',
+            'value' => 'event',
+            'compare' => '='
+        )
+    );
+    
+    $query->set('meta_query', $meta_query);
+}
+add_action('pre_get_posts', 'vh360_exclude_appointment_events_from_archives');
+
+/**
  * User menu functions
  */
 require_once VH360_THEME_DIR . '/includes/user-menu-functions.php';
