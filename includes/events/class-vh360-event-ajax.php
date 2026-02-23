@@ -524,6 +524,19 @@ class VH360_Event_Ajax {
             $message = __('RSVP cancelled', 'videohub360-theme');
             $is_rsvpd = false;
         } else {
+            // Check max attendees limit before adding new RSVP
+            $max_attendees = get_post_meta($event_id, '_vh360_event_max_attendees', true);
+            
+            if (!empty($max_attendees) && is_numeric($max_attendees)) {
+                $max_attendees = absint($max_attendees);
+                if ($max_attendees > 0 && count($rsvps) >= $max_attendees) {
+                    wp_send_json_error(array(
+                        'message' => __('Sorry, this event has reached its maximum capacity.', 'videohub360-theme')
+                    ));
+                    return;
+                }
+            }
+            
             // Add RSVP
             $rsvps[] = array(
                 'user_id' => $user_id,
