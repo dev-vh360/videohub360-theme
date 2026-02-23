@@ -20,10 +20,33 @@ function vh360_enqueue_profile_assets() {
     // Load on profile post type pages or author archive pages
     if (is_singular('vh360_profile') || is_post_type_archive('vh360_profile') || is_author()) {
         
-        // Check if we're in channel mode
-        $template_mode = function_exists('vh360_get_author_template_mode') ? vh360_get_author_template_mode() : 'profile';
+        // For author pages, determine mode based on the viewed author's account type
+        if (is_author()) {
+            $author_id = get_queried_object_id();
+            $template_mode = function_exists('vh360_get_author_display_mode') ? vh360_get_author_display_mode($author_id) : 'profile';
+        } else {
+            // For non-author pages, use global setting
+            $template_mode = function_exists('vh360_get_author_template_mode') ? vh360_get_author_template_mode() : 'profile';
+        }
         
-        if ($template_mode === 'channel') {
+        // Load assets based on display mode
+        if ($template_mode === 'business') {
+            // Load business CSS for business mode
+            wp_enqueue_style(
+                'vh360-business',
+                VH360_THEME_URI . '/assets/css/business.css',
+                array('videohub360-theme-style'),
+                VH360_THEME_VERSION
+            );
+        } elseif ($template_mode === 'client') {
+            // Load client CSS for client mode
+            wp_enqueue_style(
+                'vh360-client',
+                VH360_THEME_URI . '/assets/css/client.css',
+                array('videohub360-theme-style'),
+                VH360_THEME_VERSION
+            );
+        } elseif ($template_mode === 'channel') {
             // Load channel CSS for channel mode
             wp_enqueue_style(
                 'vh360-channel',
@@ -537,11 +560,14 @@ add_action('wp_enqueue_scripts', 'vh360_enqueue_user_menu_assets', 20);
  * Conditionally enqueue authentication page assets
  */
 function vh360_enqueue_auth_assets() {
-    // Load on login, register, lost password, and reset password template pages
+    // Load on login, register, lost password, reset password, and business registration template pages
     if (is_page_template('template-login.php') || 
         is_page_template('template-register.php') || 
         is_page_template('template-lost-password.php') || 
-        is_page_template('template-reset-password.php')) {
+        is_page_template('template-reset-password.php') ||
+        is_page_template('template-register-business.php') ||
+        is_page_template('template-register-professional.php') ||
+        is_page_template('template-register-client.php')) {
         wp_enqueue_style(
             'vh360-auth-pages',
             VH360_THEME_URI . '/assets/css/auth-pages.css',

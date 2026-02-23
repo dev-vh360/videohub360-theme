@@ -1,0 +1,140 @@
+<?php
+/**
+ * Template Name: Business Registration Landing
+ *
+ * Landing page for Business registration with two paths: Professional or Client
+ *
+ * @package Videohub360_Theme
+ * @since 1.0.0
+ */
+
+if (!defined('ABSPATH')) {
+    exit; // Exit if accessed directly
+}
+
+// Redirect if already logged in
+if (is_user_logged_in()) {
+    $redirect_to = home_url('/dashboard/');
+    if (!get_page_by_path('dashboard')) {
+        $redirect_to = home_url('/');
+    }
+    wp_safe_redirect($redirect_to);
+    exit;
+}
+
+// Check if registration is enabled
+if (!get_option('users_can_register')) {
+    wp_safe_redirect(home_url('/'));
+    exit;
+}
+
+get_header();
+
+// Get URLs for the registration forms
+$professional_url = vh360_get_professional_register_url();
+$client_url = vh360_get_client_register_url();
+?>
+
+<div id="primary" class="content-area">
+    <main id="main" class="site-main vh360-auth-page business-register-page">
+        
+        <div class="vh360-auth-container vh360-business-choice-container">
+            
+            <!-- Header Section -->
+            <div class="vh360-business-choice-header">
+                <?php if (has_custom_logo()) : ?>
+                    <div class="vh360-auth-logo">
+                        <?php the_custom_logo(); ?>
+                    </div>
+                <?php else : ?>
+                    <h2 class="vh360-auth-site-title"><?php bloginfo('name'); ?></h2>
+                <?php endif; ?>
+                
+                <h1 class="vh360-business-choice-title">
+                    <?php esc_html_e('Join as a Business Professional or Client', 'videohub360-theme'); ?>
+                </h1>
+                
+                <p class="vh360-business-choice-description">
+                    <?php esc_html_e('Choose the account type that best fits your needs', 'videohub360-theme'); ?>
+                </p>
+            </div>
+            
+            <!-- Choice Cards -->
+            <div class="vh360-business-choice-cards">
+                
+                <!-- Professional Card -->
+                <div class="vh360-business-choice-card">
+                    <div class="vh360-business-choice-icon">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </div>
+                    <h2 class="vh360-business-choice-card-title">
+                        <?php esc_html_e('Professional', 'videohub360-theme'); ?>
+                    </h2>
+                    <p class="vh360-business-choice-card-description">
+                        <?php esc_html_e('For therapists, consultants, coaches, and service providers looking to showcase their business and connect with clients.', 'videohub360-theme'); ?>
+                    </p>
+                    <ul class="vh360-business-choice-features">
+                        <li><?php esc_html_e('Business profile with services', 'videohub360-theme'); ?></li>
+                        <li><?php esc_html_e('Display credentials & specialties', 'videohub360-theme'); ?></li>
+                        <li><?php esc_html_e('Contact information & booking', 'videohub360-theme'); ?></li>
+                        <li><?php esc_html_e('Share content & resources', 'videohub360-theme'); ?></li>
+                    </ul>
+                    <a href="<?php echo esc_url($professional_url); ?>" class="vh360-business-choice-button vh360-button-primary">
+                        <?php esc_html_e('Sign Up as Professional', 'videohub360-theme'); ?>
+                    </a>
+                </div>
+                
+                <!-- Client Card -->
+                <div class="vh360-business-choice-card">
+                    <div class="vh360-business-choice-icon">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                    </div>
+                    <h2 class="vh360-business-choice-card-title">
+                        <?php esc_html_e('Client', 'videohub360-theme'); ?>
+                    </h2>
+                    <p class="vh360-business-choice-card-description">
+                        <?php esc_html_e('For individuals seeking services, engaging with content, and connecting with professionals.', 'videohub360-theme'); ?>
+                    </p>
+                    <ul class="vh360-business-choice-features">
+                        <li><?php esc_html_e('Simple profile setup', 'videohub360-theme'); ?></li>
+                        <li><?php esc_html_e('Connect with professionals', 'videohub360-theme'); ?></li>
+                        <li><?php esc_html_e('Engage with content', 'videohub360-theme'); ?></li>
+                        <li><?php esc_html_e('Privacy-focused experience', 'videohub360-theme'); ?></li>
+                    </ul>
+                    <a href="<?php echo esc_url($client_url); ?>" class="vh360-business-choice-button vh360-button-secondary">
+                        <?php esc_html_e('Sign Up as Client', 'videohub360-theme'); ?>
+                    </a>
+                </div>
+                
+            </div>
+            
+            <!-- Alternative Link -->
+            <div class="vh360-auth-links vh360-business-choice-footer">
+                <span><?php esc_html_e('Looking for a different account type?', 'videohub360-theme'); ?></span>
+                <a href="<?php echo esc_url(vh360_get_register_page_url()); ?>" class="vh360-auth-link">
+                    <?php esc_html_e('Standard Registration', 'videohub360-theme'); ?>
+                </a>
+            </div>
+            
+            <div class="vh360-auth-links">
+                <span><?php esc_html_e('Already have an account?', 'videohub360-theme'); ?></span>
+                <a href="<?php echo esc_url(vh360_get_login_page_url()); ?>" class="vh360-auth-link">
+                    <?php esc_html_e('Sign In', 'videohub360-theme'); ?>
+                </a>
+            </div>
+            
+        </div><!-- .vh360-business-choice-container -->
+        
+    </main><!-- #main -->
+</div><!-- #primary -->
+
+<?php
+get_footer();

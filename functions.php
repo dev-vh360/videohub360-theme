@@ -986,6 +986,11 @@ require_once VH360_THEME_DIR . '/includes/performance.php';
 require_once VH360_THEME_DIR . '/includes/enqueue-manager.php';
 
 /**
+ * Account type helpers
+ */
+require_once VH360_THEME_DIR . '/includes/account-types.php';
+
+/**
  * Helper functions
  */
 require_once VH360_THEME_DIR . '/includes/helpers.php';
@@ -1099,6 +1104,9 @@ if (is_admin()) {
     
     // Video upload settings page
     require_once VH360_THEME_DIR . '/includes/admin/video-upload-settings.php';
+    
+    // User account type and business profile fields
+    require_once VH360_THEME_DIR . '/includes/admin/user-account-type.php';
 }
 
 // -----------------------------------------------------------------------------

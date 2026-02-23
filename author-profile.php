@@ -6,6 +6,7 @@
  * Shows user information, stats, bio, posts, videos, and social activity.
  * 
  * Note: This file is loaded when vh360_author_template_mode = 'profile'
+ * This is a partial template loaded by author.php - does not call header/footer
  *
  * @package Videohub360_Theme
  * @since 1.0.0
@@ -15,15 +16,12 @@ if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly
 }
 
-get_header();
-
 // Get the author being displayed
 $author_id = get_queried_object_id();
 $author = get_userdata($author_id);
 
 if (!$author) {
     get_template_part('template-parts/content', 'none');
-    get_footer();
     return;
 }
 
@@ -103,6 +101,3 @@ $profile_url = get_author_posts_url($author_id);
 
     </div><!-- .vh360-profile-page -->
 </div><!-- #primary -->
-
-<?php
-get_footer();

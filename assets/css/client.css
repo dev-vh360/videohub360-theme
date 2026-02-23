@@ -1,0 +1,112 @@
+/**
+ * Client Profile Styles
+ * 
+ * Styles for client author pages (minimal presentation)
+ *
+ * @package Videohub360_Theme
+ * @since 1.0.0
+ */
+
+/* Client Profile Header */
+.vh360-client-header {
+    background: #f8f9fa;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+}
+
+.vh360-client-header-content {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.vh360-client-avatar img {
+    border-radius: 50%;
+}
+
+.vh360-client-name {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.75rem;
+}
+
+.vh360-client-type {
+    color: #666;
+    margin: 0;
+}
+
+/* Client Navigation */
+.vh360-client-navigation {
+    background: #fff;
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 2rem;
+}
+
+.vh360-client-tabs {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 2rem;
+}
+
+.vh360-client-tabs li a {
+    display: block;
+    padding: 1rem 0;
+    text-decoration: none;
+    color: #666;
+    border-bottom: 3px solid transparent;
+}
+
+.vh360-client-tabs li.active a,
+.vh360-client-tabs li a:hover {
+    color: #000;
+    border-bottom-color: #007bff;
+}
+
+/* Client Content */
+.vh360-client-content {
+    padding: 2rem 0;
+}
+
+.vh360-client-about h2,
+.vh360-client-activity h2 {
+    margin-bottom: 1.5rem;
+}
+
+.vh360-client-info-section {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.vh360-client-bio {
+    margin-top: 1.5rem;
+}
+
+/* Activity List */
+.vh360-activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.vh360-activity-item {
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.vh360-activity-meta {
+    color: #666;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+.vh360-activity-content blockquote {
+    margin: 0.5rem 0 0 0;
+    padding-left: 1rem;
+    border-left: 3px solid #ddd;
+    color: #666;
+    font-style: italic;
+}
