@@ -133,8 +133,12 @@ function vh360_get_open_appointment_slots($professional_id, $range_start, $range
         if (!empty($settings['weekly'][$day_of_week])) {
             foreach ($settings['weekly'][$day_of_week] as $time_block) {
                 // Generate slots within this time block
-                $block_start = DateTime::createFromFormat('Y-m-d H:i', $current_date->format('Y-m-d') . ' ' . $time_block['start'], new DateTimeZone($settings['timezone']));
-                $block_end = DateTime::createFromFormat('Y-m-d H:i', $current_date->format('Y-m-d') . ' ' . $time_block['end'], new DateTimeZone($settings['timezone']));
+                // Handle both H:i and H:i:s formats from time inputs
+                $start_time = preg_replace('/:\d{2}$/', '', $time_block['start']); // Remove seconds if present
+                $end_time = preg_replace('/:\d{2}$/', '', $time_block['end']); // Remove seconds if present
+                
+                $block_start = DateTime::createFromFormat('Y-m-d H:i', $current_date->format('Y-m-d') . ' ' . $start_time, new DateTimeZone($settings['timezone']));
+                $block_end = DateTime::createFromFormat('Y-m-d H:i', $current_date->format('Y-m-d') . ' ' . $end_time, new DateTimeZone($settings['timezone']));
                 
                 if (!$block_start || !$block_end) {
                     continue;

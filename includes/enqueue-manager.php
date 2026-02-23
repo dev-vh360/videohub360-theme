@@ -254,6 +254,12 @@ function vh360_enqueue_dashboard_assets() {
             ),
         ));
         
+        // Add availability-specific localization
+        wp_localize_script('vh360-dashboard-script', 'vh360Ajax', array(
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('vh360_dashboard_nonce'),
+        ));
+        
         // Localize notifications dashboard script
         wp_localize_script('vh360-notifications-dashboard-script', 'vh360NotificationsDashboard', array(
             'ajaxurl' => admin_url('admin-ajax.php'),

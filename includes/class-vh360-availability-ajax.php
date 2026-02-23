@@ -52,7 +52,7 @@ class VH360_Availability_Ajax {
      */
     public function get_professional_slots() {
         // Verify nonce
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'vh360_availability_nonce')) {
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'vh360_dashboard_nonce')) {
             wp_send_json_error(array('message' => __('Security check failed', 'videohub360-theme')));
             return;
         }
@@ -90,7 +90,7 @@ class VH360_Availability_Ajax {
      */
     public function book_appointment_slot() {
         // Verify nonce
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'vh360_availability_nonce')) {
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'vh360_dashboard_nonce')) {
             wp_send_json_error(array('message' => __('Security check failed', 'videohub360-theme')));
             return;
         }
@@ -211,7 +211,7 @@ class VH360_Availability_Ajax {
      */
     public function save_availability_settings() {
         // Verify nonce
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'vh360_availability_nonce')) {
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'vh360_dashboard_nonce')) {
             wp_send_json_error(array('message' => __('Security check failed', 'videohub360-theme')));
             return;
         }
