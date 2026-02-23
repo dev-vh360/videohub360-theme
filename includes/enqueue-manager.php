@@ -38,6 +38,45 @@ function vh360_enqueue_profile_assets() {
                 array('videohub360-theme-style'),
                 VH360_THEME_VERSION
             );
+            
+            // Load business booking JS for appointment functionality
+            wp_enqueue_script(
+                'vh360-business-booking',
+                VH360_THEME_URI . '/assets/js/business-booking.js',
+                array('jquery'),
+                VH360_THEME_VERSION,
+                true
+            );
+            
+            // Get professional's availability settings
+            $availability_settings = array();
+            if (function_exists('vh360_get_availability_settings')) {
+                $availability_settings = vh360_get_availability_settings($author_id);
+            }
+            
+            // Localize script with necessary data
+            wp_localize_script(
+                'vh360-business-booking',
+                'vh360BusinessBooking',
+                array(
+                    'ajaxUrl' => admin_url('admin-ajax.php'),
+                    'nonce' => wp_create_nonce('vh360_dashboard_nonce'),
+                    'professionalId' => $author_id,
+                    'slotDuration' => isset($availability_settings['slot_minutes']) ? $availability_settings['slot_minutes'] : 30,
+                    'isLoggedIn' => is_user_logged_in(),
+                    'loginUrl' => wp_login_url(get_permalink()),
+                    'i18n' => array(
+                        'noSlots' => __('No appointment slots available for this date.', 'videohub360-theme'),
+                        'loadError' => __('Error loading available times. Please try again.', 'videohub360-theme'),
+                        'invalidSlot' => __('Invalid slot selected.', 'videohub360-theme'),
+                        'bookButton' => __('Book', 'videohub360-theme'),
+                        'booking' => __('Booking...', 'videohub360-theme'),
+                        'bookingSuccess' => __('Appointment booked successfully!', 'videohub360-theme'),
+                        'bookingError' => __('Error booking appointment. Please try again.', 'videohub360-theme'),
+                        'loginToBook' => __('Login to Book', 'videohub360-theme'),
+                    ),
+                )
+            );
         } elseif ($template_mode === 'client') {
             // Load client CSS for client mode
             wp_enqueue_style(

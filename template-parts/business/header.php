@@ -38,63 +38,6 @@ if (is_user_logged_in() && $current_user_id !== $author_id) {
         }
     }
 }
-
-// Get upcoming availability slots for booking (not regular events or blocks)
-$upcoming_events = array();
-$events_query = new WP_Query(array(
-    'post_type' => 'vh360_event',
-    'post_status' => 'publish',
-    'author' => $author_id,
-    'posts_per_page' => 10,
-    'meta_key' => '_vh360_event_start_date',
-    'orderby' => 'meta_value',
-    'order' => 'ASC',
-    'meta_query' => array(
-        'relation' => 'AND',
-        array(
-            'key' => '_vh360_event_start_date',
-            'value' => current_time('Y-m-d'),
-            'compare' => '>=',
-            'type' => 'DATE'
-        ),
-        array(
-            'key' => '_vh360_event_kind',
-            'value' => 'availability',
-            'compare' => '='
-        )
-    )
-));
-
-if ($events_query->have_posts()) {
-    while ($events_query->have_posts()) {
-        $events_query->the_post();
-        $event_id = get_the_ID();
-        $start_date = get_post_meta($event_id, '_vh360_event_start_date', true);
-        $start_time = get_post_meta($event_id, '_vh360_event_start_time', true);
-        $max_attendees = get_post_meta($event_id, '_vh360_event_max_attendees', true);
-        $rsvp_count = get_post_meta($event_id, '_vh360_event_rsvp_count', true);
-        
-        // Check if slot is still available
-        $is_full = false;
-        if (!empty($max_attendees) && is_numeric($max_attendees)) {
-            $max_attendees = absint($max_attendees);
-            $rsvp_count = absint($rsvp_count);
-            if ($max_attendees > 0 && $rsvp_count >= $max_attendees) {
-                $is_full = true;
-            }
-        }
-        
-        $upcoming_events[] = array(
-            'id' => $event_id,
-            'title' => get_the_title(),
-            'date' => $start_date,
-            'time' => $start_time,
-            'url' => get_permalink($event_id),
-            'is_full' => $is_full
-        );
-    }
-    wp_reset_postdata();
-}
 ?>
 
 <div class="vh360-business-header">
@@ -133,7 +76,7 @@ if ($events_query->have_posts()) {
             
         </div>
         
-        <!-- Booking Section - Always show for Business profiles -->
+        <!-- Booking Section - Dynamic Appointment Picker -->
         <div class="vh360-business-booking">
             <h2 class="vh360-business-booking-title">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -142,64 +85,46 @@ if ($events_query->have_posts()) {
                     <line x1="8" y1="2" x2="8" y2="6"></line>
                     <line x1="3" y1="10" x2="21" y2="10"></line>
                 </svg>
-                <?php esc_html_e('Available Appointments', 'videohub360-theme'); ?>
+                <?php esc_html_e('Book an Appointment', 'videohub360-theme'); ?>
             </h2>
             
-            <?php if (!empty($upcoming_events)) : ?>
-                <div class="vh360-business-booking-slots">
-                    <?php foreach ($upcoming_events as $event) : ?>
-                        <div class="vh360-booking-slot <?php echo $event['is_full'] ? 'full' : ''; ?>">
-                            <div class="vh360-booking-slot-info">
-                                <div class="vh360-booking-slot-date">
-                                    <?php 
-                                    if ($event['date']) {
-                                        $timestamp = strtotime($event['date']);
-                                        if ($timestamp !== false) {
-                                            echo esc_html(date_i18n(get_option('date_format'), $timestamp));
-                                        }
-                                    }
-                                    ?>
-                                </div>
-                                <div class="vh360-booking-slot-time">
-                                    <?php 
-                                    if ($event['time']) {
-                                        echo esc_html($event['time']);
-                                    }
-                                    ?>
-                                </div>
-                                <?php if (!empty($event['title'])) : ?>
-                                    <div class="vh360-booking-slot-title"><?php echo esc_html($event['title']); ?></div>
-                                <?php endif; ?>
-                            </div>
-                            <div class="vh360-booking-slot-action">
-                                <?php if ($event['is_full']) : ?>
-                                    <span class="vh360-booking-slot-full"><?php esc_html_e('Booked', 'videohub360-theme'); ?></span>
-                                <?php else : ?>
-                                    <a href="<?php echo esc_url($event['url']); ?>" class="vh360-booking-slot-btn">
-                                        <?php esc_html_e('View & Confirm', 'videohub360-theme'); ?>
-                                    </a>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                    <p class="vh360-booking-info">
-                        <?php esc_html_e('Click "Book Appointment" to see details and confirm your booking via RSVP.', 'videohub360-theme'); ?>
-                    </p>
+            <?php if ($is_owner) : ?>
+                <!-- Owner View: Manage Availability Link -->
+                <div class="vh360-business-booking-owner">
+                    <p><?php esc_html_e('You are viewing your own profile.', 'videohub360-theme'); ?></p>
+                    <a href="<?php echo esc_url(add_query_arg('tab', 'availability', home_url('/dashboard/'))); ?>" class="vh360-booking-manage-link">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        <?php esc_html_e('Manage Your Availability', 'videohub360-theme'); ?>
+                    </a>
                 </div>
             <?php else : ?>
-                <div class="vh360-business-booking-empty">
-                    <p><?php esc_html_e('No appointment slots are currently available.', 'videohub360-theme'); ?></p>
-                    <?php if ($is_owner) : ?>
-                        <a href="<?php echo esc_url(add_query_arg('tab', 'events', home_url('/dashboard/'))); ?>" class="vh360-booking-manage-link">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                                <line x1="16" y1="2" x2="16" y2="6"></line>
-                                <line x1="8" y1="2" x2="8" y2="6"></line>
-                                <line x1="3" y1="10" x2="21" y2="10"></line>
-                            </svg>
-                            <?php esc_html_e('Manage Availability', 'videohub360-theme'); ?>
-                        </a>
-                    <?php endif; ?>
+                <!-- Client View: Dynamic Booking Interface -->
+                <div class="vh360-business-booking-picker">
+                    <div class="vh360-booking-date-picker-wrapper">
+                        <label for="vh360-booking-date-picker">
+                            <?php esc_html_e('Select a date:', 'videohub360-theme'); ?>
+                        </label>
+                        <input type="date" 
+                               id="vh360-booking-date-picker" 
+                               class="vh360-booking-date-input"
+                               min="<?php echo esc_attr(current_time('Y-m-d')); ?>">
+                    </div>
+                    
+                    <div id="vh360-booking-messages" class="vh360-booking-messages"></div>
+                    
+                    <div id="vh360-booking-loading" class="vh360-booking-loading" style="display: none;">
+                        <svg class="vh360-spinner" width="40" height="40" viewBox="0 0 50 50">
+                            <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
+                        </svg>
+                        <p><?php esc_html_e('Loading available times...', 'videohub360-theme'); ?></p>
+                    </div>
+                    
+                    <div id="vh360-booking-slots-container" class="vh360-booking-slots-container">
+                        <!-- Slots will be loaded here dynamically -->
+                    </div>
                 </div>
             <?php endif; ?>
         </div>
