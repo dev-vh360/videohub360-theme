@@ -71,6 +71,7 @@ function vh360_enqueue_profile_assets() {
                         'invalidSlot' => __('Invalid slot selected.', 'videohub360-theme'),
                         'bookButton' => __('Book', 'videohub360-theme'),
                         'booking' => __('Booking...', 'videohub360-theme'),
+                        'booked' => __('Booked', 'videohub360-theme'),
                         'bookingSuccess' => __('Appointment booked successfully!', 'videohub360-theme'),
                         'bookingError' => __('Error booking appointment. Please try again.', 'videohub360-theme'),
                         'loginToBook' => __('Login to Book', 'videohub360-theme'),

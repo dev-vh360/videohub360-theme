@@ -320,6 +320,11 @@
     cursor: not-allowed;
 }
 
+.vh360-book-slot-btn.vh360-slot-booked {
+    background: #10b981;
+    cursor: default;
+}
+
 .vh360-book-slot-login {
     background: #059669;
 }

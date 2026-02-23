@@ -185,21 +185,33 @@
                     slot_duration: vh360BusinessBooking.slotDuration
                 },
                 success: function(response) {
+                    console.log('Booking response:', response);
+                    
                     if (response.success) {
                         // Show success message
                         VH360BusinessBooking.showMessage('success', response.data.message || vh360BusinessBooking.i18n.bookingSuccess);
                         
-                        // Reload slots to update availability
-                        const selectedDate = $('#vh360-booking-date-picker').val();
+                        // Update button to show "Booked" state immediately
+                        $btn.text(vh360BusinessBooking.i18n.booked || 'Booked').addClass('vh360-slot-booked');
+                        
+                        // Remove the slot from UI after a moment
                         setTimeout(function() {
-                            VH360BusinessBooking.loadSlots(selectedDate);
+                            $btn.closest('.vh360-booking-slot').fadeOut(function() {
+                                $(this).remove();
+                                
+                                // Check if any slots remain
+                                const $slotsContainer = $('#vh360-booking-slots');
+                                if ($slotsContainer.find('.vh360-booking-slot').length === 0) {
+                                    $slotsContainer.html('<p>' + (vh360BusinessBooking.i18n.noSlots || 'No appointment slots available for this date.') + '</p>');
+                                }
+                            });
                         }, 1500);
                         
                         // Optionally redirect to appointment details
                         if (response.data.event_url) {
                             setTimeout(function() {
                                 window.location.href = response.data.event_url;
-                            }, 2000);
+                            }, 2500);
                         }
                     } else {
                         $btn.prop('disabled', false);
@@ -211,6 +223,7 @@
                     $btn.prop('disabled', false);
                     $btn.text(originalText);
                     console.error('Booking error:', error);
+                    console.error('XHR response:', xhr.responseText);
                     VH360BusinessBooking.showMessage('error', vh360BusinessBooking.i18n.bookingError || 'Error booking appointment.');
                 }
             });

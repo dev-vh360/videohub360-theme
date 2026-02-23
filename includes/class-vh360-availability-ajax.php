@@ -197,16 +197,20 @@ class VH360_Availability_Ajax {
         
         // Send notification to professional
         if (function_exists('vh360_create_notification')) {
+            $notification_message = sprintf(
+                __('%s booked an appointment with you on %s at %s', 'videohub360-theme'),
+                $client->display_name,
+                $slot_start->format(get_option('date_format')),
+                $slot_start->format(get_option('time_format'))
+            );
+            
             vh360_create_notification(
-                $professional_id,
-                'appointment_booked',
-                sprintf(
-                    __('%s booked an appointment with you on %s at %s', 'videohub360-theme'),
-                    $client->display_name,
-                    $slot_start->format(get_option('date_format')),
-                    $slot_start->format(get_option('time_format'))
-                ),
-                get_permalink($event_id)
+                $professional_id,        // user_id - who receives the notification
+                'appointment_booked',    // type
+                $client_id,             // actor_id - who triggered the notification
+                $event_id,              // object_id - the event/appointment
+                'vh360_event',          // object_type
+                $notification_message   // content
             );
         }
         
@@ -215,6 +219,7 @@ class VH360_Availability_Ajax {
             'event_id' => $event_id,
             'event_url' => get_permalink($event_id),
             'professional_id' => $professional_id,
+            'slot_datetime' => $slot_datetime, // Return so UI can update
         ));
     }
     
