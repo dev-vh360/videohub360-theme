@@ -335,12 +335,12 @@ if ($is_business_account) {
                 
                 <div class="vh360-form-group">
                     <label class="vh360-form-label"><?php esc_html_e('Service Options', 'videohub360-theme'); ?></label>
-                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                        <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: normal;">
+                    <div class="vh360-form-checkbox-group">
+                        <label class="vh360-form-checkbox-label">
                             <input type="checkbox" name="telehealth" value="1" <?php checked($telehealth, '1'); ?>>
                             <?php esc_html_e('Telehealth/Remote services available', 'videohub360-theme'); ?>
                         </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: normal;">
+                        <label class="vh360-form-checkbox-label">
                             <input type="checkbox" name="accepting_new_clients" value="1" <?php checked($accepting_clients, '1'); ?>>
                             <?php esc_html_e('Currently accepting new clients', 'videohub360-theme'); ?>
                         </label>
@@ -535,5 +535,19 @@ if ($is_business_account) {
     display: flex;
     gap: 1rem;
     margin-top: 2rem;
+}
+
+/* Checkbox Group */
+.vh360-form-checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.vh360-form-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: normal;
 }
 </style>

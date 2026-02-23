@@ -145,7 +145,10 @@ if ($events_query->have_posts()) {
                             <div class="vh360-booking-slot-date">
                                 <?php 
                                 if ($event['date']) {
-                                    echo esc_html(date_i18n(get_option('date_format'), strtotime($event['date'])));
+                                    $timestamp = strtotime($event['date']);
+                                    if ($timestamp !== false) {
+                                        echo esc_html(date_i18n(get_option('date_format'), $timestamp));
+                                    }
                                 }
                                 ?>
                             </div>
