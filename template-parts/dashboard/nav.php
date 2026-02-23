@@ -221,6 +221,18 @@ $stats = vh360_get_user_stats($current_user_id);
                 </a>
             </li>
             
+            <?php if (in_array($user_account_type, array('professional', 'organization'), true)) : ?>
+            <li class="vh360-dashboard-nav-item">
+                <a href="#availability" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="availability">
+                    <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <span class="vh360-dashboard-nav-text"><?php esc_html_e('Availability', 'videohub360-theme'); ?></span>
+                </a>
+            </li>
+            <?php endif; ?>
+            
             <li class="vh360-dashboard-nav-item">
                 <a href="#bulletins" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="bulletins">
                     <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

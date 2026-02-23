@@ -88,6 +88,11 @@ get_header();
                     <?php get_template_part('template-parts/dashboard/events'); ?>
                 </div>
                 
+                <!-- Availability Tab -->
+                <div id="availability" class="vh360-dashboard-tab-content">
+                    <?php get_template_part('template-parts/dashboard/availability'); ?>
+                </div>
+                
                 <!-- Bulletins Tab -->
                 <div id="bulletins" class="vh360-dashboard-tab-content">
                     <?php get_template_part('template-parts/dashboard/bulletins'); ?>
