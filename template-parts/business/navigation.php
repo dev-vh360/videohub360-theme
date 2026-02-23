@@ -35,11 +35,6 @@ $base_url = get_author_posts_url($author_id);
                     <?php esc_html_e('Content', 'videohub360-theme'); ?>
                 </a>
             </li>
-            <li class="<?php echo ($current_tab === 'contact') ? 'active' : ''; ?>">
-                <a href="<?php echo esc_url(add_query_arg('tab', 'contact', $base_url)); ?>">
-                    <?php esc_html_e('Contact', 'videohub360-theme'); ?>
-                </a>
-            </li>
         </ul>
     </div>
 </nav>

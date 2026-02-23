@@ -108,3 +108,307 @@
     gap: 2rem;
     margin-bottom: 2rem;
 }
+
+/* Business Booking UI */
+.vh360-business-booking {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    margin-top: 2rem;
+    overflow: hidden;
+}
+
+/* Collapsible Toggle Button */
+.vh360-business-booking-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+    text-align: left;
+    transition: background-color 0.2s;
+}
+
+.vh360-business-booking-toggle:hover {
+    background-color: #f9fafb;
+}
+
+.vh360-business-booking-toggle:focus {
+    outline: 2px solid #2563eb;
+    outline-offset: -2px;
+}
+
+.vh360-booking-toggle-text {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.vh360-booking-toggle-text svg {
+    stroke: #2563eb;
+    flex-shrink: 0;
+}
+
+.vh360-booking-toggle-icon {
+    stroke: #6b7280;
+    flex-shrink: 0;
+    transition: transform 0.3s ease;
+}
+
+.vh360-business-booking-toggle[aria-expanded="true"] .vh360-booking-toggle-icon {
+    transform: rotate(180deg);
+}
+
+/* Collapsible Content */
+.vh360-business-booking-content {
+    padding: 0 1.5rem 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.vh360-business-booking-content.vh360-booking-collapsed {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.vh360-business-booking-content.vh360-booking-expanded {
+    max-height: 2000px;
+    opacity: 1;
+}
+
+/* Owner View */
+.vh360-business-booking-owner {
+    padding: 1.5rem;
+    background: #f3f4f6;
+    border-radius: 0.375rem;
+    text-align: center;
+}
+
+.vh360-booking-manage-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: #2563eb;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    margin-top: 1rem;
+    transition: background 0.2s;
+}
+
+.vh360-booking-manage-link:hover {
+    background: #1d4ed8;
+    color: #fff;
+}
+
+/* Date Picker */
+.vh360-booking-date-picker-wrapper {
+    margin-bottom: 1.5rem;
+}
+
+.vh360-booking-date-picker-wrapper label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: #374151;
+}
+
+.vh360-booking-date-input {
+    width: 100%;
+    max-width: 300px;
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-size: 1rem;
+}
+
+/* Loading State */
+.vh360-booking-loading {
+    text-align: center;
+    padding: 2rem;
+}
+
+.vh360-spinner {
+    animation: rotate 2s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+.vh360-spinner .path {
+    stroke: #2563eb;
+    stroke-linecap: round;
+    animation: dash 1.5s ease-in-out infinite;
+}
+
+@keyframes rotate {
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes dash {
+    0% {
+        stroke-dasharray: 1, 150;
+        stroke-dashoffset: 0;
+    }
+    50% {
+        stroke-dasharray: 90, 150;
+        stroke-dashoffset: -35;
+    }
+    100% {
+        stroke-dasharray: 90, 150;
+        stroke-dashoffset: -124;
+    }
+}
+
+/* Messages */
+.vh360-booking-messages {
+    margin-bottom: 1rem;
+}
+
+.vh360-booking-message {
+    padding: 1rem;
+    border-radius: 0.375rem;
+    margin-bottom: 0.5rem;
+}
+
+.vh360-booking-message-success {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #6ee7b7;
+}
+
+.vh360-booking-message-error {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+}
+
+/* Slots Container */
+.vh360-booking-slots-container {
+    min-height: 200px;
+}
+
+.vh360-booking-no-slots,
+.vh360-booking-error {
+    text-align: center;
+    padding: 2rem;
+    color: #6b7280;
+}
+
+.vh360-booking-date-group {
+    margin-bottom: 2rem;
+}
+
+.vh360-booking-date-header {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #1f2937;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.vh360-booking-slots-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.vh360-booking-slot {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    transition: all 0.2s;
+}
+
+.vh360-booking-slot:hover {
+    background: #f3f4f6;
+    border-color: #2563eb;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.vh360-booking-slot-time {
+    font-weight: 600;
+    color: #1f2937;
+    font-size: 1rem;
+}
+
+.vh360-book-slot-btn,
+.vh360-book-slot-login {
+    width: 100%;
+    padding: 0.5rem 1rem;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 0.25rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.vh360-book-slot-btn:hover,
+.vh360-book-slot-login:hover {
+    background: #1d4ed8;
+    color: #fff;
+}
+
+.vh360-book-slot-btn:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+}
+
+.vh360-book-slot-btn.vh360-slot-booked {
+    background: #10b981;
+    cursor: default;
+}
+
+.vh360-book-slot-login {
+    background: #059669;
+}
+
+.vh360-book-slot-login:hover {
+    background: #047857;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .vh360-booking-slots-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .vh360-business-booking-toggle {
+        padding: 1rem 1.25rem;
+        font-size: 1.125rem;
+    }
+    
+    .vh360-booking-toggle-text svg {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .vh360-booking-toggle-icon {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .vh360-business-booking-content {
+        padding: 0 1.25rem 1.25rem;
+    }
+}

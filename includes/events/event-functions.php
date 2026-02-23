@@ -13,6 +13,149 @@ if (!defined('ABSPATH')) {
 }
 
 /**
+ * Get event kind (type).
+ *
+ * Returns the event kind: 'event' (normal event), 'availability' (bookable appointment slot), or 'block' (unavailable time).
+ * Defaults to 'event' if not set or invalid.
+ *
+ * @param int $event_id Event post ID.
+ * @return string Event kind: 'event', 'availability', or 'block'.
+ */
+function vh360_get_event_kind($event_id) {
+    $kind = get_post_meta($event_id, '_vh360_event_kind', true);
+    
+    // Validate against allowed values
+    $allowed_kinds = array('event', 'availability', 'block');
+    
+    if (empty($kind) || !in_array($kind, $allowed_kinds, true)) {
+        return 'event'; // Default to normal event
+    }
+    
+    return $kind;
+}
+
+/**
+ * Check if an event overlaps with existing blocks or booked availability slots.
+ *
+ * @param int    $event_id      Event post ID to check.
+ * @param int    $author_id     Author user ID.
+ * @param string $start_date    Start date (Y-m-d).
+ * @param string $start_time    Start time (H:i:s).
+ * @param string $end_date      End date (Y-m-d).
+ * @param string $end_time      End time (H:i:s).
+ * @return array Array with 'has_overlap' boolean and 'message' string.
+ */
+function vh360_check_event_overlap($event_id, $author_id, $start_date, $start_time, $end_date, $end_time) {
+    // Build start and end datetime strings
+    $check_start = $start_date . ' ' . (!empty($start_time) ? $start_time : '00:00:00');
+    $check_end = !empty($end_date) 
+        ? $end_date . ' ' . (!empty($end_time) ? $end_time : '23:59:59') 
+        : $start_date . ' ' . (!empty($start_time) && !empty($end_time) ? $end_time : '23:59:59');
+    
+    $check_start_ts = strtotime($check_start);
+    $check_end_ts = strtotime($check_end);
+    
+    if ($check_start_ts === false || $check_end_ts === false) {
+        return array(
+            'has_overlap' => false,
+            'message' => ''
+        );
+    }
+    
+    // Query for potential overlapping events by the same author
+    $args = array(
+        'post_type' => 'vh360_event',
+        'post_status' => 'publish',
+        'author' => $author_id,
+        'posts_per_page' => -1,
+        'post__not_in' => array($event_id), // Exclude the current event
+        'meta_query' => array(
+            'relation' => 'OR',
+            // Get blocks
+            array(
+                'key' => '_vh360_event_kind',
+                'value' => 'block',
+                'compare' => '='
+            ),
+            // Get booked availability slots
+            array(
+                'relation' => 'AND',
+                array(
+                    'key' => '_vh360_event_kind',
+                    'value' => 'availability',
+                    'compare' => '='
+                ),
+                array(
+                    'key' => '_vh360_event_rsvp_count',
+                    'value' => 1,
+                    'compare' => '>=',
+                    'type' => 'NUMERIC'
+                )
+            )
+        )
+    );
+    
+    $existing_events = new WP_Query($args);
+    
+    if (!$existing_events->have_posts()) {
+        return array(
+            'has_overlap' => false,
+            'message' => ''
+        );
+    }
+    
+    // Check each existing event for overlap
+    while ($existing_events->have_posts()) {
+        $existing_events->the_post();
+        $existing_id = get_the_ID();
+        
+        $existing_start_date = get_post_meta($existing_id, '_vh360_event_start_date', true);
+        $existing_start_time = get_post_meta($existing_id, '_vh360_event_start_time', true);
+        $existing_end_date = get_post_meta($existing_id, '_vh360_event_end_date', true);
+        $existing_end_time = get_post_meta($existing_id, '_vh360_event_end_time', true);
+        
+        if (empty($existing_start_date)) {
+            continue;
+        }
+        
+        $existing_start = $existing_start_date . ' ' . (!empty($existing_start_time) ? $existing_start_time : '00:00:00');
+        $existing_end = !empty($existing_end_date) 
+            ? $existing_end_date . ' ' . (!empty($existing_end_time) ? $existing_end_time : '23:59:59') 
+            : $existing_start_date . ' ' . (!empty($existing_start_time) && !empty($existing_end_time) ? $existing_end_time : '23:59:59');
+        
+        $existing_start_ts = strtotime($existing_start);
+        $existing_end_ts = strtotime($existing_end);
+        
+        if ($existing_start_ts === false || $existing_end_ts === false) {
+            continue;
+        }
+        
+        // Check for overlap: two time ranges overlap if one starts before the other ends
+        $overlaps = ($check_start_ts < $existing_end_ts) && ($check_end_ts > $existing_start_ts);
+        
+        if ($overlaps) {
+            $existing_kind = vh360_get_event_kind($existing_id);
+            $message = $existing_kind === 'block' 
+                ? __('This time slot overlaps with a blocked time period.', 'videohub360-theme')
+                : __('This time slot overlaps with an already booked appointment.', 'videohub360-theme');
+            
+            wp_reset_postdata();
+            return array(
+                'has_overlap' => true,
+                'message' => $message
+            );
+        }
+    }
+    
+    wp_reset_postdata();
+    
+    return array(
+        'has_overlap' => false,
+        'message' => ''
+    );
+}
+
+/**
  * Check if an event is upcoming.
  *
  * @param int $event_id Event post ID.

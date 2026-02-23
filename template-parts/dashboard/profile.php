@@ -58,6 +58,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vh360_edit_profile_no
                     update_user_meta($current_user_id, '_vh360_' . $field, $value);
                 }
                 
+                // Update business fields for professional/organization accounts
+                $account_type = function_exists('vh360_get_user_account_type') ? vh360_get_user_account_type($current_user_id) : 'creator';
+                if (in_array($account_type, array('professional', 'organization'), true)) {
+                    // Text fields
+                    if (isset($_POST['business_name'])) {
+                        update_user_meta($current_user_id, '_vh360_business_name', sanitize_text_field(wp_unslash($_POST['business_name'])));
+                    }
+                    if (isset($_POST['business_type'])) {
+                        update_user_meta($current_user_id, '_vh360_business_type', sanitize_text_field(wp_unslash($_POST['business_type'])));
+                    }
+                    if (isset($_POST['credentials'])) {
+                        update_user_meta($current_user_id, '_vh360_credentials', sanitize_text_field(wp_unslash($_POST['credentials'])));
+                    }
+                    if (isset($_POST['location'])) {
+                        update_user_meta($current_user_id, '_vh360_location', sanitize_text_field(wp_unslash($_POST['location'])));
+                    }
+                    if (isset($_POST['contact_phone'])) {
+                        update_user_meta($current_user_id, '_vh360_contact_phone', sanitize_text_field(wp_unslash($_POST['contact_phone'])));
+                    }
+                    
+                    // Textarea fields
+                    if (isset($_POST['specialties'])) {
+                        update_user_meta($current_user_id, '_vh360_specialties', sanitize_textarea_field(wp_unslash($_POST['specialties'])));
+                    }
+                    if (isset($_POST['pricing_info'])) {
+                        update_user_meta($current_user_id, '_vh360_pricing_info', sanitize_textarea_field(wp_unslash($_POST['pricing_info'])));
+                    }
+                    if (isset($_POST['insurance_info'])) {
+                        update_user_meta($current_user_id, '_vh360_insurance_info', sanitize_textarea_field(wp_unslash($_POST['insurance_info'])));
+                    }
+                    
+                    // Email field
+                    if (isset($_POST['contact_email'])) {
+                        update_user_meta($current_user_id, '_vh360_contact_email', sanitize_email(wp_unslash($_POST['contact_email'])));
+                    }
+                    
+                    // URL field
+                    if (isset($_POST['booking_url'])) {
+                        update_user_meta($current_user_id, '_vh360_booking_url', esc_url_raw(wp_unslash($_POST['booking_url'])));
+                    }
+                    
+                    // Checkboxes
+                    update_user_meta($current_user_id, '_vh360_telehealth', isset($_POST['telehealth']) ? '1' : '0');
+                    update_user_meta($current_user_id, '_vh360_accepting_new_clients', isset($_POST['accepting_new_clients']) ? '1' : '0');
+                }
+                
                 // Handle cover image upload
                 if (!empty($_FILES['cover_image']['name'])) {
                     require_once(ABSPATH . 'wp-admin/includes/file.php');
@@ -103,6 +149,25 @@ $bio = get_the_author_meta('description', $current_user_id);
 $website = $user->user_url;
 $cover_image = vh360_get_user_cover_image($current_user_id);
 $social_links = vh360_get_user_social_links($current_user_id);
+
+// Get business fields for professional/organization accounts
+$account_type = function_exists('vh360_get_user_account_type') ? vh360_get_user_account_type($current_user_id) : 'creator';
+$is_business_account = in_array($account_type, array('professional', 'organization'), true);
+
+if ($is_business_account) {
+    $business_name = get_user_meta($current_user_id, '_vh360_business_name', true);
+    $business_type = get_user_meta($current_user_id, '_vh360_business_type', true);
+    $credentials = get_user_meta($current_user_id, '_vh360_credentials', true);
+    $specialties = get_user_meta($current_user_id, '_vh360_specialties', true);
+    $location = get_user_meta($current_user_id, '_vh360_location', true);
+    $telehealth = get_user_meta($current_user_id, '_vh360_telehealth', true);
+    $accepting_clients = get_user_meta($current_user_id, '_vh360_accepting_new_clients', true);
+    $booking_url = get_user_meta($current_user_id, '_vh360_booking_url', true);
+    $contact_phone = get_user_meta($current_user_id, '_vh360_contact_phone', true);
+    $contact_email = get_user_meta($current_user_id, '_vh360_contact_email', true);
+    $pricing_info = get_user_meta($current_user_id, '_vh360_pricing_info', true);
+    $insurance_info = get_user_meta($current_user_id, '_vh360_insurance_info', true);
+}
 ?>
 
 <div class="vh360-dashboard-profile">
@@ -237,6 +302,88 @@ $social_links = vh360_get_user_social_links($current_user_id);
                     <input type="url" name="instagram" id="instagram" class="vh360-form-input" value="<?php echo isset($social_links['instagram']) ? esc_url($social_links['instagram']) : ''; ?>" placeholder="https://instagram.com/username">
                 </div>
             </div>
+            
+            <?php if ($is_business_account) : ?>
+            <!-- Business Information Section -->
+            <div class="vh360-form-section">
+                <h3 class="vh360-form-section-title"><?php esc_html_e('Business Information', 'videohub360-theme'); ?></h3>
+                
+                <div class="vh360-form-group">
+                    <label for="business_name" class="vh360-form-label"><?php esc_html_e('Business Name', 'videohub360-theme'); ?></label>
+                    <input type="text" name="business_name" id="business_name" class="vh360-form-input" value="<?php echo esc_attr($business_name); ?>" placeholder="<?php esc_attr_e('Your business or practice name', 'videohub360-theme'); ?>">
+                </div>
+                
+                <div class="vh360-form-group">
+                    <label for="business_type" class="vh360-form-label"><?php esc_html_e('Business Type', 'videohub360-theme'); ?></label>
+                    <input type="text" name="business_type" id="business_type" class="vh360-form-input" value="<?php echo esc_attr($business_type); ?>" placeholder="<?php esc_attr_e('e.g., Licensed Therapist, Consulting Firm', 'videohub360-theme'); ?>">
+                </div>
+                
+                <div class="vh360-form-group">
+                    <label for="credentials" class="vh360-form-label"><?php esc_html_e('Credentials', 'videohub360-theme'); ?></label>
+                    <input type="text" name="credentials" id="credentials" class="vh360-form-input" value="<?php echo esc_attr($credentials); ?>" placeholder="<?php esc_attr_e('Professional credentials, certifications, licenses', 'videohub360-theme'); ?>">
+                </div>
+                
+                <div class="vh360-form-group">
+                    <label for="location" class="vh360-form-label"><?php esc_html_e('Location', 'videohub360-theme'); ?></label>
+                    <input type="text" name="location" id="location" class="vh360-form-input" value="<?php echo esc_attr($location); ?>" placeholder="<?php esc_attr_e('City, State', 'videohub360-theme'); ?>">
+                </div>
+                
+                <div class="vh360-form-group">
+                    <label for="specialties" class="vh360-form-label"><?php esc_html_e('Specialties', 'videohub360-theme'); ?></label>
+                    <textarea name="specialties" id="specialties" rows="4" class="vh360-form-textarea" placeholder="<?php esc_attr_e('Describe your areas of expertise and specialization', 'videohub360-theme'); ?>"><?php echo esc_textarea($specialties); ?></textarea>
+                </div>
+                
+                <div class="vh360-form-group">
+                    <label class="vh360-form-label"><?php esc_html_e('Service Options', 'videohub360-theme'); ?></label>
+                    <div class="vh360-form-checkbox-group">
+                        <label class="vh360-form-checkbox-label">
+                            <input type="checkbox" name="telehealth" value="1" <?php checked($telehealth, '1'); ?>>
+                            <?php esc_html_e('Telehealth/Remote services available', 'videohub360-theme'); ?>
+                        </label>
+                        <label class="vh360-form-checkbox-label">
+                            <input type="checkbox" name="accepting_new_clients" value="1" <?php checked($accepting_clients, '1'); ?>>
+                            <?php esc_html_e('Currently accepting new clients', 'videohub360-theme'); ?>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Contact Information Section -->
+            <div class="vh360-form-section">
+                <h3 class="vh360-form-section-title"><?php esc_html_e('Contact Information', 'videohub360-theme'); ?></h3>
+                
+                <div class="vh360-form-group">
+                    <label for="contact_phone" class="vh360-form-label"><?php esc_html_e('Phone Number', 'videohub360-theme'); ?></label>
+                    <input type="text" name="contact_phone" id="contact_phone" class="vh360-form-input" value="<?php echo esc_attr($contact_phone); ?>" placeholder="<?php esc_attr_e('Business phone number', 'videohub360-theme'); ?>">
+                </div>
+                
+                <div class="vh360-form-group">
+                    <label for="contact_email" class="vh360-form-label"><?php esc_html_e('Contact Email', 'videohub360-theme'); ?></label>
+                    <input type="email" name="contact_email" id="contact_email" class="vh360-form-input" value="<?php echo esc_attr($contact_email); ?>" placeholder="<?php esc_attr_e('Business contact email', 'videohub360-theme'); ?>">
+                </div>
+                
+                <div class="vh360-form-group">
+                    <label for="booking_url" class="vh360-form-label"><?php esc_html_e('Booking URL', 'videohub360-theme'); ?></label>
+                    <input type="url" name="booking_url" id="booking_url" class="vh360-form-input" value="<?php echo esc_attr($booking_url); ?>" placeholder="<?php esc_attr_e('https://your-booking-site.com', 'videohub360-theme'); ?>">
+                    <span class="vh360-form-help"><?php esc_html_e('URL for online booking or scheduling', 'videohub360-theme'); ?></span>
+                </div>
+            </div>
+            
+            <!-- Additional Information Section -->
+            <div class="vh360-form-section">
+                <h3 class="vh360-form-section-title"><?php esc_html_e('Additional Information', 'videohub360-theme'); ?></h3>
+                
+                <div class="vh360-form-group">
+                    <label for="pricing_info" class="vh360-form-label"><?php esc_html_e('Pricing Information', 'videohub360-theme'); ?></label>
+                    <textarea name="pricing_info" id="pricing_info" rows="4" class="vh360-form-textarea" placeholder="<?php esc_attr_e('Pricing details, rates, packages, etc.', 'videohub360-theme'); ?>"><?php echo esc_textarea($pricing_info); ?></textarea>
+                </div>
+                
+                <div class="vh360-form-group">
+                    <label for="insurance_info" class="vh360-form-label"><?php esc_html_e('Insurance Information', 'videohub360-theme'); ?></label>
+                    <textarea name="insurance_info" id="insurance_info" rows="4" class="vh360-form-textarea" placeholder="<?php esc_attr_e('Insurance providers accepted', 'videohub360-theme'); ?>"><?php echo esc_textarea($insurance_info); ?></textarea>
+                </div>
+            </div>
+            <?php endif; ?>
             
             <!-- Submit Button -->
             <div class="vh360-form-actions">
@@ -388,5 +535,19 @@ $social_links = vh360_get_user_social_links($current_user_id);
     display: flex;
     gap: 1rem;
     margin-top: 2rem;
+}
+
+/* Checkbox Group */
+.vh360-form-checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.vh360-form-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: normal;
 }
 </style>

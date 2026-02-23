@@ -139,6 +139,34 @@ function videohub360_theme_setup() {
 add_action('after_setup_theme', 'videohub360_theme_setup');
 
 /**
+ * Register Professional Role
+ *
+ * Creates a custom role for professionals with event creation capabilities.
+ * This role is assigned to users who register as professionals through business registration.
+ */
+function vh360_register_professional_role() {
+    // Check if role already exists
+    if (get_role('vh360_professional')) {
+        return;
+    }
+    
+    // Get subscriber capabilities as a base
+    $subscriber = get_role('subscriber');
+    $capabilities = $subscriber ? $subscriber->capabilities : array('read' => true);
+    
+    // Add event creation capability
+    $capabilities['vh360_create_events'] = true;
+    
+    // Register the professional role
+    add_role(
+        'vh360_professional',
+        __('Professional', 'videohub360-theme'),
+        $capabilities
+    );
+}
+add_action('init', 'vh360_register_professional_role');
+
+/**
  * Set default comment options on theme activation
  *
  * Automatically enables login-only commenting for a community-focused platform.
@@ -150,6 +178,9 @@ add_action('after_switch_theme', function () {
     
     // Keep WP's guest-comment requirements consistent if it's ever enabled later
     update_option('require_name_email', 1);
+    
+    // Register professional role on theme activation
+    vh360_register_professional_role();
 });
 
 /**
@@ -1057,6 +1088,54 @@ require_once VH360_THEME_DIR . '/includes/events/class-vh360-event-post-type.php
 require_once VH360_THEME_DIR . '/includes/events/class-vh360-event-capabilities.php';
 require_once VH360_THEME_DIR . '/includes/events/class-vh360-event-ajax.php';
 require_once VH360_THEME_DIR . '/includes/events/event-functions.php';
+
+/**
+ * Availability functions for appointment booking
+ */
+require_once VH360_THEME_DIR . '/includes/availability-functions.php';
+require_once VH360_THEME_DIR . '/includes/class-vh360-availability-ajax.php';
+
+/**
+ * Exclude appointment-only events (availability and block) from public event archives
+ */
+function vh360_exclude_appointment_events_from_archives($query) {
+    // Only apply to main query on event archives (not admin, not in dashboard)
+    if (is_admin() || !$query->is_main_query()) {
+        return;
+    }
+    
+    // Only apply to vh360_event post type archives
+    if (!is_post_type_archive('vh360_event') && !($query->is_tax() && $query->get('post_type') === 'vh360_event')) {
+        return;
+    }
+    
+    // Don't apply if we're viewing a specific author's business profile (handled separately in business header)
+    if (is_author()) {
+        return;
+    }
+    
+    // Exclude availability and block kind events from public archives
+    $meta_query = $query->get('meta_query');
+    if (!is_array($meta_query)) {
+        $meta_query = array();
+    }
+    
+    $meta_query[] = array(
+        'relation' => 'OR',
+        array(
+            'key' => '_vh360_event_kind',
+            'compare' => 'NOT EXISTS'
+        ),
+        array(
+            'key' => '_vh360_event_kind',
+            'value' => 'event',
+            'compare' => '='
+        )
+    );
+    
+    $query->set('meta_query', $meta_query);
+}
+add_action('pre_get_posts', 'vh360_exclude_appointment_events_from_archives');
 
 /**
  * User menu functions

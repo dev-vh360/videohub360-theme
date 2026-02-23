@@ -308,6 +308,7 @@ class VH360_Event_Ajax {
             'status'                 => $event->post_status,
             'featured_image_id'      => get_post_thumbnail_id($event->ID),
             'featured_image_url'     => get_the_post_thumbnail_url($event->ID, 'medium'),
+            'kind'                   => get_post_meta($event->ID, '_vh360_event_kind', true),
             'start_date'             => get_post_meta($event->ID, '_vh360_event_start_date', true),
             'start_time'             => get_post_meta($event->ID, '_vh360_event_start_time', true),
             'end_date'               => get_post_meta($event->ID, '_vh360_event_end_date', true),
@@ -448,6 +449,7 @@ class VH360_Event_Ajax {
      */
     private function save_event_meta($event_id, $data) {
         $meta_fields = array(
+            'kind'                  => 'sanitize_text_field',
             'start_date'            => 'sanitize_text_field',
             'start_time'            => 'sanitize_text_field',
             'end_date'              => 'sanitize_text_field',
@@ -473,7 +475,23 @@ class VH360_Event_Ajax {
         foreach ($meta_fields as $field => $sanitize_callback) {
             if (isset($data[$field])) {
                 $value = call_user_func($sanitize_callback, $data[$field]);
+                
+                // Validate event kind
+                if ($field === 'kind') {
+                    $allowed_kinds = array('event', 'availability', 'block');
+                    if (!in_array($value, $allowed_kinds, true)) {
+                        $value = 'event'; // Default to event if invalid
+                    }
+                }
+                
                 update_post_meta($event_id, '_vh360_event_' . $field, $value);
+            }
+        }
+        
+        // Auto-set max_attendees to 1 for availability kind if not explicitly set
+        if (isset($data['kind']) && $data['kind'] === 'availability') {
+            if (!isset($data['max_attendees']) || $data['max_attendees'] === '' || $data['max_attendees'] === null) {
+                update_post_meta($event_id, '_vh360_event_max_attendees', 1);
             }
         }
 
@@ -524,6 +542,44 @@ class VH360_Event_Ajax {
             $message = __('RSVP cancelled', 'videohub360-theme');
             $is_rsvpd = false;
         } else {
+            // Get event kind to apply availability-specific checks
+            $event_kind = function_exists('vh360_get_event_kind') ? vh360_get_event_kind($event_id) : 'event';
+            
+            // Check max attendees limit before adding new RSVP
+            $max_attendees = get_post_meta($event_id, '_vh360_event_max_attendees', true);
+            
+            if (!empty($max_attendees) && is_numeric($max_attendees)) {
+                $max_attendees = absint($max_attendees);
+                if ($max_attendees > 0 && count($rsvps) >= $max_attendees) {
+                    wp_send_json_error(array(
+                        'message' => __('Sorry, this event has reached its maximum capacity.', 'videohub360-theme')
+                    ));
+                    return;
+                }
+            }
+            
+            // For availability slots, check for overlaps with blocks and booked slots
+            if ($event_kind === 'availability' && function_exists('vh360_check_event_overlap')) {
+                $event_post = get_post($event_id);
+                if ($event_post) {
+                    $author_id = $event_post->post_author;
+                    $start_date = get_post_meta($event_id, '_vh360_event_start_date', true);
+                    $start_time = get_post_meta($event_id, '_vh360_event_start_time', true);
+                    $end_date = get_post_meta($event_id, '_vh360_event_end_date', true);
+                    $end_time = get_post_meta($event_id, '_vh360_event_end_time', true);
+                    
+                    // Check if the availability slot overlaps with any blocks or already booked slots
+                    $overlap_check = vh360_check_event_overlap($event_id, $author_id, $start_date, $start_time, $end_date, $end_time);
+                    
+                    if ($overlap_check['has_overlap']) {
+                        wp_send_json_error(array(
+                            'message' => $overlap_check['message']
+                        ));
+                        return;
+                    }
+                }
+            }
+            
             // Add RSVP
             $rsvps[] = array(
                 'user_id' => $user_id,

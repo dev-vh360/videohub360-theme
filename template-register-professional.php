@@ -55,33 +55,33 @@ get_header();
                     <?php endif; ?>
                     
                     <h1 class="vh360-auth-heading">
-                        <?php esc_html_e('Professional Registration', 'videohub360-theme'); ?>
+                        <?php echo esc_html(get_theme_mod('vh360_professional_register_headline', __('Professional Registration', 'videohub360-theme'))); ?>
                     </h1>
                     
                     <p class="vh360-auth-description">
-                        <?php esc_html_e('Create your professional account and start showcasing your services.', 'videohub360-theme'); ?>
+                        <?php echo esc_html(get_theme_mod('vh360_professional_register_description', __('Create your professional account and start showcasing your services.', 'videohub360-theme'))); ?>
                     </p>
                     
                     <div class="vh360-auth-benefits">
                         <h3 class="vh360-auth-benefits-title">
-                            <?php esc_html_e('Professional Benefits:', 'videohub360-theme'); ?>
+                            <?php echo esc_html(get_theme_mod('vh360_professional_register_benefits_heading', __('Professional Benefits:', 'videohub360-theme'))); ?>
                         </h3>
                         <ul class="vh360-auth-benefits-list">
                             <li>
                                 <span class="vh360-auth-benefit-icon">✓</span>
-                                <?php esc_html_e('Business profile with services showcase', 'videohub360-theme'); ?>
+                                <?php echo esc_html(get_theme_mod('vh360_professional_register_benefit_1', __('Business profile with services showcase', 'videohub360-theme'))); ?>
                             </li>
                             <li>
                                 <span class="vh360-auth-benefit-icon">✓</span>
-                                <?php esc_html_e('Display credentials and specialties', 'videohub360-theme'); ?>
+                                <?php echo esc_html(get_theme_mod('vh360_professional_register_benefit_2', __('Display credentials and specialties', 'videohub360-theme'))); ?>
                             </li>
                             <li>
                                 <span class="vh360-auth-benefit-icon">✓</span>
-                                <?php esc_html_e('Contact information and booking options', 'videohub360-theme'); ?>
+                                <?php echo esc_html(get_theme_mod('vh360_professional_register_benefit_3', __('Contact information and booking options', 'videohub360-theme'))); ?>
                             </li>
                             <li>
                                 <span class="vh360-auth-benefit-icon">✓</span>
-                                <?php esc_html_e('Share content and connect with clients', 'videohub360-theme'); ?>
+                                <?php echo esc_html(get_theme_mod('vh360_professional_register_benefit_4', __('Share content and connect with clients', 'videohub360-theme'))); ?>
                             </li>
                         </ul>
                     </div>
@@ -92,7 +92,7 @@ get_header();
             <div class="vh360-auth-form-wrapper register-page">
                 <div class="vh360-auth-form-content">
                     <h2 class="vh360-auth-form-title">
-                        <?php esc_html_e('Create Professional Account', 'videohub360-theme'); ?>
+                        <?php echo esc_html(get_theme_mod('vh360_professional_register_button', __('Create Professional Account', 'videohub360-theme'))); ?>
                     </h2>
                     
                     <?php
@@ -228,7 +228,7 @@ get_header();
                         </div>
 
                         <button type="submit" name="vh360_business_register_submit" class="vh360-auth-submit">
-                            <?php esc_html_e('Create Professional Account', 'videohub360-theme'); ?>
+                            <?php echo esc_html(get_theme_mod('vh360_professional_register_button', __('Create Professional Account', 'videohub360-theme'))); ?>
                         </button>
                         
                         <div class="vh360-auth-links">

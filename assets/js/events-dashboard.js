@@ -145,6 +145,10 @@
             $('#vh360-event-title').val(data.title);
             $('#vh360-event-description').val(data.content);
             $('#vh360-event-excerpt').val(data.excerpt);
+            
+            // Event kind
+            $('#vh360-event-kind').val(data.kind || 'event');
+            
             $('#vh360-event-start-date').val(data.start_date);
             $('#vh360-event-start-time').val(data.start_time);
             $('#vh360-event-end-date').val(data.end_date);
