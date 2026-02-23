@@ -28,8 +28,8 @@ if (!$author) {
 // Get current tab from URL, default to 'services'
 $current_tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : 'services';
 
-// Define valid tabs for business profiles
-$valid_tabs = array('services', 'about', 'content', 'contact');
+// Define valid tabs for business profiles (contact removed - use DM system instead)
+$valid_tabs = array('services', 'about', 'content');
 
 // Validate tab
 if (!in_array($current_tab, $valid_tabs, true)) {
@@ -62,10 +62,6 @@ if (!in_array($current_tab, $valid_tabs, true)) {
                         
                     case 'content':
                         get_template_part('template-parts/business/content');
-                        break;
-                        
-                    case 'contact':
-                        get_template_part('template-parts/business/contact');
                         break;
                         
                     default:
