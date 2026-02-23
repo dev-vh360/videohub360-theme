@@ -13,6 +13,7 @@ if (!defined('ABSPATH')) {
 }
 
 $current_user_id = get_current_user_id();
+$user_account_type = vh360_get_user_account_type($current_user_id);
 $stats = vh360_get_user_stats($current_user_id);
 ?>
 
