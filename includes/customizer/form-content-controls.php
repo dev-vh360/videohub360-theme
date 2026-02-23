@@ -1750,5 +1750,339 @@ function vh360_register_form_content_controls($wp_customize) {
         'section'  => 'vh360_reset_password_design',
         'settings' => 'vh360_reset_password_required_color',
     )));
+    
+    
+    // ========================================
+    // Business Registration Sections
+    // ========================================
+    
+    /**
+     * Business Registration Landing Page Content
+     */
+    $wp_customize->add_section('vh360_business_landing_content', array(
+        'title'       => __('Business Registration Landing', 'videohub360-theme'),
+        'priority'    => 15,
+        'description' => __('Customize content for the Business registration landing page (choice between Professional and Client).', 'videohub360-theme'),
+    ));
+    
+    // Landing Headline
+    $wp_customize->add_setting('vh360_business_landing_headline', array(
+        'default'           => __('Join as a Business Professional or Client', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_business_landing_headline', array(
+        'label'   => __('Landing Headline', 'videohub360-theme'),
+        'section' => 'vh360_business_landing_content',
+        'type'    => 'text',
+    ));
+    
+    // Landing Description
+    $wp_customize->add_setting('vh360_business_landing_description', array(
+        'default'           => __('Choose the account type that best fits your needs', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_textarea_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_business_landing_description', array(
+        'label'   => __('Landing Description', 'videohub360-theme'),
+        'section' => 'vh360_business_landing_content',
+        'type'    => 'textarea',
+    ));
+    
+    // Professional Card Title
+    $wp_customize->add_setting('vh360_business_professional_title', array(
+        'default'           => __('Professional', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_business_professional_title', array(
+        'label'   => __('Professional Card Title', 'videohub360-theme'),
+        'section' => 'vh360_business_landing_content',
+        'type'    => 'text',
+    ));
+    
+    // Professional Card Description
+    $wp_customize->add_setting('vh360_business_professional_description', array(
+        'default'           => __('For therapists, consultants, coaches, and service providers looking to showcase their business and connect with clients.', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_textarea_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_business_professional_description', array(
+        'label'   => __('Professional Card Description', 'videohub360-theme'),
+        'section' => 'vh360_business_landing_content',
+        'type'    => 'textarea',
+    ));
+    
+    // Professional Features (4 items)
+    for ($i = 1; $i <= 4; $i++) {
+        $defaults = array(
+            1 => __('Business profile with services', 'videohub360-theme'),
+            2 => __('Display credentials & specialties', 'videohub360-theme'),
+            3 => __('Contact information & booking', 'videohub360-theme'),
+            4 => __('Share content & resources', 'videohub360-theme'),
+        );
+        
+        $wp_customize->add_setting("vh360_business_professional_feature_{$i}", array(
+            'default'           => $defaults[$i],
+            'sanitize_callback' => 'sanitize_text_field',
+            'transport'         => 'postMessage',
+        ));
+        $wp_customize->add_control("vh360_business_professional_feature_{$i}", array(
+            'label'   => sprintf(__('Professional Feature %d', 'videohub360-theme'), $i),
+            'section' => 'vh360_business_landing_content',
+            'type'    => 'text',
+        ));
+    }
+    
+    // Professional Button Text
+    $wp_customize->add_setting('vh360_business_professional_button', array(
+        'default'           => __('Sign Up as Professional', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_business_professional_button', array(
+        'label'   => __('Professional Button Text', 'videohub360-theme'),
+        'section' => 'vh360_business_landing_content',
+        'type'    => 'text',
+    ));
+    
+    // Client Card Title
+    $wp_customize->add_setting('vh360_business_client_title', array(
+        'default'           => __('Client', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_business_client_title', array(
+        'label'   => __('Client Card Title', 'videohub360-theme'),
+        'section' => 'vh360_business_landing_content',
+        'type'    => 'text',
+    ));
+    
+    // Client Card Description
+    $wp_customize->add_setting('vh360_business_client_description', array(
+        'default'           => __('For individuals seeking services, engaging with content, and connecting with professionals.', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_textarea_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_business_client_description', array(
+        'label'   => __('Client Card Description', 'videohub360-theme'),
+        'section' => 'vh360_business_landing_content',
+        'type'    => 'textarea',
+    ));
+    
+    // Client Features (4 items)
+    for ($i = 1; $i <= 4; $i++) {
+        $defaults = array(
+            1 => __('Simple profile setup', 'videohub360-theme'),
+            2 => __('Connect with professionals', 'videohub360-theme'),
+            3 => __('Engage with content', 'videohub360-theme'),
+            4 => __('Privacy-focused experience', 'videohub360-theme'),
+        );
+        
+        $wp_customize->add_setting("vh360_business_client_feature_{$i}", array(
+            'default'           => $defaults[$i],
+            'sanitize_callback' => 'sanitize_text_field',
+            'transport'         => 'postMessage',
+        ));
+        $wp_customize->add_control("vh360_business_client_feature_{$i}", array(
+            'label'   => sprintf(__('Client Feature %d', 'videohub360-theme'), $i),
+            'section' => 'vh360_business_landing_content',
+            'type'    => 'text',
+        ));
+    }
+    
+    // Client Button Text
+    $wp_customize->add_setting('vh360_business_client_button', array(
+        'default'           => __('Sign Up as Client', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_business_client_button', array(
+        'label'   => __('Client Button Text', 'videohub360-theme'),
+        'section' => 'vh360_business_landing_content',
+        'type'    => 'text',
+    ));
+    
+    // Footer Text
+    $wp_customize->add_setting('vh360_business_landing_footer_text', array(
+        'default'           => __('Looking for a different account type?', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_business_landing_footer_text', array(
+        'label'   => __('Footer Alternative Text', 'videohub360-theme'),
+        'section' => 'vh360_business_landing_content',
+        'type'    => 'text',
+    ));
+    
+    // Footer Link Text
+    $wp_customize->add_setting('vh360_business_landing_footer_link', array(
+        'default'           => __('Standard Registration', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_business_landing_footer_link', array(
+        'label'   => __('Footer Alternative Link Text', 'videohub360-theme'),
+        'section' => 'vh360_business_landing_content',
+        'type'    => 'text',
+    ));
+    
+    
+    /**
+     * Professional Registration Form Content
+     */
+    $wp_customize->add_section('vh360_professional_register_content', array(
+        'title'       => __('Professional Registration Form', 'videohub360-theme'),
+        'priority'    => 16,
+        'description' => __('Customize content for the Professional registration form.', 'videohub360-theme'),
+    ));
+    
+    // Form Headline
+    $wp_customize->add_setting('vh360_professional_register_headline', array(
+        'default'           => __('Professional Registration', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_professional_register_headline', array(
+        'label'   => __('Form Headline', 'videohub360-theme'),
+        'section' => 'vh360_professional_register_content',
+        'type'    => 'text',
+    ));
+    
+    // Form Description
+    $wp_customize->add_setting('vh360_professional_register_description', array(
+        'default'           => __('Create your professional account and start showcasing your services.', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_textarea_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_professional_register_description', array(
+        'label'   => __('Form Description', 'videohub360-theme'),
+        'section' => 'vh360_professional_register_content',
+        'type'    => 'textarea',
+    ));
+    
+    // Benefits Heading
+    $wp_customize->add_setting('vh360_professional_register_benefits_heading', array(
+        'default'           => __('Professional Benefits:', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_professional_register_benefits_heading', array(
+        'label'   => __('Benefits Heading', 'videohub360-theme'),
+        'section' => 'vh360_professional_register_content',
+        'type'    => 'text',
+    ));
+    
+    // Benefits (4 items)
+    for ($i = 1; $i <= 4; $i++) {
+        $defaults = array(
+            1 => __('Business profile with services showcase', 'videohub360-theme'),
+            2 => __('Display credentials and specialties', 'videohub360-theme'),
+            3 => __('Contact information and booking options', 'videohub360-theme'),
+            4 => __('Share content and connect with clients', 'videohub360-theme'),
+        );
+        
+        $wp_customize->add_setting("vh360_professional_register_benefit_{$i}", array(
+            'default'           => $defaults[$i],
+            'sanitize_callback' => 'sanitize_text_field',
+            'transport'         => 'postMessage',
+        ));
+        $wp_customize->add_control("vh360_professional_register_benefit_{$i}", array(
+            'label'   => sprintf(__('Benefit %d', 'videohub360-theme'), $i),
+            'section' => 'vh360_professional_register_content',
+            'type'    => 'text',
+        ));
+    }
+    
+    // Button Text
+    $wp_customize->add_setting('vh360_professional_register_button', array(
+        'default'           => __('Create Professional Account', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_professional_register_button', array(
+        'label'   => __('Submit Button Text', 'videohub360-theme'),
+        'section' => 'vh360_professional_register_content',
+        'type'    => 'text',
+    ));
+    
+    
+    /**
+     * Client Registration Form Content
+     */
+    $wp_customize->add_section('vh360_client_register_content', array(
+        'title'       => __('Client Registration Form', 'videohub360-theme'),
+        'priority'    => 17,
+        'description' => __('Customize content for the Client registration form.', 'videohub360-theme'),
+    ));
+    
+    // Form Headline
+    $wp_customize->add_setting('vh360_client_register_headline', array(
+        'default'           => __('Client Registration', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_client_register_headline', array(
+        'label'   => __('Form Headline', 'videohub360-theme'),
+        'section' => 'vh360_client_register_content',
+        'type'    => 'text',
+    ));
+    
+    // Form Description
+    $wp_customize->add_setting('vh360_client_register_description', array(
+        'default'           => __('Create your client account to connect with professionals and engage with content.', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_textarea_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_client_register_description', array(
+        'label'   => __('Form Description', 'videohub360-theme'),
+        'section' => 'vh360_client_register_content',
+        'type'    => 'textarea',
+    ));
+    
+    // Benefits Heading
+    $wp_customize->add_setting('vh360_client_register_benefits_heading', array(
+        'default'           => __('Client Benefits:', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_client_register_benefits_heading', array(
+        'label'   => __('Benefits Heading', 'videohub360-theme'),
+        'section' => 'vh360_client_register_content',
+        'type'    => 'text',
+    ));
+    
+    // Benefits (4 items)
+    for ($i = 1; $i <= 4; $i++) {
+        $defaults = array(
+            1 => __('Simple and private profile', 'videohub360-theme'),
+            2 => __('Connect with professionals', 'videohub360-theme'),
+            3 => __('Access content and resources', 'videohub360-theme'),
+            4 => __('Privacy-focused member experience', 'videohub360-theme'),
+        );
+        
+        $wp_customize->add_setting("vh360_client_register_benefit_{$i}", array(
+            'default'           => $defaults[$i],
+            'sanitize_callback' => 'sanitize_text_field',
+            'transport'         => 'postMessage',
+        ));
+        $wp_customize->add_control("vh360_client_register_benefit_{$i}", array(
+            'label'   => sprintf(__('Benefit %d', 'videohub360-theme'), $i),
+            'section' => 'vh360_client_register_content',
+            'type'    => 'text',
+        ));
+    }
+    
+    // Button Text
+    $wp_customize->add_setting('vh360_client_register_button', array(
+        'default'           => __('Create Client Account', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_client_register_button', array(
+        'label'   => __('Submit Button Text', 'videohub360-theme'),
+        'section' => 'vh360_client_register_content',
+        'type'    => 'text',
+    ));
 }
 add_action('customize_register', 'vh360_register_form_content_controls');

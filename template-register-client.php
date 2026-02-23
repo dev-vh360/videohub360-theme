@@ -55,33 +55,33 @@ get_header();
                     <?php endif; ?>
                     
                     <h1 class="vh360-auth-heading">
-                        <?php esc_html_e('Client Registration', 'videohub360-theme'); ?>
+                        <?php echo esc_html(get_theme_mod('vh360_client_register_headline', __('Client Registration', 'videohub360-theme'))); ?>
                     </h1>
                     
                     <p class="vh360-auth-description">
-                        <?php esc_html_e('Create your client account to connect with professionals and engage with content.', 'videohub360-theme'); ?>
+                        <?php echo esc_html(get_theme_mod('vh360_client_register_description', __('Create your client account to connect with professionals and engage with content.', 'videohub360-theme'))); ?>
                     </p>
                     
                     <div class="vh360-auth-benefits">
                         <h3 class="vh360-auth-benefits-title">
-                            <?php esc_html_e('Client Benefits:', 'videohub360-theme'); ?>
+                            <?php echo esc_html(get_theme_mod('vh360_client_register_benefits_heading', __('Client Benefits:', 'videohub360-theme'))); ?>
                         </h3>
                         <ul class="vh360-auth-benefits-list">
                             <li>
                                 <span class="vh360-auth-benefit-icon">✓</span>
-                                <?php esc_html_e('Simple and easy setup', 'videohub360-theme'); ?>
+                                <?php echo esc_html(get_theme_mod('vh360_client_register_benefit_1', __('Simple and private profile', 'videohub360-theme'))); ?>
                             </li>
                             <li>
                                 <span class="vh360-auth-benefit-icon">✓</span>
-                                <?php esc_html_e('Connect with service professionals', 'videohub360-theme'); ?>
+                                <?php echo esc_html(get_theme_mod('vh360_client_register_benefit_2', __('Connect with professionals', 'videohub360-theme'))); ?>
                             </li>
                             <li>
                                 <span class="vh360-auth-benefit-icon">✓</span>
-                                <?php esc_html_e('Engage with valuable content', 'videohub360-theme'); ?>
+                                <?php echo esc_html(get_theme_mod('vh360_client_register_benefit_3', __('Access content and resources', 'videohub360-theme'))); ?>
                             </li>
                             <li>
                                 <span class="vh360-auth-benefit-icon">✓</span>
-                                <?php esc_html_e('Privacy-focused profile', 'videohub360-theme'); ?>
+                                <?php echo esc_html(get_theme_mod('vh360_client_register_benefit_4', __('Privacy-focused member experience', 'videohub360-theme'))); ?>
                             </li>
                         </ul>
                     </div>
@@ -92,7 +92,7 @@ get_header();
             <div class="vh360-auth-form-wrapper register-page">
                 <div class="vh360-auth-form-content">
                     <h2 class="vh360-auth-form-title">
-                        <?php esc_html_e('Create Client Account', 'videohub360-theme'); ?>
+                        <?php echo esc_html(get_theme_mod('vh360_client_register_button', __('Create Client Account', 'videohub360-theme'))); ?>
                     </h2>
                     
                     <?php
@@ -228,7 +228,7 @@ get_header();
                         </div>
 
                         <button type="submit" name="vh360_business_register_submit" class="vh360-auth-submit">
-                            <?php esc_html_e('Create Client Account', 'videohub360-theme'); ?>
+                            <?php echo esc_html(get_theme_mod('vh360_client_register_button', __('Create Client Account', 'videohub360-theme'))); ?>
                         </button>
                         
                         <div class="vh360-auth-links">

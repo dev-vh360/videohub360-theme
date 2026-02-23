@@ -51,11 +51,11 @@ $client_url = vh360_get_client_register_url();
                 <?php endif; ?>
                 
                 <h1 class="vh360-business-choice-title">
-                    <?php esc_html_e('Join as a Business Professional or Client', 'videohub360-theme'); ?>
+                    <?php echo esc_html(get_theme_mod('vh360_business_landing_headline', __('Join as a Business Professional or Client', 'videohub360-theme'))); ?>
                 </h1>
                 
                 <p class="vh360-business-choice-description">
-                    <?php esc_html_e('Choose the account type that best fits your needs', 'videohub360-theme'); ?>
+                    <?php echo esc_html(get_theme_mod('vh360_business_landing_description', __('Choose the account type that best fits your needs', 'videohub360-theme'))); ?>
                 </p>
             </div>
             
@@ -71,19 +71,19 @@ $client_url = vh360_get_client_register_url();
                         </svg>
                     </div>
                     <h2 class="vh360-business-choice-card-title">
-                        <?php esc_html_e('Professional', 'videohub360-theme'); ?>
+                        <?php echo esc_html(get_theme_mod('vh360_business_professional_title', __('Professional', 'videohub360-theme'))); ?>
                     </h2>
                     <p class="vh360-business-choice-card-description">
-                        <?php esc_html_e('For therapists, consultants, coaches, and service providers looking to showcase their business and connect with clients.', 'videohub360-theme'); ?>
+                        <?php echo esc_html(get_theme_mod('vh360_business_professional_description', __('For therapists, consultants, coaches, and service providers looking to showcase their business and connect with clients.', 'videohub360-theme'))); ?>
                     </p>
                     <ul class="vh360-business-choice-features">
-                        <li><?php esc_html_e('Business profile with services', 'videohub360-theme'); ?></li>
-                        <li><?php esc_html_e('Display credentials & specialties', 'videohub360-theme'); ?></li>
-                        <li><?php esc_html_e('Contact information & booking', 'videohub360-theme'); ?></li>
-                        <li><?php esc_html_e('Share content & resources', 'videohub360-theme'); ?></li>
+                        <li><?php echo esc_html(get_theme_mod('vh360_business_professional_feature_1', __('Business profile with services', 'videohub360-theme'))); ?></li>
+                        <li><?php echo esc_html(get_theme_mod('vh360_business_professional_feature_2', __('Display credentials & specialties', 'videohub360-theme'))); ?></li>
+                        <li><?php echo esc_html(get_theme_mod('vh360_business_professional_feature_3', __('Contact information & booking', 'videohub360-theme'))); ?></li>
+                        <li><?php echo esc_html(get_theme_mod('vh360_business_professional_feature_4', __('Share content & resources', 'videohub360-theme'))); ?></li>
                     </ul>
                     <a href="<?php echo esc_url($professional_url); ?>" class="vh360-business-choice-button vh360-button-primary">
-                        <?php esc_html_e('Sign Up as Professional', 'videohub360-theme'); ?>
+                        <?php echo esc_html(get_theme_mod('vh360_business_professional_button', __('Sign Up as Professional', 'videohub360-theme'))); ?>
                     </a>
                 </div>
                 
@@ -98,19 +98,19 @@ $client_url = vh360_get_client_register_url();
                         </svg>
                     </div>
                     <h2 class="vh360-business-choice-card-title">
-                        <?php esc_html_e('Client', 'videohub360-theme'); ?>
+                        <?php echo esc_html(get_theme_mod('vh360_business_client_title', __('Client', 'videohub360-theme'))); ?>
                     </h2>
                     <p class="vh360-business-choice-card-description">
-                        <?php esc_html_e('For individuals seeking services, engaging with content, and connecting with professionals.', 'videohub360-theme'); ?>
+                        <?php echo esc_html(get_theme_mod('vh360_business_client_description', __('For individuals seeking services, engaging with content, and connecting with professionals.', 'videohub360-theme'))); ?>
                     </p>
                     <ul class="vh360-business-choice-features">
-                        <li><?php esc_html_e('Simple profile setup', 'videohub360-theme'); ?></li>
-                        <li><?php esc_html_e('Connect with professionals', 'videohub360-theme'); ?></li>
-                        <li><?php esc_html_e('Engage with content', 'videohub360-theme'); ?></li>
-                        <li><?php esc_html_e('Privacy-focused experience', 'videohub360-theme'); ?></li>
+                        <li><?php echo esc_html(get_theme_mod('vh360_business_client_feature_1', __('Simple profile setup', 'videohub360-theme'))); ?></li>
+                        <li><?php echo esc_html(get_theme_mod('vh360_business_client_feature_2', __('Connect with professionals', 'videohub360-theme'))); ?></li>
+                        <li><?php echo esc_html(get_theme_mod('vh360_business_client_feature_3', __('Engage with content', 'videohub360-theme'))); ?></li>
+                        <li><?php echo esc_html(get_theme_mod('vh360_business_client_feature_4', __('Privacy-focused experience', 'videohub360-theme'))); ?></li>
                     </ul>
                     <a href="<?php echo esc_url($client_url); ?>" class="vh360-business-choice-button vh360-button-secondary">
-                        <?php esc_html_e('Sign Up as Client', 'videohub360-theme'); ?>
+                        <?php echo esc_html(get_theme_mod('vh360_business_client_button', __('Sign Up as Client', 'videohub360-theme'))); ?>
                     </a>
                 </div>
                 
@@ -118,9 +118,9 @@ $client_url = vh360_get_client_register_url();
             
             <!-- Alternative Link -->
             <div class="vh360-auth-links vh360-business-choice-footer">
-                <span><?php esc_html_e('Looking for a different account type?', 'videohub360-theme'); ?></span>
+                <span><?php echo esc_html(get_theme_mod('vh360_business_landing_footer_text', __('Looking for a different account type?', 'videohub360-theme'))); ?></span>
                 <a href="<?php echo esc_url(vh360_get_register_page_url()); ?>" class="vh360-auth-link">
-                    <?php esc_html_e('Standard Registration', 'videohub360-theme'); ?>
+                    <?php echo esc_html(get_theme_mod('vh360_business_landing_footer_link', __('Standard Registration', 'videohub360-theme'))); ?>
                 </a>
             </div>
             
