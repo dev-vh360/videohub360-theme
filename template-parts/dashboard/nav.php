@@ -190,21 +190,7 @@ $stats = vh360_get_user_stats($current_user_id);
                 </a>
             </li>
             
-            <?php
-            // Show Business Profile tab for professionals and organizations
-            $user_account_type = function_exists('vh360_get_user_account_type') ? vh360_get_user_account_type($current_user_id) : 'creator';
-            if (in_array($user_account_type, array('professional', 'organization'), true)) :
-            ?>
-            <li class="vh360-dashboard-nav-item">
-                <a href="#business-profile" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="business-profile">
-                    <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                    </svg>
-                    <span class="vh360-dashboard-nav-text"><?php esc_html_e('Business Profile', 'videohub360-theme'); ?></span>
-                </a>
-            </li>
-            <?php endif; ?>
+
             
             <li class="vh360-dashboard-nav-item">
                 <a href="#galleries" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="galleries">
