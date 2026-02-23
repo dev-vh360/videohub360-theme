@@ -79,15 +79,21 @@
                 success: function(response) {
                     $loading.hide();
                     
+                    // Debug logging
+                    console.log('Slots AJAX response:', response);
+                    
                     if (response.success && response.data.slots) {
+                        console.log('Found ' + response.data.slots.length + ' slots for date ' + date);
                         VH360BusinessBooking.renderSlots(response.data.slots, date);
                     } else {
+                        console.log('No slots found or error:', response.data);
                         $container.html('<p class="vh360-booking-no-slots">' + (vh360BusinessBooking.i18n.noSlots || 'No slots available for this date.') + '</p>');
                     }
                 },
                 error: function(xhr, status, error) {
                     $loading.hide();
                     console.error('Error loading slots:', error);
+                    console.error('XHR response:', xhr.responseText);
                     $container.html('<p class="vh360-booking-error">' + (vh360BusinessBooking.i18n.loadError || 'Error loading available times.') + '</p>');
                 }
             });
