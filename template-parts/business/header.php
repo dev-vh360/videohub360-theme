@@ -78,16 +78,26 @@ if (is_user_logged_in() && $current_user_id !== $author_id) {
         
         <!-- Booking Section - Dynamic Appointment Picker -->
         <div class="vh360-business-booking">
-            <h2 class="vh360-business-booking-title">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                    <line x1="3" y1="10" x2="21" y2="10"></line>
+            <button type="button" 
+                    class="vh360-business-booking-toggle" 
+                    id="vh360-booking-toggle"
+                    aria-expanded="false"
+                    aria-controls="vh360-booking-content">
+                <span class="vh360-booking-toggle-text">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    <?php esc_html_e('Book an Appointment', 'videohub360-theme'); ?>
+                </span>
+                <svg class="vh360-booking-toggle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
-                <?php esc_html_e('Book an Appointment', 'videohub360-theme'); ?>
-            </h2>
+            </button>
             
+            <div class="vh360-business-booking-content" id="vh360-booking-content" style="display: none;">
             <?php if ($is_owner) : ?>
                 <!-- Owner View: Manage Availability Link -->
                 <div class="vh360-business-booking-owner">
@@ -127,6 +137,7 @@ if (is_user_logged_in() && $current_user_id !== $author_id) {
                     </div>
                 </div>
             <?php endif; ?>
+            </div><!-- .vh360-business-booking-content -->
         </div>
         
     </div>

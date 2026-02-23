@@ -22,11 +22,59 @@
             }
             
             this.bindEvents();
+            this.initCollapsible();
             
-            // Auto-load slots for today's date on page load
+            // Auto-load slots for today's date on page load (but don't expand yet)
             const today = new Date().toISOString().split('T')[0];
             $('#vh360-booking-date-picker').val(today);
-            this.loadSlots(today);
+            // Note: loadSlots will be called when user expands the section
+        },
+        
+        /**
+         * Initialize collapsible booking section
+         */
+        initCollapsible: function() {
+            const $toggle = $('#vh360-booking-toggle');
+            const $content = $('#vh360-booking-content');
+            
+            if ($toggle.length && $content.length) {
+                // Set initial state
+                $content.addClass('vh360-booking-collapsed').hide();
+                
+                // Toggle click handler
+                $toggle.on('click', function() {
+                    const isExpanded = $toggle.attr('aria-expanded') === 'true';
+                    
+                    if (isExpanded) {
+                        // Collapse
+                        $toggle.attr('aria-expanded', 'false');
+                        $content.slideUp(300, function() {
+                            $content.addClass('vh360-booking-collapsed').removeClass('vh360-booking-expanded');
+                        });
+                    } else {
+                        // Expand
+                        $toggle.attr('aria-expanded', 'true');
+                        $content.removeClass('vh360-booking-collapsed').addClass('vh360-booking-expanded').slideDown(300);
+                        
+                        // Load slots if not already loaded
+                        const $slotsContainer = $('#vh360-booking-slots-container');
+                        if ($slotsContainer.children().length === 0) {
+                            const selectedDate = $('#vh360-booking-date-picker').val();
+                            if (selectedDate) {
+                                VH360BusinessBooking.loadSlots(selectedDate);
+                            }
+                        }
+                    }
+                });
+                
+                // Keyboard accessibility
+                $toggle.on('keydown', function(e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        $(this).click();
+                    }
+                });
+            }
         },
         
         /**

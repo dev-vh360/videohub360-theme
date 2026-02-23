@@ -114,20 +114,74 @@
     background: #fff;
     border: 1px solid #e5e7eb;
     border-radius: 0.5rem;
-    padding: 1.5rem;
     margin-top: 2rem;
+    overflow: hidden;
 }
 
-.vh360-business-booking-title {
+/* Collapsible Toggle Button */
+.vh360-business-booking-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+    text-align: left;
+    transition: background-color 0.2s;
+}
+
+.vh360-business-booking-toggle:hover {
+    background-color: #f9fafb;
+}
+
+.vh360-business-booking-toggle:focus {
+    outline: 2px solid #2563eb;
+    outline-offset: -2px;
+}
+
+.vh360-booking-toggle-text {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-size: 1.5rem;
-    margin: 0 0 1.5rem 0;
 }
 
-.vh360-business-booking-title svg {
+.vh360-booking-toggle-text svg {
     stroke: #2563eb;
+    flex-shrink: 0;
+}
+
+.vh360-booking-toggle-icon {
+    stroke: #6b7280;
+    flex-shrink: 0;
+    transition: transform 0.3s ease;
+}
+
+.vh360-business-booking-toggle[aria-expanded="true"] .vh360-booking-toggle-icon {
+    transform: rotate(180deg);
+}
+
+/* Collapsible Content */
+.vh360-business-booking-content {
+    padding: 0 1.5rem 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.vh360-business-booking-content.vh360-booking-collapsed {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.vh360-business-booking-content.vh360-booking-expanded {
+    max-height: 2000px;
+    opacity: 1;
 }
 
 /* Owner View */
@@ -337,5 +391,24 @@
 @media (max-width: 768px) {
     .vh360-booking-slots-grid {
         grid-template-columns: 1fr;
+    }
+    
+    .vh360-business-booking-toggle {
+        padding: 1rem 1.25rem;
+        font-size: 1.125rem;
+    }
+    
+    .vh360-booking-toggle-text svg {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .vh360-booking-toggle-icon {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .vh360-business-booking-content {
+        padding: 0 1.25rem 1.25rem;
     }
 }
