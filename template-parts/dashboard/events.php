@@ -338,6 +338,25 @@ $user_events = new WP_Query($args);
                     </div>
                 </div>
                 
+                <!-- Event Type/Kind -->
+                <div class="vh360-form-section">
+                    <h4 class="vh360-form-section-title"><?php esc_html_e('Event Type', 'videohub360-theme'); ?></h4>
+                    
+                    <div class="vh360-form-group">
+                        <label for="vh360-event-kind" class="vh360-form-label">
+                            <?php esc_html_e('Type', 'videohub360-theme'); ?> <span class="vh360-required">*</span>
+                        </label>
+                        <select id="vh360-event-kind" name="kind" class="vh360-form-control" required>
+                            <option value="event"><?php esc_html_e('Regular Event', 'videohub360-theme'); ?></option>
+                            <option value="availability"><?php esc_html_e('Availability Slot (Bookable Appointment)', 'videohub360-theme'); ?></option>
+                            <option value="block"><?php esc_html_e('Blocked Time (Unavailable)', 'videohub360-theme'); ?></option>
+                        </select>
+                        <small class="vh360-form-help">
+                            <?php esc_html_e('Regular events appear in public listings. Availability slots are for appointment booking. Blocked times prevent double-bookings.', 'videohub360-theme'); ?>
+                        </small>
+                    </div>
+                </div>
+                
                 <!-- Date & Time -->
                 <div class="vh360-form-section">
                     <h4 class="vh360-form-section-title"><?php esc_html_e('Date & Time', 'videohub360-theme'); ?></h4>

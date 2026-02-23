@@ -308,6 +308,7 @@ class VH360_Event_Ajax {
             'status'                 => $event->post_status,
             'featured_image_id'      => get_post_thumbnail_id($event->ID),
             'featured_image_url'     => get_the_post_thumbnail_url($event->ID, 'medium'),
+            'kind'                   => get_post_meta($event->ID, '_vh360_event_kind', true),
             'start_date'             => get_post_meta($event->ID, '_vh360_event_start_date', true),
             'start_time'             => get_post_meta($event->ID, '_vh360_event_start_time', true),
             'end_date'               => get_post_meta($event->ID, '_vh360_event_end_date', true),
