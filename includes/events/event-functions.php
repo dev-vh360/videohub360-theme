@@ -48,7 +48,9 @@ function vh360_get_event_kind($event_id) {
 function vh360_check_event_overlap($event_id, $author_id, $start_date, $start_time, $end_date, $end_time) {
     // Build start and end datetime strings
     $check_start = $start_date . ' ' . (!empty($start_time) ? $start_time : '00:00:00');
-    $check_end = !empty($end_date) ? $end_date . ' ' . (!empty($end_time) ? $end_time : '23:59:59') : $check_start;
+    $check_end = !empty($end_date) 
+        ? $end_date . ' ' . (!empty($end_time) ? $end_time : '23:59:59') 
+        : $start_date . ' ' . (!empty($start_time) && !empty($end_time) ? $end_time : '23:59:59');
     
     $check_start_ts = strtotime($check_start);
     $check_end_ts = strtotime($check_end);
@@ -117,7 +119,9 @@ function vh360_check_event_overlap($event_id, $author_id, $start_date, $start_ti
         }
         
         $existing_start = $existing_start_date . ' ' . (!empty($existing_start_time) ? $existing_start_time : '00:00:00');
-        $existing_end = !empty($existing_end_date) ? $existing_end_date . ' ' . (!empty($existing_end_time) ? $existing_end_time : '23:59:59') : $existing_start;
+        $existing_end = !empty($existing_end_date) 
+            ? $existing_end_date . ' ' . (!empty($existing_end_time) ? $existing_end_time : '23:59:59') 
+            : $existing_start_date . ' ' . (!empty($existing_start_time) && !empty($existing_end_time) ? $existing_end_time : '23:59:59');
         
         $existing_start_ts = strtotime($existing_start);
         $existing_end_ts = strtotime($existing_end);

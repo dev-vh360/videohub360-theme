@@ -488,9 +488,9 @@ class VH360_Event_Ajax {
             }
         }
         
-        // Auto-set max_attendees to 1 for availability kind
+        // Auto-set max_attendees to 1 for availability kind if not explicitly set
         if (isset($data['kind']) && $data['kind'] === 'availability') {
-            if (!isset($data['max_attendees']) || empty($data['max_attendees'])) {
+            if (!isset($data['max_attendees']) || $data['max_attendees'] === '' || $data['max_attendees'] === null) {
                 update_post_meta($event_id, '_vh360_event_max_attendees', 1);
             }
         }

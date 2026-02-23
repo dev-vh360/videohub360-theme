@@ -183,7 +183,7 @@ if ($events_query->have_posts()) {
                         </div>
                     <?php endforeach; ?>
                     <p class="vh360-booking-info">
-                        <?php esc_html_e('Click "View & Confirm" to see details and complete your booking via RSVP.', 'videohub360-theme'); ?>
+                        <?php esc_html_e('Click "Book Appointment" to see details and confirm your booking via RSVP.', 'videohub360-theme'); ?>
                     </p>
                 </div>
             <?php else : ?>
