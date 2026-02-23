@@ -79,21 +79,9 @@ class VH360_Availability_Ajax {
         
         $slots = vh360_get_open_appointment_slots($professional_id, $start_date, $end_date);
         
-        // Debug: Get settings to help diagnose issues
-        $settings = vh360_get_availability_settings($professional_id);
-        
         wp_send_json_success(array(
             'slots' => $slots,
             'professional_id' => $professional_id,
-            'debug' => array(
-                'slot_count' => count($slots),
-                'has_weekly_settings' => !empty($settings['weekly']),
-                'slot_minutes' => $settings['slot_minutes'],
-                'date_range' => array('start' => $start_date, 'end' => $end_date),
-                'weekly_summary' => array_map(function($day_slots) {
-                    return count($day_slots) . ' blocks';
-                }, $settings['weekly']),
-            ),
         ));
     }
     

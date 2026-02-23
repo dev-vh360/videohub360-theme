@@ -17,7 +17,6 @@
          */
         init: function() {
             if (typeof vh360BusinessBooking === 'undefined') {
-                console.error('vh360BusinessBooking object not found');
                 return;
             }
             
@@ -127,21 +126,14 @@
                 success: function(response) {
                     $loading.hide();
                     
-                    // Debug logging
-                    console.log('Slots AJAX response:', response);
-                    
                     if (response.success && response.data.slots) {
-                        console.log('Found ' + response.data.slots.length + ' slots for date ' + date);
                         VH360BusinessBooking.renderSlots(response.data.slots, date);
                     } else {
-                        console.log('No slots found or error:', response.data);
                         $container.html('<p class="vh360-booking-no-slots">' + (vh360BusinessBooking.i18n.noSlots || 'No slots available for this date.') + '</p>');
                     }
                 },
                 error: function(xhr, status, error) {
                     $loading.hide();
-                    console.error('Error loading slots:', error);
-                    console.error('XHR response:', xhr.responseText);
                     $container.html('<p class="vh360-booking-error">' + (vh360BusinessBooking.i18n.loadError || 'Error loading available times.') + '</p>');
                 }
             });
@@ -233,8 +225,6 @@
                     slot_duration: vh360BusinessBooking.slotDuration
                 },
                 success: function(response) {
-                    console.log('Booking response:', response);
-                    
                     if (response.success) {
                         // Show success message
                         VH360BusinessBooking.showMessage('success', response.data.message || vh360BusinessBooking.i18n.bookingSuccess);
@@ -270,8 +260,6 @@
                 error: function(xhr, status, error) {
                     $btn.prop('disabled', false);
                     $btn.text(originalText);
-                    console.error('Booking error:', error);
-                    console.error('XHR response:', xhr.responseText);
                     VH360BusinessBooking.showMessage('error', vh360BusinessBooking.i18n.bookingError || 'Error booking appointment.');
                 }
             });
