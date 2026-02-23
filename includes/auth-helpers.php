@@ -313,6 +313,13 @@ function vh360_handle_business_registration() {
     if ('' === $display_name) {
         $display_name = $username;
     }
+    
+    // Determine role based on account type
+    $role = 'subscriber'; // Default for clients
+    if ($account_type === 'professional') {
+        // Use professional role if it exists, otherwise fall back to subscriber
+        $role = get_role('vh360_professional') ? 'vh360_professional' : 'subscriber';
+    }
 
     $user_id = wp_insert_user(array(
         'user_login'   => $username,
@@ -321,7 +328,7 @@ function vh360_handle_business_registration() {
         'first_name'   => $first_name,
         'last_name'    => $last_name,
         'display_name' => $display_name,
-        'role'         => 'subscriber',
+        'role'         => $role,
     ));
     
     // Check for errors
@@ -329,6 +336,12 @@ function vh360_handle_business_registration() {
         $error_code = $user_id->get_error_code();
         wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
         exit;
+    }
+    
+    // If professional role doesn't exist yet but account type is professional, grant capability directly
+    if ($account_type === 'professional' && !get_role('vh360_professional')) {
+        $user = new WP_User($user_id);
+        $user->add_cap('vh360_create_events');
     }
 
     // Set account type meta

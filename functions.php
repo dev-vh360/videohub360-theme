@@ -139,6 +139,34 @@ function videohub360_theme_setup() {
 add_action('after_setup_theme', 'videohub360_theme_setup');
 
 /**
+ * Register Professional Role
+ *
+ * Creates a custom role for professionals with event creation capabilities.
+ * This role is assigned to users who register as professionals through business registration.
+ */
+function vh360_register_professional_role() {
+    // Check if role already exists
+    if (get_role('vh360_professional')) {
+        return;
+    }
+    
+    // Get subscriber capabilities as a base
+    $subscriber = get_role('subscriber');
+    $capabilities = $subscriber ? $subscriber->capabilities : array('read' => true);
+    
+    // Add event creation capability
+    $capabilities['vh360_create_events'] = true;
+    
+    // Register the professional role
+    add_role(
+        'vh360_professional',
+        __('Professional', 'videohub360-theme'),
+        $capabilities
+    );
+}
+add_action('init', 'vh360_register_professional_role');
+
+/**
  * Set default comment options on theme activation
  *
  * Automatically enables login-only commenting for a community-focused platform.
@@ -150,6 +178,9 @@ add_action('after_switch_theme', function () {
     
     // Keep WP's guest-comment requirements consistent if it's ever enabled later
     update_option('require_name_email', 1);
+    
+    // Register professional role on theme activation
+    vh360_register_professional_role();
 });
 
 /**

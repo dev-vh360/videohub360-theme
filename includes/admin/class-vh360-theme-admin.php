@@ -944,7 +944,7 @@ class VH360_Theme_Admin {
             'create_posts_roles' => array('administrator'),
             'create_videos_roles' => array('administrator'),
             'host_live_roles' => array('administrator'),
-            'create_events_roles' => array('administrator', 'editor', 'author'),
+            'create_events_roles' => array('administrator', 'editor', 'author', 'vh360_professional'),
             'create_bulletins_roles' => array('administrator', 'editor', 'author', 'contributor'),
             'bulletin_banner_roles' => array('administrator', 'editor'),
             'create_galleries_roles' => array('administrator', 'editor', 'author', 'contributor'),
