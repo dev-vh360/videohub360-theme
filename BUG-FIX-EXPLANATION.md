@@ -64,7 +64,8 @@ After this fix is deployed:
 ## How To Verify The Fix
 
 ### Option 1: Use the Diagnostic Tool
-1. Visit: `your-site.com/wp-content/themes/videohub360-theme/check-availability-settings.php?user_id=1`
+1. Visit: `your-site.com/wp-content/themes/YOUR-THEME-NAME/check-availability-settings.php?user_id=1`  
+   (Replace `YOUR-THEME-NAME` with your actual theme directory name, likely `videohub360-theme`)
 2. Scroll to "Test Slot Generation"
 3. You should now see: **"✓ Generated X slots!"** (where X > 0)
 

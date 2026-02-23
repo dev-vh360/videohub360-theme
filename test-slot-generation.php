@@ -48,11 +48,11 @@ if (!empty($settings['weekly'][$day_of_week])) {
     echo "- Raw start: " . $time_block['start'] . "\n";
     echo "- Raw end: " . $time_block['end'] . "\n";
     
-    // Test regex
-    $start_time = preg_replace('/:\d{2}$/', '', $time_block['start']);
-    $end_time = preg_replace('/:\d{2}$/', '', $time_block['end']);
-    echo "- After regex start: '$start_time'\n";
-    echo "- After regex end: '$end_time'\n\n";
+    // Test time extraction (using fixed method)
+    $start_time = substr($time_block['start'], 0, 5);
+    $end_time = substr($time_block['end'], 0, 5);
+    echo "- After substr(0,5) start: '$start_time'\n";
+    echo "- After substr(0,5) end: '$end_time'\n\n";
     
     // Test DateTime creation
     $date_str = $start_date->format('Y-m-d');
