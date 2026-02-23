@@ -1090,6 +1090,12 @@ require_once VH360_THEME_DIR . '/includes/events/class-vh360-event-ajax.php';
 require_once VH360_THEME_DIR . '/includes/events/event-functions.php';
 
 /**
+ * Availability functions for appointment booking
+ */
+require_once VH360_THEME_DIR . '/includes/availability-functions.php';
+require_once VH360_THEME_DIR . '/includes/class-vh360-availability-ajax.php';
+
+/**
  * Exclude appointment-only events (availability and block) from public event archives
  */
 function vh360_exclude_appointment_events_from_archives($query) {
