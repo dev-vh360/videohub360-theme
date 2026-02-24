@@ -476,6 +476,38 @@ class VideoHub360_Ajax {
             return;
         }
         
+        // Validate channel name matches the post's stored channel name
+        $stored_channel_name = get_post_meta($post_id, '_vh360_agora_channel_name', true);
+        if ($stored_channel_name && $stored_channel_name !== $channel_name) {
+            wp_send_json_error('Invalid channel name for this room');
+            return;
+        }
+        
+        // Enforce appointment room access control
+        $appointment_event_id = get_post_meta($post_id, '_vh360_appointment_event_id', true);
+        if ($appointment_event_id) {
+            // This is an appointment Live Room - enforce strict membership
+            
+            // Must be logged in to join appointment rooms
+            if (!is_user_logged_in()) {
+                wp_send_json_error('You must be logged in to join this appointment session');
+                return;
+            }
+            
+            $current_user_id = get_current_user_id();
+            
+            // Check if user is authorized (professional, client, or admin)
+            $is_admin = current_user_can('manage_options');
+            $is_professional = ((int) $post->post_author === (int) $current_user_id);
+            $client_id = get_post_meta($post_id, '_vh360_appointment_client_id', true);
+            $is_client = ($client_id && (int) $client_id === (int) $current_user_id);
+            
+            if (!$is_admin && !$is_professional && !$is_client) {
+                wp_send_json_error('You do not have permission to join this appointment session');
+                return;
+            }
+        }
+        
         // Check user moderation status before generating token
         if (is_user_logged_in()) {
             $current_user_id = get_current_user_id();

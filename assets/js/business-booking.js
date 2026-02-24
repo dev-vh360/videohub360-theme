@@ -245,11 +245,17 @@
                             });
                         }, 1500);
                         
-                        // Optionally redirect to appointment details
-                        if (response.data.event_url) {
+                        // Show Live Room link if available
+                        if (response.data.live_room_url) {
+                            const liveRoomMessage = '<div class="vh360-booking-success-actions">' +
+                                '<a href="' + response.data.live_room_url + '" class="vh360-join-live-room-btn">' +
+                                (vh360BusinessBooking.i18n.joinLiveRoom || 'Join Live Room') +
+                                '</a>' +
+                                '</div>';
+                            
                             setTimeout(function() {
-                                window.location.href = response.data.event_url;
-                            }, 2500);
+                                VH360BusinessBooking.showMessage('success', liveRoomMessage);
+                            }, 2000);
                         }
                     } else {
                         $btn.prop('disabled', false);

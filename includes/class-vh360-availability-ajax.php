@@ -117,6 +117,20 @@ class VH360_Availability_Ajax {
             return;
         }
         
+        // Enforce Business Mode: Account type must be professional/org
+        $account_type = vh360_get_user_account_type($professional_id);
+        if (!in_array($account_type, array('professional', 'organization'), true)) {
+            wp_send_json_error(array('message' => __('Appointments are only available for business professionals', 'videohub360-theme')));
+            return;
+        }
+        
+        // Enforce Business Mode: Display mode must be business
+        $display_mode = vh360_get_author_display_mode($professional_id);
+        if ($display_mode !== 'business') {
+            wp_send_json_error(array('message' => __('Appointments are only available in Business Mode', 'videohub360-theme')));
+            return;
+        }
+        
         // Parse slot datetime
         $settings = vh360_get_availability_settings($professional_id);
         $slot_start = DateTime::createFromFormat('Y-m-d H:i:s', $slot_datetime, new DateTimeZone($settings['timezone']));
@@ -183,6 +197,64 @@ class VH360_Availability_Ajax {
         update_post_meta($event_id, '_vh360_event_rsvps', $rsvps);
         update_post_meta($event_id, '_vh360_event_rsvp_count', 1);
         
+        // Create appointment Live Room
+        $live_room_title = sprintf(
+            __('Appointment: %s — %s', 'videohub360-theme'),
+            $client->display_name,
+            $slot_start->format(get_option('date_format') . ' ' . get_option('time_format'))
+        );
+        
+        $live_room_id = wp_insert_post(array(
+            'post_title' => $live_room_title,
+            'post_type' => 'videohub360',
+            'post_status' => 'publish',
+            'post_author' => $professional_id,
+            'post_content' => sprintf(
+                __('Private appointment session scheduled for %s', 'videohub360-theme'),
+                $slot_start->format(get_option('date_format') . ' ' . get_option('time_format'))
+            ),
+        ));
+        
+        if (is_wp_error($live_room_id) || !$live_room_id) {
+            // Live Room creation failed, but we already created the appointment event
+            // Log the error but don't fail the booking
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Failed to create Live Room for appointment ' . $event_id);
+            }
+        } else {
+            // Set Live Room meta - required for template switch and functionality
+            update_post_meta($live_room_id, '_vh360_context', 'live_room');
+            update_post_meta($live_room_id, '_vh360_type', 'agora');
+            update_post_meta($live_room_id, '_vh360_is_live', 'no');
+            update_post_meta($live_room_id, '_vh360_stream_stopped', 'no');
+            update_post_meta($live_room_id, '_vh360_agora_stream_live', 'no');
+            update_post_meta($live_room_id, '_vh360_agora_mode', 'interactive');
+            update_post_meta($live_room_id, '_vh360_agora_everyone_is_host', 'no');
+            update_post_meta($live_room_id, '_vh360_chat_enabled', 'yes');
+            
+            // Generate unique channel name for this appointment
+            $channel_name = 'appt-' . $event_id;
+            update_post_meta($live_room_id, '_vh360_agora_channel_name', $channel_name);
+            
+            // Set appointment-specific offline message
+            $offline_message = sprintf(
+                __('This session is scheduled for %s at %s. The professional will start the session at the scheduled time.', 'videohub360-theme'),
+                $slot_start->format(get_option('date_format')),
+                $slot_start->format(get_option('time_format'))
+            );
+            update_post_meta($live_room_id, '_vh360_offline_message', $offline_message);
+            
+            // Create bidirectional mapping between appointment and Live Room
+            update_post_meta($event_id, '_vh360_appointment_live_room_id', $live_room_id);
+            update_post_meta($live_room_id, '_vh360_appointment_event_id', $event_id);
+            update_post_meta($live_room_id, '_vh360_appointment_professional_id', $professional_id);
+            update_post_meta($live_room_id, '_vh360_appointment_client_id', $client_id);
+            
+            // Set online join URL on the appointment event
+            $live_room_url = get_permalink($live_room_id);
+            update_post_meta($event_id, '_vh360_event_online_url', $live_room_url);
+        }
+        
         // Send notification to professional
         if (function_exists('vh360_create_notification')) {
             $notification_message = sprintf(
@@ -206,6 +278,8 @@ class VH360_Availability_Ajax {
             'message' => __('Appointment booked successfully!', 'videohub360-theme'),
             'event_id' => $event_id,
             'event_url' => get_permalink($event_id),
+            'live_room_id' => isset($live_room_id) && $live_room_id ? $live_room_id : 0,
+            'live_room_url' => isset($live_room_url) && $live_room_url ? $live_room_url : '',
             'professional_id' => $professional_id,
             'slot_datetime' => $slot_datetime, // Return so UI can update
         ));
