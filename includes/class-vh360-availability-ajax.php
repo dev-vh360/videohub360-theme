@@ -219,8 +219,12 @@ class VH360_Availability_Ajax {
             // Live Room creation failed, but we already created the appointment event
             // Log the error but don't fail the booking
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Failed to create Live Room for appointment ' . $event_id);
+                $error_msg = is_wp_error($live_room_id) ? $live_room_id->get_error_message() : 'Unknown error';
+                error_log('Failed to create Live Room for appointment ' . $event_id . ': ' . $error_msg);
             }
+            // Set variables to null so they're not included in response
+            $live_room_id = 0;
+            $live_room_url = '';
         } else {
             // Set Live Room meta - required for template switch and functionality
             update_post_meta($live_room_id, '_vh360_context', 'live_room');
@@ -278,8 +282,8 @@ class VH360_Availability_Ajax {
             'message' => __('Appointment booked successfully!', 'videohub360-theme'),
             'event_id' => $event_id,
             'event_url' => get_permalink($event_id),
-            'live_room_id' => isset($live_room_id) && $live_room_id ? $live_room_id : 0,
-            'live_room_url' => isset($live_room_url) && $live_room_url ? $live_room_url : '',
+            'live_room_id' => $live_room_id,
+            'live_room_url' => $live_room_url,
             'professional_id' => $professional_id,
             'slot_datetime' => $slot_datetime, // Return so UI can update
         ));
