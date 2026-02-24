@@ -498,11 +498,11 @@ class VideoHub360_Ajax {
             
             // Check if user is authorized (professional, client, or admin)
             $is_admin = current_user_can('manage_options');
-            $is_professional = ((int) $post->post_author === (int) $current_user_id);
+            $is_room_owner = ((int) $post->post_author === (int) $current_user_id);
             $client_id = get_post_meta($post_id, '_vh360_appointment_client_id', true);
             $is_client = ($client_id && (int) $client_id === (int) $current_user_id);
             
-            if (!$is_admin && !$is_professional && !$is_client) {
+            if (!$is_admin && !$is_room_owner && !$is_client) {
                 wp_send_json_error('You do not have permission to join this appointment session');
                 return;
             }
