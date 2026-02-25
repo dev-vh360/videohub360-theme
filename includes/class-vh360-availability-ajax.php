@@ -233,7 +233,8 @@ class VH360_Availability_Ajax {
             update_post_meta($live_room_id, '_vh360_stream_stopped', 'no');
             update_post_meta($live_room_id, '_vh360_agora_stream_live', 'no');
             update_post_meta($live_room_id, '_vh360_agora_mode', 'interactive');
-            update_post_meta($live_room_id, '_vh360_agora_everyone_is_host', 'no');
+            // For appointment rooms, both professional and client need host permissions to publish video/audio
+            update_post_meta($live_room_id, '_vh360_agora_everyone_is_host', 'yes');
             update_post_meta($live_room_id, '_vh360_chat_enabled', 'yes');
             
             // Generate unique channel name for this appointment
