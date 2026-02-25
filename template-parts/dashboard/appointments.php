@@ -1,9 +1,10 @@
 <?php
 /**
- * Dashboard My Appointments Tab
+ * Dashboard Appointments Tab
  *
- * Shows appointments that the current user has booked with professionals.
- * Clients can view their upcoming appointments and join live sessions.
+ * Shows appointments for both professionals (managing sessions) and clients (viewing bookings).
+ * Professionals see appointments they need to manage with session controls.
+ * Clients see their booked appointments with join buttons.
  *
  * @package Videohub360_Theme
  * @since 1.5.0
@@ -20,55 +21,97 @@ if (!is_user_logged_in()) {
 }
 
 $current_user_id = get_current_user_id();
+$user_account_type = vh360_get_user_account_type($current_user_id);
+$is_professional = in_array($user_account_type, array('professional', 'organization'), true);
 
-// Query all appointments where this user is a participant (in RSVPs)
-// We need to query all availability events and then filter by RSVP in PHP
-$appointments_query = new WP_Query(array(
-    'post_type' => 'vh360_event',
-    'post_status' => 'publish',
-    'posts_per_page' => 50,
-    'orderby' => 'meta_value',
-    'order' => 'ASC',
-    'meta_query' => array(
-        'relation' => 'AND',
-        array(
-            'key' => '_vh360_event_kind',
-            'value' => 'availability',
+// Role-based routing
+if ($is_professional) {
+    // PROFESSIONAL VIEW: Query appointments as the provider
+    $appointments_query = new WP_Query(array(
+        'post_type' => 'vh360_event',
+        'author' => $current_user_id,
+        'post_status' => 'publish',
+        'posts_per_page' => 50,
+        'orderby' => 'meta_value',
+        'order' => 'ASC',
+        'meta_query' => array(
+            'relation' => 'AND',
+            array(
+                'key' => '_vh360_event_kind',
+                'value' => 'availability',
+            ),
+            array(
+                'key' => '_vh360_event_start_date',
+                'value' => date('Y-m-d', strtotime('-7 days')), // Show from last 7 days
+                'compare' => '>=',
+                'type' => 'DATE',
+            ),
+            array(
+                'key' => '_vh360_event_rsvp_count',
+                'value' => 0,
+                'compare' => '>',
+                'type' => 'NUMERIC',
+            ),
         ),
-        array(
-            'key' => '_vh360_event_start_date',
-            'value' => date('Y-m-d', strtotime('-7 days')), // Show appointments from last 7 days
-            'compare' => '>=',
-            'type' => 'DATE',
+    ));
+    
+    $user_appointments = array();
+    if ($appointments_query->have_posts()) {
+        while ($appointments_query->have_posts()) {
+            $appointments_query->the_post();
+            $user_appointments[] = get_the_ID();
+        }
+        wp_reset_postdata();
+    }
+} else {
+    // CLIENT VIEW: Query appointments where this user is in RSVPs
+    $appointments_query = new WP_Query(array(
+        'post_type' => 'vh360_event',
+        'post_status' => 'publish',
+        'posts_per_page' => 50,
+        'orderby' => 'meta_value',
+        'order' => 'ASC',
+        'meta_query' => array(
+            'relation' => 'AND',
+            array(
+                'key' => '_vh360_event_kind',
+                'value' => 'availability',
+            ),
+            array(
+                'key' => '_vh360_event_start_date',
+                'value' => date('Y-m-d', strtotime('-7 days')),
+                'compare' => '>=',
+                'type' => 'DATE',
+            ),
+            array(
+                'key' => '_vh360_event_rsvp_count',
+                'value' => 0,
+                'compare' => '>',
+                'type' => 'NUMERIC',
+            ),
         ),
-        array(
-            'key' => '_vh360_event_rsvp_count',
-            'value' => 0,
-            'compare' => '>',
-            'type' => 'NUMERIC',
-        ),
-    ),
-));
-
-// Filter to only appointments where current user is in RSVP list
-$user_appointments = array();
-if ($appointments_query->have_posts()) {
-    while ($appointments_query->have_posts()) {
-        $appointments_query->the_post();
-        $appointment_id = get_the_ID();
-        $rsvps = get_post_meta($appointment_id, '_vh360_event_rsvps', true);
-        
-        // Check if current user is in the RSVP list
-        if (is_array($rsvps)) {
-            foreach ($rsvps as $rsvp) {
-                if (isset($rsvp['user_id']) && (int) $rsvp['user_id'] === $current_user_id) {
-                    $user_appointments[] = $appointment_id;
-                    break;
+    ));
+    
+    // Filter to only appointments where current user is in RSVP list
+    $user_appointments = array();
+    if ($appointments_query->have_posts()) {
+        while ($appointments_query->have_posts()) {
+            $appointments_query->the_post();
+            $appointment_id = get_the_ID();
+            $rsvps = get_post_meta($appointment_id, '_vh360_event_rsvps', true);
+            
+            // Check if current user is in the RSVP list
+            if (is_array($rsvps)) {
+                foreach ($rsvps as $rsvp) {
+                    if (isset($rsvp['user_id']) && (int) $rsvp['user_id'] === $current_user_id) {
+                        $user_appointments[] = $appointment_id;
+                        break;
+                    }
                 }
             }
         }
+        wp_reset_postdata();
     }
-    wp_reset_postdata();
 }
 ?>
 
@@ -82,10 +125,22 @@ if ($appointments_query->have_posts()) {
                 <line x1="3" y1="10" x2="21" y2="10"></line>
                 <circle cx="12" cy="13" r="3"></circle>
             </svg>
-            <?php esc_html_e('My Appointments', 'videohub360-theme'); ?>
+            <?php 
+            if ($is_professional) {
+                esc_html_e('Appointments', 'videohub360-theme');
+            } else {
+                esc_html_e('My Appointments', 'videohub360-theme');
+            }
+            ?>
         </h2>
         <p class="vh360-dashboard-section-subtitle">
-            <?php esc_html_e('View your booked appointments and join live sessions when they start.', 'videohub360-theme'); ?>
+            <?php 
+            if ($is_professional) {
+                esc_html_e('Manage your scheduled appointment sessions. Start and end sessions when meeting with clients.', 'videohub360-theme');
+            } else {
+                esc_html_e('View your booked appointments and join live sessions when they start.', 'videohub360-theme');
+            }
+            ?>
         </p>
     </header>
 
@@ -100,17 +155,35 @@ if ($appointments_query->have_posts()) {
                     $end_time = get_post_meta($appointment_id, '_vh360_event_end_time', true);
                     $live_room_id = get_post_meta($appointment_id, '_vh360_appointment_live_room_id', true);
                     
-                    // Get professional info
-                    $professional_id = get_post_field('post_author', $appointment_id);
-                    $professional = get_userdata($professional_id);
-                    $professional_name = $professional ? $professional->display_name : __('Unknown Professional', 'videohub360-theme');
+                    if ($is_professional) {
+                        // Professional view: show client name
+                        $rsvps = get_post_meta($appointment_id, '_vh360_event_rsvps', true);
+                        $participant_name = __('Unknown Client', 'videohub360-theme');
+                        if (is_array($rsvps) && !empty($rsvps)) {
+                            $client_id = $rsvps[0]['user_id'];
+                            $client = get_userdata($client_id);
+                            if ($client) {
+                                $participant_name = $client->display_name;
+                            }
+                        }
+                    } else {
+                        // Client view: show professional name
+                        $professional_id = get_post_field('post_author', $appointment_id);
+                        $professional = get_userdata($professional_id);
+                        $participant_name = $professional ? $professional->display_name : __('Unknown Professional', 'videohub360-theme');
+                    }
                     
                     // Get Live Room status
                     $is_live = false;
                     $live_room_url = '';
                     $stream_stopped = false;
                     if ($live_room_id) {
-                        $is_live = get_post_meta($live_room_id, '_vh360_is_live', true) === 'yes';
+                        // Check actual stream state for professionals, UI mode for clients
+                        if ($is_professional) {
+                            $is_live = get_post_meta($live_room_id, '_vh360_agora_stream_live', true) === 'yes';
+                        } else {
+                            $is_live = get_post_meta($live_room_id, '_vh360_is_live', true) === 'yes';
+                        }
                         $stream_stopped = get_post_meta($live_room_id, '_vh360_stream_stopped', true) === 'yes';
                         $live_room_url = get_permalink($live_room_id);
                     }
@@ -129,24 +202,30 @@ if ($appointments_query->have_posts()) {
                     
                     // Determine status
                     $status_class = 'offline';
-                    $status_label = __('Scheduled', 'videohub360-theme');
+                    $status_label = $is_professional ? __('Offline', 'videohub360-theme') : __('Scheduled', 'videohub360-theme');
                     if ($stream_stopped) {
                         $status_class = 'ended';
                         $status_label = __('Ended', 'videohub360-theme');
                     } elseif ($is_live) {
                         $status_class = 'live';
                         $status_label = __('Live Now', 'videohub360-theme');
-                    } elseif ($is_past) {
+                    } elseif (!$is_professional && $is_past) {
                         $status_class = 'past';
                         $status_label = __('Past', 'videohub360-theme');
                     }
                 ?>
-                <div class="vh360-appointment-item">
+                <div class="vh360-appointment-item" data-appointment-id="<?php echo esc_attr($appointment_id); ?>" data-live-room-id="<?php echo esc_attr($live_room_id); ?>">
                     <div class="vh360-appointment-info">
                         <div class="vh360-appointment-header">
                             <h4 class="vh360-appointment-title">
-                                <?php esc_html_e('Appointment with', 'videohub360-theme'); ?> 
-                                <?php echo esc_html($professional_name); ?>
+                                <?php 
+                                if ($is_professional) {
+                                    echo esc_html($participant_name);
+                                } else {
+                                    esc_html_e('Appointment with', 'videohub360-theme');
+                                    echo ' ' . esc_html($participant_name);
+                                }
+                                ?>
                             </h4>
                             <span class="vh360-appointment-status vh360-status-<?php echo esc_attr($status_class); ?>">
                                 <?php echo esc_html($status_label); ?>
@@ -170,7 +249,7 @@ if ($appointments_query->have_posts()) {
                                 <?php echo esc_html($formatted_time); ?>
                             </span>
                         </div>
-                        <?php if ($is_live) : ?>
+                        <?php if (!$is_professional && $is_live) : ?>
                             <div class="vh360-appointment-live-notice">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color: #16a34a;">
                                     <circle cx="12" cy="12" r="10"></circle>
@@ -181,22 +260,56 @@ if ($appointments_query->have_posts()) {
                     </div>
                     <div class="vh360-appointment-actions">
                         <?php if ($live_room_id && $live_room_url) : ?>
-                            <a href="<?php echo esc_url($live_room_url); ?>" 
-                               class="vh360-dashboard-btn <?php echo $is_live ? 'vh360-dashboard-btn-primary vh360-pulse' : 'vh360-dashboard-btn-secondary'; ?>" 
-                               target="_blank">
-                                <?php if ($is_live) : ?>
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <polygon points="10 8 16 12 10 16 10 8" fill="white"></polygon>
-                                    </svg>
-                                    <?php esc_html_e('Join Session', 'videohub360-theme'); ?>
-                                <?php else : ?>
+                            <?php if ($is_professional) : ?>
+                                <!-- Professional controls -->
+                                <a href="<?php echo esc_url($live_room_url); ?>" class="vh360-dashboard-btn vh360-dashboard-btn-secondary" target="_blank">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path>
                                     </svg>
-                                    <?php esc_html_e('View Room', 'videohub360-theme'); ?>
+                                    <?php esc_html_e('Open Room', 'videohub360-theme'); ?>
+                                </a>
+                                
+                                <?php if (!$stream_stopped) : ?>
+                                    <?php if ($is_live) : ?>
+                                        <button class="vh360-dashboard-btn vh360-dashboard-btn-danger vh360-end-session-btn" 
+                                                data-live-room-id="<?php echo esc_attr($live_room_id); ?>"
+                                                data-nonce="<?php echo wp_create_nonce('vh360_end_stream'); ?>">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <rect x="5" y="5" width="14" height="14" rx="2" ry="2"></rect>
+                                            </svg>
+                                            <?php esc_html_e('End Session', 'videohub360-theme'); ?>
+                                        </button>
+                                    <?php else : ?>
+                                        <button class="vh360-dashboard-btn vh360-dashboard-btn-primary vh360-start-session-btn" 
+                                                data-live-room-id="<?php echo esc_attr($live_room_id); ?>"
+                                                data-nonce="<?php echo wp_create_nonce('vh360_agora_token'); ?>">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <circle cx="12" cy="12" r="10"></circle>
+                                                <polygon points="10 8 16 12 10 16 10 8"></polygon>
+                                            </svg>
+                                            <?php esc_html_e('Start Session', 'videohub360-theme'); ?>
+                                        </button>
+                                    <?php endif; ?>
                                 <?php endif; ?>
-                            </a>
+                            <?php else : ?>
+                                <!-- Client controls -->
+                                <a href="<?php echo esc_url($live_room_url); ?>" 
+                                   class="vh360-dashboard-btn <?php echo $is_live ? 'vh360-dashboard-btn-primary vh360-pulse' : 'vh360-dashboard-btn-secondary'; ?>" 
+                                   target="_blank">
+                                    <?php if ($is_live) : ?>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <polygon points="10 8 16 12 10 16 10 8" fill="white"></polygon>
+                                        </svg>
+                                        <?php esc_html_e('Join Session', 'videohub360-theme'); ?>
+                                    <?php else : ?>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path>
+                                        </svg>
+                                        <?php esc_html_e('View Room', 'videohub360-theme'); ?>
+                                    <?php endif; ?>
+                                </a>
+                            <?php endif; ?>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -209,12 +322,154 @@ if ($appointments_query->have_posts()) {
                     <?php esc_html_e('No appointments yet', 'videohub360-theme'); ?>
                 </p>
                 <p class="vh360-dashboard-empty-text">
-                    <?php esc_html_e('When you book appointments with professionals, they will appear here.', 'videohub360-theme'); ?>
+                    <?php 
+                    if ($is_professional) {
+                        esc_html_e('When clients book appointments with you, they will appear here.', 'videohub360-theme');
+                    } else {
+                        esc_html_e('When you book appointments with professionals, they will appear here.', 'videohub360-theme');
+                    }
+                    ?>
                 </p>
             </div>
         <?php endif; ?>
     </div>
 </div>
+
+<?php if ($is_professional) : ?>
+<script>
+jQuery(document).ready(function($) {
+    // Handle Start Session button
+    $(document).on('click', '.vh360-start-session-btn', function() {
+        var $btn = $(this);
+        var liveRoomId = $btn.data('live-room-id');
+        var nonce = $btn.data('nonce');
+        
+        if (!liveRoomId) {
+            alert('<?php esc_html_e("Error: Live Room ID not found", "videohub360-theme"); ?>');
+            return;
+        }
+        
+        // Disable button and show loading state
+        $btn.prop('disabled', true);
+        var originalHtml = $btn.html();
+        $btn.html('<svg class="vh360-spinner" width="16" height="16" viewBox="0 0 50 50" style="animation: spin 1s linear infinite;"><circle class="path" cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="5"></circle></svg> <?php esc_html_e("Starting...", "videohub360-theme"); ?>');
+        
+        $.ajax({
+            url: '<?php echo admin_url("admin-ajax.php"); ?>',
+            type: 'POST',
+            data: {
+                action: 'vh360_set_stream_status',
+                post_id: liveRoomId,
+                status: 'yes',
+                nonce: nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Update UI to show "Live" status
+                    var $appointmentItem = $btn.closest('.vh360-appointment-item');
+                    $appointmentItem.find('.vh360-appointment-status')
+                        .removeClass('vh360-status-offline')
+                        .addClass('vh360-status-live')
+                        .text('<?php esc_html_e("Live Now", "videohub360-theme"); ?>');
+                    
+                    // Replace Start button with End button (with correct nonce for vh360_end_stream)
+                    var endNonce = '<?php echo wp_create_nonce('vh360_end_stream'); ?>';
+                    $btn.replaceWith(
+                        '<button class="vh360-dashboard-btn vh360-dashboard-btn-danger vh360-end-session-btn" ' +
+                        'data-live-room-id="' + liveRoomId + '" ' +
+                        'data-nonce="' + endNonce + '">' +
+                        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+                        '<rect x="5" y="5" width="14" height="14" rx="2" ry="2"></rect>' +
+                        '</svg> ' +
+                        '<?php esc_html_e("End Session", "videohub360-theme"); ?>' +
+                        '</button>'
+                    );
+                    
+                    // Show success message
+                    alert('<?php esc_html_e("Session started successfully! You are now live.", "videohub360-theme"); ?>');
+                } else {
+                    alert(response.data || '<?php esc_html_e("Error starting session", "videohub360-theme"); ?>');
+                    $btn.prop('disabled', false);
+                    $btn.html(originalHtml);
+                }
+            },
+            error: function() {
+                alert('<?php esc_html_e("Network error. Please try again.", "videohub360-theme"); ?>');
+                $btn.prop('disabled', false);
+                $btn.html(originalHtml);
+            }
+        });
+    });
+    
+    // Handle End Session button
+    $(document).on('click', '.vh360-end-session-btn', function() {
+        if (!confirm('<?php esc_html_e("Are you sure you want to end this session?", "videohub360-theme"); ?>')) {
+            return;
+        }
+        
+        var $btn = $(this);
+        var liveRoomId = $btn.data('live-room-id');
+        var nonce = $btn.data('nonce');
+        
+        if (!liveRoomId) {
+            alert('<?php esc_html_e("Error: Live Room ID not found", "videohub360-theme"); ?>');
+            return;
+        }
+        
+        // Disable button and show loading state
+        $btn.prop('disabled', true);
+        var originalHtml = $btn.html();
+        $btn.html('<svg class="vh360-spinner" width="16" height="16" viewBox="0 0 50 50" style="animation: spin 1s linear infinite;"><circle class="path" cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="5"></circle></svg> <?php esc_html_e("Ending...", "videohub360-theme"); ?>');
+        
+        $.ajax({
+            url: '<?php echo admin_url("admin-ajax.php"); ?>',
+            type: 'POST',
+            data: {
+                action: 'vh360_end_stream',
+                post_id: liveRoomId,
+                nonce: nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Update UI to show "Offline" status
+                    var $appointmentItem = $btn.closest('.vh360-appointment-item');
+                    $appointmentItem.find('.vh360-appointment-status')
+                        .removeClass('vh360-status-live')
+                        .addClass('vh360-status-offline')
+                        .text('<?php esc_html_e("Offline", "videohub360-theme"); ?>');
+                    
+                    // Replace End button with Start button (with correct nonce for vh360_set_stream_status)
+                    var startNonce = '<?php echo wp_create_nonce('vh360_agora_token'); ?>';
+                    $btn.replaceWith(
+                        '<button class="vh360-dashboard-btn vh360-dashboard-btn-primary vh360-start-session-btn" ' +
+                        'data-live-room-id="' + liveRoomId + '" ' +
+                        'data-nonce="' + startNonce + '">' +
+                        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+                        '<circle cx="12" cy="12" r="10"></circle>' +
+                        '<polygon points="10 8 16 12 10 16 10 8"></polygon>' +
+                        '</svg> ' +
+                        '<?php esc_html_e("Start Session", "videohub360-theme"); ?>' +
+                        '</button>'
+                    );
+                    
+                    // Show success message
+                    alert('<?php esc_html_e("Session ended successfully.", "videohub360-theme"); ?>');
+                } else {
+                    alert(response.data || '<?php esc_html_e("Error ending session", "videohub360-theme"); ?>');
+                    $btn.prop('disabled', false);
+                    $btn.html(originalHtml);
+                }
+            },
+            error: function() {
+                alert('<?php esc_html_e("Network error. Please try again.", "videohub360-theme"); ?>');
+                $btn.prop('disabled', false);
+                $btn.html(originalHtml);
+            }
+        });
+    });
+});
+</script>
+<?php endif; ?>
 
 <style>
 .vh360-appointments-list {
@@ -349,6 +604,16 @@ if ($appointments_query->have_posts()) {
     color: #374151;
 }
 
+.vh360-dashboard-btn-danger {
+    background: #dc2626;
+    color: white;
+}
+
+.vh360-dashboard-btn-danger:hover {
+    background: #b91c1c;
+    color: white;
+}
+
 .vh360-pulse {
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
@@ -360,6 +625,11 @@ if ($appointments_query->have_posts()) {
     50% {
         opacity: .8;
     }
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 @media (max-width: 768px) {

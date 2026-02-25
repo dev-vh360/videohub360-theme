@@ -26,7 +26,7 @@ $vh360_license_url = function_exists('vh360_theme_get_license_admin_url') ? vh36
 // Check if user can create events
 $can_create_events = vh360_user_can_create_events();
 
-// Get user's events
+// Get user's events (exclude appointments and block events)
 $args = array(
     'post_type'      => 'vh360_event',
     'author'         => $current_user_id,
@@ -34,6 +34,23 @@ $args = array(
     'posts_per_page' => -1,
     'orderby'        => 'date',
     'order'          => 'DESC',
+    'meta_query'     => array(
+        'relation' => 'OR',
+        array(
+            'key'     => '_vh360_event_kind',
+            'compare' => 'NOT EXISTS', // Include events with no kind meta (defaults to 'event')
+        ),
+        array(
+            'key'     => '_vh360_event_kind',
+            'value'   => '',
+            'compare' => '=', // Include events with empty kind (defaults to 'event')
+        ),
+        array(
+            'key'     => '_vh360_event_kind',
+            'value'   => 'event',
+            'compare' => '=', // Include events explicitly set as 'event'
+        ),
+    ),
 );
 
 $user_events = new WP_Query($args);
