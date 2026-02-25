@@ -1238,6 +1238,11 @@ require_once VH360_THEME_DIR . '/includes/class-vh360-dm-notifications.php';
 require_once VH360_THEME_DIR . '/includes/live-activity.php';
 
 /**
+ * Appointment Live Room access gate
+ */
+require_once VH360_THEME_DIR . '/includes/appointment-live-room-gate.php';
+
+/**
  * Create direct messages database table on theme activation
  */
 function vh360_create_dm_table_on_activation() {

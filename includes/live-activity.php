@@ -27,6 +27,13 @@ function vh360_create_went_live_post($live_room_id) {
         return;
     }
 
+    // Skip activity post creation for appointment Live Rooms
+    // Appointment sessions are private and should not generate public activity feed posts
+    $appointment_event_id = get_post_meta($live_room_id, '_vh360_appointment_event_id', true);
+    if ($appointment_event_id) {
+        return; // This is an appointment room, don't create public activity post
+    }
+
     // Get the live room post author
     $author_id = get_post_field('post_author', $live_room_id);
     if (!$author_id) {
