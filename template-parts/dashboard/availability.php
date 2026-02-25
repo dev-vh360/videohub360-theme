@@ -273,7 +273,7 @@ $days = array(
                             <?php if ($is_live) : ?>
                                 <button class="vh360-dashboard-btn vh360-dashboard-btn-danger vh360-end-session-btn" 
                                         data-live-room-id="<?php echo esc_attr($live_room_id); ?>"
-                                        data-nonce="<?php echo wp_create_nonce('vh360_agora_token'); ?>">
+                                        data-nonce="<?php echo wp_create_nonce('vh360_end_stream'); ?>">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <rect x="5" y="5" width="14" height="14" rx="2" ry="2"></rect>
                                     </svg>
@@ -682,11 +682,12 @@ $days = array(
                         .addClass('vh360-status-live')
                         .text('<?php esc_html_e("Live Now", "videohub360-theme"); ?>');
                     
-                    // Replace Start button with End button
+                    // Replace Start button with End button (with correct nonce for vh360_end_stream)
+                    var endNonce = '<?php echo wp_create_nonce('vh360_end_stream'); ?>';
                     $btn.replaceWith(
                         '<button class="vh360-dashboard-btn vh360-dashboard-btn-danger vh360-end-session-btn" ' +
                         'data-live-room-id="' + liveRoomId + '" ' +
-                        'data-nonce="' + nonce + '">' +
+                        'data-nonce="' + endNonce + '">' +
                         '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
                         '<rect x="5" y="5" width="14" height="14" rx="2" ry="2"></rect>' +
                         '</svg> ' +
@@ -734,9 +735,8 @@ $days = array(
             url: '<?php echo admin_url("admin-ajax.php"); ?>',
             type: 'POST',
             data: {
-                action: 'vh360_set_stream_status',
+                action: 'vh360_end_stream',
                 post_id: liveRoomId,
-                status: 'no',
                 nonce: nonce
             },
             success: function(response) {
@@ -748,11 +748,12 @@ $days = array(
                         .addClass('vh360-status-offline')
                         .text('<?php esc_html_e("Offline", "videohub360-theme"); ?>');
                     
-                    // Replace End button with Start button
+                    // Replace End button with Start button (with correct nonce for vh360_set_stream_status)
+                    var startNonce = '<?php echo wp_create_nonce('vh360_agora_token'); ?>';
                     $btn.replaceWith(
                         '<button class="vh360-dashboard-btn vh360-dashboard-btn-primary vh360-start-session-btn" ' +
                         'data-live-room-id="' + liveRoomId + '" ' +
-                        'data-nonce="' + nonce + '">' +
+                        'data-nonce="' + startNonce + '">' +
                         '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
                         '<circle cx="12" cy="12" r="10"></circle>' +
                         '<polygon points="10 8 16 12 10 16 10 8"></polygon>' +

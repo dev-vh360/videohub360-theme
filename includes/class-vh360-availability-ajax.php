@@ -229,8 +229,10 @@ class VH360_Availability_Ajax {
             // Set Live Room meta - required for template switch and functionality
             update_post_meta($live_room_id, '_vh360_context', 'live_room');
             update_post_meta($live_room_id, '_vh360_type', 'agora');
-            update_post_meta($live_room_id, '_vh360_is_live', 'no');
+            // For appointment rooms, set livestream mode ON so the UI renders (but stream itself is off until host starts)
+            update_post_meta($live_room_id, '_vh360_is_live', 'yes');
             update_post_meta($live_room_id, '_vh360_stream_stopped', 'no');
+            // Stream is not yet started - professional will start it via frontend controls
             update_post_meta($live_room_id, '_vh360_agora_stream_live', 'no');
             update_post_meta($live_room_id, '_vh360_agora_mode', 'interactive');
             // For appointment rooms, both professional and client need host permissions to publish video/audio

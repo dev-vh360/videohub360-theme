@@ -799,7 +799,9 @@ class VideoHub360_Ajax {
             wp_send_json_success(array(
                 'post_id' => $post_id,
                 'stream_live' => $stream_live === 'yes',
-                'is_live' => $is_live_status === 'yes', 
+                // is_live should reflect actual stream state, not just livestream mode enabled
+                // Frontend JS poller checks is_live to determine if stream is currently broadcasting
+                'is_live' => $stream_live === 'yes', 
                 'live_start_time' => $live_start_time,
                 'stream_stopped' => $stream_stopped === 'yes',
                 'timestamp' => current_time('mysql')
