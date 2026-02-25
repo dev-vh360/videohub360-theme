@@ -212,7 +212,8 @@ $days = array(
                 $live_room_url = '';
                 $stream_stopped = false;
                 if ($live_room_id) {
-                    $is_live = get_post_meta($live_room_id, '_vh360_is_live', true) === 'yes';
+                    // Check if stream is actually live (not just livestream mode enabled)
+                    $is_live = get_post_meta($live_room_id, '_vh360_agora_stream_live', true) === 'yes';
                     $stream_stopped = get_post_meta($live_room_id, '_vh360_stream_stopped', true) === 'yes';
                     $live_room_url = get_permalink($live_room_id);
                 }
