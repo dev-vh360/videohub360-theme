@@ -1092,7 +1092,9 @@ public function handle_restart_stream() {
         }
         
         // Check moderation permissions with post-aware check
-        if (!$this->user_can_moderate(get_current_user_id(), $post_id)) {
+        $current_user_id = get_current_user_id();
+        $can_moderate = $this->user_can_moderate($current_user_id, $post_id);
+        if (!$can_moderate) {
             $this->debug_log('VideoHub360: User permission check failed for post ' . $post_id);
             wp_send_json_error(__('You do not have permission to moderate participants.', 'videohub360'));
             return;
@@ -1102,14 +1104,14 @@ public function handle_restart_stream() {
         $debug_data = array(
             'post_data' => $_POST,
             'user_logged_in' => is_user_logged_in(),
-            'user_id' => get_current_user_id(),
-            'can_moderate' => $this->user_can_moderate(get_current_user_id(), $post_id),
+            'user_id' => $current_user_id,
+            'can_moderate' => $can_moderate,
             'timestamp' => current_time('mysql')
         );
         
         // Enhanced debug logging for admins
         $this->debug_log('VideoHub360: handle_remove_participant called', $_POST);
-        $this->debug_log('VideoHub360: User can moderate: ' . ($this->user_can_moderate(get_current_user_id(), $post_id) ? 'yes' : 'no'));
+        $this->debug_log('VideoHub360: User can moderate: ' . ($can_moderate ? 'yes' : 'no'));
         
         // If target IP not provided but we have UID, try to look it up from recent activity
         if (!$target_ip && $target_uid) {
@@ -1138,7 +1140,6 @@ public function handle_restart_stream() {
             $post_id, $is_live, $agora_mode));
         
         // Prevent self-moderation
-        $current_user_id = get_current_user_id();
         if ($target_user_id && $target_user_id === $current_user_id) {
             wp_send_json_error(__('You cannot moderate yourself.', 'videohub360'));
             return;
@@ -1276,6 +1277,8 @@ public function handle_restart_stream() {
         // live room author/editor can moderate that room
         if ($post_id && get_post_type($post_id) === 'videohub360') {
             $post = get_post($post_id);
+            // Check authorship first (direct ownership) before capability check
+            // Both checks are kept because authorship is a direct right independent of capabilities
             if ($post && (int)$post->post_author === (int)$user_id) return true;
             if (user_can($user_id, 'edit_post', $post_id)) return true;
         }
