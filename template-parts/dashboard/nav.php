@@ -222,7 +222,7 @@ $stats = vh360_get_user_stats($current_user_id);
                 </a>
             </li>
             
-            <!-- My Appointments (for clients to see their booked appointments) -->
+            <!-- Appointments (label changes based on user type) -->
             <li class="vh360-dashboard-nav-item">
                 <a href="#appointments" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="appointments">
                     <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -232,7 +232,16 @@ $stats = vh360_get_user_stats($current_user_id);
                         <line x1="3" y1="10" x2="21" y2="10"></line>
                         <circle cx="12" cy="13" r="3" fill="currentColor"></circle>
                     </svg>
-                    <span class="vh360-dashboard-nav-text"><?php esc_html_e('My Appointments', 'videohub360-theme'); ?></span>
+                    <span class="vh360-dashboard-nav-text">
+                        <?php 
+                        // Professionals see "Appointments" (managing sessions), others see "My Appointments" (their bookings)
+                        if (in_array($user_account_type, array('professional', 'organization'), true)) {
+                            esc_html_e('Appointments', 'videohub360-theme');
+                        } else {
+                            esc_html_e('My Appointments', 'videohub360-theme');
+                        }
+                        ?>
+                    </span>
                 </a>
             </li>
             

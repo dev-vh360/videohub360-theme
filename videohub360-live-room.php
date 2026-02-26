@@ -88,8 +88,18 @@ $livestream_fields = [
     'host_passcode' => get_post_meta($post_id, '_vh360_host_passcode', true),
 ];
 
+// Check if this is an appointment Live Room
+$is_appointment_room = !empty(get_post_meta($post_id, '_vh360_appointment_event_id', true));
+
 // Determine if livestream is effectively live
-$is_live = ($livestream_fields['is_live'] === 'yes' && $livestream_fields['stream_stopped'] !== 'yes');
+// For appointment rooms, always render the livestream UI when livestream mode is enabled
+// (even after stream_stopped, so professional can restart the session)
+if ($is_appointment_room) {
+    $is_live = ($livestream_fields['is_live'] === 'yes');
+} else {
+    // For regular Live Rooms, only show UI when actually live and not stopped
+    $is_live = ($livestream_fields['is_live'] === 'yes' && $livestream_fields['stream_stopped'] !== 'yes');
+}
 
 // Determine if chat should be enabled for this livestream
 $global_chat_enabled = get_option('videohub360_chat_enabled', 1);

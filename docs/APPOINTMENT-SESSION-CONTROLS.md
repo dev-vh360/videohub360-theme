@@ -1,5 +1,55 @@
 # Appointment Live Room Session Controls - Implementation Summary
 
+## Recent Updates (2026-02-25)
+
+### 🔧 Critical Bug Fixes
+
+**Problem 1: Livestream UI Not Rendering**
+- Appointment Live Rooms were created with `_vh360_is_live='no'`
+- This prevented the livestream UI from rendering at all
+- Professionals had no way to access start/end controls on the Live Room page
+
+**Fix 1:** Set `_vh360_is_live='yes'` at appointment room creation
+- Location: `includes/class-vh360-availability-ajax.php:232`
+- Result: Livestream UI now renders immediately after booking
+
+**Problem 2: End Session Breaking Future Sessions**
+- "End Session" was calling `vh360_set_stream_status` with `status='no'`
+- This set `_vh360_is_live='no'`, breaking the UI for future sessions
+- Professionals couldn't restart sessions after ending them
+
+**Fix 2:** Changed End Session to use `vh360_end_stream` endpoint
+- Location: `template-parts/dashboard/availability.php:739`
+- Preserves `_vh360_is_live='yes'` so UI remains available
+- Sessions can now be ended and restarted multiple times
+
+**Problem 3: Live Room Template Hiding UI After End**
+- Template checked `stream_stopped` flag to hide UI
+- This prevented restart controls from appearing after ending
+- Specific to appointment rooms (regular rooms should hide UI)
+
+**Fix 3:** Template detects appointment rooms and always shows UI
+- Location: `videohub360-live-room.php:91-103`
+- Appointment rooms: UI renders when `_vh360_is_live='yes'` (always)
+- Regular rooms: UI only shows when not stopped (existing behavior)
+
+**Problem 4: Wrong Status Checks**
+- Stream polling returned UI mode state instead of actual stream state
+- Dashboard checked wrong meta field for live status
+
+**Fix 4:** Fixed status checks to use correct meta fields
+- Stream polling now returns actual stream state (`_vh360_agora_stream_live`)
+- Dashboard checks `_vh360_agora_stream_live` for live status
+- Result: Status indicators now show correct state
+
+### Files Modified in Recent Fix
+1. `includes/class-vh360-availability-ajax.php` - Set `_vh360_is_live='yes'` at creation
+2. `bundled-plugins/videohub360-core/includes/class-videohub360-ajax.php` - Fix stream polling
+3. `template-parts/dashboard/availability.php` - Use `vh360_end_stream`, fix status checks
+4. `videohub360-live-room.php` - Detect appointment rooms, always render UI
+
+---
+
 ## Issue Fixed
 **Problem:** Professionals had no way to start appointment Live Room sessions. While appointment bookings automatically created Live Rooms (as per the initial integration), there was no UI for professionals to actually go live with their sessions.
 
@@ -38,9 +88,13 @@ Added comprehensive session management controls for both professionals and clien
 **End Session Button** (when live)
 - One-click button to end the Live Room session
 - Requires confirmation dialog
-- Sends AJAX request to set status to 'no'
+- Sends AJAX request to `vh360_end_stream` endpoint
+- Sets `_vh360_stream_stopped` to 'yes'
+- Sets `_vh360_agora_stream_live` to 'no'
+- **Preserves `_vh360_is_live='yes'`** so UI remains available
 - Updates UI in real-time to show "Offline" status
 - Button transforms back to "Start Session" after ending
+- **Session can be restarted** using Start Session button
 
 **Open Room Button** (always visible)
 - Direct link to the Live Room page
@@ -120,15 +174,55 @@ Added comprehensive session management controls for both professionals and clien
 
 ### AJAX Endpoints Used
 
-**`vh360_set_stream_status`** (existing endpoint)
+**`vh360_set_stream_status`** (existing endpoint - for starting sessions)
 - Action: `wp_ajax_vh360_set_stream_status`
 - Parameters:
   - `post_id`: Live Room post ID
   - `status`: 'yes' or 'no'
   - `nonce`: Security nonce (`vh360_agora_token`)
 - Response: Success/error with updated metadata
+- Sets `_vh360_agora_stream_live` to control stream state
+- When status='yes': Deletes `_vh360_stream_stopped` to allow streaming
+
+**`vh360_end_stream`** (existing endpoint - for ending sessions)
+- Action: `wp_ajax_vh360_end_stream`
+- Parameters:
+  - `post_id`: Live Room post ID
+  - `nonce`: Security nonce (`vh360_end_stream`)
+- Response: Success/error with updated metadata
+- Sets `_vh360_stream_stopped='yes'` to mark session as ended
+- Sets `_vh360_agora_stream_live='no'` to stop streaming
+- **Preserves `_vh360_is_live='yes'`** to keep UI available for restart
+
+### Meta Field Semantics (Critical for Appointment Rooms)
+
+**`_vh360_is_live`** - Livestream UI Mode Control
+- Controls whether the livestream UI is rendered on the Live Room page
+- For appointment rooms: Set to 'yes' at creation and **never changed**
+- For regular rooms: Toggled between 'yes'/'no' based on stream state
+- Purpose: Ensures appointment rooms always show the join/start controls
+
+**`_vh360_agora_stream_live`** - Actual Stream State
+- Controls whether the Agora stream is currently broadcasting
+- Set to 'yes' when professional clicks "Start Session"
+- Set to 'no' when professional clicks "End Session"
+- Purpose: Tracks the real-time state of the video stream
+
+**`_vh360_stream_stopped`** - Session End Marker
+- Set to 'yes' when professional ends the session via "End Session"
+- Deleted when professional clicks "Start Session" (allows restart)
+- For regular rooms: Prevents UI from showing after stream ends
+- For appointment rooms: Ignored by template (UI always shows)
+- Purpose: Tracks whether a session has been explicitly ended
+
+**`_vh360_appointment_event_id`** - Appointment Room Identifier
+- Links the Live Room to its appointment event
+- Used by template to detect appointment-type rooms
+- Purpose: Enables special rendering logic for appointment rooms
 
 ### Database Queries
+
+**Professional's Upcoming Appointments:**
 
 **Professional's Upcoming Appointments:**
 ```php
