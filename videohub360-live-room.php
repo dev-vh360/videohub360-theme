@@ -128,7 +128,7 @@ if ($is_user_logged_in) {
 }
 
 // Define moderation capabilities for the current user (for chat UI)
-$can_moderate = current_user_can('moderate_comments') || current_user_can('manage_options');
+$can_moderate = vh360_user_can_manage_live_room($post_id) || current_user_can('moderate_comments') || current_user_can('manage_options');
 
 // Provide a local copy of the plugin's livestream renderer if needed
 
@@ -158,7 +158,11 @@ $can_moderate = current_user_can('moderate_comments') || current_user_can('manag
             <section class="vh360-live-room-player">
                 <?php if ($is_live) : ?>
                     <div class="videohub360-video-player" id="videohub360-livestream-player-root">
-                        <?php echo videohub360_render_livestream($livestream_fields, $chat_enabled, $chat_placement, $is_user_logged_in, $user_avatar, $user_display_name, $user_logout_url, true); ?>
+                        <?php 
+                        // Show settings gear icon for hosts, hide for non-hosts
+                        $hide_settings = !vh360_user_can_manage_live_room(get_the_ID());
+                        echo videohub360_render_livestream($livestream_fields, $chat_enabled, $chat_placement, $is_user_logged_in, $user_avatar, $user_display_name, $user_logout_url, $hide_settings); 
+                        ?>
                     </div>
                 <?php else : ?>
                     <div class="vh360-offline-wrapper">
