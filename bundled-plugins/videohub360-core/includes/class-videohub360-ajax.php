@@ -1275,12 +1275,14 @@ public function handle_restart_stream() {
         }
         
         // live room author/editor can moderate that room
-        if ($post_id && get_post_type($post_id) === 'videohub360') {
+        if ($post_id) {
             $post = get_post($post_id);
-            // Check authorship first (direct ownership) before capability check
-            // Both checks are kept because authorship is a direct right independent of capabilities
-            if ($post && (int)$post->post_author === (int)$user_id) return true;
-            if (user_can($user_id, 'edit_post', $post_id)) return true;
+            if ($post && $post->post_type === 'videohub360') {
+                // Check authorship first (direct ownership) before capability check
+                // Both checks are kept because authorship is a direct right independent of capabilities
+                if ((int)$post->post_author === (int)$user_id) return true;
+                if (user_can($user_id, 'edit_post', $post_id)) return true;
+            }
         }
         
         return false;
