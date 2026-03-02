@@ -1046,21 +1046,6 @@ public function handle_restart_stream() {
 
 
     public function handle_remove_participant() {
-        // Debug: Log incoming request for troubleshooting
-        $debug_data = array(
-            'post_data' => $_POST,
-            'user_logged_in' => is_user_logged_in(),
-            'user_id' => get_current_user_id(),
-            'can_moderate' => $this->user_can_moderate(),
-            'timestamp' => current_time('mysql')
-        );
-        
-        // Enhanced debug logging for admins
-        $this->debug_log('VideoHub360: handle_remove_participant called', $_POST);
-        $this->debug_log('VideoHub360: User can moderate: ' . ($this->user_can_moderate() ? 'yes' : 'no'));
-        $this->debug_log('VideoHub360: Is user logged in: ' . (is_user_logged_in() ? 'yes' : 'no'));
-        $this->debug_log('VideoHub360: Current user ID: ' . get_current_user_id());
-        
         // Rate limiting check for moderation actions
         if (!$this->check_rate_limit('remove_participant', 20)) { // 20 requests per minute
             $this->debug_log('VideoHub360: Rate limit exceeded for remove_participant');
@@ -1068,10 +1053,9 @@ public function handle_restart_stream() {
             return;
         }
         
-        // Check if user is logged in and has moderation permissions
-        if (!is_user_logged_in() || !$this->user_can_moderate()) {
-            $this->debug_log('VideoHub360: User permission check failed. Logged in: ' . (is_user_logged_in() ? 'yes' : 'no') . ', Can moderate: ' . ($this->user_can_moderate() ? 'yes' : 'no'));
-            wp_send_json_error(__('You do not have permission to moderate participants.', 'videohub360'));
+        // Check if user is logged in
+        if (!is_user_logged_in()) {
+            wp_send_json_error(__('You must be logged in to moderate participants.', 'videohub360'));
             return;
         }
         
@@ -1083,7 +1067,7 @@ public function handle_restart_stream() {
             return;
         }
         
-        // Validate and sanitize input
+        // Validate and sanitize input - parse post_id early for permission check
         $post_id = absint($_POST['post_id'] ?? 0);
         $target_uid = absint($_POST['target_uid'] ?? 0);
         $target_user_id = absint($_POST['target_user_id'] ?? 0);
@@ -1091,11 +1075,6 @@ public function handle_restart_stream() {
         $action_type = sanitize_text_field($_POST['action_type'] ?? '');
         $display_name = sanitize_text_field($_POST['display_name'] ?? '');
         $reason = sanitize_text_field($_POST['reason'] ?? '');
-        
-        // If target IP not provided but we have UID, try to look it up from recent activity
-        if (!$target_ip && $target_uid) {
-            $target_ip = $this->get_user_ip_by_uid($target_uid, $post_id);
-        }
         
         // Validate required parameters
         if (!$post_id || !$target_uid || !$action_type) {
@@ -1110,6 +1089,33 @@ public function handle_restart_stream() {
         if (!$post || $post->post_type !== 'videohub360') {
             wp_send_json_error(__('Invalid video post.', 'videohub360'));
             return;
+        }
+        
+        // Check moderation permissions with post-aware check
+        $current_user_id = get_current_user_id();
+        $can_moderate = $this->user_can_moderate($current_user_id, $post_id);
+        if (!$can_moderate) {
+            $this->debug_log('VideoHub360: User permission check failed for post ' . $post_id);
+            wp_send_json_error(__('You do not have permission to moderate participants.', 'videohub360'));
+            return;
+        }
+        
+        // Debug: Log incoming request for troubleshooting
+        $debug_data = array(
+            'post_data' => $_POST,
+            'user_logged_in' => is_user_logged_in(),
+            'user_id' => $current_user_id,
+            'can_moderate' => $can_moderate,
+            'timestamp' => current_time('mysql')
+        );
+        
+        // Enhanced debug logging for admins
+        $this->debug_log('VideoHub360: handle_remove_participant called', $_POST);
+        $this->debug_log('VideoHub360: User can moderate: ' . ($can_moderate ? 'yes' : 'no'));
+        
+        // If target IP not provided but we have UID, try to look it up from recent activity
+        if (!$target_ip && $target_uid) {
+            $target_ip = $this->get_user_ip_by_uid($target_uid, $post_id);
         }
         
         // Validate action type
@@ -1134,14 +1140,13 @@ public function handle_restart_stream() {
             $post_id, $is_live, $agora_mode));
         
         // Prevent self-moderation
-        $current_user_id = get_current_user_id();
         if ($target_user_id && $target_user_id === $current_user_id) {
             wp_send_json_error(__('You cannot moderate yourself.', 'videohub360'));
             return;
         }
         
         // Prevent moderating other moderators/admins
-        if ($target_user_id && $this->user_can_moderate($target_user_id)) {
+        if ($target_user_id && $this->user_can_moderate($target_user_id, $post_id)) {
             wp_send_json_error(__('Cannot moderate other moderators or administrators.', 'videohub360'));
             return;
         }
@@ -1255,7 +1260,7 @@ public function handle_restart_stream() {
     /**
      * Helper method to check if user can moderate
      */
-    private function user_can_moderate($user_id = null) {
+    private function user_can_moderate($user_id = null, $post_id = 0) {
         if (!$user_id) {
             $user_id = get_current_user_id();
         }
@@ -1264,7 +1269,23 @@ public function handle_restart_stream() {
             return false;
         }
         
-        return user_can($user_id, 'moderate_comments') || user_can($user_id, 'manage_options');
+        // global moderators/admins
+        if (user_can($user_id, 'manage_options') || user_can($user_id, 'moderate_comments')) {
+            return true;
+        }
+        
+        // live room author/editor can moderate that room
+        if ($post_id) {
+            $post = get_post($post_id);
+            if ($post && $post->post_type === 'videohub360') {
+                // Check authorship first (direct ownership) before capability check
+                // Both checks are kept because authorship is a direct right independent of capabilities
+                if ((int)$post->post_author === (int)$user_id) return true;
+                if (user_can($user_id, 'edit_post', $post_id)) return true;
+            }
+        }
+        
+        return false;
     }
     
     /**
@@ -1277,23 +1298,23 @@ public function handle_restart_stream() {
             return;
         }
         
-        // Check moderation permissions
-        if (!$this->user_can_moderate()) {
-            wp_send_json_error(__('You do not have permission to access moderation tools.', 'videohub360'));
-            return;
-        }
-        
         // Verify nonce for security
         if (!wp_verify_nonce($_POST['nonce'] ?? '', 'videohub360_chat_nonce')) {
             wp_send_json_error(__('Security check failed. Please refresh the page.', 'videohub360'));
             return;
         }
         
-        // Validate input
+        // Validate input - parse post_id early for permission check
         $post_id = intval($_POST['post_id'] ?? 0);
         
         if (!$post_id || get_post_type($post_id) !== 'videohub360') {
             wp_send_json_error(__('Invalid post ID.', 'videohub360'));
+            return;
+        }
+        
+        // Check moderation permissions with post-aware check
+        if (!$this->user_can_moderate(get_current_user_id(), $post_id)) {
+            wp_send_json_error(__('You do not have permission to access moderation tools.', 'videohub360'));
             return;
         }
         
@@ -1462,19 +1483,13 @@ public function handle_restart_stream() {
             return;
         }
         
-        // Check moderation permissions
-        if (!$this->user_can_moderate()) {
-            wp_send_json_error(__('You do not have permission to perform moderation actions.', 'videohub360'));
-            return;
-        }
-        
         // Verify nonce for security
         if (!wp_verify_nonce($_POST['nonce'] ?? '', 'videohub360_chat_nonce')) {
             wp_send_json_error(__('Security check failed. Please refresh the page.', 'videohub360'));
             return;
         }
         
-        // Validate input
+        // Validate input - parse post_id early for permission check
         $ban_id = intval($_POST['ban_id'] ?? 0);
         $post_id = intval($_POST['post_id'] ?? 0);
         
@@ -1485,6 +1500,12 @@ public function handle_restart_stream() {
         
         if (get_post_type($post_id) !== 'videohub360') {
             wp_send_json_error(__('Invalid post ID.', 'videohub360'));
+            return;
+        }
+        
+        // Check moderation permissions with post-aware check
+        if (!$this->user_can_moderate(get_current_user_id(), $post_id)) {
+            wp_send_json_error(__('You do not have permission to perform moderation actions.', 'videohub360'));
             return;
         }
         
@@ -1612,19 +1633,13 @@ public function handle_restart_stream() {
             return;
         }
         
-        // Check moderation permissions
-        if (!$this->user_can_moderate()) {
-            wp_send_json_error(__('You do not have permission to perform moderation actions.', 'videohub360'));
-            return;
-        }
-        
         // Verify nonce for security
         if (!wp_verify_nonce($_POST['nonce'] ?? '', 'videohub360_chat_nonce')) {
             wp_send_json_error(__('Security check failed. Please refresh the page.', 'videohub360'));
             return;
         }
         
-        // Validate input
+        // Validate input - parse post_id early for permission check
         $timeout_id = intval($_POST['timeout_id'] ?? 0);
         $post_id = intval($_POST['post_id'] ?? 0);
         
@@ -1635,6 +1650,12 @@ public function handle_restart_stream() {
         
         if (get_post_type($post_id) !== 'videohub360') {
             wp_send_json_error(__('Invalid post ID.', 'videohub360'));
+            return;
+        }
+        
+        // Check moderation permissions with post-aware check
+        if (!$this->user_can_moderate(get_current_user_id(), $post_id)) {
+            wp_send_json_error(__('You do not have permission to perform moderation actions.', 'videohub360'));
             return;
         }
         

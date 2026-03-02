@@ -333,7 +333,7 @@ if (!function_exists('videohub360_get_livestream_bootstrap_data')) {
         $is_original_host = current_user_can('manage_options') 
             || current_user_can('edit_post', $post_id) 
             || $is_owner;
-        $can_moderate = current_user_can('moderate_comments') || current_user_can('manage_options');
+        $can_moderate = $is_original_host || current_user_can('moderate_comments') || current_user_can('manage_options');
         $is_logged_in = is_user_logged_in();
         
         $current_user = wp_get_current_user();

@@ -110,7 +110,7 @@ if (!function_exists('videohub360_render_livestream')) {
             $is_original_host = current_user_can('manage_options') 
                 || current_user_can('edit_post', get_the_ID()) 
                 || $is_owner;
-            $can_moderate = current_user_can('moderate_comments') || current_user_can('manage_options');
+            $can_moderate = $is_original_host || current_user_can('moderate_comments') || current_user_can('manage_options');
             $is_logged_in = is_user_logged_in();
 
             // Debug: Check current user capabilities
