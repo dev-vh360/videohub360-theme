@@ -231,7 +231,12 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
     $user_logout_url = $is_user_logged_in ? wp_logout_url(get_permalink()) : '';
     
     // Define moderation capabilities for the current user
-    $can_moderate = current_user_can('moderate_comments') || current_user_can('manage_options');
+    $can_moderate = (
+        current_user_can('manage_options')
+        || current_user_can('moderate_comments')
+        || ((int) get_post_field('post_author', get_the_ID()) === (int) get_current_user_id())
+        || current_user_can('edit_post', get_the_ID())
+    );
 ?>
 
     <div class="videohub360-main-wrapper <?php echo ($video_layout === 'full-width') ? 'videohub360-full-width' : 'videohub360-sidebar-layout'; ?>">

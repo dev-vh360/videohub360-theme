@@ -66,7 +66,7 @@ class VideoHub360_Frontend {
                     $this->enqueue_chat_assets();
                 }
                 
-                if ($this->user_can_moderate()) {
+                if ($this->user_can_moderate($post->ID)) {
                     $this->enqueue_moderation_assets();
                 }
             }
@@ -219,9 +219,10 @@ class VideoHub360_Frontend {
         wp_localize_script('vh360-video-quality-manager', 'vh360QualityConfig', $this->get_quality_config());
         
         // Enable unified settings mode - localize to both scripts to ensure proper detection
+        global $post;
         $unified_settings_config = array(
             'enabled' => true,
-            'canModerate' => $this->user_can_moderate()
+            'canModerate' => $this->user_can_moderate($post ? $post->ID : 0)
         );
         wp_localize_script('vh360-video-quality-manager', 'vh360UnifiedSettingsConfig', $unified_settings_config);
         wp_localize_script('vh360-unified-settings-manager', 'vh360UnifiedSettingsConfig', $unified_settings_config);
@@ -464,7 +465,7 @@ class VideoHub360_Frontend {
                 ? vh360_get_login_page_url_with_redirect(get_permalink())
                 : wp_login_url(get_permalink()),
             'userLogoutUrl' => is_user_logged_in() ? wp_logout_url(get_permalink()) : '',
-            'canModerate' => $this->user_can_moderate(),
+            'canModerate' => $this->user_can_moderate($post ? $post->ID : 0),
             'loginModalType' => get_option('videohub360_login_modal_type', 'redirect'),
             'loginModalShortcode' => get_option('videohub360_login_modal_shortcode', ''),
             'loginModalRedirectUrl' => get_option('videohub360_login_modal_redirect_url', ''),
@@ -477,7 +478,7 @@ class VideoHub360_Frontend {
             'user_role' => is_user_logged_in() && isset($current_user->roles[0]) ? $current_user->roles[0] : '',
             'is_host' => is_user_logged_in() && videohub360_user_is_host(),
             'security' => array(
-                'can_moderate' => is_user_logged_in() && videohub360_user_can_moderate(),
+                'can_moderate' => is_user_logged_in() && videohub360_user_can_moderate(null, $post ? $post->ID : 0),
                 'is_logged_in' => is_user_logged_in(),
                 'user_id' => get_current_user_id(),
                 'display_name' => $current_user->display_name
@@ -715,8 +716,31 @@ class VideoHub360_Frontend {
     /**
      * Check if user can moderate
      */
-    private function user_can_moderate() {
-        return current_user_can('moderate_comments') || current_user_can('manage_options');
+    private function user_can_moderate($post_id = 0) {
+        if (!is_user_logged_in()) {
+            return false;
+        }
+        
+        if (current_user_can('manage_options') || current_user_can('moderate_comments')) {
+            return true;
+        }
+        
+        if ($post_id) {
+            $post = get_post($post_id);
+            
+            if ($post && $post->post_type === 'videohub360') {
+                
+                if ((int) $post->post_author === (int) get_current_user_id()) {
+                    return true;
+                }
+                
+                if (current_user_can('edit_post', $post_id)) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
     }
     
     /**

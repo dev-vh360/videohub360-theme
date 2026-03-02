@@ -325,7 +325,7 @@ class VideoHub360_Core {
         }
         
         if (!function_exists('videohub360_user_can_moderate')) {
-            function videohub360_user_can_moderate($user_id = null) {
+            function videohub360_user_can_moderate($user_id = null, $post_id = 0) {
                 if (!$user_id) {
                     $user_id = get_current_user_id();
                 }
@@ -334,7 +334,26 @@ class VideoHub360_Core {
                     return false;
                 }
                 
-                return user_can($user_id, 'moderate_comments') || user_can($user_id, 'manage_options');
+                if (user_can($user_id, 'manage_options') || user_can($user_id, 'moderate_comments')) {
+                    return true;
+                }
+                
+                if ($post_id) {
+                    $post = get_post($post_id);
+                    
+                    if ($post && $post->post_type === 'videohub360') {
+                        
+                        if ((int) $post->post_author === (int) $user_id) {
+                            return true;
+                        }
+                        
+                        if (user_can($user_id, 'edit_post', $post_id)) {
+                            return true;
+                        }
+                    }
+                }
+                
+                return false;
             }
         }
         

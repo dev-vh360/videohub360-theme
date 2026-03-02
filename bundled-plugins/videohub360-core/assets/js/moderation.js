@@ -43,8 +43,8 @@ if (typeof window !== 'undefined') {
     var bannedCount = document.getElementById('vh360-banned-count');
     var timeoutCount = document.getElementById('vh360-timeout-count');
 
-    if (!moderationModal || moderationPanelBtns.length === 0) {
-        return; // No moderation elements found
+    if (!moderationModal) {
+        return; // No moderation modal found
     }
 
     // Handle fullscreen changes - move moderation modal inside/outside fullscreen element

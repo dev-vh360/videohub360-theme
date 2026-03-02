@@ -1153,10 +1153,9 @@ public function handle_restart_stream() {
         
         // For interactive mode, ensure only original host can moderate
         // But allow admins and users with moderate_comments capability
-        if ($agora_mode === 'interactive' && 
-            !current_user_can('manage_options') && 
-            !current_user_can('edit_post', $post_id) && 
-            !current_user_can('moderate_comments')) {
+        if ($agora_mode === 'interactive' 
+            && !$this->user_can_manage_live_room($post_id) 
+            && !current_user_can('moderate_comments')) {
             wp_send_json_error(__('Only the original host or users with moderation permissions can moderate participants in interactive mode.', 'videohub360'));
             return;
         }
