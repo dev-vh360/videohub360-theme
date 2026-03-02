@@ -220,9 +220,16 @@ class VideoHub360_Frontend {
         
         // Enable unified settings mode - localize to both scripts to ensure proper detection
         global $post;
+        // Get post ID more reliably - use queried object for singular pages
+        $post_id = 0;
+        if (is_singular('videohub360')) {
+            $post_id = get_queried_object_id();
+        } elseif ($post && $post->post_type === 'videohub360') {
+            $post_id = $post->ID;
+        }
         $unified_settings_config = array(
             'enabled' => true,
-            'canModerate' => $this->user_can_moderate($post ? $post->ID : 0)
+            'canModerate' => $this->user_can_moderate($post_id)
         );
         wp_localize_script('vh360-video-quality-manager', 'vh360UnifiedSettingsConfig', $unified_settings_config);
         wp_localize_script('vh360-unified-settings-manager', 'vh360UnifiedSettingsConfig', $unified_settings_config);
@@ -446,9 +453,17 @@ class VideoHub360_Frontend {
         global $post;
         $current_user = wp_get_current_user();
         
+        // Get post ID more reliably - use queried object for singular pages
+        $post_id = 0;
+        if (is_singular('videohub360')) {
+            $post_id = get_queried_object_id();
+        } elseif ($post && $post->post_type === 'videohub360') {
+            $post_id = $post->ID;
+        }
+        
         $data = array(
             'ajaxUrl' => admin_url('admin-ajax.php'),
-            'postId' => $post ? $post->ID : 0,
+            'postId' => $post_id,
             'userId' => get_current_user_id(),
             'isUserLoggedIn' => is_user_logged_in(),
             'chatNonce' => wp_create_nonce('videohub360_chat_nonce'),
@@ -465,7 +480,7 @@ class VideoHub360_Frontend {
                 ? vh360_get_login_page_url_with_redirect(get_permalink())
                 : wp_login_url(get_permalink()),
             'userLogoutUrl' => is_user_logged_in() ? wp_logout_url(get_permalink()) : '',
-            'canModerate' => $this->user_can_moderate($post ? $post->ID : 0),
+            'canModerate' => $this->user_can_moderate($post_id),
             'loginModalType' => get_option('videohub360_login_modal_type', 'redirect'),
             'loginModalShortcode' => get_option('videohub360_login_modal_shortcode', ''),
             'loginModalRedirectUrl' => get_option('videohub360_login_modal_redirect_url', ''),
@@ -478,7 +493,7 @@ class VideoHub360_Frontend {
             'user_role' => is_user_logged_in() && isset($current_user->roles[0]) ? $current_user->roles[0] : '',
             'is_host' => is_user_logged_in() && videohub360_user_is_host(),
             'security' => array(
-                'can_moderate' => is_user_logged_in() && videohub360_user_can_moderate(null, $post ? $post->ID : 0),
+                'can_moderate' => is_user_logged_in() && videohub360_user_can_moderate(null, $post_id),
                 'is_logged_in' => is_user_logged_in(),
                 'user_id' => get_current_user_id(),
                 'display_name' => $current_user->display_name
