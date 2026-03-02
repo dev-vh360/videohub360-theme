@@ -219,14 +219,7 @@ class VideoHub360_Frontend {
         wp_localize_script('vh360-video-quality-manager', 'vh360QualityConfig', $this->get_quality_config());
         
         // Enable unified settings mode - localize to both scripts to ensure proper detection
-        global $post;
-        // Get post ID more reliably - use queried object for singular pages
-        $post_id = 0;
-        if (is_singular('videohub360')) {
-            $post_id = get_queried_object_id();
-        } elseif ($post && $post->post_type === 'videohub360') {
-            $post_id = $post->ID;
-        }
+        $post_id = $this->get_current_post_id();
         $unified_settings_config = array(
             'enabled' => true,
             'canModerate' => $this->user_can_moderate($post_id)
@@ -453,13 +446,8 @@ class VideoHub360_Frontend {
         global $post;
         $current_user = wp_get_current_user();
         
-        // Get post ID more reliably - use queried object for singular pages
-        $post_id = 0;
-        if (is_singular('videohub360')) {
-            $post_id = get_queried_object_id();
-        } elseif ($post && $post->post_type === 'videohub360') {
-            $post_id = $post->ID;
-        }
+        // Get post ID reliably
+        $post_id = $this->get_current_post_id();
         
         $data = array(
             'ajaxUrl' => admin_url('admin-ajax.php'),
@@ -493,7 +481,7 @@ class VideoHub360_Frontend {
             'user_role' => is_user_logged_in() && isset($current_user->roles[0]) ? $current_user->roles[0] : '',
             'is_host' => is_user_logged_in() && videohub360_user_is_host(),
             'security' => array(
-                'can_moderate' => is_user_logged_in() && videohub360_user_can_moderate(null, $post_id),
+                'can_moderate' => videohub360_user_can_moderate(null, $post_id),
                 'is_logged_in' => is_user_logged_in(),
                 'user_id' => get_current_user_id(),
                 'display_name' => $current_user->display_name
@@ -726,6 +714,26 @@ class VideoHub360_Frontend {
             // Use global setting if no per-video setting
             return get_option('videohub360_chat_enabled', 1);
         }
+    }
+    
+    /**
+     * Get current post ID reliably
+     * 
+     * @return int Post ID or 0 if not in videohub360 context
+     */
+    private function get_current_post_id() {
+        // Use queried object for singular pages
+        if (is_singular('videohub360')) {
+            return get_queried_object_id();
+        }
+        
+        // Fall back to global $post if it's a videohub360 post
+        global $post;
+        if ($post && $post->post_type === 'videohub360') {
+            return $post->ID;
+        }
+        
+        return 0;
     }
     
     /**
