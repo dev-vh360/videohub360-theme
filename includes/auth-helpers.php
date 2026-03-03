@@ -314,11 +314,20 @@ function vh360_handle_business_registration() {
         $display_name = $username;
     }
     
-    // Determine role based on account type
+    // Check if professional approval is required
+    $business_opts = get_option('vh360_business_options', array());
+    $require_approval = !empty($business_opts['require_professional_approval']);
+    
+    // Determine role based on account type and approval settings
     $role = 'subscriber'; // Default for clients
     if ($account_type === 'professional') {
-        // Use professional role if it exists, otherwise fall back to subscriber
-        $role = get_role('vh360_professional') ? 'vh360_professional' : 'subscriber';
+        // If approval is required, always create as subscriber (pending approval)
+        if ($require_approval) {
+            $role = 'subscriber';
+        } else {
+            // No approval required - use professional role if it exists, otherwise fall back to subscriber
+            $role = get_role('vh360_professional') ? 'vh360_professional' : 'subscriber';
+        }
     }
 
     $user_id = wp_insert_user(array(
@@ -338,10 +347,21 @@ function vh360_handle_business_registration() {
         exit;
     }
     
-    // If professional role doesn't exist yet but account type is professional, grant capability directly
-    if ($account_type === 'professional' && !get_role('vh360_professional')) {
-        $user = new WP_User($user_id);
-        $user->add_cap('vh360_create_events');
+    // Handle professional account setup
+    if ($account_type === 'professional') {
+        if ($require_approval) {
+            // Set status to pending when approval is required
+            update_user_meta($user_id, '_vh360_professional_status', 'pending');
+            // Do NOT grant vh360_create_events capability - wait for approval
+        } else {
+            // No approval required - grant capability if role doesn't exist
+            if (!get_role('vh360_professional')) {
+                $user = new WP_User($user_id);
+                $user->add_cap('vh360_create_events');
+            }
+            // Set status to approved for backwards compatibility
+            update_user_meta($user_id, '_vh360_professional_status', 'approved');
+        }
     }
 
     // Set account type meta
@@ -370,6 +390,10 @@ function vh360_handle_business_registration() {
             $message .= __('Username:', 'videohub360-theme') . ' ' . $username . "\n";
             $message .= __('Email:', 'videohub360-theme') . ' ' . $email . "\n";
             $message .= __('Account Type:', 'videohub360-theme') . ' ' . ucfirst($account_type) . "\n";
+            if ($account_type === 'professional' && $require_approval) {
+                $message .= __('Status:', 'videohub360-theme') . ' ' . __('Pending Approval', 'videohub360-theme') . "\n";
+                $message .= "\n" . sprintf(__('Review and approve at: %s', 'videohub360-theme'), admin_url('admin.php?page=vh360-theme-business')) . "\n";
+            }
             wp_mail($notification_email, $subject, $message);
         }
     }
