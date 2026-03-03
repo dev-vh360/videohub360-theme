@@ -317,6 +317,14 @@ class VH360_Availability_Ajax {
             return;
         }
         
+        // Verify professional is approved
+        if ($account_type === 'professional' && function_exists('vh360_is_professional_approved')) {
+            if (!vh360_is_professional_approved($user_id)) {
+                wp_send_json_error(array('message' => __('Your professional account is pending approval. Availability settings will be available once your account is approved.', 'videohub360-theme')));
+                return;
+            }
+        }
+        
         // Get settings from POST
         $settings = array();
         
