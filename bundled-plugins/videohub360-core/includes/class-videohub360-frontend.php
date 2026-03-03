@@ -59,6 +59,8 @@ class VideoHub360_Frontend {
                 // Conditional loading based on post meta and features
                 if ($this->is_live_post($post->ID) || $this->is_agora_post($post->ID)) {
                     $this->enqueue_livestream_assets();
+                    // Enqueue moderation styles for Agora/live posts (ensures UI elements are styled)
+                    $this->enqueue_moderation_styles();
                 }
                 
                 // Load chat assets if chat is enabled for this video
@@ -394,9 +396,32 @@ class VideoHub360_Frontend {
     }
     
     /**
-     * Enqueue moderation assets
+     * Enqueue moderation styles only (for Agora/live posts where UI elements may appear)
+     */
+    private function enqueue_moderation_styles() {
+        // Enqueue moderation CSS
+        $css_path = VIDEOHUB360_PLUGIN_DIR . 'assets/css/moderation.css';
+        $css_url  = VIDEOHUB360_ASSETS_URL . 'css/moderation.css';
+        $css_ver  = file_exists($css_path) ? filemtime($css_path) : VIDEOHUB360_VERSION;
+
+        wp_enqueue_style(
+            'vh360-moderation',
+            $css_url,
+            array('vh360-variables', 'vh360-frontend'),
+            $css_ver
+        );
+    }
+    
+    /**
+     * Enqueue moderation assets (styles + scripts)
      */
     private function enqueue_moderation_assets() {
+        // Enqueue styles if not already enqueued
+        if (!wp_style_is('vh360-moderation', 'enqueued')) {
+            $this->enqueue_moderation_styles();
+        }
+        
+        // Enqueue moderation JS
         $js_path = VIDEOHUB360_PLUGIN_DIR . 'assets/js/moderation.js';
         $js_url = VIDEOHUB360_ASSETS_URL . 'js/moderation.js';
         $js_version = file_exists($js_path) ? filemtime($js_path) : VIDEOHUB360_VERSION;
