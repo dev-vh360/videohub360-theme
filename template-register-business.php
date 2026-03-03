@@ -28,14 +28,26 @@ if (!get_option('users_can_register')) {
     exit;
 }
 
+// Handle single-path mode redirects
+$landing_mode = get_theme_mod('vh360_business_landing_mode', 'both');
+
+if ($landing_mode === 'professional_only') {
+    wp_safe_redirect(vh360_get_professional_register_url());
+    exit;
+}
+
+if ($landing_mode === 'client_only') {
+    wp_safe_redirect(vh360_get_client_register_url());
+    exit;
+}
+
 get_header();
 
 // Get URLs for the registration forms
 $professional_url = vh360_get_professional_register_url();
 $client_url = vh360_get_client_register_url();
 
-// Get landing mode setting
-$landing_mode = get_theme_mod('vh360_business_landing_mode', 'both');
+// Cards rendering logic for 'both' mode
 $show_professional = ($landing_mode === 'both' || $landing_mode === 'professional_only');
 $show_client = ($landing_mode === 'both' || $landing_mode === 'client_only');
 $single_card_mode = ($landing_mode !== 'both');
