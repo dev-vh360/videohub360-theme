@@ -446,6 +446,14 @@
     margin-bottom: 2rem;
 }
 
+/* Single Card Mode - Center and widen single card */
+.vh360-business-choice-cards--single {
+    grid-template-columns: 1fr;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
 /* Individual Choice Card */
 .vh360-business-choice-card {
     background: var(--bg-color);

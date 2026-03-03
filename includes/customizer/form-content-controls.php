@@ -27,6 +27,17 @@ if (!function_exists('vh360_sanitize_checkbox')) {
 }
 
 /**
+ * Sanitize business landing mode setting
+ *
+ * @param string $value The landing mode value.
+ * @return string Sanitized value (one of: both, professional_only, client_only).
+ */
+function vh360_sanitize_business_landing_mode($value) {
+    $valid_modes = array('both', 'professional_only', 'client_only');
+    return in_array($value, $valid_modes, true) ? $value : 'both';
+}
+
+/**
  * Register form content customizer controls
  *
  * @param WP_Customize_Manager $wp_customize Theme Customizer object.
@@ -1763,6 +1774,25 @@ function vh360_register_form_content_controls($wp_customize) {
         'title'       => __('Business Registration Landing', 'videohub360-theme'),
         'priority'    => 15,
         'description' => __('Customize content for the Business registration landing page (choice between Professional and Client).', 'videohub360-theme'),
+    ));
+    
+    // Landing Mode (which registration paths to show)
+    $wp_customize->add_setting('vh360_business_landing_mode', array(
+        'default'           => 'both',
+        'sanitize_callback' => 'vh360_sanitize_business_landing_mode',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control('vh360_business_landing_mode', array(
+        'label'       => __('Registration Paths to Display', 'videohub360-theme'),
+        'description' => __('Control which registration options are shown on the landing page.', 'videohub360-theme'),
+        'section'     => 'vh360_business_landing_content',
+        'type'        => 'select',
+        'choices'     => array(
+            'both'              => __('Both Professional and Client', 'videohub360-theme'),
+            'professional_only' => __('Professional Only', 'videohub360-theme'),
+            'client_only'       => __('Client Only', 'videohub360-theme'),
+        ),
+        'priority'    => 5,
     ));
     
     // Landing Headline
