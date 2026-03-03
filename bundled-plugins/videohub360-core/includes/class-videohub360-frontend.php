@@ -59,6 +59,8 @@ class VideoHub360_Frontend {
                 // Conditional loading based on post meta and features
                 if ($this->is_live_post($post->ID) || $this->is_agora_post($post->ID)) {
                     $this->enqueue_livestream_assets();
+                    // Enqueue moderation styles for Agora/live posts (ensures UI elements are styled)
+                    $this->enqueue_moderation_styles();
                 }
                 
                 // Load chat assets if chat is enabled for this video
@@ -66,7 +68,7 @@ class VideoHub360_Frontend {
                     $this->enqueue_chat_assets();
                 }
                 
-                if ($this->user_can_moderate()) {
+                if ($this->user_can_moderate($post->ID)) {
                     $this->enqueue_moderation_assets();
                 }
             }
@@ -219,9 +221,10 @@ class VideoHub360_Frontend {
         wp_localize_script('vh360-video-quality-manager', 'vh360QualityConfig', $this->get_quality_config());
         
         // Enable unified settings mode - localize to both scripts to ensure proper detection
+        $post_id = $this->get_current_post_id();
         $unified_settings_config = array(
             'enabled' => true,
-            'canModerate' => $this->user_can_moderate()
+            'canModerate' => $this->user_can_moderate($post_id)
         );
         wp_localize_script('vh360-video-quality-manager', 'vh360UnifiedSettingsConfig', $unified_settings_config);
         wp_localize_script('vh360-unified-settings-manager', 'vh360UnifiedSettingsConfig', $unified_settings_config);
@@ -393,9 +396,32 @@ class VideoHub360_Frontend {
     }
     
     /**
-     * Enqueue moderation assets
+     * Enqueue moderation styles only (for Agora/live posts where UI elements may appear)
+     */
+    private function enqueue_moderation_styles() {
+        // Enqueue moderation CSS
+        $css_path = VIDEOHUB360_PLUGIN_DIR . 'assets/css/moderation.css';
+        $css_url  = VIDEOHUB360_ASSETS_URL . 'css/moderation.css';
+        $css_ver  = file_exists($css_path) ? filemtime($css_path) : VIDEOHUB360_VERSION;
+
+        wp_enqueue_style(
+            'vh360-moderation',
+            $css_url,
+            array('vh360-variables', 'vh360-frontend'),
+            $css_ver
+        );
+    }
+    
+    /**
+     * Enqueue moderation assets (styles + scripts)
      */
     private function enqueue_moderation_assets() {
+        // Enqueue styles if not already enqueued
+        if (!wp_style_is('vh360-moderation', 'enqueued')) {
+            $this->enqueue_moderation_styles();
+        }
+        
+        // Enqueue moderation JS
         $js_path = VIDEOHUB360_PLUGIN_DIR . 'assets/js/moderation.js';
         $js_url = VIDEOHUB360_ASSETS_URL . 'js/moderation.js';
         $js_version = file_exists($js_path) ? filemtime($js_path) : VIDEOHUB360_VERSION;
@@ -445,9 +471,12 @@ class VideoHub360_Frontend {
         global $post;
         $current_user = wp_get_current_user();
         
+        // Get post ID reliably
+        $post_id = $this->get_current_post_id();
+        
         $data = array(
             'ajaxUrl' => admin_url('admin-ajax.php'),
-            'postId' => $post ? $post->ID : 0,
+            'postId' => $post_id,
             'userId' => get_current_user_id(),
             'isUserLoggedIn' => is_user_logged_in(),
             'chatNonce' => wp_create_nonce('videohub360_chat_nonce'),
@@ -464,7 +493,7 @@ class VideoHub360_Frontend {
                 ? vh360_get_login_page_url_with_redirect(get_permalink())
                 : wp_login_url(get_permalink()),
             'userLogoutUrl' => is_user_logged_in() ? wp_logout_url(get_permalink()) : '',
-            'canModerate' => $this->user_can_moderate(),
+            'canModerate' => $this->user_can_moderate($post_id),
             'loginModalType' => get_option('videohub360_login_modal_type', 'redirect'),
             'loginModalShortcode' => get_option('videohub360_login_modal_shortcode', ''),
             'loginModalRedirectUrl' => get_option('videohub360_login_modal_redirect_url', ''),
@@ -477,7 +506,7 @@ class VideoHub360_Frontend {
             'user_role' => is_user_logged_in() && isset($current_user->roles[0]) ? $current_user->roles[0] : '',
             'is_host' => is_user_logged_in() && videohub360_user_is_host(),
             'security' => array(
-                'can_moderate' => is_user_logged_in() && videohub360_user_can_moderate(),
+                'can_moderate' => videohub360_user_can_moderate(null, $post_id),
                 'is_logged_in' => is_user_logged_in(),
                 'user_id' => get_current_user_id(),
                 'display_name' => $current_user->display_name
@@ -713,10 +742,53 @@ class VideoHub360_Frontend {
     }
     
     /**
+     * Get current post ID reliably
+     * 
+     * @return int Post ID or 0 if not in videohub360 context
+     */
+    private function get_current_post_id() {
+        // Use queried object for singular pages
+        if (is_singular('videohub360')) {
+            return get_queried_object_id();
+        }
+        
+        // Fall back to global $post if it's a videohub360 post
+        global $post;
+        if ($post && $post->post_type === 'videohub360') {
+            return $post->ID;
+        }
+        
+        return 0;
+    }
+    
+    /**
      * Check if user can moderate
      */
-    private function user_can_moderate() {
-        return current_user_can('moderate_comments') || current_user_can('manage_options');
+    private function user_can_moderate($post_id = 0) {
+        if (!is_user_logged_in()) {
+            return false;
+        }
+        
+        if (current_user_can('manage_options') || current_user_can('moderate_comments')) {
+            return true;
+        }
+        
+        if ($post_id) {
+            $post = get_post($post_id);
+            
+            if ($post && $post->post_type === 'videohub360') {
+                
+                if ((int) $post->post_author === (int) get_current_user_id()) {
+                    return true;
+                }
+                
+                if (current_user_can('edit_post', $post_id)) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
     }
     
     /**
