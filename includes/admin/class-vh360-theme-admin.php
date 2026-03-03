@@ -49,6 +49,10 @@ class VH360_Theme_Admin {
         // Notification admin AJAX handlers
         add_action('wp_ajax_vh360_manual_notification_cleanup', array($this, 'ajax_manual_notification_cleanup'));
         add_action('wp_ajax_vh360_reset_all_notifications', array($this, 'ajax_reset_all_notifications'));
+        
+        // Business/Professional approval AJAX handlers
+        add_action('wp_ajax_vh360_approve_professional', array($this, 'ajax_approve_professional'));
+        add_action('wp_ajax_vh360_reject_professional', array($this, 'ajax_reject_professional'));
     }
     
     /**
@@ -164,6 +168,16 @@ class VH360_Theme_Admin {
             'manage_options',
             'vh360-theme-permissions',
             array($this, 'render_permissions')
+        );
+        
+        // Business submenu
+        add_submenu_page(
+            'vh360-theme',
+            __('Business Settings', 'videohub360-theme'),
+            __('Business', 'videohub360-theme'),
+            'manage_options',
+            'vh360-theme-business',
+            array($this, 'render_business')
         );
         
         // Advanced submenu
@@ -360,6 +374,15 @@ class VH360_Theme_Admin {
                 'create_posts_roles' => array('administrator'),
                 'create_videos_roles' => array('administrator'),
                 'host_live_roles' => array('administrator'),
+            ),
+        ));
+        
+        // Business settings
+        register_setting('vh360_business_settings', 'vh360_business_options', array(
+            'type' => 'array',
+            'sanitize_callback' => array($this, 'sanitize_business_settings'),
+            'default' => array(
+                'require_professional_approval' => false,
             ),
         ));
     }
@@ -873,6 +896,16 @@ class VH360_Theme_Admin {
     }
     
     /**
+     * Render business settings page
+     */
+    public function render_business() {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You do not have sufficient permissions to access this page.', 'videohub360-theme'));
+        }
+        include VH360_THEME_DIR . '/includes/admin/pages/business.php';
+    }
+    
+    /**
      * Sanitize permissions settings
      */
     public function sanitize_permissions_settings($input) {
@@ -916,6 +949,22 @@ class VH360_Theme_Admin {
         
         // Set transient to trigger capability sync on next admin_init
         set_transient('vh360_permissions_needs_sync', true, 60);
+        
+        return $output;
+    }
+    
+    /**
+     * Sanitize business settings
+     */
+    public function sanitize_business_settings($input) {
+        if (!is_array($input)) {
+            $input = array();
+        }
+        
+        $output = array();
+        
+        // Sanitize require_professional_approval checkbox
+        $output['require_professional_approval'] = !empty($input['require_professional_approval']) ? 1 : 0;
         
         return $output;
     }
@@ -1239,6 +1288,109 @@ class VH360_Theme_Admin {
         
         wp_send_json_success(array(
             'message' => __('All notifications have been deleted.', 'videohub360-theme')
+        ));
+    }
+    
+    /**
+     * AJAX handler for approving a professional
+     */
+    public function ajax_approve_professional() {
+        // Get user ID
+        $user_id = isset($_POST['user_id']) ? absint($_POST['user_id']) : 0;
+        
+        // Verify nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'vh360_approve_professional_' . $user_id)) {
+            wp_send_json_error(array('message' => __('Security check failed', 'videohub360-theme')));
+        }
+        
+        // Check permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Insufficient permissions', 'videohub360-theme')));
+        }
+        
+        if (!$user_id) {
+            wp_send_json_error(array('message' => __('Invalid user ID', 'videohub360-theme')));
+        }
+        
+        // Get user
+        $user = get_user_by('id', $user_id);
+        if (!$user) {
+            wp_send_json_error(array('message' => __('User not found', 'videohub360-theme')));
+        }
+        
+        // Set status to approved
+        update_user_meta($user_id, '_vh360_professional_status', 'approved');
+        
+        // Set role to vh360_professional
+        $user->set_role('vh360_professional');
+        
+        // Send approval notification email
+        $site_name = get_bloginfo('name');
+        $subject = sprintf(__('[%s] Your Professional Account Has Been Approved', 'videohub360-theme'), $site_name);
+        $message = sprintf(__('Hello %s,', 'videohub360-theme'), $user->display_name) . "\n\n";
+        $message .= sprintf(__('Great news! Your professional account on %s has been approved.', 'videohub360-theme'), $site_name) . "\n\n";
+        $message .= __('You now have access to all professional features, including:', 'videohub360-theme') . "\n";
+        $message .= __('- Create and manage events', 'videohub360-theme') . "\n";
+        $message .= __('- Set availability for appointments', 'videohub360-theme') . "\n";
+        $message .= __('- Showcase your business profile', 'videohub360-theme') . "\n\n";
+        $message .= sprintf(__('Visit your dashboard: %s', 'videohub360-theme'), home_url('/dashboard/')) . "\n\n";
+        $message .= sprintf(__('Thank you for joining %s!', 'videohub360-theme'), $site_name) . "\n";
+        
+        wp_mail($user->user_email, $subject, $message);
+        
+        wp_send_json_success(array(
+            'message' => sprintf(__('Professional %s has been approved.', 'videohub360-theme'), $user->display_name)
+        ));
+    }
+    
+    /**
+     * AJAX handler for rejecting a professional
+     */
+    public function ajax_reject_professional() {
+        // Get user ID
+        $user_id = isset($_POST['user_id']) ? absint($_POST['user_id']) : 0;
+        
+        // Verify nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'vh360_reject_professional_' . $user_id)) {
+            wp_send_json_error(array('message' => __('Security check failed', 'videohub360-theme')));
+        }
+        
+        // Check permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Insufficient permissions', 'videohub360-theme')));
+        }
+        
+        if (!$user_id) {
+            wp_send_json_error(array('message' => __('Invalid user ID', 'videohub360-theme')));
+        }
+        
+        // Get user
+        $user = get_user_by('id', $user_id);
+        if (!$user) {
+            wp_send_json_error(array('message' => __('User not found', 'videohub360-theme')));
+        }
+        
+        // Set status to rejected
+        update_user_meta($user_id, '_vh360_professional_status', 'rejected');
+        
+        // Keep as subscriber role (or set explicitly)
+        if ($user->roles && in_array('vh360_professional', $user->roles, true)) {
+            $user->set_role('subscriber');
+        }
+        
+        // Send rejection notification email
+        $site_name = get_bloginfo('name');
+        $subject = sprintf(__('[%s] Professional Account Application Status', 'videohub360-theme'), $site_name);
+        $message = sprintf(__('Hello %s,', 'videohub360-theme'), $user->display_name) . "\n\n";
+        $message .= sprintf(__('Thank you for your interest in becoming a professional on %s.', 'videohub360-theme'), $site_name) . "\n\n";
+        $message .= __('After review, we are unable to approve your professional account at this time.', 'videohub360-theme') . "\n\n";
+        $message .= __('If you have questions or would like to discuss this decision, please contact us.', 'videohub360-theme') . "\n\n";
+        $message .= __('You can still use the platform as a standard member.', 'videohub360-theme') . "\n";
+        
+        wp_mail($user->user_email, $subject, $message);
+        
+        wp_send_json_success(array(
+            'message' => sprintf(__('Professional %s has been rejected.', 'videohub360-theme'), $user->display_name)
         ));
     }
 }
