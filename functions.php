@@ -1027,6 +1027,11 @@ require_once VH360_THEME_DIR . '/includes/account-types.php';
 require_once VH360_THEME_DIR . '/includes/helpers.php';
 
 /**
+ * Dashboard Tabs Registry (single source of truth)
+ */
+require_once VH360_THEME_DIR . '/includes/navigation/dashboard-tabs.php';
+
+/**
  * Media helper functions (YouTube, etc.)
  */
 require_once VH360_THEME_DIR . '/includes/media-helpers.php';
@@ -2274,55 +2279,66 @@ function vh360_get_visible_menu_item_for_cta( $theme_location, $match_classes = 
  */
 class VH360_Dashboard_Menu_Walker extends Walker_Nav_Menu {
 
-    private function vh360_icon_svg($tab) {
-        $icons = array(
-            'overview'       => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13h8V3H3v10zM13 21h8V11h-8v10zM13 3v6h8V3h-8zM3 21h8v-6H3v6z"/></svg>',
-            'create-video'   => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>',
-            'videos'         => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>',
-            'live-rooms'     => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="13" height="12" rx="2"></rect><path d="M15 10l5-3v10l-5-3V10z"></path></svg>',
-            'messages'       => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5A8.5 8.5 0 0 1 21 11v.5z"/></svg>',
-            'notifications'  => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>',
-            'push-notifications' => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"></path><path d="M22 2L15 22l-4-9-9-4 20-7z"></path></svg>',
-            'create-post'    => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>',
-            'galleries'      => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg>',
-            'events'         => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4"></path><path d="M8 2v4"></path><path d="M3 10h18"></path></svg>',
-            'bulletins'      => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16"></rect><path d="M8 8h8"></path><path d="M8 12h8"></path><path d="M8 16h5"></path></svg>',
-            'profile'        => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>',
-            'settings'       => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 0 1-1.4 3.4h-.2a1.9 1.9 0 0 0-1.8 1.1 2 2 0 0 1-3.6 0 1.9 1.9 0 0 0-1.8-1.1H9a2 2 0 0 1-1.4-3.4l.1-.1A1.7 1.7 0 0 0 8.3 15a1.9 1.9 0 0 0-1.1-1.8 2 2 0 0 1 0-3.6 1.9 1.9 0 0 0 1.1-1.8 1.7 1.7 0 0 0-.3-1.8l-.1-.1A2 2 0 0 1 9 2.3h.2a1.9 1.9 0 0 0 1.8-1.1 2 2 0 0 1 3.6 0 1.9 1.9 0 0 0 1.8 1.1h.2a2 2 0 0 1 1.4 3.4l-.1.1a1.7 1.7 0 0 0-.3 1.8 1.9 1.9 0 0 0 1.1 1.8 2 2 0 0 1 0 3.6 1.9 1.9 0 0 0-1.1 1.8z"></path></svg>',
-            'go-live'        => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M16.24 7.76a6 6 0 0 1 0 8.48"></path><path d="M7.76 7.76a6 6 0 0 0 0 8.48"></path></svg>',
-        );
+    /**
+     * Get icon SVG from registry
+     *
+     * @param string $tab Tab ID
+     * @return string SVG markup
+     */
+    private function vh360_icon_svg( $tab ) {
+        $registry = vh360_get_dashboard_tabs_registry();
+        $tab = strtolower( (string) $tab );
 
-        $tab = strtolower((string) $tab);
-        return isset($icons[$tab]) ? $icons[$tab] : '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16"></path><path d="M4 12h16"></path><path d="M4 18h16"></path></svg>';
+        if ( isset( $registry[ $tab ] ) && ! empty( $registry[ $tab ]['icon_svg'] ) ) {
+            return $registry[ $tab ]['icon_svg'];
+        }
+
+        // Default generic icon for unknown tabs
+        return '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16"></path><path d="M4 12h16"></path><path d="M4 18h16"></path></svg>';
     }
 
     public function start_el( &$output, $item, $depth = 0, $args = null, $id = 0 ) {
-        $title = isset($item->title) ? $item->title : '';
-        $url   = isset($item->url) ? $item->url : '';
+        $title = isset( $item->title ) ? $item->title : '';
+        $url   = isset( $item->url ) ? $item->url : '';
         $tab   = '';
 
-        if ( preg_match('~#([a-z0-9\-]+)~i', $url, $m) ) {
-            $tab = strtolower($m[1]);
+        if ( preg_match( '~#([a-z0-9\-]+)~i', $url, $m ) ) {
+            $tab = strtolower( $m[1] );
         }
 
-        // Gate Push Notifications tab by capability (frontend dashboard).
-        if ( $tab === 'push-notifications' && ! current_user_can( 'vh360_send_push' ) ) {
-            return;
+        // Check if tab exists in registry
+        $registry = vh360_get_dashboard_tabs_registry();
+        if ( $tab && isset( $registry[ $tab ] ) ) {
+            $tab_config = $registry[ $tab ];
+
+            // Apply visibility rules from registry
+            $show_callback = $tab_config['show_callback'];
+            if ( is_callable( $show_callback ) ) {
+                $should_show = call_user_func( $show_callback, get_current_user_id() );
+                if ( ! $should_show ) {
+                    return; // Don't render this item
+                }
+            }
+
+            // Apply dynamic label if available
+            if ( $tab_config['label_callback'] && is_callable( $tab_config['label_callback'] ) ) {
+                $title = call_user_func( $tab_config['label_callback'], get_current_user_id() );
+            }
         }
 
         $href = $url;
-        if ( $tab && function_exists('is_page_template') && is_page_template('template-dashboard.php') ) {
+        if ( $tab && function_exists( 'is_page_template' ) && is_page_template( 'template-dashboard.php' ) ) {
             $href = '#' . $tab;
         }
 
         $output .= '<li class="vh360-dashboard-nav-item">';
-        $output .= '<a href="' . esc_url($href) . '" class="vh360-dashboard-nav-link vh360-dashboard-tab' . ( $tab === 'overview' ? ' active' : '' ) . '"';
+        $output .= '<a href="' . esc_url( $href ) . '" class="vh360-dashboard-nav-link vh360-dashboard-tab' . ( $tab === 'overview' ? ' active' : '' ) . '"';
         if ( $tab ) {
-            $output .= ' data-tab="' . esc_attr($tab) . '"';
+            $output .= ' data-tab="' . esc_attr( $tab ) . '"';
         }
         $output .= '>';
-        $output .= $this->vh360_icon_svg($tab);
-        $output .= '<span class="vh360-dashboard-nav-text">' . esc_html($title) . '</span>';
+        $output .= $this->vh360_icon_svg( $tab );
+        $output .= '<span class="vh360-dashboard-nav-text">' . esc_html( $title ) . '</span>';
         $output .= '</a>';
     }
 

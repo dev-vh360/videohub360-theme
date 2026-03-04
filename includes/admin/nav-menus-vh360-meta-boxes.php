@@ -42,81 +42,33 @@ add_action('admin_init', 'vh360_register_nav_menu_meta_boxes');
  * Get Dashboard Menu Item Definitions
  *
  * Returns an array of dashboard tab items with correct URLs and labels.
- * Each item includes a #tab fragment that the VH360_Dashboard_Menu_Walker uses.
+ * Built from the dashboard tabs registry for consistency.
  *
  * @return array Array of menu item definitions.
  * @since 1.0.0
  */
 function vh360_get_dashboard_menu_item_definitions() {
     $dashboard_url = vh360_get_dashboard_page_url();
+    $registry = vh360_get_dashboard_tabs_registry();
 
-    $definitions = array(
-        array(
-            'id'    => 'vh360-dashboard-overview',
-            'title' => __('Overview', 'videohub360-theme'),
-            'url'   => $dashboard_url . '#overview',
-        ),
-        array(
-            'id'    => 'vh360-dashboard-create-video',
-            'title' => __('+ Create', 'videohub360-theme'),
-            'url'   => $dashboard_url . '#create-video',
-        ),
-        array(
-            'id'    => 'vh360-dashboard-videos',
-            'title' => __('My Videos', 'videohub360-theme'),
-            'url'   => $dashboard_url . '#videos',
-        ),
-        array(
-            'id'    => 'vh360-dashboard-live-rooms',
-            'title' => __('Live Rooms', 'videohub360-theme'),
-            'url'   => $dashboard_url . '#live-rooms',
-        ),
-        array(
-            'id'    => 'vh360-dashboard-messages',
-            'title' => __('Messages', 'videohub360-theme'),
-            'url'   => $dashboard_url . '#messages',
-        ),
-        array(
-            'id'    => 'vh360-dashboard-notifications',
-            'title' => __('Notifications', 'videohub360-theme'),
-            'url'   => $dashboard_url . '#notifications',
-        ),
-        array(
-            'id'    => 'vh360-dashboard-push-notifications',
-            'title' => __('Push Notifications', 'videohub360-theme'),
-            'url'   => $dashboard_url . '#push-notifications',
-        ),
-        array(
-            'id'    => 'vh360-dashboard-create-post',
-            'title' => __('Create Post', 'videohub360-theme'),
-            'url'   => $dashboard_url . '#create-post',
-        ),
-        array(
-            'id'    => 'vh360-dashboard-galleries',
-            'title' => __('Galleries', 'videohub360-theme'),
-            'url'   => $dashboard_url . '#galleries',
-        ),
-        array(
-            'id'    => 'vh360-dashboard-events',
-            'title' => __('Events', 'videohub360-theme'),
-            'url'   => $dashboard_url . '#events',
-        ),
-        array(
-            'id'    => 'vh360-dashboard-bulletins',
-            'title' => __('Bulletins', 'videohub360-theme'),
-            'url'   => $dashboard_url . '#bulletins',
-        ),
-        array(
-            'id'    => 'vh360-dashboard-profile',
-            'title' => __('Profile', 'videohub360-theme'),
-            'url'   => $dashboard_url . '#profile',
-        ),
-        array(
-            'id'    => 'vh360-dashboard-settings',
-            'title' => __('Settings', 'videohub360-theme'),
-            'url'   => $dashboard_url . '#settings',
-        ),
-    );
+    $definitions = array();
+    $index = 0;
+
+    foreach ( $registry as $tab_id => $tab_config ) {
+        // Get label (use callback if available, otherwise use default label)
+        $label = $tab_config['label'];
+        if ( $tab_config['label_callback'] && is_callable( $tab_config['label_callback'] ) ) {
+            $label = call_user_func( $tab_config['label_callback'], get_current_user_id() );
+        }
+
+        $definitions[] = array(
+            'id'    => 'vh360-dashboard-' . $tab_id,
+            'title' => $label,
+            'url'   => $dashboard_url . '#' . $tab_id,
+        );
+
+        $index++;
+    }
 
     /**
      * Filter dashboard menu item definitions.
@@ -126,7 +78,7 @@ function vh360_get_dashboard_menu_item_definitions() {
      * @param array $definitions Array of menu item definitions.
      * @since 1.0.0
      */
-    return apply_filters('vh360_dashboard_menu_item_definitions', $definitions);
+    return apply_filters( 'vh360_dashboard_menu_item_definitions', $definitions );
 }
 
 /**
@@ -196,6 +148,8 @@ function vh360_render_dashboard_menu_items_meta_box() {
         <div id="tabs-panel-vh360-dashboard-menu-items" class="tabs-panel tabs-panel-active">
             <p class="description" style="margin: 10px 12px;">
                 <?php esc_html_e( 'Dashboard items must include #tab fragments for the tab system to work correctly. Do not modify the URLs after adding items.', 'videohub360-theme' ); ?>
+                <br/>
+                <em><?php esc_html_e( 'Note: Some items only appear for certain account types (e.g., Business Profile for professionals). Labels may vary by user type (Appointments vs My Appointments).', 'videohub360-theme' ); ?></em>
             </p>
 
             <ul id="vh360-dashboard-menu-items-checklist" class="categorychecklist form-no-clear">
