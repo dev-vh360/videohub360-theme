@@ -195,7 +195,7 @@ function vh360_render_dashboard_menu_items_meta_box() {
     <div id="vh360-dashboard-menu-items" class="posttypediv">
         <div id="tabs-panel-vh360-dashboard-menu-items" class="tabs-panel tabs-panel-active">
             <p class="description" style="margin: 10px 12px;">
-                <?php esc_html_e('Dashboard items must include #tab fragments for the tab system to work correctly.', 'videohub360-theme'); ?>
+                <?php esc_html_e( 'Dashboard items must include #tab fragments for the tab system to work correctly. Do not modify the URLs after adding items.', 'videohub360-theme' ); ?>
             </p>
 
             <ul id="vh360-dashboard-menu-items-checklist" class="categorychecklist form-no-clear">
@@ -247,7 +247,7 @@ function vh360_render_mobile_bottom_menu_items_meta_box() {
     <div id="vh360-mobile-bottom-menu-items" class="posttypediv">
         <div id="tabs-panel-vh360-mobile-bottom-menu-items" class="tabs-panel tabs-panel-active">
             <p class="description" style="margin: 10px 12px;">
-                <?php esc_html_e('Mobile Bottom Nav uses CSS classes for icons; these items set them automatically. Keep 3–5 items.', 'videohub360-theme'); ?>
+                <?php esc_html_e( 'Mobile Bottom Nav uses CSS classes for icons; these items set them automatically. Keep 3–5 items (maximum 5 enforced automatically).', 'videohub360-theme' ); ?>
             </p>
 
             <ul id="vh360-mobile-bottom-menu-items-checklist" class="categorychecklist form-no-clear">
