@@ -14,6 +14,7 @@ if (!defined('ABSPATH')) {
 
 $current_user_id = get_current_user_id();
 $user_account_type = vh360_get_user_account_type($current_user_id);
+$is_approved_professional = vh360_is_professional_approved($current_user_id);
 $stats = vh360_get_user_stats($current_user_id);
 ?>
 
@@ -210,6 +211,14 @@ $stats = vh360_get_user_stats($current_user_id);
                 </a>
             </li>
             
+            <?php 
+            // Events tab - hide if professional but not approved
+            $show_events = true;
+            if ($user_account_type === 'professional' && !$is_approved_professional) {
+                $show_events = false;
+            }
+            if ($show_events) :
+            ?>
             <li class="vh360-dashboard-nav-item">
                 <a href="#events" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="events">
                     <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -221,6 +230,7 @@ $stats = vh360_get_user_stats($current_user_id);
                     <span class="vh360-dashboard-nav-text"><?php esc_html_e('Events', 'videohub360-theme'); ?></span>
                 </a>
             </li>
+            <?php endif; ?>
             
             <!-- Appointments (label changes based on user type) -->
             <li class="vh360-dashboard-nav-item">
@@ -245,7 +255,10 @@ $stats = vh360_get_user_stats($current_user_id);
                 </a>
             </li>
             
-            <?php if (in_array($user_account_type, array('professional', 'organization'), true)) : ?>
+            <?php 
+            // Availability tab - only show for approved professionals/organizations
+            if (in_array($user_account_type, array('professional', 'organization'), true) && $is_approved_professional) : 
+            ?>
             <li class="vh360-dashboard-nav-item">
                 <a href="#availability" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="availability">
                     <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

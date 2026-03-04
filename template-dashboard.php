@@ -19,6 +19,13 @@ if (!defined('ABSPATH')) {
 $current_user_id = get_current_user_id();
 $user = get_userdata($current_user_id);
 
+// Check if user is a pending professional
+$account_type = function_exists('vh360_get_user_account_type') ? vh360_get_user_account_type($current_user_id) : 'creator';
+$is_pending_professional = false;
+if ($account_type === 'professional' && function_exists('vh360_is_professional_approved')) {
+    $is_pending_professional = !vh360_is_professional_approved($current_user_id);
+}
+
 get_header();
 ?>
 
@@ -32,6 +39,23 @@ get_header();
             
             <!-- Dashboard Content -->
             <div class="vh360-dashboard-content">
+                
+                <?php if ($is_pending_professional) : ?>
+                <!-- Professional Approval Pending Notice -->
+                <div class="vh360-dashboard-notice vh360-approval-pending-notice">
+                    <div class="vh360-notice-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                    </div>
+                    <div class="vh360-notice-content">
+                        <h3><?php esc_html_e('Professional Account Pending Approval', 'videohub360-theme'); ?></h3>
+                        <p><?php esc_html_e('Your professional account is currently pending admin approval. You can complete your profile while you wait. Professional features such as event creation and appointment scheduling will be available once your account is approved.', 'videohub360-theme'); ?></p>
+                    </div>
+                </div>
+                <?php endif; ?>
                 
                 <!-- Overview Tab -->
                 <div id="overview" class="vh360-dashboard-tab-content active">

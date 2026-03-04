@@ -28,11 +28,29 @@ if (!get_option('users_can_register')) {
     exit;
 }
 
+// Handle single-path mode redirects
+$landing_mode = get_theme_mod('vh360_business_landing_mode', 'both');
+
+if ($landing_mode === 'professional_only') {
+    wp_safe_redirect(vh360_get_professional_register_url());
+    exit;
+}
+
+if ($landing_mode === 'client_only') {
+    wp_safe_redirect(vh360_get_client_register_url());
+    exit;
+}
+
 get_header();
 
 // Get URLs for the registration forms
 $professional_url = vh360_get_professional_register_url();
 $client_url = vh360_get_client_register_url();
+
+// Cards rendering logic for 'both' mode
+$show_professional = ($landing_mode === 'both' || $landing_mode === 'professional_only');
+$show_client = ($landing_mode === 'both' || $landing_mode === 'client_only');
+$single_card_mode = ($landing_mode !== 'both');
 ?>
 
 <div id="primary" class="content-area">
@@ -60,8 +78,9 @@ $client_url = vh360_get_client_register_url();
             </div>
             
             <!-- Choice Cards -->
-            <div class="vh360-business-choice-cards">
+            <div class="vh360-business-choice-cards<?php echo $single_card_mode ? ' vh360-business-choice-cards--single' : ''; ?>">
                 
+                <?php if ($show_professional) : ?>
                 <!-- Professional Card -->
                 <div class="vh360-business-choice-card">
                     <div class="vh360-business-choice-icon">
@@ -86,7 +105,9 @@ $client_url = vh360_get_client_register_url();
                         <?php echo esc_html(get_theme_mod('vh360_business_professional_button', __('Sign Up as Professional', 'videohub360-theme'))); ?>
                     </a>
                 </div>
+                <?php endif; ?>
                 
+                <?php if ($show_client) : ?>
                 <!-- Client Card -->
                 <div class="vh360-business-choice-card">
                     <div class="vh360-business-choice-icon">
@@ -113,6 +134,7 @@ $client_url = vh360_get_client_register_url();
                         <?php echo esc_html(get_theme_mod('vh360_business_client_button', __('Sign Up as Client', 'videohub360-theme'))); ?>
                     </a>
                 </div>
+                <?php endif; ?>
                 
             </div>
             

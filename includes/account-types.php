@@ -76,3 +76,39 @@ function vh360_get_author_display_mode($author_id) {
             return 'profile';
     }
 }
+
+/**
+ * Check if a professional user is approved
+ * 
+ * Determines if a professional has been approved to access professional features.
+ * Admins are always considered approved. For others, checks _vh360_professional_status meta.
+ * 
+ * @param int $user_id User ID to check
+ * @return bool True if approved (or admin), false if pending/rejected or not professional
+ */
+function vh360_is_professional_approved($user_id) {
+    if (!$user_id) {
+        return false;
+    }
+    
+    // Admins are always approved
+    if (user_can($user_id, 'manage_options')) {
+        return true;
+    }
+    
+    // Check if user is a professional
+    $account_type = vh360_get_user_account_type($user_id);
+    if ($account_type !== 'professional') {
+        return true; // Non-professionals don't need approval
+    }
+    
+    // Check professional status
+    $status = get_user_meta($user_id, '_vh360_professional_status', true);
+    
+    // If no status is set, assume approved (for backwards compatibility with existing accounts)
+    if (empty($status)) {
+        return true;
+    }
+    
+    return ($status === 'approved');
+}

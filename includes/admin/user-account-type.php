@@ -72,6 +72,36 @@ function vh360_display_account_type_fields($user) {
                 <?php wp_nonce_field('vh360_account_type_save', 'vh360_account_type_nonce'); ?>
             </td>
         </tr>
+        
+        <?php if ($account_type === 'professional') : 
+            $professional_status = get_user_meta($user->ID, '_vh360_professional_status', true);
+            if (!$professional_status) {
+                // Default to approved for existing professionals without status (backwards compatibility)
+                $professional_status = 'approved';
+            }
+        ?>
+        <tr>
+            <th scope="row">
+                <label for="vh360_professional_status"><?php esc_html_e('Professional Status', 'videohub360-theme'); ?></label>
+            </th>
+            <td>
+                <select name="vh360_professional_status" id="vh360_professional_status">
+                    <option value="pending" <?php selected($professional_status, 'pending'); ?>>
+                        <?php esc_html_e('Pending Approval', 'videohub360-theme'); ?>
+                    </option>
+                    <option value="approved" <?php selected($professional_status, 'approved'); ?>>
+                        <?php esc_html_e('Approved', 'videohub360-theme'); ?>
+                    </option>
+                    <option value="rejected" <?php selected($professional_status, 'rejected'); ?>>
+                        <?php esc_html_e('Rejected', 'videohub360-theme'); ?>
+                    </option>
+                </select>
+                <p class="description">
+                    <?php esc_html_e('Control professional approval status. Approved professionals receive the vh360_professional role and can create events. Pending/rejected professionals remain as subscribers without professional capabilities.', 'videohub360-theme'); ?>
+                </p>
+            </td>
+        </tr>
+        <?php endif; ?>
     </table>
     
     <div id="vh360-business-fields" style="display: <?php echo (in_array($account_type, array('professional', 'organization'), true)) ? 'block' : 'none'; ?>;">
@@ -248,6 +278,50 @@ function vh360_save_account_type_fields($user_id) {
         
         if (in_array($account_type, $valid_types, true)) {
             update_user_meta($user_id, '_vh360_account_type', $account_type);
+        }
+    }
+    
+    // Save and handle professional status (with role updates)
+    if (isset($_POST['vh360_professional_status'])) {
+        $status = sanitize_text_field(wp_unslash($_POST['vh360_professional_status']));
+        $valid_statuses = array('pending', 'approved', 'rejected');
+        
+        if (in_array($status, $valid_statuses, true)) {
+            $old_status = get_user_meta($user_id, '_vh360_professional_status', true);
+            update_user_meta($user_id, '_vh360_professional_status', $status);
+            
+            // Get user object for role updates
+            $user = new WP_User($user_id);
+            
+            // Update role based on status
+            if ($status === 'approved') {
+                // Set role to vh360_professional
+                $user->set_role('vh360_professional');
+                
+                // Send approval email if status changed from pending/rejected to approved
+                if ($old_status !== 'approved') {
+                    $site_name = get_bloginfo('name');
+                    $subject = sprintf(__('[%s] Your Professional Account Has Been Approved', 'videohub360-theme'), $site_name);
+                    $message = sprintf(__('Hello %s,', 'videohub360-theme'), $user->display_name) . "\n\n";
+                    $message .= sprintf(__('Great news! Your professional account on %s has been approved.', 'videohub360-theme'), $site_name) . "\n\n";
+                    $message .= __('You now have access to all professional features.', 'videohub360-theme') . "\n";
+                    wp_mail($user->user_email, $subject, $message);
+                }
+            } else {
+                // For pending or rejected, set role to subscriber
+                if ($user->roles && in_array('vh360_professional', $user->roles, true)) {
+                    $user->set_role('subscriber');
+                }
+                
+                // Send rejection email if status changed to rejected
+                if ($status === 'rejected' && $old_status !== 'rejected') {
+                    $site_name = get_bloginfo('name');
+                    $subject = sprintf(__('[%s] Professional Account Application Status', 'videohub360-theme'), $site_name);
+                    $message = sprintf(__('Hello %s,', 'videohub360-theme'), $user->display_name) . "\n\n";
+                    $message .= sprintf(__('After review, we are unable to approve your professional account on %s at this time.', 'videohub360-theme'), $site_name) . "\n";
+                    wp_mail($user->user_email, $subject, $message);
+                }
+            }
         }
     }
     
