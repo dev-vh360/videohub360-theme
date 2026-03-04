@@ -49,7 +49,7 @@ add_action('admin_init', 'vh360_register_nav_menu_meta_boxes');
  */
 function vh360_get_dashboard_menu_item_definitions() {
     $dashboard_url = vh360_get_dashboard_page_url();
-    
+
     $definitions = array(
         array(
             'id'    => 'vh360-dashboard-overview',
@@ -117,7 +117,7 @@ function vh360_get_dashboard_menu_item_definitions() {
             'url'   => $dashboard_url . '#settings',
         ),
     );
-    
+
     /**
      * Filter dashboard menu item definitions.
      *
@@ -140,7 +140,7 @@ function vh360_get_dashboard_menu_item_definitions() {
  */
 function vh360_get_mobile_bottom_nav_item_definitions() {
     $dashboard_url = vh360_get_dashboard_page_url();
-    
+
     $definitions = array(
         array(
             'id'      => 'vh360-mobile-activity',
@@ -167,7 +167,7 @@ function vh360_get_mobile_bottom_nav_item_definitions() {
             'classes' => array('vh360-icon-avatar'),
         ),
     );
-    
+
     /**
      * Filter mobile bottom nav item definitions.
      *
@@ -187,9 +187,9 @@ function vh360_get_mobile_bottom_nav_item_definitions() {
  */
 function vh360_render_dashboard_menu_items_meta_box() {
     global $_nav_menu_placeholder, $nav_menu_selected_id;
-    
+
     $_nav_menu_placeholder = 0 > $_nav_menu_placeholder ? $_nav_menu_placeholder - 1 : -1;
-    
+
     $items = vh360_get_dashboard_menu_item_definitions();
     ?>
     <div id="vh360-dashboard-menu-items" class="posttypediv">
@@ -197,7 +197,7 @@ function vh360_render_dashboard_menu_items_meta_box() {
             <p class="description" style="margin: 10px 12px;">
                 <?php esc_html_e('Dashboard items must include #tab fragments for the tab system to work correctly.', 'videohub360-theme'); ?>
             </p>
-            
+
             <ul id="vh360-dashboard-menu-items-checklist" class="categorychecklist form-no-clear">
                 <?php foreach ( $items as $item ) : ?>
                     <?php
@@ -217,7 +217,7 @@ function vh360_render_dashboard_menu_items_meta_box() {
                 <?php endforeach; ?>
             </ul>
         </div>
-        
+
         <p class="button-controls wp-clearfix">
             <span class="list-controls">
                 <a href="<?php echo esc_url( admin_url( 'nav-menus.php?page-tab=all&amp;selectall=1#vh360-dashboard-menu-items' ) ); ?>" class="select-all"><?php esc_html_e( 'Select All', 'videohub360-theme' ); ?></a>
@@ -239,9 +239,9 @@ function vh360_render_dashboard_menu_items_meta_box() {
  */
 function vh360_render_mobile_bottom_menu_items_meta_box() {
     global $_nav_menu_placeholder, $nav_menu_selected_id;
-    
+
     $_nav_menu_placeholder = 0 > $_nav_menu_placeholder ? $_nav_menu_placeholder - 1 : -1;
-    
+
     $items = vh360_get_mobile_bottom_nav_item_definitions();
     ?>
     <div id="vh360-mobile-bottom-menu-items" class="posttypediv">
@@ -249,7 +249,7 @@ function vh360_render_mobile_bottom_menu_items_meta_box() {
             <p class="description" style="margin: 10px 12px;">
                 <?php esc_html_e('Mobile Bottom Nav uses CSS classes for icons; these items set them automatically. Keep 3–5 items.', 'videohub360-theme'); ?>
             </p>
-            
+
             <ul id="vh360-mobile-bottom-menu-items-checklist" class="categorychecklist form-no-clear">
                 <?php foreach ( $items as $item ) : ?>
                     <?php
@@ -270,7 +270,7 @@ function vh360_render_mobile_bottom_menu_items_meta_box() {
                 <?php endforeach; ?>
             </ul>
         </div>
-        
+
         <p class="button-controls wp-clearfix">
             <span class="list-controls">
                 <a href="<?php echo esc_url( admin_url( 'nav-menus.php?page-tab=all&amp;selectall=1#vh360-mobile-bottom-menu-items' ) ); ?>" class="select-all"><?php esc_html_e( 'Select All', 'videohub360-theme' ); ?></a>

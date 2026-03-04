@@ -22,28 +22,28 @@ function vh360_get_video_duration($video_id) {
     if (!$video_id) {
         return '';
     }
-    
+
     // Check if plugin function exists
     if (function_exists('videohub360_get_video_duration')) {
         return videohub360_get_video_duration($video_id);
     }
-    
+
     // Fallback: get from post meta
     $duration = get_post_meta($video_id, '_videohub360_duration', true);
-    
+
     if (!$duration) {
         return '';
     }
-    
+
     // Format duration from seconds
     $hours = floor($duration / 3600);
     $minutes = floor(($duration % 3600) / 60);
     $seconds = $duration % 60;
-    
+
     if ($hours > 0) {
         return sprintf('%d:%02d:%02d', $hours, $minutes, $seconds);
     }
-    
+
     return sprintf('%d:%02d', $minutes, $seconds);
 }
 
@@ -57,15 +57,15 @@ function vh360_get_video_views($video_id) {
     if (!$video_id) {
         return 0;
     }
-    
+
     // Check if plugin function exists
     if (function_exists('videohub360_get_video_views')) {
         return videohub360_get_video_views($video_id);
     }
-    
+
     // Fallback: get from post meta
     $views = get_post_meta($video_id, '_videohub360_post_views_count', true);
-    
+
     return $views ? absint($views) : 0;
 }
 
@@ -79,23 +79,23 @@ function vh360_user_can_edit_profile($user_id = 0) {
     if (!$user_id) {
         $user_id = get_current_user_id();
     }
-    
+
     if (!is_user_logged_in()) {
         return false;
     }
-    
+
     $current_user_id = get_current_user_id();
-    
+
     // Users can edit their own profile
     if ($current_user_id === $user_id) {
         return true;
     }
-    
+
     // Administrators can edit any profile
     if (current_user_can('manage_options')) {
         return true;
     }
-    
+
     return false;
 }
 
@@ -109,16 +109,16 @@ function vh360_get_profile_url($user_id = 0) {
     if (!$user_id) {
         $user_id = get_current_user_id();
     }
-    
+
     if (!$user_id) {
         return '';
     }
-    
+
     // Check if plugin function exists
     if (function_exists('videohub360_get_profile_url')) {
         return videohub360_get_profile_url($user_id);
     }
-    
+
     // Fallback: check for profile post type
     $args = array(
         'post_type' => 'vh360_profile',
@@ -130,16 +130,16 @@ function vh360_get_profile_url($user_id = 0) {
         ),
         'posts_per_page' => 1,
     );
-    
+
     $profile_query = new WP_Query($args);
-    
+
     if ($profile_query->have_posts()) {
         $profile_query->the_post();
         $url = get_permalink();
         wp_reset_postdata();
         return $url;
     }
-    
+
     // Default fallback to author archive
     return get_author_posts_url($user_id);
 }
@@ -152,21 +152,21 @@ function vh360_get_profile_url($user_id = 0) {
  */
 function vh360_format_number($number) {
     $number = absint($number);
-    
+
     if ($number < 1000) {
         return (string) $number;
     }
-    
+
     if ($number < 1000000) {
         $formatted = round($number / 1000, 1);
         return $formatted . 'K';
     }
-    
+
     if ($number < 1000000000) {
         $formatted = round($number / 1000000, 1);
         return $formatted . 'M';
     }
-    
+
     $formatted = round($number / 1000000000, 1);
     return $formatted . 'B';
 }
@@ -181,7 +181,7 @@ function vh360_get_user_stats($user_id = 0) {
     if (!$user_id) {
         $user_id = get_current_user_id();
     }
-    
+
     if (!$user_id) {
         return array(
             'videos' => 0,
@@ -191,12 +191,12 @@ function vh360_get_user_stats($user_id = 0) {
             'likes' => 0,
         );
     }
-    
+
     // Check if plugin function exists
     if (function_exists('videohub360_get_user_stats')) {
         return videohub360_get_user_stats($user_id);
     }
-    
+
     // Fallback: calculate stats
     $stats = array(
         'videos' => 0,
@@ -205,15 +205,15 @@ function vh360_get_user_stats($user_id = 0) {
         'views' => 0,
         'likes' => 0,
     );
-    
+
     // Use optimized video count function
     $stats['videos'] = vh360_get_user_video_count($user_id);
-    
+
     // Calculate total views from all videos
     // Use a transient to cache the expensive query
     $transient_key = 'vh360_user_views_' . $user_id;
     $total_views = get_transient($transient_key);
-    
+
     if (false === $total_views) {
         $video_args = array(
             'post_type' => array('videohub360', 'post'),
@@ -224,23 +224,23 @@ function vh360_get_user_stats($user_id = 0) {
             'orderby' => 'date',
             'order' => 'DESC',
         );
-        
+
         $video_ids = get_posts($video_args);
         $total_views = 0;
         foreach ($video_ids as $video_id) {
             $total_views += vh360_get_video_views($video_id);
         }
-        
+
         // Cache for 1 hour
         set_transient($transient_key, $total_views, HOUR_IN_SECONDS);
     }
-    
+
     $stats['views'] = $total_views;
-    
+
     // Get follower count from user meta (updated to use the correct meta key)
     $followers = get_user_meta($user_id, 'vh360_followers_count', true);
     $stats['followers'] = $followers ? absint($followers) : 0;
-    
+
     // Get following count from user meta (array of user IDs this user follows)
     if (function_exists('vh360_get_following_user_ids')) {
         $following_ids = vh360_get_following_user_ids($user_id);
@@ -249,11 +249,11 @@ function vh360_get_user_stats($user_id = 0) {
         $following = get_user_meta($user_id, 'vh360_following', true);
         $stats['following'] = is_array($following) ? count($following) : 0;
     }
-    
+
     // Get likes count from user meta
     $likes = get_user_meta($user_id, '_vh360_likes_count', true);
     $stats['likes'] = $likes ? absint($likes) : 0;
-    
+
     return $stats;
 }
 
@@ -268,19 +268,19 @@ function vh360_get_video_thumbnail($video_id, $size = 'videohub360-video-thumb')
     if (!$video_id) {
         return '';
     }
-    
+
     // Try to get featured image
     $thumbnail = get_the_post_thumbnail_url($video_id, $size);
-    
+
     if ($thumbnail) {
         return $thumbnail;
     }
-    
+
     // Fallback to plugin function if available
     if (function_exists('videohub360_get_video_thumbnail')) {
         return videohub360_get_video_thumbnail($video_id, $size);
     }
-    
+
     // Ultimate fallback: return empty string (browser will show broken image or alt text)
     // Alternatively, you could create a data URI placeholder or check plugin for default
     return '';
@@ -295,19 +295,19 @@ function vh360_get_video_thumbnail($video_id, $size = 'videohub360-video-thumb')
 function vh360_is_feature_enabled($feature) {
     // Check theme options
     $enabled_features = get_option('vh360_enabled_features', array());
-    
+
     if (is_array($enabled_features) && in_array($feature, $enabled_features)) {
         return true;
     }
-    
+
     // Check if plugin function exists
     if (function_exists('videohub360_is_feature_enabled')) {
         return videohub360_is_feature_enabled($feature);
     }
-    
+
     // Default features are enabled
     $default_features = array('profiles', 'dashboard', 'groups', 'bulletins', 'gallery');
-    
+
     return in_array($feature, $default_features);
 }
 
@@ -344,7 +344,7 @@ function vh360_get_user_avatar_url($user_id, $size = 150) {
     if (!$user_id) {
         return '';
     }
-    
+
     // Check for custom uploaded avatar in user meta
     $custom_avatar = get_user_meta($user_id, '_vh360_custom_avatar', true);
     if ($custom_avatar) {
@@ -360,10 +360,10 @@ function vh360_get_user_avatar_url($user_id, $size = 150) {
             return $custom_avatar;
         }
     }
-    
+
     // Fallback to WordPress get_avatar_url (includes Gravatar)
     $avatar_url = get_avatar_url($user_id, array('size' => $size));
-    
+
     return $avatar_url ? $avatar_url : '';
 }
 
@@ -377,13 +377,13 @@ function vh360_get_user_cover_image($user_id) {
     if (!$user_id) {
         return false;
     }
-    
+
     $cover_image = get_user_meta($user_id, '_vh360_cover_image', true);
-    
+
     if (!$cover_image) {
         return false;
     }
-    
+
     // If it's an attachment ID, get the image URL
     if (is_numeric($cover_image)) {
         $image_url = wp_get_attachment_image_url($cover_image, 'full');
@@ -391,12 +391,12 @@ function vh360_get_user_cover_image($user_id) {
             return $image_url;
         }
     }
-    
+
     // If it's a direct URL
     if (filter_var($cover_image, FILTER_VALIDATE_URL)) {
         return $cover_image;
     }
-    
+
     return false;
 }
 
@@ -410,9 +410,9 @@ function vh360_get_user_bio($user_id) {
     if (!$user_id) {
         return '';
     }
-    
+
     $bio = get_the_author_meta('description', $user_id);
-    
+
     return $bio ? sanitize_textarea_field($bio) : '';
 }
 
@@ -427,15 +427,15 @@ function vh360_get_user_join_date($user_id, $format = 'F Y') {
     if (!$user_id) {
         return '';
     }
-    
+
     $user = get_userdata($user_id);
-    
+
     if (!$user) {
         return '';
     }
-    
+
     $registered = $user->user_registered;
-    
+
     if ($format === 'relative') {
         // Return relative time (e.g., "2 months ago")
         return sprintf(
@@ -444,7 +444,7 @@ function vh360_get_user_join_date($user_id, $format = 'F Y') {
             human_time_diff(strtotime($registered), current_time('timestamp'))
         );
     }
-    
+
     // Return formatted date
     return date_i18n($format, strtotime($registered));
 }
@@ -459,13 +459,13 @@ function vh360_get_user_video_count($user_id) {
     if (!$user_id) {
         return 0;
     }
-    
+
     // Count videohub360 posts
     $videohub360_count = count_user_posts($user_id, 'videohub360', true);
-    
+
     // Count regular posts (if they're used for videos)
     $post_count = count_user_posts($user_id, 'post', true);
-    
+
     return $videohub360_count + $post_count;
 }
 
@@ -479,14 +479,14 @@ function vh360_get_user_social_links($user_id) {
     if (!$user_id) {
         return array();
     }
-    
+
     $social_links = array(
         'twitter' => get_user_meta($user_id, '_vh360_twitter', true),
         'facebook' => get_user_meta($user_id, '_vh360_facebook', true),
         'youtube' => get_user_meta($user_id, '_vh360_youtube', true),
         'instagram' => get_user_meta($user_id, '_vh360_instagram', true),
     );
-    
+
     // Filter out empty values
     return array_filter($social_links);
 }
@@ -501,10 +501,10 @@ function vh360_get_members($args = array()) {
     // Get members options for default values
     $members_options = get_option('vh360_members_options', array());
     $default_per_page = isset($members_options['per_page']) ? absint($members_options['per_page']) : 12;
-    $visible_roles = isset($members_options['visible_roles']) && is_array($members_options['visible_roles']) 
-        ? $members_options['visible_roles'] 
+    $visible_roles = isset($members_options['visible_roles']) && is_array($members_options['visible_roles'])
+        ? $members_options['visible_roles']
         : array();
-    
+
     $defaults = array(
         'role' => '',                    // Filter by role
         'orderby' => 'registered',       // registered, login, display_name, post_count
@@ -514,9 +514,9 @@ function vh360_get_members($args = array()) {
         'search' => '',                  // Search by display name or username
         'date_query' => array(),         // Date query for registration
     );
-    
+
     $args = wp_parse_args($args, $defaults);
-    
+
     // Build WP_User_Query args
     $query_args = array(
         'orderby' => $args['orderby'],
@@ -524,7 +524,7 @@ function vh360_get_members($args = array()) {
         'number' => absint($args['number']),
         'offset' => absint($args['offset']),
     );
-    
+
     // Add role filter - either from args or visible_roles from admin settings
     if (!empty($args['role'])) {
         $query_args['role'] = sanitize_text_field($args['role']);
@@ -532,20 +532,20 @@ function vh360_get_members($args = array()) {
         // Filter by visible roles from admin settings
         $query_args['role__in'] = array_map('sanitize_text_field', $visible_roles);
     }
-    
+
     // Add search
     if (!empty($args['search'])) {
         $query_args['search'] = '*' . sanitize_text_field($args['search']) . '*';
         $query_args['search_columns'] = array('user_login', 'user_email', 'display_name');
     }
-    
+
     // Add date query
     if (!empty($args['date_query'])) {
         $query_args['date_query'] = $args['date_query'];
     }
-    
+
     $user_query = new WP_User_Query($query_args);
-    
+
     return $user_query->get_results();
 }
 
@@ -557,13 +557,13 @@ function vh360_get_members($args = array()) {
  */
 function vh360_get_member_count($role = '') {
     $args = array('fields' => 'ID');
-    
+
     if (!empty($role)) {
         $args['role'] = sanitize_text_field($role);
     }
-    
+
     $user_query = new WP_User_Query($args);
-    
+
     return $user_query->get_total();
 }
 
@@ -577,9 +577,9 @@ function vh360_format_activity_time($timestamp) {
     if (!$timestamp) {
         return '';
     }
-    
+
     $time_diff = human_time_diff($timestamp, current_time('timestamp'));
-    
+
     return sprintf(
         /* translators: %s: Time difference */
         esc_html__('%s ago', 'videohub360-theme'),
@@ -600,7 +600,7 @@ function vh360_get_activity_icon($type) {
         'profile_update' => '<svg class="vh360-activity-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>',
         'milestone' => '<svg class="vh360-activity-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>',
     );
-    
+
     return isset($icons[$type]) ? $icons[$type] : '';
 }
 
@@ -614,7 +614,7 @@ function vh360_is_user_active($user_id) {
     if (!$user_id) {
         return false;
     }
-    
+
     // Check for recent posts
     $args = array(
         'author' => $user_id,
@@ -628,9 +628,9 @@ function vh360_is_user_active($user_id) {
             ),
         ),
     );
-    
+
     $query = new WP_Query($args);
-    
+
     return $query->have_posts();
 }
 
@@ -646,15 +646,15 @@ function vh360_get_user_activities($user_id, $limit = 20, $type = 'all') {
     if (!$user_id) {
         return array();
     }
-    
+
     // Check if plugin function exists
     if (function_exists('videohub360_get_user_activities')) {
         return videohub360_get_user_activities($user_id, $limit, $type);
     }
-    
+
     // Fallback: build activities from posts
     $activities = array();
-    
+
     $args = array(
         'author' => $user_id,
         'post_type' => array('videohub360', 'post'),
@@ -663,9 +663,9 @@ function vh360_get_user_activities($user_id, $limit = 20, $type = 'all') {
         'orderby' => 'date',
         'order' => 'DESC',
     );
-    
+
     $query = new WP_Query($args);
-    
+
     if ($query->have_posts()) {
         while ($query->have_posts()) {
             $query->the_post();
@@ -682,7 +682,7 @@ function vh360_get_user_activities($user_id, $limit = 20, $type = 'all') {
         }
         wp_reset_postdata();
     }
-    
+
     return $activities;
 }
 
@@ -697,30 +697,30 @@ function vh360_user_can_delete_video($video_id, $user_id = 0) {
     if (!$user_id) {
         $user_id = get_current_user_id();
     }
-    
+
     if (!$user_id || !$video_id) {
         return false;
     }
-    
+
     // Get video author
     $video_author = get_post_field('post_author', $video_id);
-    
+
     // User can delete their own videos
     if ($video_author == $user_id) {
         return true;
     }
-    
+
     // Admins can delete any video
     if (current_user_can('delete_posts')) {
         return true;
     }
-    
+
     return false;
 }
 
 /**
  * Get bulletins with optional filters
- * 
+ *
  * @param array $args Query arguments
  * @return array Array of bulletin posts
  */
@@ -733,17 +733,17 @@ function vh360_get_bulletins($args = array()) {
         'order' => 'DESC',
         'meta_key' => '_vh360_bulletin_sticky',
     );
-    
+
     $args = wp_parse_args($args, $defaults);
-    
+
     $bulletins = get_posts($args);
-    
+
     return $bulletins;
 }
 
 /**
  * Check if user has unread bulletins
- * 
+ *
  * @param int $user_id User ID (default current user)
  * @return bool True if has unread
  */
@@ -751,19 +751,19 @@ function vh360_has_unread_bulletins($user_id = 0) {
     if (!$user_id) {
         $user_id = get_current_user_id();
     }
-    
+
     if (!$user_id) {
         return false;
     }
-    
+
     $count = vh360_get_unread_bulletin_count($user_id);
-    
+
     return $count > 0;
 }
 
 /**
  * Get count of unread bulletins for user
- * 
+ *
  * @param int $user_id User ID (default current user)
  * @return int Count of unread bulletins
  */
@@ -771,25 +771,25 @@ function vh360_get_unread_bulletin_count($user_id = 0) {
     if (!$user_id) {
         $user_id = get_current_user_id();
     }
-    
+
     if (!$user_id) {
         return 0;
     }
-    
+
     // Get read and dismissed bulletins
     $read_bulletins = get_user_meta($user_id, '_vh360_read_bulletins', true);
     $dismissed_bulletins = get_user_meta($user_id, '_vh360_dismissed_bulletins', true);
-    
+
     if (!is_array($read_bulletins)) {
         $read_bulletins = array();
     }
     if (!is_array($dismissed_bulletins)) {
         $dismissed_bulletins = array();
     }
-    
+
     // Combine read and dismissed
     $exclude_ids = array_merge($read_bulletins, $dismissed_bulletins);
-    
+
     // Build efficient query args
     $args = array(
         'post_type' => 'vh360_bulletin',
@@ -810,14 +810,14 @@ function vh360_get_unread_bulletin_count($user_id = 0) {
             )
         )
     );
-    
+
     // Exclude already read/dismissed
     if (!empty($exclude_ids)) {
         $args['post__not_in'] = $exclude_ids;
     }
-    
+
     $bulletin_ids = get_posts($args);
-    
+
     // Filter by user visibility
     $unread_count = 0;
     foreach ($bulletin_ids as $bulletin_id) {
@@ -825,13 +825,13 @@ function vh360_get_unread_bulletin_count($user_id = 0) {
             $unread_count++;
         }
     }
-    
+
     return $unread_count;
 }
 
 /**
  * Check if bulletin is read by user
- * 
+ *
  * @param int $bulletin_id Bulletin post ID
  * @param int $user_id User ID (default current user)
  * @return bool True if read
@@ -840,23 +840,23 @@ function vh360_is_bulletin_read($bulletin_id, $user_id = 0) {
     if (!$user_id) {
         $user_id = get_current_user_id();
     }
-    
+
     if (!$user_id || !$bulletin_id) {
         return false;
     }
-    
+
     $read_bulletins = get_user_meta($user_id, '_vh360_read_bulletins', true);
-    
+
     if (!is_array($read_bulletins)) {
         $read_bulletins = array();
     }
-    
+
     return in_array($bulletin_id, $read_bulletins);
 }
 
 /**
  * Mark bulletin as read for user
- * 
+ *
  * @param int $bulletin_id Bulletin post ID
  * @param int $user_id User ID (default current user)
  * @return bool Success
@@ -865,28 +865,28 @@ function vh360_mark_bulletin_read($bulletin_id, $user_id = 0) {
     if (!$user_id) {
         $user_id = get_current_user_id();
     }
-    
+
     if (!$user_id || !$bulletin_id) {
         return false;
     }
-    
+
     $read_bulletins = get_user_meta($user_id, '_vh360_read_bulletins', true);
-    
+
     if (!is_array($read_bulletins)) {
         $read_bulletins = array();
     }
-    
+
     if (!in_array($bulletin_id, $read_bulletins)) {
         $read_bulletins[] = $bulletin_id;
         return update_user_meta($user_id, '_vh360_read_bulletins', array_unique($read_bulletins));
     }
-    
+
     return true;
 }
 
 /**
  * Dismiss bulletin for user (hide permanently)
- * 
+ *
  * @param int $bulletin_id Bulletin post ID
  * @param int $user_id User ID (default current user)
  * @return bool Success
@@ -895,31 +895,31 @@ function vh360_dismiss_bulletin($bulletin_id, $user_id = 0) {
     if (!$user_id) {
         $user_id = get_current_user_id();
     }
-    
+
     if (!$user_id || !$bulletin_id) {
         return false;
     }
-    
+
     // Also mark as read when dismissing
     vh360_mark_bulletin_read($bulletin_id, $user_id);
-    
+
     $dismissed_bulletins = get_user_meta($user_id, '_vh360_dismissed_bulletins', true);
-    
+
     if (!is_array($dismissed_bulletins)) {
         $dismissed_bulletins = array();
     }
-    
+
     if (!in_array($bulletin_id, $dismissed_bulletins)) {
         $dismissed_bulletins[] = $bulletin_id;
         return update_user_meta($user_id, '_vh360_dismissed_bulletins', array_unique($dismissed_bulletins));
     }
-    
+
     return true;
 }
 
 /**
  * Check if bulletin is expired
- * 
+ *
  * @param int $bulletin_id Bulletin post ID
  * @return bool True if expired
  */
@@ -927,19 +927,19 @@ function vh360_is_bulletin_expired($bulletin_id) {
     if (!$bulletin_id) {
         return false;
     }
-    
+
     $expiry_date = get_post_meta($bulletin_id, '_vh360_bulletin_expiry_date', true);
-    
+
     if (!$expiry_date) {
         return false;
     }
-    
+
     return $expiry_date < current_time('timestamp');
 }
 
 /**
  * Get active bulletins (not expired, not dismissed by user)
- * 
+ *
  * @param string $type Filter by type (site_wide, urgent, etc)
  * @param int $user_id User ID for dismissed check
  * @return array Active bulletins
@@ -948,7 +948,7 @@ function vh360_get_active_bulletins($type = 'all', $user_id = 0) {
     if (!$user_id) {
         $user_id = get_current_user_id();
     }
-    
+
     $args = array(
         'post_type' => 'vh360_bulletin',
         'post_status' => 'publish',
@@ -957,7 +957,7 @@ function vh360_get_active_bulletins($type = 'all', $user_id = 0) {
         'order' => 'DESC',
         'meta_key' => '_vh360_bulletin_sticky',
     );
-    
+
     // Filter by priority if type is urgent or important
     if ($type === 'urgent' || $type === 'important') {
         $args['meta_query'] = array(
@@ -968,10 +968,10 @@ function vh360_get_active_bulletins($type = 'all', $user_id = 0) {
             )
         );
     }
-    
+
     $bulletins = get_posts($args);
     $active_bulletins = array();
-    
+
     // Get user's dismissed bulletins
     $dismissed_bulletins = array();
     if ($user_id) {
@@ -980,30 +980,30 @@ function vh360_get_active_bulletins($type = 'all', $user_id = 0) {
             $dismissed_bulletins = array();
         }
     }
-    
+
     foreach ($bulletins as $bulletin) {
         // Skip if expired
         if (vh360_is_bulletin_expired($bulletin->ID)) {
             continue;
         }
-        
+
         // Skip if dismissed by user
         if ($user_id && in_array($bulletin->ID, $dismissed_bulletins)) {
             continue;
         }
-        
+
         // Check if user can see this bulletin
         if ($user_id && !vh360_can_user_see_bulletin($bulletin->ID, $user_id)) {
             continue;
         }
-        
+
         // When filtering for urgent bulletins (banner display), check show_banner flag
         if ($type === 'urgent') {
             $show_banner = get_post_meta($bulletin->ID, '_vh360_bulletin_show_banner', true);
             $bulletin_type = get_post_meta($bulletin->ID, '_vh360_bulletin_type', true);
             $priority = get_post_meta($bulletin->ID, '_vh360_bulletin_priority', true);
-            
-            // Backward compatibility: if show_banner meta doesn't exist, 
+
+            // Backward compatibility: if show_banner meta doesn't exist,
             // treat as enabled for legacy urgent + site_wide bulletins
             if ($show_banner === '') {
                 // Legacy bulletin - only show as banner if urgent AND site_wide
@@ -1019,27 +1019,27 @@ function vh360_get_active_bulletins($type = 'all', $user_id = 0) {
             }
             // If show_banner === '1', bulletin is explicitly enabled for banner display
         }
-        
+
         $active_bulletins[] = $bulletin;
     }
-    
+
     return $active_bulletins;
 }
 
 /**
  * Get urgent bulletins for banner display
- * 
+ *
  * @return array Urgent, non-expired bulletins
  */
 function vh360_get_urgent_bulletins() {
     $user_id = get_current_user_id();
-    
+
     return vh360_get_active_bulletins('urgent', $user_id);
 }
 
 /**
  * Check if user can see bulletin (based on targeting)
- * 
+ *
  * @param int $bulletin_id Bulletin post ID
  * @param int $user_id User ID (default current user)
  * @return bool True if user can see
@@ -1048,24 +1048,24 @@ function vh360_can_user_see_bulletin($bulletin_id, $user_id = 0) {
     if (!$user_id) {
         $user_id = get_current_user_id();
     }
-    
+
     if (!$bulletin_id) {
         return false;
     }
-    
+
     $type = get_post_meta($bulletin_id, '_vh360_bulletin_type', true);
     $target = get_post_meta($bulletin_id, '_vh360_bulletin_target', true);
-    
+
     // Site-wide bulletins are visible to everyone
     if ($type === 'site_wide' || !$type) {
         return true;
     }
-    
+
     // Not logged in users can only see site-wide bulletins
     if (!$user_id) {
         return false;
     }
-    
+
     // Role-based bulletins
     if ($type === 'role' && $target) {
         $user = get_userdata($user_id);
@@ -1074,12 +1074,12 @@ function vh360_can_user_see_bulletin($bulletin_id, $user_id = 0) {
         }
         return false;
     }
-    
+
     // User-specific bulletins
     if ($type === 'user' && $target) {
         return absint($target) === $user_id;
     }
-    
+
     // Group-based bulletins (reserved for future implementation when groups feature is added)
     if ($type === 'group' && $target) {
         // Check if user is member of group
@@ -1090,13 +1090,13 @@ function vh360_can_user_see_bulletin($bulletin_id, $user_id = 0) {
         }
         return false;
     }
-    
+
     return false;
 }
 
 /**
  * Get bulletin priority label
- * 
+ *
  * @param int $bulletin_id Bulletin post ID
  * @return string Priority (normal|important|urgent)
  */
@@ -1104,15 +1104,15 @@ function vh360_get_bulletin_priority($bulletin_id) {
     if (!$bulletin_id) {
         return 'normal';
     }
-    
+
     $priority = get_post_meta($bulletin_id, '_vh360_bulletin_priority', true);
-    
+
     return $priority ? $priority : 'normal';
 }
 
 /**
  * Get bulletin type
- * 
+ *
  * @param int $bulletin_id Bulletin post ID
  * @return string Type (site_wide|group|role|user)
  */
@@ -1120,15 +1120,15 @@ function vh360_get_bulletin_type($bulletin_id) {
     if (!$bulletin_id) {
         return 'site_wide';
     }
-    
+
     $type = get_post_meta($bulletin_id, '_vh360_bulletin_type', true);
-    
+
     return $type ? $type : 'site_wide';
 }
 
 /**
  * Get author template mode (profile or channel)
- * 
+ *
  * @return string 'profile' or 'channel'
  */
 function vh360_get_author_template_mode() {
@@ -1137,7 +1137,7 @@ function vh360_get_author_template_mode() {
 
 /**
  * Check if channel has playlists (series)
- * 
+ *
  * @param int $author_id Author ID
  * @return bool True if author has videos with series taxonomy
  */
@@ -1145,7 +1145,7 @@ function vh360_channel_has_playlists($author_id) {
     if (!$author_id) {
         return false;
     }
-    
+
     $videos = get_posts(array(
         'author' => $author_id,
         'post_type' => 'videohub360',
@@ -1163,7 +1163,7 @@ function vh360_channel_has_playlists($author_id) {
             array('key' => '_vh360_context', 'value' => 'live_room', 'compare' => '!=')
         )
     ));
-    
+
     return !empty($videos);
 }
 
@@ -1186,22 +1186,22 @@ function vh360_show_community_menu() {
     if ($nav_style !== 'community') {
         return false;
     }
-    
+
     // Layer 2: Check logged-in status if Customizer requires it
     $show_to_logged_out = get_theme_mod('vh360_community_menu_logged_out', 0);
     if (!$show_to_logged_out && !is_user_logged_in()) {
         return false;
     }
-    
+
     // Layer 3: Template exclusions based on Customizer settings
-    
+
     // Check Dashboard template exclusion
     if (get_theme_mod('vh360_community_menu_hide_dashboard', 1)) {
         if (is_page_template('template-dashboard.php') || is_page_template('templates/dashboard.php')) {
             return false;
         }
     }
-    
+
     // Check Auth pages exclusion
     if (get_theme_mod('vh360_community_menu_hide_auth', 1)) {
         // Custom auth templates
@@ -1211,37 +1211,37 @@ function vh360_show_community_menu() {
             'template-lost-password.php',
             'template-reset-password.php',
         );
-        
+
         foreach ($auth_templates as $template) {
             if (is_page_template($template)) {
                 return false;
             }
         }
     }
-    
+
     // Layer 4: WooCommerce account pages (if WooCommerce is active)
     if (function_exists('is_account_page') && is_account_page()) {
         return false;
     }
-    
+
     // Layer 5: WordPress core login page
     // Check if we're on wp-login.php
     if (isset($GLOBALS['pagenow']) && $GLOBALS['pagenow'] === 'wp-login.php') {
         return false;
     }
-    
+
     // Additional check for wp-login.php via PHP_SELF
     if (isset($_SERVER['PHP_SELF']) && strpos($_SERVER['PHP_SELF'], 'wp-login.php') !== false) {
         return false;
     }
-    
+
     // Layer 6: Custom page IDs (future-proofing)
     // This allows site admins to exclude specific pages via filter
     $excluded_page_ids = apply_filters('vh360_community_menu_excluded_pages', array());
     if (is_page() && in_array(get_the_ID(), $excluded_page_ids)) {
         return false;
     }
-    
+
     return true;
 }
 
@@ -1263,9 +1263,9 @@ function vh360_get_author_pagination_args($author_id, $current_page, $max_pages,
     // not rebuild from get_author_posts_url() which can cause 404s
     // Using get_pagenum_link() ensures we work with WordPress's rewrite rules
     // Note: We don't set 'format' - let WordPress use the correct structure from get_pagenum_link()
-    
+
     $big = 999999999; // Unlikely page number
-    
+
     $pagination_args = array(
         'base'      => str_replace($big, '%#%', esc_url(get_pagenum_link($big))),
         'current'   => $current_page,
@@ -1276,7 +1276,7 @@ function vh360_get_author_pagination_args($author_id, $current_page, $max_pages,
         'end_size'  => 3,
         'mid_size'  => 2,
     );
-    
+
     // Preserve current profile UI state (tabs/filters/sort) unless explicitly overridden.
     // This ensures pagination links keep users in the same profile view.
     $preserve = array('tab', 'filter', 'sort');
@@ -1293,7 +1293,7 @@ function vh360_get_author_pagination_args($author_id, $current_page, $max_pages,
     if (!empty($query_args)) {
         $pagination_args['add_args'] = $query_args;
     }
-    
+
     return $pagination_args;
 }
 
@@ -1315,9 +1315,9 @@ function vh360_get_current_page() {
  *
  * Returns true for Single Video pages and Live Room pages where we want
  * the Community Menu to default to icons-only mode to maximize video/player width.
- * 
- * Both page types are served as is_singular('videohub360'). Live Room pages are 
- * identified by post meta _vh360_context === 'live_room' but the template switch 
+ *
+ * Both page types are served as is_singular('videohub360'). Live Room pages are
+ * identified by post meta _vh360_context === 'live_room' but the template switch
  * happens via single_template filter, so they're still singular videohub360 posts.
  *
  * @return bool True if compact mode should be forced, false otherwise.
@@ -1344,11 +1344,11 @@ function vh360_get_dashboard_page_url() {
             'number'     => 1,
         )
     );
-    
+
     if ( ! empty( $dashboard_page ) ) {
         return get_permalink( $dashboard_page[0]->ID );
     }
-    
+
     return home_url( '/dashboard/' );
 }
 
@@ -1368,11 +1368,11 @@ function vh360_get_activity_page_url() {
             'number'     => 1,
         )
     );
-    
+
     if ( ! empty( $activity_page ) ) {
         return get_permalink( $activity_page[0]->ID );
     }
-    
+
     return home_url( '/activity/' );
 }
 
@@ -1386,10 +1386,10 @@ function vh360_get_activity_page_url() {
  */
 function vh360_get_members_page_url() {
     $members_page = get_page_by_path( 'members' );
-    
+
     if ( $members_page ) {
         return get_permalink( $members_page->ID );
     }
-    
+
     return home_url( '/members/' );
 }

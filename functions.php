@@ -39,11 +39,11 @@ if (!function_exists('vh360_debug_log')) {
         if (!defined('WP_DEBUG') || !WP_DEBUG || !function_exists('error_log')) {
             return;
         }
-        
+
         if (!empty($context)) {
             $message .= ': ' . print_r($context, true);
         }
-        
+
         error_log($message);
     }
 }
@@ -54,7 +54,7 @@ if (!function_exists('vh360_debug_log')) {
 function videohub360_theme_setup() {
     // Load theme textdomain for translation support
     load_theme_textdomain('videohub360-theme', get_template_directory() . '/languages');
-    
+
     // Add default posts and comments RSS feed links to head
     add_theme_support('automatic-feed-links');
 
@@ -63,11 +63,11 @@ function videohub360_theme_setup() {
 
     // Enable support for Post Thumbnails
     add_theme_support('post-thumbnails');
-    
+
     // Set custom thumbnail sizes
     add_image_size('videohub360-video-thumb', 480, 270, true); // 16:9 ratio
     add_image_size('videohub360-video-large', 1280, 720, true);
-    
+
     // Add new image sizes for upcoming features
     add_image_size('vh360-profile-avatar', 300, 300, true);
     add_image_size('vh360-group-cover', 1200, 400, true);
@@ -149,14 +149,14 @@ function vh360_register_professional_role() {
     if (get_role('vh360_professional')) {
         return;
     }
-    
+
     // Get subscriber capabilities as a base
     $subscriber = get_role('subscriber');
     $capabilities = $subscriber ? $subscriber->capabilities : array('read' => true);
-    
+
     // Add event creation capability
     $capabilities['vh360_create_events'] = true;
-    
+
     // Register the professional role
     add_role(
         'vh360_professional',
@@ -175,10 +175,10 @@ add_action('init', 'vh360_register_professional_role');
 add_action('after_switch_theme', function () {
     // Default platform behavior: require login to comment
     update_option('comment_registration', 1);
-    
+
     // Keep WP's guest-comment requirements consistent if it's ever enabled later
     update_option('require_name_email', 1);
-    
+
     // Register professional role on theme activation
     vh360_register_professional_role();
 });
@@ -192,7 +192,7 @@ add_action('after_switch_theme', function () {
 function vh360_community_menu_body_class($classes) {
     if (vh360_show_community_menu()) {
         $classes[] = 'has-community-menu';
-        
+
         // Add compact mode class if enabled globally OR forced for specific pages
         if (get_theme_mod('vh360_community_menu_compact', 0) || vh360_force_compact_community_menu()) {
             $classes[] = 'community-menu-compact';
@@ -358,10 +358,10 @@ function videohub360_theme_scripts() {
     }
 
     /*
-     * Additional UI enhancements for the activity feed.  
+     * Additional UI enhancements for the activity feed.
      *
      * This stylesheet adds the Explore/My Feed tabs, responsive grid layout for the feed
-     * and sidebar, and styles for the trending topics and recommended profiles widgets.  
+     * and sidebar, and styles for the trending topics and recommended profiles widgets.
      */
     wp_enqueue_style(
         'vh360-feed-ui-enhancements',
@@ -369,7 +369,7 @@ function videohub360_theme_scripts() {
         array(),
         VH360_THEME_VERSION
     );
-    
+
     // Live Room stylesheet (conditional - only on Live Room pages)
     global $post;
     if ($post && get_post_type($post) === 'videohub360') {
@@ -383,7 +383,7 @@ function videohub360_theme_scripts() {
             );
         }
     }
-    
+
     // Enqueue connections page styles
     if (is_page_template('template-connections.php')) {
         wp_enqueue_style(
@@ -399,7 +399,7 @@ function videohub360_theme_scripts() {
             VH360_THEME_VERSION
         );
     }
-    
+
     // Enqueue follow system script
     wp_enqueue_script(
         'vh360-follow-system',
@@ -408,14 +408,14 @@ function videohub360_theme_scripts() {
         VH360_THEME_VERSION,
         true
     );
-    
+
     wp_localize_script('vh360-follow-system', 'vh360Follow', array(
         'ajaxUrl' => admin_url('admin-ajax.php'),
         'followText' => __('Follow', 'videohub360-theme'),
         'unfollowText' => __('Unfollow', 'videohub360-theme'),
         'errorText' => __('An error occurred. Please try again.', 'videohub360-theme'),
     ));
-    
+
     // Enqueue notification script for logged-in users
     if (is_user_logged_in()) {
         // Mobile bottom navigation + user drawer (logged-in only)
@@ -440,7 +440,7 @@ function videohub360_theme_scripts() {
             array('videohub360-theme-style'),
             VH360_THEME_VERSION
         );
-        
+
         wp_enqueue_script(
             'vh360-notifications',
             VH360_THEME_URI . '/assets/js/notifications.js',
@@ -448,7 +448,7 @@ function videohub360_theme_scripts() {
             VH360_THEME_VERSION,
             true
         );
-        
+
         wp_localize_script('vh360-notifications', 'vh360Notifications', array(
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('vh360_notifications'),
@@ -461,7 +461,7 @@ function videohub360_theme_scripts() {
                 'ago' => __('ago', 'videohub360-theme'),
             ),
         ));
-        
+
         // Enqueue direct messages on dashboard page
         if (is_page_template('template-dashboard.php')) {
             wp_enqueue_style(
@@ -470,7 +470,7 @@ function videohub360_theme_scripts() {
                 array('videohub360-theme-style'),
                 VH360_THEME_VERSION
             );
-            
+
             wp_enqueue_script(
                 'vh360-direct-messages',
                 VH360_THEME_URI . '/assets/js/direct-messages.js',
@@ -478,7 +478,7 @@ function videohub360_theme_scripts() {
                 VH360_THEME_VERSION,
                 true
             );
-            
+
             wp_localize_script('vh360-direct-messages', 'vh360DirectMessages', array(
                 'ajaxUrl' => admin_url('admin-ajax.php'),
                 'nonce' => wp_create_nonce('vh360_dm_nonce'),
@@ -571,7 +571,7 @@ function vh360_enqueue_header_assets() {
         array('videohub360-theme-style'),
         VH360_THEME_VERSION
     );
-    
+
     // Enqueue header navigation JavaScript
     wp_enqueue_script(
         'vh360-header-navigation',
@@ -580,7 +580,7 @@ function vh360_enqueue_header_assets() {
         VH360_THEME_VERSION,
         true
     );
-    
+
     // Enqueue centered search bar assets if search is enabled
     $show_search = get_theme_mod('vh360_show_search_icon', true);
     if ($show_search) {
@@ -590,7 +590,7 @@ function vh360_enqueue_header_assets() {
             array('videohub360-theme-style'),
             VH360_THEME_VERSION
         );
-        
+
         wp_enqueue_script(
             'vh360-search-bar-centered',
             VH360_THEME_URI . '/assets/js/search-bar-centered.js',
@@ -598,7 +598,7 @@ function vh360_enqueue_header_assets() {
             VH360_THEME_VERSION,
             true
         );
-        
+
         // Localize search bar script
         wp_localize_script('vh360-search-bar-centered', 'vh360SearchBar', array(
             'ajaxUrl' => admin_url('admin-ajax.php'),
@@ -629,9 +629,9 @@ function vh360_enqueue_community_menu_toggle() {
     if (!vh360_show_community_menu()) {
         return;
     }
-    
+
     $is_compact = (bool) get_theme_mod('vh360_community_menu_compact', 0) || vh360_force_compact_community_menu();
-    
+
     if (!$is_compact) {
         return;
     }
@@ -657,7 +657,7 @@ add_action('wp_enqueue_scripts', 'vh360_enqueue_community_menu_toggle');
  */
 function vh360_register_gallery_assets() {
     $settings = vh360_get_gallery_settings();
-    
+
     // Register gallery CSS
     wp_register_style(
         'vh360-gallery',
@@ -665,7 +665,7 @@ function vh360_register_gallery_assets() {
         array(),
         VH360_THEME_VERSION
     );
-    
+
     // Register gallery dashboard CSS
     wp_register_style(
         'vh360-gallery-dashboard',
@@ -673,7 +673,7 @@ function vh360_register_gallery_assets() {
         array(),
         VH360_THEME_VERSION
     );
-    
+
     // Register Dropzone.js
     wp_register_script(
         'dropzone',
@@ -682,14 +682,14 @@ function vh360_register_gallery_assets() {
         '5.9.3',
         true
     );
-    
+
     wp_register_style(
         'dropzone',
         'https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.css',
         array(),
         '5.9.3'
     );
-    
+
     // Register Sortable.js
     wp_register_script(
         'sortablejs',
@@ -698,7 +698,7 @@ function vh360_register_gallery_assets() {
         '1.15.0',
         true
     );
-    
+
     // Register main gallery script (for frontend gallery display)
     wp_register_script(
         'vh360-gallery-script',
@@ -707,7 +707,7 @@ function vh360_register_gallery_assets() {
         VH360_THEME_VERSION,
         true
     );
-    
+
     // Register gallery lightbox integration (custom lightbox, no external dependencies)
     wp_register_script(
         'vh360-gallery-photoswipe',
@@ -716,7 +716,7 @@ function vh360_register_gallery_assets() {
         VH360_THEME_VERSION,
         true
     );
-    
+
     // Register gallery dashboard script
     wp_register_script(
         'vh360-gallery-dashboard',
@@ -725,11 +725,11 @@ function vh360_register_gallery_assets() {
         VH360_THEME_VERSION,
         true
     );
-    
+
     // Get allowed file types for Dropzone
     $allowed_types = isset($settings['allowed_image_types']) ? $settings['allowed_image_types'] : array('jpg', 'jpeg', 'png', 'gif', 'webp');
     $accepted_files = 'image/' . implode(',image/', $allowed_types);
-    
+
     // Localize gallery script
     wp_localize_script('vh360-gallery-dashboard', 'vh360Gallery', array(
         'ajaxUrl'        => admin_url('admin-ajax.php'),
@@ -822,7 +822,7 @@ function videohub360_theme_widgets_init() {
         'before_title'  => '<h2 class="widget-title">',
         'after_title'   => '</h2>',
     ));
-    
+
     // Page Sidebar
     register_sidebar(array(
         'name'          => esc_html__('Page Sidebar', 'videohub360-theme'),
@@ -833,7 +833,7 @@ function videohub360_theme_widgets_init() {
         'before_title'  => '<h2 class="widget-title">',
         'after_title'   => '</h2>',
     ));
-    
+
     // Post Sidebar
     register_sidebar(array(
         'name'          => esc_html__('Post Sidebar', 'videohub360-theme'),
@@ -844,7 +844,7 @@ function videohub360_theme_widgets_init() {
         'before_title'  => '<h2 class="widget-title">',
         'after_title'   => '</h2>',
     ));
-    
+
     // Product Sidebar (WooCommerce)
     if (class_exists('WooCommerce')) {
         register_sidebar(array(
@@ -870,7 +870,7 @@ function videohub360_theme_widgets_init() {
             'after_title'   => '</h2>',
         ));
     }
-    
+
     // Activity Feed Sidebar widget area
     register_sidebar(array(
         'name'          => esc_html__('Activity Feed Sidebar', 'videohub360-theme'),
@@ -881,7 +881,7 @@ function videohub360_theme_widgets_init() {
         'before_title'  => '<h3 class="vh360-widget-title">',
         'after_title'   => '</h3>',
     ));
-    
+
     // Activity Feed Ad Slot widget area
     register_sidebar(array(
         'name'          => esc_html__('Activity Feed Ad Slot', 'videohub360-theme'),
@@ -1103,23 +1103,23 @@ function vh360_exclude_appointment_events_from_archives($query) {
     if (is_admin() || !$query->is_main_query()) {
         return;
     }
-    
+
     // Only apply to vh360_event post type archives
     if (!is_post_type_archive('vh360_event') && !($query->is_tax() && $query->get('post_type') === 'vh360_event')) {
         return;
     }
-    
+
     // Don't apply if we're viewing a specific author's business profile (handled separately in business header)
     if (is_author()) {
         return;
     }
-    
+
     // Exclude availability and block kind events from public archives
     $meta_query = $query->get('meta_query');
     if (!is_array($meta_query)) {
         $meta_query = array();
     }
-    
+
     $meta_query[] = array(
         'relation' => 'OR',
         array(
@@ -1132,7 +1132,7 @@ function vh360_exclude_appointment_events_from_archives($query) {
             'compare' => '='
         )
     );
-    
+
     $query->set('meta_query', $meta_query);
 }
 add_action('pre_get_posts', 'vh360_exclude_appointment_events_from_archives');
@@ -1180,13 +1180,13 @@ if (!function_exists('vh360_get_video_upload_settings')) {
 if (is_admin()) {
     require_once VH360_THEME_DIR . '/includes/admin/class-vh360-theme-admin.php';
     VH360_Theme_Admin::get_instance();
-    
+
     // Video upload settings page
     require_once VH360_THEME_DIR . '/includes/admin/video-upload-settings.php';
-    
+
     // User account type and business profile fields
     require_once VH360_THEME_DIR . '/includes/admin/user-account-type.php';
-    
+
     // Menu meta boxes for Dashboard and Mobile Bottom Nav items
     require_once VH360_THEME_DIR . '/includes/admin/nav-menus-vh360-meta-boxes.php';
 }
@@ -1201,7 +1201,7 @@ if (is_admin()) {
 
 require_once VH360_THEME_DIR . '/includes/follow-system.php';
 require_once VH360_THEME_DIR . '/includes/trending.php';
-// Load recommended user helpers for the sidebar widget.  
+// Load recommended user helpers for the sidebar widget.
 // This file defines functions such as `vh360_get_recommended_users()` to suggest profiles
 // to users based on their following behaviour and popular accounts.
 require_once VH360_THEME_DIR . '/includes/recommended.php';
@@ -1415,12 +1415,12 @@ function videohub360_theme_body_classes($classes) {
     // Add auth page classes
     if (function_exists('vh360_is_auth_page') && vh360_is_auth_page()) {
         $classes[] = 'is-auth-page';
-        
+
         // Add header-hidden class if setting is enabled
         if (get_theme_mod('vh360_hide_header_on_auth_pages', 1)) {
             $classes[] = 'vh360-auth-hide-header';
         }
-        
+
         // Add footer-hidden class if setting is enabled
         if (get_theme_mod('vh360_hide_footer_on_auth_pages', 1)) {
             $classes[] = 'vh360-auth-hide-footer';
@@ -1491,7 +1491,7 @@ add_action('wp_enqueue_scripts', 'vh360_enqueue_widget_styles');
  */
 function videohub360_theme_custom_css() {
     $options = get_option('vh360_appearance_options', array());
-    
+
     if (!empty($options['custom_css'])) {
         echo '<style id="vh360-custom-css">' . "\n";
         echo wp_strip_all_tags($options['custom_css']) . "\n";
@@ -1823,7 +1823,7 @@ add_action('after_switch_theme', function () {
 
     // Use helper to get real dashboard URL
     $dashboard_url = vh360_get_dashboard_page_url();
-    
+
     $items = array(
         array('title' => 'Overview', 'url' => $dashboard_url . '#overview'),
         array('title' => 'Videos', 'url' => $dashboard_url . '#videos'),
@@ -2009,7 +2009,7 @@ add_action('wp_nav_menu_item_custom_fields', function($item_id, $item, $depth, $
             <?php echo esc_html__('Leave everything unchecked to show this item to everyone.', 'videohub360-theme'); ?>
         </em>
     </p>
-    
+
     <p class="description description-wide vh360-menu-icon-field">
         <label for="vh360-menu-icon-<?php echo esc_attr($item_id); ?>">
             <strong><?php echo esc_html__('Community Menu Icon', 'videohub360-theme'); ?></strong><br />
@@ -2017,9 +2017,9 @@ add_action('wp_nav_menu_item_custom_fields', function($item_id, $item, $depth, $
                 <?php echo esc_html__('Optional icon for Community Menu. Only displays when this item is used in the Community Menu location.', 'videohub360-theme'); ?>
             </span>
         </label>
-        <select 
+        <select
             id="vh360-menu-icon-<?php echo esc_attr($item_id); ?>"
-            name="vh360_menu_icon[<?php echo esc_attr($item_id); ?>]" 
+            name="vh360_menu_icon[<?php echo esc_attr($item_id); ?>]"
             style="width:100%; margin-top:6px;">
             <option value=""><?php echo esc_html__('— No Icon —', 'videohub360-theme'); ?></option>
             <?php
@@ -2070,19 +2070,19 @@ add_action('wp_update_nav_menu_item', function($menu_id, $menu_item_db_id, $args
     } else {
         delete_post_meta($menu_item_db_id, '_vh360_menu_visibility_roles');
     }
-    
+
     // Icon field
     $icon = '';
     if (isset($_POST['vh360_menu_icon'][$menu_item_db_id])) {
         $icon = sanitize_key($_POST['vh360_menu_icon'][$menu_item_db_id]);
-        
+
         // Validate against whitelist
         $allowed_icons = array_keys(vh360_cm_icon_choices());
         if (!empty($icon) && !in_array($icon, $allowed_icons, true)) {
             $icon = ''; // Invalid icon, clear it
         }
     }
-    
+
     if (!empty($icon)) {
         update_post_meta($menu_item_db_id, '_vh360_menu_icon', $icon);
     } else {
@@ -2449,7 +2449,7 @@ function vh360_custom_comments_template($template) {
             return $custom_template;
         }
     }
-    
+
     return $template;
 }
 
@@ -2460,13 +2460,13 @@ function vh360_custom_comments_template($template) {
 add_filter('comments_open', 'vh360_disable_wp_comments_for_community', 10, 2);
 function vh360_disable_wp_comments_for_community($open, $post_id) {
     $post = get_post($post_id);
-    
+
     // For community posts, return false to disable WP comments
     // (We use custom commenting system in activity feed)
     if ($post && $post->post_type === 'vh360_post') {
         return false;
     }
-    
+
     return $open;
 }
 
