@@ -52,7 +52,6 @@ function vh360_get_dashboard_menu_item_definitions() {
     $registry = vh360_get_dashboard_tabs_registry();
 
     $definitions = array();
-    $index = 0;
 
     foreach ( $registry as $tab_id => $tab_config ) {
         // Get label (use callback if available, otherwise use default label)
@@ -66,8 +65,6 @@ function vh360_get_dashboard_menu_item_definitions() {
             'title' => $label,
             'url'   => $dashboard_url . '#' . $tab_id,
         );
-
-        $index++;
     }
 
     /**

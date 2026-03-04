@@ -101,7 +101,7 @@ $stats = vh360_get_user_stats($current_user_id);
                         endif;
                         
                         if ( $tab_id === 'messages' ) :
-                            $unread_dm = function_exists( 'vh360_get_unread_dm_count' ) ? vh360_get_unread_dm_count( $current_user_id ) : 0;
+                            $unread_dm = function_exists( 'vh360_get_unread_messages_count' ) ? vh360_get_unread_messages_count( $current_user_id ) : 0;
                             if ( $unread_dm > 0 ) :
                         ?>
                             <span class="vh360-dashboard-nav-badge"><?php echo esc_html( $unread_dm > 99 ? '99+' : $unread_dm ); ?></span>
