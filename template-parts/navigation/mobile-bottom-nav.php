@@ -73,18 +73,11 @@ if ( has_nav_menu( 'vh360_mobile_bottom' ) ) {
             <?php
             // Safe fallback (matches your preferred default set).
             $user_id      = get_current_user_id();
-            $activity_url = home_url( '/activity/' );
-            $members_url  = home_url( '/members/' );
+            $activity_url = vh360_get_activity_page_url();
+            $members_url  = vh360_get_members_page_url();
 
-            // Find dashboard page URL (used for notifications tab).
-            $dashboard_page = get_pages(
-                array(
-                    'meta_key'   => '_wp_page_template',
-                    'meta_value' => 'template-dashboard.php',
-                    'number'     => 1,
-                )
-            );
-            $dashboard_url     = ! empty( $dashboard_page ) ? get_permalink( $dashboard_page[0]->ID ) : home_url( '/' );
+            // Use helper to get dashboard page URL (used for notifications tab).
+            $dashboard_url     = vh360_get_dashboard_page_url();
             $notifications_url = add_query_arg( 'tab', 'notifications', $dashboard_url );
             $unread_count      = function_exists( 'vh360_get_unread_notification_count' ) ? (int) vh360_get_unread_notification_count( $user_id ) : 0;
 

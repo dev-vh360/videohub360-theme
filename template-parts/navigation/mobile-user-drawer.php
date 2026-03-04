@@ -22,16 +22,8 @@ $user      = wp_get_current_user();
 $avatar    = get_avatar_url( $user_id, array( 'size' => 96 ) );
 $profile   = get_author_posts_url( $user_id );
 
-// Find dashboard page URL
-$dashboard_page = get_pages(
-    array(
-        'meta_key'   => '_wp_page_template',
-        'meta_value' => 'template-dashboard.php',
-        'number'     => 1,
-    )
-);
-
-$dashboard_url = ! empty( $dashboard_page ) ? get_permalink( $dashboard_page[0]->ID ) : home_url( '/' );
+// Use helper to get dashboard page URL
+$dashboard_url = vh360_get_dashboard_page_url();
 
 $dashboard_links = array(
     'overview'      => __( 'Dashboard', 'videohub360-theme' ),

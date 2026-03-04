@@ -1326,3 +1326,70 @@ function vh360_get_current_page() {
 function vh360_force_compact_community_menu() {
     return is_singular('videohub360');
 }
+
+/**
+ * Get Dashboard Page URL
+ *
+ * Discovers the actual dashboard page by querying for template-dashboard.php.
+ * This ensures menus and fallbacks use the real URL, even if the page slug differs.
+ *
+ * @return string Dashboard page URL.
+ * @since 1.0.0
+ */
+function vh360_get_dashboard_page_url() {
+    $dashboard_page = get_pages(
+        array(
+            'meta_key'   => '_wp_page_template',
+            'meta_value' => 'template-dashboard.php',
+            'number'     => 1,
+        )
+    );
+    
+    if (!empty($dashboard_page)) {
+        return get_permalink($dashboard_page[0]->ID);
+    }
+    
+    return home_url('/dashboard/');
+}
+
+/**
+ * Get Activity Feed Page URL
+ *
+ * Discovers the actual activity feed page by querying for template-activity-feed.php.
+ *
+ * @return string Activity feed page URL.
+ * @since 1.0.0
+ */
+function vh360_get_activity_page_url() {
+    $activity_page = get_pages(
+        array(
+            'meta_key'   => '_wp_page_template',
+            'meta_value' => 'template-activity-feed.php',
+            'number'     => 1,
+        )
+    );
+    
+    if (!empty($activity_page)) {
+        return get_permalink($activity_page[0]->ID);
+    }
+    
+    return home_url('/activity/');
+}
+
+/**
+ * Get Members Directory Page URL
+ *
+ * Discovers the members page by slug 'members'.
+ *
+ * @return string Members page URL.
+ * @since 1.0.0
+ */
+function vh360_get_members_page_url() {
+    $members_page = get_page_by_path('members');
+    
+    if ($members_page) {
+        return get_permalink($members_page->ID);
+    }
+    
+    return home_url('/members/');
+}

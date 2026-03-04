@@ -1186,6 +1186,9 @@ if (is_admin()) {
     
     // User account type and business profile fields
     require_once VH360_THEME_DIR . '/includes/admin/user-account-type.php';
+    
+    // Menu meta boxes for Dashboard and Mobile Bottom Nav items
+    require_once VH360_THEME_DIR . '/includes/admin/nav-menus-vh360-meta-boxes.php';
 }
 
 // -----------------------------------------------------------------------------
@@ -1818,18 +1821,21 @@ add_action('after_switch_theme', function () {
         return;
     }
 
+    // Use helper to get real dashboard URL
+    $dashboard_url = vh360_get_dashboard_page_url();
+    
     $items = array(
-        array('title' => 'Overview', 'url' => home_url('/dashboard/#overview')),
-        array('title' => 'Videos', 'url' => home_url('/dashboard/#videos')),
-        array('title' => 'Live Rooms', 'url' => home_url('/dashboard/#live-rooms')),
-        array('title' => 'Messages', 'url' => home_url('/dashboard/#messages')),
-        array('title' => 'Notifications', 'url' => home_url('/dashboard/#notifications')),
-        array('title' => 'Create Post', 'url' => home_url('/dashboard/#create-post')),
-        array('title' => 'Profile', 'url' => home_url('/dashboard/#profile')),
-        array('title' => 'Galleries', 'url' => home_url('/dashboard/#galleries')),
-        array('title' => 'Events', 'url' => home_url('/dashboard/#events')),
-        array('title' => 'Bulletins', 'url' => home_url('/dashboard/#bulletins')),
-        array('title' => 'Settings', 'url' => home_url('/dashboard/#settings')),
+        array('title' => 'Overview', 'url' => $dashboard_url . '#overview'),
+        array('title' => 'Videos', 'url' => $dashboard_url . '#videos'),
+        array('title' => 'Live Rooms', 'url' => $dashboard_url . '#live-rooms'),
+        array('title' => 'Messages', 'url' => $dashboard_url . '#messages'),
+        array('title' => 'Notifications', 'url' => $dashboard_url . '#notifications'),
+        array('title' => 'Create Post', 'url' => $dashboard_url . '#create-post'),
+        array('title' => 'Profile', 'url' => $dashboard_url . '#profile'),
+        array('title' => 'Galleries', 'url' => $dashboard_url . '#galleries'),
+        array('title' => 'Events', 'url' => $dashboard_url . '#events'),
+        array('title' => 'Bulletins', 'url' => $dashboard_url . '#bulletins'),
+        array('title' => 'Settings', 'url' => $dashboard_url . '#settings'),
     );
 
     foreach ( $items as $it ) {
@@ -1879,25 +1885,10 @@ add_action('after_switch_theme', function () {
         return;
     }
 
-    // Get activity feed URL
-    $activity_page = get_pages(array(
-        'meta_key'   => '_wp_page_template',
-        'meta_value' => 'template-activity-feed.php',
-        'number'     => 1,
-    ));
-    $activity_url = ! empty($activity_page) ? get_permalink($activity_page[0]->ID) : home_url('/activity/');
-
-    // Get members page URL
-    $members_page = get_page_by_path('members');
-    $members_url = $members_page ? get_permalink($members_page->ID) : home_url('/members/');
-
-    // Get dashboard page URL for notifications
-    $dashboard_page = get_pages(array(
-        'meta_key'   => '_wp_page_template',
-        'meta_value' => 'template-dashboard.php',
-        'number'     => 1,
-    ));
-    $dashboard_url = ! empty($dashboard_page) ? get_permalink($dashboard_page[0]->ID) : home_url('/dashboard/');
+    // Use helper functions to get real page URLs
+    $activity_url = vh360_get_activity_page_url();
+    $members_url = vh360_get_members_page_url();
+    $dashboard_url = vh360_get_dashboard_page_url();
     $notifications_url = add_query_arg('tab', 'notifications', $dashboard_url);
 
     // Create default menu items (4 items: Activity, Notifications, Members, Menu)
