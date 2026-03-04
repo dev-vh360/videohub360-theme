@@ -255,7 +255,7 @@ function vh360_render_mobile_bottom_menu_items_meta_box() {
                     <?php
                     $item_id = $_nav_menu_placeholder;
                     $_nav_menu_placeholder--;
-                    $classes_str = !empty($item['classes']) ? implode(' ', $item['classes']) : '';
+                    $classes_str = ! empty( $item['classes'] ) ? implode( ' ', $item['classes'] ) : '';
                     ?>
                     <li>
                         <label class="menu-item-title">

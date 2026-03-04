@@ -1345,11 +1345,11 @@ function vh360_get_dashboard_page_url() {
         )
     );
     
-    if (!empty($dashboard_page)) {
-        return get_permalink($dashboard_page[0]->ID);
+    if ( ! empty( $dashboard_page ) ) {
+        return get_permalink( $dashboard_page[0]->ID );
     }
     
-    return home_url('/dashboard/');
+    return home_url( '/dashboard/' );
 }
 
 /**
@@ -1369,11 +1369,11 @@ function vh360_get_activity_page_url() {
         )
     );
     
-    if (!empty($activity_page)) {
-        return get_permalink($activity_page[0]->ID);
+    if ( ! empty( $activity_page ) ) {
+        return get_permalink( $activity_page[0]->ID );
     }
     
-    return home_url('/activity/');
+    return home_url( '/activity/' );
 }
 
 /**
@@ -1385,11 +1385,11 @@ function vh360_get_activity_page_url() {
  * @since 1.0.0
  */
 function vh360_get_members_page_url() {
-    $members_page = get_page_by_path('members');
+    $members_page = get_page_by_path( 'members' );
     
-    if ($members_page) {
-        return get_permalink($members_page->ID);
+    if ( $members_page ) {
+        return get_permalink( $members_page->ID );
     }
     
-    return home_url('/members/');
+    return home_url( '/members/' );
 }
