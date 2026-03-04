@@ -45,254 +45,84 @@ $stats = vh360_get_user_stats($current_user_id);
                     'items_wrap'     => '<ul class="vh360-dashboard-nav">%3$s</ul>',
                 ));
             ?>
-            <?php else : ?>
+        <?php else : ?>
+            <?php
+            // Fallback navigation built from registry (eliminates drift)
+            $registry = vh360_get_dashboard_tabs_registry( $current_user_id );
+            $first_tab = true;
+            ?>
             <ul class="vh360-dashboard-nav">
-            
-            <li class="vh360-dashboard-nav-item">
-                <a href="#overview" class="vh360-dashboard-nav-link vh360-dashboard-tab active" data-tab="overview">
-                    <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="3" width="7" height="7"></rect>
-                        <rect x="14" y="3" width="7" height="7"></rect>
-                        <rect x="14" y="14" width="7" height="7"></rect>
-                        <rect x="3" y="14" width="7" height="7"></rect>
-                    </svg>
-                    <span class="vh360-dashboard-nav-text"><?php esc_html_e('Overview', 'videohub360-theme'); ?></span>
-                </a>
-            </li>
-            
-            <li class="vh360-dashboard-nav-item">
-                <a href="#create-video" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="create-video">
-                    <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 5v14M5 12h14"/>
-                    </svg>
-                    <span class="vh360-dashboard-nav-text"><?php esc_html_e('+ Create', 'videohub360-theme'); ?></span>
-                </a>
-            </li>
-            
-            <li class="vh360-dashboard-nav-item">
-                <a href="#videos" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="videos">
-                    <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                    </svg>
-                    <span class="vh360-dashboard-nav-text"><?php esc_html_e('My Videos', 'videohub360-theme'); ?></span>
-                    <?php if ($stats['videos'] > 0) : ?>
-                        <span class="vh360-dashboard-nav-badge"><?php echo esc_html($stats['videos']); ?></span>
-                    <?php endif; ?>
-                </a>
-            </li>
-            <li class="vh360-dashboard-nav-item">
-                <a href="#live-rooms" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="live-rooms">
-                    <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <circle cx="12" cy="12" r="8"></circle>
-                        <path d="M2 12a10 10 0 0 1 20 0"></path>
-                    </svg>
-                    <span class="vh360-dashboard-nav-text"><?php esc_html_e('Live Rooms', 'videohub360-theme'); ?></span>
-                </a>
-            </li>
-
-            
-            <li class="vh360-dashboard-nav-item">
-                <a href="#messages" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="messages">
-                    <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                    </svg>
-                    <span class="vh360-dashboard-nav-text"><?php esc_html_e('Messages', 'videohub360-theme'); ?></span>
-                    <?php
-                    if (function_exists('vh360_get_unread_messages_count')) {
-                        $unread_dm_count = vh360_get_unread_messages_count($current_user_id);
-                        if ($unread_dm_count > 0) :
+            <?php foreach ( $registry as $tab_id => $tab_config ) :
+                // Apply visibility rules
+                $show_callback = $tab_config['show_callback'];
+                $should_show = is_callable( $show_callback ) ? call_user_func( $show_callback, $current_user_id ) : true;
+                
+                if ( ! $should_show ) {
+                    continue;
+                }
+                
+                // Skip go-live from main nav (it's in Quick Actions)
+                if ( $tab_id === 'go-live' ) {
+                    continue;
+                }
+                
+                // Get label (use callback if available)
+                $label = $tab_config['label'];
+                if ( $tab_config['label_callback'] && is_callable( $tab_config['label_callback'] ) ) {
+                    $label = call_user_func( $tab_config['label_callback'], $current_user_id );
+                }
+                
+                // Get icon
+                $icon_svg = ! empty( $tab_config['icon_svg'] ) ? $tab_config['icon_svg'] : '';
+                
+                // Add active class to first visible tab
+                $active_class = $first_tab ? ' active' : '';
+                $first_tab = false;
+                ?>
+                <li class="vh360-dashboard-nav-item">
+                    <a href="#<?php echo esc_attr( $tab_id ); ?>" class="vh360-dashboard-nav-link vh360-dashboard-tab<?php echo $active_class; ?>" data-tab="<?php echo esc_attr( $tab_id ); ?>">
+                        <?php echo $icon_svg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                        <span class="vh360-dashboard-nav-text"><?php echo esc_html( $label ); ?></span>
+                        <?php
+                        // Add badges for specific tabs
+                        if ( $tab_id === 'videos' && $stats['videos'] > 0 ) :
                         ?>
-                            <span class="vh360-dashboard-nav-badge vh360-dm-unread-badge-nav"><?php echo esc_html($unread_dm_count); ?></span>
+                            <span class="vh360-dashboard-nav-badge"><?php echo esc_html( $stats['videos'] ); ?></span>
                         <?php
                         endif;
-                    }
-                    ?>
-                </a>
-            </li>
-            
-            <li class="vh360-dashboard-nav-item">
-                <a href="#notifications" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="notifications">
-                    <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                    </svg>
-                    <span class="vh360-dashboard-nav-text"><?php esc_html_e('Notifications', 'videohub360-theme'); ?></span>
-                    <?php
-                    $unread_count = vh360_get_unread_notification_count($current_user_id);
-                    if ($unread_count > 0) :
-                    ?>
-                        <span class="vh360-dashboard-nav-badge"><?php echo esc_html($unread_count); ?></span>
-                    <?php endif; ?>
-                </a>
-            </li>
-
-            <?php if ( current_user_can( 'vh360_send_push' ) ) : ?>
-            <li class="vh360-dashboard-nav-item">
-                <a href="#push-notifications" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="push-notifications">
-                    <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M22 2L11 13"></path>
-                        <path d="M22 2L15 22l-4-9-9-4 20-7z"></path>
-                    </svg>
-                    <span class="vh360-dashboard-nav-text"><?php esc_html_e('Push Notifications', 'videohub360-theme'); ?></span>
-                </a>
-            </li>
-            <?php endif; ?>
-            
-            <li class="vh360-dashboard-nav-item">
-                <a href="#liked-videos" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="liked-videos">
-                    <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/>
-                    </svg>
-                    <span class="vh360-dashboard-nav-text"><?php esc_html_e('Liked Videos', 'videohub360-theme'); ?></span>
-                    <?php
-                    $liked_count = VideoHub360_Video_Reactions::get_liked_videos_count($current_user_id);
-                    if ($liked_count > 0) :
-                    ?>
-                        <span class="vh360-dashboard-nav-badge"><?php echo esc_html($liked_count); ?></span>
-                    <?php endif; ?>
-                </a>
-            </li>
-            
-            <li class="vh360-dashboard-nav-item">
-                <a href="#playlists" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="playlists">
-                    <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                        <line x1="9" y1="9" x2="15" y2="9"></line>
-                        <line x1="9" y1="15" x2="15" y2="15"></line>
-                    </svg>
-                    <span class="vh360-dashboard-nav-text"><?php esc_html_e('My Playlists', 'videohub360-theme'); ?></span>
-                    <?php
-                    $playlists = VideoHub360_Playlists::get_user_playlists($current_user_id);
-                    $playlist_count = count($playlists);
-                    if ($playlist_count > 0) :
-                    ?>
-                        <span class="vh360-dashboard-nav-badge"><?php echo esc_html($playlist_count); ?></span>
-                    <?php endif; ?>
-                </a>
-            </li>
-            
-            <li class="vh360-dashboard-nav-item">
-                <a href="#create-post" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="create-post">
-                    <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                    </svg>
-                    <span class="vh360-dashboard-nav-text"><?php esc_html_e('+ Blog Posts', 'videohub360-theme'); ?></span>
-                </a>
-            </li>
-            
-            <li class="vh360-dashboard-nav-item">
-                <a href="#profile" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="profile">
-                    <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="12" cy="7" r="4"></circle>
-                    </svg>
-                    <span class="vh360-dashboard-nav-text"><?php esc_html_e('Edit Profile', 'videohub360-theme'); ?></span>
-                </a>
-            </li>
-            
-
-            
-            <li class="vh360-dashboard-nav-item">
-                <a href="#galleries" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="galleries">
-                    <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                        <polyline points="21 15 16 10 5 21"></polyline>
-                    </svg>
-                    <span class="vh360-dashboard-nav-text"><?php esc_html_e('Galleries', 'videohub360-theme'); ?></span>
-                    <?php
-                    $gallery_count = vh360_get_user_gallery_count($current_user_id);
-                    if ($gallery_count > 0) :
-                    ?>
-                        <span class="vh360-dashboard-nav-badge"><?php echo esc_html($gallery_count); ?></span>
-                    <?php endif; ?>
-                </a>
-            </li>
-            
-            <?php 
-            // Events tab - hide if professional but not approved
-            $show_events = true;
-            if ($user_account_type === 'professional' && !$is_approved_professional) {
-                $show_events = false;
-            }
-            if ($show_events) :
-            ?>
-            <li class="vh360-dashboard-nav-item">
-                <a href="#events" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="events">
-                    <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                        <line x1="16" y1="2" x2="16" y2="6"></line>
-                        <line x1="8" y1="2" x2="8" y2="6"></line>
-                        <line x1="3" y1="10" x2="21" y2="10"></line>
-                    </svg>
-                    <span class="vh360-dashboard-nav-text"><?php esc_html_e('Events', 'videohub360-theme'); ?></span>
-                </a>
-            </li>
-            <?php endif; ?>
-            
-            <!-- Appointments (label changes based on user type) -->
-            <li class="vh360-dashboard-nav-item">
-                <a href="#appointments" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="appointments">
-                    <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                        <line x1="16" y1="2" x2="16" y2="6"></line>
-                        <line x1="8" y1="2" x2="8" y2="6"></line>
-                        <line x1="3" y1="10" x2="21" y2="10"></line>
-                        <circle cx="12" cy="13" r="3" fill="currentColor"></circle>
-                    </svg>
-                    <span class="vh360-dashboard-nav-text">
-                        <?php 
-                        // Professionals see "Appointments" (managing sessions), others see "My Appointments" (their bookings)
-                        if (in_array($user_account_type, array('professional', 'organization'), true)) {
-                            esc_html_e('Appointments', 'videohub360-theme');
-                        } else {
-                            esc_html_e('My Appointments', 'videohub360-theme');
-                        }
+                        
+                        if ( $tab_id === 'galleries' ) :
+                            $gallery_count = vh360_get_user_gallery_count( $current_user_id );
+                            if ( $gallery_count > 0 ) :
                         ?>
-                    </span>
-                </a>
-            </li>
-            
-            <?php 
-            // Availability tab - only show for approved professionals/organizations
-            if (in_array($user_account_type, array('professional', 'organization'), true) && $is_approved_professional) : 
-            ?>
-            <li class="vh360-dashboard-nav-item">
-                <a href="#availability" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="availability">
-                    <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <polyline points="12 6 12 12 16 14"></polyline>
-                    </svg>
-                    <span class="vh360-dashboard-nav-text"><?php esc_html_e('Availability', 'videohub360-theme'); ?></span>
-                </a>
-            </li>
-            <?php endif; ?>
-            
-            <li class="vh360-dashboard-nav-item">
-                <a href="#bulletins" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="bulletins">
-                    <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                        <line x1="12" y1="9" x2="12" y2="13"></line>
-                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                    </svg>
-                    <span class="vh360-dashboard-nav-text"><?php esc_html_e('Bulletins', 'videohub360-theme'); ?></span>
-                </a>
-            </li>
-            
-            <li class="vh360-dashboard-nav-item">
-                <a href="#settings" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="settings">
-                    <svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <path d="M12 1v6m0 6v6m8.66-7.66l-5.2 3M8.54 14l-5.2 3m13.32-10.34l-5.2 3M8.54 10l-5.2-3"></path>
-                    </svg>
-                    <span class="vh360-dashboard-nav-text"><?php esc_html_e('Settings', 'videohub360-theme'); ?></span>
-                </a>
-            </li>
-            
-        </ul>
-            <?php endif; ?>
+                            <span class="vh360-dashboard-nav-badge"><?php echo esc_html( $gallery_count ); ?></span>
+                        <?php
+                            endif;
+                        endif;
+                        
+                        if ( $tab_id === 'messages' ) :
+                            $unread_dm = function_exists( 'vh360_get_unread_dm_count' ) ? vh360_get_unread_dm_count( $current_user_id ) : 0;
+                            if ( $unread_dm > 0 ) :
+                        ?>
+                            <span class="vh360-dashboard-nav-badge"><?php echo esc_html( $unread_dm > 99 ? '99+' : $unread_dm ); ?></span>
+                        <?php
+                            endif;
+                        endif;
+                        
+                        if ( $tab_id === 'notifications' ) :
+                            $unread_notif = function_exists( 'vh360_get_unread_notification_count' ) ? (int) vh360_get_unread_notification_count( $current_user_id ) : 0;
+                            if ( $unread_notif > 0 ) :
+                        ?>
+                            <span class="vh360-dashboard-nav-badge"><?php echo esc_html( $unread_notif > 99 ? '99+' : $unread_notif ); ?></span>
+                        <?php
+                            endif;
+                        endif;
+                        ?>
+                    </a>
+                </li>
+            <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
             </nav>
     
     <!-- Quick Actions -->

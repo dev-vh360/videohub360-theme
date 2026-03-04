@@ -1826,27 +1826,36 @@ add_action('after_switch_theme', function () {
         return;
     }
 
-    // Use helper to get real dashboard URL
+    // Use registry to build a curated default menu (clean subset for first-run UX)
     $dashboard_url = vh360_get_dashboard_page_url();
-
-    $items = array(
-        array('title' => 'Overview', 'url' => $dashboard_url . '#overview'),
-        array('title' => 'Videos', 'url' => $dashboard_url . '#videos'),
-        array('title' => 'Live Rooms', 'url' => $dashboard_url . '#live-rooms'),
-        array('title' => 'Messages', 'url' => $dashboard_url . '#messages'),
-        array('title' => 'Notifications', 'url' => $dashboard_url . '#notifications'),
-        array('title' => 'Create Post', 'url' => $dashboard_url . '#create-post'),
-        array('title' => 'Profile', 'url' => $dashboard_url . '#profile'),
-        array('title' => 'Galleries', 'url' => $dashboard_url . '#galleries'),
-        array('title' => 'Events', 'url' => $dashboard_url . '#events'),
-        array('title' => 'Bulletins', 'url' => $dashboard_url . '#bulletins'),
-        array('title' => 'Settings', 'url' => $dashboard_url . '#settings'),
+    $registry = vh360_get_dashboard_tabs_registry();
+    
+    // Curated tabs for activation default (8 core items)
+    $default_tabs = array(
+        'overview',
+        'create-video',
+        'videos',
+        'live-rooms',
+        'messages',
+        'notifications',
+        'appointments',
+        'settings',
     );
-
-    foreach ( $items as $it ) {
+    
+    foreach ( $default_tabs as $tab_id ) {
+        if ( ! isset( $registry[ $tab_id ] ) ) {
+            continue;
+        }
+        
+        $tab_config = $registry[ $tab_id ];
+        $label = $tab_config['label'];
+        
+        // Use default label (not dynamic) for activation menu
+        // Admins can customize later if needed
+        
         wp_update_nav_menu_item($menu_id, 0, array(
-            'menu-item-title'  => $it['title'],
-            'menu-item-url'    => $it['url'],
+            'menu-item-title'  => $label,
+            'menu-item-url'    => $dashboard_url . '#' . $tab_id,
             'menu-item-status' => 'publish',
             'menu-item-type'   => 'custom',
         ));
