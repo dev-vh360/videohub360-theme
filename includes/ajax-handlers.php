@@ -562,6 +562,12 @@ class VH360_Ajax_Handlers {
         
         // SECURITY STEP 2: Belt-and-suspenders post-filter for professionals_only mode
         // This ensures no non-professionals leak even if the query was modified by another plugin/filter
+        // NOTE: This post-filter is a safety net that should rarely execute. In normal operation,
+        // the query builder's fail-closed logic prevents any non-professionals from being returned.
+        // The N user meta lookups here (N = results per page, typically 12-24) are acceptable because:
+        // 1. This only runs if another plugin bypassed our meta_query (rare)
+        // 2. WordPress caches user meta automatically
+        // 3. Security is more important than optimization for this edge case
         if ($mode['audience'] === 'professionals_only' && !empty($members)) {
             $allowed_account_types = !empty($mode['professionals_account_types']) 
                 ? $mode['professionals_account_types'] 
@@ -613,6 +619,11 @@ class VH360_Ajax_Handlers {
         $html = ob_get_clean();
         
         // Get total count using shared helper (no pagination)
+        // NOTE: Count uses the same query builder with the same fail-closed logic,
+        // so it will be consistent with the display query in normal operation.
+        // If a plugin modifies the query to bypass our meta_query, the post-filter
+        // will remove leaked results from display but the count might not match.
+        // This is an acceptable trade-off: security (no leaked data) > perfect pagination.
         $total_args = $args;
         unset($total_args['number']);
         unset($total_args['offset']);
