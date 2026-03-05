@@ -20,7 +20,10 @@
         sortBy: 'registered',
         sortOrder: 'DESC',
         view: 'grid',
-        isLoading: false
+        isLoading: false,
+        directoryMode: null,
+        pageId: 0,
+        perPage: 12
     };
     
     // DOM elements
@@ -87,6 +90,19 @@
      * Initialize members directory
      */
     function init() {
+        // Load directory mode configuration from localized data
+        if (typeof vh360Members !== 'undefined') {
+            state.directoryMode = vh360Members.directoryMode || null;
+            state.pageId = vh360Members.pageId || 0;
+            state.perPage = vh360Members.perPage || 12;
+            
+            // For professionals_only mode, force role to empty and disable role filter
+            if (state.directoryMode && state.directoryMode.audience === 'professionals_only') {
+                state.role = '';
+                // Role filter should already be hidden in template, but ensure it's not used
+            }
+        }
+        
         // Initialize totalPages from server-rendered value
         if ($totalPages.length && $totalPages.text()) {
             state.totalPages = parseInt($totalPages.text(), 10) || 1;
@@ -100,7 +116,12 @@
         // Event listeners
         $searchInput.on('input', debounce(handleSearch, 500));
         $searchClear.on('click', clearSearch);
-        $roleFilter.on('change', handleFilterChange);
+        
+        // Only attach role filter if in all_members mode
+        if (!state.directoryMode || state.directoryMode.audience === 'all_members') {
+            $roleFilter.on('change', handleFilterChange);
+        }
+        
         $dateFilter.on('change', handleFilterChange);
         $sortSelect.on('change', handleSortChange);
         $viewBtns.on('click', handleViewToggle);
@@ -171,7 +192,13 @@
      * Handle filter change
      */
     function handleFilterChange() {
-        state.role = $roleFilter.val();
+        // Only update role if in all_members mode
+        if (!state.directoryMode || state.directoryMode.audience === 'all_members') {
+            state.role = $roleFilter.val();
+        } else {
+            state.role = ''; // Force empty for professionals_only
+        }
+        
         state.joinDate = $dateFilter.val();
         state.currentPage = 1;
         loadMembers();
@@ -253,13 +280,18 @@
         const data = {
             action: 'vh360_search_members',
             nonce: vh360Members.nonce,
+            directory_page_id: state.pageId,
             search: state.search,
-            role: state.role,
             join_date: state.joinDate,
             orderby: state.sortBy,
             order: state.sortOrder,
             page: state.currentPage
         };
+        
+        // Only include role for all_members mode
+        if (!state.directoryMode || state.directoryMode.audience === 'all_members') {
+            data.role = state.role;
+        }
         
         $.ajax({
             url: vh360Members.ajaxurl,
@@ -323,7 +355,12 @@
         const params = new URLSearchParams();
         
         if (state.search) params.set('search', state.search);
-        if (state.role) params.set('role', state.role);
+        
+        // Only include role param for all_members mode
+        if ((!state.directoryMode || state.directoryMode.audience === 'all_members') && state.role) {
+            params.set('role', state.role);
+        }
+        
         if (state.joinDate) params.set('joined', state.joinDate);
         if (state.sortBy !== 'registered' || state.sortOrder !== 'DESC') {
             params.set('sort', `${state.sortBy}_${state.sortOrder.toLowerCase()}`);
@@ -346,7 +383,8 @@
             $searchClear.show();
         }
         
-        if (params.has('role')) {
+        // Only parse role for all_members mode
+        if ((!state.directoryMode || state.directoryMode.audience === 'all_members') && params.has('role')) {
             state.role = params.get('role');
             $roleFilter.val(state.role);
         }

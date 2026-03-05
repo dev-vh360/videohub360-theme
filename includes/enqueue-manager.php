@@ -460,10 +460,21 @@ function vh360_enqueue_members_directory_assets() {
             true
         );
         
+        // Compute effective mode for current page
+        $page_id = get_queried_object_id();
+        $mode = vh360_get_members_directory_effective_mode($page_id);
+        
+        // Get per_page from settings
+        $members_options = get_option('vh360_members_options', array());
+        $per_page = isset($members_options['per_page']) ? absint($members_options['per_page']) : 12;
+        
         // Localize script with AJAX data
         wp_localize_script('vh360-members-directory-js', 'vh360Members', array(
             'ajaxurl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('vh360_members_nonce'),
+            'pageId' => $page_id,
+            'perPage' => $per_page,
+            'directoryMode' => $mode,
             'strings' => array(
                 'loading' => esc_html__('Loading...', 'videohub360-theme'),
                 'error' => esc_html__('An error occurred. Please try again.', 'videohub360-theme'),

@@ -20,6 +20,9 @@ $defaults = array(
     'default_sort' => 'newest',
     'enable_search' => true,
     'visible_roles' => array('subscriber', 'contributor', 'author', 'editor', 'administrator'),
+    'directory_audience' => 'all_members',
+    'professionals_account_types' => array('professional', 'organization'),
+    'professionals_require_approval' => true,
 );
 $options = wp_parse_args($options, $defaults);
 ?>
@@ -92,6 +95,55 @@ $options = wp_parse_args($options, $defaults);
                                 <input type="checkbox" name="vh360_members_options[enable_search]" value="1" <?php checked($options['enable_search'], true); ?>>
                                 <?php esc_html_e('Enable search box in members directory', 'videohub360-theme'); ?>
                             </label>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Directory Audience -->
+        <div class="vh360-admin-card">
+            <h2><?php esc_html_e('Directory Audience', 'videohub360-theme'); ?></h2>
+            <p><?php esc_html_e('Configure whether the directory shows all community members or only professionals. Individual pages can override these defaults.', 'videohub360-theme'); ?></p>
+            
+            <table class="form-table">
+                <tbody>
+                    <tr>
+                        <th scope="row"><?php esc_html_e('Directory Audience', 'videohub360-theme'); ?></th>
+                        <td>
+                            <label style="display: block; margin-bottom: 8px;">
+                                <input type="radio" name="vh360_members_options[directory_audience]" value="all_members" <?php checked($options['directory_audience'], 'all_members'); ?>>
+                                <?php esc_html_e('All Members', 'videohub360-theme'); ?>
+                            </label>
+                            <label style="display: block; margin-bottom: 8px;">
+                                <input type="radio" name="vh360_members_options[directory_audience]" value="professionals_only" <?php checked($options['directory_audience'], 'professionals_only'); ?>>
+                                <?php esc_html_e('Professionals Only', 'videohub360-theme'); ?>
+                            </label>
+                            <p class="description"><?php esc_html_e('Choose whether the directory shows all members or only approved professionals', 'videohub360-theme'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php esc_html_e('Professional Account Types', 'videohub360-theme'); ?></th>
+                        <td>
+                            <label style="display: block; margin-bottom: 8px;">
+                                <input type="checkbox" name="vh360_members_options[professionals_account_types][]" value="professional" <?php checked(in_array('professional', $options['professionals_account_types'])); ?>>
+                                <?php esc_html_e('Professional', 'videohub360-theme'); ?>
+                            </label>
+                            <label style="display: block; margin-bottom: 8px;">
+                                <input type="checkbox" name="vh360_members_options[professionals_account_types][]" value="organization" <?php checked(in_array('organization', $options['professionals_account_types'])); ?>>
+                                <?php esc_html_e('Organization', 'videohub360-theme'); ?>
+                            </label>
+                            <p class="description"><?php esc_html_e('When showing professionals only, include these account types', 'videohub360-theme'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php esc_html_e('Require Approval', 'videohub360-theme'); ?></th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="vh360_members_options[professionals_require_approval]" value="1" <?php checked($options['professionals_require_approval'], true); ?>>
+                                <?php esc_html_e('Only show approved professionals in professionals-only directories', 'videohub360-theme'); ?>
+                            </label>
+                            <p class="description"><?php esc_html_e('When enabled, only approved professionals will appear. Legacy accounts without status are considered approved.', 'videohub360-theme'); ?></p>
                         </td>
                     </tr>
                 </tbody>

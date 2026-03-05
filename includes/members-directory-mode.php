@@ -1,0 +1,90 @@
+<?php
+/**
+ * Members Directory Mode Resolver
+ *
+ * Provides functions to determine the effective directory mode for any given page,
+ * combining global settings with page-level overrides. This is the single source of
+ * truth for directory audience configuration.
+ *
+ * @package Videohub360_Theme
+ * @since 1.0.0
+ */
+
+if (!defined('ABSPATH')) {
+    exit; // Exit if accessed directly
+}
+
+/**
+ * Get the effective members directory mode for a page
+ * 
+ * Resolves the directory configuration by checking page-level overrides first,
+ * then falling back to global settings. Returns a complete configuration array
+ * including audience, account types, and approval requirements.
+ * 
+ * @param int $page_id Optional page ID. If not provided, uses current queried object.
+ * @return array Configuration array with keys:
+ *   - audience: 'all_members' or 'professionals_only'
+ *   - professionals_account_types: array of account type strings
+ *   - professionals_require_approval: boolean
+ *   - source: 'page_override' or 'global'
+ */
+function vh360_get_members_directory_effective_mode($page_id = 0) {
+    // Determine page ID
+    if (!$page_id && function_exists('get_queried_object_id')) {
+        $page_id = get_queried_object_id();
+    }
+    
+    // Get global settings
+    $global_options = get_option('vh360_members_options', array());
+    $defaults = array(
+        'directory_audience' => 'all_members',
+        'professionals_account_types' => array('professional', 'organization'),
+        'professionals_require_approval' => true,
+    );
+    $global_options = wp_parse_args($global_options, $defaults);
+    
+    // Start with global settings
+    $mode = array(
+        'audience' => $global_options['directory_audience'],
+        'professionals_account_types' => $global_options['professionals_account_types'],
+        'professionals_require_approval' => $global_options['professionals_require_approval'],
+        'source' => 'global',
+    );
+    
+    // Check for page-level overrides if we have a valid page ID
+    if ($page_id > 0) {
+        // Verify this page uses the members directory template
+        $template = get_page_template_slug($page_id);
+        if ($template === 'template-members-directory.php') {
+            // Check audience override
+            $audience_override = get_post_meta($page_id, '_vh360_members_directory_audience_override', true);
+            if ($audience_override && $audience_override !== 'inherit') {
+                $allowed_audiences = array('all_members', 'professionals_only');
+                if (in_array($audience_override, $allowed_audiences, true)) {
+                    $mode['audience'] = $audience_override;
+                    $mode['source'] = 'page_override';
+                }
+            }
+            
+            // Check approval override
+            $approval_override = get_post_meta($page_id, '_vh360_members_directory_require_approval_override', true);
+            if ($approval_override !== '' && $approval_override !== 'inherit') {
+                $mode['professionals_require_approval'] = (bool) $approval_override;
+                $mode['source'] = 'page_override';
+            }
+            
+            // Check account types override
+            $account_types_override = get_post_meta($page_id, '_vh360_members_directory_account_types_override', true);
+            if (is_array($account_types_override) && !empty($account_types_override)) {
+                $allowed_account_types = array('professional', 'organization');
+                $filtered_types = array_intersect($account_types_override, $allowed_account_types);
+                if (!empty($filtered_types)) {
+                    $mode['professionals_account_types'] = array_values($filtered_types);
+                    $mode['source'] = 'page_override';
+                }
+            }
+        }
+    }
+    
+    return $mode;
+}

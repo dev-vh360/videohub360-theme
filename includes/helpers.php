@@ -497,7 +497,16 @@ function vh360_get_user_social_links($user_id) {
  * @param array $args Query arguments.
  * @return array Array of WP_User objects.
  */
-function vh360_get_members($args = array()) {
+/**
+ * Build WP_User_Query arguments for members directory
+ * 
+ * Internal query builder that constructs consistent WP_User_Query arguments
+ * for both role-driven and account-type-driven audiences.
+ * 
+ * @param array $args Query arguments
+ * @return array WP_User_Query arguments
+ */
+function vh360_build_members_directory_query_args($args = array()) {
     // Get members options for default values
     $members_options = get_option('vh360_members_options', array());
     $default_per_page = isset($members_options['per_page']) ? absint($members_options['per_page']) : 12;
@@ -506,18 +515,22 @@ function vh360_get_members($args = array()) {
         : array();
 
     $defaults = array(
-        'role' => '',                    // Filter by role
-        'orderby' => 'registered',       // registered, login, display_name, post_count
-        'order' => 'DESC',               // DESC or ASC
-        'number' => $default_per_page,   // Number of users per page from admin settings
-        'offset' => 0,                   // Offset for pagination
-        'search' => '',                  // Search by display name or username
-        'date_query' => array(),         // Date query for registration
+        'audience' => 'all_members',                    // 'all_members' or 'professionals_only'
+        'account_types' => array(),                     // For professionals_only mode
+        'require_professional_approval' => true,        // For professionals_only mode
+        'role' => '',                                   // For all_members mode (legacy)
+        'role__in' => array(),                          // For all_members mode (legacy)
+        'orderby' => 'registered',                      // registered, login, display_name, post_count
+        'order' => 'DESC',                              // DESC or ASC
+        'number' => $default_per_page,                  // Number of users per page
+        'offset' => 0,                                  // Offset for pagination
+        'search' => '',                                 // Search by display name or username
+        'date_query' => array(),                        // Date query for registration
     );
 
     $args = wp_parse_args($args, $defaults);
 
-    // Build WP_User_Query args
+    // Build base WP_User_Query args
     $query_args = array(
         'orderby' => $args['orderby'],
         'order' => $args['order'],
@@ -525,12 +538,51 @@ function vh360_get_members($args = array()) {
         'offset' => absint($args['offset']),
     );
 
-    // Add role filter - either from args or visible_roles from admin settings
-    if (!empty($args['role'])) {
-        $query_args['role'] = sanitize_text_field($args['role']);
-    } elseif (!empty($visible_roles)) {
-        // Filter by visible roles from admin settings
-        $query_args['role__in'] = array_map('sanitize_text_field', $visible_roles);
+    // Handle audience-based filtering
+    if ($args['audience'] === 'professionals_only') {
+        // Professionals-only mode: ignore role filters, use account type meta
+        if (!empty($args['account_types']) && is_array($args['account_types'])) {
+            $query_args['meta_query'] = array(
+                'relation' => 'AND',
+                array(
+                    'key' => '_vh360_account_type',
+                    'value' => $args['account_types'],
+                    'compare' => 'IN',
+                ),
+            );
+            
+            // Add professional approval filter if required
+            if ($args['require_professional_approval']) {
+                // Show approved professionals or those without status (legacy accounts)
+                $query_args['meta_query'][] = array(
+                    'relation' => 'OR',
+                    array(
+                        'key' => '_vh360_professional_status',
+                        'value' => 'approved',
+                        'compare' => '=',
+                    ),
+                    array(
+                        'key' => '_vh360_professional_status',
+                        'compare' => 'NOT EXISTS',
+                    ),
+                    array(
+                        'key' => '_vh360_professional_status',
+                        'value' => '',
+                        'compare' => '=',
+                    ),
+                );
+            }
+        }
+    } else {
+        // All members mode: use role filtering (existing behavior)
+        if (!empty($args['role'])) {
+            $query_args['role'] = sanitize_text_field($args['role']);
+        } elseif (!empty($args['role__in']) && is_array($args['role__in'])) {
+            $query_args['role__in'] = array_map('sanitize_text_field', $args['role__in']);
+        } elseif (!empty($visible_roles)) {
+            // Filter by visible roles from admin settings
+            $query_args['role__in'] = array_map('sanitize_text_field', $visible_roles);
+        }
     }
 
     // Add search
@@ -544,27 +596,61 @@ function vh360_get_members($args = array()) {
         $query_args['date_query'] = $args['date_query'];
     }
 
-    $user_query = new WP_User_Query($query_args);
+    return $query_args;
+}
 
+/**
+ * Get members list
+ *
+ * @param array $args Query arguments. Supports new keys:
+ *   - audience: 'all_members' or 'professionals_only'
+ *   - account_types: array of account type strings
+ *   - require_professional_approval: boolean
+ *   Plus legacy keys: role, orderby, order, number, offset, search, date_query
+ * @return array Array of WP_User objects.
+ */
+function vh360_get_members($args = array()) {
+    $query_args = vh360_build_members_directory_query_args($args);
+    $user_query = new WP_User_Query($query_args);
     return $user_query->get_results();
 }
 
 /**
  * Get member count
  *
- * @param string $role Optional role filter.
+ * @param string|array $args Query arguments array or legacy single role string.
  * @return int Member count.
  */
-function vh360_get_member_count($role = '') {
-    $args = array('fields' => 'ID');
-
-    if (!empty($role)) {
-        $args['role'] = sanitize_text_field($role);
+function vh360_get_member_count($args = '') {
+    // Backwards compatibility: if string is passed, treat as role
+    if (is_string($args)) {
+        if (!empty($args)) {
+            $args = array('role' => $args);
+        } else {
+            $args = array();
+        }
     }
-
-    $user_query = new WP_User_Query($args);
-
+    
+    // Build query args without pagination
+    $count_args = $args;
+    $count_args['number'] = -1;
+    $count_args['offset'] = 0;
+    
+    $query_args = vh360_build_members_directory_query_args($count_args);
+    $query_args['fields'] = 'ID';
+    
+    $user_query = new WP_User_Query($query_args);
     return $user_query->get_total();
+}
+
+/**
+ * Get total members count (alias for vh360_get_member_count with array args)
+ *
+ * @param array $args Query arguments.
+ * @return int Member count.
+ */
+function vh360_get_members_total($args = array()) {
+    return vh360_get_member_count($args);
 }
 
 /**
