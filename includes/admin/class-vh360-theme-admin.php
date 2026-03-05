@@ -631,10 +631,18 @@ class VH360_Theme_Admin {
         $professionals_account_types = isset($input['professionals_account_types']) && is_array($input['professionals_account_types'])
             ? array_intersect($input['professionals_account_types'], $allowed_account_types)
             : array('professional', 'organization');
-        // Ensure at least one type is selected, fallback to default
-        $sanitized['professionals_account_types'] = !empty($professionals_account_types) 
-            ? array_values($professionals_account_types)
-            : array('professional', 'organization');
+        
+        // SECURITY: Enforce non-empty account types when professionals_only is selected
+        // Empty account_types in professionals_only mode would cause a security vulnerability
+        if ($sanitized['directory_audience'] === 'professionals_only' && empty($professionals_account_types)) {
+            // Force defaults to prevent data leak
+            $sanitized['professionals_account_types'] = array('professional', 'organization');
+        } else {
+            // Ensure at least one type is selected, fallback to default
+            $sanitized['professionals_account_types'] = !empty($professionals_account_types) 
+                ? array_values($professionals_account_types)
+                : array('professional', 'organization');
+        }
         
         // Array field for visible roles - default to empty array if not set
         $sanitized['visible_roles'] = $this->sanitize_array_input(

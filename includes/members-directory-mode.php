@@ -87,5 +87,12 @@ function vh360_get_members_directory_effective_mode($page_id = 0) {
         }
     }
     
+    // SECURITY: Fail-closed enforcement for professionals_only mode
+    // If professionals_only is set but account_types is empty, apply safe defaults
+    // This prevents data leaks from misconfigured settings
+    if ($mode['audience'] === 'professionals_only' && empty($mode['professionals_account_types'])) {
+        $mode['professionals_account_types'] = array('professional', 'organization');
+    }
+    
     return $mode;
 }

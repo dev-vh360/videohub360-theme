@@ -535,12 +535,31 @@ function vh360_build_members_directory_query_args($args = array()) {
     // Handle audience-based filtering
     if ($args['audience'] === 'professionals_only') {
         // Professionals-only mode: ignore role filters, use account type meta
+        // SECURITY: Sanitize account_types to only allowed values
+        $allowed_account_types = array('professional', 'organization');
+        $sanitized_account_types = array();
         if (!empty($args['account_types']) && is_array($args['account_types'])) {
+            $sanitized_account_types = array_intersect($args['account_types'], $allowed_account_types);
+        }
+        
+        // SECURITY: Fail-closed enforcement - if account_types is empty, match nothing
+        // This prevents data leaks when settings are misconfigured or payload is manipulated
+        if (empty($sanitized_account_types)) {
+            // Force an impossible meta_query that will match zero users
+            $query_args['meta_query'] = array(
+                array(
+                    'key' => '_vh360_account_type',
+                    'value' => '__none__',
+                    'compare' => '=',
+                ),
+            );
+        } else {
+            // Valid account types present - apply normal filtering
             $query_args['meta_query'] = array(
                 'relation' => 'AND',
                 array(
                     'key' => '_vh360_account_type',
-                    'value' => $args['account_types'],
+                    'value' => $sanitized_account_types,
                     'compare' => 'IN',
                 ),
             );
