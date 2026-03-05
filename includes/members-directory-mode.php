@@ -69,7 +69,8 @@ function vh360_get_members_directory_effective_mode($page_id = 0) {
             // Check approval override
             $approval_override = get_post_meta($page_id, '_vh360_members_directory_require_approval_override', true);
             if ($approval_override !== '' && $approval_override !== 'inherit') {
-                $mode['professionals_require_approval'] = ($approval_override === '1' || $approval_override === true);
+                // Meta value is stored as string '1' or '0'
+                $mode['professionals_require_approval'] = ($approval_override === '1');
                 $mode['source'] = 'page_override';
             }
             

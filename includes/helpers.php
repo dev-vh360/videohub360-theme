@@ -492,12 +492,6 @@ function vh360_get_user_social_links($user_id) {
 }
 
 /**
- * Get all site members with optional filters
- *
- * @param array $args Query arguments.
- * @return array Array of WP_User objects.
- */
-/**
  * Build WP_User_Query arguments for members directory
  * 
  * Internal query builder that constructs consistent WP_User_Query arguments
@@ -554,6 +548,10 @@ function vh360_build_members_directory_query_args($args = array()) {
             // Add professional approval filter if required
             if ($args['require_professional_approval']) {
                 // Show approved professionals or those without status (legacy accounts)
+                // Three conditions are necessary because:
+                // 1. value='approved' - explicitly approved professionals
+                // 2. NOT EXISTS - meta key never set (legacy accounts)
+                // 3. value='' - meta key exists but empty (some WP functions save empty strings)
                 $query_args['meta_query'][] = array(
                     'relation' => 'OR',
                     array(

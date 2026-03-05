@@ -96,10 +96,10 @@
             state.pageId = vh360Members.pageId || 0;
             state.perPage = vh360Members.perPage || 12;
             
-            // For professionals_only mode, force role to empty and disable role filter
+            // For professionals_only mode, force role to empty
+            // (role filter won't be rendered in template and handler won't be attached)
             if (state.directoryMode && state.directoryMode.audience === 'professionals_only') {
                 state.role = '';
-                // Role filter should already be hidden in template, but ensure it's not used
             }
         }
         

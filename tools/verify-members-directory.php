@@ -3,11 +3,20 @@
  * Members Directory Implementation Verification Script
  * 
  * Tests the new audience filtering implementation.
- * Run from command line: php tools/verify-members-directory.php
+ * Run from command line from theme root: php tools/verify-members-directory.php
+ * 
+ * Note: Requires WordPress to be installed in ../../../ relative to theme directory.
+ * If your installation differs, adjust the path to wp-load.php accordingly.
  */
 
-// Load WordPress
-require_once(__DIR__ . '/../../../wp-load.php');
+// Attempt to load WordPress - adjust path if needed for your installation
+$wp_load_path = __DIR__ . '/../../../wp-load.php';
+if (!file_exists($wp_load_path)) {
+    echo "ERROR: Cannot find wp-load.php at expected path: $wp_load_path\n";
+    echo "Please adjust the path in this script to match your WordPress installation.\n";
+    exit(1);
+}
+require_once($wp_load_path);
 
 echo "====================================\n";
 echo "Members Directory Verification Test\n";
