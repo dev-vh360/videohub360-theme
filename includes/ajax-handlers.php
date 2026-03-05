@@ -489,23 +489,50 @@ class VH360_Ajax_Handlers {
             ));
         }
         
+        // Get directory page ID and resolve effective mode
+        $directory_page_id = isset($_POST['directory_page_id']) ? absint($_POST['directory_page_id']) : 0;
+        
+        // Security: verify the page ID is valid and uses the directory template
+        $mode = null;
+        if ($directory_page_id > 0) {
+            $template = get_page_template_slug($directory_page_id);
+            if ($template === 'template-members-directory.php') {
+                $mode = vh360_get_members_directory_effective_mode($directory_page_id);
+            }
+        }
+        
+        // Fallback to global settings if page ID is invalid/missing
+        if (!$mode) {
+            $mode = vh360_get_members_directory_effective_mode(0);
+        }
+        
+        // Get members options for per_page
+        $members_options = get_option('vh360_members_options', array());
+        $per_page = isset($members_options['per_page']) ? absint($members_options['per_page']) : 12;
+        
         // Get parameters
         $search = isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '';
         $role = isset($_POST['role']) ? sanitize_text_field($_POST['role']) : '';
         $orderby = isset($_POST['orderby']) ? sanitize_text_field($_POST['orderby']) : 'registered';
         $order = isset($_POST['order']) ? sanitize_text_field($_POST['order']) : 'DESC';
         $page = isset($_POST['page']) ? absint($_POST['page']) : 1;
-        $per_page = 12;
         
-        // Build query args
+        // Build query args based on effective mode
         $args = array(
+            'audience' => $mode['audience'],
+            'account_types' => $mode['professionals_account_types'],
+            'require_professional_approval' => $mode['professionals_require_approval'],
             'search' => $search,
-            'role' => $role,
             'orderby' => $orderby,
             'order' => $order,
             'number' => $per_page,
             'offset' => ($page - 1) * $per_page,
         );
+        
+        // For all_members mode, include role filter
+        if ($mode['audience'] === 'all_members' && !empty($role)) {
+            $args['role'] = $role;
+        }
         
         // Handle join date filter
         if (isset($_POST['join_date']) && !empty($_POST['join_date'])) {
@@ -551,12 +578,11 @@ class VH360_Ajax_Handlers {
         
         $html = ob_get_clean();
         
-        // Get total count for pagination
+        // Get total count using shared helper (no pagination)
         $total_args = $args;
         unset($total_args['number']);
         unset($total_args['offset']);
-        $total_query = new WP_User_Query($total_args);
-        $total = $total_query->get_total();
+        $total = vh360_get_member_count($total_args);
         
         wp_send_json_success(array(
             'html' => $html,

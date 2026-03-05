@@ -12,6 +12,9 @@ if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly
 }
 
+// Resolve effective directory mode (global + page overrides)
+$mode = vh360_get_members_directory_effective_mode(get_queried_object_id());
+
 // Get members options from admin settings
 $members_options = get_option('vh360_members_options', array());
 $members_defaults = array(
@@ -43,10 +46,24 @@ $default_sort = isset($sort_mapping[$members_options['default_sort']])
 
 get_header();
 
-// Header visibility and content from customizer
+// Header visibility and content from customizer - with dynamic defaults based on mode
 $vh360_show_header  = (bool) get_theme_mod('vh360_show_members_header', 1);
-$vh360_header_title = get_theme_mod('vh360_members_header_title', __('Members Directory', 'videohub360-theme'));
-$vh360_header_desc  = get_theme_mod('vh360_members_header_description', __('Discover and connect with our community members', 'videohub360-theme'));
+
+// Dynamic defaults based on directory mode
+$default_title = ($mode['audience'] === 'professionals_only') 
+    ? __('Professionals Directory', 'videohub360-theme')
+    : __('Members Directory', 'videohub360-theme');
+$default_desc = ($mode['audience'] === 'professionals_only')
+    ? __('Browse approved professionals', 'videohub360-theme')
+    : __('Discover and connect with our community members', 'videohub360-theme');
+
+$vh360_header_title = get_theme_mod('vh360_members_header_title', $default_title);
+$vh360_header_desc  = get_theme_mod('vh360_members_header_description', $default_desc);
+
+// Dynamic count label based on mode
+$count_label = ($mode['audience'] === 'professionals_only')
+    ? __('Total Professionals', 'videohub360-theme')
+    : __('Total Members', 'videohub360-theme');
 ?>
 
 <div id="primary" class="content-area">
@@ -65,8 +82,17 @@ $vh360_header_desc  = get_theme_mod('vh360_members_header_description', __('Disc
                 
                 <!-- Member Count -->
                 <div class="vh360-member-count">
-                    <span class="vh360-count-number"><?php echo esc_html(number_format_i18n(vh360_get_member_count())); ?></span>
-                    <span class="vh360-count-label"><?php esc_html_e('Total Members', 'videohub360-theme'); ?></span>
+                    <?php
+                    // Get count based on effective mode
+                    $count_args = array(
+                        'audience' => $mode['audience'],
+                        'account_types' => $mode['professionals_account_types'],
+                        'require_professional_approval' => $mode['professionals_require_approval'],
+                    );
+                    $total_count = vh360_get_member_count($count_args);
+                    ?>
+                    <span class="vh360-count-number"><?php echo esc_html(number_format_i18n($total_count)); ?></span>
+                    <span class="vh360-count-label"><?php echo esc_html($count_label); ?></span>
                 </div>
             </div>
         </header>
@@ -105,19 +131,29 @@ $vh360_header_desc  = get_theme_mod('vh360_members_header_description', __('Disc
 <div id="vh360-members-filters-panel" class="vh360-controls-panel is-collapsed">
     <div class="vh360-filters-wrapper">
                     
-                    <!-- Role Filter -->
+                    <?php if ($mode['audience'] === 'all_members') : ?>
+                    <!-- Role Filter (only for all_members mode) -->
                     <div class="vh360-filter-group">
                         <label for="vh360-role-filter" class="vh360-filter-label">
                             <?php esc_html_e('Role:', 'videohub360-theme'); ?>
                         </label>
                         <select id="vh360-role-filter" class="vh360-filter-select">
                             <option value=""><?php esc_html_e('All Roles', 'videohub360-theme'); ?></option>
-                            <option value="subscriber"><?php esc_html_e('Subscriber', 'videohub360-theme'); ?></option>
-                            <option value="contributor"><?php esc_html_e('Contributor', 'videohub360-theme'); ?></option>
-                            <option value="author"><?php esc_html_e('Author', 'videohub360-theme'); ?></option>
-                            <option value="editor"><?php esc_html_e('Editor', 'videohub360-theme'); ?></option>
+                            <?php
+                            // Generate role options from visible_roles setting
+                            if (!empty($members_options['visible_roles'])) {
+                                global $wp_roles;
+                                foreach ($members_options['visible_roles'] as $role_key) {
+                                    if (isset($wp_roles->roles[$role_key])) {
+                                        $role_name = $wp_roles->roles[$role_key]['name'];
+                                        echo '<option value="' . esc_attr($role_key) . '">' . esc_html($role_name) . '</option>';
+                                    }
+                                }
+                            }
+                            ?>
                         </select>
                     </div>
+                    <?php endif; ?>
                     
                     <!-- Join Date Filter -->
                     <div class="vh360-filter-group">
@@ -200,13 +236,17 @@ $vh360_header_desc  = get_theme_mod('vh360_members_header_description', __('Disc
                 <!-- Members Grid/List -->
                 <div id="vh360-members-grid" class="vh360-members-grid view-grid">
                     <?php
-                    // Get initial members using admin settings
+                    // Get initial members using effective mode
                     $per_page = absint($members_options['per_page']);
-                    $members = vh360_get_members(array(
+                    $initial_args = array(
+                        'audience' => $mode['audience'],
+                        'account_types' => $mode['professionals_account_types'],
+                        'require_professional_approval' => $mode['professionals_require_approval'],
                         'number' => $per_page,
                         'orderby' => $default_sort['orderby'],
                         'order' => $default_sort['order'],
-                    ));
+                    );
+                    $members = vh360_get_members($initial_args);
                     
                     if (!empty($members)) :
                         foreach ($members as $member) :
@@ -239,7 +279,13 @@ $vh360_header_desc  = get_theme_mod('vh360_members_header_description', __('Disc
                 <!-- Pagination -->
                 <div id="vh360-members-pagination" class="vh360-pagination">
                     <?php
-                    $total_members = vh360_get_member_count();
+                    // Get total count based on effective mode
+                    $count_args = array(
+                        'audience' => $mode['audience'],
+                        'account_types' => $mode['professionals_account_types'],
+                        'require_professional_approval' => $mode['professionals_require_approval'],
+                    );
+                    $total_members = vh360_get_member_count($count_args);
                     $max_pages = ceil($total_members / $per_page);
                     
                     if ($max_pages > 1) :

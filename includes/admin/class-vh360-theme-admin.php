@@ -299,6 +299,9 @@ class VH360_Theme_Admin {
                 'default_sort' => 'registered',
                 'enable_search' => true,
                 'visible_roles' => array(),
+                'directory_audience' => 'all_members',
+                'professionals_account_types' => array('professional', 'organization'),
+                'professionals_require_approval' => true,
             ),
         ));
         
@@ -609,12 +612,29 @@ class VH360_Theme_Admin {
         // Boolean checkbox fields - explicitly set to false if not present (unchecked)
         $sanitized['enable_directory'] = isset($input['enable_directory']) ? (bool) $input['enable_directory'] : false;
         $sanitized['enable_search'] = isset($input['enable_search']) ? (bool) $input['enable_search'] : false;
+        $sanitized['professionals_require_approval'] = isset($input['professionals_require_approval']) ? (bool) $input['professionals_require_approval'] : false;
         
         // Numeric field with default
         $sanitized['per_page'] = isset($input['per_page']) ? absint($input['per_page']) : 12;
         
         // Text field
         $sanitized['default_sort'] = isset($input['default_sort']) ? sanitize_text_field($input['default_sort']) : 'registered';
+        
+        // Directory audience - validate against allowed values
+        $allowed_audiences = array('all_members', 'professionals_only');
+        $sanitized['directory_audience'] = isset($input['directory_audience']) && in_array($input['directory_audience'], $allowed_audiences, true) 
+            ? $input['directory_audience'] 
+            : 'all_members';
+        
+        // Professionals account types - validate against allowed values
+        $allowed_account_types = array('professional', 'organization');
+        $professionals_account_types = isset($input['professionals_account_types']) && is_array($input['professionals_account_types'])
+            ? array_intersect($input['professionals_account_types'], $allowed_account_types)
+            : array('professional', 'organization');
+        // Ensure at least one type is selected, fallback to default
+        $sanitized['professionals_account_types'] = !empty($professionals_account_types) 
+            ? array_values($professionals_account_types)
+            : array('professional', 'organization');
         
         // Array field for visible roles - default to empty array if not set
         $sanitized['visible_roles'] = $this->sanitize_array_input(

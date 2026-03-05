@@ -997,6 +997,16 @@ require_once VH360_THEME_DIR . '/includes/sidebar-resolver.php';
 require_once VH360_THEME_DIR . '/includes/sidebar-meta-box.php';
 
 /**
+ * Members directory mode resolver
+ */
+require_once VH360_THEME_DIR . '/includes/members-directory-mode.php';
+
+/**
+ * Members directory meta box for per-page controls
+ */
+require_once VH360_THEME_DIR . '/includes/members-directory-meta-box.php';
+
+/**
  * Dynamic CSS generation
  */
 require_once VH360_THEME_DIR . '/includes/dynamic-css.php';
