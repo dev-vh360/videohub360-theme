@@ -232,8 +232,21 @@ function vh360_save_members_directory_meta_box($post_id) {
         
         update_post_meta($post_id, '_vh360_members_directory_account_types_override', array_values($account_types));
     } else {
-        // If no checkboxes are checked, save empty array
-        update_post_meta($post_id, '_vh360_members_directory_account_types_override', array());
+        // SECURITY: If no checkboxes are checked and audience is professionals_only,
+        // don't save empty array - this would cause the fail-closed logic to kick in
+        // Instead, just delete the override meta so it inherits from global
+        $audience_value = isset($_POST['vh360_directory_audience_override']) 
+            ? sanitize_text_field($_POST['vh360_directory_audience_override']) 
+            : get_post_meta($post_id, '_vh360_members_directory_audience_override', true);
+        
+        if ($audience_value === 'professionals_only') {
+            // Don't save empty array for professionals_only mode
+            // This ensures global defaults are used
+            delete_post_meta($post_id, '_vh360_members_directory_account_types_override');
+        } else {
+            // For other modes, empty array is acceptable
+            update_post_meta($post_id, '_vh360_members_directory_account_types_override', array());
+        }
     }
 }
 add_action('save_post', 'vh360_save_members_directory_meta_box');

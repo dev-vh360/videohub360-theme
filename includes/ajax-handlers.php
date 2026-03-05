@@ -492,7 +492,7 @@ class VH360_Ajax_Handlers {
         // Get directory page ID and resolve effective mode
         $directory_page_id = isset($_POST['directory_page_id']) ? absint($_POST['directory_page_id']) : 0;
         
-        // Security: verify the page ID is valid and uses the directory template
+        // SECURITY STEP 3: Fail closed when directory context is missing or invalid
         $mode = null;
         if ($directory_page_id > 0) {
             $template = get_page_template_slug($directory_page_id);
@@ -501,9 +501,11 @@ class VH360_Ajax_Handlers {
             }
         }
         
-        // Fallback to global settings if page ID is invalid/missing
+        // SECURITY: Fail closed - require valid directory context
         if (!$mode) {
-            $mode = vh360_get_members_directory_effective_mode(0);
+            wp_send_json_error(array(
+                'message' => esc_html__('Invalid directory context.', 'videohub360-theme'),
+            ));
         }
         
         // Get members options for per_page
@@ -557,6 +559,38 @@ class VH360_Ajax_Handlers {
         }
         
         $members = vh360_get_members($args);
+        
+        // SECURITY STEP 2: Belt-and-suspenders post-filter for professionals_only mode
+        // This ensures no non-professionals leak even if the query was modified by another plugin/filter
+        if ($mode['audience'] === 'professionals_only' && !empty($members)) {
+            $allowed_account_types = !empty($mode['professionals_account_types']) 
+                ? $mode['professionals_account_types'] 
+                : array('professional', 'organization');
+            $require_approval = $mode['professionals_require_approval'];
+            
+            $members = array_filter($members, function($member) use ($allowed_account_types, $require_approval) {
+                // Check account type
+                $account_type = get_user_meta($member->ID, '_vh360_account_type', true);
+                if (!in_array($account_type, $allowed_account_types, true)) {
+                    return false;
+                }
+                
+                // If approval is required, check approval status
+                if ($require_approval && $account_type === 'professional') {
+                    $status = get_user_meta($member->ID, '_vh360_professional_status', true);
+                    // Approved if: status='approved', OR status is empty/not set (legacy accounts)
+                    // Organizations don't have professional_status meta, so they pass through
+                    if ($status !== '' && $status !== 'approved') {
+                        return false;
+                    }
+                }
+                
+                return true;
+            });
+            
+            // Re-index array after filtering
+            $members = array_values($members);
+        }
         
         if (empty($members)) {
             wp_send_json_error(array(
