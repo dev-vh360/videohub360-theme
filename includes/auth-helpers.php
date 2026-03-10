@@ -463,15 +463,13 @@ function vh360_get_client_register_url() {
 /**
  * Handle Business Profile form submission (front-end editor)
  * 
- * DEPRECATED: Business profile fields are now saved through the unified Edit Profile form
- * in template-parts/dashboard/profile.php. This handler is disabled to prevent duplicate
- * saving pathways.
+ * Handles saving of business/professional-specific data from the Business Profile
+ * dashboard page. This is separate from the shared Profile editor to maintain
+ * clean responsibility boundaries.
+ * 
+ * @since 1.0.0
  */
 function vh360_handle_business_profile_save() {
-    // This handler has been disabled - business fields are now saved via profile.php
-    return;
-    
-    /* Original code preserved for reference
     // Only process POST requests
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         return;
@@ -482,11 +480,73 @@ function vh360_handle_business_profile_save() {
         return;
     }
     
-    // ... rest of original handler code ...
-    */
+    // Verify nonce for security
+    if (!wp_verify_nonce($_POST['vh360_save_business_profile_nonce'], 'vh360_save_business_profile')) {
+        return;
+    }
+    
+    // Get current user
+    $current_user_id = get_current_user_id();
+    
+    // Verify user is logged in
+    if (!$current_user_id) {
+        return;
+    }
+    
+    // Verify user has permission (professional or organization only)
+    $account_type = function_exists('vh360_get_user_account_type') ? vh360_get_user_account_type($current_user_id) : '';
+    if (!in_array($account_type, array('professional', 'organization'), true)) {
+        return;
+    }
+    
+    // Sanitize and save text fields
+    $text_fields = array(
+        'business_name' => '_vh360_business_name',
+        'business_type' => '_vh360_business_type',
+        'credentials' => '_vh360_credentials',
+        'location' => '_vh360_location',
+        'contact_phone' => '_vh360_contact_phone',
+    );
+    
+    foreach ($text_fields as $field => $meta_key) {
+        if (isset($_POST[$field])) {
+            update_user_meta($current_user_id, $meta_key, sanitize_text_field(wp_unslash($_POST[$field])));
+        }
+    }
+    
+    // Sanitize and save textarea fields
+    $textarea_fields = array(
+        'specialties' => '_vh360_specialties',
+        'pricing_info' => '_vh360_pricing_info',
+        'insurance_info' => '_vh360_insurance_info',
+    );
+    
+    foreach ($textarea_fields as $field => $meta_key) {
+        if (isset($_POST[$field])) {
+            update_user_meta($current_user_id, $meta_key, sanitize_textarea_field(wp_unslash($_POST[$field])));
+        }
+    }
+    
+    // Sanitize and save email field
+    if (isset($_POST['contact_email'])) {
+        update_user_meta($current_user_id, '_vh360_contact_email', sanitize_email(wp_unslash($_POST['contact_email'])));
+    }
+    
+    // Sanitize and save URL field
+    if (isset($_POST['booking_url'])) {
+        update_user_meta($current_user_id, '_vh360_booking_url', esc_url_raw(wp_unslash($_POST['booking_url'])));
+    }
+    
+    // Handle checkboxes
+    update_user_meta($current_user_id, '_vh360_telehealth', isset($_POST['telehealth']) && $_POST['telehealth'] === '1' ? '1' : '0');
+    update_user_meta($current_user_id, '_vh360_accepting_new_clients', isset($_POST['accepting_new_clients']) && $_POST['accepting_new_clients'] === '1' ? '1' : '0');
+    
+    // Redirect back with success message
+    $redirect_url = add_query_arg('business_profile_updated', 'success', wp_get_referer());
+    wp_safe_redirect($redirect_url);
+    exit;
 }
-// Hook disabled - business fields now saved via profile.php form
-// add_action('template_redirect', 'vh360_handle_business_profile_save');
+add_action('template_redirect', 'vh360_handle_business_profile_save');
 
 /**
  * Get the URL for the business registration landing page
