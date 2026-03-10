@@ -538,8 +538,14 @@ function vh360_handle_business_profile_save() {
     }
     
     // Handle checkboxes
-    update_user_meta($current_user_id, '_vh360_telehealth', isset($_POST['telehealth']) && $_POST['telehealth'] === '1' ? '1' : '0');
-    update_user_meta($current_user_id, '_vh360_accepting_new_clients', isset($_POST['accepting_new_clients']) && $_POST['accepting_new_clients'] === '1' ? '1' : '0');
+    $checkbox_fields = array(
+        'telehealth' => '_vh360_telehealth',
+        'accepting_new_clients' => '_vh360_accepting_new_clients',
+    );
+    
+    foreach ($checkbox_fields as $field => $meta_key) {
+        update_user_meta($current_user_id, $meta_key, isset($_POST[$field]) && $_POST[$field] === '1' ? '1' : '0');
+    }
     
     // Redirect back with success message
     $redirect_url = add_query_arg('business_profile_updated', 'success', wp_get_referer());

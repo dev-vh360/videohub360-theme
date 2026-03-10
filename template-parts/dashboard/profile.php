@@ -81,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vh360_edit_profile_no
                     } else {
                         $image_path = $upload['file'];
                         
-                        // Smart mode: crop to centered square and resize to 300x300
+                        // Crop image to centered square and resize to 300x300 pixels
                         $editor = wp_get_image_editor($image_path);
                         if (!is_wp_error($editor)) {
                             $size = $editor->get_size();
@@ -118,7 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vh360_edit_profile_no
                     }
                 }
                 
-                // Handle profile picture removal
+                // Handle profile picture removal (requires same nonce as form submission)
                 if (isset($_POST['remove_profile_picture']) && $_POST['remove_profile_picture'] === '1') {
                     delete_user_meta($current_user_id, 'vh360_profile_picture_id');
                 }
