@@ -636,6 +636,91 @@ function vh360_enqueue_auth_assets() {
 add_action('wp_enqueue_scripts', 'vh360_enqueue_auth_assets', 20);
 
 /**
+ * Enqueue avatar cropper assets on profile editing pages
+ */
+function vh360_enqueue_avatar_cropper_assets() {
+    // Load on profile edit template and dashboard profile tab
+    $is_profile_edit = is_page_template('template-profile-edit.php');
+    $is_dashboard = is_page_template('template-dashboard.php') || is_page_template('templates/dashboard.php');
+    
+    if (!$is_profile_edit && !$is_dashboard) {
+        return;
+    }
+
+    // Check if avatar cropper is enabled
+    $options = get_option('vh360_profile_options', array());
+    $enable_cropper = isset($options['enable_avatar_cropper']) ? $options['enable_avatar_cropper'] : true;
+    
+    if (!$enable_cropper) {
+        return;
+    }
+
+    // Enqueue Cropper.js CSS from CDN
+    wp_enqueue_style(
+        'cropperjs',
+        'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css',
+        array(),
+        '1.6.2'
+    );
+
+    // Enqueue Cropper.js JS from CDN
+    wp_enqueue_script(
+        'cropperjs',
+        'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js',
+        array(),
+        '1.6.2',
+        true
+    );
+
+    // Enqueue avatar cropper CSS
+    wp_enqueue_style(
+        'vh360-avatar-cropper',
+        VH360_THEME_URI . '/assets/css/avatar-cropper.css',
+        array('cropperjs'),
+        VH360_THEME_VERSION
+    );
+
+    // Enqueue avatar cropper JS
+    wp_enqueue_script(
+        'vh360-avatar-cropper',
+        VH360_THEME_URI . '/assets/js/avatar-cropper.js',
+        array('jquery', 'cropperjs'),
+        VH360_THEME_VERSION,
+        true
+    );
+
+    // Get avatar settings
+    $avatar_settings = function_exists('vh360_get_avatar_settings') ? vh360_get_avatar_settings() : array(
+        'avatar_max_size' => 2,
+        'avatar_output_size' => 300,
+        'avatar_quality' => 90,
+    );
+
+    // Localize script with settings and translations
+    wp_localize_script('vh360-avatar-cropper', 'vh360AvatarCropper', array(
+        'maxSize'    => $avatar_settings['avatar_max_size'],
+        'outputSize' => $avatar_settings['avatar_output_size'],
+        'quality'    => $avatar_settings['avatar_quality'],
+        'i18n'       => array(
+            'cropTitle'       => __('Crop Your Avatar', 'videohub360-theme'),
+            'previewLabel'    => __('Preview', 'videohub360-theme'),
+            'apply'           => __('Apply Crop', 'videohub360-theme'),
+            'cancel'          => __('Cancel', 'videohub360-theme'),
+            'close'           => __('Close', 'videohub360-theme'),
+            'cropImageAlt'    => __('Image to crop', 'videohub360-theme'),
+            'previewAlt'      => __('Avatar preview', 'videohub360-theme'),
+            'invalidFileType' => __('Invalid file type. Please upload a JPG, PNG, or GIF image.', 'videohub360-theme'),
+            'fileTooLarge'    => sprintf(
+                /* translators: %s: maximum file size */
+                __('File size exceeds maximum allowed size of %s MB.', 'videohub360-theme'),
+                $avatar_settings['avatar_max_size']
+            ),
+        ),
+    ));
+}
+add_action('wp_enqueue_scripts', 'vh360_enqueue_avatar_cropper_assets', 20);
+
+/**
  * Enqueue admin scripts for better backend experience
  */
 function vh360_enqueue_admin_assets($hook) {

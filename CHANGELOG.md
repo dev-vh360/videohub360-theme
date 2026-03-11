@@ -6,6 +6,27 @@ This project follows semantic versioning.
 
 ---
 
+## Unreleased
+
+### Added
+- Avatar cropping system with client-side interface using Cropper.js
+- Live preview and repositioning for profile picture uploads
+- Centralized avatar processing with EXIF orientation correction
+- Configurable avatar settings in admin (output size, quality, minimum dimensions)
+- MIME type validation using wp_check_filetype_and_ext() for enhanced security
+- Automatic cleanup of old avatar attachments after successful upload
+
+### Changed
+- Profile picture upload now uses centralized vh360_process_profile_avatar_upload() helper
+- Both profile editing templates (template-profile-edit.php and dashboard) now share identical avatar processing logic
+
+### Security
+- Enhanced MIME type validation with defense-in-depth approach
+- Crop coordinates sanitized before server processing
+- Dimension validation prevents low-quality uploads
+
+---
+
 ## 1.0.0 – Initial Release
 
 ### Added

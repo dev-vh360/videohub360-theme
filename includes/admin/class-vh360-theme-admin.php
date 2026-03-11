@@ -261,6 +261,12 @@ class VH360_Theme_Admin {
                 'social_platforms' => array('twitter', 'facebook', 'youtube', 'instagram'),
                 'avatar_max_size' => 2,
                 'cover_max_size' => 5,
+                'enable_avatar_cropper' => true,
+                'avatar_output_size' => 300,
+                'avatar_min_width' => 300,
+                'avatar_min_height' => 300,
+                'avatar_quality' => 90,
+                'avatar_allowed_types' => array('image/jpeg', 'image/png', 'image/gif'),
             ),
         ));
         
@@ -520,15 +526,25 @@ class VH360_Theme_Admin {
         $sanitized['show_cover'] = isset($input['show_cover']) ? (bool) $input['show_cover'] : false;
         $sanitized['show_social'] = isset($input['show_social']) ? (bool) $input['show_social'] : false;
         $sanitized['show_stats'] = isset($input['show_stats']) ? (bool) $input['show_stats'] : false;
+        $sanitized['enable_avatar_cropper'] = isset($input['enable_avatar_cropper']) ? (bool) $input['enable_avatar_cropper'] : false;
         
         // Array field for social platforms - default to empty array if not set
         $sanitized['social_platforms'] = $this->sanitize_array_input(
             isset($input['social_platforms']) ? $input['social_platforms'] : null
         );
         
+        // Array field for avatar allowed types
+        $sanitized['avatar_allowed_types'] = $this->sanitize_array_input(
+            isset($input['avatar_allowed_types']) ? $input['avatar_allowed_types'] : null
+        );
+        
         // Numeric fields with defaults
         $sanitized['avatar_max_size'] = isset($input['avatar_max_size']) ? absint($input['avatar_max_size']) : 2;
         $sanitized['cover_max_size'] = isset($input['cover_max_size']) ? absint($input['cover_max_size']) : 5;
+        $sanitized['avatar_output_size'] = isset($input['avatar_output_size']) ? absint($input['avatar_output_size']) : 300;
+        $sanitized['avatar_min_width'] = isset($input['avatar_min_width']) ? absint($input['avatar_min_width']) : 300;
+        $sanitized['avatar_min_height'] = isset($input['avatar_min_height']) ? absint($input['avatar_min_height']) : 300;
+        $sanitized['avatar_quality'] = isset($input['avatar_quality']) ? min(100, max(1, absint($input['avatar_quality']))) : 90;
         
         return $sanitized;
     }
