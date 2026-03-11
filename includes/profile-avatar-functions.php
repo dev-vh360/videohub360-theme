@@ -85,9 +85,12 @@ function vh360_process_profile_avatar_upload($file, $user_id, $crop_data = array
     require_once(ABSPATH . 'wp-admin/includes/media.php');
 
     // Upload file with MIME type restrictions
-    // Note: This is the first layer of validation. The wp_check_filetype_and_ext
-    // below provides a second layer that validates both extension and file contents.
-    // The allowed types can be customized via the avatar_allowed_types option.
+    // Note: WordPress wp_handle_upload() requires the 'mimes' parameter in the format
+    // 'extension|ext' => 'mime/type'. We use standard image types here for the initial
+    // upload validation. The wp_check_filetype_and_ext() call below provides additional
+    // validation that checks both file extension and actual file contents, and also
+    // respects the avatar_allowed_types configuration for advanced customization.
+    // This two-layer approach provides defense-in-depth against malicious uploads.
     $upload_overrides = array(
         'test_form' => false,
         'mimes'     => array(
@@ -108,8 +111,8 @@ function vh360_process_profile_avatar_upload($file, $user_id, $crop_data = array
 
     $image_path = $upload['file'];
 
-    // Validate MIME type securely using both extension and file contents
-    // This provides defense-in-depth and respects configured allowed types
+    // Second layer: Validate MIME type securely using both extension and file contents
+    // This provides defense-in-depth and allows avatar_allowed_types customization
     $file_check = wp_check_filetype_and_ext($image_path, $file['name']);
     
     if (!$file_check['type'] || !in_array($file_check['type'], $avatar_allowed_types)) {
@@ -158,6 +161,8 @@ function vh360_process_profile_avatar_upload($file, $user_id, $crop_data = array
     }
 
     // Process crop coordinates if provided
+    // Note: Empty crop data (from hidden fields with empty values) will trigger
+    // the fallback auto-center-crop logic below, maintaining backward compatibility
     if (!empty($crop_data) && isset($crop_data['x'], $crop_data['y'], $crop_data['width'], $crop_data['height'])) {
         // Validate crop coordinates
         $crop_x = max(0, (float) $crop_data['x']);

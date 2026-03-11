@@ -224,9 +224,9 @@
         // Update hidden fields
         updateCropFields(cropData);
         
-        // Update source dimensions
-        $('input[name="avatar_source_width"]').val(Math.round(imageData.naturalWidth));
-        $('input[name="avatar_source_height"]').val(Math.round(imageData.naturalHeight));
+        // Update source dimensions (naturalWidth/Height are already integers)
+        $('input[name="avatar_source_width"]').val(imageData.naturalWidth);
+        $('input[name="avatar_source_height"]').val(imageData.naturalHeight);
 
         // Get cropped canvas and convert to blob
         const canvas = cropperInstance.getCroppedCanvas({
