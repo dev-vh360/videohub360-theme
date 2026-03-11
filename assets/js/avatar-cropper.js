@@ -40,7 +40,8 @@
             }
 
             // Validate file type
-            if (!file.type.match(/^image\/(jpeg|jpg|png|gif)$/i)) {
+            // Note: File MIME types use 'image/jpeg' not 'image/jpg'
+            if (!file.type.match(/^image\/(jpeg|png|gif)$/i)) {
                 alert(vh360AvatarCropper.i18n.invalidFileType || 'Invalid file type. Please upload a JPG, PNG, or GIF image.');
                 e.target.value = '';
                 return;

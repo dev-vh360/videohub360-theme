@@ -52,6 +52,8 @@ function vh360_process_profile_avatar_upload($file, $user_id, $crop_data = array
     $avatar_min_width = isset($options['avatar_min_width']) ? absint($options['avatar_min_width']) : 300;
     $avatar_min_height = isset($options['avatar_min_height']) ? absint($options['avatar_min_height']) : 300;
     $avatar_quality = isset($options['avatar_quality']) ? absint($options['avatar_quality']) : 90;
+    // Note: avatar_allowed_types can be customized programmatically via options or filters
+    // The admin UI displays static text, but the option is available for advanced customization
     $avatar_allowed_types = isset($options['avatar_allowed_types']) && is_array($options['avatar_allowed_types']) 
         ? $options['avatar_allowed_types'] 
         : array('image/jpeg', 'image/png', 'image/gif');
@@ -84,8 +86,8 @@ function vh360_process_profile_avatar_upload($file, $user_id, $crop_data = array
 
     // Upload file with MIME type restrictions
     // Note: This is the first layer of validation. The wp_check_filetype_and_ext
-    // below provides a second layer that validates both extension and file contents,
-    // and respects the admin-configured avatar_allowed_types setting.
+    // below provides a second layer that validates both extension and file contents.
+    // The allowed types can be customized via the avatar_allowed_types option.
     $upload_overrides = array(
         'test_form' => false,
         'mimes'     => array(
@@ -107,7 +109,7 @@ function vh360_process_profile_avatar_upload($file, $user_id, $crop_data = array
     $image_path = $upload['file'];
 
     // Validate MIME type securely using both extension and file contents
-    // This provides defense-in-depth and respects admin-configured allowed types
+    // This provides defense-in-depth and respects configured allowed types
     $file_check = wp_check_filetype_and_ext($image_path, $file['name']);
     
     if (!$file_check['type'] || !in_array($file_check['type'], $avatar_allowed_types)) {
