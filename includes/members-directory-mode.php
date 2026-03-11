@@ -26,6 +26,7 @@ if (!defined('ABSPATH')) {
  *   - audience: 'all_members' or 'professionals_only'
  *   - professionals_account_types: array of account type strings
  *   - professionals_require_approval: boolean
+ *   - show_card_stats: boolean
  *   - source: 'page_override' or 'global'
  */
 function vh360_get_members_directory_effective_mode($page_id = 0) {
@@ -40,6 +41,7 @@ function vh360_get_members_directory_effective_mode($page_id = 0) {
         'directory_audience' => 'all_members',
         'professionals_account_types' => array('professional', 'organization'),
         'professionals_require_approval' => true,
+        'show_card_stats' => true,
     );
     $global_options = wp_parse_args($global_options, $defaults);
     
@@ -48,6 +50,7 @@ function vh360_get_members_directory_effective_mode($page_id = 0) {
         'audience' => $global_options['directory_audience'],
         'professionals_account_types' => $global_options['professionals_account_types'],
         'professionals_require_approval' => $global_options['professionals_require_approval'],
+        'show_card_stats' => $global_options['show_card_stats'],
         'source' => 'global',
     );
     
@@ -71,6 +74,14 @@ function vh360_get_members_directory_effective_mode($page_id = 0) {
             if ($approval_override !== '' && $approval_override !== 'inherit') {
                 // Meta value is stored as string '1' or '0'
                 $mode['professionals_require_approval'] = ($approval_override === '1');
+                $mode['source'] = 'page_override';
+            }
+            
+            // Check show_card_stats override
+            $show_card_stats_override = get_post_meta($page_id, '_vh360_members_directory_show_card_stats_override', true);
+            if ($show_card_stats_override !== '' && $show_card_stats_override !== 'inherit') {
+                // Meta value is stored as string '1' or '0'
+                $mode['show_card_stats'] = ($show_card_stats_override === '1');
                 $mode['source'] = 'page_override';
             }
             

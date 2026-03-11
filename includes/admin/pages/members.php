@@ -23,6 +23,7 @@ $defaults = array(
     'directory_audience' => 'all_members',
     'professionals_account_types' => array('professional', 'organization'),
     'professionals_require_approval' => true,
+    'show_card_stats' => true,
 );
 $options = wp_parse_args($options, $defaults);
 ?>
@@ -94,6 +95,15 @@ $options = wp_parse_args($options, $defaults);
                             <label>
                                 <input type="checkbox" name="vh360_members_options[enable_search]" value="1" <?php checked($options['enable_search'], true); ?>>
                                 <?php esc_html_e('Enable search box in members directory', 'videohub360-theme'); ?>
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php esc_html_e('Show Profile Card Stats', 'videohub360-theme'); ?></th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="vh360_members_options[show_card_stats]" value="1" <?php checked($options['show_card_stats'], true); ?>>
+                                <?php esc_html_e('Show statistics on member cards (videos, followers, views)', 'videohub360-theme'); ?>
                             </label>
                         </td>
                     </tr>

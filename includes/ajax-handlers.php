@@ -611,7 +611,7 @@ class VH360_Ajax_Handlers {
                 'user_id' => $member->ID,
                 'show_avatar' => true,
                 'show_bio' => true,
-                'show_stats' => true,
+                'show_stats' => !empty($mode['show_card_stats']),
                 'avatar_size' => 80,
             ));
         }

@@ -50,6 +50,7 @@ function vh360_render_members_directory_meta_box($post) {
     $audience_override = get_post_meta($post->ID, '_vh360_members_directory_audience_override', true);
     $approval_override = get_post_meta($post->ID, '_vh360_members_directory_require_approval_override', true);
     $account_types_override = get_post_meta($post->ID, '_vh360_members_directory_account_types_override', true);
+    $show_card_stats_override = get_post_meta($post->ID, '_vh360_members_directory_show_card_stats_override', true);
     
     // Set defaults if empty
     if (empty($audience_override)) {
@@ -61,6 +62,9 @@ function vh360_render_members_directory_meta_box($post) {
     if (!is_array($account_types_override)) {
         $account_types_override = array();
     }
+    if ($show_card_stats_override === '') {
+        $show_card_stats_override = 'inherit';
+    }
     
     // Get global settings for reference
     $global_options = get_option('vh360_members_options', array());
@@ -68,6 +72,7 @@ function vh360_render_members_directory_meta_box($post) {
         'directory_audience' => 'all_members',
         'professionals_account_types' => array('professional', 'organization'),
         'professionals_require_approval' => true,
+        'show_card_stats' => true,
     );
     $global_options = wp_parse_args($global_options, $global_defaults);
     
@@ -77,6 +82,9 @@ function vh360_render_members_directory_meta_box($post) {
     $global_approval_label = $global_options['professionals_require_approval'] 
         ? __('Yes', 'videohub360-theme') 
         : __('No', 'videohub360-theme');
+    $global_card_stats_label = $global_options['show_card_stats'] 
+        ? __('Show', 'videohub360-theme') 
+        : __('Hide', 'videohub360-theme');
     ?>
     <div class="vh360-members-directory-meta-box">
         <p class="description">
@@ -145,6 +153,29 @@ function vh360_render_members_directory_meta_box($post) {
                 </option>
                 <option value="0" <?php selected($approval_override, '0'); ?>>
                     <?php esc_html_e('No', 'videohub360-theme'); ?>
+                </option>
+            </select>
+        </p>
+        
+        <!-- Profile Card Stats Override -->
+        <p>
+            <label for="vh360_directory_show_card_stats_override">
+                <strong><?php esc_html_e('Profile Card Stats', 'videohub360-theme'); ?></strong>
+            </label>
+        </p>
+        <p>
+            <select name="vh360_directory_show_card_stats_override" id="vh360_directory_show_card_stats_override" class="widefat">
+                <option value="inherit" <?php selected($show_card_stats_override, 'inherit'); ?>>
+                    <?php
+                    /* translators: %s: global card stats setting */
+                    echo esc_html(sprintf(__('Inherit Global (%s)', 'videohub360-theme'), $global_card_stats_label));
+                    ?>
+                </option>
+                <option value="1" <?php selected($show_card_stats_override, '1'); ?>>
+                    <?php esc_html_e('Show', 'videohub360-theme'); ?>
+                </option>
+                <option value="0" <?php selected($show_card_stats_override, '0'); ?>>
+                    <?php esc_html_e('Hide', 'videohub360-theme'); ?>
                 </option>
             </select>
         </p>
@@ -221,6 +252,16 @@ function vh360_save_members_directory_meta_box($post_id) {
         
         if (in_array($approval, $valid_values, true)) {
             update_post_meta($post_id, '_vh360_members_directory_require_approval_override', $approval);
+        }
+    }
+    
+    // Save show_card_stats override
+    if (isset($_POST['vh360_directory_show_card_stats_override'])) {
+        $show_card_stats = sanitize_text_field($_POST['vh360_directory_show_card_stats_override']);
+        $valid_values = array('inherit', '0', '1');
+        
+        if (in_array($show_card_stats, $valid_values, true)) {
+            update_post_meta($post_id, '_vh360_members_directory_show_card_stats_override', $show_card_stats);
         }
     }
     

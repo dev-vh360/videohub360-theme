@@ -26,7 +26,7 @@ echo "====================================\n\n";
 echo "TEST 1: New Settings Schema\n";
 echo "----------------------------\n";
 $options = get_option('vh360_members_options', array());
-$required_keys = array('directory_audience', 'professionals_account_types', 'professionals_require_approval');
+$required_keys = array('directory_audience', 'professionals_account_types', 'professionals_require_approval', 'show_card_stats');
 foreach ($required_keys as $key) {
     $exists = array_key_exists($key, $options);
     $value = $exists ? var_export($options[$key], true) : 'NOT SET';
@@ -41,6 +41,7 @@ $mode = vh360_get_members_directory_effective_mode(0);
 echo "Audience: " . $mode['audience'] . "\n";
 echo "Account Types: " . implode(', ', $mode['professionals_account_types']) . "\n";
 echo "Require Approval: " . ($mode['professionals_require_approval'] ? 'true' : 'false') . "\n";
+echo "Show Card Stats: " . ($mode['show_card_stats'] ? 'true' : 'false') . "\n";
 echo "Source: " . $mode['source'] . "\n\n";
 
 // Test 3: Test query builder for all_members mode
@@ -135,6 +136,7 @@ if (!empty($pages)) {
     $page_mode = vh360_get_members_directory_effective_mode($page->ID);
     echo "Page Mode:\n";
     echo "  Audience: " . $page_mode['audience'] . "\n";
+    echo "  Show Card Stats: " . ($page_mode['show_card_stats'] ? 'true' : 'false') . "\n";
     echo "  Source: " . $page_mode['source'] . "\n";
 } else {
     echo "No Members Directory pages found. Skipping page override test.\n";
