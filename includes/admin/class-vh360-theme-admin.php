@@ -302,6 +302,7 @@ class VH360_Theme_Admin {
                 'directory_audience' => 'all_members',
                 'professionals_account_types' => array('professional', 'organization'),
                 'professionals_require_approval' => true,
+                'show_card_stats' => true,
             ),
         ));
         
@@ -613,6 +614,7 @@ class VH360_Theme_Admin {
         $sanitized['enable_directory'] = isset($input['enable_directory']) ? (bool) $input['enable_directory'] : false;
         $sanitized['enable_search'] = isset($input['enable_search']) ? (bool) $input['enable_search'] : false;
         $sanitized['professionals_require_approval'] = isset($input['professionals_require_approval']) ? (bool) $input['professionals_require_approval'] : false;
+        $sanitized['show_card_stats'] = isset($input['show_card_stats']) ? (bool) $input['show_card_stats'] : false;
         
         // Numeric field with default
         $sanitized['per_page'] = isset($input['per_page']) ? absint($input['per_page']) : 12;
