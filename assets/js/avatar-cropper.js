@@ -49,7 +49,7 @@
             // Validate file size
             const maxSize = (vh360AvatarCropper.maxSize || 2) * 1024 * 1024;
             if (file.size > maxSize) {
-                alert((vh360AvatarCropper.i18n.fileTooLarge || 'File size exceeds maximum allowed size of {size} MB.').replace('{size}', vh360AvatarCropper.maxSize || 2));
+                alert(vh360AvatarCropper.i18n.fileTooLarge || 'File size exceeds maximum allowed size.');
                 e.target.value = '';
                 return;
             }

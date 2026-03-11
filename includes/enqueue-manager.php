@@ -690,7 +690,11 @@ function vh360_enqueue_avatar_cropper_assets() {
     );
 
     // Get avatar settings
-    $avatar_settings = vh360_get_avatar_settings();
+    $avatar_settings = function_exists('vh360_get_avatar_settings') ? vh360_get_avatar_settings() : array(
+        'avatar_max_size' => 2,
+        'avatar_output_size' => 300,
+        'avatar_quality' => 90,
+    );
 
     // Localize script with settings and translations
     wp_localize_script('vh360-avatar-cropper', 'vh360AvatarCropper', array(

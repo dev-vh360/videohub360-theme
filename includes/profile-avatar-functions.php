@@ -218,11 +218,11 @@ function vh360_process_profile_avatar_upload($file, $user_id, $crop_data = array
     }
 
     // Create WordPress attachment
-    $filetype = wp_check_filetype($image_path);
+    // Reuse MIME type from earlier validation to avoid redundant processing
     $filename = sanitize_file_name($file['name']);
 
     $attachment = array(
-        'post_mime_type' => $filetype['type'],
+        'post_mime_type' => $file_check['type'],
         'post_title'     => pathinfo($filename, PATHINFO_FILENAME),
         'post_content'   => '',
         'post_status'    => 'inherit',
