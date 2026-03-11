@@ -83,6 +83,9 @@ function vh360_process_profile_avatar_upload($file, $user_id, $crop_data = array
     require_once(ABSPATH . 'wp-admin/includes/media.php');
 
     // Upload file with MIME type restrictions
+    // Note: This is the first layer of validation. The wp_check_filetype_and_ext
+    // below provides a second layer that validates both extension and file contents,
+    // and respects the admin-configured avatar_allowed_types setting.
     $upload_overrides = array(
         'test_form' => false,
         'mimes'     => array(
@@ -104,6 +107,7 @@ function vh360_process_profile_avatar_upload($file, $user_id, $crop_data = array
     $image_path = $upload['file'];
 
     // Validate MIME type securely using both extension and file contents
+    // This provides defense-in-depth and respects admin-configured allowed types
     $file_check = wp_check_filetype_and_ext($image_path, $file['name']);
     
     if (!$file_check['type'] || !in_array($file_check['type'], $avatar_allowed_types)) {

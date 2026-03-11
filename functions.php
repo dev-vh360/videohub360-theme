@@ -1022,11 +1022,6 @@ require_once VH360_THEME_DIR . '/includes/google-fonts.php';
 require_once VH360_THEME_DIR . '/includes/performance.php';
 
 /**
- * Smart asset enqueue manager
- */
-require_once VH360_THEME_DIR . '/includes/enqueue-manager.php';
-
-/**
  * Account type helpers
  */
 require_once VH360_THEME_DIR . '/includes/account-types.php';
@@ -1040,6 +1035,11 @@ require_once VH360_THEME_DIR . '/includes/helpers.php';
  * Profile avatar processing functions
  */
 require_once VH360_THEME_DIR . '/includes/profile-avatar-functions.php';
+
+/**
+ * Smart asset enqueue manager
+ */
+require_once VH360_THEME_DIR . '/includes/enqueue-manager.php';
 
 /**
  * Dashboard Tabs Registry (single source of truth)
