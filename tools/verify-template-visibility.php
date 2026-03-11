@@ -176,4 +176,3 @@ echo "1. Navigate to VH360 Theme → Template Visibility in wp-admin\n";
 echo "2. Configure which templates require login\n";
 echo "3. Test guest access to public templates\n";
 echo "4. Verify login redirects work for private templates\n";
-

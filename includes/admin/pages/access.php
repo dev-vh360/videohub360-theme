@@ -102,4 +102,3 @@ $targets = vh360_get_access_control_targets();
 </div>
 
 <?php include VH360_THEME_DIR . '/includes/admin/partials/footer.php'; ?>
-
