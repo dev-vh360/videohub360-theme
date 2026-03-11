@@ -138,7 +138,7 @@ function vh360_get_template_visibility_settings() {
     // Build defaults from registry
     $defaults = array();
     foreach ($targets as $key => $target) {
-        $defaults[$key] = isset($target['default']) ? $target['default'] : 1;
+        $defaults[$key] = $target['default'] ?? 1;
     }
 
     $saved = get_option('vh360_access_options', array());
