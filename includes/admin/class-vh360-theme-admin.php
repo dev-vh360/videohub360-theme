@@ -170,6 +170,16 @@ class VH360_Theme_Admin {
             array($this, 'render_permissions')
         );
         
+        // Template Visibility submenu
+        add_submenu_page(
+            'vh360-theme',
+            __('Template Visibility Settings', 'videohub360-theme'),
+            __('Template Visibility', 'videohub360-theme'),
+            'manage_options',
+            'vh360-theme-access',
+            array($this, 'render_access')
+        );
+        
         // Business submenu
         add_submenu_page(
             'vh360-theme',
@@ -387,6 +397,19 @@ class VH360_Theme_Admin {
             ),
         ));
         
+        // Access/visibility settings
+        register_setting('vh360_access_settings', 'vh360_access_options', array(
+            'type' => 'array',
+            'sanitize_callback' => array($this, 'sanitize_access_settings'),
+            'default' => array(
+                'dashboard'         => 1,
+                'profile_edit'      => 1,
+                'members_directory' => 0,
+                'activity_feed'     => 1,
+                'author_profiles'   => 0,
+            ),
+        ));
+        
         // Business settings
         register_setting('vh360_business_settings', 'vh360_business_options', array(
             'type' => 'array',
@@ -481,6 +504,7 @@ class VH360_Theme_Admin {
         delete_option('vh360_activity_options');
         delete_option('vh360_members_options');
         delete_option('vh360_advanced_options');
+        delete_option('vh360_access_options');
     }
     
     /**
@@ -942,6 +966,16 @@ class VH360_Theme_Admin {
     }
     
     /**
+     * Render access/visibility settings page
+     */
+    public function render_access() {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You do not have sufficient permissions to access this page.', 'videohub360-theme'));
+        }
+        include VH360_THEME_DIR . '/includes/admin/pages/access.php';
+    }
+    
+    /**
      * Render business settings page
      */
     public function render_business() {
@@ -995,6 +1029,23 @@ class VH360_Theme_Admin {
         
         // Set transient to trigger capability sync on next admin_init
         set_transient('vh360_permissions_needs_sync', true, 60);
+        
+        return $output;
+    }
+    
+    /**
+     * Sanitize access/visibility settings
+     */
+    public function sanitize_access_settings($input) {
+        // Get targets from registry to ensure we only save known keys
+        $targets = vh360_get_access_control_targets();
+        
+        $output = array();
+        
+        foreach ($targets as $key => $target) {
+            // Normalize to 1 or 0
+            $output[$key] = !empty($input[$key]) ? 1 : 0;
+        }
         
         return $output;
     }
@@ -1232,6 +1283,10 @@ class VH360_Theme_Admin {
         
         if (isset($settings['advanced'])) {
             update_option('vh360_advanced_options', $settings['advanced']);
+        }
+        
+        if (isset($settings['access'])) {
+            update_option('vh360_access_options', $settings['access']);
         }
         
         wp_send_json_success(__('Settings imported successfully', 'videohub360-theme'));
