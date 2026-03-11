@@ -137,16 +137,51 @@ $options = wp_parse_args($options, $defaults);
         <!-- Avatar Settings -->
         <div class="vh360-admin-card">
             <h2><?php esc_html_e('Avatar Settings', 'videohub360-theme'); ?></h2>
-            <p><?php esc_html_e('Configure avatar upload settings.', 'videohub360-theme'); ?></p>
+            <p><?php esc_html_e('Configure avatar upload and cropping settings.', 'videohub360-theme'); ?></p>
             
             <table class="form-table">
                 <tbody>
+                    <tr>
+                        <th scope="row"><?php esc_html_e('Enable Avatar Cropper', 'videohub360-theme'); ?></th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="vh360_profile_options[enable_avatar_cropper]" value="1" <?php checked(isset($options['enable_avatar_cropper']) ? $options['enable_avatar_cropper'] : true, true); ?>>
+                                <?php esc_html_e('Allow users to crop and reposition their avatar before uploading', 'videohub360-theme'); ?>
+                            </label>
+                        </td>
+                    </tr>
                     <tr>
                         <th scope="row"><?php esc_html_e('Maximum File Size', 'videohub360-theme'); ?></th>
                         <td>
                             <input type="number" name="vh360_profile_options[avatar_max_size]" value="<?php echo esc_attr($options['avatar_max_size']); ?>" min="1" max="10" class="small-text">
                             <span><?php esc_html_e('MB', 'videohub360-theme'); ?></span>
                             <p class="description"><?php esc_html_e('Maximum file size for avatar uploads (1-10 MB)', 'videohub360-theme'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php esc_html_e('Output Size', 'videohub360-theme'); ?></th>
+                        <td>
+                            <input type="number" name="vh360_profile_options[avatar_output_size]" value="<?php echo esc_attr(isset($options['avatar_output_size']) ? $options['avatar_output_size'] : 300); ?>" min="100" max="1000" class="small-text">
+                            <span><?php esc_html_e('pixels', 'videohub360-theme'); ?></span>
+                            <p class="description"><?php esc_html_e('Final avatar dimensions (square). Default: 300x300 pixels.', 'videohub360-theme'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php esc_html_e('Minimum Dimensions', 'videohub360-theme'); ?></th>
+                        <td>
+                            <input type="number" name="vh360_profile_options[avatar_min_width]" value="<?php echo esc_attr(isset($options['avatar_min_width']) ? $options['avatar_min_width'] : 300); ?>" min="100" max="5000" class="small-text">
+                            <span><?php esc_html_e('x', 'videohub360-theme'); ?></span>
+                            <input type="number" name="vh360_profile_options[avatar_min_height]" value="<?php echo esc_attr(isset($options['avatar_min_height']) ? $options['avatar_min_height'] : 300); ?>" min="100" max="5000" class="small-text">
+                            <span><?php esc_html_e('pixels', 'videohub360-theme'); ?></span>
+                            <p class="description"><?php esc_html_e('Minimum width x height required for uploaded avatars.', 'videohub360-theme'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php esc_html_e('Image Quality', 'videohub360-theme'); ?></th>
+                        <td>
+                            <input type="number" name="vh360_profile_options[avatar_quality]" value="<?php echo esc_attr(isset($options['avatar_quality']) ? $options['avatar_quality'] : 90); ?>" min="1" max="100" class="small-text">
+                            <span>%</span>
+                            <p class="description"><?php esc_html_e('JPEG compression quality (1-100). Higher = better quality but larger file size. Default: 90', 'videohub360-theme'); ?></p>
                         </td>
                     </tr>
                     <tr>

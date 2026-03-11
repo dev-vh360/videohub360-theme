@@ -1037,6 +1037,11 @@ require_once VH360_THEME_DIR . '/includes/account-types.php';
 require_once VH360_THEME_DIR . '/includes/helpers.php';
 
 /**
+ * Profile avatar processing functions
+ */
+require_once VH360_THEME_DIR . '/includes/profile-avatar-functions.php';
+
+/**
  * Dashboard Tabs Registry (single source of truth)
  */
 require_once VH360_THEME_DIR . '/includes/navigation/dashboard-tabs.php';

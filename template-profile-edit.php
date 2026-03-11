@@ -127,62 +127,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vh360_edit_profile_no
 
                 // Handle profile picture upload (avatar)
                 if (empty($error_message) && !empty($_FILES['profile_picture']['name'])) {
-                    require_once(ABSPATH . 'wp-admin/includes/file.php');
-                    require_once(ABSPATH . 'wp-admin/includes/image.php');
-                    require_once(ABSPATH . 'wp-admin/includes/media.php');
+                    // Prepare crop data from hidden fields
+                    $crop_data = array();
+                    if (isset($_POST['avatar_crop_x'], $_POST['avatar_crop_y'], $_POST['avatar_crop_width'], $_POST['avatar_crop_height'])) {
+                        $crop_data = array(
+                            'x'             => $_POST['avatar_crop_x'],
+                            'y'             => $_POST['avatar_crop_y'],
+                            'width'         => $_POST['avatar_crop_width'],
+                            'height'        => $_POST['avatar_crop_height'],
+                            'source_width'  => isset($_POST['avatar_source_width']) ? $_POST['avatar_source_width'] : null,
+                            'source_height' => isset($_POST['avatar_source_height']) ? $_POST['avatar_source_height'] : null,
+                        );
+                    }
 
-                    // Allow only common image types
-                    $upload_overrides = array(
-                        'test_form' => false,
-                        'mimes'     => array(
-                            'jpg|jpeg|jpe' => 'image/jpeg',
-                            'png'         => 'image/png',
-                            'gif'         => 'image/gif',
-                        ),
-                    );
+                    // Process avatar upload using centralized helper
+                    $result = vh360_process_profile_avatar_upload($_FILES['profile_picture'], $current_user_id, $crop_data);
 
-                    $file    = $_FILES['profile_picture'];
-                    $upload  = wp_handle_upload($file, $upload_overrides);
-
-                    if (isset($upload['error'])) {
-                        $error_message = $upload['error'];
-                    } else {
-                        $image_path = $upload['file'];
-
-                        // Smart mode: crop to centered square and resize to 300x300.
-                        $editor = wp_get_image_editor($image_path);
-                        if (!is_wp_error($editor)) {
-                            $size = $editor->get_size();
-                            if (!empty($size['width']) && !empty($size['height'])) {
-                                $min_side = min($size['width'], $size['height']);
-                                $x        = max(0, ($size['width']  - $min_side) / 2);
-                                $y        = max(0, ($size['height'] - $min_side) / 2);
-
-                                // Crop to square, then resize down to 300x300.
-                                $editor->crop($x, $y, $min_side, $min_side);
-                                $editor->resize(300, 300, true);
-                                $saved = $editor->save($image_path);
-
-                                if (!is_wp_error($saved)) {
-                                    $filetype = wp_check_filetype($image_path);
-                                    $filename = sanitize_file_name($file['name']);
-
-                                    $attachment = array(
-                                        'post_mime_type' => $filetype['type'],
-                                        'post_title'     => pathinfo($filename, PATHINFO_FILENAME),
-                                        'post_content'   => '',
-                                        'post_status'    => 'inherit',
-                                    );
-
-                                    $attach_id   = wp_insert_attachment($attachment, $image_path);
-                                    $attach_data = wp_generate_attachment_metadata($attach_id, $image_path);
-                                    wp_update_attachment_metadata($attach_id, $attach_data);
-
-                                    // Save attachment ID to user meta.
-                                    update_user_meta($current_user_id, 'vh360_profile_picture_id', $attach_id);
-                                }
-                            }
+                    if ($result['success']) {
+                        // Delete old avatar attachment if exists
+                        $old_avatar_id = get_user_meta($current_user_id, 'vh360_profile_picture_id', true);
+                        if ($old_avatar_id && $old_avatar_id !== $result['attachment_id']) {
+                            wp_delete_attachment($old_avatar_id, true);
                         }
+
+                        // Save new attachment ID to user meta
+                        update_user_meta($current_user_id, 'vh360_profile_picture_id', $result['attachment_id']);
+                    } else {
+                        $error_message = $result['error'];
                     }
                 }
 
@@ -243,6 +214,14 @@ get_header();
 
             <form method="post" enctype="multipart/form-data" class="vh360-profile-edit-form">
                 <?php wp_nonce_field('vh360_edit_profile_action', 'vh360_edit_profile_nonce'); ?>
+                
+                <!-- Hidden fields for avatar crop coordinates -->
+                <input type="hidden" name="avatar_crop_x" value="">
+                <input type="hidden" name="avatar_crop_y" value="">
+                <input type="hidden" name="avatar_crop_width" value="">
+                <input type="hidden" name="avatar_crop_height" value="">
+                <input type="hidden" name="avatar_source_width" value="">
+                <input type="hidden" name="avatar_source_height" value="">
 
                 <div class="vh360-form-section">
                     <h2><?php esc_html_e('Basic Information', 'videohub360-theme'); ?></h2>
