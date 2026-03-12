@@ -1761,11 +1761,7 @@ class VideoHub360_Admin {
             update_post_meta($post_id, '_videohub360_post_views_count', $views);
         }
         if (isset($_POST['videohub360_custom_html'])) {
-            if (current_user_can('unfiltered_html')) {
-                update_post_meta($post_id, 'videohub360_custom_html', $_POST['videohub360_custom_html']);
-            } else {
-                update_post_meta($post_id, 'videohub360_custom_html', wp_kses_post($_POST['videohub360_custom_html']));
-            }
+            update_post_meta($post_id, 'videohub360_custom_html', vh360_sanitize_embed_code($_POST['videohub360_custom_html']));
         }
 
         // Save video quality settings
