@@ -350,6 +350,7 @@ function vh360_sanitize_embed_code($html) {
     }
     
     // For regular users, use whitelist that allows common embed elements
+    // Note: Script tags are intentionally excluded for security
     $allowed_embed_html = array(
         'iframe' => array(
             'src' => true,
@@ -361,29 +362,18 @@ function vh360_sanitize_embed_code($html) {
             'title' => true,
             'referrerpolicy' => true,
             'loading' => true,
-            'style' => true,
             'class' => true,
             'id' => true,
             'name' => true,
             'scrolling' => true,
-            'sandbox' => true,
-        ),
-        'script' => array(
-            'src' => true,
-            'type' => true,
-            'async' => true,
-            'defer' => true,
         ),
         'div' => array(
             'class' => true,
             'id' => true,
-            'style' => true,
-            'data-*' => true,
         ),
         'blockquote' => array(
             'class' => true,
             'cite' => true,
-            'data-*' => true,
         ),
         'a' => array(
             'href' => true,
@@ -394,11 +384,9 @@ function vh360_sanitize_embed_code($html) {
         ),
         'p' => array(
             'class' => true,
-            'style' => true,
         ),
         'span' => array(
             'class' => true,
-            'style' => true,
         ),
         'br' => array(),
     );
