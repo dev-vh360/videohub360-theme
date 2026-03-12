@@ -2474,40 +2474,6 @@ add_action( 'admin_notices', function () {
     echo '</p></div>';
 } );
 
-/**
- * Use custom comments template for community posts (PR #9)
- * Disables WordPress default "Leave a Reply" form
- */
-add_filter('comments_template', 'vh360_custom_comments_template', 20);
-function vh360_custom_comments_template($template) {
-    // Only affect vh360_post post type
-    if (get_post_type() === 'vh360_post') {
-        // Return blank template (comments handled by activity feed rendering)
-        // Use get_template_directory() to ensure it works with child themes
-        $custom_template = get_template_directory() . '/templates/community-comments.php';
-        if (file_exists($custom_template)) {
-            return $custom_template;
-        }
-    }
 
-    return $template;
-}
-
-/**
- * Disable comments open for community posts (PR #9)
- * Prevents WordPress form from showing (we use custom commenting system)
- */
-add_filter('comments_open', 'vh360_disable_wp_comments_for_community', 10, 2);
-function vh360_disable_wp_comments_for_community($open, $post_id) {
-    $post = get_post($post_id);
-
-    // For community posts, return false to disable WP comments
-    // (We use custom commenting system in activity feed)
-    if ($post && $post->post_type === 'vh360_post') {
-        return false;
-    }
-
-    return $open;
-}
 
 

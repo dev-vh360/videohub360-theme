@@ -59,8 +59,14 @@ get_header();
                 // Check if vh360_render_community_post function exists
                 if (function_exists('vh360_render_community_post')) {
                     
-                    // Use activity feed rendering function
-                    vh360_render_community_post($post);
+                    // Use activity feed rendering function but skip its comments section
+                    // We'll use native WordPress comments instead
+                    vh360_render_community_post($post, true, true);
+                    
+                    // Now render native WordPress comments
+                    if (comments_open() || get_comments_number()) {
+                        comments_template();
+                    }
                     
                 } else {
                     
@@ -103,14 +109,14 @@ get_header();
                         }
                         ?>
                         
-                        <!-- Comments Section -->
-                        <?php
-                        if (function_exists('vh360_render_comments_section')) {
-                            vh360_render_comments_section($post_id);
-                        }
-                        ?>
-                        
                     </div>
+                    
+                    <!-- Comments Section (using native WordPress comments) -->
+                    <?php
+                    if (comments_open() || get_comments_number()) {
+                        comments_template();
+                    }
+                    ?>
                     <?php
                 }
                 
