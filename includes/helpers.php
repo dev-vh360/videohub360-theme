@@ -334,6 +334,73 @@ function vh360_sanitize_profile_input($input, $type = 'text') {
 }
 
 /**
+ * Sanitize embed code/custom HTML input
+ * 
+ * Uses capability-based filtering:
+ * - Users with 'unfiltered_html' capability: no filtering (admin/editor)
+ * - Regular users: filtered with whitelist that allows common embed elements
+ *
+ * Security notes:
+ * - iframe 'src' attribute is allowed to support various embed providers (YouTube, Vimeo, etc.)
+ * - Script tags are excluded to prevent XSS attacks
+ * - Style attributes are excluded to prevent CSS injection
+ * - WordPress's wp_kses() function provides additional URL and attribute validation
+ *
+ * @param string $html The HTML/embed code to sanitize.
+ * @return string Sanitized HTML.
+ */
+function vh360_sanitize_embed_code($html) {
+    // Users with unfiltered_html capability (admin/editor) can save as-is
+    if (current_user_can('unfiltered_html')) {
+        return $html;
+    }
+    
+    // For regular users, use whitelist that allows common embed elements
+    // Note: Script tags are intentionally excluded for security
+    $allowed_embed_html = array(
+        'iframe' => array(
+            'src' => true,
+            'width' => true,
+            'height' => true,
+            'frameborder' => true,
+            'allowfullscreen' => true,
+            'allow' => true,
+            'title' => true,
+            'referrerpolicy' => true,
+            'loading' => true,
+            'class' => true,
+            'id' => true,
+            'name' => true,
+            'scrolling' => true,
+        ),
+        'div' => array(
+            'class' => true,
+            'id' => true,
+        ),
+        'blockquote' => array(
+            'class' => true,
+            'cite' => true,
+        ),
+        'a' => array(
+            'href' => true,
+            'title' => true,
+            'class' => true,
+            'target' => true,
+            'rel' => true,
+        ),
+        'p' => array(
+            'class' => true,
+        ),
+        'span' => array(
+            'class' => true,
+        ),
+        'br' => array(),
+    );
+    
+    return wp_kses($html, $allowed_embed_html);
+}
+
+/**
  * Get user avatar URL (not HTML)
  *
  * @param int    $user_id The user ID.

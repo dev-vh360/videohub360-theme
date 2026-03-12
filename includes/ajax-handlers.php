@@ -850,7 +850,7 @@ class VH360_Ajax_Handlers {
         
         // Video source
         $video_url = isset($_POST['vh360_video_url']) ? esc_url_raw($_POST['vh360_video_url']) : '';
-        $custom_html = isset($_POST['vh360_custom_html']) ? wp_kses_post($_POST['vh360_custom_html']) : '';
+        $custom_html = isset($_POST['vh360_custom_html']) ? vh360_sanitize_embed_code($_POST['vh360_custom_html']) : '';
         
         // Ad settings
         $ad_video_url = isset($_POST['vh360_ad_video_url']) ? esc_url_raw($_POST['vh360_ad_video_url']) : '';
@@ -880,7 +880,7 @@ class VH360_Ajax_Handlers {
         $badge_color = isset($_POST['vh360_badge_color']) ? sanitize_hex_color($_POST['vh360_badge_color']) : '#e53935';
         
         // Stream type specific fields
-        $embed_code = isset($_POST['vh360_embed_code']) ? wp_kses_post($_POST['vh360_embed_code']) : '';
+        $embed_code = isset($_POST['vh360_embed_code']) ? vh360_sanitize_embed_code($_POST['vh360_embed_code']) : '';
         $stream_url = isset($_POST['vh360_stream_url']) ? esc_url_raw($_POST['vh360_stream_url']) : '';
         $api_url = isset($_POST['vh360_api_url']) ? esc_url_raw($_POST['vh360_api_url']) : '';
         
