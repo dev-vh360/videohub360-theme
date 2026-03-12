@@ -199,6 +199,21 @@ foreach ($templates as $template) {
             <li><?php esc_html_e('Members Directory, Activity Feed (for community features)', 'videohub360-theme'); ?></li>
             <li><?php esc_html_e('Bulletins (for announcements)', 'videohub360-theme'); ?></li>
         </ul>
+        
+        <h3><?php esc_html_e('Template Visibility', 'videohub360-theme'); ?></h3>
+        <p><?php esc_html_e('You can control which templates require login from the Template Visibility settings page:', 'videohub360-theme'); ?></p>
+        <ul>
+            <li><?php esc_html_e('Dashboard and Profile Edit are typically private (login required)', 'videohub360-theme'); ?></li>
+            <li><?php esc_html_e('Members Directory can be public or private depending on your community strategy', 'videohub360-theme'); ?></li>
+            <li><?php esc_html_e('Activity Feed can be public or private based on your preferences', 'videohub360-theme'); ?></li>
+            <li><?php esc_html_e('Public Profile Pages can be public (for discoverability) or private', 'videohub360-theme'); ?></li>
+        </ul>
+        <p>
+            <a href="<?php echo esc_url(admin_url('admin.php?page=vh360-theme-access')); ?>" class="button button-secondary">
+                <span class="dashicons dashicons-lock"></span>
+                <?php esc_html_e('Configure Template Visibility', 'videohub360-theme'); ?>
+            </a>
+        </p>
     </div>
     
 </div>
