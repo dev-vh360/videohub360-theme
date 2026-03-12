@@ -285,6 +285,7 @@ class VH360_YouTube_Comment_Walker extends Walker_Comment {
                         <span class="vh360-action-separator" aria-hidden="true">•</span>
                         <button class="vh360-action-reply vh360-wp-comment-reply" 
                                 data-comment-id="<?php echo esc_attr($comment->comment_ID); ?>"
+                                data-post-id="<?php echo esc_attr($comment->comment_post_ID); ?>"
                                 data-respond-id="respond"
                                 data-reply-to="<?php echo esc_attr($comment->comment_ID); ?>"
                                 aria-label="<?php 

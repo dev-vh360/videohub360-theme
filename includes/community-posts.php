@@ -1274,7 +1274,7 @@ function vh360_render_shared_post($post, $show_full = true) {
     <?php
 }
 
-function vh360_render_community_post($post, $show_full = true) {
+function vh360_render_community_post($post, $show_full = true, $skip_comments = false) {
     if (!$post) {
         return;
     }
@@ -1471,6 +1471,7 @@ function vh360_render_community_post($post, $show_full = true) {
             }
             ?>
 
+            <?php if (!$skip_comments) : ?>
             <div id="vh360-comments-section-<?php echo esc_attr($post->ID); ?>" class="vh360-comments-section" data-post-id="<?php echo esc_attr($post->ID); ?>">
                 <div class="vh360-comments-list" data-post-id="<?php echo esc_attr($post->ID); ?>">
                     <?php vh360_render_activity_comments($post->ID); ?>
@@ -1507,6 +1508,7 @@ function vh360_render_community_post($post, $show_full = true) {
                     </p>
                 <?php endif; ?>
             </div>
+            <?php endif; ?>
         </div>
     </article>
     <?php
