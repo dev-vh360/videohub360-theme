@@ -199,14 +199,15 @@
          */
         handleReply: function($button) {
             var commentId = $button.data('comment-id');
+            var postId = $button.data('post-id');
             var respondId = $button.data('respond-id') || 'respond';
             
-            vh360Log('Reply to comment:', commentId);
+            vh360Log('Reply to comment:', commentId, 'Post ID:', postId);
             
             // Use WordPress's built-in comment reply functionality
             if (typeof addComment !== 'undefined' && typeof addComment.moveForm === 'function') {
                 var commentElement = $button.closest('.vh360-comment-item').attr('id');
-                addComment.moveForm(commentElement, commentId, respondId, commentId);
+                addComment.moveForm(commentElement, commentId, respondId, postId);
             } else {
                 vh360Warn('WordPress comment reply function not available');
             }
