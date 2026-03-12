@@ -2793,8 +2793,8 @@ body.single-vh360_post .vh360-single-post-page .vh360-comments-section {
 }
 
 /* Add top spacing for single post pages only */
-body.single-vh360_post .vh360-single-post-page {
-    margin-top: 2rem;
+body.single-vh360_post #content.site-content {
+    padding-top: 2rem;
 }
 
 /* Mobile responsive */
