@@ -504,7 +504,7 @@ class VideoHub360_Import_Export {
         
         // HTML/text areas
         if ($meta_key === 'videohub360_custom_html' || $meta_key === '_vh360_embed_code') {
-            return wp_kses_post($meta_value);
+            return vh360_sanitize_embed_code($meta_value);
         }
         
         // Array/JSON fields
