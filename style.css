@@ -310,7 +310,7 @@ a:focus {
    ========================================================================== */
 
 /* Add spacing between header and content for standard single posts */
-body.single:not(.single-vh360_post):not(.single-vh360_gallery):not(.single-vh360_bulletin):not(.single-vh360_event) #primary.site-content {
+body.single:not(.single-vh360_post):not(.single-vh360_gallery):not(.single-vh360_bulletin):not(.single-vh360_event):not(.single-videohub360) #primary.site-content {
     padding-top: 2rem;
 }
 
