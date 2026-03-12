@@ -144,7 +144,7 @@ a:focus {
 
 #content.site-content {
     flex: 1 0 auto;
-    padding: 2rem 0;
+    padding: 0 0 2rem 0;
 }
 
 .container {
