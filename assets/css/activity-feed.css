@@ -2699,9 +2699,10 @@ html {
    Single Community Post Page (PR #9)
    ======================================== */
 
-.vh360-single-post-page {
+body.single-vh360_post .vh360-single-post-page {
     background: var(--surface-3);
     min-height: calc(100vh - 200px);
+    padding-top: 2rem;
     padding-bottom: 40px;
 }
 
@@ -2790,11 +2791,6 @@ body.single-vh360_post .vh360-single-post-page .comments-title {
 /* Ensure our custom comments are visible */
 body.single-vh360_post .vh360-single-post-page .vh360-comments-section {
     display: block !important;
-}
-
-/* Add top spacing for single post pages only */
-body.single-vh360_post #content.site-content {
-    padding-top: 2rem;
 }
 
 /* Mobile responsive */
