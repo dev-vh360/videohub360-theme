@@ -340,6 +340,12 @@ function vh360_sanitize_profile_input($input, $type = 'text') {
  * - Users with 'unfiltered_html' capability: no filtering (admin/editor)
  * - Regular users: filtered with whitelist that allows common embed elements
  *
+ * Security notes:
+ * - iframe 'src' attribute is allowed to support various embed providers (YouTube, Vimeo, etc.)
+ * - Script tags are excluded to prevent XSS attacks
+ * - Style attributes are excluded to prevent CSS injection
+ * - WordPress's wp_kses() function provides additional URL and attribute validation
+ *
  * @param string $html The HTML/embed code to sanitize.
  * @return string Sanitized HTML.
  */
