@@ -67,8 +67,7 @@
    ========================================================================== */
 
 .vh360-blog-controls {
-    background: #f9fafb;
-    border-bottom: 1px solid #e5e7eb;
+    background: transparent;
     padding: 1.5rem 0;
     margin-bottom: 2rem;
 }
