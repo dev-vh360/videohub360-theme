@@ -20,11 +20,11 @@
 
 /* Two-column layout: content + sidebar */
 .container.has-sidebar.sidebar-right {
-    grid-template-columns: 1fr 300px;
+    grid-template-columns: minmax(0, 1fr) 340px;
 }
 
 .container.has-sidebar.sidebar-left {
-    grid-template-columns: 300px 1fr;
+    grid-template-columns: 340px minmax(0, 1fr);
 }
 
 /* ==========================================================================

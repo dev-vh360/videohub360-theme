@@ -12,10 +12,10 @@
    ========================================================================== */
 
 .vh360-latest-posts-widget {
-    padding: 1.5rem;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
 }
 
 .vh360-latest-posts-list {
@@ -39,9 +39,10 @@
 }
 
 .vh360-latest-post-content {
-    display: flex;
-    gap: 1rem;
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 14px;
+    align-items: start;
 }
 
 /* Thumbnail Styles */
@@ -51,9 +52,9 @@
 
 .vh360-latest-post-thumbnail a {
     display: block;
-    width: 80px;
-    height: 80px;
-    border-radius: 8px;
+    width: 140px;
+    aspect-ratio: 16 / 9;
+    border-radius: 10px;
     overflow: hidden;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
@@ -122,17 +123,13 @@
 
 /* Tablet and below */
 @media (max-width: 768px) {
-    .vh360-latest-posts-widget {
-        padding: 1rem;
-    }
-
     .vh360-latest-post-content {
+        grid-template-columns: 80px 1fr;
         gap: 0.75rem;
     }
 
     .vh360-latest-post-thumbnail a {
-        width: 60px;
-        height: 60px;
+        width: 80px;
         border-radius: 6px;
     }
 
@@ -151,22 +148,17 @@
 
 /* Mobile */
 @media (max-width: 480px) {
-    .vh360-latest-posts-widget {
-        padding: 0.875rem;
-        border-radius: 6px;
-    }
-
     .vh360-latest-post-item {
         padding: 0.75rem 0;
     }
 
     .vh360-latest-post-content {
+        grid-template-columns: 70px 1fr;
         gap: 0.625rem;
     }
 
     .vh360-latest-post-thumbnail a {
-        width: 60px;
-        height: 60px;
+        width: 70px;
     }
 
     .vh360-latest-post-title {
@@ -190,11 +182,6 @@
    ========================================================================== */
 
 @media (prefers-color-scheme: dark) {
-    .vh360-latest-posts-widget {
-        background: #1f2937;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    }
-
     .vh360-latest-post-item {
         border-bottom-color: #374151;
     }
@@ -221,11 +208,6 @@
    ========================================================================== */
 
 @media print {
-    .vh360-latest-posts-widget {
-        box-shadow: none;
-        border: 1px solid #e5e7eb;
-    }
-
     .vh360-latest-post-thumbnail a:hover {
         transform: none;
         box-shadow: none;
