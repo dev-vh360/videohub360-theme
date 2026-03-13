@@ -789,8 +789,11 @@ add_action('wp_enqueue_scripts', 'vh360_enqueue_wp_comments_assets', 20);
  * Conditionally enqueue blog archive assets
  */
 function vh360_enqueue_blog_archive_assets() {
-    // Load on blog archive, category, tag, and search pages
-    if (is_home() || is_category() || is_tag() || (is_search() && get_query_var('post_type') !== 'videohub360')) {
+    // Load on blog archive, category, tag, and search pages for standard posts
+    $post_type = get_query_var('post_type');
+    $is_post_search = is_search() && (empty($post_type) || $post_type === 'post');
+    
+    if (is_home() || is_category() || is_tag() || $is_post_search) {
         wp_enqueue_style(
             'vh360-blog-archive',
             VH360_THEME_URI . '/assets/css/blog-archive.css',

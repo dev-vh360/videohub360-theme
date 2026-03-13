@@ -15,7 +15,6 @@ if (!defined('ABSPATH')) {
 
 // Use global query by default (for initial page load)
 global $wp_query;
-$paged = max(1, get_query_var('paged'));
 ?>
 
 <div class="vh360-container">

@@ -93,8 +93,8 @@ $current_search = get_search_query();
                 <select id="vh360-blog-sort" class="vh360-blog-select">
                     <option value="date_desc"><?php esc_html_e('Newest First', 'videohub360-theme'); ?></option>
                     <option value="date_asc"><?php esc_html_e('Oldest First', 'videohub360-theme'); ?></option>
-                    <option value="title_asc"><?php esc_html_e('Title A–Z', 'videohub360-theme'); ?></option>
-                    <option value="title_desc"><?php esc_html_e('Title Z–A', 'videohub360-theme'); ?></option>
+                    <option value="title_asc"><?php esc_html_e('Title A—Z', 'videohub360-theme'); ?></option>
+                    <option value="title_desc"><?php esc_html_e('Title Z—A', 'videohub360-theme'); ?></option>
                     <option value="comment_count"><?php esc_html_e('Most Commented', 'videohub360-theme'); ?></option>
                 </select>
             </div>
