@@ -433,8 +433,7 @@ body.single:not(.single-vh360_post):not(.single-vh360_gallery):not(.single-vh360
    Single Post with Right Sidebar - Editorial Layout Refinements
    ========================================================================== */
 
-/* Constrain article width more tightly for better visual balance with right sidebar */
-/* This overrides the default 820px from sidebar-layout.css for single posts only */
+/* Set article width for better visual balance with right sidebar */
 body.single-post .container.has-sidebar.sidebar-right .content-area article {
     max-width: 820px;
 }
