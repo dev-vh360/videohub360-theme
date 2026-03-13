@@ -41,7 +41,7 @@
 .vh360-latest-post-content {
     display: grid;
     grid-template-columns: 140px 1fr;
-    gap: 14px;
+    gap: 0.875rem;
     align-items: start;
 }
 
