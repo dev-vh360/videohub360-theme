@@ -440,7 +440,7 @@ body.single-post .container.has-sidebar.sidebar-right .content-area article {
     margin-right: auto;
 }
 
-/* Increase spacing between featured image and article header for better breathing room */
+/* Tighten spacing between featured image and article header for better proportion */
 body.single-post .container.has-sidebar.sidebar-right .post-thumbnail {
     margin-bottom: 1.75rem;
 }
