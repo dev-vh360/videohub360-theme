@@ -309,6 +309,11 @@ a:focus {
    Single Post Layout with Sidebar
    ========================================================================== */
 
+/* Add spacing between header and content for standard single posts */
+body.single:not(.single-vh360_post):not(.single-vh360_gallery):not(.single-vh360_bulletin):not(.single-vh360_event):not(.single-videohub360) #primary.site-content {
+    padding-top: 2rem;
+}
+
 /* Two-column grid layout: content + sidebar */
 .single:not(.single-vh360_gallery):not(.single-vh360_bulletin) .site-content .container {
     display: grid;
