@@ -315,12 +315,8 @@ body.single:not(.single-vh360_post):not(.single-vh360_gallery):not(.single-vh360
 }
 
 /* Two-column grid layout: content + sidebar */
-.single:not(.single-vh360_gallery):not(.single-vh360_bulletin) .site-content .container {
-    display: grid;
-    grid-template-columns: 1fr 320px;
-    gap: 3rem;
-    align-items: start;
-}
+/* Sidebar layout is now handled in assets/css/sidebar-layout.css */
+/* This allows position-aware sidebar layouts (left/right) to work correctly */
 
 /* Content area takes available space */
 .single .site-content .content-area {
