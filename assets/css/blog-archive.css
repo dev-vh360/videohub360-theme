@@ -92,18 +92,9 @@
     position: relative;
 }
 
-.vh360-blog-search-icon {
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #6b7280;
-    pointer-events: none;
-}
-
 .vh360-blog-search-input {
     width: 100%;
-    padding: 0.75rem 1rem 0.75rem 3rem;
+    padding: 0.75rem 1rem;
     border: 1px solid #d1d5db;
     border-radius: 0.5rem;
     font-size: 1rem;

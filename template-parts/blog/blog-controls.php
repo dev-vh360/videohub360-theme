@@ -38,10 +38,6 @@ $current_search = get_search_query();
             
             <!-- Search -->
             <div class="vh360-blog-search">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="vh360-blog-search-icon">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <path d="m21 21-4.35-4.35"></path>
-                </svg>
                 <input type="search" 
                        id="vh360-blog-search" 
                        placeholder="<?php esc_attr_e('Search posts...', 'videohub360-theme'); ?>" 
