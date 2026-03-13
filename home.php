@@ -18,14 +18,23 @@ if (!defined('ABSPATH')) {
 }
 
 get_header();
+
+// Header visibility and content from customizer
+$vh360_show_header  = (bool) get_theme_mod('vh360_show_blog_header', true);
+$vh360_header_title = get_theme_mod('vh360_blog_header_title', __('Blog', 'videohub360-theme'));
+$vh360_header_desc  = get_theme_mod('vh360_blog_header_description', __('Discover articles, insights, and updates from our community', 'videohub360-theme'));
 ?>
 
-<div id="primary" class="site-content vh360-blog-archive">
+<div id="primary" class="content-area vh360-blog-archive <?php echo $vh360_show_header ? '' : 'vh360-template-header-off'; ?>">
     <main id="main" class="site-main">
         
         <?php
         // Blog header with title and description
-        get_template_part('template-parts/blog/blog-header');
+        get_template_part('template-parts/blog/blog-header', null, array(
+            'show_header' => $vh360_show_header,
+            'header_title' => $vh360_header_title,
+            'header_desc' => $vh360_header_desc,
+        ));
         
         // Search, filters, and sort controls
         get_template_part('template-parts/blog/blog-controls');

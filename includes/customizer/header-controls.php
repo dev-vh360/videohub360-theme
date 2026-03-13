@@ -266,7 +266,7 @@ function vh360_register_header_controls($wp_customize) {
     $wp_customize->add_section('vh360_header_settings', array(
         'title'       => __('Template Headers', 'videohub360-theme'),
         'priority'    => 32,
-        'description' => __('Control the visibility and text of headers on Activity Feed, Members Directory, and Bulletins archive pages.', 'videohub360-theme'),
+        'description' => __('Control the visibility and text of headers on Activity Feed, Members Directory, Bulletins, Blog, and archive pages.', 'videohub360-theme'),
     ));
 
     /* Activity Feed header settings */
@@ -358,6 +358,37 @@ function vh360_register_header_controls($wp_customize) {
     ));
     $wp_customize->add_control('vh360_bulletins_header_description', array(
         'label'    => __('Bulletins Header Description', 'videohub360-theme'),
+        'section'  => 'vh360_header_settings',
+        'type'     => 'text',
+    ));
+
+    /* Blog Archive header settings */
+    $wp_customize->add_setting('vh360_show_blog_header', array(
+        'default'           => 1,
+        'sanitize_callback' => 'vh360_sanitize_checkbox',
+    ));
+    $wp_customize->add_control('vh360_show_blog_header', array(
+        'label'    => __('Show Blog Header', 'videohub360-theme'),
+        'section'  => 'vh360_header_settings',
+        'type'     => 'checkbox',
+    ));
+    $wp_customize->add_setting('vh360_blog_header_title', array(
+        'default'           => __('Blog', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_blog_header_title', array(
+        'label'    => __('Blog Header Title', 'videohub360-theme'),
+        'section'  => 'vh360_header_settings',
+        'type'     => 'text',
+    ));
+    $wp_customize->add_setting('vh360_blog_header_description', array(
+        'default'           => __('Discover articles, insights, and updates from our community', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_blog_header_description', array(
+        'label'    => __('Blog Header Description', 'videohub360-theme'),
         'section'  => 'vh360_header_settings',
         'type'     => 'text',
     ));

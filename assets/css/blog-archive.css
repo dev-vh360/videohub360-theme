@@ -1,29 +1,48 @@
 /**
  * Blog Archive Styles
  *
- * First-class blog archive styling including header, controls, grid, and cards.
+ * First-class blog archive styling including controls, grid, and cards.
+ * Header styles are managed by dynamic-css.php for consistency across templates.
  *
  * @package Videohub360_Theme
  * @since 1.4.0
  */
 
 /* ==========================================================================
-   Blog Archive Header
+   Blog Archive Template Wrapper
    ========================================================================== */
 
-.vh360-blog-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: #fff;
-    padding: 3rem 0 2.5rem;
-    margin-bottom: 2rem;
+.vh360-blog-archive {
+    background: var(--bg-color, #f9fafb);
+    min-height: 100vh;
+    padding-bottom: 4rem;
 }
+
+/* Container - matching other templates */
+.vh360-blog-archive .vh360-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+}
+
+/* Ensure spacing when template header is disabled */
+.vh360-blog-archive.vh360-template-header-off {
+    padding-top: 50px;
+}
+
+/* ==========================================================================
+   Blog Archive Header - Typography Only
+   ========================================================================== */
+
+/* vh360-blog-header background/color/padding are inherited from dynamic-css.php */
 
 .vh360-blog-title {
     font-size: 2.5rem;
     font-weight: 700;
-    margin: 0 0 0.75rem;
+    margin: 0 0 0.5rem;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 1rem;
 }
 
@@ -36,6 +55,7 @@
     line-height: 1.6;
     opacity: 0.95;
     max-width: 700px;
+    margin: 0 auto;
 }
 
 .vh360-blog-description p {

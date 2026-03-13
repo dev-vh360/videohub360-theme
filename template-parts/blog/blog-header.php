@@ -12,10 +12,10 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Get customizer settings or defaults
-$show_header = (bool) get_theme_mod('vh360_show_blog_header', true);
-$blog_title = get_theme_mod('vh360_blog_header_title', __('Blog', 'videohub360-theme'));
-$blog_description = get_theme_mod('vh360_blog_header_description', __('Discover articles, insights, and updates from our community', 'videohub360-theme'));
+// Get values from args or use defaults (for category/tag archives called directly)
+$show_header = isset($args['show_header']) ? $args['show_header'] : true;
+$blog_title = isset($args['header_title']) ? $args['header_title'] : __('Blog', 'videohub360-theme');
+$blog_description = isset($args['header_desc']) ? $args['header_desc'] : __('Discover articles, insights, and updates from our community', 'videohub360-theme');
 
 // Override with page title if this is a category or tag archive
 if (is_category() || is_tag()) {
