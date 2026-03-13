@@ -80,6 +80,25 @@
     color: var(--primary-color, #2563eb);
 }
 
+/* Refined sidebar widget presentation for right sidebar layouts */
+body.single-post .container.has-sidebar.sidebar-right .widget-area .widget {
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+body.single-post .container.has-sidebar.sidebar-right .widget-area .widget-title {
+    margin-bottom: 0.875rem;
+    font-size: 1rem;
+}
+
+body.single-post .container.has-sidebar.sidebar-right .widget-area ul li {
+    padding: 0.625rem 0;
+}
+
+body.single-post .container.has-sidebar.sidebar-right .widget-area ul li:first-child {
+    padding-top: 0;
+}
+
 /* ==========================================================================
    Content Area Adjustments
    ========================================================================== */
