@@ -152,7 +152,7 @@ function vh360_user_can_manage_dashboard_post($post_id, $user_id = 0) {
     }
 
     // Allow administrators
-    if (current_user_can('manage_options')) {
+    if (user_can($user_id, 'manage_options')) {
         return true;
     }
 
