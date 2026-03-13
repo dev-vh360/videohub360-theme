@@ -135,7 +135,7 @@ function vh360_user_can_publish_galleries($user_id = 0) {
 /**
  * Check if user can manage a specific dashboard blog post.
  * 
- * Determines if the current user is allowed to edit or delete a blog post
+ * Determines if the specified user is allowed to edit or delete a blog post
  * from the frontend dashboard. This is ownership-based for business-mode users
  * (professional/organization) and admin-override capable.
  * 
