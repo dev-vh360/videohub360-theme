@@ -370,7 +370,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
                     </p>
                     
                     <div class="vh360-post-card-actions" style="display: flex; gap: 0.5rem;">
-                        <?php if (current_user_can('edit_post', $post_id)) : ?>
+                        <?php if (vh360_user_can_manage_dashboard_post($post_id, $current_user_id)) : ?>
                         <button type="button" class="vh360-post-edit vh360-btn-secondary" data-post-id="<?php echo esc_attr($post_id); ?>" style="flex: 1; text-align: center; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; background: transparent; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem;">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -386,7 +386,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
                             </svg>
                             <?php esc_html_e('View', 'videohub360-theme'); ?>
                         </a>
-                        <?php if (current_user_can('delete_post', $post_id)) : ?>
+                        <?php if (vh360_user_can_manage_dashboard_post($post_id, $current_user_id)) : ?>
                         <button type="button" class="vh360-post-delete vh360-btn-secondary" data-post-id="<?php echo esc_attr($post_id); ?>" style="flex: 1; text-align: center; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; background: transparent; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; color: #dc2626;">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="3 6 5 6 21 6"></polyline>
