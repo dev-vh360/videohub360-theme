@@ -1357,9 +1357,9 @@ function vh360_ajax_get_post_data() {
     }
     
     // Check if user can edit this post
-    if (!current_user_can('edit_post', $post_id)) {
+    if (!vh360_user_can_manage_dashboard_post($post_id)) {
         wp_send_json_error(array(
-            'message' => esc_html__('You do not have permission to edit this post', 'videohub360-theme')
+            'message' => esc_html__('You are not allowed to edit this post.', 'videohub360-theme')
         ));
     }
     
@@ -1416,9 +1416,9 @@ function vh360_ajax_update_post() {
     }
     
     // Check if user can edit this post
-    if (!current_user_can('edit_post', $post_id)) {
+    if (!vh360_user_can_manage_dashboard_post($post_id)) {
         wp_send_json_error(array(
-            'message' => esc_html__('You do not have permission to edit this post', 'videohub360-theme')
+            'message' => esc_html__('You are not allowed to edit this post.', 'videohub360-theme')
         ));
     }
     
@@ -1505,9 +1505,9 @@ function vh360_ajax_delete_post() {
     }
     
     // Check if user can delete this post
-    if (!current_user_can('delete_post', $post_id)) {
+    if (!vh360_user_can_manage_dashboard_post($post_id)) {
         wp_send_json_error(array(
-            'message' => esc_html__('You do not have permission to delete this post', 'videohub360-theme')
+            'message' => esc_html__('You are not allowed to delete this post.', 'videohub360-theme')
         ));
     }
     

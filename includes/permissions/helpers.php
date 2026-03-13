@@ -131,3 +131,44 @@ function vh360_user_can_publish_galleries($user_id = 0) {
     
     return apply_filters('vh360_user_can_publish_galleries', $can_publish, $user_id);
 }
+
+/**
+ * Check if user can manage a specific dashboard blog post.
+ * 
+ * Determines if the current user is allowed to edit or delete a blog post
+ * from the frontend dashboard. This is ownership-based for business-mode users
+ * (professional/organization) and admin-override capable.
+ * 
+ * @param int $post_id Post ID to check.
+ * @param int $user_id User ID. Defaults to current user.
+ * @return bool True if user can manage the dashboard post.
+ */
+function vh360_user_can_manage_dashboard_post($post_id, $user_id = 0) {
+    $user_id = $user_id ? absint($user_id) : get_current_user_id();
+    $post    = get_post($post_id);
+
+    if (!$user_id || !$post || $post->post_type !== 'post') {
+        return false;
+    }
+
+    // Allow administrators
+    if (current_user_can('manage_options')) {
+        return true;
+    }
+
+    // Must be post author
+    if ((int) $post->post_author !== (int) $user_id) {
+        return false;
+    }
+
+    // Check account type
+    $account_type = function_exists('vh360_get_user_account_type')
+        ? vh360_get_user_account_type($user_id)
+        : get_user_meta($user_id, '_vh360_account_type', true);
+
+    if (!in_array($account_type, array('professional', 'organization'), true)) {
+        return false;
+    }
+
+    return apply_filters('vh360_user_can_manage_dashboard_post', true, $post_id, $user_id, $post);
+}
