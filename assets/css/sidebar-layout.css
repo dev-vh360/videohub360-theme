@@ -39,9 +39,6 @@
 .widget-area .widget {
     margin-bottom: 2rem;
     padding: 1.5rem;
-    background: var(--bg-light, #f9fafb);
-    border: 1px solid var(--border-color, #e5e7eb);
-    border-radius: var(--border-radius, 8px);
 }
 
 .widget-area .widget:last-child {
