@@ -1894,3 +1894,117 @@ function vh360_get_bulletin() {
     ));
 }
 add_action('wp_ajax_vh360_get_bulletin', 'vh360_get_bulletin');
+
+/**
+ * Load blog posts via AJAX (for filtering and pagination)
+ */
+function vh360_load_blog_posts() {
+    // Verify nonce
+    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'vh360_blog_nonce')) {
+        wp_send_json_error(array('message' => __('Security check failed', 'videohub360-theme')));
+        return;
+    }
+
+    $page = isset($_POST['page']) ? absint($_POST['page']) : 1;
+    $search = isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '';
+    $category = isset($_POST['category']) ? absint($_POST['category']) : 0;
+    $tag = isset($_POST['tag']) ? absint($_POST['tag']) : 0;
+    $sort = isset($_POST['sort']) ? sanitize_text_field($_POST['sort']) : 'date_desc';
+
+    // Build query args
+    $args = array(
+        'post_type'      => 'post',
+        'post_status'    => 'publish',
+        'posts_per_page' => get_option('posts_per_page', 10),
+        'paged'          => $page,
+    );
+
+    // Apply search
+    if (!empty($search)) {
+        $args['s'] = $search;
+    }
+
+    // Apply category filter
+    if ($category > 0) {
+        $args['cat'] = $category;
+    }
+
+    // Apply tag filter
+    if ($tag > 0) {
+        $args['tag_id'] = $tag;
+    }
+
+    // Apply sorting
+    switch ($sort) {
+        case 'date_asc':
+            $args['orderby'] = 'date';
+            $args['order'] = 'ASC';
+            break;
+        case 'title_asc':
+            $args['orderby'] = 'title';
+            $args['order'] = 'ASC';
+            break;
+        case 'title_desc':
+            $args['orderby'] = 'title';
+            $args['order'] = 'DESC';
+            break;
+        case 'comment_count':
+            $args['orderby'] = 'comment_count';
+            $args['order'] = 'DESC';
+            break;
+        case 'date_desc':
+        default:
+            $args['orderby'] = 'date';
+            $args['order'] = 'DESC';
+            break;
+    }
+
+    $query = new WP_Query($args);
+
+    ob_start();
+
+    if ($query->have_posts()) {
+        ?>
+        <div class="vh360-blog-list">
+            <?php 
+            while ($query->have_posts()) {
+                $query->the_post();
+                get_template_part('template-parts/blog/blog-card', null, array(
+                    'post_id' => get_the_ID(),
+                ));
+            }
+            wp_reset_postdata();
+            ?>
+        </div>
+        
+        <!-- Pagination -->
+        <?php if ($query->max_num_pages > 1) : ?>
+            <div class="vh360-blog-pagination" id="vh360-blog-pagination">
+                <?php
+                echo paginate_links(array(
+                    'total'     => $query->max_num_pages,
+                    'current'   => $page,
+                    'prev_text' => '&larr; ' . __('Previous', 'videohub360-theme'),
+                    'next_text' => __('Next', 'videohub360-theme') . ' &rarr;',
+                    'type'      => 'list',
+                    'end_size'  => 1,
+                    'mid_size'  => 2,
+                ));
+                ?>
+            </div>
+        <?php endif; ?>
+        <?php
+    } else {
+        get_template_part('template-parts/blog/blog-empty');
+    }
+
+    $html = ob_get_clean();
+
+    wp_send_json_success(array(
+        'html'  => $html,
+        'total' => $query->found_posts,
+        'pages' => $query->max_num_pages,
+    ));
+}
+add_action('wp_ajax_vh360_load_blog_posts', 'vh360_load_blog_posts');
+add_action('wp_ajax_nopriv_vh360_load_blog_posts', 'vh360_load_blog_posts');
