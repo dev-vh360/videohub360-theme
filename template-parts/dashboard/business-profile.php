@@ -106,6 +106,37 @@ $success = isset($_GET['business_profile_updated']) && $_GET['business_profile_u
                     placeholder="<?php esc_attr_e('City, State', 'videohub360-theme'); ?>"
                 >
             </div>
+            
+            <?php
+            // Display member category if enabled
+            $members_options = get_option('vh360_members_options', array());
+            if (!empty($members_options['enable_category_filter'])) :
+                $member_category = get_user_meta($current_user_id, '_vh360_member_category', true);
+                $category_choices = function_exists('vh360_get_member_category_choices') 
+                    ? vh360_get_member_category_choices() 
+                    : array();
+                
+                if (!empty($category_choices)) :
+            ?>
+            <div class="vh360-dashboard-form-group">
+                <label for="member_category"><?php esc_html_e('Professional Category', 'videohub360-theme'); ?></label>
+                <select 
+                    name="member_category" 
+                    id="member_category" 
+                    class="vh360-dashboard-select"
+                >
+                    <option value=""><?php esc_html_e('Select a category', 'videohub360-theme'); ?></option>
+                    <?php foreach ($category_choices as $slug => $label) : ?>
+                        <option value="<?php echo esc_attr($slug); ?>" <?php selected($member_category, $slug); ?>>
+                            <?php echo esc_html($label); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <small class="vh360-dashboard-form-help">
+                    <?php esc_html_e('This category helps members find you in the directory.', 'videohub360-theme'); ?>
+                </small>
+            </div>
+            <?php endif; endif; ?>
         </div>
         
         <div class="vh360-dashboard-form-section">
