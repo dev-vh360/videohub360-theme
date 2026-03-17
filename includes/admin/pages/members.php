@@ -286,7 +286,7 @@ $options = wp_parse_args($options, $defaults);
         
         <script type="text/javascript">
         (function($) {
-            let categoryIndex = <?php echo count($categories); ?>;
+            let categoryIndex = <?php echo intval(count($categories)); ?>;
             
             $('#vh360-add-category').on('click', function() {
                 const newRow = `
