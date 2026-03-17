@@ -177,7 +177,7 @@ if ($is_appointment && function_exists('vh360_get_appointment_session_state')) {
             if (!empty($appointment_data['start_datetime'])) {
                 $start_datetime = $appointment_data['start_datetime'];
                 $player_html .= '<h3 class="vh360-overlay-title">Appointment Session</h3>';
-                $player_html .= '<p class="vh360-overlay-description">Scheduled for ' . $start_datetime->format(get_option('time_format') . ' on ' . get_option('date_format')) . '</p>';
+                $player_html .= '<p class="vh360-overlay-description">Scheduled for ' . $start_datetime->format(get_option('time_format')) . ', ' . $start_datetime->format(get_option('date_format')) . '</p>';
             } else {
                 $player_html .= '<h3 class="vh360-overlay-title">Appointment Session</h3>';
                 $player_html .= '<p class="vh360-overlay-description">Start the session when ready.</p>';

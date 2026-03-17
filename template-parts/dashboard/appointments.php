@@ -228,7 +228,7 @@ if ($is_professional) {
                     } elseif ($session_state['status'] === 'waiting_for_host') {
                         $status_class = 'waiting';
                         $status_label = __('Waiting', 'videohub360-theme');
-                    } elseif (!$is_professional && $is_past && !$is_live) {
+                    } elseif (!$is_professional && $is_past) {
                         $status_class = 'past';
                         $status_label = __('Past', 'videohub360-theme');
                     }

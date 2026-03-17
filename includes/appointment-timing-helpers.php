@@ -223,7 +223,7 @@ function vh360_get_appointment_session_state($live_room_id, $user_id) {
             $result['message'] = sprintf(
                 __('This session opens %d minutes before the scheduled start time. Session starts at %s.', 'videohub360-theme'),
                 $early_join_minutes,
-                $start_datetime->format(get_option('time_format') . ' on ' . get_option('date_format'))
+                $start_datetime->format(get_option('time_format')) . ', ' . $start_datetime->format(get_option('date_format'))
             );
         } elseif (!$is_live) {
             // Within early-join window but host hasn't started
