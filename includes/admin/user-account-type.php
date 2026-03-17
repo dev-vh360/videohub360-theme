@@ -360,7 +360,7 @@ function vh360_save_account_type_fields($user_id) {
     
     // Save member category
     if (isset($_POST['vh360_member_category'])) {
-        $category_slug = sanitize_text_field(wp_unslash($_POST['vh360_member_category']));
+        $category_slug = sanitize_title(wp_unslash($_POST['vh360_member_category']));
         
         // Validate category if not empty
         if (empty($category_slug)) {

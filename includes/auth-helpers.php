@@ -549,7 +549,7 @@ function vh360_handle_business_profile_save() {
     
     // Save member category if submitted
     if (isset($_POST['member_category'])) {
-        $category_slug = sanitize_text_field(wp_unslash($_POST['member_category']));
+        $category_slug = sanitize_title(wp_unslash($_POST['member_category']));
         
         // Validate category if not empty
         if (empty($category_slug)) {

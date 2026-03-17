@@ -683,23 +683,31 @@ function vh360_build_members_directory_query_args($args = array()) {
 
     // Add category filter
     if (!empty($args['category'])) {
-        $category_slug = sanitize_text_field($args['category']);
+        $category_slug = sanitize_title($args['category']);
         
         // Validate category
         $is_valid = function_exists('vh360_is_valid_member_category') 
             ? vh360_is_valid_member_category($category_slug)
             : false;
         
+        // Initialize meta_query if not already set
+        if (!isset($query_args['meta_query'])) {
+            $query_args['meta_query'] = array('relation' => 'AND');
+        }
+        
         if ($is_valid) {
-            // Initialize meta_query if not already set
-            if (!isset($query_args['meta_query'])) {
-                $query_args['meta_query'] = array('relation' => 'AND');
-            }
-            
             // Add category filter
             $query_args['meta_query'][] = array(
                 'key' => '_vh360_member_category',
                 'value' => $category_slug,
+                'compare' => '=',
+            );
+        } else {
+            // SECURITY: Fail-closed - force zero results for invalid category
+            // This prevents the filter from appearing broken when an invalid category is submitted
+            $query_args['meta_query'][] = array(
+                'key' => '_vh360_member_category',
+                'value' => '__invalid_category__',
                 'compare' => '=',
             );
         }
