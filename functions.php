@@ -1261,6 +1261,11 @@ require_once VH360_THEME_DIR . '/includes/class-vh360-dm-notifications.php';
 require_once VH360_THEME_DIR . '/includes/live-activity.php';
 
 /**
+ * Appointment timing helpers (must load before gate and AJAX)
+ */
+require_once VH360_THEME_DIR . '/includes/appointment-timing-helpers.php';
+
+/**
  * Appointment Live Room access gate
  */
 require_once VH360_THEME_DIR . '/includes/appointment-live-room-gate.php';

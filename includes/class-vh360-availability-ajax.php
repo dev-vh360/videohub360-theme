@@ -229,14 +229,15 @@ class VH360_Availability_Ajax {
             // Set Live Room meta - required for template switch and functionality
             update_post_meta($live_room_id, '_vh360_context', 'live_room');
             update_post_meta($live_room_id, '_vh360_type', 'agora');
-            // For appointment rooms, set livestream mode ON so the UI renders (but stream itself is off until host starts)
-            update_post_meta($live_room_id, '_vh360_is_live', 'yes');
+            // For appointment rooms, start in scheduled state (not live until professional starts)
+            update_post_meta($live_room_id, '_vh360_is_live', 'no');
             update_post_meta($live_room_id, '_vh360_stream_stopped', 'no');
             // Stream is not yet started - professional will start it via frontend controls
             update_post_meta($live_room_id, '_vh360_agora_stream_live', 'no');
             update_post_meta($live_room_id, '_vh360_agora_mode', 'interactive');
-            // For appointment rooms, both professional and client need host permissions to publish video/audio
-            update_post_meta($live_room_id, '_vh360_agora_everyone_is_host', 'yes');
+            // For appointment rooms, do NOT enable everyone_is_host by default
+            // This prevents clients from joining before the professional starts the session
+            update_post_meta($live_room_id, '_vh360_agora_everyone_is_host', 'no');
             update_post_meta($live_room_id, '_vh360_chat_enabled', 'yes');
             
             // Generate unique channel name for this appointment
