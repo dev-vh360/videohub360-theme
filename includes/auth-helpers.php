@@ -547,6 +547,26 @@ function vh360_handle_business_profile_save() {
         update_user_meta($current_user_id, $meta_key, isset($_POST[$field]) && $_POST[$field] === '1' ? '1' : '0');
     }
     
+    // Save member category if submitted
+    if (isset($_POST['member_category'])) {
+        $category_slug = sanitize_title(wp_unslash($_POST['member_category']));
+        
+        // Validate category if not empty
+        if (empty($category_slug)) {
+            // Allow clearing the category
+            delete_user_meta($current_user_id, '_vh360_member_category');
+        } else {
+            // Validate against enabled categories
+            $is_valid = function_exists('vh360_is_valid_member_category') 
+                ? vh360_is_valid_member_category($category_slug)
+                : false;
+            
+            if ($is_valid) {
+                update_user_meta($current_user_id, '_vh360_member_category', $category_slug);
+            }
+        }
+    }
+    
     // Redirect back with success message
     $redirect_url = add_query_arg('business_profile_updated', 'success', wp_get_referer());
     wp_safe_redirect($redirect_url);

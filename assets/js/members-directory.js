@@ -16,6 +16,7 @@
         totalPages: 1,
         search: '',
         role: '',
+        category: '',
         joinDate: '',
         sortBy: 'registered',
         sortOrder: 'DESC',
@@ -30,6 +31,7 @@
     const $searchInput = $('#vh360-member-search');
     const $searchClear = $('.vh360-search-clear');
     const $roleFilter = $('#vh360-role-filter');
+    const $categoryFilter = $('#vh360-category-filter');
     const $dateFilter = $('#vh360-date-filter');
     const $sortSelect = $('#vh360-sort-select');
     const $viewBtns = $('.vh360-view-btn');
@@ -122,6 +124,11 @@
             $roleFilter.on('change', handleFilterChange);
         }
         
+        // Attach category filter if element exists
+        if ($categoryFilter.length) {
+            $categoryFilter.on('change', handleFilterChange);
+        }
+        
         $dateFilter.on('change', handleFilterChange);
         $sortSelect.on('change', handleSortChange);
         $viewBtns.on('click', handleViewToggle);
@@ -197,6 +204,11 @@
             state.role = $roleFilter.val();
         } else {
             state.role = ''; // Force empty for professionals_only
+        }
+        
+        // Update category if filter exists
+        if ($categoryFilter.length) {
+            state.category = $categoryFilter.val();
         }
         
         state.joinDate = $dateFilter.val();
@@ -282,6 +294,7 @@
             nonce: vh360Members.nonce,
             directory_page_id: state.pageId,
             search: state.search,
+            category: state.category,
             join_date: state.joinDate,
             orderby: state.sortBy,
             order: state.sortOrder,
@@ -361,6 +374,7 @@
             params.set('role', state.role);
         }
         
+        if (state.category) params.set('category', state.category);
         if (state.joinDate) params.set('joined', state.joinDate);
         if (state.sortBy !== 'registered' || state.sortOrder !== 'DESC') {
             params.set('sort', `${state.sortBy}_${state.sortOrder.toLowerCase()}`);
@@ -387,6 +401,13 @@
         if ((!state.directoryMode || state.directoryMode.audience === 'all_members') && params.has('role')) {
             state.role = params.get('role');
             $roleFilter.val(state.role);
+        }
+        
+        if (params.has('category')) {
+            state.category = params.get('category');
+            if ($categoryFilter.length) {
+                $categoryFilter.val(state.category);
+            }
         }
         
         if (params.has('joined')) {

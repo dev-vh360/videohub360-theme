@@ -456,7 +456,7 @@ function vh360_enqueue_members_directory_assets() {
             'vh360-members-directory-js',
             VH360_THEME_URI . '/assets/js/members-directory.js',
             array('jquery'),
-            VH360_THEME_VERSION,
+            VH360_THEME_VERSION . '-' . filemtime(get_template_directory() . '/assets/js/members-directory.js'),
             true
         );
         

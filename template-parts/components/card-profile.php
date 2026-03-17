@@ -53,6 +53,27 @@ $user_stats = vh360_get_user_stats($user_id);
             
             <p class="vh360-profile-card-username">@<?php echo esc_html($user->user_login); ?></p>
             
+            <?php
+            // Display member category if enabled and assigned
+            $members_options = get_option('vh360_members_options', array());
+            if (!empty($members_options['enable_category_filter'])) {
+                $member_category = get_user_meta($user_id, '_vh360_member_category', true);
+                if (!empty($member_category)) {
+                    $category_label = function_exists('vh360_get_member_category_label') 
+                        ? vh360_get_member_category_label($member_category)
+                        : '';
+                    
+                    if (!empty($category_label)) :
+            ?>
+                <p class="vh360-profile-card-category">
+                    <span class="vh360-category-badge"><?php echo esc_html($category_label); ?></span>
+                </p>
+            <?php
+                    endif;
+                }
+            }
+            ?>
+            
             <?php if ($args['show_bio'] && $user_bio) : ?>
                 <p class="vh360-profile-card-bio"><?php echo esc_html(wp_trim_words($user_bio, 15, '...')); ?></p>
             <?php endif; ?>

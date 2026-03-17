@@ -587,6 +587,7 @@ function vh360_build_members_directory_query_args($args = array()) {
         'offset' => 0,                                  // Offset for pagination
         'search' => '',                                 // Search by display name or username
         'date_query' => array(),                        // Date query for registration
+        'category' => '',                               // Member category slug
     );
 
     $args = wp_parse_args($args, $defaults);
@@ -680,6 +681,38 @@ function vh360_build_members_directory_query_args($args = array()) {
         $query_args['date_query'] = $args['date_query'];
     }
 
+    // Add category filter
+    if (!empty($args['category'])) {
+        $category_slug = sanitize_title($args['category']);
+        
+        // Validate category
+        $is_valid = function_exists('vh360_is_valid_member_category') 
+            ? vh360_is_valid_member_category($category_slug)
+            : false;
+        
+        // Initialize meta_query if not already set
+        if (!isset($query_args['meta_query'])) {
+            $query_args['meta_query'] = array('relation' => 'AND');
+        }
+        
+        if ($is_valid) {
+            // Add category filter
+            $query_args['meta_query'][] = array(
+                'key' => '_vh360_member_category',
+                'value' => $category_slug,
+                'compare' => '=',
+            );
+        } else {
+            // SECURITY: Fail-closed - force zero results for invalid category
+            // This prevents the filter from appearing broken when an invalid category is submitted
+            $query_args['meta_query'][] = array(
+                'key' => '_vh360_member_category',
+                'value' => '__invalid_category__',
+                'compare' => '=',
+            );
+        }
+    }
+
     return $query_args;
 }
 
@@ -735,6 +768,89 @@ function vh360_get_member_count($args = '') {
  */
 function vh360_get_members_total($args = array()) {
     return vh360_get_member_count($args);
+}
+
+/**
+ * Get member categories from admin settings
+ *
+ * @param bool $enabled_only Whether to return only enabled categories. Default true.
+ * @return array Array of category objects with slug, label, enabled, and sort_order.
+ */
+function vh360_get_member_categories($enabled_only = true) {
+    $members_options = get_option('vh360_members_options', array());
+    $categories = isset($members_options['member_categories']) && is_array($members_options['member_categories'])
+        ? $members_options['member_categories']
+        : array();
+    
+    if ($enabled_only) {
+        $categories = array_filter($categories, function($cat) {
+            return !empty($cat['enabled']);
+        });
+    }
+    
+    return $categories;
+}
+
+/**
+ * Get member category choices as key => label array for form fields
+ *
+ * @return array Array of slug => label pairs.
+ */
+function vh360_get_member_category_choices() {
+    $categories = vh360_get_member_categories(true);
+    $choices = array();
+    
+    foreach ($categories as $category) {
+        if (!empty($category['slug']) && !empty($category['label'])) {
+            $choices[$category['slug']] = $category['label'];
+        }
+    }
+    
+    return $choices;
+}
+
+/**
+ * Get member category label by slug
+ *
+ * @param string $slug Category slug.
+ * @return string Category label or empty string if not found.
+ */
+function vh360_get_member_category_label($slug) {
+    if (empty($slug)) {
+        return '';
+    }
+    
+    $categories = vh360_get_member_categories(false); // Get all categories, even disabled
+    
+    foreach ($categories as $category) {
+        if (isset($category['slug']) && $category['slug'] === $slug) {
+            return isset($category['label']) ? $category['label'] : '';
+        }
+    }
+    
+    return '';
+}
+
+/**
+ * Check if a member category slug is valid
+ *
+ * @param string $slug Category slug to validate.
+ * @return bool True if valid, false otherwise.
+ */
+function vh360_is_valid_member_category($slug) {
+    if (empty($slug)) {
+        return false;
+    }
+    
+    $categories = vh360_get_member_categories(true); // Only enabled categories
+    
+    foreach ($categories as $category) {
+        if (isset($category['slug']) && $category['slug'] === $slug) {
+            return true;
+        }
+    }
+    
+    return false;
 }
 
 /**
