@@ -1737,7 +1737,10 @@ window.initializeAgoraPlayer = function(config) {
         if (muteVideoBtn) muteVideoBtn.style.display = 'none';
         if (joinAsPresenterBtn) joinAsPresenterBtn.style.display = 'none';
 
-        if (currentRole === 'host') {
+        // Show controls for hosts OR appointment participants with publish permission
+        const isAppointmentPublisher = config.appointment && config.appointment.isAppointment && config.appointment.canPublish;
+        
+        if (currentRole === 'host' || isAppointmentPublisher) {
             if (muteAudioBtn) {
                 muteAudioBtn.style.display = 'inline-block';
             }
@@ -4182,6 +4185,41 @@ window.initializeAgoraPlayer = function(config) {
                 joinChannel().catch(error => {
                     window.vh360Error('Failed to join livestream as host:', error);
                     showAgoraError('Failed to join livestream. Please refresh and try again.');
+                });
+            } else if (config.appointment && config.appointment.isAppointment && config.appointment.canPublish) {
+                // Appointment participant who can publish (professional or client in active session)
+                window.vh360Log('VideoHub360: Appointment participant with publish permission, promoting to host');
+                window.vh360Log('VideoHub360: Appointment context:', config.appointment);
+                
+                // Promote to host role for appointment publishing
+                currentRole = 'host';
+                isHost = true;
+                
+                window.vh360Log('VideoHub360: Promoted appointment participant - currentRole:', currentRole, 'isHost:', isHost);
+                
+                if (joinOverlay) {
+                    joinOverlay.style.display = 'none';
+                }
+                
+                // Mark stream as started and show controls
+                window.vh360StreamStarted = true;
+                const mobileControls = document.getElementById('vh360-agora-controls');
+                if (mobileControls) {
+                    mobileControls.style.display = 'flex';
+                }
+                
+                // Update desktop controls visibility
+                updateControlsVisibility();
+                
+                const localPlayer = document.getElementById("vh360-agora-local-player");
+                if (localPlayer) {
+                    localPlayer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#fff;font-size:1.2em;"><div style="text-align:center;"><div style="margin-bottom:12px;">🔄</div><div>Joining appointment session...</div></div></div>';
+                }
+                
+                // Join as host with publish capability
+                joinChannel().catch(error => {
+                    window.vh360Error('Failed to join appointment session:', error);
+                    showAgoraError('Failed to join appointment. Please refresh and try again.');
                 });
             } else {
                 // Standard behavior: start polling for stream status or join directly

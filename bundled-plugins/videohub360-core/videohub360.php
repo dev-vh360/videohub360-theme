@@ -365,17 +365,29 @@ if (!function_exists('videohub360_get_livestream_bootstrap_data')) {
             'userRole' => null,
             'status' => null,
             'canJoin' => false,
+            'canPublish' => false,
             'message' => ''
         );
         
         if ($is_appointment && function_exists('vh360_get_appointment_session_state')) {
             $session_state = vh360_get_appointment_session_state($post_id, $user_id);
             
+            // Determine if this user can publish in the appointment
+            // Professional (room owner) can always publish
+            // Client can publish during active sessions ('active' status)
+            $can_publish = false;
+            if ($session_state['user_role'] === 'professional') {
+                $can_publish = true; // Professional can always publish
+            } elseif ($session_state['user_role'] === 'client' && $session_state['status'] === 'active') {
+                $can_publish = true; // Client can publish when session is active
+            }
+            
             $appointment_context = array(
                 'isAppointment' => true,
                 'userRole' => $session_state['user_role'],
                 'status' => $session_state['status'],
                 'canJoin' => $session_state['can_generate_token'],
+                'canPublish' => $can_publish,
                 'message' => $session_state['message']
             );
         }
