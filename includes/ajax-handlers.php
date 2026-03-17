@@ -515,6 +515,7 @@ class VH360_Ajax_Handlers {
         // Get parameters
         $search = isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '';
         $role = isset($_POST['role']) ? sanitize_text_field($_POST['role']) : '';
+        $category = isset($_POST['category']) ? sanitize_text_field($_POST['category']) : '';
         $orderby = isset($_POST['orderby']) ? sanitize_text_field($_POST['orderby']) : 'registered';
         $order = isset($_POST['order']) ? sanitize_text_field($_POST['order']) : 'DESC';
         $page = isset($_POST['page']) ? absint($_POST['page']) : 1;
@@ -525,6 +526,7 @@ class VH360_Ajax_Handlers {
             'account_types' => $mode['professionals_account_types'],
             'require_professional_approval' => $mode['professionals_require_approval'],
             'search' => $search,
+            'category' => $category,
             'orderby' => $orderby,
             'order' => $order,
             'number' => $per_page,

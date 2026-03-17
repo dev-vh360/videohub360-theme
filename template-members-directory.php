@@ -155,6 +155,29 @@ $count_label = ($mode['audience'] === 'professionals_only')
                     </div>
                     <?php endif; ?>
                     
+                    <?php if (!empty($members_options['enable_category_filter'])) :
+                        $category_choices = function_exists('vh360_get_member_category_choices') 
+                            ? vh360_get_member_category_choices() 
+                            : array();
+                        
+                        if (!empty($category_choices)) :
+                    ?>
+                    <!-- Category Filter -->
+                    <div class="vh360-filter-group">
+                        <label for="vh360-category-filter" class="vh360-filter-label">
+                            <?php esc_html_e('Category:', 'videohub360-theme'); ?>
+                        </label>
+                        <select id="vh360-category-filter" class="vh360-filter-select">
+                            <option value=""><?php esc_html_e('All Categories', 'videohub360-theme'); ?></option>
+                            <?php
+                            foreach ($category_choices as $slug => $label) {
+                                echo '<option value="' . esc_attr($slug) . '">' . esc_html($label) . '</option>';
+                            }
+                            ?>
+                        </select>
+                    </div>
+                    <?php endif; endif; ?>
+                    
                     <!-- Join Date Filter -->
                     <div class="vh360-filter-group">
                         <label for="vh360-date-filter" class="vh360-filter-label">
