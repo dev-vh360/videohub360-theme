@@ -655,6 +655,7 @@ class VH360_Theme_Admin {
         $sanitized['enable_search'] = isset($input['enable_search']) ? (bool) $input['enable_search'] : false;
         $sanitized['professionals_require_approval'] = isset($input['professionals_require_approval']) ? (bool) $input['professionals_require_approval'] : false;
         $sanitized['show_card_stats'] = isset($input['show_card_stats']) ? (bool) $input['show_card_stats'] : false;
+        $sanitized['enable_category_filter'] = isset($input['enable_category_filter']) ? (bool) $input['enable_category_filter'] : false;
         
         // Numeric field with default
         $sanitized['per_page'] = isset($input['per_page']) ? absint($input['per_page']) : 12;
@@ -690,6 +691,61 @@ class VH360_Theme_Admin {
         $sanitized['visible_roles'] = $this->sanitize_array_input(
             isset($input['visible_roles']) ? $input['visible_roles'] : null
         );
+        
+        // Sanitize member categories
+        $sanitized['member_categories'] = array();
+        if (isset($input['member_categories']) && is_array($input['member_categories'])) {
+            $categories = array();
+            $seen_slugs = array();
+            
+            foreach ($input['member_categories'] as $category) {
+                if (!is_array($category)) {
+                    continue;
+                }
+                
+                // Sanitize slug
+                $slug = isset($category['slug']) ? sanitize_title($category['slug']) : '';
+                
+                // Skip empty slugs or duplicate slugs
+                if (empty($slug) || in_array($slug, $seen_slugs, true)) {
+                    continue;
+                }
+                
+                // Sanitize label
+                $label = isset($category['label']) ? sanitize_text_field($category['label']) : '';
+                
+                // Skip if label is empty
+                if (empty($label)) {
+                    continue;
+                }
+                
+                // Sanitize enabled
+                $enabled = isset($category['enabled']) ? (bool) $category['enabled'] : false;
+                
+                // Sanitize sort_order
+                $sort_order = isset($category['sort_order']) ? absint($category['sort_order']) : 0;
+                
+                // Add to categories array
+                $categories[] = array(
+                    'slug' => $slug,
+                    'label' => $label,
+                    'enabled' => $enabled,
+                    'sort_order' => $sort_order,
+                );
+                
+                $seen_slugs[] = $slug;
+            }
+            
+            // Sort categories by sort_order, then by label
+            usort($categories, function($a, $b) {
+                if ($a['sort_order'] === $b['sort_order']) {
+                    return strcmp($a['label'], $b['label']);
+                }
+                return $a['sort_order'] - $b['sort_order'];
+            });
+            
+            $sanitized['member_categories'] = $categories;
+        }
         
         return $sanitized;
     }

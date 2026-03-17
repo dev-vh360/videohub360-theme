@@ -189,6 +189,161 @@ $options = wp_parse_args($options, $defaults);
             </table>
         </div>
         
+        <!-- Member Categories -->
+        <div class="vh360-admin-card">
+            <h2><?php esc_html_e('Member Categories', 'videohub360-theme'); ?></h2>
+            <p><?php esc_html_e('Define categories that can be assigned to members for filtering in the directory. Categories are assigned to individual members through their profile edit screen.', 'videohub360-theme'); ?></p>
+            
+            <table class="form-table">
+                <tbody>
+                    <tr>
+                        <th scope="row"><?php esc_html_e('Enable Category Filter', 'videohub360-theme'); ?></th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="vh360_members_options[enable_category_filter]" value="1" <?php checked(!empty($options['enable_category_filter']), true); ?>>
+                                <?php esc_html_e('Enable category filtering in members directory', 'videohub360-theme'); ?>
+                            </label>
+                            <p class="description"><?php esc_html_e('Allow users to filter members by category in the directory', 'videohub360-theme'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php esc_html_e('Categories', 'videohub360-theme'); ?></th>
+                        <td>
+                            <div id="vh360-member-categories-list">
+                                <?php
+                                $categories = isset($options['member_categories']) && is_array($options['member_categories'])
+                                    ? $options['member_categories']
+                                    : array();
+                                
+                                if (empty($categories)) {
+                                    // Add one empty row by default
+                                    $categories = array(
+                                        array('slug' => '', 'label' => '', 'enabled' => true, 'sort_order' => 0)
+                                    );
+                                }
+                                
+                                foreach ($categories as $index => $category) :
+                                    $slug = isset($category['slug']) ? $category['slug'] : '';
+                                    $label = isset($category['label']) ? $category['label'] : '';
+                                    $enabled = isset($category['enabled']) ? $category['enabled'] : true;
+                                    $sort_order = isset($category['sort_order']) ? $category['sort_order'] : $index;
+                                ?>
+                                <div class="vh360-category-row" style="margin-bottom: 12px; padding: 12px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px;">
+                                    <div style="display: grid; grid-template-columns: 200px 1fr 80px 80px auto; gap: 12px; align-items: center;">
+                                        <input 
+                                            type="text" 
+                                            name="vh360_members_options[member_categories][<?php echo esc_attr($index); ?>][slug]" 
+                                            value="<?php echo esc_attr($slug); ?>" 
+                                            placeholder="<?php esc_attr_e('Slug (e.g., therapist)', 'videohub360-theme'); ?>"
+                                            class="regular-text"
+                                        >
+                                        <input 
+                                            type="text" 
+                                            name="vh360_members_options[member_categories][<?php echo esc_attr($index); ?>][label]" 
+                                            value="<?php echo esc_attr($label); ?>" 
+                                            placeholder="<?php esc_attr_e('Label (e.g., Therapist)', 'videohub360-theme'); ?>"
+                                            class="regular-text"
+                                        >
+                                        <label style="display: flex; align-items: center; gap: 4px;">
+                                            <input 
+                                                type="checkbox" 
+                                                name="vh360_members_options[member_categories][<?php echo esc_attr($index); ?>][enabled]" 
+                                                value="1" 
+                                                <?php checked($enabled, true); ?>
+                                            >
+                                            <span><?php esc_html_e('Enabled', 'videohub360-theme'); ?></span>
+                                        </label>
+                                        <input 
+                                            type="number" 
+                                            name="vh360_members_options[member_categories][<?php echo esc_attr($index); ?>][sort_order]" 
+                                            value="<?php echo esc_attr($sort_order); ?>" 
+                                            placeholder="<?php esc_attr_e('Order', 'videohub360-theme'); ?>"
+                                            class="small-text"
+                                            min="0"
+                                        >
+                                        <button 
+                                            type="button" 
+                                            class="button vh360-remove-category" 
+                                            style="color: #b32d2e;"
+                                        >
+                                            <?php esc_html_e('Remove', 'videohub360-theme'); ?>
+                                        </button>
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <button type="button" id="vh360-add-category" class="button" style="margin-top: 12px;">
+                                <?php esc_html_e('Add Category', 'videohub360-theme'); ?>
+                            </button>
+                            <p class="description" style="margin-top: 8px;">
+                                <?php esc_html_e('Define member categories. Slug should be lowercase, alphanumeric with hyphens. Examples: therapist, doctor, lawyer, consultant, coach.', 'videohub360-theme'); ?>
+                            </p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <script type="text/javascript">
+        (function($) {
+            let categoryIndex = <?php echo count($categories); ?>;
+            
+            $('#vh360-add-category').on('click', function() {
+                const newRow = `
+                    <div class="vh360-category-row" style="margin-bottom: 12px; padding: 12px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px;">
+                        <div style="display: grid; grid-template-columns: 200px 1fr 80px 80px auto; gap: 12px; align-items: center;">
+                            <input 
+                                type="text" 
+                                name="vh360_members_options[member_categories][${categoryIndex}][slug]" 
+                                value="" 
+                                placeholder="<?php esc_attr_e('Slug (e.g., therapist)', 'videohub360-theme'); ?>"
+                                class="regular-text"
+                            >
+                            <input 
+                                type="text" 
+                                name="vh360_members_options[member_categories][${categoryIndex}][label]" 
+                                value="" 
+                                placeholder="<?php esc_attr_e('Label (e.g., Therapist)', 'videohub360-theme'); ?>"
+                                class="regular-text"
+                            >
+                            <label style="display: flex; align-items: center; gap: 4px;">
+                                <input 
+                                    type="checkbox" 
+                                    name="vh360_members_options[member_categories][${categoryIndex}][enabled]" 
+                                    value="1" 
+                                    checked
+                                >
+                                <span><?php esc_html_e('Enabled', 'videohub360-theme'); ?></span>
+                            </label>
+                            <input 
+                                type="number" 
+                                name="vh360_members_options[member_categories][${categoryIndex}][sort_order]" 
+                                value="${categoryIndex}" 
+                                placeholder="<?php esc_attr_e('Order', 'videohub360-theme'); ?>"
+                                class="small-text"
+                                min="0"
+                            >
+                            <button 
+                                type="button" 
+                                class="button vh360-remove-category" 
+                                style="color: #b32d2e;"
+                            >
+                                <?php esc_html_e('Remove', 'videohub360-theme'); ?>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                $('#vh360-member-categories-list').append(newRow);
+                categoryIndex++;
+            });
+            
+            $(document).on('click', '.vh360-remove-category', function() {
+                $(this).closest('.vh360-category-row').remove();
+            });
+        })(jQuery);
+        </script>
+        
         <?php submit_button(); ?>
         
     </form>
