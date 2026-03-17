@@ -3935,9 +3935,9 @@ window.initializeAgoraPlayer = function(config) {
                             window.vh360Log('VideoHub360: Appointment client - showing Join Session button');
                             updateAppointmentOverlay('ready_to_join');
                             
-                            // Mark stream as started for controls
-                            window.vh360StreamStarted = true;
-                            updateControlsVisibility();
+                            // Do NOT mark stream as started or update controls yet
+                            // Client must click "Join Session" button first
+                            // vh360StreamStarted will be set when client joins via button click
                             
                             // Do NOT hide overlay or auto-join for appointment clients
                             // Client must click "Join Session" button
