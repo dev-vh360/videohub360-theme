@@ -587,6 +587,7 @@ function vh360_build_members_directory_query_args($args = array()) {
         'offset' => 0,                                  // Offset for pagination
         'search' => '',                                 // Search by display name or username
         'date_query' => array(),                        // Date query for registration
+        'category' => '',                               // Member category slug
     );
 
     $args = wp_parse_args($args, $defaults);
@@ -678,6 +679,30 @@ function vh360_build_members_directory_query_args($args = array()) {
     // Add date query
     if (!empty($args['date_query'])) {
         $query_args['date_query'] = $args['date_query'];
+    }
+
+    // Add category filter
+    if (!empty($args['category'])) {
+        $category_slug = sanitize_text_field($args['category']);
+        
+        // Validate category
+        $is_valid = function_exists('vh360_is_valid_member_category') 
+            ? vh360_is_valid_member_category($category_slug)
+            : false;
+        
+        if ($is_valid) {
+            // Initialize meta_query if not already set
+            if (!isset($query_args['meta_query'])) {
+                $query_args['meta_query'] = array('relation' => 'AND');
+            }
+            
+            // Add category filter
+            $query_args['meta_query'][] = array(
+                'key' => '_vh360_member_category',
+                'value' => $category_slug,
+                'compare' => '=',
+            );
+        }
     }
 
     return $query_args;

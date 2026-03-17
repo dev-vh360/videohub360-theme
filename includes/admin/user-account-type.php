@@ -102,6 +102,39 @@ function vh360_display_account_type_fields($user) {
             </td>
         </tr>
         <?php endif; ?>
+        
+        <?php
+        // Get member category
+        $member_category = get_user_meta($user->ID, '_vh360_member_category', true);
+        
+        // Check if category filter is enabled
+        $members_options = get_option('vh360_members_options', array());
+        $category_filter_enabled = !empty($members_options['enable_category_filter']);
+        
+        if ($category_filter_enabled) :
+            $category_choices = function_exists('vh360_get_member_category_choices') 
+                ? vh360_get_member_category_choices() 
+                : array();
+        ?>
+        <tr>
+            <th scope="row">
+                <label for="vh360_member_category"><?php esc_html_e('Member Category', 'videohub360-theme'); ?></label>
+            </th>
+            <td>
+                <select name="vh360_member_category" id="vh360_member_category">
+                    <option value=""><?php esc_html_e('None', 'videohub360-theme'); ?></option>
+                    <?php foreach ($category_choices as $slug => $label) : ?>
+                        <option value="<?php echo esc_attr($slug); ?>" <?php selected($member_category, $slug); ?>>
+                            <?php echo esc_html($label); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <p class="description">
+                    <?php esc_html_e('Assign a category to this member. Categories can be used to filter members in the directory.', 'videohub360-theme'); ?>
+                </p>
+            </td>
+        </tr>
+        <?php endif; ?>
     </table>
     
     <div id="vh360-business-fields" style="display: <?php echo (in_array($account_type, array('professional', 'organization'), true)) ? 'block' : 'none'; ?>;">
@@ -321,6 +354,26 @@ function vh360_save_account_type_fields($user_id) {
                     $message .= sprintf(__('After review, we are unable to approve your professional account on %s at this time.', 'videohub360-theme'), $site_name) . "\n";
                     wp_mail($user->user_email, $subject, $message);
                 }
+            }
+        }
+    }
+    
+    // Save member category
+    if (isset($_POST['vh360_member_category'])) {
+        $category_slug = sanitize_text_field(wp_unslash($_POST['vh360_member_category']));
+        
+        // Validate category if not empty
+        if (empty($category_slug)) {
+            // Allow clearing the category
+            delete_user_meta($user_id, '_vh360_member_category');
+        } else {
+            // Validate against enabled categories
+            $is_valid = function_exists('vh360_is_valid_member_category') 
+                ? vh360_is_valid_member_category($category_slug)
+                : false;
+            
+            if ($is_valid) {
+                update_user_meta($user_id, '_vh360_member_category', $category_slug);
             }
         }
     }
