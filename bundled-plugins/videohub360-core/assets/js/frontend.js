@@ -1058,8 +1058,7 @@ window.initializeAgoraPlayer = function(config) {
     const endStreamBtn = document.getElementById('vh360-agora-end-stream');
     const controlsContainer = document.getElementById('vh360-agora-controls');
     
-    // Get the new join livestream button
-    const joinLivestreamBtn = document.getElementById('vh360-join-livestream-btn');
+    // Get overlay element (button is handled via event delegation below)
     const joinOverlay = document.getElementById('vh360-join-livestream-overlay');
 
     // === Permission Helper Functions ===
@@ -4212,16 +4211,28 @@ window.initializeAgoraPlayer = function(config) {
         }
     }
 
-    // Add event listener for join button
-    if (joinLivestreamBtn) {
-        joinLivestreamBtn.addEventListener('click', handleJoinLivestream);
-        joinLivestreamBtn.addEventListener('mouseenter', function() {
-            this.style.background = '#d32f2f';
-        });
-        joinLivestreamBtn.addEventListener('mouseleave', function() {
-            this.style.background = '#e53935';
-        });
-    }
+    // Add event listener for join button using event delegation
+    // This handles both the initial button and any dynamically recreated buttons (e.g., appointment "Join Session")
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('#vh360-join-livestream-btn');
+        if (!btn) return;
+        
+        window.vh360Log('VideoHub360: Join button clicked (via delegation)');
+        handleJoinLivestream();
+    });
+    
+    // Add hover effects using event delegation
+    document.addEventListener('mouseenter', function(e) {
+        const btn = e.target.closest('#vh360-join-livestream-btn');
+        if (!btn) return;
+        btn.style.background = '#d32f2f';
+    }, true);
+    
+    document.addEventListener('mouseleave', function(e) {
+        const btn = e.target.closest('#vh360-join-livestream-btn');
+        if (!btn) return;
+        btn.style.background = '#e53935';
+    }, true);
 
     // Don't auto-join anymore - wait for user to click the button OR stream status changes
     // The old code was: joinChannel();
