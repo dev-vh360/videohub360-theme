@@ -1738,6 +1738,10 @@ window.initializeAgoraPlayer = function(config) {
         if (joinAsPresenterBtn) joinAsPresenterBtn.style.display = 'none';
 
         // Show controls for hosts OR appointment participants with publish permission
+        // Note: For appointment clients, canPublish is true only when:
+        // 1. They are the booked client (validated server-side)
+        // 2. The session status is 'active' (professional has started)
+        // 3. They have been promoted to 'host' role in handleJoinLivestream()
         const isAppointmentPublisher = config.appointment && config.appointment.isAppointment && config.appointment.canPublish;
         
         if (currentRole === 'host' || isAppointmentPublisher) {
@@ -4188,10 +4192,16 @@ window.initializeAgoraPlayer = function(config) {
                 });
             } else if (config.appointment && config.appointment.isAppointment && config.appointment.canPublish) {
                 // Appointment participant who can publish (professional or client in active session)
+                // SECURITY: canPublish is determined server-side in videohub360.php based on:
+                // - Professional (room owner): always true
+                // - Client (booked user): true only when session status is 'active'
+                // - Others: false (not included in appointment context)
+                // This ensures only authorized participants can publish during appropriate times
                 window.vh360Log('VideoHub360: Appointment participant with publish permission, promoting to host');
                 window.vh360Log('VideoHub360: Appointment context:', config.appointment);
                 
                 // Promote to host role for appointment publishing
+                // This allows client to call startPublishing() and access camera/mic controls
                 currentRole = 'host';
                 isHost = true;
                 
