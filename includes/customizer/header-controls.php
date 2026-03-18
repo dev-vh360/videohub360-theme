@@ -281,7 +281,7 @@ function vh360_register_header_controls($wp_customize) {
     $wp_customize->add_setting('vh360_header_menu_font_family', array(
         'default'           => '',
         'sanitize_callback' => 'vh360_sanitize_header_menu_font_family',
-        'transport'         => 'postMessage',
+        'transport'         => 'refresh',
     ));
     
     $font_choices = array_merge(
@@ -300,7 +300,7 @@ function vh360_register_header_controls($wp_customize) {
     $wp_customize->add_setting('vh360_header_menu_font_size', array(
         'default'           => 16,
         'sanitize_callback' => 'absint',
-        'transport'         => 'postMessage',
+        'transport'         => 'refresh',
     ));
     
     $wp_customize->add_control('vh360_header_menu_font_size', array(
@@ -319,7 +319,7 @@ function vh360_register_header_controls($wp_customize) {
     $wp_customize->add_setting('vh360_header_menu_font_weight', array(
         'default'           => 500,
         'sanitize_callback' => 'vh360_sanitize_header_menu_font_weight',
-        'transport'         => 'postMessage',
+        'transport'         => 'refresh',
     ));
     
     $wp_customize->add_control('vh360_header_menu_font_weight', array(
@@ -339,7 +339,7 @@ function vh360_register_header_controls($wp_customize) {
     $wp_customize->add_setting('vh360_header_menu_text_transform', array(
         'default'           => 'none',
         'sanitize_callback' => 'vh360_sanitize_header_menu_text_transform',
-        'transport'         => 'postMessage',
+        'transport'         => 'refresh',
     ));
     
     $wp_customize->add_control('vh360_header_menu_text_transform', array(
@@ -358,7 +358,7 @@ function vh360_register_header_controls($wp_customize) {
     $wp_customize->add_setting('vh360_header_menu_letter_spacing', array(
         'default'           => 0,
         'sanitize_callback' => 'vh360_sanitize_header_menu_letter_spacing',
-        'transport'         => 'postMessage',
+        'transport'         => 'refresh',
     ));
     
     $wp_customize->add_control('vh360_header_menu_letter_spacing', array(
