@@ -481,3 +481,54 @@ function vh360_sanitize_community_menu_font_weight($input) {
     $allowed = array(400, 500, 600, 700);
     return in_array((int) $input, $allowed, true) ? (int) $input : 500;
 }
+
+/**
+ * Sanitize Header Menu Font Family
+ *
+ * @param string $input Font family value.
+ * @return string Sanitized font family.
+ */
+function vh360_sanitize_header_menu_font_family($input) {
+    // Allow empty string (inherit)
+    if ($input === '') {
+        return '';
+    }
+    
+    // Validate against font choices
+    $valid = array_keys(vh360_get_font_choices());
+    return in_array($input, $valid, true) ? $input : '';
+}
+
+/**
+ * Sanitize Header Menu Font Weight
+ *
+ * @param int $input Font weight value.
+ * @return int Sanitized font weight.
+ */
+function vh360_sanitize_header_menu_font_weight($input) {
+    $allowed = array(400, 500, 600, 700);
+    return in_array((int) $input, $allowed, true) ? (int) $input : 500;
+}
+
+/**
+ * Sanitize Header Menu Text Transform
+ *
+ * @param string $input Text transform value.
+ * @return string Sanitized text transform.
+ */
+function vh360_sanitize_header_menu_text_transform($input) {
+    $allowed = array('none', 'uppercase', 'capitalize');
+    return in_array($input, $allowed, true) ? $input : 'none';
+}
+
+/**
+ * Sanitize Header Menu Letter Spacing
+ *
+ * @param mixed $input Letter spacing value.
+ * @return float Sanitized letter spacing (clamped to -2 to 5).
+ */
+function vh360_sanitize_header_menu_letter_spacing($input) {
+    $value = is_numeric($input) ? floatval($input) : 0;
+    // Clamp to reasonable range
+    return max(-2, min(5, $value));
+}

@@ -54,6 +54,13 @@ function vh360_output_dynamic_css() {
     $community_menu_left_gutter = get_theme_mod('vh360_community_menu_left_gutter', 24);
     $community_menu_width       = get_theme_mod('vh360_community_menu_width', 280);
     
+    // Header Menu typography
+    $header_menu_font_family = get_theme_mod('vh360_header_menu_font_family', '');
+    $header_menu_font_size   = get_theme_mod('vh360_header_menu_font_size', 16);
+    $header_menu_font_weight = get_theme_mod('vh360_header_menu_font_weight', 500);
+    $header_menu_text_transform = get_theme_mod('vh360_header_menu_text_transform', 'none');
+    $header_menu_letter_spacing = get_theme_mod('vh360_header_menu_letter_spacing', 0);
+    
     // Button colors
     $button_bg_color            = get_theme_mod('vh360_button_bg_color', '#2563eb');
     $button_text_color          = get_theme_mod('vh360_button_text_color', '#ffffff');
@@ -150,6 +157,15 @@ function vh360_output_dynamic_css() {
             --community-menu-font-weight: <?php echo absint($community_menu_font_weight); ?>;
             <?php if (!empty($community_menu_font_family)) : ?>
             --community-menu-font-family: <?php echo esc_attr(vh360_get_font_family($community_menu_font_family)); ?>;
+            <?php endif; ?>
+            
+            /* Header Menu Typography */
+            --header-menu-font-size: <?php echo absint($header_menu_font_size); ?>px;
+            --header-menu-font-weight: <?php echo absint($header_menu_font_weight); ?>;
+            --header-menu-text-transform: <?php echo esc_attr($header_menu_text_transform); ?>;
+            --header-menu-letter-spacing: <?php echo floatval($header_menu_letter_spacing); ?>px;
+            <?php if (!empty($header_menu_font_family)) : ?>
+            --header-menu-font-family: <?php echo esc_attr(vh360_get_font_family($header_menu_font_family)); ?>;
             <?php endif; ?>
             
             /* Button Colors */

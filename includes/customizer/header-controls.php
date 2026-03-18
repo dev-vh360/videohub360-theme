@@ -262,6 +262,117 @@ function vh360_register_header_controls($wp_customize) {
         'description' => __('Comma-separated list: search,cart,messages,notifications,user', 'videohub360-theme'),
     ));
     
+    /* Header Menu Typography Section Header */
+    $wp_customize->add_setting('vh360_header_menu_typography_heading', array(
+        'sanitize_callback' => 'sanitize_text_field',
+    ));
+    $wp_customize->add_control(new WP_Customize_Control(
+        $wp_customize,
+        'vh360_header_menu_typography_heading',
+        array(
+            'label'       => '<strong>' . __('Header Menu Typography', 'videohub360-theme') . '</strong>',
+            'section'     => 'vh360_main_header_settings',
+            'type'        => 'hidden',
+            'description' => __('Customize font settings for the header navigation menu.', 'videohub360-theme'),
+        )
+    ));
+    
+    /* Header Menu Font Family */
+    $wp_customize->add_setting('vh360_header_menu_font_family', array(
+        'default'           => '',
+        'sanitize_callback' => 'vh360_sanitize_header_menu_font_family',
+        'transport'         => 'postMessage',
+    ));
+    
+    $font_choices = array_merge(
+        array('' => __('Inherit (Body)', 'videohub360-theme')),
+        vh360_get_font_choices()
+    );
+    $wp_customize->add_control('vh360_header_menu_font_family', array(
+        'label'       => __('Font Family', 'videohub360-theme'),
+        'description' => __('Optional font family for header menu. Leave as "Inherit" to use body font.', 'videohub360-theme'),
+        'section'     => 'vh360_main_header_settings',
+        'type'        => 'select',
+        'choices'     => $font_choices,
+    ));
+    
+    /* Header Menu Font Size */
+    $wp_customize->add_setting('vh360_header_menu_font_size', array(
+        'default'           => 16,
+        'sanitize_callback' => 'absint',
+        'transport'         => 'postMessage',
+    ));
+    
+    $wp_customize->add_control('vh360_header_menu_font_size', array(
+        'label'       => __('Font Size (px)', 'videohub360-theme'),
+        'description' => __('Font size for header menu items.', 'videohub360-theme'),
+        'section'     => 'vh360_main_header_settings',
+        'type'        => 'number',
+        'input_attrs' => array(
+            'min'  => 12,
+            'max'  => 24,
+            'step' => 1,
+        ),
+    ));
+    
+    /* Header Menu Font Weight */
+    $wp_customize->add_setting('vh360_header_menu_font_weight', array(
+        'default'           => 500,
+        'sanitize_callback' => 'vh360_sanitize_header_menu_font_weight',
+        'transport'         => 'postMessage',
+    ));
+    
+    $wp_customize->add_control('vh360_header_menu_font_weight', array(
+        'label'       => __('Font Weight', 'videohub360-theme'),
+        'description' => __('Font weight for header menu items.', 'videohub360-theme'),
+        'section'     => 'vh360_main_header_settings',
+        'type'        => 'select',
+        'choices'     => array(
+            400 => __('400 (Normal)', 'videohub360-theme'),
+            500 => __('500 (Medium)', 'videohub360-theme'),
+            600 => __('600 (Semi-Bold)', 'videohub360-theme'),
+            700 => __('700 (Bold)', 'videohub360-theme'),
+        ),
+    ));
+    
+    /* Header Menu Text Transform */
+    $wp_customize->add_setting('vh360_header_menu_text_transform', array(
+        'default'           => 'none',
+        'sanitize_callback' => 'vh360_sanitize_header_menu_text_transform',
+        'transport'         => 'postMessage',
+    ));
+    
+    $wp_customize->add_control('vh360_header_menu_text_transform', array(
+        'label'       => __('Text Transform', 'videohub360-theme'),
+        'description' => __('Text transformation for header menu items.', 'videohub360-theme'),
+        'section'     => 'vh360_main_header_settings',
+        'type'        => 'select',
+        'choices'     => array(
+            'none'       => __('None', 'videohub360-theme'),
+            'uppercase'  => __('Uppercase', 'videohub360-theme'),
+            'capitalize' => __('Capitalize', 'videohub360-theme'),
+        ),
+    ));
+    
+    /* Header Menu Letter Spacing */
+    $wp_customize->add_setting('vh360_header_menu_letter_spacing', array(
+        'default'           => 0,
+        'sanitize_callback' => 'vh360_sanitize_header_menu_letter_spacing',
+        'transport'         => 'postMessage',
+    ));
+    
+    $wp_customize->add_control('vh360_header_menu_letter_spacing', array(
+        'label'       => __('Letter Spacing (px)', 'videohub360-theme'),
+        'description' => __('Letter spacing for header menu items.', 'videohub360-theme'),
+        'section'     => 'vh360_main_header_settings',
+        'type'        => 'number',
+        'input_attrs' => array(
+            'min'  => -2,
+            'max'  => 5,
+            'step' => 0.1,
+        ),
+    ));
+    
     // Add Page Header Settings section (existing content headers)
     $wp_customize->add_section('vh360_header_settings', array(
         'title'       => __('Template Headers', 'videohub360-theme'),
