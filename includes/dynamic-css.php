@@ -156,7 +156,7 @@ function vh360_output_dynamic_css() {
             --community-menu-font-size: <?php echo absint($community_menu_font_size); ?>px;
             --community-menu-font-weight: <?php echo absint($community_menu_font_weight); ?>;
             <?php if (!empty($community_menu_font_family)) : ?>
-            --community-menu-font-family: <?php echo esc_attr(vh360_get_font_family($community_menu_font_family)); ?>;
+            --community-menu-font-family: <?php echo vh360_get_font_family($community_menu_font_family); ?>;
             <?php endif; ?>
             
             /* Header Menu Typography */
@@ -165,7 +165,7 @@ function vh360_output_dynamic_css() {
             --header-menu-text-transform: <?php echo esc_attr($header_menu_text_transform); ?>;
             --header-menu-letter-spacing: <?php echo floatval($header_menu_letter_spacing); ?>px;
             <?php if (!empty($header_menu_font_family)) : ?>
-            --header-menu-font-family: <?php echo esc_attr(vh360_get_font_family($header_menu_font_family)); ?>;
+            --header-menu-font-family: <?php echo vh360_get_font_family($header_menu_font_family); ?>;
             <?php endif; ?>
             
             /* Button Colors */
@@ -395,5 +395,7 @@ function vh360_get_font_family($font) {
     }
     
     // Return Google Font with system fallback
-    return "'" . esc_attr($font) . "', " . $system_fonts;
+    // Note: Font name is already sanitized by Customizer sanitizer, no escaping needed here
+    // This value will be output in CSS context (inside <style> tag), not HTML attribute context
+    return "'" . $font . "', " . $system_fonts;
 }
