@@ -355,6 +355,43 @@ if (!function_exists('videohub360_get_livestream_bootstrap_data')) {
         
         $agora_mode = $fields['agora_mode'] === 'broadcast' ? 'live' : 'rtc';
         
+        // Check if this is an appointment room
+        $appointment_event_id = get_post_meta($post_id, '_vh360_appointment_event_id', true);
+        $is_appointment = !empty($appointment_event_id);
+        
+        // Get appointment session state if this is an appointment
+        $appointment_context = array(
+            'isAppointment' => false,
+            'userRole' => null,
+            'status' => null,
+            'canJoin' => false,
+            'canPublish' => false,
+            'message' => ''
+        );
+        
+        if ($is_appointment && function_exists('vh360_get_appointment_session_state')) {
+            $session_state = vh360_get_appointment_session_state($post_id, $user_id);
+            
+            // Determine if this user can publish in the appointment
+            // Professional (room owner) can always publish
+            // Client can publish during active sessions ('active' status)
+            $can_publish = false;
+            if ($session_state['user_role'] === 'professional') {
+                $can_publish = true; // Professional can always publish
+            } elseif ($session_state['user_role'] === 'client' && $session_state['status'] === 'active') {
+                $can_publish = true; // Client can publish when session is active
+            }
+            
+            $appointment_context = array(
+                'isAppointment' => true,
+                'userRole' => $session_state['user_role'],
+                'status' => $session_state['status'],
+                'canJoin' => $session_state['can_generate_token'],
+                'canPublish' => $can_publish,
+                'message' => $session_state['message']
+            );
+        }
+        
         // Security context
         $security_context = array(
             'can_promote_users' => $is_original_host,
@@ -379,7 +416,9 @@ if (!function_exists('videohub360_get_livestream_bootstrap_data')) {
             'agora_mode' => $fields['agora_mode'],
             'everyone_is_host' => $fields['agora_everyone_is_host'],
             'final_role' => $role,
-            'is_original_host' => $is_original_host
+            'is_original_host' => $is_original_host,
+            'is_appointment' => $is_appointment,
+            'appointment_status' => $appointment_context['status']
         );
         
         return array(
@@ -397,7 +436,8 @@ if (!function_exists('videohub360_get_livestream_bootstrap_data')) {
             'hostPasscode' => isset($fields['host_passcode']) ? $fields['host_passcode'] : '',
             'displayName' => $user_display_name,
             'security' => $security_context,
-            'debugInfo' => $debug_info
+            'debugInfo' => $debug_info,
+            'appointment' => $appointment_context
         );
     }
 }

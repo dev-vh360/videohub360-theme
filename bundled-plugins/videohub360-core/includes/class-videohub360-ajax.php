@@ -486,7 +486,7 @@ class VideoHub360_Ajax {
         // Enforce appointment room access control
         $appointment_event_id = get_post_meta($post_id, '_vh360_appointment_event_id', true);
         if ($appointment_event_id) {
-            // This is an appointment Live Room - enforce strict membership
+            // This is an appointment Live Room - enforce strict membership and timing
             
             // Must be logged in to join appointment rooms
             if (!is_user_logged_in()) {
@@ -496,15 +496,28 @@ class VideoHub360_Ajax {
             
             $current_user_id = get_current_user_id();
             
-            // Check if user is authorized (professional, client, or admin)
-            $is_admin = current_user_can('manage_options');
-            $is_room_owner = ((int) $post->post_author === (int) $current_user_id);
-            $client_id = get_post_meta($post_id, '_vh360_appointment_client_id', true);
-            $is_client = ($client_id && (int) $client_id === (int) $current_user_id);
-            
-            if (!$is_admin && !$is_room_owner && !$is_client) {
-                wp_send_json_error('You do not have permission to join this appointment session');
-                return;
+            // Use centralized timing helper for appointment access control
+            if (function_exists('vh360_can_user_join_appointment_room')) {
+                $join_check = vh360_can_user_join_appointment_room($post_id, $current_user_id);
+                
+                if (!$join_check['can_join']) {
+                    wp_send_json_error($join_check['message']);
+                    return;
+                }
+                
+                // User has permission and timing is correct - continue to token generation
+            } else {
+                // Fallback to legacy check if helper not loaded
+                // Check if user is authorized (professional, client, or admin)
+                $is_admin = current_user_can('manage_options');
+                $is_room_owner = ((int) $post->post_author === (int) $current_user_id);
+                $client_id = get_post_meta($post_id, '_vh360_appointment_client_id', true);
+                $is_client = ($client_id && (int) $client_id === (int) $current_user_id);
+                
+                if (!$is_admin && !$is_room_owner && !$is_client) {
+                    wp_send_json_error('You do not have permission to join this appointment session');
+                    return;
+                }
             }
         }
         

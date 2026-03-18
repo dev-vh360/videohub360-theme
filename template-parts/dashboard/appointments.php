@@ -200,15 +200,34 @@ if ($is_professional) {
                         $is_past = $datetime_obj < $now;
                     }
                     
+                    // Get appointment session state using timing helper
+                    $session_state = array(
+                        'status' => 'scheduled',
+                        'can_view_page' => true,
+                        'can_generate_token' => false,
+                        'message' => '',
+                    );
+                    
+                    if (function_exists('vh360_get_appointment_session_state') && $live_room_id) {
+                        $session_state = vh360_get_appointment_session_state($live_room_id, $current_user_id);
+                    }
+                    
                     // Determine status
                     $status_class = 'offline';
                     $status_label = $is_professional ? __('Offline', 'videohub360-theme') : __('Scheduled', 'videohub360-theme');
+                    
                     if ($stream_stopped) {
                         $status_class = 'ended';
                         $status_label = __('Ended', 'videohub360-theme');
                     } elseif ($is_live) {
                         $status_class = 'live';
                         $status_label = __('Live Now', 'videohub360-theme');
+                    } elseif ($session_state['status'] === 'too_early') {
+                        $status_class = 'scheduled';
+                        $status_label = __('Scheduled', 'videohub360-theme');
+                    } elseif ($session_state['status'] === 'waiting_for_host') {
+                        $status_class = 'waiting';
+                        $status_label = __('Waiting', 'videohub360-theme');
                     } elseif (!$is_professional && $is_past) {
                         $status_class = 'past';
                         $status_label = __('Past', 'videohub360-theme');
@@ -256,6 +275,23 @@ if ($is_professional) {
                                 </svg>
                                 <span><?php esc_html_e('The professional is live now! Click "Join Session" to enter.', 'videohub360-theme'); ?></span>
                             </div>
+                        <?php elseif (!$is_professional && $session_state['status'] === 'too_early') : ?>
+                            <div class="vh360-appointment-notice">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                <span><?php echo esc_html($session_state['message']); ?></span>
+                            </div>
+                        <?php elseif (!$is_professional && $session_state['status'] === 'waiting_for_host') : ?>
+                            <div class="vh360-appointment-notice">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                </svg>
+                                <span><?php echo esc_html($session_state['message']); ?></span>
+                            </div>
                         <?php endif; ?>
                     </div>
                     <div class="vh360-appointment-actions">
@@ -293,22 +329,53 @@ if ($is_professional) {
                                 <?php endif; ?>
                             <?php else : ?>
                                 <!-- Client controls -->
-                                <a href="<?php echo esc_url($live_room_url); ?>" 
-                                   class="vh360-dashboard-btn <?php echo $is_live ? 'vh360-dashboard-btn-primary vh360-pulse' : 'vh360-dashboard-btn-secondary'; ?>" 
-                                   target="_blank">
-                                    <?php if ($is_live) : ?>
+                                <?php if ($session_state['status'] === 'too_early') : ?>
+                                    <!-- Before early-join window -->
+                                    <button class="vh360-dashboard-btn vh360-dashboard-btn-disabled" disabled>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <polyline points="12 6 12 12 16 14"></polyline>
+                                        </svg>
+                                        <?php esc_html_e('Not Open Yet', 'videohub360-theme'); ?>
+                                    </button>
+                                <?php elseif ($session_state['status'] === 'waiting_for_host') : ?>
+                                    <!-- Within early-join window but host hasn't started -->
+                                    <button class="vh360-dashboard-btn vh360-dashboard-btn-disabled" disabled>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                        </svg>
+                                        <?php esc_html_e('Waiting for Professional', 'videohub360-theme'); ?>
+                                    </button>
+                                <?php elseif ($session_state['status'] === 'ended') : ?>
+                                    <!-- Session has ended -->
+                                    <button class="vh360-dashboard-btn vh360-dashboard-btn-disabled" disabled>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <rect x="5" y="5" width="14" height="14" rx="2" ry="2"></rect>
+                                        </svg>
+                                        <?php esc_html_e('Session Ended', 'videohub360-theme'); ?>
+                                    </button>
+                                <?php elseif ($is_live) : ?>
+                                    <!-- Session is live - client can join -->
+                                    <a href="<?php echo esc_url($live_room_url); ?>" 
+                                       class="vh360-dashboard-btn vh360-dashboard-btn-primary vh360-pulse" 
+                                       target="_blank">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                                             <circle cx="12" cy="12" r="10"></circle>
                                             <polygon points="10 8 16 12 10 16 10 8" fill="white"></polygon>
                                         </svg>
                                         <?php esc_html_e('Join Session', 'videohub360-theme'); ?>
-                                    <?php else : ?>
+                                    </a>
+                                <?php else : ?>
+                                    <!-- Default: not live yet -->
+                                    <button class="vh360-dashboard-btn vh360-dashboard-btn-disabled" disabled>
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path>
                                         </svg>
-                                        <?php esc_html_e('View Room', 'videohub360-theme'); ?>
-                                    <?php endif; ?>
-                                </a>
+                                        <?php esc_html_e('Scheduled', 'videohub360-theme'); ?>
+                                    </button>
+                                <?php endif; ?>
                             <?php endif; ?>
                         <?php endif; ?>
                     </div>

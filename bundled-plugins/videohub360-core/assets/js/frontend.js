@@ -1058,8 +1058,7 @@ window.initializeAgoraPlayer = function(config) {
     const endStreamBtn = document.getElementById('vh360-agora-end-stream');
     const controlsContainer = document.getElementById('vh360-agora-controls');
     
-    // Get the new join livestream button
-    const joinLivestreamBtn = document.getElementById('vh360-join-livestream-btn');
+    // Get overlay element (button is handled via event delegation below)
     const joinOverlay = document.getElementById('vh360-join-livestream-overlay');
 
     // === Permission Helper Functions ===
@@ -1738,7 +1737,14 @@ window.initializeAgoraPlayer = function(config) {
         if (muteVideoBtn) muteVideoBtn.style.display = 'none';
         if (joinAsPresenterBtn) joinAsPresenterBtn.style.display = 'none';
 
-        if (currentRole === 'host') {
+        // Show controls for hosts OR appointment participants with publish permission
+        // Note: For appointment clients, canPublish is true only when:
+        // 1. They are the booked client (validated server-side)
+        // 2. The session status is 'active' (professional has started)
+        // 3. They have been promoted to 'host' role in handleJoinLivestream()
+        const isAppointmentPublisher = config.appointment && config.appointment.isAppointment && config.appointment.canPublish;
+        
+        if (currentRole === 'host' || isAppointmentPublisher) {
             if (muteAudioBtn) {
                 muteAudioBtn.style.display = 'inline-block';
             }
@@ -3368,14 +3374,121 @@ window.initializeAgoraPlayer = function(config) {
             localPlayer.innerHTML = '';
             const messageContainer = document.createElement('div');
             messageContainer.className = 'waiting-message vh360-waiting-container';
-            if (config.agoraMode === 'interactive') {
+            
+            // Check if this is an appointment room
+            if (config.appointment && config.appointment.isAppointment) {
+                // Appointment-specific waiting message
+                if (config.appointment.userRole === 'client') {
+                    messageContainer.innerHTML = '<div class="vh360-waiting-text">Waiting for the professional to start the session...</div>';
+                } else {
+                    // For professional or admin in appointment
+                    messageContainer.innerHTML = '<div class="vh360-waiting-text">Waiting for stream to start...</div>';
+                }
+            } else if (config.agoraMode === 'interactive') {
+                // Regular interactive room (non-appointment)
                 messageContainer.innerHTML = '<div class="vh360-waiting-text">Click "Go Live" to join as host</div>';
             } else {
+                // Broadcast mode
                 messageContainer.innerHTML = '<div class="vh360-waiting-text">Waiting for host to start stream...</div>';
             }
             localPlayer.appendChild(messageContainer);
         }
     }
+    
+    /**
+     * Update appointment overlay state
+     * Centralizes appointment overlay UI updates based on session state
+     */
+    function updateAppointmentOverlay(state) {
+        if (!config.appointment || !config.appointment.isAppointment) {
+            return; // Not an appointment, do nothing
+        }
+        
+        const joinOverlay = document.getElementById('vh360-join-livestream-overlay');
+        if (!joinOverlay) {
+            return;
+        }
+        
+        const overlayContent = joinOverlay.querySelector('.vh360-overlay-content');
+        if (!overlayContent) {
+            return;
+        }
+        
+        // Clear existing content
+        overlayContent.innerHTML = '';
+        
+        // Add icon
+        const icon = document.createElement('div');
+        icon.className = 'vh360-overlay-icon';
+        icon.textContent = '🔴';
+        overlayContent.appendChild(icon);
+        
+        const title = document.createElement('h3');
+        title.className = 'vh360-overlay-title';
+        
+        const description = document.createElement('p');
+        description.className = 'vh360-overlay-description';
+        
+        const userRole = config.appointment.userRole;
+        
+        switch (state) {
+            case 'too_early':
+                title.textContent = 'Session Not Open Yet';
+                description.textContent = config.appointment.message || 'This session will open shortly before the scheduled time.';
+                joinOverlay.style.display = 'flex';
+                break;
+                
+            case 'waiting_for_host':
+                title.textContent = 'Waiting for Professional';
+                description.textContent = 'The professional will start the session shortly.';
+                joinOverlay.style.display = 'flex';
+                break;
+                
+            case 'ready_to_join':
+                if (userRole === 'client') {
+                    title.textContent = 'Join Session';
+                    description.textContent = 'The professional is ready for you.';
+                    
+                    const joinButton = document.createElement('button');
+                    joinButton.id = 'vh360-join-livestream-btn';
+                    joinButton.className = 'vh360-overlay-btn';
+                    joinButton.textContent = 'Join Session';
+                    overlayContent.appendChild(title);
+                    overlayContent.appendChild(description);
+                    overlayContent.appendChild(joinButton);
+                    
+                    joinOverlay.style.display = 'flex';
+                    return; // Button added, return early
+                } else {
+                    // Professional or admin
+                    title.textContent = 'Session Ready';
+                    description.textContent = 'Click to start the session.';
+                }
+                joinOverlay.style.display = 'flex';
+                break;
+                
+            case 'active':
+                // Session is active, overlay should be hidden
+                joinOverlay.style.display = 'none';
+                return;
+                
+            case 'ended':
+                title.textContent = 'Session Ended';
+                description.textContent = 'This appointment session has been completed.';
+                joinOverlay.style.display = 'flex';
+                break;
+                
+            default:
+                // Unknown state, show generic waiting
+                title.textContent = 'Appointment Session';
+                description.textContent = config.appointment.message || 'Please wait...';
+                joinOverlay.style.display = 'flex';
+        }
+        
+        overlayContent.appendChild(title);
+        overlayContent.appendChild(description);
+    }
+    
     // Function to request token from server
     // NEW: Dynamic token generation per join request (Scenario 2)
     // - No static tokens stored anywhere
@@ -3814,42 +3927,94 @@ window.initializeAgoraPlayer = function(config) {
         .then(function(data) {
             if (data.success) {
                 if (data.data.is_live) {
-                    // Stream is now live, stop polling and join
-                    window.vh360Log('VideoHub360: Stream detected as live, joining...');
+                    // Stream is now live
+                    window.vh360Log('VideoHub360: Stream detected as live');
                     stopStreamStatusPolling();
                     
-                    // Hide the join overlay
-                    if (joinOverlay) {
-                        joinOverlay.style.display = 'none';
+                    // Check if this is an appointment room
+                    if (config.appointment && config.appointment.isAppointment) {
+                        // Appointment-specific behavior
+                        const userRole = config.appointment.userRole;
+                        
+                        if (userRole === 'client') {
+                            // For appointment clients: show "Join Session" button, do NOT auto-join
+                            window.vh360Log('VideoHub360: Appointment client - showing Join Session button');
+                            updateAppointmentOverlay('ready_to_join');
+                            
+                            // Do NOT mark stream as started or update controls yet
+                            // Client must click "Join Session" button first
+                            // vh360StreamStarted will be set when client joins via button click
+                            
+                            // Do NOT hide overlay or auto-join for appointment clients
+                            // Client must click "Join Session" button
+                        } else {
+                            // Professional or admin in appointment - can auto-join
+                            window.vh360Log('VideoHub360: Appointment professional/admin - auto-joining');
+                            
+                            if (joinOverlay) {
+                                joinOverlay.style.display = 'none';
+                            }
+                            
+                            window.vh360StreamStarted = true;
+                            const mobileControls = document.getElementById('vh360-agora-controls');
+                            if (mobileControls) {
+                                mobileControls.style.display = 'flex';
+                            }
+                            
+                            updateControlsVisibility();
+                            
+                            const localPlayer = document.getElementById("vh360-agora-local-player");
+                            if (localPlayer) {
+                                localPlayer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#fff;font-size:1.2em;"><div style="text-align:center;"><div style="margin-bottom:12px;">🔄</div><div>Connecting to session...</div></div></div>';
+                            }
+                            
+                            joinChannel().catch(error => {
+                                window.vh360Error('Failed to join session:', error);
+                                showAgoraError('Failed to connect to session. Please refresh and try again.');
+                            });
+                        }
+                    } else {
+                        // Regular (non-appointment) livestream - keep original behavior
+                        window.vh360Log('VideoHub360: Regular livestream - auto-joining');
+                        
+                        // Hide the join overlay
+                        if (joinOverlay) {
+                            joinOverlay.style.display = 'none';
+                        }
+                        
+                        // Mark stream as started and show controls now that live stream has begun
+                        window.vh360StreamStarted = true;
+                        const mobileControls = document.getElementById('vh360-agora-controls');
+                        if (mobileControls) {
+                            mobileControls.style.display = 'flex';
+                        }
+                        
+                        // Update desktop controls visibility for broadcast mode hosts
+                        updateControlsVisibility();
+                        
+                        // Show loading message
+                        const localPlayer = document.getElementById("vh360-agora-local-player");
+                        if (localPlayer) {
+                            localPlayer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#fff;font-size:1.2em;"><div style="text-align:center;"><div style="margin-bottom:12px;">🔄</div><div>Connecting to livestream...</div></div></div>';
+                        }
+                        
+                        // Start the connection
+                        joinChannel().catch(error => {
+                            window.vh360Error('Failed to join livestream:', error);
+                            showAgoraError('Failed to connect to livestream. Please refresh and try again.');
+                        });
                     }
-                    
-                    // Mark stream as started and show controls now that live stream has begun
-                    window.vh360StreamStarted = true;
-                    const mobileControls = document.getElementById('vh360-agora-controls');
-                    if (mobileControls) {
-                        mobileControls.style.display = 'flex';
-                    }
-                    
-                    // Update desktop controls visibility for broadcast mode hosts
-                    updateControlsVisibility();
-                    
-                    // Show loading message
-                    const localPlayer = document.getElementById("vh360-agora-local-player");
-                    if (localPlayer) {
-                        localPlayer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#fff;font-size:1.2em;"><div style="text-align:center;"><div style="margin-bottom:12px;">🔄</div><div>Connecting to livestream...</div></div></div>';
-                    }
-                    
-                    // Start the connection
-                    joinChannel().catch(error => {
-                        window.vh360Error('Failed to join livestream:', error);
-                        showAgoraError('Failed to connect to livestream. Please refresh and try again.');
-                    });
                 } else {
                     // Stream is not live yet, keep polling
                     // Optionally update the waiting message
                     const localPlayer = document.getElementById("vh360-agora-local-player");
                     if (localPlayer && !localPlayer.querySelector('.waiting-message')) {
                         showAudienceWaitingMessage();
+                    }
+                    
+                    // For appointment clients, update overlay state
+                    if (config.appointment && config.appointment.isAppointment && config.appointment.userRole === 'client') {
+                        updateAppointmentOverlay('waiting_for_host');
                     }
                 }
             } else {
@@ -4025,6 +4190,47 @@ window.initializeAgoraPlayer = function(config) {
                     window.vh360Error('Failed to join livestream as host:', error);
                     showAgoraError('Failed to join livestream. Please refresh and try again.');
                 });
+            } else if (config.appointment && config.appointment.isAppointment && config.appointment.canPublish) {
+                // Appointment participant who can publish (professional or client in active session)
+                // SECURITY: canPublish is determined server-side in videohub360.php based on:
+                // - Professional (room owner): always true
+                // - Client (booked user): true only when session status is 'active'
+                // - Others: false (not included in appointment context)
+                // This ensures only authorized participants can publish during appropriate times
+                window.vh360Log('VideoHub360: Appointment participant with publish permission, promoting to host');
+                window.vh360Log('VideoHub360: Appointment context:', config.appointment);
+                
+                // Promote to host role for appointment publishing
+                // This allows client to call startPublishing() and access camera/mic controls
+                currentRole = 'host';
+                isHost = true;
+                
+                window.vh360Log('VideoHub360: Promoted appointment participant - currentRole:', currentRole, 'isHost:', isHost);
+                
+                if (joinOverlay) {
+                    joinOverlay.style.display = 'none';
+                }
+                
+                // Mark stream as started and show controls
+                window.vh360StreamStarted = true;
+                const mobileControls = document.getElementById('vh360-agora-controls');
+                if (mobileControls) {
+                    mobileControls.style.display = 'flex';
+                }
+                
+                // Update desktop controls visibility
+                updateControlsVisibility();
+                
+                const localPlayer = document.getElementById("vh360-agora-local-player");
+                if (localPlayer) {
+                    localPlayer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#fff;font-size:1.2em;"><div style="text-align:center;"><div style="margin-bottom:12px;">🔄</div><div>Joining appointment session...</div></div></div>';
+                }
+                
+                // Join as host with publish capability
+                joinChannel().catch(error => {
+                    window.vh360Error('Failed to join appointment session:', error);
+                    showAgoraError('Failed to join appointment. Please refresh and try again.');
+                });
             } else {
                 // Standard behavior: start polling for stream status or join directly
                 if (joinOverlay) {
@@ -4053,23 +4259,67 @@ window.initializeAgoraPlayer = function(config) {
         }
     }
 
-    // Add event listener for join button
-    if (joinLivestreamBtn) {
-        joinLivestreamBtn.addEventListener('click', handleJoinLivestream);
-        joinLivestreamBtn.addEventListener('mouseenter', function() {
-            this.style.background = '#d32f2f';
-        });
-        joinLivestreamBtn.addEventListener('mouseleave', function() {
-            this.style.background = '#e53935';
-        });
-    }
+    // Add event listener for join button using event delegation
+    // This handles both the initial button and any dynamically recreated buttons (e.g., appointment "Join Session")
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('#vh360-join-livestream-btn');
+        if (!btn) return;
+        
+        window.vh360Log('VideoHub360: Join button clicked (via delegation)');
+        handleJoinLivestream();
+    });
+    
+    // Add hover effects using event delegation
+    document.addEventListener('mouseenter', function(e) {
+        const btn = e.target.closest('#vh360-join-livestream-btn');
+        if (!btn) return;
+        btn.style.background = '#d32f2f';
+    }, true);
+    
+    document.addEventListener('mouseleave', function(e) {
+        const btn = e.target.closest('#vh360-join-livestream-btn');
+        if (!btn) return;
+        btn.style.background = '#e53935';
+    }, true);
 
     // Don't auto-join anymore - wait for user to click the button OR stream status changes
     // The old code was: joinChannel();
     // Now we show the join overlay for hosts and start polling for audience
     // UNLESS allowEveryoneIsHost is enabled in interactive mode
     
-    if (isOriginalHost) {
+    // Initialize appointment overlay state if this is an appointment
+    if (config.appointment && config.appointment.isAppointment) {
+        window.vh360Log('VideoHub360: Appointment room detected, role:', config.appointment.userRole, 'status:', config.appointment.status);
+        
+        if (config.appointment.userRole === 'client') {
+            // Client in appointment - set initial overlay state based on session status
+            const status = config.appointment.status;
+            
+            if (status === 'too_early') {
+                updateAppointmentOverlay('too_early');
+            } else if (status === 'waiting_for_host' || status === 'ready') {
+                updateAppointmentOverlay('waiting_for_host');
+                // Start polling to detect when professional starts
+                startStreamStatusPolling();
+            } else if (status === 'active') {
+                // Session is already active
+                updateAppointmentOverlay('ready_to_join');
+            } else if (status === 'ended') {
+                updateAppointmentOverlay('ended');
+            } else {
+                // Default waiting state
+                updateAppointmentOverlay('waiting_for_host');
+                startStreamStatusPolling();
+            }
+        } else if (isOriginalHost) {
+            // Professional sees the "Start Session" button
+            window.vh360Log('VideoHub360: Professional in appointment, waiting for Start Session button click');
+        } else {
+            // Admin or other authorized user
+            window.vh360Log('VideoHub360: Admin in appointment room');
+            startStreamStatusPolling();
+        }
+    } else if (isOriginalHost) {
         // Host sees the "Start Live Stream" button and waits for click
         window.vh360Log('VideoHub360: Host detected, waiting for Start Live Stream button click');
     } else if (config.allowEveryoneIsHost && config.agoraMode === 'interactive') {

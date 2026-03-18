@@ -153,16 +153,65 @@ if (!function_exists('videohub360_render_livestream')) {
             // Mode indicator removed as requested - no longer shows "Interactive Mode" or "Broadcast Mode" labels
 
             // Button overlay: Host sees Start Live Stream, audience sees waiting message
+            // For appointment rooms, use appointment-specific messaging
+            $post_id = get_the_ID();
+            $appointment_event_id = get_post_meta($post_id, '_vh360_appointment_event_id', true);
+            $is_appointment = !empty($appointment_event_id);
+            
             $player_html .= '<div id="vh360-join-livestream-overlay" class="vh360-join-livestream-overlay">';
 $player_html .= '<div class="vh360-overlay-content">';
 $player_html .= '<div class="vh360-overlay-icon">🔴</div>';
-if ($is_original_host) {
+
+if ($is_appointment && function_exists('vh360_get_appointment_session_state')) {
+    // Appointment room - use timing-aware messaging
+    $current_user_id = get_current_user_id();
+    $session_state = vh360_get_appointment_session_state($post_id, $current_user_id);
+    
+    if ($is_original_host) {
+        // Professional view
+        if ($session_state['status'] === 'ended') {
+            $player_html .= '<h3 class="vh360-overlay-title">Session Ended</h3>';
+            $player_html .= '<p class="vh360-overlay-description">This appointment session has been completed.</p>';
+        } else {
+            $appointment_data = $session_state['appointment_data'];
+            if (!empty($appointment_data['start_datetime'])) {
+                $start_datetime = $appointment_data['start_datetime'];
+                $player_html .= '<h3 class="vh360-overlay-title">Appointment Session</h3>';
+                $player_html .= '<p class="vh360-overlay-description">Scheduled for ' . $start_datetime->format(get_option('time_format')) . ', ' . $start_datetime->format(get_option('date_format')) . '</p>';
+            } else {
+                $player_html .= '<h3 class="vh360-overlay-title">Appointment Session</h3>';
+                $player_html .= '<p class="vh360-overlay-description">Start the session when ready.</p>';
+            }
+            $player_html .= '<button id="vh360-join-livestream-btn" class="vh360-overlay-btn">Start Session</button>';
+            $player_html .= '<div class="vh360-overlay-hint">You can enter early to prepare</div>';
+        }
+    } else {
+        // Client view
+        if ($session_state['status'] === 'too_early') {
+            $player_html .= '<h3 class="vh360-overlay-title">Session Not Open Yet</h3>';
+            $player_html .= '<p class="vh360-overlay-description">' . esc_html($session_state['message']) . '</p>';
+        } elseif ($session_state['status'] === 'waiting_for_host') {
+            $player_html .= '<h3 class="vh360-overlay-title">Waiting for Professional</h3>';
+            $player_html .= '<p class="vh360-overlay-description">The professional will start the session shortly.</p>';
+        } elseif ($session_state['status'] === 'ended') {
+            $player_html .= '<h3 class="vh360-overlay-title">Session Ended</h3>';
+            $player_html .= '<p class="vh360-overlay-description">This appointment session has been completed.</p>';
+        } elseif ($session_state['status'] === 'active' && $session_state['can_generate_token']) {
+            $player_html .= '<h3 class="vh360-overlay-title">Join Session</h3>';
+            $player_html .= '<p class="vh360-overlay-description">The professional is ready for you.</p>';
+            $player_html .= '<button id="vh360-join-livestream-btn" class="vh360-overlay-btn">Join Session</button>';
+        } else {
+            $player_html .= '<div class="vh360-overlay-waiting">Waiting for the professional to start the session</div>';
+        }
+    }
+} elseif ($is_original_host) {
+    // Regular live room - original behavior for host
     $player_html .= '<h3 class="vh360-overlay-title">Live Stream Control</h3>';
     $player_html .= '<p class="vh360-overlay-description">Start the live stream for your viewers.</p>';
     $player_html .= '<button id="vh360-join-livestream-btn" class="vh360-overlay-btn">Start Live Stream</button>';
     $player_html .= '<div class="vh360-overlay-hint">Click to start the live stream</div>';
 } else {
-    // Check if everyone can join as host in interactive mode (Zoom-style)
+    // Regular live room - check if everyone can join as host in interactive mode (Zoom-style)
     if ($fields['agora_everyone_is_host'] === 'yes' && $fields['agora_mode'] === 'interactive') {
         $player_html .= '<h3 class="vh360-overlay-title">Join Live Stream</h3>';
         $player_html .= '<p class="vh360-overlay-description">Click to join as host</p>';

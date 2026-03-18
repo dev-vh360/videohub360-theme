@@ -245,16 +245,16 @@
                             });
                         }, 1500);
                         
-                        // Show Live Room link if available
+                        // Show scheduled session confirmation instead of immediate join link
                         if (response.data.live_room_url) {
-                            const liveRoomMessage = '<div class="vh360-booking-success-actions">' +
-                                '<a href="' + response.data.live_room_url + '" class="vh360-join-live-room-btn">' +
-                                (vh360BusinessBooking.i18n.joinLiveRoom || 'Join Live Room') +
-                                '</a>' +
+                            const scheduledMessage = '<div class="vh360-booking-success-info">' +
+                                '<p>' + (vh360BusinessBooking.i18n.appointmentBooked || 'Your appointment has been booked successfully!') + '</p>' +
+                                '<p>' + (vh360BusinessBooking.i18n.sessionLinkAvailable || 'The session link will be available from your Appointments dashboard.') + '</p>' +
+                                '<p>' + (vh360BusinessBooking.i18n.sessionOpensEarly || 'The session will open shortly before the scheduled time.') + '</p>' +
                                 '</div>';
                             
                             setTimeout(function() {
-                                VH360BusinessBooking.showMessage('success', liveRoomMessage);
+                                VH360BusinessBooking.showMessage('success', scheduledMessage);
                             }, 2000);
                         }
                     } else {

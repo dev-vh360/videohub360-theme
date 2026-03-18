@@ -61,9 +61,29 @@ function vh360_gate_appointment_live_room_access() {
         exit;
     }
     
-    // User is logged in - check if they have access
+    // User is logged in - check if they have access using timing helper
     $current_user_id = get_current_user_id();
     
+    // Use centralized timing helper for access control
+    if (function_exists('vh360_can_user_view_appointment_page')) {
+        $can_view = vh360_can_user_view_appointment_page($post_id, $current_user_id);
+        
+        if (!$can_view) {
+            // User is logged in but not authorized - return 404
+            // We don't want to reveal that this room exists
+            global $wp_query;
+            $wp_query->set_404();
+            status_header(404);
+            nocache_headers();
+            include(get_404_template());
+            exit;
+        }
+        
+        // User has permission to view the page
+        return;
+    }
+    
+    // Fallback to legacy access check if helper not loaded
     // Allow administrators
     if (current_user_can('manage_options')) {
         return;
