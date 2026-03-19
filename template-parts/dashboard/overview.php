@@ -18,16 +18,16 @@ $vh360_is_licensed = ( function_exists('vh360_theme_is_license_valid') ? vh360_t
 $vh360_license_url = function_exists('vh360_theme_get_license_admin_url') ? vh360_theme_get_license_admin_url() : admin_url('admin.php?page=videohub360-license');
 $stats = vh360_get_user_stats($current_user_id);
 
-// Get recent videos
-$recent_videos_args = array(
-    'post_type' => array('videohub360', 'post'),
+// Get recent content
+$recent_content_args = array(
+    'post_type' => vh360_get_dashboard_content_types(),
     'author' => $current_user_id,
     'post_status' => 'publish',
     'posts_per_page' => 5,
     'orderby' => 'date',
     'order' => 'DESC',
 );
-$recent_videos = new WP_Query($recent_videos_args);
+$recent_content = new WP_Query($recent_content_args);
 
 // Get recent activities
 $activities = array();
@@ -55,15 +55,15 @@ if (function_exists('vh360_get_user_activities')) {
 <!-- Statistics Widgets -->
     <div class="vh360-dashboard-widgets">
         
-        <!-- Total Videos -->
+        <!-- Total Content -->
         <div class="vh360-dashboard-widget">
             <div class="vh360-dashboard-widget-icon" style="background: rgba(37, 99, 235, 0.1); color: var(--primary-color);">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polygon points="5 3 19 12 5 21 5 3"></polygon>
                 </svg>
             </div>
-            <div class="vh360-dashboard-widget-label"><?php esc_html_e('Total Videos', 'videohub360-theme'); ?></div>
-            <div class="vh360-dashboard-widget-value"><?php echo esc_html(vh360_format_number($stats['videos'])); ?></div>
+            <div class="vh360-dashboard-widget-label"><?php esc_html_e('Total Content', 'videohub360-theme'); ?></div>
+            <div class="vh360-dashboard-widget-value"><?php echo esc_html(vh360_format_number($stats['content'])); ?></div>
         </div>
         
         <!-- Total Views -->
@@ -107,16 +107,16 @@ if (function_exists('vh360_get_user_activities')) {
     
     <div class="vh360-dashboard-grid">
         
-        <!-- Recent Videos -->
+        <!-- Recent Content -->
         <div class="vh360-dashboard-card">
             <div class="vh360-dashboard-card-header">
-                <h2 class="vh360-dashboard-card-title"><?php esc_html_e('Recent Videos', 'videohub360-theme'); ?></h2>
+                <h2 class="vh360-dashboard-card-title"><?php esc_html_e('Recent Content', 'videohub360-theme'); ?></h2>
                 <a href="#videos" class="vh360-dashboard-tab" data-tab="videos"><?php esc_html_e('View All', 'videohub360-theme'); ?></a>
             </div>
             <div class="vh360-dashboard-card-body">
-                <?php if ($recent_videos->have_posts()) : ?>
+                <?php if ($recent_content->have_posts()) : ?>
                     <div class="vh360-dashboard-video-list">
-                        <?php while ($recent_videos->have_posts()) : $recent_videos->the_post(); ?>
+                        <?php while ($recent_content->have_posts()) : $recent_content->the_post(); ?>
                             <div class="vh360-dashboard-video-item">
                                 <div class="vh360-dashboard-video-thumbnail">
                                     <?php
@@ -147,11 +147,11 @@ if (function_exists('vh360_get_user_activities')) {
                     </div>
                 <?php else : ?>
                     <div class="vh360-dashboard-empty">
-                        <div class="vh360-dashboard-empty-icon">📹</div>
-                        <p class="vh360-dashboard-empty-title"><?php esc_html_e('No videos yet', 'videohub360-theme'); ?></p>
-                        <p class="vh360-dashboard-empty-text"><?php esc_html_e('Upload your first video to get started!', 'videohub360-theme'); ?></p>
+                        <div class="vh360-dashboard-empty-icon">📄</div>
+                        <p class="vh360-dashboard-empty-title"><?php esc_html_e('No content yet', 'videohub360-theme'); ?></p>
+                        <p class="vh360-dashboard-empty-text"><?php esc_html_e('Create your first video or post to get started!', 'videohub360-theme'); ?></p>
                         <a href="<?php echo esc_url(admin_url('post-new.php?post_type=videohub360')); ?>" class="vh360-dashboard-btn">
-                            <?php esc_html_e('Upload Video', 'videohub360-theme'); ?>
+                            <?php esc_html_e('Create Content', 'videohub360-theme'); ?>
                         </a>
                     </div>
                 <?php endif; ?>
@@ -162,7 +162,6 @@ if (function_exists('vh360_get_user_activities')) {
         <div class="vh360-dashboard-card">
             <div class="vh360-dashboard-card-header">
                 <h2 class="vh360-dashboard-card-title"><?php esc_html_e('Recent Activity', 'videohub360-theme'); ?></h2>
-                <a href="#activity" class="vh360-dashboard-tab" data-tab="activity"><?php esc_html_e('View All', 'videohub360-theme'); ?></a>
             </div>
             <div class="vh360-dashboard-card-body">
                 <?php if (!empty($activities)) : ?>
@@ -179,12 +178,9 @@ if (function_exists('vh360_get_user_activities')) {
                                         $content = $activity['content'];
                                         if (is_array($content)) {
                                             if ($activity['type'] === 'video_upload') {
-                                                echo esc_html__('uploaded a new video:', 'videohub360-theme') . ' ';
-                                                if (!empty($content['link'])) {
-                                                    echo '<a href="' . esc_url($content['link']) . '">' . esc_html($content['title']) . '</a>';
-                                                } else {
-                                                    echo esc_html($content['title']);
-                                                }
+                                                echo wp_kses_post(vh360_format_activity_content_link($content, __('uploaded a new video:', 'videohub360-theme')));
+                                            } elseif ($activity['type'] === 'post_publish') {
+                                                echo wp_kses_post(vh360_format_activity_content_link($content, __('published a post:', 'videohub360-theme')));
                                             } else {
                                                 echo esc_html($content['title'] ?? '');
                                             }

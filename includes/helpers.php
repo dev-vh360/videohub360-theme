@@ -185,6 +185,7 @@ function vh360_get_user_stats($user_id = 0) {
     if (!$user_id) {
         return array(
             'videos' => 0,
+            'content' => 0,
             'followers' => 0,
             'following' => 0,
             'views' => 0,
@@ -194,32 +195,41 @@ function vh360_get_user_stats($user_id = 0) {
 
     // Check if plugin function exists
     if (function_exists('videohub360_get_user_stats')) {
-        return videohub360_get_user_stats($user_id);
+        $plugin_stats = videohub360_get_user_stats($user_id);
+        // Ensure content key exists for backwards compatibility
+        if (!isset($plugin_stats['content'])) {
+            $plugin_stats['content'] = vh360_get_user_content_count($user_id);
+        }
+        return $plugin_stats;
     }
 
     // Fallback: calculate stats
     $stats = array(
         'videos' => 0,
+        'content' => 0,
         'followers' => 0,
         'following' => 0,
         'views' => 0,
         'likes' => 0,
     );
 
-    // Use optimized video count function
+    // Count videos only (videohub360 post type)
     $stats['videos'] = vh360_get_user_video_count($user_id);
+    
+    // Count all dashboard content (videos + posts)
+    $stats['content'] = vh360_get_user_content_count($user_id);
 
-    // Calculate total views from all videos
+    // Calculate total views from all dashboard content
     // Use a transient to cache the expensive query
     $transient_key = 'vh360_user_views_' . $user_id;
     $total_views = get_transient($transient_key);
 
     if (false === $total_views) {
         $video_args = array(
-            'post_type' => array('videohub360', 'post'),
+            'post_type' => vh360_get_dashboard_content_types(),
             'author' => $user_id,
             'post_status' => 'publish',
-            'posts_per_page' => 100, // Limit to 100 most recent videos
+            'posts_per_page' => 100, // Limit to 100 most recent items
             'fields' => 'ids', // Only get IDs for performance
             'orderby' => 'date',
             'order' => 'DESC',
@@ -517,7 +527,28 @@ function vh360_get_user_join_date($user_id, $format = 'F Y') {
 }
 
 /**
- * Get count of user's published videos
+ * Get dashboard content types
+ *
+ * Central definition of post types included in dashboard overview content counts.
+ * This ensures consistency across overview widgets, recent content, and activity summaries.
+ *
+ * @return array Array of post type slugs.
+ * @since 1.0.0
+ */
+function vh360_get_dashboard_content_types() {
+    $content_types = array('videohub360', 'post');
+    
+    /**
+     * Filter dashboard content types.
+     *
+     * @param array $content_types Array of post type slugs.
+     * @since 1.0.0
+     */
+    return apply_filters('vh360_dashboard_content_types', $content_types);
+}
+
+/**
+ * Get count of user's published videos (videohub360 post type only)
  *
  * @param int $user_id The user ID.
  * @return int Video count.
@@ -527,13 +558,35 @@ function vh360_get_user_video_count($user_id) {
         return 0;
     }
 
-    // Count videohub360 posts
+    // Count only videohub360 posts (true video content)
     $videohub360_count = count_user_posts($user_id, 'videohub360', true);
 
-    // Count regular posts (if they're used for videos)
-    $post_count = count_user_posts($user_id, 'post', true);
+    return $videohub360_count;
+}
 
-    return $videohub360_count + $post_count;
+/**
+ * Get count of user's published dashboard content
+ *
+ * Counts all content types shown in dashboard overview (videos + posts).
+ * This is distinct from vh360_get_user_video_count() which counts videos only.
+ *
+ * @param int $user_id The user ID.
+ * @return int Content count.
+ * @since 1.0.0
+ */
+function vh360_get_user_content_count($user_id) {
+    if (!$user_id) {
+        return 0;
+    }
+
+    $content_types = vh360_get_dashboard_content_types();
+    $total_count = 0;
+
+    foreach ($content_types as $post_type) {
+        $total_count += count_user_posts($user_id, $post_type, true);
+    }
+
+    return $total_count;
 }
 
 /**
@@ -874,6 +927,36 @@ function vh360_format_activity_time($timestamp) {
 }
 
 /**
+ * Format activity content with link
+ *
+ * Renders activity title with optional link, avoiding code duplication.
+ * Returns escaped HTML safe for direct output.
+ *
+ * @param array  $content Activity content array with 'title' and optionally 'link'.
+ * @param string $prefix  Text to display before the title/link (e.g., "uploaded a new video:").
+ * @return string Escaped HTML string safe for output.
+ * @since 1.0.0
+ */
+function vh360_format_activity_content_link($content, $prefix = '') {
+    if (!is_array($content)) {
+        return esc_html($content);
+    }
+    
+    $output = '';
+    if ($prefix) {
+        $output .= esc_html($prefix) . ' ';
+    }
+    
+    if (!empty($content['link'])) {
+        $output .= '<a href="' . esc_url($content['link']) . '">' . esc_html($content['title']) . '</a>';
+    } else {
+        $output .= esc_html($content['title']);
+    }
+    
+    return $output;
+}
+
+/**
  * Get activity type icon
  *
  * @param string $type Activity type.
@@ -882,6 +965,7 @@ function vh360_format_activity_time($timestamp) {
 function vh360_get_activity_icon($type) {
     $icons = array(
         'video_upload' => '<svg class="vh360-activity-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>',
+        'post_publish' => '<svg class="vh360-activity-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>',
         'new_member' => '<svg class="vh360-activity-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>',
         'profile_update' => '<svg class="vh360-activity-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>',
         'milestone' => '<svg class="vh360-activity-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>',
@@ -904,7 +988,7 @@ function vh360_is_user_active($user_id) {
     // Check for recent posts
     $args = array(
         'author' => $user_id,
-        'post_type' => array('videohub360', 'post'),
+        'post_type' => vh360_get_dashboard_content_types(),
         'post_status' => 'publish',
         'posts_per_page' => 1,
         'fields' => 'ids',
@@ -943,7 +1027,7 @@ function vh360_get_user_activities($user_id, $limit = 20, $type = 'all') {
 
     $args = array(
         'author' => $user_id,
-        'post_type' => array('videohub360', 'post'),
+        'post_type' => vh360_get_dashboard_content_types(),
         'post_status' => 'publish',
         'posts_per_page' => $limit,
         'orderby' => 'date',
@@ -955,14 +1039,23 @@ function vh360_get_user_activities($user_id, $limit = 20, $type = 'all') {
     if ($query->have_posts()) {
         while ($query->have_posts()) {
             $query->the_post();
+            
+            // Set activity type based on actual post type
+            $post_type = get_post_type();
+            $activity_type = 'video_upload'; // default for videohub360
+            if ($post_type === 'post') {
+                $activity_type = 'post_publish';
+            }
+            
             $activities[] = array(
                 'id' => get_the_ID(),
-                'type' => 'video_upload',
+                'type' => $activity_type,
                 'user_id' => $user_id,
                 'timestamp' => get_the_time('U'),
                 'content' => array(
                     'title' => get_the_title(),
                     'link' => get_permalink(),
+                    'post_type' => $post_type,
                 ),
             );
         }
