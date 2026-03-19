@@ -756,6 +756,16 @@ class VH360_Ajax_Handlers {
                                 }
                                 echo '</p>';
                                 break;
+                            case 'post_publish':
+                                echo '<p>';
+                                echo esc_html__('published a post:', 'videohub360-theme') . ' ';
+                                if (!empty($content['link'])) {
+                                    echo '<a href="' . esc_url($content['link']) . '">' . esc_html($content['title']) . '</a>';
+                                } else {
+                                    echo esc_html($content['title']);
+                                }
+                                echo '</p>';
+                                break;
                             case 'new_member':
                                 echo '<p>' . esc_html__('joined the community', 'videohub360-theme') . '</p>';
                                 break;

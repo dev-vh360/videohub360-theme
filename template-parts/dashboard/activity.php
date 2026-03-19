@@ -25,7 +25,7 @@ if (function_exists('vh360_get_user_activities')) {
     // Fallback: Get recent posts as activities
     $args = array(
         'author' => $current_user_id,
-        'post_type' => array('videohub360', 'post'),
+        'post_type' => vh360_get_dashboard_content_types(),
         'post_status' => 'publish',
         'posts_per_page' => 20,
         'orderby' => 'date',
@@ -36,14 +36,23 @@ if (function_exists('vh360_get_user_activities')) {
     if ($query->have_posts()) {
         while ($query->have_posts()) {
             $query->the_post();
+            
+            // Set activity type based on actual post type
+            $post_type = get_post_type();
+            $activity_type = 'video_upload'; // default for videohub360
+            if ($post_type === 'post') {
+                $activity_type = 'post_publish';
+            }
+            
             $activities[] = array(
                 'id' => get_the_ID(),
-                'type' => 'video_upload',
+                'type' => $activity_type,
                 'user_id' => $current_user_id,
                 'timestamp' => get_the_time('U'),
                 'content' => array(
                     'title' => get_the_title(),
                     'link' => get_permalink(),
+                    'post_type' => $post_type,
                 ),
             );
         }
