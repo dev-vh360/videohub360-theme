@@ -162,7 +162,6 @@ if (function_exists('vh360_get_user_activities')) {
         <div class="vh360-dashboard-card">
             <div class="vh360-dashboard-card-header">
                 <h2 class="vh360-dashboard-card-title"><?php esc_html_e('Recent Activity', 'videohub360-theme'); ?></h2>
-                <a href="#activity" class="vh360-dashboard-tab" data-tab="activity"><?php esc_html_e('View All', 'videohub360-theme'); ?></a>
             </div>
             <div class="vh360-dashboard-card-body">
                 <?php if (!empty($activities)) : ?>
