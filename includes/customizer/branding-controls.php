@@ -27,9 +27,9 @@ function vh360_register_branding_controls($wp_customize) {
 
     // Logo maximum width setting
     $wp_customize->add_setting('vh360_logo_max_width', array(
-        'default'           => 50,
+        'default'           => 220,
         'sanitize_callback' => 'absint',
-        'transport'         => 'postMessage',
+        'transport'         => 'refresh',
     ));
 
     $wp_customize->add_control('vh360_logo_max_width', array(
