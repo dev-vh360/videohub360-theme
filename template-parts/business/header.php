@@ -41,301 +41,102 @@ if (is_user_logged_in() && $current_user_id !== $author_id) {
 ?>
 
 <div class="vh360-business-header">
-    <div class="container">
-        <div class="vh360-business-header-content">
-            
-            <div class="vh360-business-avatar">
-                <?php echo get_avatar($author_id, 150); ?>
-            </div>
-            
-            <div class="vh360-business-info">
-                <h1 class="vh360-business-name"><?php echo esc_html($display_name); ?></h1>
-                
-                <?php if ($business_type) : ?>
-                    <p class="vh360-business-type"><?php echo esc_html($business_type); ?></p>
-                <?php endif; ?>
-                
-                <?php if ($location) : ?>
-                    <p class="vh360-business-location">
-                        <span class="dashicons dashicons-location"></span>
-                        <?php echo esc_html($location); ?>
-                    </p>
-                <?php endif; ?>
-                
-                <?php if ($show_message_button) : ?>
-                    <div class="vh360-business-actions">
-                        <a href="<?php echo esc_url(add_query_arg(array('tab' => 'messages', 'user' => $author_id), home_url('/dashboard/'))); ?>" class="vh360-business-message-btn">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                            </svg>
-                            <?php esc_html_e('Send Message', 'videohub360-theme'); ?>
-                        </a>
-                    </div>
-                <?php endif; ?>
-            </div>
-            
+    <div class="vh360-business-header-content">
+        
+        <div class="vh360-business-avatar">
+            <?php echo get_avatar($author_id, 150); ?>
         </div>
         
-        <!-- Booking Section - Dynamic Appointment Picker -->
-        <div class="vh360-business-booking">
-            <button type="button" 
-                    class="vh360-business-booking-toggle" 
-                    id="vh360-booking-toggle"
-                    aria-expanded="false"
-                    aria-controls="vh360-booking-content">
-                <span class="vh360-booking-toggle-text">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                        <line x1="16" y1="2" x2="16" y2="6"></line>
-                        <line x1="8" y1="2" x2="8" y2="6"></line>
-                        <line x1="3" y1="10" x2="21" y2="10"></line>
-                    </svg>
-                    <?php esc_html_e('Book an Appointment', 'videohub360-theme'); ?>
-                </span>
-                <svg class="vh360-booking-toggle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-            </button>
+        <div class="vh360-business-info">
+            <h1 class="vh360-business-name"><?php echo esc_html($display_name); ?></h1>
             
-            <div class="vh360-business-booking-content" id="vh360-booking-content" style="display: none;">
-            <?php if ($is_owner) : ?>
-                <!-- Owner View: Manage Availability Link -->
-                <div class="vh360-business-booking-owner">
-                    <p><?php esc_html_e('You are viewing your own profile.', 'videohub360-theme'); ?></p>
-                    <a href="<?php echo esc_url(add_query_arg('tab', 'availability', home_url('/dashboard/'))); ?>" class="vh360-booking-manage-link">
+            <?php if ($business_type) : ?>
+                <p class="vh360-business-type"><?php echo esc_html($business_type); ?></p>
+            <?php endif; ?>
+            
+            <?php if ($location) : ?>
+                <p class="vh360-business-location">
+                    <span class="dashicons dashicons-location"></span>
+                    <?php echo esc_html($location); ?>
+                </p>
+            <?php endif; ?>
+            
+            <?php if ($show_message_button) : ?>
+                <div class="vh360-business-actions">
+                    <a href="<?php echo esc_url(add_query_arg(array('tab' => 'messages', 'user' => $author_id), home_url('/dashboard/'))); ?>" class="vh360-business-message-btn">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <polyline points="12 6 12 12 16 14"></polyline>
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                         </svg>
-                        <?php esc_html_e('Manage Your Availability', 'videohub360-theme'); ?>
+                        <?php esc_html_e('Send Message', 'videohub360-theme'); ?>
                     </a>
                 </div>
-            <?php else : ?>
-                <!-- Client View: Dynamic Booking Interface -->
-                <div class="vh360-business-booking-picker">
-                    <div class="vh360-booking-date-picker-wrapper">
-                        <label for="vh360-booking-date-picker">
-                            <?php esc_html_e('Select a date:', 'videohub360-theme'); ?>
-                        </label>
-                        <input type="date" 
-                               id="vh360-booking-date-picker" 
-                               class="vh360-booking-date-input"
-                               min="<?php echo esc_attr(current_time('Y-m-d')); ?>">
-                    </div>
-                    
-                    <div id="vh360-booking-messages" class="vh360-booking-messages"></div>
-                    
-                    <div id="vh360-booking-loading" class="vh360-booking-loading" style="display: none;">
-                        <svg class="vh360-spinner" width="40" height="40" viewBox="0 0 50 50">
-                            <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
-                        </svg>
-                        <p><?php esc_html_e('Loading available times...', 'videohub360-theme'); ?></p>
-                    </div>
-                    
-                    <div id="vh360-booking-slots-container" class="vh360-booking-slots-container">
-                        <!-- Slots will be loaded here dynamically -->
-                    </div>
-                </div>
             <?php endif; ?>
-            </div><!-- .vh360-business-booking-content -->
         </div>
         
     </div>
+    
+    <!-- Booking Section - Dynamic Appointment Picker -->
+    <div class="vh360-business-booking">
+        <button type="button" 
+                class="vh360-business-booking-toggle" 
+                id="vh360-booking-toggle"
+                aria-expanded="false"
+                aria-controls="vh360-booking-content">
+            <span class="vh360-booking-toggle-text">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                <?php esc_html_e('Book an Appointment', 'videohub360-theme'); ?>
+            </span>
+            <svg class="vh360-booking-toggle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </button>
+        
+        <div class="vh360-business-booking-content" id="vh360-booking-content" style="display: none;">
+        <?php if ($is_owner) : ?>
+            <!-- Owner View: Manage Availability Link -->
+            <div class="vh360-business-booking-owner">
+                <p><?php esc_html_e('You are viewing your own profile.', 'videohub360-theme'); ?></p>
+                <a href="<?php echo esc_url(add_query_arg('tab', 'availability', home_url('/dashboard/'))); ?>" class="vh360-booking-manage-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <?php esc_html_e('Manage Your Availability', 'videohub360-theme'); ?>
+                </a>
+            </div>
+        <?php else : ?>
+            <!-- Client View: Dynamic Booking Interface -->
+            <div class="vh360-business-booking-picker">
+                <div class="vh360-booking-date-picker-wrapper">
+                    <label for="vh360-booking-date-picker">
+                        <?php esc_html_e('Select a date:', 'videohub360-theme'); ?>
+                    </label>
+                    <input type="date" 
+                           id="vh360-booking-date-picker" 
+                           class="vh360-booking-date-input"
+                           min="<?php echo esc_attr(current_time('Y-m-d')); ?>">
+                </div>
+                
+                <div id="vh360-booking-messages" class="vh360-booking-messages"></div>
+                
+                <div id="vh360-booking-loading" class="vh360-booking-loading" style="display: none;">
+                    <svg class="vh360-spinner" width="40" height="40" viewBox="0 0 50 50">
+                        <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
+                    </svg>
+                    <p><?php esc_html_e('Loading available times...', 'videohub360-theme'); ?></p>
+                </div>
+                
+                <div id="vh360-booking-slots-container" class="vh360-booking-slots-container">
+                    <!-- Slots will be loaded here dynamically -->
+                </div>
+            </div>
+        <?php endif; ?>
+        </div><!-- .vh360-business-booking-content -->
+    </div>
+    
 </div>
-
-<style>
-.vh360-business-actions {
-    margin-top: 1rem;
-}
-
-.vh360-business-message-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    background: var(--primary-color, #2563eb);
-    color: #ffffff;
-    text-decoration: none;
-    border-radius: 0.375rem;
-    font-weight: 600;
-    font-size: 0.875rem;
-    transition: all 0.2s ease;
-}
-
-.vh360-business-message-btn:hover {
-    background: var(--primary-hover, #1d4ed8);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.vh360-business-message-btn svg {
-    flex-shrink: 0;
-}
-
-/* Booking Section */
-.vh360-business-booking {
-    margin-top: 2rem;
-    padding: 1.5rem;
-    background: var(--bg-light, #f8f9fa);
-    border-radius: 0.5rem;
-}
-
-.vh360-business-booking-title {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin: 0 0 1rem;
-    color: var(--text-color, #1f2937);
-}
-
-.vh360-business-booking-slots {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.vh360-booking-slot {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem;
-    background: #ffffff;
-    border: 1px solid var(--border-color, #e5e7eb);
-    border-radius: 0.375rem;
-    transition: all 0.2s ease;
-}
-
-.vh360-booking-slot:hover:not(.full) {
-    border-color: var(--primary-color, #2563eb);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.vh360-booking-slot.full {
-    opacity: 0.6;
-}
-
-.vh360-booking-slot-info {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    flex: 1;
-}
-
-.vh360-booking-slot-date {
-    font-weight: 600;
-    color: var(--text-color, #1f2937);
-    min-width: 120px;
-}
-
-.vh360-booking-slot-time {
-    font-weight: 500;
-    color: var(--text-light, #6b7280);
-    min-width: 80px;
-}
-
-.vh360-booking-slot-title {
-    color: var(--text-light, #6b7280);
-    font-size: 0.875rem;
-}
-
-.vh360-booking-slot-action {
-    flex-shrink: 0;
-}
-
-.vh360-booking-slot-btn {
-    display: inline-block;
-    padding: 0.5rem 1.25rem;
-    background: var(--primary-color, #2563eb);
-    color: #ffffff;
-    text-decoration: none;
-    border-radius: 0.375rem;
-    font-weight: 600;
-    font-size: 0.875rem;
-    transition: all 0.2s ease;
-}
-
-.vh360-booking-slot-btn:hover {
-    background: var(--primary-hover, #1d4ed8);
-}
-
-.vh360-booking-slot-full {
-    display: inline-block;
-    padding: 0.5rem 1.25rem;
-    background: var(--bg-color, #e5e7eb);
-    color: var(--text-light, #6b7280);
-    border-radius: 0.375rem;
-    font-weight: 600;
-    font-size: 0.875rem;
-}
-
-.vh360-booking-info {
-    margin-top: 1rem;
-    padding: 0.75rem;
-    background: rgba(37, 99, 235, 0.05);
-    border-left: 3px solid var(--primary-color, #2563eb);
-    font-size: 0.875rem;
-    color: var(--text-color, #1f2937);
-}
-
-.vh360-business-booking-empty {
-    text-align: center;
-    padding: 2rem 1rem;
-}
-
-.vh360-business-booking-empty p {
-    margin: 0 0 1rem;
-    color: var(--text-light, #6b7280);
-}
-
-.vh360-booking-manage-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    background: var(--primary-color, #2563eb);
-    color: #ffffff;
-    text-decoration: none;
-    border-radius: 0.375rem;
-    font-weight: 600;
-    font-size: 0.875rem;
-    transition: all 0.2s ease;
-}
-
-.vh360-booking-manage-link:hover {
-    background: var(--primary-hover, #1d4ed8);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.vh360-booking-manage-link svg {
-    flex-shrink: 0;
-}
-
-@media (max-width: 768px) {
-    .vh360-booking-slot {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-    }
-    
-    .vh360-booking-slot-info {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.25rem;
-        width: 100%;
-    }
-    
-    .vh360-booking-slot-action {
-        width: 100%;
-    }
-    
-    .vh360-booking-slot-btn,
-    .vh360-booking-slot-full {
-        display: block;
-        text-align: center;
-        width: 100%;
-    }
-}
-</style>

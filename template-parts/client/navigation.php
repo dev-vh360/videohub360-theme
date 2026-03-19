@@ -18,18 +18,16 @@ $base_url = get_author_posts_url($author_id);
 ?>
 
 <nav class="vh360-client-navigation">
-    <div class="container">
-        <ul class="vh360-client-tabs">
-            <li class="<?php echo ($current_tab === 'about') ? 'active' : ''; ?>">
-                <a href="<?php echo esc_url(add_query_arg('tab', 'about', $base_url)); ?>">
-                    <?php esc_html_e('About', 'videohub360-theme'); ?>
-                </a>
-            </li>
-            <li class="<?php echo ($current_tab === 'activity') ? 'active' : ''; ?>">
-                <a href="<?php echo esc_url(add_query_arg('tab', 'activity', $base_url)); ?>">
-                    <?php esc_html_e('Activity', 'videohub360-theme'); ?>
-                </a>
-            </li>
-        </ul>
-    </div>
+    <ul class="vh360-client-tabs">
+        <li class="<?php echo ($current_tab === 'about') ? 'active' : ''; ?>">
+            <a href="<?php echo esc_url(add_query_arg('tab', 'about', $base_url)); ?>">
+                <?php esc_html_e('About', 'videohub360-theme'); ?>
+            </a>
+        </li>
+        <li class="<?php echo ($current_tab === 'activity') ? 'active' : ''; ?>">
+            <a href="<?php echo esc_url(add_query_arg('tab', 'activity', $base_url)); ?>">
+                <?php esc_html_e('Activity', 'videohub360-theme'); ?>
+            </a>
+        </li>
+    </ul>
 </nav>

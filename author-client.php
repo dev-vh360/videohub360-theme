@@ -38,15 +38,16 @@ if (!in_array($current_tab, $valid_tabs, true)) {
 ?>
 
 <div id="primary" class="site-content">
-    <div class="vh360-client-page">
-        
-        <!-- Client Header Section -->
-        <?php get_template_part('template-parts/client/header'); ?>
+    <div class="container">
+        <div class="vh360-client-profile-wrapper">
+            
+            <!-- Client Header Section -->
+            <?php get_template_part('template-parts/client/header'); ?>
 
-        <!-- Client Navigation -->
-        <?php get_template_part('template-parts/client/navigation'); ?>
+            <!-- Client Navigation -->
+            <?php get_template_part('template-parts/client/navigation'); ?>
 
-        <div class="container">
+            <!-- Client Content -->
             <div class="vh360-client-content">
                 
                 <?php
@@ -67,7 +68,7 @@ if (!in_array($current_tab, $valid_tabs, true)) {
                 ?>
                 
             </div><!-- .vh360-client-content -->
-        </div><!-- .container -->
-        
-    </div><!-- .vh360-client-page -->
+            
+        </div><!-- .vh360-client-profile-wrapper -->
+    </div><!-- .container -->
 </div><!-- #primary -->
