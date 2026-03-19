@@ -92,7 +92,8 @@ function vh360_output_dynamic_css() {
     $logo_max_width = get_theme_mod('vh360_logo_max_width', 220);
     
     // Calculate header height based on logo size (min 80px, scales with logo)
-    $header_height = max(80, intval($logo_max_width * 0.6));
+    // Header height = logo width * 0.6, with 80px minimum for usability
+    $header_height = max(80, round($logo_max_width * 0.6));
     
     // Auth Pages Colors (Consolidated - shared by Login, Register, Lost Password, Reset Password)
     $auth_page_bg_color             = get_theme_mod('vh360_auth_page_bg_color', '#f3f4f6');
@@ -285,6 +286,7 @@ function vh360_output_dynamic_css() {
         .custom-logo,
         .site-branding .custom-logo {
             max-width: var(--logo-max-width);
+            /* max-height accounts for header padding (10px top + 10px bottom = 20px) */
             max-height: calc(var(--header-height) - 20px);
             width: auto;
             height: auto;
