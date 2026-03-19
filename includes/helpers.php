@@ -927,6 +927,35 @@ function vh360_format_activity_time($timestamp) {
 }
 
 /**
+ * Format activity content with link
+ *
+ * Renders activity title with optional link, avoiding code duplication.
+ *
+ * @param array  $content Activity content array with 'title' and optionally 'link'.
+ * @param string $prefix  Text to display before the title/link (e.g., "uploaded a new video:").
+ * @return string Formatted HTML string.
+ * @since 1.0.0
+ */
+function vh360_format_activity_content_link($content, $prefix = '') {
+    if (!is_array($content)) {
+        return esc_html($content);
+    }
+    
+    $output = '';
+    if ($prefix) {
+        $output .= esc_html($prefix) . ' ';
+    }
+    
+    if (!empty($content['link'])) {
+        $output .= '<a href="' . esc_url($content['link']) . '">' . esc_html($content['title']) . '</a>';
+    } else {
+        $output .= esc_html($content['title']);
+    }
+    
+    return $output;
+}
+
+/**
  * Get activity type icon
  *
  * @param string $type Activity type.

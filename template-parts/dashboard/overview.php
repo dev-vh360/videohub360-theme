@@ -179,19 +179,9 @@ if (function_exists('vh360_get_user_activities')) {
                                         $content = $activity['content'];
                                         if (is_array($content)) {
                                             if ($activity['type'] === 'video_upload') {
-                                                echo esc_html__('uploaded a new video:', 'videohub360-theme') . ' ';
-                                                if (!empty($content['link'])) {
-                                                    echo '<a href="' . esc_url($content['link']) . '">' . esc_html($content['title']) . '</a>';
-                                                } else {
-                                                    echo esc_html($content['title']);
-                                                }
+                                                echo vh360_format_activity_content_link($content, __('uploaded a new video:', 'videohub360-theme'));
                                             } elseif ($activity['type'] === 'post_publish') {
-                                                echo esc_html__('published a post:', 'videohub360-theme') . ' ';
-                                                if (!empty($content['link'])) {
-                                                    echo '<a href="' . esc_url($content['link']) . '">' . esc_html($content['title']) . '</a>';
-                                                } else {
-                                                    echo esc_html($content['title']);
-                                                }
+                                                echo vh360_format_activity_content_link($content, __('published a post:', 'videohub360-theme'));
                                             } else {
                                                 echo esc_html($content['title'] ?? '');
                                             }
