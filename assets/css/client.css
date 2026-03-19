@@ -7,11 +7,19 @@
  * @since 1.0.0
  */
 
+/* Client Profile Wrapper - Boxed Layout */
+.vh360-client-profile-wrapper {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
 /* Client Profile Header */
 .vh360-client-header {
     background: #f8f9fa;
-    padding: 2rem 0;
-    margin-bottom: 2rem;
+    padding: 2rem;
 }
 
 .vh360-client-header-content {
@@ -38,13 +46,12 @@
 .vh360-client-navigation {
     background: #fff;
     border-bottom: 1px solid #ddd;
-    margin-bottom: 2rem;
 }
 
 .vh360-client-tabs {
     list-style: none;
     margin: 0;
-    padding: 0;
+    padding: 0 2rem;
     display: flex;
     gap: 2rem;
 }
@@ -65,7 +72,7 @@
 
 /* Client Content */
 .vh360-client-content {
-    padding: 2rem 0;
+    padding: 2rem;
 }
 
 .vh360-client-about h2,

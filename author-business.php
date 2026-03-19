@@ -38,15 +38,15 @@ if (!in_array($current_tab, $valid_tabs, true)) {
 ?>
 
 <div id="primary" class="site-content">
-    <div class="vh360-business-page">
-        
-        <!-- Business Header Section -->
-        <?php get_template_part('template-parts/business/header'); ?>
+    <div class="container">
+        <div class="vh360-business-profile-wrapper">
+            
+            <!-- Business Header Section -->
+            <?php get_template_part('template-parts/business/header'); ?>
 
-        <!-- Business Navigation -->
-        <?php get_template_part('template-parts/business/navigation'); ?>
+            <!-- Business Navigation -->
+            <?php get_template_part('template-parts/business/navigation'); ?>
 
-        <div class="container">
             <div class="vh360-business-content">
                 
                 <?php
@@ -71,7 +71,7 @@ if (!in_array($current_tab, $valid_tabs, true)) {
                 ?>
                 
             </div><!-- .vh360-business-content -->
-        </div><!-- .container -->
-        
-    </div><!-- .vh360-business-page -->
+            
+        </div><!-- .vh360-business-profile-wrapper -->
+    </div><!-- .container -->
 </div><!-- #primary -->

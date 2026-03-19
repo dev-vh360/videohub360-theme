@@ -7,11 +7,19 @@
  * @since 1.0.0
  */
 
+/* Business Profile Wrapper - Boxed Layout */
+.vh360-business-profile-wrapper {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
 /* Business Profile Header */
 .vh360-business-header {
     background: #f8f9fa;
-    padding: 2rem 0;
-    margin-bottom: 2rem;
+    padding: 2rem;
 }
 
 .vh360-business-header-content {
@@ -45,13 +53,12 @@
 .vh360-business-navigation {
     background: #fff;
     border-bottom: 1px solid #ddd;
-    margin-bottom: 2rem;
 }
 
 .vh360-business-tabs {
     list-style: none;
     margin: 0;
-    padding: 0;
+    padding: 0 2rem;
     display: flex;
     gap: 2rem;
 }
@@ -72,7 +79,7 @@
 
 /* Business Content */
 .vh360-business-content {
-    padding: 2rem 0;
+    padding: 2rem;
 }
 
 .vh360-business-services h2,
@@ -107,6 +114,18 @@
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 2rem;
     margin-bottom: 2rem;
+}
+
+/* Reduce post title size within business profile Content tab */
+.vh360-business-content .entry-title {
+    font-size: 1.5rem;
+    line-height: 1.4;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.vh360-business-content .entry-title a {
+    font-weight: 600;
 }
 
 /* Business Booking UI */
