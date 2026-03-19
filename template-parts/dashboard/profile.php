@@ -15,6 +15,10 @@ if (!defined('ABSPATH')) {
 $current_user_id = get_current_user_id();
 $user = get_userdata($current_user_id);
 
+// Get user account type to determine if cover image should be shown
+$account_type = vh360_get_user_account_type($current_user_id);
+$is_business_mode_account = in_array($account_type, array('client', 'professional', 'organization'), true);
+
 // Initialize messages
 $success_message = '';
 $error_message = '';
@@ -95,8 +99,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vh360_edit_profile_no
                     delete_user_meta($current_user_id, 'vh360_profile_picture_id');
                 }
                 
-                // Handle cover image upload
-                if (!empty($_FILES['cover_image']['name'])) {
+                // Handle cover image upload (skip for business-mode accounts)
+                if (!$is_business_mode_account && !empty($_FILES['cover_image']['name'])) {
                     require_once(ABSPATH . 'wp-admin/includes/file.php');
                     require_once(ABSPATH . 'wp-admin/includes/image.php');
                     require_once(ABSPATH . 'wp-admin/includes/media.php');
@@ -197,6 +201,7 @@ $profile_picture_url = $profile_picture_id ? wp_get_attachment_image_url($profil
             <input type="hidden" name="avatar_source_width" value="">
             <input type="hidden" name="avatar_source_height" value="">
             
+            <?php if (!$is_business_mode_account) : ?>
             <!-- Cover Image -->
             <div class="vh360-form-group">
                 <label class="vh360-form-label"><?php esc_html_e('Cover Image', 'videohub360-theme'); ?></label>
@@ -219,6 +224,7 @@ $profile_picture_url = $profile_picture_id ? wp_get_attachment_image_url($profil
                     </label>
                 </div>
             </div>
+            <?php endif; ?>
             
             <!-- Profile Picture -->
             <div class="vh360-form-group">
