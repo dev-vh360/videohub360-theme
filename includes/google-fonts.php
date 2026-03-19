@@ -24,6 +24,7 @@ function vh360_enqueue_google_fonts() {
     $heading_font = get_theme_mod('vh360_heading_font', 'system');
     $body_font    = get_theme_mod('vh360_body_font', 'system');
     $community_menu_font = get_theme_mod('vh360_community_menu_font_family', '');
+    $header_menu_font = get_theme_mod('vh360_header_menu_font_family', '');
 
     // Collect unique fonts that need to be loaded
     $fonts_to_load = array();
@@ -39,6 +40,11 @@ function vh360_enqueue_google_fonts() {
     // Add community menu font if set and not already in array
     if (!empty($community_menu_font) && $community_menu_font !== 'system' && !in_array($community_menu_font, $fonts_to_load, true)) {
         $fonts_to_load[] = $community_menu_font;
+    }
+    
+    // Add header menu font if set and not already in array
+    if (!empty($header_menu_font) && $header_menu_font !== 'system' && !in_array($header_menu_font, $fonts_to_load, true)) {
+        $fonts_to_load[] = $header_menu_font;
     }
 
     // If no Google Fonts selected, return early
@@ -72,9 +78,10 @@ function vh360_add_google_fonts_preconnect() {
     $heading_font = get_theme_mod('vh360_heading_font', 'system');
     $body_font    = get_theme_mod('vh360_body_font', 'system');
     $community_menu_font = get_theme_mod('vh360_community_menu_font_family', '');
+    $header_menu_font = get_theme_mod('vh360_header_menu_font_family', '');
 
     // Only add preconnect if using Google Fonts
-    if ($heading_font !== 'system' || $body_font !== 'system' || (!empty($community_menu_font) && $community_menu_font !== 'system')) {
+    if ($heading_font !== 'system' || $body_font !== 'system' || (!empty($community_menu_font) && $community_menu_font !== 'system') || (!empty($header_menu_font) && $header_menu_font !== 'system')) {
         ?>
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

@@ -114,7 +114,11 @@
 
 .main-navigation--horizontal a {
     color: var(--nav-link-color, var(--text-color));
-    font-weight: 500;
+    font-size: var(--header-menu-font-size, 16px);
+    font-weight: var(--header-menu-font-weight, 500);
+    text-transform: var(--header-menu-text-transform, none);
+    letter-spacing: var(--header-menu-letter-spacing, 0);
+    font-family: var(--header-menu-font-family, inherit);
     padding: 0.5rem 0;
     display: block;
     text-decoration: none;
@@ -283,6 +287,11 @@
     display: block;
     padding: 0.75rem 1rem;
     color: var(--hamburger-text-color, var(--text-color));
+    font-size: var(--header-menu-font-size, 16px);
+    font-weight: var(--header-menu-font-weight, 500);
+    text-transform: var(--header-menu-text-transform, none);
+    letter-spacing: var(--header-menu-letter-spacing, 0);
+    font-family: var(--header-menu-font-family, inherit);
     text-decoration: none;
     border-radius: 6px;
     transition: background-color 0.2s, color 0.2s;
