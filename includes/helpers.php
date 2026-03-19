@@ -930,10 +930,11 @@ function vh360_format_activity_time($timestamp) {
  * Format activity content with link
  *
  * Renders activity title with optional link, avoiding code duplication.
+ * Returns escaped HTML safe for direct output.
  *
  * @param array  $content Activity content array with 'title' and optionally 'link'.
  * @param string $prefix  Text to display before the title/link (e.g., "uploaded a new video:").
- * @return string Formatted HTML string.
+ * @return string Escaped HTML string safe for output.
  * @since 1.0.0
  */
 function vh360_format_activity_content_link($content, $prefix = '') {

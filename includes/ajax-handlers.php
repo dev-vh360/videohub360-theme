@@ -747,10 +747,10 @@ class VH360_Ajax_Handlers {
                         $content = $activity['content'];
                         switch ($activity['type']) {
                             case 'video_upload':
-                                echo '<p>' . vh360_format_activity_content_link($content, __('uploaded a new video:', 'videohub360-theme')) . '</p>';
+                                echo '<p>' . wp_kses_post(vh360_format_activity_content_link($content, __('uploaded a new video:', 'videohub360-theme'))) . '</p>';
                                 break;
                             case 'post_publish':
-                                echo '<p>' . vh360_format_activity_content_link($content, __('published a post:', 'videohub360-theme')) . '</p>';
+                                echo '<p>' . wp_kses_post(vh360_format_activity_content_link($content, __('published a post:', 'videohub360-theme'))) . '</p>';
                                 break;
                             case 'new_member':
                                 echo '<p>' . esc_html__('joined the community', 'videohub360-theme') . '</p>';
