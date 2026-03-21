@@ -73,6 +73,7 @@
                 self.isSubmitting = false;
                 
                 // Capture initial form state (after character counter initialization)
+                // This represents the baseline state when the form is first loaded
                 self.initialFormState = $form.serialize();
                 
                 // Debounce timer reference for clearing
@@ -82,8 +83,12 @@
                 $form.on('change input', 'input, textarea, select', function(e) {
                     clearTimeout(self.debounceTimer);
                     self.debounceTimer = setTimeout(function() {
-                        var currentState = $form.serialize();
-                        self.formModified = (currentState !== self.initialFormState);
+                        // Only update formModified if create-post tab is still active
+                        var $createPostTab = $('#create-post');
+                        if ($createPostTab.length && $createPostTab.hasClass('active')) {
+                            var currentState = $form.serialize();
+                            self.formModified = (currentState !== self.initialFormState);
+                        }
                     }, 300);
                 });
                 
@@ -105,10 +110,10 @@
                 });
             }
             
-            // Suppress warning for safe navigation (View links)
-            // View links open in new tabs/windows, so form state is preserved in current tab.
-            // No need to warn about unsaved changes when viewing existing posts.
-            $(document).on('click', '.vh360-post-card a[href]', function() {
+            // Suppress warning for safe navigation (View links that open in new tabs)
+            // View links with target="_blank" open in new tabs/windows, so form state
+            // is preserved in current tab. No need to warn about unsaved changes.
+            $(document).on('click', '.vh360-post-card a[href][target="_blank"]', function() {
                 clearTimeout(self.debounceTimer);
                 self.formModified = false;
             });
