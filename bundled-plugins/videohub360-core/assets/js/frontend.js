@@ -2858,7 +2858,7 @@ window.initializeAgoraPlayer = function(config) {
             
             await client.publish([localTracks.audioTrack, localTracks.videoTrack]);
             window.vh360Log("Agora: Successfully published tracks");
-            window.vh360Log("VideoHub360: Publish success - UID:", currentUserUID, "Role:", currentRole, "Display name:", security.display_name || 'Guest');
+            window.vh360Log("VideoHub360: Publish success - UID:", currentUserUID, "Role:", currentRole, "Display name:", security.display_name);
             
             if (muteAudioBtn) {
                 muteAudioBtn.textContent = isAudioMuted ? '🔇 Unmute' : '🎤 Mute';
@@ -3504,9 +3504,9 @@ window.initializeAgoraPlayer = function(config) {
     // - Fresh token generated for each user joining the stream
     async function requestTokenFromServer(channelName, uid, role) {
         try {
-            // Validate UID is provided and is a valid positive number
-            if (uid === null || uid === undefined || typeof uid !== 'number' || uid <= 0 || !Number.isInteger(uid)) {
-                const errorMsg = 'VideoHub360: Invalid UID provided to requestTokenFromServer. UID must be a positive integer, got: ' + uid;
+            // Validate UID is provided and is a valid positive integer
+            if (typeof uid !== 'number' || uid <= 0 || !Number.isInteger(uid)) {
+                const errorMsg = 'VideoHub360: Invalid UID provided to requestTokenFromServer. UID must be a positive integer, got: ' + uid + ' (type: ' + typeof uid + ')';
                 window.vh360Error(errorMsg);
                 throw new Error(errorMsg);
             }
