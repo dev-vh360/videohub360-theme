@@ -3534,6 +3534,14 @@ window.initializeAgoraPlayer = function(config) {
                 // Handle different response types
                 window.vh360Log('VideoHub360: Token response received:', data.data);
                 
+                // Check if App Certificate setup is required
+                if (data.data.setup_required) {
+                    window.vh360Warn('VideoHub360: App Certificate not configured - using tokenless mode');
+                    window.vh360Log('VideoHub360: Setup instructions:', data.data.instructions);
+                    // Return null to use tokenless mode (for apps without App Certificate enabled)
+                    return null;
+                }
+                
                 if (data.data.placeholder_token) {
                     // For testing/demo purposes, return the placeholder
                     window.vh360Log('VideoHub360: Using placeholder token');
@@ -3728,6 +3736,12 @@ window.initializeAgoraPlayer = function(config) {
             
             const token = await requestTokenFromServer(config.channelName, config.uid, currentRole);
             window.vh360Log('VideoHub360: Token received for role:', currentRole);
+            
+            // If token is null, we're in tokenless mode (App Certificate not configured)
+            if (token === null) {
+                window.vh360Log('VideoHub360: Running in tokenless mode - App Certificate not configured');
+                window.vh360Log('VideoHub360: For production use, configure Agora App Certificate in VideoHub360 Settings');
+            }
             
             // Additional verification: if we're supposed to be host, double-check before join
             if (currentRole === 'host' && config.mode === 'live') {
@@ -4285,6 +4299,9 @@ window.initializeAgoraPlayer = function(config) {
     // Add event listener for join button using event delegation
     // This handles both the initial button and any dynamically recreated buttons (e.g., appointment "Join Session")
     document.addEventListener('click', function(e) {
+        // Check if target is an Element before calling closest()
+        if (!e.target || typeof e.target.closest !== 'function') return;
+        
         const btn = e.target.closest('#vh360-join-livestream-btn');
         if (!btn) return;
         
@@ -4294,12 +4311,18 @@ window.initializeAgoraPlayer = function(config) {
     
     // Add hover effects using event delegation
     document.addEventListener('mouseenter', function(e) {
+        // Check if target is an Element before calling closest()
+        if (!e.target || typeof e.target.closest !== 'function') return;
+        
         const btn = e.target.closest('#vh360-join-livestream-btn');
         if (!btn) return;
         btn.style.background = '#d32f2f';
     }, true);
     
     document.addEventListener('mouseleave', function(e) {
+        // Check if target is an Element before calling closest()
+        if (!e.target || typeof e.target.closest !== 'function') return;
+        
         const btn = e.target.closest('#vh360-join-livestream-btn');
         if (!btn) return;
         btn.style.background = '#e53935';
