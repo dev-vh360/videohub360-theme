@@ -17,6 +17,12 @@
     var VH360CreatePost = {
         
         /**
+         * Constants
+         */
+        EXCERPT_WARNING_THRESHOLD: 450, // Character count when warning appears
+        EXCERPT_MAX_LENGTH: 500,        // Maximum allowed character count
+        
+        /**
          * Initialize
          */
         init: function() {
@@ -195,6 +201,7 @@
          * Initialize character counter for excerpt field
          */
         initCharacterCounter: function() {
+            var self = this;
             var $excerpt = $('#vh360_post_excerpt');
             var $counter = $('.vh360-char-count');
             
@@ -204,7 +211,7 @@
                 $counter.text(currentLength);
                 
                 // Add warning class if near limit
-                if (currentLength > 450) {
+                if (currentLength > self.EXCERPT_WARNING_THRESHOLD) {
                     $counter.parent().addClass('vh360-char-warning');
                 } else {
                     $counter.parent().removeClass('vh360-char-warning');
@@ -216,7 +223,7 @@
                     $counter.text(count);
                     
                     // Add warning class if near limit
-                    if (count > 450) {
+                    if (count > self.EXCERPT_WARNING_THRESHOLD) {
                         $counter.parent().addClass('vh360-char-warning');
                     } else {
                         $counter.parent().removeClass('vh360-char-warning');
@@ -286,8 +293,8 @@
 
             // Check excerpt length
             var excerpt = $('#vh360_post_excerpt').val();
-            if (excerpt.length > 500) {
-                errors.push('Excerpt must be 500 characters or less.');
+            if (excerpt.length > self.EXCERPT_MAX_LENGTH) {
+                errors.push('Excerpt must be ' + self.EXCERPT_MAX_LENGTH + ' characters or less.');
                 isValid = false;
             }
 
