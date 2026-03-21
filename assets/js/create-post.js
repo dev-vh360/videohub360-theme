@@ -75,10 +75,27 @@
                 // Capture initial form state (after character counter initialization)
                 self.initialFormState = $form.serialize();
                 
-                // Track form changes by comparing state
-                $form.on('change input', 'input, textarea, select', function(e) {
+                // Debounce function for performance
+                var debounceTimer;
+                function debounce(func, delay) {
+                    return function() {
+                        var context = this;
+                        var args = arguments;
+                        clearTimeout(debounceTimer);
+                        debounceTimer = setTimeout(function() {
+                            func.apply(context, args);
+                        }, delay);
+                    };
+                }
+                
+                // Track form changes by comparing state (debounced for performance)
+                var checkFormState = debounce(function() {
                     var currentState = $form.serialize();
                     self.formModified = (currentState !== self.initialFormState);
+                }, 300);
+                
+                $form.on('change input', 'input, textarea, select', function(e) {
+                    checkFormState();
                 });
                 
                 // Clear warning on form submit
@@ -98,7 +115,8 @@
             }
             
             // Suppress warning for safe navigation (View links)
-            $(document).on('click', '.vh360-post-card a', function() {
+            // Note: Only <a> tags in post cards are View links; Edit/Delete are buttons
+            $(document).on('click', '.vh360-post-card a[href]', function() {
                 self.formModified = false;
             });
             
