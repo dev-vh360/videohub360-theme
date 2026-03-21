@@ -20,8 +20,8 @@
          * Initialize
          */
         init: function() {
-            this.bindEvents();
             this.initCharacterCounter();
+            this.bindEvents();
         },
 
         /**
@@ -70,12 +70,15 @@
             // Handle form submission to warn about unsaved changes
             var $form = $('.vh360-post-create-form');
             if ($form.length) {
-                self.formModified = false;
                 self.isSubmitting = false;
                 
-                // Track form changes
+                // Capture initial form state (after character counter initialization)
+                self.initialFormState = $form.serialize();
+                
+                // Track form changes by comparing state
                 $form.on('change input', 'input, textarea, select', function(e) {
-                    self.formModified = true;
+                    var currentState = $form.serialize();
+                    self.formModified = (currentState !== self.initialFormState);
                 });
                 
                 // Clear warning on form submit
@@ -94,15 +97,26 @@
                 });
             }
             
+            // Suppress warning for safe navigation (View links)
+            $(document).on('click', '.vh360-post-card a', function() {
+                self.formModified = false;
+            });
+            
             // Global beforeunload handler that checks form state
             $(window).on('beforeunload', function(e) {
                 // Only warn if form has modifications, not submitting, and create-post tab is active
                 if (self.formModified && !self.isSubmitting) {
                     var $createPostTab = $('#create-post');
                     if ($createPostTab.length && $createPostTab.hasClass('active')) {
-                        var message = 'You have unsaved changes. Are you sure you want to leave?';
-                        e.returnValue = message;
-                        return message;
+                        // Additional check: only warn if there's meaningful content
+                        var title = $('#vh360_post_title').val().trim();
+                        var content = $('#vh360_post_content').val().trim();
+                        
+                        if (title || content) {
+                            var message = 'You have unsaved changes. Are you sure you want to leave?';
+                            e.returnValue = message;
+                            return message;
+                        }
                     }
                 }
             });
@@ -169,7 +183,18 @@
             var $counter = $('.vh360-char-count');
             
             if ($excerpt.length && $counter.length) {
-                // Update counter on input
+                // Initialize counter on page load without triggering input event
+                var currentLength = $excerpt.val().length;
+                $counter.text(currentLength);
+                
+                // Add warning class if near limit
+                if (currentLength > 450) {
+                    $counter.parent().addClass('vh360-char-warning');
+                } else {
+                    $counter.parent().removeClass('vh360-char-warning');
+                }
+                
+                // Update counter on user input
                 $excerpt.on('input', function() {
                     var count = $(this).val().length;
                     $counter.text(count);
@@ -181,9 +206,6 @@
                         $counter.parent().removeClass('vh360-char-warning');
                     }
                 });
-                
-                // Initialize counter on page load
-                $excerpt.trigger('input');
             }
         },
 
