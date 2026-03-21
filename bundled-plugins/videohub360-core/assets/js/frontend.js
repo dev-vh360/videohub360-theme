@@ -4282,10 +4282,21 @@ window.initializeAgoraPlayer = function(config) {
         }
     }
 
+    function getEventTargetClosest(eventTarget, selector) {
+        if (!eventTarget) return null;
+        if (eventTarget instanceof Element) {
+            return eventTarget.closest(selector);
+        }
+        if (eventTarget.parentElement instanceof Element) {
+            return eventTarget.parentElement.closest(selector);
+        }
+        return null;
+    }
+
     // Add event listener for join button using event delegation
     // This handles both the initial button and any dynamically recreated buttons (e.g., appointment "Join Session")
     document.addEventListener('click', function(e) {
-        const btn = e.target.closest('#vh360-join-livestream-btn');
+        const btn = getEventTargetClosest(e.target, '#vh360-join-livestream-btn');
         if (!btn) return;
         
         window.vh360Log('VideoHub360: Join button clicked (via delegation)');
@@ -4294,13 +4305,13 @@ window.initializeAgoraPlayer = function(config) {
     
     // Add hover effects using event delegation
     document.addEventListener('mouseenter', function(e) {
-        const btn = e.target.closest('#vh360-join-livestream-btn');
+        const btn = getEventTargetClosest(e.target, '#vh360-join-livestream-btn');
         if (!btn) return;
         btn.style.background = '#d32f2f';
     }, true);
     
     document.addEventListener('mouseleave', function(e) {
-        const btn = e.target.closest('#vh360-join-livestream-btn');
+        const btn = getEventTargetClosest(e.target, '#vh360-join-livestream-btn');
         if (!btn) return;
         btn.style.background = '#e53935';
     }, true);
