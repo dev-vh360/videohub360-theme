@@ -3821,6 +3821,87 @@ window.initializeAgoraPlayer = function(config) {
         } catch (error) {
             window.vh360Error('Agora: Join channel failed:', error);
             
+            // SPECIAL CASE: "dynamic use static key" error
+            // This occurs when WordPress has App Certificate configured (generating tokens)
+            // but Agora Console project doesn't have certificate enabled (expects no token)
+            // Solution: Retry the join without a token
+            if (error.code === 'CAN_NOT_GET_GATEWAY_SERVER' && 
+                error.message && error.message.includes('dynamic use static key')) {
+                
+                window.vh360Warn('VideoHub360: Configuration mismatch detected!');
+                window.vh360Warn('VideoHub360: WordPress is generating tokens but Agora project has no certificate.');
+                window.vh360Warn('VideoHub360: Retrying join without token...');
+                
+                try {
+                    // Retry join with null token (tokenless mode)
+                    const uid = await client.join(config.appId, config.channelName, null, config.uid);
+                    window.vh360Log('Agora: Successfully joined channel in tokenless mode with UID:', uid);
+                    window.vh360Log('VideoHub360: UID consistency check - Bootstrap UID:', config.uid, 'Joined UID:', uid, 'Match:', config.uid === uid);
+                    window.vh360Log('VideoHub360: Role after successful join:', currentRole);
+                    currentUserUID = uid; // Store the current user's UID for later use
+                    
+                    // If we are the original host, set our UID as the original host UID
+                    if (isOriginalHost) {
+                        originalHostUID = uid;
+                        window.vh360Log('VideoHub360: Current user is original host, setting originalHostUID:', originalHostUID);
+                    }
+                    
+                    // Start periodic moderation check for all users
+                    window.vh360Log('Agora: Starting periodic moderation check...');
+                    startPeriodicModerationCheck();
+                    
+                    // Initialize layout manager after successful join and controls setup
+                    if (!viewLayoutManager) {
+                        const isAdmin = isUserAdministrator();
+                        viewLayoutManager = new ViewLayoutManager(config.agoraMode, isAdmin);
+                        window.vh360LayoutManager = viewLayoutManager;
+                        
+                        // Ensure controls are still visible after layout manager setup
+                        setTimeout(() => {
+                            updateControlsVisibility();
+                        }, 100);
+                    }
+                    
+                    // Set client role for live mode
+                    if (config.mode === 'live' && typeof client.setClientRole === 'function') {
+                        try {
+                            window.vh360Log("VideoHub360: Setting explicit client role after join for live mode:", currentRole);
+                            await client.setClientRole(currentRole);
+                            window.vh360Log("VideoHub360: Client role set successfully after join to:", currentRole);
+                        } catch (roleError) {
+                            window.vh360Warn("VideoHub360: Failed to set client role after join, continuing anyway:", roleError);
+                        }
+                    }
+                    
+                    await initDataStream();
+                    
+                    // Start periodic user info broadcasting for 30 seconds
+                    startUserInfoBroadcasting();
+                    
+                    if (currentRole === "host") {
+                        window.vh360Log('VideoHub360: User is host, starting publishing...');
+                        await startPublishing();
+                    } else {
+                        window.vh360Log('VideoHub360: User is audience, showing waiting message...');
+                        showAudienceWaitingMessage();
+                    }
+                    updateControlsVisibility();
+                    
+                    // Update mobile controls visibility after joining
+                    if (typeof window.updateMobileControlsVisibility === 'function') {
+                        window.updateMobileControlsVisibility();
+                    }
+                    
+                    // Success! Exit the function - no error to show
+                    return;
+                    
+                } catch (retryError) {
+                    window.vh360Error('VideoHub360: Retry without token also failed:', retryError);
+                    showAgoraError('Failed to connect to livestream. Please check Agora configuration and try again.');
+                    return;
+                }
+            }
+            
             let errorMessage = "Failed to connect to livestream.";
             
             // Provide specific error messages based on error type
