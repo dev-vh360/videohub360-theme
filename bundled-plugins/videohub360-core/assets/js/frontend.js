@@ -1882,7 +1882,7 @@ window.initializeAgoraPlayer = function(config) {
             const userInfo = { 
                 type: 'user_info', 
                 displayName: security.display_name, // Already set by backend for both logged-in and guest users
-                fromUserId: security.user_id || null, // null for guests
+                fromUserId: security.user_id || null, // Will be 0 for guests (set by backend), converted to null for data stream
                 fromUID: currentUserUID,
                 isOriginalHost: isOriginalHost // Include original host status
             };
@@ -2878,7 +2878,8 @@ window.initializeAgoraPlayer = function(config) {
                 errorMessage += "Invalid streaming request. Please refresh and try again.";
             } else if (error.code === 'NETWORK_ERROR') {
                 errorMessage += "Network connection issue. Please check your internet and try again.";
-            } else if (error.message && error.message.includes('audience')) {
+            } else if (error.code === 'CAN_NOT_PUBLISH_MULTIPLE_VIDEO_TRACKS' || 
+                       (error.message && error.message.toLowerCase().includes('audience') && error.message.toLowerCase().includes('publish'))) {
                 errorMessage += "Permission issue: audience role cannot publish. Please contact support.";
             } else {
                 errorMessage += "Please check your connection and device settings.";
