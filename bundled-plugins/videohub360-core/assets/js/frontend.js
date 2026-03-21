@@ -3567,8 +3567,10 @@ window.initializeAgoraPlayer = function(config) {
             }
         } catch (error) {
             window.vh360Error('VideoHub360: Token request error:', error);
-            // For testing purposes, continue without token
-            return null;
+            // Re-throw the error so it's properly handled by the caller
+            // Don't return null here - that causes "dynamic use static key" error
+            // if the app has an App Certificate configured
+            throw error;
         }
     }
 
@@ -3820,7 +3822,11 @@ window.initializeAgoraPlayer = function(config) {
             let errorMessage = "Failed to connect to livestream.";
             
             // Provide specific error messages based on error type
-            if (error.code === 'INVALID_VENDOR_KEY') {
+            if (error.message && error.message.includes('Invalid UID')) {
+                errorMessage = "Invalid user configuration. Please refresh the page and try again.";
+            } else if (error.message && (error.message.includes('Token request failed') || error.message.includes('Token generation failed'))) {
+                errorMessage = "Failed to authenticate with streaming service. Please check your configuration and try again.";
+            } else if (error.code === 'INVALID_VENDOR_KEY') {
                 errorMessage = "Invalid Agora credentials. Please contact the administrator.";
             } else if (error.code === 'INVALID_CHANNEL_NAME') {
                 errorMessage = "Invalid channel configuration. Please contact the administrator.";
