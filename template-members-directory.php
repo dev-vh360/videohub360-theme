@@ -278,6 +278,7 @@ $count_label = ($mode['audience'] === 'professionals_only')
                                 'show_avatar' => true,
                                 'show_bio' => true,
                                 'show_stats' => !empty($mode['show_card_stats']),
+                                'show_follow_button' => !empty($mode['show_card_follow_button']),
                                 'avatar_size' => 80,
                             ));
                         endforeach;

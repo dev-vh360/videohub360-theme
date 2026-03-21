@@ -20,6 +20,7 @@ $defaults = array(
     'show_cover' => true,
     'show_social' => true,
     'show_stats' => true,
+    'show_header_follow_button' => true,
     'social_platforms' => array('twitter', 'facebook', 'youtube', 'instagram'),
     'avatar_max_size' => 2, // MB
     'cover_max_size' => 5, // MB
@@ -93,6 +94,16 @@ $options = wp_parse_args($options, $defaults);
                                 <input type="checkbox" name="vh360_profile_options[show_stats]" value="1" <?php checked($options['show_stats'], true); ?>>
                                 <?php esc_html_e('Show user statistics (videos, followers, etc.)', 'videohub360-theme'); ?>
                             </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php esc_html_e('Follow Button', 'videohub360-theme'); ?></th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="vh360_profile_options[show_header_follow_button]" value="1" <?php checked($options['show_header_follow_button'], true); ?>>
+                                <?php esc_html_e('Show follow button in profile headers (all profile types)', 'videohub360-theme'); ?>
+                            </label>
+                            <p class="description"><?php esc_html_e('When enabled, logged-in users will see a follow button on other users\' profile pages.', 'videohub360-theme'); ?></p>
                         </td>
                     </tr>
                 </tbody>

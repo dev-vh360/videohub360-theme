@@ -268,6 +268,7 @@ class VH360_Theme_Admin {
                 'show_cover' => true,
                 'show_social' => true,
                 'show_stats' => true,
+                'show_header_follow_button' => true,
                 'social_platforms' => array('twitter', 'facebook', 'youtube', 'instagram'),
                 'avatar_max_size' => 2,
                 'cover_max_size' => 5,
@@ -319,6 +320,7 @@ class VH360_Theme_Admin {
                 'professionals_account_types' => array('professional', 'organization'),
                 'professionals_require_approval' => true,
                 'show_card_stats' => true,
+                'show_card_follow_button' => true,
             ),
         ));
         
@@ -550,6 +552,7 @@ class VH360_Theme_Admin {
         $sanitized['show_cover'] = isset($input['show_cover']) ? (bool) $input['show_cover'] : false;
         $sanitized['show_social'] = isset($input['show_social']) ? (bool) $input['show_social'] : false;
         $sanitized['show_stats'] = isset($input['show_stats']) ? (bool) $input['show_stats'] : false;
+        $sanitized['show_header_follow_button'] = isset($input['show_header_follow_button']) ? (bool) $input['show_header_follow_button'] : false;
         $sanitized['enable_avatar_cropper'] = isset($input['enable_avatar_cropper']) ? (bool) $input['enable_avatar_cropper'] : false;
         
         // Array field for social platforms - default to empty array if not set
@@ -655,6 +658,7 @@ class VH360_Theme_Admin {
         $sanitized['enable_search'] = isset($input['enable_search']) ? (bool) $input['enable_search'] : false;
         $sanitized['professionals_require_approval'] = isset($input['professionals_require_approval']) ? (bool) $input['professionals_require_approval'] : false;
         $sanitized['show_card_stats'] = isset($input['show_card_stats']) ? (bool) $input['show_card_stats'] : false;
+        $sanitized['show_card_follow_button'] = isset($input['show_card_follow_button']) ? (bool) $input['show_card_follow_button'] : false;
         $sanitized['enable_category_filter'] = isset($input['enable_category_filter']) ? (bool) $input['enable_category_filter'] : false;
         
         // Numeric field with default
