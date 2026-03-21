@@ -3567,15 +3567,7 @@ window.initializeAgoraPlayer = function(config) {
             }
         } catch (error) {
             window.vh360Error('VideoHub360: Token request error:', error);
-            
-            // Check if this is a validation error (UID, etc.) - these should not be ignored
-            if (error.message && error.message.includes('Invalid UID')) {
-                throw error;
-            }
-            
-            // For other errors (network, server issues), fall back to tokenless mode
-            // This allows the stream to continue even if token generation temporarily fails
-            window.vh360Warn('VideoHub360: Falling back to tokenless mode due to error');
+            // For testing purposes, continue without token
             return null;
         }
     }
@@ -3759,27 +3751,7 @@ window.initializeAgoraPlayer = function(config) {
             // Log the UID being used for join
             window.vh360Log('VideoHub360: Joining with UID:', config.uid, 'Type:', typeof config.uid);
             
-            // Try to join with token first
-            let uid;
-            try {
-                uid = await client.join(config.appId, config.channelName, token, config.uid);
-            } catch (joinError) {
-                // Check if error is "dynamic use static key" - this means Agora project doesn't have certificate enabled
-                if (joinError.message && joinError.message.includes('dynamic use static key')) {
-                    window.vh360Warn('VideoHub360: "Dynamic use static key" error detected. This means:');
-                    window.vh360Warn('  - Your WordPress has App Certificate configured');
-                    window.vh360Warn('  - But your Agora Console project does NOT have certificate enabled');
-                    window.vh360Warn('  - Retrying without token (tokenless mode)...');
-                    
-                    // Retry without token
-                    uid = await client.join(config.appId, config.channelName, null, config.uid);
-                    window.vh360Log('VideoHub360: Successfully joined in tokenless mode');
-                } else {
-                    // Re-throw other errors
-                    throw joinError;
-                }
-            }
-            
+            const uid = await client.join(config.appId, config.channelName, token, config.uid);
             window.vh360Log('Agora: Successfully joined channel with UID:', uid);
             window.vh360Log('VideoHub360: UID consistency check - Bootstrap UID:', config.uid, 'Joined UID:', uid, 'Match:', config.uid === uid);
             window.vh360Log('VideoHub360: Role after successful join:', currentRole);
@@ -3848,11 +3820,7 @@ window.initializeAgoraPlayer = function(config) {
             let errorMessage = "Failed to connect to livestream.";
             
             // Provide specific error messages based on error type
-            if (error.message && error.message.includes('Invalid UID')) {
-                errorMessage = "Invalid user configuration. Please refresh the page and try again.";
-            } else if (error.message && (error.message.includes('Token request failed') || error.message.includes('Token generation failed'))) {
-                errorMessage = "Failed to authenticate with streaming service. Please check your configuration and try again.";
-            } else if (error.code === 'INVALID_VENDOR_KEY') {
+            if (error.code === 'INVALID_VENDOR_KEY') {
                 errorMessage = "Invalid Agora credentials. Please contact the administrator.";
             } else if (error.code === 'INVALID_CHANNEL_NAME') {
                 errorMessage = "Invalid channel configuration. Please contact the administrator.";
