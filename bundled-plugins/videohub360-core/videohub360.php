@@ -339,7 +339,19 @@ if (!function_exists('videohub360_get_livestream_bootstrap_data')) {
         $current_user = wp_get_current_user();
         $user_display_name = $is_logged_in ? $current_user->display_name : 'Guest_' . substr(md5(sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])) . sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT']))), 0, 6);
         $user_id = $is_logged_in ? $current_user->ID : 0;
-        $agora_uid = $is_logged_in ? $user_id : null;
+        
+        // Generate deterministic Agora UID for all users (logged-in and guests)
+        // Logged-in users: use their WordPress user ID directly
+        // Logged-out users: generate a deterministic numeric UID based on session/IP
+        if ($is_logged_in) {
+            $agora_uid = $user_id;
+        } else {
+            // Generate a deterministic guest UID using a hash of IP + User Agent
+            // Use a large range (starting from 1000000000) to avoid conflicts with WordPress user IDs
+            $guest_hash = md5(sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])) . sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT'])));
+            // Convert first 8 hex chars to integer and ensure it's in the guest range
+            $agora_uid = 1000000000 + (hexdec(substr($guest_hash, 0, 8)) % 999999999);
+        }
         
         // Determine role
         $role = 'audience';

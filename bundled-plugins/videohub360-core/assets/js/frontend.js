@@ -1876,17 +1876,21 @@ window.initializeAgoraPlayer = function(config) {
     });
 
     function broadcastUserInfo() {
-        if (currentUserUID && security.user_id) {
+        // Allow broadcasting for all users who have joined (have a UID)
+        // Guests will broadcast with their display name but without a WordPress user ID
+        if (currentUserUID) {
             const userInfo = { 
                 type: 'user_info', 
-                displayName: security.display_name, 
-                fromUserId: security.user_id,
+                displayName: security.display_name || 'Guest', 
+                fromUserId: security.user_id || null, // null for guests
                 fromUID: currentUserUID,
                 isOriginalHost: isOriginalHost // Include original host status
             };
             
             window.vh360Log('VideoHub360: Broadcasting user info:', userInfo);
             sendDataStreamMessage(userInfo);
+        } else {
+            window.vh360Log('VideoHub360: Skipping user info broadcast - no currentUserUID yet');
         }
     }
 
@@ -2854,6 +2858,7 @@ window.initializeAgoraPlayer = function(config) {
             
             await client.publish([localTracks.audioTrack, localTracks.videoTrack]);
             window.vh360Log("Agora: Successfully published tracks");
+            window.vh360Log("VideoHub360: Publish success - UID:", currentUserUID, "Role:", currentRole, "Display name:", security.display_name || 'Guest');
             
             if (muteAudioBtn) {
                 muteAudioBtn.textContent = isAudioMuted ? '🔇 Unmute' : '🎤 Mute';
@@ -2865,6 +2870,7 @@ window.initializeAgoraPlayer = function(config) {
             }
         } catch (error) {
             window.vh360Error("Agora: Publishing failed", error);
+            window.vh360Error("VideoHub360: Publish failure - UID:", currentUserUID, "Role:", currentRole, "Error code:", error.code, "Message:", error.message);
             
             // Provide specific error messages for publishing failures
             let errorMessage = "Failed to start streaming. ";
@@ -2872,6 +2878,8 @@ window.initializeAgoraPlayer = function(config) {
                 errorMessage += "Invalid streaming request. Please refresh and try again.";
             } else if (error.code === 'NETWORK_ERROR') {
                 errorMessage += "Network connection issue. Please check your internet and try again.";
+            } else if (error.message && error.message.includes('audience')) {
+                errorMessage += "Permission issue: audience role cannot publish. Please contact support.";
             } else {
                 errorMessage += "Please check your connection and device settings.";
             }
@@ -3496,6 +3504,13 @@ window.initializeAgoraPlayer = function(config) {
     // - Fresh token generated for each user joining the stream
     async function requestTokenFromServer(channelName, uid, role) {
         try {
+            // Validate UID is provided and is a valid number
+            if (uid === null || uid === undefined || typeof uid !== 'number') {
+                const errorMsg = 'VideoHub360: Invalid UID provided to requestTokenFromServer. UID must be a number, got: ' + uid;
+                window.vh360Error(errorMsg);
+                throw new Error(errorMsg);
+            }
+            
             window.vh360Log('VideoHub360: Requesting token with role:', role);
             window.vh360Log('VideoHub360: Token request params:', { channelName, uid, role });
             
@@ -3504,7 +3519,7 @@ window.initializeAgoraPlayer = function(config) {
             formData.append('nonce', vh360Data.agoraTokenNonce); // Use dedicated Agora token nonce
             formData.append('post_id', vh360Data.postId);
             formData.append('channel_name', channelName);
-            formData.append('uid', uid || 0);
+            formData.append('uid', uid); // Use the exact UID, no fallback
             formData.append('role', role || 'audience');
             
             const response = await fetch(vh360Data.ajaxUrl, {
@@ -3707,6 +3722,9 @@ window.initializeAgoraPlayer = function(config) {
             }
             
             // Request token dynamically before joining
+            // Log the configured UID before token request
+            window.vh360Log('VideoHub360: Bootstrap config.uid:', config.uid, 'Type:', typeof config.uid);
+            
             const token = await requestTokenFromServer(config.channelName, config.uid, currentRole);
             window.vh360Log('VideoHub360: Token received for role:', currentRole);
             
@@ -3715,8 +3733,12 @@ window.initializeAgoraPlayer = function(config) {
                 window.vh360Log('VideoHub360: Verified host role before join - mode:', config.mode, 'role:', currentRole);
             }
             
+            // Log the UID being used for join
+            window.vh360Log('VideoHub360: Joining with UID:', config.uid, 'Type:', typeof config.uid);
+            
             const uid = await client.join(config.appId, config.channelName, token, config.uid);
             window.vh360Log('Agora: Successfully joined channel with UID:', uid);
+            window.vh360Log('VideoHub360: UID consistency check - Bootstrap UID:', config.uid, 'Joined UID:', uid, 'Match:', config.uid === uid);
             window.vh360Log('VideoHub360: Role after successful join:', currentRole);
             currentUserUID = uid; // Store the current user's UID for later use
             
