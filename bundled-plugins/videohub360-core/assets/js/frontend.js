@@ -422,6 +422,10 @@ function addParticipantModerationMenu(playerElement, uid, displayName) {
         
         // Add click outside listener to hide menu
         const hideOnClickOutside = (event) => {
+            // Check if event.target is an Element before calling contains()
+            // Events can fire on text nodes which don't have DOM methods
+            if (!event.target || typeof event.target.contains !== 'function') return;
+            
             if (!menuButton.contains(event.target) && !dropdownMenu.contains(event.target)) {
                 hideParticipantMenu();
                 isDropdownOpen = false;
