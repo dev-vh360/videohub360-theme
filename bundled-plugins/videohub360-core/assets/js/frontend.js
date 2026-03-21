@@ -1881,7 +1881,7 @@ window.initializeAgoraPlayer = function(config) {
         if (currentUserUID) {
             const userInfo = { 
                 type: 'user_info', 
-                displayName: security.display_name || 'Guest', 
+                displayName: security.display_name, // Already set by backend for both logged-in and guest users
                 fromUserId: security.user_id || null, // null for guests
                 fromUID: currentUserUID,
                 isOriginalHost: isOriginalHost // Include original host status
@@ -3504,9 +3504,9 @@ window.initializeAgoraPlayer = function(config) {
     // - Fresh token generated for each user joining the stream
     async function requestTokenFromServer(channelName, uid, role) {
         try {
-            // Validate UID is provided and is a valid number
-            if (uid === null || uid === undefined || typeof uid !== 'number') {
-                const errorMsg = 'VideoHub360: Invalid UID provided to requestTokenFromServer. UID must be a number, got: ' + uid;
+            // Validate UID is provided and is a valid positive number
+            if (uid === null || uid === undefined || typeof uid !== 'number' || uid <= 0 || !Number.isInteger(uid)) {
+                const errorMsg = 'VideoHub360: Invalid UID provided to requestTokenFromServer. UID must be a positive integer, got: ' + uid;
                 window.vh360Error(errorMsg);
                 throw new Error(errorMsg);
             }

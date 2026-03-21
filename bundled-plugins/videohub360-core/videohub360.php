@@ -349,8 +349,8 @@ if (!function_exists('videohub360_get_livestream_bootstrap_data')) {
             // Generate a deterministic guest UID using a hash of IP + User Agent
             // Use a large range (starting from 1000000000) to avoid conflicts with WordPress user IDs
             $guest_hash = md5(sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])) . sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT'])));
-            // Convert first 8 hex chars to integer and ensure it's in the guest range
-            $agora_uid = 1000000000 + (hexdec(substr($guest_hash, 0, 8)) % 999999999);
+            // Convert first 8 hex chars to integer and ensure it's in the guest range (1B to 2B-1)
+            $agora_uid = 1000000000 + (hexdec(substr($guest_hash, 0, 8)) % 1000000000);
         }
         
         // Determine role
