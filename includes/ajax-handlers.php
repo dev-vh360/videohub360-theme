@@ -614,6 +614,7 @@ class VH360_Ajax_Handlers {
                 'show_avatar' => true,
                 'show_bio' => true,
                 'show_stats' => !empty($mode['show_card_stats']),
+                'show_follow_button' => !empty($mode['show_card_follow_button']),
                 'avatar_size' => 80,
             ));
         }

@@ -21,6 +21,7 @@ $profile_defaults = array(
     'show_cover' => true,
     'show_social' => true,
     'show_stats' => true,
+    'show_header_follow_button' => true,
 );
 $profile_options = wp_parse_args($profile_options, $profile_defaults);
 
@@ -199,9 +200,12 @@ $can_edit = vh360_user_can_edit_profile($author_id);
                     <?php endif; ?>
                     
                     <?php
-                    // Show follow button if viewing another user's profile
-                    if ($current_user_id != $author_id) :
-                        vh360_follow_button($author_id, 'vh360-profile-follow-btn');
+                    // Show follow button if viewing another user's profile and setting is enabled
+                    if ($current_user_id != $author_id && function_exists('vh360_follow_button')) :
+                        // Check if follow button is enabled in settings
+                        if (!empty($profile_options['show_header_follow_button'])) :
+                            vh360_follow_button($author_id, 'vh360-profile-follow-btn');
+                        endif;
                     endif;
                     ?>
                 </div>

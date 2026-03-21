@@ -42,6 +42,7 @@ function vh360_get_members_directory_effective_mode($page_id = 0) {
         'professionals_account_types' => array('professional', 'organization'),
         'professionals_require_approval' => true,
         'show_card_stats' => true,
+        'show_card_follow_button' => true,
     );
     $global_options = wp_parse_args($global_options, $defaults);
     
@@ -51,6 +52,7 @@ function vh360_get_members_directory_effective_mode($page_id = 0) {
         'professionals_account_types' => $global_options['professionals_account_types'],
         'professionals_require_approval' => $global_options['professionals_require_approval'],
         'show_card_stats' => $global_options['show_card_stats'],
+        'show_card_follow_button' => $global_options['show_card_follow_button'],
         'source' => 'global',
     );
     
@@ -82,6 +84,14 @@ function vh360_get_members_directory_effective_mode($page_id = 0) {
             if ($show_card_stats_override !== '' && $show_card_stats_override !== 'inherit') {
                 // Meta value is stored as string '1' or '0'
                 $mode['show_card_stats'] = ($show_card_stats_override === '1');
+                $mode['source'] = 'page_override';
+            }
+            
+            // Check show_card_follow_button override
+            $show_card_follow_button_override = get_post_meta($page_id, '_vh360_members_directory_show_card_follow_button_override', true);
+            if ($show_card_follow_button_override !== '' && $show_card_follow_button_override !== 'inherit') {
+                // Meta value is stored as string '1' or '0'
+                $mode['show_card_follow_button'] = ($show_card_follow_button_override === '1');
                 $mode['source'] = 'page_override';
             }
             

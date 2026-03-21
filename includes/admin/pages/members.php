@@ -24,6 +24,7 @@ $defaults = array(
     'professionals_account_types' => array('professional', 'organization'),
     'professionals_require_approval' => true,
     'show_card_stats' => true,
+    'show_card_follow_button' => true,
 );
 $options = wp_parse_args($options, $defaults);
 ?>
@@ -105,6 +106,16 @@ $options = wp_parse_args($options, $defaults);
                                 <input type="checkbox" name="vh360_members_options[show_card_stats]" value="1" <?php checked($options['show_card_stats'], true); ?>>
                                 <?php esc_html_e('Show statistics on member cards (videos, followers, views)', 'videohub360-theme'); ?>
                             </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php esc_html_e('Show Follow Button', 'videohub360-theme'); ?></th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="vh360_members_options[show_card_follow_button]" value="1" <?php checked($options['show_card_follow_button'], true); ?>>
+                                <?php esc_html_e('Show follow button on member cards in the directory', 'videohub360-theme'); ?>
+                            </label>
+                            <p class="description"><?php esc_html_e('When enabled, logged-in users will see a follow button on member cards. Individual pages can override this setting.', 'videohub360-theme'); ?></p>
                         </td>
                     </tr>
                 </tbody>

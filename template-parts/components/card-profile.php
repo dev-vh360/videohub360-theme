@@ -19,6 +19,7 @@ $args = wp_parse_args($args, array(
     'show_avatar' => true,
     'show_bio' => true,
     'show_stats' => true,
+    'show_follow_button' => true,
     'avatar_size' => 80,
 ));
 
@@ -105,21 +106,12 @@ $user_stats = vh360_get_user_stats($user_id);
         </div>
     </a>
     
-    <?php if (is_user_logged_in() && get_current_user_id() !== $user_id) : 
-        // Check if current user is following this user
-        $is_following = function_exists('vh360_is_following') ? vh360_is_following($user_id) : false;
-        $btn_text = $is_following ? __('Following', 'videohub360-theme') : __('Follow', 'videohub360-theme');
-        $btn_class = $is_following ? 'vh360-follow-btn vh360-follow-btn--following' : 'vh360-follow-btn';
-        $nonce = wp_create_nonce('vh360_follow_user');
+    <?php 
+    // Show follow button if enabled, user is logged in, and not viewing own card
+    if ($args['show_follow_button'] && is_user_logged_in() && get_current_user_id() !== $user_id && function_exists('vh360_follow_button')) : 
     ?>
         <div class="vh360-profile-card-footer">
-            <button 
-                class="<?php echo esc_attr($btn_class); ?>" 
-                data-target="<?php echo esc_attr($user_id); ?>"
-                data-nonce="<?php echo esc_attr($nonce); ?>"
-            >
-                <?php echo esc_html($btn_text); ?>
-            </button>
+            <?php vh360_follow_button($user_id, 'vh360-profile-card-follow-btn'); ?>
         </div>
     <?php endif; ?>
 </article>

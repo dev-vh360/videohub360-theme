@@ -51,6 +51,7 @@ function vh360_render_members_directory_meta_box($post) {
     $approval_override = get_post_meta($post->ID, '_vh360_members_directory_require_approval_override', true);
     $account_types_override = get_post_meta($post->ID, '_vh360_members_directory_account_types_override', true);
     $show_card_stats_override = get_post_meta($post->ID, '_vh360_members_directory_show_card_stats_override', true);
+    $show_card_follow_button_override = get_post_meta($post->ID, '_vh360_members_directory_show_card_follow_button_override', true);
     
     // Set defaults if empty
     if (empty($audience_override)) {
@@ -65,6 +66,9 @@ function vh360_render_members_directory_meta_box($post) {
     if ($show_card_stats_override === '') {
         $show_card_stats_override = 'inherit';
     }
+    if ($show_card_follow_button_override === '') {
+        $show_card_follow_button_override = 'inherit';
+    }
     
     // Get global settings for reference
     $global_options = get_option('vh360_members_options', array());
@@ -73,6 +77,7 @@ function vh360_render_members_directory_meta_box($post) {
         'professionals_account_types' => array('professional', 'organization'),
         'professionals_require_approval' => true,
         'show_card_stats' => true,
+        'show_card_follow_button' => true,
     );
     $global_options = wp_parse_args($global_options, $global_defaults);
     
@@ -83,6 +88,9 @@ function vh360_render_members_directory_meta_box($post) {
         ? __('Yes', 'videohub360-theme') 
         : __('No', 'videohub360-theme');
     $global_card_stats_label = $global_options['show_card_stats'] 
+        ? __('Show', 'videohub360-theme') 
+        : __('Hide', 'videohub360-theme');
+    $global_card_follow_button_label = $global_options['show_card_follow_button'] 
         ? __('Show', 'videohub360-theme') 
         : __('Hide', 'videohub360-theme');
     ?>
@@ -180,6 +188,29 @@ function vh360_render_members_directory_meta_box($post) {
             </select>
         </p>
         
+        <!-- Profile Card Follow Button Override -->
+        <p>
+            <label for="vh360_directory_show_card_follow_button_override">
+                <strong><?php esc_html_e('Profile Card Follow Button', 'videohub360-theme'); ?></strong>
+            </label>
+        </p>
+        <p>
+            <select name="vh360_directory_show_card_follow_button_override" id="vh360_directory_show_card_follow_button_override" class="widefat">
+                <option value="inherit" <?php selected($show_card_follow_button_override, 'inherit'); ?>>
+                    <?php
+                    /* translators: %s: global card follow button setting */
+                    echo esc_html(sprintf(__('Inherit Global (%s)', 'videohub360-theme'), $global_card_follow_button_label));
+                    ?>
+                </option>
+                <option value="1" <?php selected($show_card_follow_button_override, '1'); ?>>
+                    <?php esc_html_e('Show', 'videohub360-theme'); ?>
+                </option>
+                <option value="0" <?php selected($show_card_follow_button_override, '0'); ?>>
+                    <?php esc_html_e('Hide', 'videohub360-theme'); ?>
+                </option>
+            </select>
+        </p>
+        
         <p class="description" style="margin-top: 10px;">
             <em>
                 <?php
@@ -262,6 +293,16 @@ function vh360_save_members_directory_meta_box($post_id) {
         
         if (in_array($show_card_stats, $valid_values, true)) {
             update_post_meta($post_id, '_vh360_members_directory_show_card_stats_override', $show_card_stats);
+        }
+    }
+    
+    // Save show_card_follow_button override
+    if (isset($_POST['vh360_directory_show_card_follow_button_override'])) {
+        $show_card_follow_button = sanitize_text_field($_POST['vh360_directory_show_card_follow_button_override']);
+        $valid_values = array('inherit', '0', '1');
+        
+        if (in_array($show_card_follow_button, $valid_values, true)) {
+            update_post_meta($post_id, '_vh360_members_directory_show_card_follow_button_override', $show_card_follow_button);
         }
     }
     

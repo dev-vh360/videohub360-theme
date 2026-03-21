@@ -54,9 +54,56 @@
 
 .vh360-client-type {
     color: #6b7280;
-    margin: 0;
+    margin: 0 0 1rem 0;
     font-size: 1rem;
     font-weight: 500;
+}
+
+/* Client Actions */
+.vh360-client-actions {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.vh360-client-follow-btn,
+.vh360-client-actions .vh360-follow-btn,
+.vh360-client-actions .vh360-unfollow-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    background: var(--primary-color, #2563eb);
+    color: #ffffff;
+    text-decoration: none;
+    border: none;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+    cursor: pointer;
+}
+
+.vh360-client-follow-btn:hover,
+.vh360-client-actions .vh360-follow-btn:hover {
+    background: var(--primary-hover, #1d4ed8);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+    color: #ffffff;
+}
+
+.vh360-client-actions .vh360-unfollow-btn {
+    background: #f3f4f6;
+    color: #4b5563;
+    border: 2px solid #e5e7eb;
+}
+
+.vh360-client-actions .vh360-unfollow-btn:hover {
+    background: #fee2e2;
+    color: #ef4444;
+    border-color: #ef4444;
 }
 
 /* Client Navigation */

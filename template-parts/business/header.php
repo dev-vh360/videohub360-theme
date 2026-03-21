@@ -19,6 +19,13 @@ if (!$author) {
     return;
 }
 
+// Get profile options
+$profile_options = get_option('vh360_profile_options', array());
+$profile_defaults = array(
+    'show_header_follow_button' => true,
+);
+$profile_options = wp_parse_args($profile_options, $profile_defaults);
+
 // Get business meta
 $business_name = get_user_meta($author_id, '_vh360_business_name', true);
 $business_type = get_user_meta($author_id, '_vh360_business_type', true);
@@ -29,13 +36,20 @@ $display_name = $business_name ? $business_name : $author->display_name;
 // Check if we should show message button
 $current_user_id = get_current_user_id();
 $show_message_button = false;
+$show_follow_button = false;
 $is_owner = ($current_user_id === $author_id);
 
 if (is_user_logged_in() && $current_user_id !== $author_id) {
+    // Check message button availability
     if (function_exists('vh360_is_dm_enabled') && function_exists('vh360_can_send_message')) {
         if (vh360_is_dm_enabled() && vh360_can_send_message($current_user_id, $author_id)) {
             $show_message_button = true;
         }
+    }
+    
+    // Check follow button availability
+    if (function_exists('vh360_follow_button') && !empty($profile_options['show_header_follow_button'])) {
+        $show_follow_button = true;
     }
 }
 ?>
@@ -61,14 +75,20 @@ if (is_user_logged_in() && $current_user_id !== $author_id) {
                 </p>
             <?php endif; ?>
             
-            <?php if ($show_message_button) : ?>
+            <?php if ($show_message_button || $show_follow_button) : ?>
                 <div class="vh360-business-actions">
-                    <a href="<?php echo esc_url(add_query_arg(array('tab' => 'messages', 'user' => $author_id), home_url('/dashboard/'))); ?>" class="vh360-business-message-btn">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                        </svg>
-                        <?php esc_html_e('Send Message', 'videohub360-theme'); ?>
-                    </a>
+                    <?php if ($show_message_button) : ?>
+                        <a href="<?php echo esc_url(add_query_arg(array('tab' => 'messages', 'user' => $author_id), home_url('/dashboard/'))); ?>" class="vh360-business-message-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                            <?php esc_html_e('Send Message', 'videohub360-theme'); ?>
+                        </a>
+                    <?php endif; ?>
+                    
+                    <?php if ($show_follow_button) : ?>
+                        <?php vh360_follow_button($author_id, 'vh360-business-follow-btn'); ?>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
         </div>
