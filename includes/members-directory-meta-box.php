@@ -51,6 +51,7 @@ function vh360_render_members_directory_meta_box($post) {
     $approval_override = get_post_meta($post->ID, '_vh360_members_directory_require_approval_override', true);
     $account_types_override = get_post_meta($post->ID, '_vh360_members_directory_account_types_override', true);
     $show_card_stats_override = get_post_meta($post->ID, '_vh360_members_directory_show_card_stats_override', true);
+    $show_card_follow_button_override = get_post_meta($post->ID, '_vh360_members_directory_show_card_follow_button_override', true);
     
     // Set defaults if empty
     if (empty($audience_override)) {
