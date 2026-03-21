@@ -3567,10 +3567,16 @@ window.initializeAgoraPlayer = function(config) {
             }
         } catch (error) {
             window.vh360Error('VideoHub360: Token request error:', error);
-            // Re-throw the error so it's properly handled by the caller
-            // Don't return null here - that causes "dynamic use static key" error
-            // if the app has an App Certificate configured
-            throw error;
+            
+            // Check if this is a validation error (UID, etc.) - these should not be ignored
+            if (error.message && error.message.includes('Invalid UID')) {
+                throw error;
+            }
+            
+            // For other errors (network, server issues), fall back to tokenless mode
+            // This allows the stream to continue even if token generation temporarily fails
+            window.vh360Warn('VideoHub360: Falling back to tokenless mode due to error');
+            return null;
         }
     }
 
@@ -3753,7 +3759,27 @@ window.initializeAgoraPlayer = function(config) {
             // Log the UID being used for join
             window.vh360Log('VideoHub360: Joining with UID:', config.uid, 'Type:', typeof config.uid);
             
-            const uid = await client.join(config.appId, config.channelName, token, config.uid);
+            // Try to join with token first
+            let uid;
+            try {
+                uid = await client.join(config.appId, config.channelName, token, config.uid);
+            } catch (joinError) {
+                // Check if error is "dynamic use static key" - this means Agora project doesn't have certificate enabled
+                if (joinError.message && joinError.message.includes('dynamic use static key')) {
+                    window.vh360Warn('VideoHub360: "Dynamic use static key" error detected. This means:');
+                    window.vh360Warn('  - Your WordPress has App Certificate configured');
+                    window.vh360Warn('  - But your Agora Console project does NOT have certificate enabled');
+                    window.vh360Warn('  - Retrying without token (tokenless mode)...');
+                    
+                    // Retry without token
+                    uid = await client.join(config.appId, config.channelName, null, config.uid);
+                    window.vh360Log('VideoHub360: Successfully joined in tokenless mode');
+                } else {
+                    // Re-throw other errors
+                    throw joinError;
+                }
+            }
+            
             window.vh360Log('Agora: Successfully joined channel with UID:', uid);
             window.vh360Log('VideoHub360: UID consistency check - Bootstrap UID:', config.uid, 'Joined UID:', uid, 'Match:', config.uid === uid);
             window.vh360Log('VideoHub360: Role after successful join:', currentRole);
