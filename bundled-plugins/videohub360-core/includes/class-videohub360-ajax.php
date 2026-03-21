@@ -475,6 +475,11 @@ class VideoHub360_Ajax {
             wp_send_json_error('Missing required parameter: Channel Name');
             return;
         }
+
+        if ($uid <= 0) {
+            wp_send_json_error('Missing or invalid Agora UID');
+            return;
+        }
         
         // Validate channel name matches the post's stored channel name
         $stored_channel_name = get_post_meta($post_id, '_vh360_agora_channel_name', true);
