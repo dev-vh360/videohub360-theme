@@ -75,31 +75,21 @@
                 // Capture initial form state (after character counter initialization)
                 self.initialFormState = $form.serialize();
                 
-                // Debounce function for performance
-                var debounceTimer;
-                function debounce(func, delay) {
-                    return function() {
-                        var context = this;
-                        var args = arguments;
-                        clearTimeout(debounceTimer);
-                        debounceTimer = setTimeout(function() {
-                            func.apply(context, args);
-                        }, delay);
-                    };
-                }
+                // Debounce timer reference for clearing
+                self.debounceTimer = null;
                 
                 // Track form changes by comparing state (debounced for performance)
-                var checkFormState = debounce(function() {
-                    var currentState = $form.serialize();
-                    self.formModified = (currentState !== self.initialFormState);
-                }, 300);
-                
                 $form.on('change input', 'input, textarea, select', function(e) {
-                    checkFormState();
+                    clearTimeout(self.debounceTimer);
+                    self.debounceTimer = setTimeout(function() {
+                        var currentState = $form.serialize();
+                        self.formModified = (currentState !== self.initialFormState);
+                    }, 300);
                 });
                 
                 // Clear warning on form submit
                 $form.on('submit', function() {
+                    clearTimeout(self.debounceTimer);
                     self.isSubmitting = true;
                     self.formModified = false;
                 });
@@ -109,14 +99,17 @@
                     // If clicking a different tab, reset the flag
                     var clickedTab = $(this).data('tab');
                     if (clickedTab !== 'create-post') {
+                        clearTimeout(self.debounceTimer);
                         self.formModified = false;
                     }
                 });
             }
             
             // Suppress warning for safe navigation (View links)
-            // Note: Only <a> tags in post cards are View links; Edit/Delete are buttons
+            // View links open in new tabs/windows, so form state is preserved in current tab.
+            // No need to warn about unsaved changes when viewing existing posts.
             $(document).on('click', '.vh360-post-card a[href]', function() {
+                clearTimeout(self.debounceTimer);
                 self.formModified = false;
             });
             
