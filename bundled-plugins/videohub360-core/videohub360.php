@@ -308,6 +308,47 @@ if (!function_exists('videohub360_render_author_badge')) {
  * @param array $fields Livestream fields from post meta
  * @return array|null Configuration array or null if not an Agora livestream
  */
+
+if (!function_exists('videohub360_get_or_create_guest_agora_uid')) {
+    function videohub360_get_or_create_guest_agora_uid() {
+        $cookie_name = 'vh360_guest_agora_uid';
+        $min_uid = 1000000000;
+        $max_uid = 2147483647;
+
+        if (isset($_COOKIE[$cookie_name])) {
+            $existing_uid = absint(wp_unslash($_COOKIE[$cookie_name]));
+            if ($existing_uid >= $min_uid && $existing_uid <= $max_uid) {
+                return $existing_uid;
+            }
+        }
+
+        try {
+            $guest_uid = random_int($min_uid, $max_uid);
+        } catch (Exception $e) {
+            $guest_uid = $min_uid + wp_rand(1, ($max_uid - $min_uid));
+        }
+
+        if (!headers_sent()) {
+            $cookie_options = array(
+                'expires'  => time() + MONTH_IN_SECONDS,
+                'path'     => COOKIEPATH ? COOKIEPATH : '/',
+                'secure'   => is_ssl(),
+                'httponly' => false,
+                'samesite' => 'Lax',
+            );
+
+            if (defined('COOKIE_DOMAIN') && COOKIE_DOMAIN) {
+                $cookie_options['domain'] = COOKIE_DOMAIN;
+            }
+
+            setcookie($cookie_name, (string) $guest_uid, $cookie_options);
+            $_COOKIE[$cookie_name] = (string) $guest_uid;
+        }
+
+        return $guest_uid;
+    }
+}
+
 if (!function_exists('videohub360_get_livestream_bootstrap_data')) {
     function videohub360_get_livestream_bootstrap_data($post_id, $fields) {
         // Only return data for Agora livestreams
@@ -339,7 +380,7 @@ if (!function_exists('videohub360_get_livestream_bootstrap_data')) {
         $current_user = wp_get_current_user();
         $user_display_name = $is_logged_in ? $current_user->display_name : 'Guest_' . substr(md5(sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])) . sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT']))), 0, 6);
         $user_id = $is_logged_in ? $current_user->ID : 0;
-        $agora_uid = $is_logged_in ? $user_id : null;
+        $agora_uid = $is_logged_in ? $user_id : videohub360_get_or_create_guest_agora_uid();
         
         // Determine role
         $role = 'audience';
