@@ -17,11 +17,17 @@
     var VH360CreatePost = {
         
         /**
+         * Constants
+         */
+        EXCERPT_WARNING_THRESHOLD: 450, // Character count when warning appears
+        EXCERPT_MAX_LENGTH: 500,        // Maximum allowed character count
+        
+        /**
          * Initialize
          */
         init: function() {
-            this.bindEvents();
             this.initCharacterCounter();
+            this.bindEvents();
         },
 
         /**
@@ -70,16 +76,31 @@
             // Handle form submission to warn about unsaved changes
             var $form = $('.vh360-post-create-form');
             if ($form.length) {
-                self.formModified = false;
                 self.isSubmitting = false;
                 
-                // Track form changes
+                // Capture initial form state (after character counter initialization)
+                // This represents the baseline state when the form is first loaded
+                self.initialFormState = $form.serialize();
+                
+                // Debounce timer reference for clearing
+                self.debounceTimer = null;
+                
+                // Track form changes by comparing state (debounced for performance)
                 $form.on('change input', 'input, textarea, select', function(e) {
-                    self.formModified = true;
+                    clearTimeout(self.debounceTimer);
+                    self.debounceTimer = setTimeout(function() {
+                        // Only update formModified if create-post tab is still active
+                        var $createPostTab = $('#create-post');
+                        if ($createPostTab.length && $createPostTab.hasClass('active')) {
+                            var currentState = $form.serialize();
+                            self.formModified = (currentState !== self.initialFormState);
+                        }
+                    }, 300);
                 });
                 
                 // Clear warning on form submit
                 $form.on('submit', function() {
+                    clearTimeout(self.debounceTimer);
                     self.isSubmitting = true;
                     self.formModified = false;
                 });
@@ -89,10 +110,19 @@
                     // If clicking a different tab, reset the flag
                     var clickedTab = $(this).data('tab');
                     if (clickedTab !== 'create-post') {
+                        clearTimeout(self.debounceTimer);
                         self.formModified = false;
                     }
                 });
             }
+            
+            // Suppress warning for safe navigation (View links that open in new tabs)
+            // View links with target="_blank" open in new tabs/windows, so form state
+            // is preserved in current tab. No need to warn about unsaved changes.
+            $(document).on('click', '.vh360-post-card a[href][target="_blank"]', function() {
+                clearTimeout(self.debounceTimer);
+                self.formModified = false;
+            });
             
             // Global beforeunload handler that checks form state
             $(window).on('beforeunload', function(e) {
@@ -100,9 +130,15 @@
                 if (self.formModified && !self.isSubmitting) {
                     var $createPostTab = $('#create-post');
                     if ($createPostTab.length && $createPostTab.hasClass('active')) {
-                        var message = 'You have unsaved changes. Are you sure you want to leave?';
-                        e.returnValue = message;
-                        return message;
+                        // Additional check: only warn if there's meaningful content
+                        var title = $('#vh360_post_title').val().trim();
+                        var content = $('#vh360_post_content').val().trim();
+                        
+                        if (title || content) {
+                            var message = 'You have unsaved changes. Are you sure you want to leave?';
+                            e.returnValue = message;
+                            return message;
+                        }
                     }
                 }
             });
@@ -165,25 +201,34 @@
          * Initialize character counter for excerpt field
          */
         initCharacterCounter: function() {
+            var self = this;
             var $excerpt = $('#vh360_post_excerpt');
             var $counter = $('.vh360-char-count');
             
             if ($excerpt.length && $counter.length) {
-                // Update counter on input
+                // Initialize counter on page load without triggering input event
+                var currentLength = $excerpt.val().length;
+                $counter.text(currentLength);
+                
+                // Add warning class if near limit
+                if (currentLength > self.EXCERPT_WARNING_THRESHOLD) {
+                    $counter.parent().addClass('vh360-char-warning');
+                } else {
+                    $counter.parent().removeClass('vh360-char-warning');
+                }
+                
+                // Update counter on user input
                 $excerpt.on('input', function() {
                     var count = $(this).val().length;
                     $counter.text(count);
                     
                     // Add warning class if near limit
-                    if (count > 450) {
+                    if (count > self.EXCERPT_WARNING_THRESHOLD) {
                         $counter.parent().addClass('vh360-char-warning');
                     } else {
                         $counter.parent().removeClass('vh360-char-warning');
                     }
                 });
-                
-                // Initialize counter on page load
-                $excerpt.trigger('input');
             }
         },
 
@@ -248,8 +293,8 @@
 
             // Check excerpt length
             var excerpt = $('#vh360_post_excerpt').val();
-            if (excerpt.length > 500) {
-                errors.push('Excerpt must be 500 characters or less.');
+            if (excerpt.length > self.EXCERPT_MAX_LENGTH) {
+                errors.push('Excerpt must be ' + self.EXCERPT_MAX_LENGTH + ' characters or less.');
                 isValid = false;
             }
 
