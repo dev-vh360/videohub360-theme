@@ -358,9 +358,9 @@
 /* Community Post Composer */
 .vh360-community-post--composer {
     background: var(--surface-1);
-    border: 2px solid var(--border-1);
+    border: 1px solid var(--border-1);
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
     padding: 1.25rem;
     margin-bottom: 1.5rem;
     transition: all 0.3s ease;
@@ -368,8 +368,7 @@
 
 .vh360-community-post--composer:hover {
     border-color: var(--primary-color);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
-    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.08);
 }
 
 /* Remove inner textarea border */
@@ -602,39 +601,23 @@
     display: flex;
     gap: 1rem;
     background: var(--surface-1);
-    border: 1px solid var(--border-1);
+    border: none;
     border-radius: 8px;
     padding: 1.25rem;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
     transition: all 0.3s ease;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
     position: relative;
     overflow: hidden;
     animation: fadeInSlide 0.4s ease-out;
 }
 
 .vh360-community-post:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    transform: translateY(-2px);
-    border-color: var(--border-1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transform: translateY(-1px);
 }
 
-/* Top accent bar (appears on hover) */
-.vh360-community-post::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--primary-color) 0%, var(--accent-color) 100%);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.vh360-community-post:hover::before {
-    opacity: 1;
-}
+/* Top accent bar removed for cleaner look */
 
 /* Fade-in animation */
 @keyframes fadeInSlide {
@@ -704,8 +687,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 12px 0;
-    border-bottom: 1px solid var(--border-1);
+    padding: 16px 0 8px 0;
     font-size: 13px;
     color: var(--text-2);
 }
@@ -1603,10 +1585,8 @@ html {
     min-width: 0;
     display: flex;
     flex-direction: column;
-    border-left: 1px solid var(--border-1);
-    border-right: 1px solid var(--border-1);
     padding: 0 1.5rem;
-    background: var(--surface-3);
+    background: transparent;
     min-height: 100vh;
 }
 
@@ -1621,14 +1601,15 @@ html {
 .vh360-sidebar-widgets {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1.5rem;
 }
 
 .vh360-sidebar-widget {
     background: var(--surface-1);
-    border: 1px solid var(--border-color, #e5e7eb);
+    border: none;
     border-radius: var(--border-radius, 8px);
     overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .vh360-widget-title {
@@ -1637,9 +1618,8 @@ html {
     gap: 0.5rem;
     font-size: 1.125rem;
     font-weight: 700;
-    padding: 1rem;
+    padding: 1rem 1rem 0.75rem 1rem;
     margin: 0;
-    border-bottom: 1px solid var(--border-color, #e5e7eb);
 }
 
 .vh360-widget-title svg {
@@ -1656,12 +1636,7 @@ html {
     display: flex;
     gap: 0.75rem;
     padding: 1rem;
-    border-bottom: 1px solid var(--border-color, #e5e7eb);
     align-items: flex-start;
-}
-
-.vh360-follow-user-item:last-of-type {
-    border-bottom: none;
 }
 
 /* Scoped to Who to Follow widget to avoid conflicts with user-menu.css (36px) and channel.css */
