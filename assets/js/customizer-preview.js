@@ -61,11 +61,11 @@
             cssFamily: '"Merriweather", serif'
         },
         'PT Sans': {
-            googleFont: 'PT+Sans:400,700',
+            googleFont: 'PT+Sans:400,500,700',
             cssFamily: '"PT Sans", sans-serif'
         },
         'Source Sans Pro': {
-            googleFont: 'Source+Sans+Pro:400,600,700',
+            googleFont: 'Source+Sans+Pro:400,500,600,700',
             cssFamily: '"Source Sans Pro", sans-serif'
         }
     };
