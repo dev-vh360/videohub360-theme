@@ -16,52 +16,57 @@
 
     /**
      * Font configuration mapping
-     * Maps font slugs to both Google Fonts API names and CSS font-family values
+     * Maps font identifiers to both Google Fonts API names and CSS font-family values
+     * Keys MUST match exactly with values from vh360_get_font_choices() in PHP
      */
     var FONT_CONFIG = {
         'system': {
             googleFont: null,
             cssFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
         },
-        'roboto': {
+        'Roboto': {
             googleFont: 'Roboto:400,500,600,700',
             cssFamily: '"Roboto", sans-serif'
         },
-        'open-sans': {
+        'Open Sans': {
             googleFont: 'Open+Sans:400,500,600,700',
             cssFamily: '"Open Sans", sans-serif'
         },
-        'lato': {
+        'Lato': {
             googleFont: 'Lato:400,500,600,700',
             cssFamily: '"Lato", sans-serif'
         },
-        'montserrat': {
+        'Montserrat': {
             googleFont: 'Montserrat:400,500,600,700',
             cssFamily: '"Montserrat", sans-serif'
         },
-        'poppins': {
-            googleFont: 'Poppins:400,500,600,700',
-            cssFamily: '"Poppins", sans-serif'
-        },
-        'raleway': {
+        'Raleway': {
             googleFont: 'Raleway:400,500,600,700',
             cssFamily: '"Raleway", sans-serif'
         },
-        'ubuntu': {
-            googleFont: 'Ubuntu:400,500,600,700',
-            cssFamily: '"Ubuntu", sans-serif'
+        'Poppins': {
+            googleFont: 'Poppins:400,500,600,700',
+            cssFamily: '"Poppins", sans-serif'
         },
-        'nunito': {
+        'Nunito': {
             googleFont: 'Nunito:400,500,600,700',
             cssFamily: '"Nunito", sans-serif'
         },
-        'playfair-display': {
+        'Playfair Display': {
             googleFont: 'Playfair+Display:400,500,600,700',
             cssFamily: '"Playfair Display", serif'
         },
-        'merriweather': {
+        'Merriweather': {
             googleFont: 'Merriweather:400,700',
             cssFamily: '"Merriweather", serif'
+        },
+        'PT Sans': {
+            googleFont: 'PT+Sans:400,500,700',
+            cssFamily: '"PT Sans", sans-serif'
+        },
+        'Source Sans Pro': {
+            googleFont: 'Source+Sans+Pro:400,500,600,700',
+            cssFamily: '"Source Sans Pro", sans-serif'
         }
     };
 
@@ -281,28 +286,23 @@
 
     wp.customize('vh360_heading_font', function(value) {
         value.bind(function(newval) {
-            var fontFamily = getFontFamily(newval);
+            // Load Google Font if needed
+            loadGoogleFont(newval);
+            // Get the font family CSS value
+            var fontFamily = getFontFamilyCSS(newval);
             $('h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6').css('font-family', fontFamily);
         });
     });
 
     wp.customize('vh360_body_font', function(value) {
         value.bind(function(newval) {
-            var fontFamily = getFontFamily(newval);
+            // Load Google Font if needed
+            loadGoogleFont(newval);
+            // Get the font family CSS value
+            var fontFamily = getFontFamilyCSS(newval);
             $('body').css('font-family', fontFamily);
         });
     });
-
-    // Helper function to get font family string
-    function getFontFamily(font) {
-        var systemFonts = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif";
-        
-        if (font === 'system') {
-            return systemFonts;
-        }
-        
-        return "'" + font + "', " + systemFonts;
-    }
 
     // Login Page Content
     wp.customize('vh360_login_headline', function(value) {
@@ -1559,23 +1559,24 @@
      * used in production - the actual font loading on the frontend is handled by
      * the theme's font enqueueing system.
      * 
-     * @param {string} fontSlug Font slug (e.g., 'roboto', 'open-sans')
+     * @param {string} fontName Font name (e.g., 'Roboto', 'Open Sans')
      */
-    function loadGoogleFont(fontSlug) {
-        // System fonts or empty slugs don't need loading
-        if (!fontSlug || fontSlug === '' || fontSlug === 'system') {
+    function loadGoogleFont(fontName) {
+        // System fonts or empty values don't need loading
+        if (!fontName || fontName === '' || fontName === 'system') {
             return;
         }
 
         // Get font configuration
-        var fontConfig = FONT_CONFIG[fontSlug];
+        var fontConfig = FONT_CONFIG[fontName];
         if (!fontConfig || !fontConfig.googleFont) {
-            // Unknown font slug or system font - silently ignore
+            // Unknown font or system font - silently ignore
             return;
         }
 
         // Check if font is already loaded to prevent duplicate loading
-        var fontId = 'google-font-' + fontSlug;
+        // Create a safe ID from the font name
+        var fontId = 'google-font-' + fontName.replace(/\s+/g, '-').toLowerCase();
         if (document.getElementById(fontId)) {
             return; // Already loaded
         }
@@ -1589,17 +1590,17 @@
     }
 
     /**
-     * Get CSS font-family value from font slug
+     * Get CSS font-family value from font name
      * 
-     * @param {string} fontSlug Font slug
+     * @param {string} fontName Font name
      * @return {string} CSS font-family value
      */
-    function getFontFamilyCSS(fontSlug) {
-        var fontConfig = FONT_CONFIG[fontSlug];
+    function getFontFamilyCSS(fontName) {
+        var fontConfig = FONT_CONFIG[fontName];
         if (fontConfig && fontConfig.cssFamily) {
             return fontConfig.cssFamily;
         }
-        // Default to system fonts if slug not found
+        // Default to system fonts if name not found
         return FONT_CONFIG.system.cssFamily;
     }
 
