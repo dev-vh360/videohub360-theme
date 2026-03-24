@@ -25,19 +25,6 @@ $profile   = get_author_posts_url( $user_id );
 // Use helper to get dashboard page URL
 $dashboard_url = vh360_get_dashboard_page_url();
 
-$dashboard_links = array(
-    'overview'      => __( 'Dashboard', 'videohub360-theme' ),
-    'videos'        => __( 'My Videos', 'videohub360-theme' ),
-    'live-rooms'    => __( 'Live Rooms', 'videohub360-theme' ),
-    'messages'      => __( 'Messages', 'videohub360-theme' ),
-    'notifications' => __( 'Notifications', 'videohub360-theme' ),
-    'create-post'   => __( 'Create Post', 'videohub360-theme' ),
-    'galleries'     => __( 'Galleries', 'videohub360-theme' ),
-    'events'        => __( 'Events', 'videohub360-theme' ),
-    'bulletins'     => __( 'Bulletins', 'videohub360-theme' ),
-    'settings'      => __( 'Settings', 'videohub360-theme' ),
-);
-
 // "Go Live" CTA is sourced ONLY from vh360_mobile_drawer menu location
 // and controlled by the vh360-go-live-cta CSS class
 $go_live_item  = vh360_get_menu_item_by_class( 'vh360_mobile_drawer', 'vh360-go-live-cta' );
@@ -115,14 +102,17 @@ $logout_url = function_exists( 'vh360_get_logout_url' ) ? vh360_get_logout_url( 
                                     <?php
                                 }
                             }
+                        } else {
+                            // Menu assigned but empty - show admin notice
+                            if ( function_exists( 'vh360_render_menu_admin_notice' ) ) {
+                                vh360_render_menu_admin_notice( 'vh360_mobile_drawer', __( 'Mobile User Drawer', 'videohub360-theme' ) );
+                            }
                         }
                     } else {
-                        // Fallback to hardcoded dashboard links
-                        foreach ( $dashboard_links as $tab => $label ) : ?>
-                            <a class="vh360-mobile-user-drawer__link" href="<?php echo esc_url( add_query_arg( 'tab', $tab, $dashboard_url ) ); ?>">
-                                <?php echo esc_html( $label ); ?>
-                            </a>
-                        <?php endforeach;
+                        // No menu assigned - show admin notice
+                        if ( function_exists( 'vh360_render_menu_admin_notice' ) ) {
+                            vh360_render_menu_admin_notice( 'vh360_mobile_drawer', __( 'Mobile User Drawer', 'videohub360-theme' ) );
+                        }
                     }
                     ?>
                 </div>
