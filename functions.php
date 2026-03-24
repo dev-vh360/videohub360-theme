@@ -2534,5 +2534,203 @@ add_action('admin_init', function() {
     vh360_ensure_administrator_core_caps();
 }, 999);
 
+/**
+ * Render admin notice when a menu location is not assigned
+ *
+ * Displays a helpful notice to administrators when a menu location
+ * is empty, with instructions on how to assign a menu.
+ *
+ * @param string $location_slug Menu location slug (e.g., 'dashboard', 'vh360_mobile_bottom')
+ * @param string $location_name Human-readable name of the menu location
+ * @since 1.0.0
+ */
+function vh360_render_menu_admin_notice( $location_slug, $location_name ) {
+    // Only show to administrators
+    if ( ! current_user_can( 'manage_options' ) ) {
+        return;
+    }
+    
+    $menu_admin_url = admin_url( 'nav-menus.php' );
+    ?>
+    <div class="vh360-menu-admin-notice" style="padding: 2rem; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin: 1rem 0;">
+        <h3 style="margin: 0 0 0.5rem; color: #856404;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 0.5rem;">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <?php
+            /* translators: %s: Menu location name */
+            printf( esc_html__( 'No menu assigned to %s', 'videohub360-theme' ), esc_html( $location_name ) );
+            ?>
+        </h3>
+        <p style="margin: 0.5rem 0; color: #856404;">
+            <?php esc_html_e( 'This menu location is empty. Please assign a menu to control what appears here.', 'videohub360-theme' ); ?>
+        </p>
+        <p style="margin: 0.5rem 0;">
+            <a href="<?php echo esc_url( $menu_admin_url ); ?>" style="color: #004085; text-decoration: underline;">
+                <?php esc_html_e( 'Go to Appearance → Menus', 'videohub360-theme' ); ?>
+            </a>
+        </p>
+    </div>
+    <?php
+}
+
+/**
+ * Populate menu with items from dashboard tabs registry
+ *
+ * Creates menu items based on the dashboard tabs registry,
+ * applying visibility rules and using registry metadata.
+ *
+ * @param int   $menu_id   Menu ID to populate
+ * @param int   $user_id   User ID for context (defaults to 0 for admin context)
+ * @param array $tab_ids   Optional array of specific tab IDs to include (defaults to all visible tabs)
+ * @return int Number of items added
+ * @since 1.0.0
+ */
+function vh360_populate_menu_from_registry( $menu_id, $user_id = 0, $tab_ids = array() ) {
+    if ( ! $menu_id ) {
+        return 0;
+    }
+    
+    // Use admin user context (0) to get all tabs during initial setup
+    $registry = vh360_get_dashboard_tabs_registry( $user_id );
+    $items_added = 0;
+    
+    foreach ( $registry as $tab_id => $tab_config ) {
+        // Skip if specific tabs requested and this isn't one of them
+        if ( ! empty( $tab_ids ) && ! in_array( $tab_id, $tab_ids, true ) ) {
+            continue;
+        }
+        
+        // Skip go-live as it appears in Quick Actions
+        if ( $tab_id === 'go-live' ) {
+            continue;
+        }
+        
+        // Get label (no callback during setup, use static label)
+        $label = $tab_config['label'];
+        
+        // Create menu item
+        $item_id = wp_update_nav_menu_item( $menu_id, 0, array(
+            'menu-item-title'   => $label,
+            'menu-item-url'     => '#' . $tab_id,
+            'menu-item-status'  => 'publish',
+            'menu-item-type'    => 'custom',
+        ) );
+        
+        if ( ! is_wp_error( $item_id ) ) {
+            $items_added++;
+        }
+    }
+    
+    return $items_added;
+}
+
+/**
+ * Create default menus on theme activation
+ *
+ * Automatically creates and assigns default menus for dashboard,
+ * mobile bottom nav, and mobile drawer on theme activation.
+ * Skips if menus already exist to preserve customizations.
+ *
+ * @since 1.0.0
+ */
+function vh360_create_default_menus() {
+    // Check if menus already exist (prevent overwriting on re-activation)
+    $existing_locations = get_theme_mod( 'nav_menu_locations', array() );
+    
+    // Dashboard Menu
+    if ( empty( $existing_locations['dashboard'] ) ) {
+        $dashboard_menu_id = wp_create_nav_menu( __( 'Dashboard Menu', 'videohub360-theme' ) );
+        
+        if ( ! is_wp_error( $dashboard_menu_id ) ) {
+            // Populate with all dashboard tabs except go-live
+            vh360_populate_menu_from_registry( $dashboard_menu_id, 0 );
+            
+            // Assign to location
+            $existing_locations['dashboard'] = $dashboard_menu_id;
+        }
+    }
+    
+    // Mobile Bottom Nav Menu
+    if ( empty( $existing_locations['vh360_mobile_bottom'] ) ) {
+        $mobile_bottom_menu_id = wp_create_nav_menu( __( 'Mobile Bottom Nav', 'videohub360-theme' ) );
+        
+        if ( ! is_wp_error( $mobile_bottom_menu_id ) ) {
+            // Get dashboard page URL for notifications
+            $dashboard_url = function_exists( 'vh360_get_dashboard_page_url' ) ? vh360_get_dashboard_page_url() : home_url( '/dashboard/' );
+            $activity_url = function_exists( 'vh360_get_activity_page_url' ) ? vh360_get_activity_page_url() : home_url( '/activity/' );
+            $members_url = function_exists( 'vh360_get_members_page_url' ) ? vh360_get_members_page_url() : home_url( '/members/' );
+            
+            // Add 4 default items: Activity, Notifications, Members, Menu (avatar)
+            wp_update_nav_menu_item( $mobile_bottom_menu_id, 0, array(
+                'menu-item-title'   => __( 'Activity', 'videohub360-theme' ),
+                'menu-item-url'     => $activity_url,
+                'menu-item-status'  => 'publish',
+                'menu-item-type'    => 'custom',
+                'menu-item-classes' => 'vh360-icon-activity',
+            ) );
+            
+            wp_update_nav_menu_item( $mobile_bottom_menu_id, 0, array(
+                'menu-item-title'   => __( 'Notifications', 'videohub360-theme' ),
+                'menu-item-url'     => add_query_arg( 'tab', 'notifications', $dashboard_url ),
+                'menu-item-status'  => 'publish',
+                'menu-item-type'    => 'custom',
+                'menu-item-classes' => 'vh360-icon-notifications',
+            ) );
+            
+            wp_update_nav_menu_item( $mobile_bottom_menu_id, 0, array(
+                'menu-item-title'   => __( 'Members', 'videohub360-theme' ),
+                'menu-item-url'     => $members_url,
+                'menu-item-status'  => 'publish',
+                'menu-item-type'    => 'custom',
+                'menu-item-classes' => 'vh360-icon-members',
+            ) );
+            
+            wp_update_nav_menu_item( $mobile_bottom_menu_id, 0, array(
+                'menu-item-title'   => __( 'Menu', 'videohub360-theme' ),
+                'menu-item-url'     => '#',
+                'menu-item-status'  => 'publish',
+                'menu-item-type'    => 'custom',
+                'menu-item-classes' => 'vh360-icon-avatar',
+            ) );
+            
+            // Assign to location
+            $existing_locations['vh360_mobile_bottom'] = $mobile_bottom_menu_id;
+        }
+    }
+    
+    // Mobile User Drawer Menu
+    if ( empty( $existing_locations['vh360_mobile_drawer'] ) ) {
+        $mobile_drawer_menu_id = wp_create_nav_menu( __( 'Mobile User Drawer', 'videohub360-theme' ) );
+        
+        if ( ! is_wp_error( $mobile_drawer_menu_id ) ) {
+            // Populate with key dashboard tabs
+            $drawer_tabs = array( 'overview', 'videos', 'live-rooms', 'messages', 'notifications', 
+                                  'create-post', 'galleries', 'events', 'bulletins', 'settings' );
+            vh360_populate_menu_from_registry( $mobile_drawer_menu_id, 0, $drawer_tabs );
+            
+            // Add Go Live CTA with special class
+            wp_update_nav_menu_item( $mobile_drawer_menu_id, 0, array(
+                'menu-item-title'   => __( 'Go Live', 'videohub360-theme' ),
+                'menu-item-url'     => '#go-live',
+                'menu-item-status'  => 'publish',
+                'menu-item-type'    => 'custom',
+                'menu-item-classes' => 'vh360-go-live-cta',
+            ) );
+            
+            // Assign to location
+            $existing_locations['vh360_mobile_drawer'] = $mobile_drawer_menu_id;
+        }
+    }
+    
+    // Save all location assignments
+    set_theme_mod( 'nav_menu_locations', $existing_locations );
+}
+
+// Auto-create default menus on theme activation
+add_action( 'after_switch_theme', 'vh360_create_default_menus' );
+
 
 

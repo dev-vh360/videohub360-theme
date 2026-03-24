@@ -47,81 +47,11 @@ $stats = vh360_get_user_stats($current_user_id);
             ?>
         <?php else : ?>
             <?php
-            // Fallback navigation built from registry (eliminates drift)
-            $registry = vh360_get_dashboard_tabs_registry( $current_user_id );
-            $first_tab = true;
+            // Show admin-only notice when menu is not assigned
+            if ( function_exists( 'vh360_render_menu_admin_notice' ) ) {
+                vh360_render_menu_admin_notice( 'dashboard', __( 'Dashboard Menu', 'videohub360-theme' ) );
+            }
             ?>
-            <ul class="vh360-dashboard-nav">
-            <?php foreach ( $registry as $tab_id => $tab_config ) :
-                // Apply visibility rules
-                $show_callback = $tab_config['show_callback'];
-                $should_show = is_callable( $show_callback ) ? call_user_func( $show_callback, $current_user_id ) : true;
-                
-                if ( ! $should_show ) {
-                    continue;
-                }
-                
-                // Skip go-live from main nav (it's in Quick Actions)
-                if ( $tab_id === 'go-live' ) {
-                    continue;
-                }
-                
-                // Get label (use callback if available)
-                $label = $tab_config['label'];
-                if ( $tab_config['label_callback'] && is_callable( $tab_config['label_callback'] ) ) {
-                    $label = call_user_func( $tab_config['label_callback'], $current_user_id );
-                }
-                
-                // Get icon
-                $icon_svg = ! empty( $tab_config['icon_svg'] ) ? $tab_config['icon_svg'] : '';
-                
-                // Add active class to first visible tab
-                $active_class = $first_tab ? ' active' : '';
-                $first_tab = false;
-                ?>
-                <li class="vh360-dashboard-nav-item">
-                    <a href="#<?php echo esc_attr( $tab_id ); ?>" class="vh360-dashboard-nav-link vh360-dashboard-tab<?php echo $active_class; ?>" data-tab="<?php echo esc_attr( $tab_id ); ?>">
-                        <?php echo $icon_svg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-                        <span class="vh360-dashboard-nav-text"><?php echo esc_html( $label ); ?></span>
-                        <?php
-                        // Add badges for specific tabs
-                        if ( $tab_id === 'videos' && $stats['videos'] > 0 ) :
-                        ?>
-                            <span class="vh360-dashboard-nav-badge"><?php echo esc_html( $stats['videos'] ); ?></span>
-                        <?php
-                        endif;
-                        
-                        if ( $tab_id === 'galleries' ) :
-                            $gallery_count = vh360_get_user_gallery_count( $current_user_id );
-                            if ( $gallery_count > 0 ) :
-                        ?>
-                            <span class="vh360-dashboard-nav-badge"><?php echo esc_html( $gallery_count ); ?></span>
-                        <?php
-                            endif;
-                        endif;
-                        
-                        if ( $tab_id === 'messages' ) :
-                            $unread_dm = function_exists( 'vh360_get_unread_messages_count' ) ? vh360_get_unread_messages_count( $current_user_id ) : 0;
-                            if ( $unread_dm > 0 ) :
-                        ?>
-                            <span class="vh360-dashboard-nav-badge"><?php echo esc_html( $unread_dm > 99 ? '99+' : $unread_dm ); ?></span>
-                        <?php
-                            endif;
-                        endif;
-                        
-                        if ( $tab_id === 'notifications' ) :
-                            $unread_notif = function_exists( 'vh360_get_unread_notification_count' ) ? (int) vh360_get_unread_notification_count( $current_user_id ) : 0;
-                            if ( $unread_notif > 0 ) :
-                        ?>
-                            <span class="vh360-dashboard-nav-badge"><?php echo esc_html( $unread_notif > 99 ? '99+' : $unread_notif ); ?></span>
-                        <?php
-                            endif;
-                        endif;
-                        ?>
-                    </a>
-                </li>
-            <?php endforeach; ?>
-            </ul>
         <?php endif; ?>
             </nav>
     
