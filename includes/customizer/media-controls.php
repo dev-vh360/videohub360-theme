@@ -19,9 +19,9 @@ if (!defined('ABSPATH')) {
  */
 function vh360_media_customize_register($wp_customize) {
     // Add Media Settings section
+    // Panel assignment handled in customizer.php via vh360_customize_assign_panels
     $wp_customize->add_section('vh360_media_settings', array(
         'title'       => __('Media Settings', 'videohub360-theme'),
-        'priority'    => 160,
         'description' => __('Configure how media content (like YouTube videos) is displayed in posts and comments.', 'videohub360-theme'),
     ));
     

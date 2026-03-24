@@ -21,10 +21,10 @@ if (!defined('ABSPATH')) {
 function vh360_register_author_template_controls($wp_customize) {
     
     // Add section for Author Template Mode
+    // Panel assignment handled in customizer.php via vh360_customize_assign_panels
     $wp_customize->add_section('vh360_author_template', array(
         'title'       => esc_html__('Author Template Mode', 'videohub360-theme'),
         'description' => esc_html__('Choose how author pages display site-wide. Profile mode shows a social media style layout with posts, videos, and activity. Channel mode shows a YouTube-style layout focused on video content.', 'videohub360-theme'),
-        'priority'    => 160,
         'capability'  => 'edit_theme_options',
     ));
     

@@ -20,10 +20,10 @@ if (!defined('ABSPATH')) {
 function vh360_register_activity_sidebar_customizer($wp_customize) {
     
     // Add Activity Feed Sidebar Section
+    // Panel assignment handled in customizer.php via vh360_customize_assign_panels
     $wp_customize->add_section('vh360_activity_sidebar', array(
         'title'       => __('Activity Feed Sidebar', 'videohub360-theme'),
         'description' => __('Control the widgets that appear in the activity feed right sidebar.', 'videohub360-theme'),
-        'priority'    => 35,
     ));
     
     // Who to Follow Title
