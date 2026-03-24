@@ -1139,11 +1139,67 @@
     // FORM CONTENT CONTROLS BINDINGS (Icons)
     // =============================================================================
 
-    // Login Page Icons (already have bindings for text, adding icon change support)
-    // Note: Icons are media controls, they already have bindings above that update img src
+    // Login Page Icon 1
+    wp.customize('vh360_login_icon_1', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-auth-feature:eq(0) .vh360-auth-feature-icon').text(newval);
+        });
+    });
 
-    // Register Page Icons (already have bindings above)
-    // Icons 1-4 already handled by existing bindings that update img src
+    // Login Page Icon 2
+    wp.customize('vh360_login_icon_2', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-auth-feature:eq(1) .vh360-auth-feature-icon').text(newval);
+        });
+    });
+
+    // Login Page Icon 3
+    wp.customize('vh360_login_icon_3', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-auth-feature:eq(2) .vh360-auth-feature-icon').text(newval);
+        });
+    });
+
+    // Register Page Icon 1
+    wp.customize('vh360_register_icon_1', function(value) {
+        value.bind(function(newval) {
+            // Register page uses benefit icons in list items
+            var $benefitIcon = $('.vh360-auth-benefits-list li:eq(0) .vh360-auth-benefit-icon');
+            if ($benefitIcon.length) {
+                $benefitIcon.text(newval);
+            }
+        });
+    });
+
+    // Register Page Icon 2
+    wp.customize('vh360_register_icon_2', function(value) {
+        value.bind(function(newval) {
+            var $benefitIcon = $('.vh360-auth-benefits-list li:eq(1) .vh360-auth-benefit-icon');
+            if ($benefitIcon.length) {
+                $benefitIcon.text(newval);
+            }
+        });
+    });
+
+    // Register Page Icon 3
+    wp.customize('vh360_register_icon_3', function(value) {
+        value.bind(function(newval) {
+            var $benefitIcon = $('.vh360-auth-benefits-list li:eq(2) .vh360-auth-benefit-icon');
+            if ($benefitIcon.length) {
+                $benefitIcon.text(newval);
+            }
+        });
+    });
+
+    // Register Page Icon 4
+    wp.customize('vh360_register_icon_4', function(value) {
+        value.bind(function(newval) {
+            var $benefitIcon = $('.vh360-auth-benefits-list li:eq(3) .vh360-auth-benefit-icon');
+            if ($benefitIcon.length) {
+                $benefitIcon.text(newval);
+            }
+        });
+    });
 
     // =============================================================================
     // HELPER FUNCTIONS FOR GOOGLE FONTS
