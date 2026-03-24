@@ -1202,6 +1202,261 @@
     });
 
     // =============================================================================
+    // BUSINESS LANDING PAGE BINDINGS (template-register-business.php)
+    // =============================================================================
+
+    // Business Landing - Headline
+    wp.customize('vh360_business_landing_headline', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-business-choice-title').text(newval);
+        });
+    });
+
+    // Business Landing - Description
+    wp.customize('vh360_business_landing_description', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-business-choice-description').text(newval);
+        });
+    });
+
+    // Business Landing - Professional Card Title
+    wp.customize('vh360_business_professional_title', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-business-choice-card:eq(0) .vh360-business-choice-card-title').text(newval);
+        });
+    });
+
+    // Business Landing - Professional Card Description
+    wp.customize('vh360_business_professional_description', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-business-choice-card:eq(0) .vh360-business-choice-card-description').text(newval);
+        });
+    });
+
+    // Business Landing - Professional Features (1-4)
+    wp.customize('vh360_business_professional_feature_1', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-business-choice-card:eq(0) .vh360-business-choice-features li:eq(0)').text(newval);
+        });
+    });
+
+    wp.customize('vh360_business_professional_feature_2', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-business-choice-card:eq(0) .vh360-business-choice-features li:eq(1)').text(newval);
+        });
+    });
+
+    wp.customize('vh360_business_professional_feature_3', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-business-choice-card:eq(0) .vh360-business-choice-features li:eq(2)').text(newval);
+        });
+    });
+
+    wp.customize('vh360_business_professional_feature_4', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-business-choice-card:eq(0) .vh360-business-choice-features li:eq(3)').text(newval);
+        });
+    });
+
+    // Business Landing - Professional Button
+    wp.customize('vh360_business_professional_button', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-business-choice-card:eq(0) .vh360-business-choice-button').text(newval);
+        });
+    });
+
+    // Business Landing - Client Card Title
+    wp.customize('vh360_business_client_title', function(value) {
+        value.bind(function(newval) {
+            // Client card is the second card, or first if only showing client
+            var $clientCard = $('.vh360-business-choice-card').last();
+            $clientCard.find('.vh360-business-choice-card-title').text(newval);
+        });
+    });
+
+    // Business Landing - Client Card Description
+    wp.customize('vh360_business_client_description', function(value) {
+        value.bind(function(newval) {
+            var $clientCard = $('.vh360-business-choice-card').last();
+            $clientCard.find('.vh360-business-choice-card-description').text(newval);
+        });
+    });
+
+    // Business Landing - Client Features (1-4)
+    wp.customize('vh360_business_client_feature_1', function(value) {
+        value.bind(function(newval) {
+            var $clientCard = $('.vh360-business-choice-card').last();
+            $clientCard.find('.vh360-business-choice-features li:eq(0)').text(newval);
+        });
+    });
+
+    wp.customize('vh360_business_client_feature_2', function(value) {
+        value.bind(function(newval) {
+            var $clientCard = $('.vh360-business-choice-card').last();
+            $clientCard.find('.vh360-business-choice-features li:eq(1)').text(newval);
+        });
+    });
+
+    wp.customize('vh360_business_client_feature_3', function(value) {
+        value.bind(function(newval) {
+            var $clientCard = $('.vh360-business-choice-card').last();
+            $clientCard.find('.vh360-business-choice-features li:eq(2)').text(newval);
+        });
+    });
+
+    wp.customize('vh360_business_client_feature_4', function(value) {
+        value.bind(function(newval) {
+            var $clientCard = $('.vh360-business-choice-card').last();
+            $clientCard.find('.vh360-business-choice-features li:eq(3)').text(newval);
+        });
+    });
+
+    // Business Landing - Client Button
+    wp.customize('vh360_business_client_button', function(value) {
+        value.bind(function(newval) {
+            var $clientCard = $('.vh360-business-choice-card').last();
+            $clientCard.find('.vh360-business-choice-button').text(newval);
+        });
+    });
+
+    // Business Landing - Footer Text
+    wp.customize('vh360_business_landing_footer_text', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-business-choice-footer span').text(newval);
+        });
+    });
+
+    // Business Landing - Footer Link
+    wp.customize('vh360_business_landing_footer_link', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-business-choice-footer .vh360-auth-link').text(newval);
+        });
+    });
+
+    // =============================================================================
+    // PROFESSIONAL REGISTRATION PAGE BINDINGS (template-register-professional.php)
+    // =============================================================================
+
+    // Professional Registration - Headline
+    wp.customize('vh360_professional_register_headline', function(value) {
+        value.bind(function(newval) {
+            // Target the professional registration page specifically
+            $('.vh360-auth-wrapper.register-professional .vh360-auth-heading').text(newval);
+        });
+    });
+
+    // Professional Registration - Description
+    wp.customize('vh360_professional_register_description', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-auth-wrapper.register-professional .vh360-auth-description').text(newval);
+        });
+    });
+
+    // Professional Registration - Benefits Heading
+    wp.customize('vh360_professional_register_benefits_heading', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-auth-wrapper.register-professional .vh360-auth-benefits-title').text(newval);
+        });
+    });
+
+    // Professional Registration - Benefits 1-4
+    wp.customize('vh360_professional_register_benefit_1', function(value) {
+        value.bind(function(newval) {
+            var $benefit = $('.vh360-auth-wrapper.register-professional .vh360-auth-benefits-list li:eq(0)');
+            $benefit.contents().filter(function() { return this.nodeType === 3; }).first().replaceWith(newval);
+        });
+    });
+
+    wp.customize('vh360_professional_register_benefit_2', function(value) {
+        value.bind(function(newval) {
+            var $benefit = $('.vh360-auth-wrapper.register-professional .vh360-auth-benefits-list li:eq(1)');
+            $benefit.contents().filter(function() { return this.nodeType === 3; }).first().replaceWith(newval);
+        });
+    });
+
+    wp.customize('vh360_professional_register_benefit_3', function(value) {
+        value.bind(function(newval) {
+            var $benefit = $('.vh360-auth-wrapper.register-professional .vh360-auth-benefits-list li:eq(2)');
+            $benefit.contents().filter(function() { return this.nodeType === 3; }).first().replaceWith(newval);
+        });
+    });
+
+    wp.customize('vh360_professional_register_benefit_4', function(value) {
+        value.bind(function(newval) {
+            var $benefit = $('.vh360-auth-wrapper.register-professional .vh360-auth-benefits-list li:eq(3)');
+            $benefit.contents().filter(function() { return this.nodeType === 3; }).first().replaceWith(newval);
+        });
+    });
+
+    // Professional Registration - Button/Form Title
+    wp.customize('vh360_professional_register_button', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-auth-wrapper.register-professional .vh360-auth-form-title').text(newval);
+        });
+    });
+
+    // =============================================================================
+    // CLIENT REGISTRATION PAGE BINDINGS (template-register-client.php)
+    // =============================================================================
+
+    // Client Registration - Headline
+    wp.customize('vh360_client_register_headline', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-auth-wrapper.register-client .vh360-auth-heading').text(newval);
+        });
+    });
+
+    // Client Registration - Description
+    wp.customize('vh360_client_register_description', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-auth-wrapper.register-client .vh360-auth-description').text(newval);
+        });
+    });
+
+    // Client Registration - Benefits Heading
+    wp.customize('vh360_client_register_benefits_heading', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-auth-wrapper.register-client .vh360-auth-benefits-title').text(newval);
+        });
+    });
+
+    // Client Registration - Benefits 1-4
+    wp.customize('vh360_client_register_benefit_1', function(value) {
+        value.bind(function(newval) {
+            var $benefit = $('.vh360-auth-wrapper.register-client .vh360-auth-benefits-list li:eq(0)');
+            $benefit.contents().filter(function() { return this.nodeType === 3; }).first().replaceWith(newval);
+        });
+    });
+
+    wp.customize('vh360_client_register_benefit_2', function(value) {
+        value.bind(function(newval) {
+            var $benefit = $('.vh360-auth-wrapper.register-client .vh360-auth-benefits-list li:eq(1)');
+            $benefit.contents().filter(function() { return this.nodeType === 3; }).first().replaceWith(newval);
+        });
+    });
+
+    wp.customize('vh360_client_register_benefit_3', function(value) {
+        value.bind(function(newval) {
+            var $benefit = $('.vh360-auth-wrapper.register-client .vh360-auth-benefits-list li:eq(2)');
+            $benefit.contents().filter(function() { return this.nodeType === 3; }).first().replaceWith(newval);
+        });
+    });
+
+    wp.customize('vh360_client_register_benefit_4', function(value) {
+        value.bind(function(newval) {
+            var $benefit = $('.vh360-auth-wrapper.register-client .vh360-auth-benefits-list li:eq(3)');
+            $benefit.contents().filter(function() { return this.nodeType === 3; }).first().replaceWith(newval);
+        });
+    });
+
+    // Client Registration - Button/Form Title
+    wp.customize('vh360_client_register_button', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-auth-wrapper.register-client .vh360-auth-form-title').text(newval);
+        });
+    });
+
+    // =============================================================================
     // HELPER FUNCTIONS FOR GOOGLE FONTS
     // =============================================================================
 
