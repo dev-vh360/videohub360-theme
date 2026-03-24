@@ -777,4 +777,444 @@
         return text;
     }
 
+    // =============================================================================
+    // COMMUNITY MENU BINDINGS
+    // =============================================================================
+    
+    // Community Menu - Background Color
+    wp.customize('vh360_community_menu_bg_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('community-menu-bg-color', newval);
+        });
+    });
+
+    // Community Menu - Text Color
+    wp.customize('vh360_community_menu_text_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('community-menu-text-color', newval);
+        });
+    });
+
+    // Community Menu - Hover Background Color
+    wp.customize('vh360_community_menu_hover_bg_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('community-menu-hover-bg-color', newval);
+        });
+    });
+
+    // Community Menu - Active Color
+    wp.customize('vh360_community_menu_active_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('community-menu-active-color', newval);
+        });
+    });
+
+    // Community Menu - Active Background Color
+    wp.customize('vh360_community_menu_active_bg_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('community-menu-active-bg-color', newval);
+        });
+    });
+
+    // Community Menu - Font Family
+    wp.customize('vh360_community_menu_font_family', function(value) {
+        value.bind(function(newval) {
+            if (newval && newval !== '') {
+                // Load Google Font if needed
+                loadGoogleFont(newval);
+                // Get the font family CSS value
+                var fontFamily = getFontFamilyCSS(newval);
+                updateCSSVariable('community-menu-font-family', fontFamily);
+            } else {
+                // Remove custom font family to inherit from body
+                document.documentElement.style.removeProperty('--community-menu-font-family');
+            }
+        });
+    });
+
+    // Community Menu - Font Size
+    wp.customize('vh360_community_menu_font_size', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('community-menu-font-size', newval + 'px');
+        });
+    });
+
+    // Community Menu - Font Weight
+    wp.customize('vh360_community_menu_font_weight', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('community-menu-font-weight', newval);
+        });
+    });
+
+    // Community Menu - Left Gutter
+    wp.customize('vh360_community_menu_left_gutter', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('community-menu-left-gutter', newval + 'px');
+        });
+    });
+
+    // Community Menu - Width
+    wp.customize('vh360_community_menu_width', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('community-menu-width', newval + 'px');
+        });
+    });
+
+    // =============================================================================
+    // ACTIVITY FEED BINDINGS
+    // =============================================================================
+
+    // Activity Feed - Tab Color
+    wp.customize('vh360_feed_tab_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('feed-tab-color', newval);
+        });
+    });
+
+    // Activity Feed - Tab Hover Color
+    wp.customize('vh360_feed_tab_hover_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('feed-tab-hover-color', newval);
+        });
+    });
+
+    // Activity Feed - Mention Color
+    wp.customize('vh360_mention_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('mention-color', newval);
+        });
+    });
+
+    // =============================================================================
+    // AUTH PAGES BINDINGS (Consolidated for Login, Register, Lost Password, Reset)
+    // =============================================================================
+
+    // Auth Pages - Page Background Color
+    wp.customize('vh360_auth_page_bg_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-page-bg', newval);
+        });
+    });
+
+    // Auth Pages - Form Background Color
+    wp.customize('vh360_auth_form_bg_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-form-bg', newval);
+        });
+    });
+
+    // Auth Pages - Welcome Background Gradient Start
+    wp.customize('vh360_auth_welcome_bg_start', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-welcome-bg-start', newval);
+        });
+    });
+
+    // Auth Pages - Welcome Background Gradient End
+    wp.customize('vh360_auth_welcome_bg_end', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-welcome-bg-end', newval);
+        });
+    });
+
+    // Auth Pages - Welcome Text Color
+    wp.customize('vh360_auth_welcome_text_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-welcome-text', newval);
+        });
+    });
+
+    // Auth Pages - Form Title Color
+    wp.customize('vh360_auth_form_title_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-form-title', newval);
+        });
+    });
+
+    // Auth Pages - Label Color
+    wp.customize('vh360_auth_label_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-label', newval);
+        });
+    });
+
+    // Auth Pages - Input Border Color
+    wp.customize('vh360_auth_input_border_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-input-border', newval);
+        });
+    });
+
+    // Auth Pages - Input Focus Border Color
+    wp.customize('vh360_auth_input_focus_border_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-input-focus-border', newval);
+        });
+    });
+
+    // Auth Pages - Button Background Gradient Start
+    wp.customize('vh360_auth_button_bg_start', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-button-bg-start', newval);
+        });
+    });
+
+    // Auth Pages - Button Background Gradient End
+    wp.customize('vh360_auth_button_bg_end', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-button-bg-end', newval);
+        });
+    });
+
+    // Auth Pages - Button Text Color
+    wp.customize('vh360_auth_button_text_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-button-text', newval);
+        });
+    });
+
+    // Auth Pages - Link Color
+    wp.customize('vh360_auth_link_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-link', newval);
+        });
+    });
+
+    // Auth Pages - Error Background Color
+    wp.customize('vh360_auth_error_bg_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-error-bg', newval);
+        });
+    });
+
+    // Auth Pages - Error Text Color
+    wp.customize('vh360_auth_error_text_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-error-text', newval);
+        });
+    });
+
+    // Auth Pages - Success Background Color
+    wp.customize('vh360_auth_success_bg_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-success-bg', newval);
+        });
+    });
+
+    // =============================================================================
+    // HEADER CONTROLS BINDINGS (Page Headers)
+    // =============================================================================
+
+    // Activity Page Header - Title
+    wp.customize('vh360_activity_header_title', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-activity-header .vh360-page-header__title').text(newval);
+        });
+    });
+
+    // Activity Page Header - Description
+    wp.customize('vh360_activity_header_description', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-activity-header .vh360-page-header__description').text(newval);
+        });
+    });
+
+    // Members Directory Header - Title
+    wp.customize('vh360_members_header_title', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-members-header .vh360-page-header__title').text(newval);
+        });
+    });
+
+    // Members Directory Header - Description
+    wp.customize('vh360_members_header_description', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-members-header .vh360-page-header__description').text(newval);
+        });
+    });
+
+    // Bulletins Archive Header - Title
+    wp.customize('vh360_bulletins_header_title', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-bulletins-header .vh360-page-header__title').text(newval);
+        });
+    });
+
+    // Bulletins Archive Header - Description
+    wp.customize('vh360_bulletins_header_description', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-bulletins-header .vh360-page-header__description').text(newval);
+        });
+    });
+
+    // Blog Archive Header - Title
+    wp.customize('vh360_blog_header_title', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-blog-header .vh360-page-header__title').text(newval);
+        });
+    });
+
+    // Blog Archive Header - Description
+    wp.customize('vh360_blog_header_description', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-blog-header .vh360-page-header__description').text(newval);
+        });
+    });
+
+    // Live Room Header - Title
+    wp.customize('vh360_live_room_header_title', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-live-room-header .vh360-page-header__title').text(newval);
+        });
+    });
+
+    // Live Room Header - Description
+    wp.customize('vh360_live_room_header_description', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-live-room-header .vh360-page-header__description').text(newval);
+        });
+    });
+
+    // Events Header - Title
+    wp.customize('vh360_events_header_title', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-events-header .vh360-page-header__title').text(newval);
+        });
+    });
+
+    // Events Header - Description
+    wp.customize('vh360_events_header_description', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-events-header .vh360-page-header__description').text(newval);
+        });
+    });
+
+    // =============================================================================
+    // SITE IDENTITY BINDINGS
+    // =============================================================================
+
+    // Site Title - Font Size
+    wp.customize('vh360_site_title_font_size', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('site-title-font-size', newval + 'px');
+        });
+    });
+
+    // Site Title - Color
+    wp.customize('vh360_site_title_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('site-title-color', newval);
+        });
+    });
+
+    // Site Title - Font Weight
+    wp.customize('vh360_site_title_font_weight', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('site-title-font-weight', newval);
+        });
+    });
+
+    // Site Title - Top Margin
+    wp.customize('vh360_site_title_top_margin', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('site-title-top-margin', newval + 'px');
+        });
+    });
+
+    // Site Title - Line Height
+    wp.customize('vh360_site_title_line_height', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('site-title-line-height', newval);
+        });
+    });
+
+    // Site Title - Vertical Alignment
+    wp.customize('vh360_site_title_vertical_align', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('site-title-vertical-align', newval);
+        });
+    });
+
+    // =============================================================================
+    // FORM CONTENT CONTROLS BINDINGS (Icons)
+    // =============================================================================
+
+    // Login Page Icons (already have bindings for text, adding icon change support)
+    // Note: Icons are media controls, they already have bindings above that update img src
+
+    // Register Page Icons (already have bindings above)
+    // Icons 1-4 already handled by existing bindings that update img src
+
+    // =============================================================================
+    // HELPER FUNCTIONS FOR GOOGLE FONTS
+    // =============================================================================
+
+    /**
+     * Load Google Font dynamically
+     * 
+     * @param {string} fontSlug Font slug (e.g., 'roboto', 'open-sans')
+     */
+    function loadGoogleFont(fontSlug) {
+        // System fonts don't need loading
+        if (fontSlug === 'system' || fontSlug === '' || !fontSlug) {
+            return;
+        }
+
+        // Map common font slugs to Google Fonts API names
+        var fontMap = {
+            'roboto': 'Roboto:400,500,600,700',
+            'open-sans': 'Open+Sans:400,500,600,700',
+            'lato': 'Lato:400,500,600,700',
+            'montserrat': 'Montserrat:400,500,600,700',
+            'poppins': 'Poppins:400,500,600,700',
+            'raleway': 'Raleway:400,500,600,700',
+            'ubuntu': 'Ubuntu:400,500,600,700',
+            'nunito': 'Nunito:400,500,600,700',
+            'playfair-display': 'Playfair+Display:400,500,600,700',
+            'merriweather': 'Merriweather:400,700'
+        };
+
+        var googleFontName = fontMap[fontSlug];
+        if (!googleFontName) {
+            return; // Unknown font, don't load
+        }
+
+        // Check if font is already loaded
+        var fontId = 'google-font-' + fontSlug;
+        if (document.getElementById(fontId)) {
+            return; // Already loaded
+        }
+
+        // Create and append link element
+        var link = document.createElement('link');
+        link.id = fontId;
+        link.rel = 'stylesheet';
+        link.href = 'https://fonts.googleapis.com/css2?family=' + googleFontName + '&display=swap';
+        document.head.appendChild(link);
+    }
+
+    /**
+     * Get CSS font-family value from font slug
+     * 
+     * @param {string} fontSlug Font slug
+     * @return {string} CSS font-family value
+     */
+    function getFontFamilyCSS(fontSlug) {
+        var fontFamilies = {
+            'system': '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+            'roboto': '"Roboto", sans-serif',
+            'open-sans': '"Open Sans", sans-serif',
+            'lato': '"Lato", sans-serif',
+            'montserrat': '"Montserrat", sans-serif',
+            'poppins': '"Poppins", sans-serif',
+            'raleway': '"Raleway", sans-serif',
+            'ubuntu': '"Ubuntu", sans-serif',
+            'nunito': '"Nunito", sans-serif',
+            'playfair-display': '"Playfair Display", serif',
+            'merriweather': '"Merriweather", serif'
+        };
+
+        return fontFamilies[fontSlug] || fontFamilies['system'];
+    }
+
 })(jQuery);
