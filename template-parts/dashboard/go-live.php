@@ -33,12 +33,13 @@ if (!is_user_logged_in()) {
 $current_user_id = get_current_user_id();
 
 // Determine if current user is allowed to host Live Rooms.
-// By default, this uses the vh360_host_live_rooms capability,
-// but it can be customized via the vh360_can_host_live_rooms filter.
-$can_host_live_rooms = apply_filters(
-    'vh360_can_host_live_rooms',
-    current_user_can('vh360_host_live_rooms')
-);
+// Use helper function with administrator override, or fall back to custom capability.
+// Can be customized via the vh360_can_host_live_rooms filter.
+$can_host_live_rooms = function_exists('vh360_user_can_host_live_rooms')
+    ? vh360_user_can_host_live_rooms($current_user_id)
+    : (current_user_can('manage_options') || current_user_can('vh360_host_live_rooms'));
+
+$can_host_live_rooms = apply_filters('vh360_can_host_live_rooms', $can_host_live_rooms);
 
 $errors = array();
 $success_message = '';

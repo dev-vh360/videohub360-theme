@@ -820,8 +820,12 @@ class VH360_Ajax_Handlers {
             ));
         }
         
-        // Check user permissions
-        if (!current_user_can('vh360_create_videos')) {
+        // Check user permissions - use helper with administrator override
+        $can_create_videos = function_exists('vh360_user_can_create_videos')
+            ? vh360_user_can_create_videos()
+            : (current_user_can('manage_options') || current_user_can('vh360_create_videos'));
+            
+        if (!$can_create_videos) {
             wp_send_json_error(array(
                 'message' => esc_html__('You do not have permission to create videos.', 'videohub360-theme'),
             ));

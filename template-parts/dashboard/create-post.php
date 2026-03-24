@@ -25,12 +25,13 @@ $current_user_id = get_current_user_id();
 $vh360_is_licensed = ( function_exists('vh360_theme_is_license_valid') ? vh360_theme_is_license_valid() : ( function_exists('videohub360_license_is_valid') && videohub360_license_is_valid() ) );
 $vh360_license_url = function_exists('vh360_theme_get_license_admin_url') ? vh360_theme_get_license_admin_url() : admin_url('admin.php?page=videohub360-license');
 // Determine if current user is allowed to create posts.
-// By default, this uses the vh360_create_posts capability,
-// but it can be customized via the vh360_can_create_posts filter.
-$can_create_posts = apply_filters(
-    'vh360_can_create_posts',
-    current_user_can('vh360_create_posts')
-);
+// Use helper function with administrator override, or fall back to custom capability.
+// Can be customized via the vh360_can_create_posts filter.
+$can_create_posts = function_exists('vh360_user_can_create_posts')
+    ? vh360_user_can_create_posts($current_user_id)
+    : (current_user_can('manage_options') || current_user_can('vh360_create_posts'));
+
+$can_create_posts = apply_filters('vh360_can_create_posts', $can_create_posts);
 
 $errors = array();
 $success_message = '';

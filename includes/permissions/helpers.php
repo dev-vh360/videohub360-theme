@@ -14,6 +14,72 @@ if (!defined('ABSPATH')) {
 }
 
 /**
+ * Check if user can host live rooms.
+ *
+ * Administrators always have permission via manage_options capability.
+ *
+ * @param int $user_id User ID. Defaults to current user.
+ * @return bool True if user can host live rooms.
+ */
+function vh360_user_can_host_live_rooms($user_id = 0) {
+    if (!$user_id) {
+        $user_id = get_current_user_id();
+    }
+    
+    if (!$user_id) {
+        return false;
+    }
+    
+    $can = user_can($user_id, 'manage_options') || user_can($user_id, 'vh360_host_live_rooms');
+    
+    return apply_filters('vh360_user_can_host_live_rooms', $can, $user_id);
+}
+
+/**
+ * Check if user can create videos.
+ *
+ * Administrators always have permission via manage_options capability.
+ *
+ * @param int $user_id User ID. Defaults to current user.
+ * @return bool True if user can create videos.
+ */
+function vh360_user_can_create_videos($user_id = 0) {
+    if (!$user_id) {
+        $user_id = get_current_user_id();
+    }
+    
+    if (!$user_id) {
+        return false;
+    }
+    
+    $can = user_can($user_id, 'manage_options') || user_can($user_id, 'vh360_create_videos');
+    
+    return apply_filters('vh360_user_can_create_videos', $can, $user_id);
+}
+
+/**
+ * Check if user can create posts.
+ *
+ * Administrators always have permission via manage_options capability.
+ *
+ * @param int $user_id User ID. Defaults to current user.
+ * @return bool True if user can create posts.
+ */
+function vh360_user_can_create_posts($user_id = 0) {
+    if (!$user_id) {
+        $user_id = get_current_user_id();
+    }
+    
+    if (!$user_id) {
+        return false;
+    }
+    
+    $can = user_can($user_id, 'manage_options') || user_can($user_id, 'vh360_create_posts');
+    
+    return apply_filters('vh360_user_can_create_posts', $can, $user_id);
+}
+
+/**
  * Check if user can create events.
  *
  * @param int $user_id User ID. Defaults to current user.
