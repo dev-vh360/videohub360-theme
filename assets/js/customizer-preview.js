@@ -15,6 +15,29 @@
         document.documentElement.style.setProperty('--' + variable, value);
     }
 
+    /**
+     * Helper function to update benefit text while preserving icon
+     * 
+     * Updates the text content of a benefit list item while preserving
+     * the icon span element that precedes the text.
+     * 
+     * @param {string} selector jQuery selector for the list item
+     * @param {string} newText New text content to set
+     */
+    function updateBenefitText(selector, newText) {
+        var $benefit = $(selector);
+        if ($benefit.length) {
+            // Find all text nodes and replace the first one (after the icon)
+            var textNodes = $benefit.contents().filter(function() {
+                return this.nodeType === 3; // Text node
+            });
+            if (textNodes.length > 0) {
+                // Replace text node with new text node
+                textNodes.first().replaceWith(document.createTextNode(newText));
+            }
+        }
+    }
+
     // Color Controls
     wp.customize('vh360_primary_color', function(value) {
         value.bind(function(newval) {
@@ -1268,8 +1291,12 @@
     // Business Landing - Client Card Title
     wp.customize('vh360_business_client_title', function(value) {
         value.bind(function(newval) {
-            // Client card is the second card, or first if only showing client
-            var $clientCard = $('.vh360-business-choice-card').last();
+            // Find client card by its secondary button class
+            var $clientCard = $('.vh360-business-choice-card:has(.vh360-button-secondary)');
+            if ($clientCard.length === 0) {
+                // Fallback: if no secondary button, it might be the only card
+                $clientCard = $('.vh360-business-choice-card').last();
+            }
             $clientCard.find('.vh360-business-choice-card-title').text(newval);
         });
     });
@@ -1277,7 +1304,10 @@
     // Business Landing - Client Card Description
     wp.customize('vh360_business_client_description', function(value) {
         value.bind(function(newval) {
-            var $clientCard = $('.vh360-business-choice-card').last();
+            var $clientCard = $('.vh360-business-choice-card:has(.vh360-button-secondary)');
+            if ($clientCard.length === 0) {
+                $clientCard = $('.vh360-business-choice-card').last();
+            }
             $clientCard.find('.vh360-business-choice-card-description').text(newval);
         });
     });
@@ -1285,28 +1315,40 @@
     // Business Landing - Client Features (1-4)
     wp.customize('vh360_business_client_feature_1', function(value) {
         value.bind(function(newval) {
-            var $clientCard = $('.vh360-business-choice-card').last();
+            var $clientCard = $('.vh360-business-choice-card:has(.vh360-button-secondary)');
+            if ($clientCard.length === 0) {
+                $clientCard = $('.vh360-business-choice-card').last();
+            }
             $clientCard.find('.vh360-business-choice-features li:eq(0)').text(newval);
         });
     });
 
     wp.customize('vh360_business_client_feature_2', function(value) {
         value.bind(function(newval) {
-            var $clientCard = $('.vh360-business-choice-card').last();
+            var $clientCard = $('.vh360-business-choice-card:has(.vh360-button-secondary)');
+            if ($clientCard.length === 0) {
+                $clientCard = $('.vh360-business-choice-card').last();
+            }
             $clientCard.find('.vh360-business-choice-features li:eq(1)').text(newval);
         });
     });
 
     wp.customize('vh360_business_client_feature_3', function(value) {
         value.bind(function(newval) {
-            var $clientCard = $('.vh360-business-choice-card').last();
+            var $clientCard = $('.vh360-business-choice-card:has(.vh360-button-secondary)');
+            if ($clientCard.length === 0) {
+                $clientCard = $('.vh360-business-choice-card').last();
+            }
             $clientCard.find('.vh360-business-choice-features li:eq(2)').text(newval);
         });
     });
 
     wp.customize('vh360_business_client_feature_4', function(value) {
         value.bind(function(newval) {
-            var $clientCard = $('.vh360-business-choice-card').last();
+            var $clientCard = $('.vh360-business-choice-card:has(.vh360-button-secondary)');
+            if ($clientCard.length === 0) {
+                $clientCard = $('.vh360-business-choice-card').last();
+            }
             $clientCard.find('.vh360-business-choice-features li:eq(3)').text(newval);
         });
     });
@@ -1314,7 +1356,10 @@
     // Business Landing - Client Button
     wp.customize('vh360_business_client_button', function(value) {
         value.bind(function(newval) {
-            var $clientCard = $('.vh360-business-choice-card').last();
+            var $clientCard = $('.vh360-business-choice-card:has(.vh360-button-secondary)');
+            if ($clientCard.length === 0) {
+                $clientCard = $('.vh360-business-choice-card').last();
+            }
             $clientCard.find('.vh360-business-choice-button').text(newval);
         });
     });
@@ -1362,29 +1407,25 @@
     // Professional Registration - Benefits 1-4
     wp.customize('vh360_professional_register_benefit_1', function(value) {
         value.bind(function(newval) {
-            var $benefit = $('.vh360-auth-wrapper.register-professional .vh360-auth-benefits-list li:eq(0)');
-            $benefit.contents().filter(function() { return this.nodeType === 3; }).first().replaceWith(newval);
+            updateBenefitText('.vh360-auth-wrapper.register-professional .vh360-auth-benefits-list li:eq(0)', newval);
         });
     });
 
     wp.customize('vh360_professional_register_benefit_2', function(value) {
         value.bind(function(newval) {
-            var $benefit = $('.vh360-auth-wrapper.register-professional .vh360-auth-benefits-list li:eq(1)');
-            $benefit.contents().filter(function() { return this.nodeType === 3; }).first().replaceWith(newval);
+            updateBenefitText('.vh360-auth-wrapper.register-professional .vh360-auth-benefits-list li:eq(1)', newval);
         });
     });
 
     wp.customize('vh360_professional_register_benefit_3', function(value) {
         value.bind(function(newval) {
-            var $benefit = $('.vh360-auth-wrapper.register-professional .vh360-auth-benefits-list li:eq(2)');
-            $benefit.contents().filter(function() { return this.nodeType === 3; }).first().replaceWith(newval);
+            updateBenefitText('.vh360-auth-wrapper.register-professional .vh360-auth-benefits-list li:eq(2)', newval);
         });
     });
 
     wp.customize('vh360_professional_register_benefit_4', function(value) {
         value.bind(function(newval) {
-            var $benefit = $('.vh360-auth-wrapper.register-professional .vh360-auth-benefits-list li:eq(3)');
-            $benefit.contents().filter(function() { return this.nodeType === 3; }).first().replaceWith(newval);
+            updateBenefitText('.vh360-auth-wrapper.register-professional .vh360-auth-benefits-list li:eq(3)', newval);
         });
     });
 
@@ -1423,29 +1464,25 @@
     // Client Registration - Benefits 1-4
     wp.customize('vh360_client_register_benefit_1', function(value) {
         value.bind(function(newval) {
-            var $benefit = $('.vh360-auth-wrapper.register-client .vh360-auth-benefits-list li:eq(0)');
-            $benefit.contents().filter(function() { return this.nodeType === 3; }).first().replaceWith(newval);
+            updateBenefitText('.vh360-auth-wrapper.register-client .vh360-auth-benefits-list li:eq(0)', newval);
         });
     });
 
     wp.customize('vh360_client_register_benefit_2', function(value) {
         value.bind(function(newval) {
-            var $benefit = $('.vh360-auth-wrapper.register-client .vh360-auth-benefits-list li:eq(1)');
-            $benefit.contents().filter(function() { return this.nodeType === 3; }).first().replaceWith(newval);
+            updateBenefitText('.vh360-auth-wrapper.register-client .vh360-auth-benefits-list li:eq(1)', newval);
         });
     });
 
     wp.customize('vh360_client_register_benefit_3', function(value) {
         value.bind(function(newval) {
-            var $benefit = $('.vh360-auth-wrapper.register-client .vh360-auth-benefits-list li:eq(2)');
-            $benefit.contents().filter(function() { return this.nodeType === 3; }).first().replaceWith(newval);
+            updateBenefitText('.vh360-auth-wrapper.register-client .vh360-auth-benefits-list li:eq(2)', newval);
         });
     });
 
     wp.customize('vh360_client_register_benefit_4', function(value) {
         value.bind(function(newval) {
-            var $benefit = $('.vh360-auth-wrapper.register-client .vh360-auth-benefits-list li:eq(3)');
-            $benefit.contents().filter(function() { return this.nodeType === 3; }).first().replaceWith(newval);
+            updateBenefitText('.vh360-auth-wrapper.register-client .vh360-auth-benefits-list li:eq(3)', newval);
         });
     });
 
@@ -1461,7 +1498,16 @@
     // =============================================================================
 
     /**
-     * Load Google Font dynamically
+     * Load Google Font dynamically in Customizer preview
+     * 
+     * Creates and appends a stylesheet link element for the specified Google Font
+     * if it hasn't been loaded yet. Only loads fonts that match the predefined
+     * font map. System fonts and unrecognized fonts are silently ignored.
+     * 
+     * Note: This function loads fonts from Google Fonts API over HTTPS. The fonts
+     * are loaded for preview purposes only and don't require SRI as they're not
+     * used in production - the actual font loading on the frontend is handled by
+     * the theme's font enqueueing system.
      * 
      * @param {string} fontSlug Font slug (e.g., 'roboto', 'open-sans')
      */
@@ -1487,16 +1533,17 @@
 
         var googleFontName = fontMap[fontSlug];
         if (!googleFontName) {
-            return; // Unknown font, don't load
+            // Unknown font slug - silently ignore
+            return;
         }
 
-        // Check if font is already loaded
+        // Check if font is already loaded to prevent duplicate loading
         var fontId = 'google-font-' + fontSlug;
         if (document.getElementById(fontId)) {
             return; // Already loaded
         }
 
-        // Create and append link element
+        // Create and append link element to load the Google Font
         var link = document.createElement('link');
         link.id = fontId;
         link.rel = 'stylesheet';
