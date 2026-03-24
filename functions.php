@@ -2512,7 +2512,7 @@ function vh360_ensure_administrator_core_caps() {
     }
 
     // Log if we updated capabilities
-    if ($needs_update && defined('WP_DEBUG') && WP_DEBUG) {
+    if ($needs_update && defined('WP_DEBUG') && WP_DEBUG && function_exists('vh360_debug_log')) {
         vh360_debug_log('Administrator role capabilities auto-healed with VH360 core capabilities.');
     }
 }
