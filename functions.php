@@ -2603,11 +2603,6 @@ function vh360_populate_menu_from_registry( $menu_id, $user_id = 0, $tab_ids = a
             continue;
         }
         
-        // Skip go-live as it appears in Quick Actions
-        if ( $tab_id === 'go-live' ) {
-            continue;
-        }
-        
         // Get label (no callback during setup, use static label)
         $label = $tab_config['label'];
         
@@ -2645,7 +2640,7 @@ function vh360_create_default_menus() {
         $dashboard_menu_id = wp_create_nav_menu( __( 'Dashboard Menu', 'videohub360-theme' ) );
         
         if ( ! is_wp_error( $dashboard_menu_id ) ) {
-            // Populate with all dashboard tabs except go-live
+            // Populate with all dashboard tabs from registry
             vh360_populate_menu_from_registry( $dashboard_menu_id, 0 );
             
             // Assign to location

@@ -55,17 +55,6 @@ $stats = vh360_get_user_stats($current_user_id);
         <?php endif; ?>
             </nav>
     
-    <!-- Quick Actions -->
-    <div class="vh360-dashboard-quick-actions">
-        <a href="#go-live" class="vh360-dashboard-btn vh360-dashboard-btn-go-live vh360-dashboard-tab" data-tab="go-live">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <circle cx="12" cy="12" r="3"></circle>
-            </svg>
-            <?php esc_html_e('Go Live', 'videohub360-theme'); ?>
-        </a>
-    </div>
-    
     <!-- Logout Link -->
     <div class="vh360-dashboard-logout">
         <a href="<?php echo esc_url(vh360_get_logout_url(home_url())); ?>" class="vh360-dashboard-logout-link">
@@ -119,34 +108,6 @@ $stats = vh360_get_user_stats($current_user_id);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-}
-
-/* Quick Actions */
-.vh360-dashboard-quick-actions {
-    padding: 1.5rem 0;
-    border-top: 1px solid var(--border-color);
-    margin-top: 1.5rem;
-}
-
-.vh360-dashboard-quick-actions .vh360-dashboard-btn {
-    width: 100%;
-    justify-content: center;
-}
-
-/* Go Live Button - Red background with white text/icon */
-.vh360-dashboard-btn-go-live {
-    background-color: #e53935 !important;
-    color: #ffffff !important;
-    border-color: #e53935 !important;
-}
-
-.vh360-dashboard-btn-go-live:hover {
-    background-color: #c62828 !important;
-    border-color: #c62828 !important;
-}
-
-.vh360-dashboard-btn-go-live svg {
-    stroke: #ffffff !important;
 }
 
 /* Logout Link */
