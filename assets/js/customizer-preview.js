@@ -10,6 +10,65 @@
 (function($) {
     'use strict';
 
+    // =============================================================================
+    // CONFIGURATION
+    // =============================================================================
+
+    /**
+     * Font configuration mapping
+     * Maps font slugs to both Google Fonts API names and CSS font-family values
+     */
+    var FONT_CONFIG = {
+        'system': {
+            googleFont: null,
+            cssFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+        },
+        'roboto': {
+            googleFont: 'Roboto:400,500,600,700',
+            cssFamily: '"Roboto", sans-serif'
+        },
+        'open-sans': {
+            googleFont: 'Open+Sans:400,500,600,700',
+            cssFamily: '"Open Sans", sans-serif'
+        },
+        'lato': {
+            googleFont: 'Lato:400,500,600,700',
+            cssFamily: '"Lato", sans-serif'
+        },
+        'montserrat': {
+            googleFont: 'Montserrat:400,500,600,700',
+            cssFamily: '"Montserrat", sans-serif'
+        },
+        'poppins': {
+            googleFont: 'Poppins:400,500,600,700',
+            cssFamily: '"Poppins", sans-serif'
+        },
+        'raleway': {
+            googleFont: 'Raleway:400,500,600,700',
+            cssFamily: '"Raleway", sans-serif'
+        },
+        'ubuntu': {
+            googleFont: 'Ubuntu:400,500,600,700',
+            cssFamily: '"Ubuntu", sans-serif'
+        },
+        'nunito': {
+            googleFont: 'Nunito:400,500,600,700',
+            cssFamily: '"Nunito", sans-serif'
+        },
+        'playfair-display': {
+            googleFont: 'Playfair+Display:400,500,600,700',
+            cssFamily: '"Playfair Display", serif'
+        },
+        'merriweather': {
+            googleFont: 'Merriweather:400,700',
+            cssFamily: '"Merriweather", serif'
+        }
+    };
+
+    // =============================================================================
+    // HELPER FUNCTIONS
+    // =============================================================================
+
     // Helper function to update CSS variable
     function updateCSSVariable(variable, value) {
         document.documentElement.style.setProperty('--' + variable, value);
@@ -37,6 +96,27 @@
             }
         }
     }
+
+    /**
+     * Helper function to get the client card element
+     * 
+     * Finds the client card by its secondary button class, with a fallback
+     * to the last card if the secondary button is not found (single-card mode).
+     * 
+     * @return {jQuery} jQuery object containing the client card
+     */
+    function getClientCard() {
+        var $clientCard = $('.vh360-business-choice-card:has(.vh360-button-secondary)');
+        if ($clientCard.length === 0) {
+            // Fallback: if no secondary button found, use last card
+            $clientCard = $('.vh360-business-choice-card').last();
+        }
+        return $clientCard;
+    }
+
+    // =============================================================================
+    // COLOR CONTROLS
+    // =============================================================================
 
     // Color Controls
     wp.customize('vh360_primary_color', function(value) {
@@ -1291,76 +1371,46 @@
     // Business Landing - Client Card Title
     wp.customize('vh360_business_client_title', function(value) {
         value.bind(function(newval) {
-            // Find client card by its secondary button class
-            var $clientCard = $('.vh360-business-choice-card:has(.vh360-button-secondary)');
-            if ($clientCard.length === 0) {
-                // Fallback: if no secondary button, it might be the only card
-                $clientCard = $('.vh360-business-choice-card').last();
-            }
-            $clientCard.find('.vh360-business-choice-card-title').text(newval);
+            getClientCard().find('.vh360-business-choice-card-title').text(newval);
         });
     });
 
     // Business Landing - Client Card Description
     wp.customize('vh360_business_client_description', function(value) {
         value.bind(function(newval) {
-            var $clientCard = $('.vh360-business-choice-card:has(.vh360-button-secondary)');
-            if ($clientCard.length === 0) {
-                $clientCard = $('.vh360-business-choice-card').last();
-            }
-            $clientCard.find('.vh360-business-choice-card-description').text(newval);
+            getClientCard().find('.vh360-business-choice-card-description').text(newval);
         });
     });
 
     // Business Landing - Client Features (1-4)
     wp.customize('vh360_business_client_feature_1', function(value) {
         value.bind(function(newval) {
-            var $clientCard = $('.vh360-business-choice-card:has(.vh360-button-secondary)');
-            if ($clientCard.length === 0) {
-                $clientCard = $('.vh360-business-choice-card').last();
-            }
-            $clientCard.find('.vh360-business-choice-features li:eq(0)').text(newval);
+            getClientCard().find('.vh360-business-choice-features li:eq(0)').text(newval);
         });
     });
 
     wp.customize('vh360_business_client_feature_2', function(value) {
         value.bind(function(newval) {
-            var $clientCard = $('.vh360-business-choice-card:has(.vh360-button-secondary)');
-            if ($clientCard.length === 0) {
-                $clientCard = $('.vh360-business-choice-card').last();
-            }
-            $clientCard.find('.vh360-business-choice-features li:eq(1)').text(newval);
+            getClientCard().find('.vh360-business-choice-features li:eq(1)').text(newval);
         });
     });
 
     wp.customize('vh360_business_client_feature_3', function(value) {
         value.bind(function(newval) {
-            var $clientCard = $('.vh360-business-choice-card:has(.vh360-button-secondary)');
-            if ($clientCard.length === 0) {
-                $clientCard = $('.vh360-business-choice-card').last();
-            }
-            $clientCard.find('.vh360-business-choice-features li:eq(2)').text(newval);
+            getClientCard().find('.vh360-business-choice-features li:eq(2)').text(newval);
         });
     });
 
     wp.customize('vh360_business_client_feature_4', function(value) {
         value.bind(function(newval) {
-            var $clientCard = $('.vh360-business-choice-card:has(.vh360-button-secondary)');
-            if ($clientCard.length === 0) {
-                $clientCard = $('.vh360-business-choice-card').last();
-            }
-            $clientCard.find('.vh360-business-choice-features li:eq(3)').text(newval);
+            getClientCard().find('.vh360-business-choice-features li:eq(3)').text(newval);
         });
     });
 
     // Business Landing - Client Button
     wp.customize('vh360_business_client_button', function(value) {
         value.bind(function(newval) {
-            var $clientCard = $('.vh360-business-choice-card:has(.vh360-button-secondary)');
-            if ($clientCard.length === 0) {
-                $clientCard = $('.vh360-business-choice-card').last();
-            }
-            $clientCard.find('.vh360-business-choice-button').text(newval);
+            getClientCard().find('.vh360-business-choice-button').text(newval);
         });
     });
 
@@ -1502,7 +1552,7 @@
      * 
      * Creates and appends a stylesheet link element for the specified Google Font
      * if it hasn't been loaded yet. Only loads fonts that match the predefined
-     * font map. System fonts and unrecognized fonts are silently ignored.
+     * font configuration. System fonts and unrecognized fonts are silently ignored.
      * 
      * Note: This function loads fonts from Google Fonts API over HTTPS. The fonts
      * are loaded for preview purposes only and don't require SRI as they're not
@@ -1512,28 +1562,15 @@
      * @param {string} fontSlug Font slug (e.g., 'roboto', 'open-sans')
      */
     function loadGoogleFont(fontSlug) {
-        // System fonts don't need loading
-        if (fontSlug === 'system' || fontSlug === '' || !fontSlug) {
+        // System fonts or empty slugs don't need loading
+        if (!fontSlug || fontSlug === '' || fontSlug === 'system') {
             return;
         }
 
-        // Map common font slugs to Google Fonts API names
-        var fontMap = {
-            'roboto': 'Roboto:400,500,600,700',
-            'open-sans': 'Open+Sans:400,500,600,700',
-            'lato': 'Lato:400,500,600,700',
-            'montserrat': 'Montserrat:400,500,600,700',
-            'poppins': 'Poppins:400,500,600,700',
-            'raleway': 'Raleway:400,500,600,700',
-            'ubuntu': 'Ubuntu:400,500,600,700',
-            'nunito': 'Nunito:400,500,600,700',
-            'playfair-display': 'Playfair+Display:400,500,600,700',
-            'merriweather': 'Merriweather:400,700'
-        };
-
-        var googleFontName = fontMap[fontSlug];
-        if (!googleFontName) {
-            // Unknown font slug - silently ignore
+        // Get font configuration
+        var fontConfig = FONT_CONFIG[fontSlug];
+        if (!fontConfig || !fontConfig.googleFont) {
+            // Unknown font slug or system font - silently ignore
             return;
         }
 
@@ -1547,7 +1584,7 @@
         var link = document.createElement('link');
         link.id = fontId;
         link.rel = 'stylesheet';
-        link.href = 'https://fonts.googleapis.com/css2?family=' + googleFontName + '&display=swap';
+        link.href = 'https://fonts.googleapis.com/css2?family=' + fontConfig.googleFont + '&display=swap';
         document.head.appendChild(link);
     }
 
@@ -1558,21 +1595,12 @@
      * @return {string} CSS font-family value
      */
     function getFontFamilyCSS(fontSlug) {
-        var fontFamilies = {
-            'system': '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-            'roboto': '"Roboto", sans-serif',
-            'open-sans': '"Open Sans", sans-serif',
-            'lato': '"Lato", sans-serif',
-            'montserrat': '"Montserrat", sans-serif',
-            'poppins': '"Poppins", sans-serif',
-            'raleway': '"Raleway", sans-serif',
-            'ubuntu': '"Ubuntu", sans-serif',
-            'nunito': '"Nunito", sans-serif',
-            'playfair-display': '"Playfair Display", serif',
-            'merriweather': '"Merriweather", serif'
-        };
-
-        return fontFamilies[fontSlug] || fontFamilies['system'];
+        var fontConfig = FONT_CONFIG[fontSlug];
+        if (fontConfig && fontConfig.cssFamily) {
+            return fontConfig.cssFamily;
+        }
+        // Default to system fonts if slug not found
+        return FONT_CONFIG.system.cssFamily;
     }
 
 })(jQuery);
