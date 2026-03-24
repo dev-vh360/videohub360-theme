@@ -7,9 +7,10 @@
  * Configurable via Appearance > Menus.
  * Theme location: vh360_mobile_bottom
  *
- * Rules:
- * - Minimum 3 items recommended for proper layout
- * - Maximum 5 items (extra items are trimmed by a filter in functions.php).
+ * Layout notes:
+ * - Minimum 3 items recommended for balanced mobile layout
+ * - Layout handles 1-5 items gracefully with flexbox
+ * - Maximum 5 items enforced by filter in functions.php
  *
  * Icon system (no dependencies):
  * - Add CSS classes to menu items (Screen Options > CSS Classes):

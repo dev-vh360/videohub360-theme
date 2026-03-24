@@ -2707,6 +2707,8 @@ function vh360_create_default_menus() {
         
         if ( ! is_wp_error( $mobile_drawer_menu_id ) ) {
             // Populate with key dashboard tabs
+            // Note: This is a curated subset for mobile UX, not all tabs.
+            // Admins can customize this menu via Appearance → Menus after creation.
             $drawer_tabs = array( 'overview', 'videos', 'live-rooms', 'messages', 'notifications', 
                                   'create-post', 'galleries', 'events', 'bulletins', 'settings' );
             vh360_populate_menu_from_registry( $mobile_drawer_menu_id, 0, $drawer_tabs );
