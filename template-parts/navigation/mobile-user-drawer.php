@@ -25,13 +25,6 @@ $profile   = get_author_posts_url( $user_id );
 // Use helper to get dashboard page URL
 $dashboard_url = vh360_get_dashboard_page_url();
 
-// "Go Live" CTA is sourced ONLY from vh360_mobile_drawer menu location
-// and controlled by the vh360-go-live-cta CSS class
-$go_live_item  = vh360_get_menu_item_by_class( 'vh360_mobile_drawer', 'vh360-go-live-cta' );
-$go_live_url   = $go_live_item && ! empty( $go_live_item->url ) ? $go_live_item->url : '';
-$go_live_label = $go_live_item && ! empty( $go_live_item->title ) ? wp_strip_all_tags( $go_live_item->title ) : __( 'Go Live', 'videohub360-theme' );
-$show_go_live  = ! empty( $go_live_url );
-
 $logout_url = function_exists( 'vh360_get_logout_url' ) ? vh360_get_logout_url( home_url() ) : wp_logout_url( home_url() );
 
 ?>
@@ -89,9 +82,6 @@ $logout_url = function_exists( 'vh360_get_logout_url' ) ? vh360_get_logout_url( 
                             );
                             $menu_items = apply_filters( 'wp_nav_menu_objects', $menu_items, $args );
                             
-                            // Filter out the CTA item to prevent duplicates (it appears in footer)
-                            $menu_items = vh360_filter_menu_items_excluding_class( $menu_items, 'vh360-go-live-cta' );
-                            
                             // Output menu items using drawer markup
                             foreach ( $menu_items as $item ) {
                                 if ( ! empty( $item->url ) ) {
@@ -118,18 +108,5 @@ $logout_url = function_exists( 'vh360_get_logout_url' ) ? vh360_get_logout_url( 
                 </div>
             </div>
         </div>
-
-        <?php if ( $show_go_live ) : ?>
-        <!-- Primary CTA (driven by Appearance → Menus visibility rules) -->
-        <div class="vh360-mobile-user-drawer__footer">
-            <a class="vh360-mobile-user-drawer__go-live" href="<?php echo esc_url( $go_live_url ); ?>">
-                <svg class="vh360-mobile-user-drawer__go-live-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <circle cx="12" cy="12" r="3"></circle>
-                </svg>
-                <?php echo esc_html( $go_live_label ); ?>
-            </a>
-        </div>
-        <?php endif; ?>
     </div>
 </div>

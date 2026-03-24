@@ -2708,15 +2708,6 @@ function vh360_create_default_menus() {
                                   'create-post', 'galleries', 'events', 'bulletins', 'settings' );
             vh360_populate_menu_from_registry( $mobile_drawer_menu_id, 0, $drawer_tabs );
             
-            // Add Go Live CTA with special class
-            wp_update_nav_menu_item( $mobile_drawer_menu_id, 0, array(
-                'menu-item-title'   => __( 'Go Live', 'videohub360-theme' ),
-                'menu-item-url'     => '#go-live',
-                'menu-item-status'  => 'publish',
-                'menu-item-type'    => 'custom',
-                'menu-item-classes' => 'vh360-go-live-cta',
-            ) );
-            
             // Assign to location
             $existing_locations['vh360_mobile_drawer'] = $mobile_drawer_menu_id;
         }
