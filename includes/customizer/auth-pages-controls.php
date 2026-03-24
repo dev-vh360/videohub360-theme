@@ -17,11 +17,10 @@ function vh360_register_auth_pages_controls($wp_customize) {
     
     // ==========================================
     // AUTH PAGES SECTION (Consolidated)
+    // Panel assignment handled in customizer.php via vh360_customize_assign_panels
     // ==========================================
     $wp_customize->add_section('vh360_auth_pages_design', array(
-        'title'       => __('Authentication Pages', 'videohub360-theme'),
-        'panel'       => 'vh360_components',
-        'priority'    => 20,
+        'title'       => __('Authentication Pages - Design', 'videohub360-theme'),
         'description' => __('Customize colors for Login, Register, Lost Password, and Reset Password pages. These pages share the same color scheme for consistency.', 'videohub360-theme'),
     ));
 

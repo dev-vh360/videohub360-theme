@@ -21,10 +21,10 @@ function vh360_register_color_controls($wp_customize) {
     
     // ==========================================
     // MAIN COLORS SECTION
+    // Panel assignment handled in customizer.php via vh360_customize_assign_panels
     // ==========================================
     $wp_customize->add_section('vh360_colors', array(
         'title'       => __('Colors', 'videohub360-theme'),
-        'priority'    => 30,
         'description' => __('Customize all theme colors. Changes preview in real-time.', 'videohub360-theme'),
     ));
 

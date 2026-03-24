@@ -16,11 +16,10 @@ function vh360_register_activity_feed_controls($wp_customize) {
     
     // ==========================================
     // ACTIVITY FEED SECTION
+    // Panel assignment handled in customizer.php via vh360_customize_assign_panels
     // ==========================================
     $wp_customize->add_section('vh360_activity_feed_design', array(
         'title'       => __('Activity Feed', 'videohub360-theme'),
-        'panel'       => 'vh360_components',
-        'priority'    => 30,
         'description' => __('Customize colors for Activity Feed page elements. Leave blank to use global theme colors.', 'videohub360-theme'),
     ));
 

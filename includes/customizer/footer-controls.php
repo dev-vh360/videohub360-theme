@@ -20,9 +20,9 @@ if (!defined('ABSPATH')) {
  */
 function vh360_register_footer_controls($wp_customize) {
     // Add Footer Settings section (footer colors are now in the main Colors section)
+    // Panel assignment handled in customizer.php via vh360_customize_assign_panels
     $wp_customize->add_section('vh360_footer_settings', array(
         'title'       => __('Footer Settings', 'videohub360-theme'),
-        'priority'    => 35,
         'description' => __('Customize footer content. Changes preview in real-time.', 'videohub360-theme'),
     ));
 

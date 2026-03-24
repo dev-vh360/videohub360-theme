@@ -19,9 +19,9 @@ if (!defined('ABSPATH')) {
  */
 function vh360_register_global_controls($wp_customize) {
     // Add Global Settings section
+    // Panel assignment handled in customizer.php via vh360_customize_assign_panels
     $wp_customize->add_section('vh360_global_settings', array(
         'title'       => __('Global Settings', 'videohub360-theme'),
-        'priority'    => 30,
         'description' => __('General theme settings that apply globally across your site.', 'videohub360-theme'),
     ));
     
