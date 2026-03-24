@@ -202,30 +202,6 @@
     border-top: 1px solid rgba(0, 0, 0, 0.06);
   }
 
-  .vh360-mobile-user-drawer__go-live {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    width: 100%;
-    padding: 14px 14px;
-    border-radius: 14px;
-    text-decoration: none;
-    font-weight: 800;
-    letter-spacing: 0.01em;
-    background: #ef4444;
-    color: #ffffff;
-    box-shadow: 0 8px 18px rgba(239, 68, 68, 0.25);
-  }
-
-  .vh360-mobile-user-drawer__go-live:active {
-    transform: scale(0.99);
-  }
-
-  .vh360-mobile-user-drawer__go-live-icon {
-    display: block;
-  }
-
   .vh360-mobile-user-drawer__section {
     margin-top: 12px;
   }

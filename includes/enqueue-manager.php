@@ -153,17 +153,17 @@ function vh360_enqueue_dashboard_assets() {
             true
         );
         
-        // Enqueue Go Live form assets
+        // Enqueue Live Rooms form assets
         wp_enqueue_style(
-            'vh360-go-live',
-            VH360_THEME_URI . '/assets/css/go-live.css',
+            'vh360-live-rooms',
+            VH360_THEME_URI . '/assets/css/live-rooms.css',
             array('vh360-dashboard'),
             VH360_THEME_VERSION
         );
         
         wp_enqueue_script(
-            'vh360-go-live-script',
-            VH360_THEME_URI . '/assets/js/go-live.js',
+            'vh360-live-rooms-script',
+            VH360_THEME_URI . '/assets/js/live-rooms.js',
             array('jquery', 'vh360-dashboard-script'),
             VH360_THEME_VERSION,
             true
