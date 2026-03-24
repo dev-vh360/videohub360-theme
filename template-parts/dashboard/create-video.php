@@ -30,8 +30,10 @@ if (function_exists('vh360_theme_is_license_valid')) {
 }
 $vh360_license_url = function_exists('vh360_theme_get_license_admin_url') ? vh360_theme_get_license_admin_url() : admin_url('admin.php?page=videohub360-license');
 
-// Check user capability
-$can_create_videos = current_user_can('vh360_create_videos');
+// Check user capability - use helper with administrator override
+$can_create_videos = function_exists('vh360_user_can_create_videos')
+    ? vh360_user_can_create_videos($current_user_id)
+    : (current_user_can('manage_options') || current_user_can('vh360_create_videos'));
 
 // Check if we're in edit mode
 $edit_mode = false;

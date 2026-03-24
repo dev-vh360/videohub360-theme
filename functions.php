@@ -2479,6 +2479,60 @@ add_action( 'admin_notices', function () {
     echo '</p></div>';
 } );
 
+/**
+ * Ensure administrator role has core VH360 custom capabilities.
+ *
+ * This function auto-heals the administrator role by adding core dashboard
+ * capabilities that administrators should always have. This runs on theme
+ * activation and on admin_init to ensure administrators can access dashboard
+ * features even if the permissions settings have never been saved.
+ *
+ * @since 1.4.0
+ */
+function vh360_ensure_administrator_core_caps() {
+    $admin = get_role('administrator');
+    if (!$admin) {
+        return;
+    }
+
+    $caps = array(
+        'vh360_create_posts',
+        'vh360_create_videos',
+        'vh360_host_live_rooms',
+        'vh360_create_events',
+        'vh360_create_bulletins',
+    );
+
+    $needs_update = false;
+    foreach ($caps as $cap) {
+        if (!$admin->has_cap($cap)) {
+            $admin->add_cap($cap);
+            $needs_update = true;
+        }
+    }
+
+    // Log if we updated capabilities
+    if ($needs_update && defined('WP_DEBUG') && WP_DEBUG) {
+        vh360_debug_log('Administrator role capabilities auto-healed with VH360 core capabilities.');
+    }
+}
+
+// Run on theme activation to ensure fresh installs have correct permissions
+add_action('after_switch_theme', 'vh360_ensure_administrator_core_caps');
+
+// Run on admin_init to auto-heal if capabilities are missing (e.g., after upgrades or role modifications)
+add_action('admin_init', function() {
+    // Only run occasionally to avoid overhead - use transient to limit frequency
+    $last_check = get_transient('vh360_admin_caps_check');
+    if ($last_check !== false) {
+        return;
+    }
+    
+    // Set transient to prevent running again for 1 day
+    set_transient('vh360_admin_caps_check', true, DAY_IN_SECONDS);
+    
+    vh360_ensure_administrator_core_caps();
+}, 999);
 
 
 
