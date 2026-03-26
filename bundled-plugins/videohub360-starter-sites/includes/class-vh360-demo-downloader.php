@@ -114,6 +114,7 @@ class VH360_Demo_Downloader {
      * @return bool|WP_Error True if valid, WP_Error otherwise
      */
     private function validate_manifest($manifest) {
+        // Required top-level fields
         $required_fields = array('demo_id', 'version', 'files');
         
         foreach ($required_fields as $field) {
@@ -124,6 +125,29 @@ class VH360_Demo_Downloader {
         
         if (!is_array($manifest['files'])) {
             return new WP_Error('manifest_invalid_files', __('Manifest files must be an array', 'videohub360-starter-sites'));
+        }
+        
+        // Validate post_import section if present (recommended approach)
+        if (isset($manifest['post_import'])) {
+            if (!is_array($manifest['post_import'])) {
+                return new WP_Error('manifest_invalid_post_import', __('Manifest post_import must be an array', 'videohub360-starter-sites'));
+            }
+            
+            // Validate homepage config if present
+            if (isset($manifest['post_import']['homepage'])) {
+                if (!is_array($manifest['post_import']['homepage'])) {
+                    return new WP_Error('manifest_invalid_homepage', __('Homepage config must be an array', 'videohub360-starter-sites'));
+                }
+                
+                if (!isset($manifest['post_import']['homepage']['slug']) && !isset($manifest['post_import']['homepage']['title'])) {
+                    return new WP_Error('manifest_missing_homepage_identifier', __('Homepage must have slug or title', 'videohub360-starter-sites'));
+                }
+            }
+            
+            // Validate menus config if present
+            if (isset($manifest['post_import']['menus']) && !is_array($manifest['post_import']['menus'])) {
+                return new WP_Error('manifest_invalid_menus', __('Menus config must be an array', 'videohub360-starter-sites'));
+            }
         }
         
         return true;
