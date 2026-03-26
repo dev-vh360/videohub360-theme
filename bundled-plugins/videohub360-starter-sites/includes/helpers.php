@@ -26,7 +26,7 @@ function vh360_ss_get_temp_dir() {
  * @return string Registry URL
  */
 function vh360_ss_get_registry_url() {
-    return apply_filters('vh360_ss_registry_url', 'https://demos.videohub360.com/registry.json');
+    return apply_filters('vh360_ss_registry_url', 'https://videohub360.com/registry.json');
 }
 
 /**
