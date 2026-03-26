@@ -106,22 +106,6 @@ function videohub360_theme_setup() {
         'flex-width'  => true,
     ));
 
-    // Add support for custom header
-    add_theme_support('custom-header', array(
-        'default-image'      => '',
-        'width'              => 1920,
-        'height'             => 500,
-        'flex-height'        => true,
-        'flex-width'         => true,
-        'header-text'        => true,
-        'default-text-color' => '1f2937',
-    ));
-
-    // Add support for custom background
-    add_theme_support('custom-background', array(
-        'default-color' => 'ffffff',
-    ));
-
     // Add support for editor styles
     add_theme_support('editor-styles');
 
