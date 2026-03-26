@@ -290,6 +290,7 @@ class VH360_Demo_Importer {
         
         $missing_plugins = array();
         $activated_plugins = array();
+        $installed_plugins = array();
         
         foreach ($this->current_demo['required_plugins'] as $plugin_slug) {
             // Check if already active
@@ -311,8 +312,34 @@ class VH360_Demo_Importer {
                     $activated_plugins[] = $plugin_slug;
                 }
             } else {
-                $this->logger->error(sprintf('Required plugin not installed: %s', $plugin_slug));
-                $missing_plugins[] = $plugin_slug;
+                // Plugin not installed - try to install if it's bundled
+                if (vh360_ss_is_bundled_plugin($plugin_slug)) {
+                    $this->logger->info(sprintf('Installing bundled plugin: %s', $plugin_slug));
+                    $install_result = vh360_ss_install_bundled_plugin($plugin_slug);
+                    
+                    if (is_wp_error($install_result)) {
+                        $this->logger->error(sprintf('Failed to install plugin %s: %s', $plugin_slug, $install_result->get_error_message()));
+                        $missing_plugins[] = $plugin_slug;
+                    } else {
+                        $this->logger->success(sprintf('Installed plugin: %s', $plugin_slug));
+                        $installed_plugins[] = $plugin_slug;
+                        
+                        // Now activate the newly installed plugin
+                        $this->logger->info(sprintf('Activating newly installed plugin: %s', $plugin_slug));
+                        $activation_result = vh360_ss_activate_plugin($plugin_slug);
+                        
+                        if (is_wp_error($activation_result)) {
+                            $this->logger->error(sprintf('Failed to activate plugin %s: %s', $plugin_slug, $activation_result->get_error_message()));
+                            $missing_plugins[] = $plugin_slug;
+                        } else {
+                            $this->logger->success(sprintf('Activated plugin: %s', $plugin_slug));
+                            $activated_plugins[] = $plugin_slug;
+                        }
+                    }
+                } else {
+                    $this->logger->error(sprintf('Required plugin not installed and not bundled: %s', $plugin_slug));
+                    $missing_plugins[] = $plugin_slug;
+                }
             }
         }
         
@@ -322,6 +349,10 @@ class VH360_Demo_Importer {
                 implode(', ', $missing_plugins)
             );
             return new WP_Error('required_plugins_unavailable', $error_message);
+        }
+        
+        if (!empty($installed_plugins)) {
+            $this->logger->success(sprintf('Installed %d required plugins', count($installed_plugins)));
         }
         
         if (!empty($activated_plugins)) {

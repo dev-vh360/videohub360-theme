@@ -148,6 +148,92 @@ function vh360_ss_activate_plugin($plugin_slug) {
 }
 
 /**
+ * Get bundled plugin ZIP path if it exists
+ *
+ * @param string $plugin_slug Plugin slug
+ * @return string|false Path to ZIP file or false if not found
+ */
+function vh360_ss_get_bundled_plugin_path($plugin_slug) {
+    // Map plugin slugs to ZIP filenames
+    $bundled_plugins = array(
+        'videohub360' => 'videohub360-core.zip',
+        'videohub360-core' => 'videohub360-core.zip',
+        'videohub360-community' => 'videohub360-community.zip',
+        'vh360-pwa-app' => 'vh360-pwa-app.zip',
+        'videohub360-starter-sites' => 'videohub360-starter-sites.zip',
+    );
+    
+    if (!isset($bundled_plugins[$plugin_slug])) {
+        return false;
+    }
+    
+    $zip_path = get_template_directory() . '/bundled-plugins/' . $bundled_plugins[$plugin_slug];
+    
+    if (file_exists($zip_path)) {
+        return $zip_path;
+    }
+    
+    return false;
+}
+
+/**
+ * Check if a plugin is bundled with the theme
+ *
+ * @param string $plugin_slug Plugin slug
+ * @return bool True if bundled
+ */
+function vh360_ss_is_bundled_plugin($plugin_slug) {
+    return vh360_ss_get_bundled_plugin_path($plugin_slug) !== false;
+}
+
+/**
+ * Install a bundled plugin from ZIP file
+ *
+ * @param string $plugin_slug Plugin slug
+ * @return bool|WP_Error True on success, WP_Error on failure
+ */
+function vh360_ss_install_bundled_plugin($plugin_slug) {
+    $zip_path = vh360_ss_get_bundled_plugin_path($plugin_slug);
+    
+    if (!$zip_path) {
+        return new WP_Error('not_bundled', sprintf(__('Plugin is not bundled: %s', 'videohub360-starter-sites'), $plugin_slug));
+    }
+    
+    if (!file_exists($zip_path)) {
+        return new WP_Error('zip_not_found', sprintf(__('Bundled plugin ZIP not found: %s', 'videohub360-starter-sites'), $zip_path));
+    }
+    
+    // Load required WordPress classes
+    if (!class_exists('Plugin_Upgrader')) {
+        require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
+    }
+    
+    if (!class_exists('WP_Ajax_Upgrader_Skin')) {
+        require_once ABSPATH . 'wp-admin/includes/class-wp-ajax-upgrader-skin.php';
+    }
+    
+    // Use WP_Ajax_Upgrader_Skin for silent installation
+    $skin = new WP_Ajax_Upgrader_Skin();
+    $upgrader = new Plugin_Upgrader($skin);
+    
+    // Install the plugin
+    $result = $upgrader->install($zip_path);
+    
+    if (is_wp_error($result)) {
+        return $result;
+    }
+    
+    if (!$result) {
+        return new WP_Error('install_failed', sprintf(__('Failed to install plugin: %s', 'videohub360-starter-sites'), $plugin_slug));
+    }
+    
+    // Clear plugin cache
+    wp_cache_delete('plugins', 'plugins');
+    
+    return true;
+}
+
+/**
  * Format file size for display
  *
  * @param int $bytes Size in bytes
