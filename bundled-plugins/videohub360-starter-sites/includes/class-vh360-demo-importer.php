@@ -104,15 +104,15 @@ class VH360_Demo_Importer {
         $this->logger->info('========== STARTING DEMO IMPORT ==========');
         $this->logger->info('Demo ID: ' . $demo_id);
         
-        // Set import in progress flag
-        vh360_ss_set_import_running($demo_id);
-        
         try {
-            // Step 1: Validate environment
+            // Step 1: Validate environment (BEFORE setting lock)
             $validation = $this->validate_environment();
             if (is_wp_error($validation)) {
                 throw new Exception($validation->get_error_message());
             }
+            
+            // Set import in progress flag AFTER validation passes
+            vh360_ss_set_import_running($demo_id);
             
             // Step 2: Get demo data from registry
             $demo = $this->registry->get_demo($demo_id);
@@ -190,17 +190,18 @@ class VH360_Demo_Importer {
             // Clear import in progress flag
             vh360_ss_clear_import_running();
             
-            // Save log
-            $this->logger->save();
-            
+            // Log completion BEFORE saving
             $this->logger->info('========== DEMO IMPORT COMPLETED ==========');
+            
+            // Save log AFTER all entries are written
+            $this->logger->save();
             
             return array(
                 'success' => true,
                 'demo_id' => $demo_id,
                 'demo_name' => $demo['name'],
                 'verification' => $verification,
-                'log' => $this->logger->get_entries(),
+                'log' => $this->logger->get_last_log(),
             );
             
         } catch (Exception $e) {
@@ -276,21 +277,44 @@ class VH360_Demo_Importer {
             return true;
         }
         
-        $inactive_plugins = array();
+        $missing_plugins = array();
+        $activated_plugins = array();
         
         foreach ($this->current_demo['required_plugins'] as $plugin_slug) {
-            if (!vh360_ss_is_plugin_active($plugin_slug)) {
-                $inactive_plugins[] = $plugin_slug;
+            // Check if already active
+            if (vh360_ss_is_plugin_active($plugin_slug)) {
+                $this->logger->info(sprintf('Plugin already active: %s', $plugin_slug));
+                continue;
+            }
+            
+            // Check if installed but inactive
+            if (vh360_ss_is_plugin_installed($plugin_slug)) {
+                $this->logger->info(sprintf('Activating plugin: %s', $plugin_slug));
+                $activation_result = vh360_ss_activate_plugin($plugin_slug);
+                
+                if (is_wp_error($activation_result)) {
+                    $this->logger->error(sprintf('Failed to activate plugin %s: %s', $plugin_slug, $activation_result->get_error_message()));
+                    $missing_plugins[] = $plugin_slug;
+                } else {
+                    $this->logger->success(sprintf('Activated plugin: %s', $plugin_slug));
+                    $activated_plugins[] = $plugin_slug;
+                }
+            } else {
+                $this->logger->error(sprintf('Required plugin not installed: %s', $plugin_slug));
+                $missing_plugins[] = $plugin_slug;
             }
         }
         
-        if (!empty($inactive_plugins)) {
+        if (!empty($missing_plugins)) {
             $error_message = sprintf(
-                __('Required plugins are not active: %s', 'videohub360-starter-sites'),
-                implode(', ', $inactive_plugins)
+                __('Required plugins are not available: %s. Please install and activate these plugins before importing.', 'videohub360-starter-sites'),
+                implode(', ', $missing_plugins)
             );
-            $this->logger->error($error_message);
-            return new WP_Error('required_plugins_inactive', $error_message);
+            return new WP_Error('required_plugins_unavailable', $error_message);
+        }
+        
+        if (!empty($activated_plugins)) {
+            $this->logger->success(sprintf('Activated %d required plugins', count($activated_plugins)));
         }
         
         $this->logger->success('All required plugins are active');

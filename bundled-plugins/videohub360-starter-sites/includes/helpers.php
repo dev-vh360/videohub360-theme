@@ -44,6 +44,44 @@ function vh360_ss_check_elementor($min_version = '3.0.0') {
 }
 
 /**
+ * Get plugin file path for known bundled plugins
+ *
+ * @param string $plugin_slug Plugin slug
+ * @return string|false Plugin file path or false if not found
+ */
+function vh360_ss_get_plugin_file($plugin_slug) {
+    // Explicit mapping for known VH360 bundled plugins
+    $plugin_files = array(
+        'videohub360' => 'videohub360-core/videohub360.php',
+        'videohub360-core' => 'videohub360-core/videohub360.php',
+        'videohub360-community' => 'videohub360-community/videohub360-community.php',
+        'vh360-pwa-app' => 'vh360-pwa-app/vh360-pwa-app.php',
+        'videohub360-starter-sites' => 'videohub360-starter-sites/videohub360-starter-sites.php',
+        'elementor' => 'elementor/elementor.php',
+    );
+    
+    // Check if we have an explicit mapping
+    if (isset($plugin_files[$plugin_slug])) {
+        return $plugin_files[$plugin_slug];
+    }
+    
+    // Fallback: try common patterns
+    $patterns = array(
+        $plugin_slug . '/' . $plugin_slug . '.php',
+        $plugin_slug . '/plugin.php',
+        $plugin_slug . '/index.php',
+    );
+    
+    foreach ($patterns as $pattern) {
+        if (file_exists(WP_PLUGIN_DIR . '/' . $pattern)) {
+            return $pattern;
+        }
+    }
+    
+    return false;
+}
+
+/**
  * Check if a plugin is active
  *
  * @param string $plugin_slug Plugin slug
@@ -54,20 +92,59 @@ function vh360_ss_is_plugin_active($plugin_slug) {
         include_once ABSPATH . 'wp-admin/includes/plugin.php';
     }
     
-    // Check common plugin file patterns
-    $plugin_files = array(
-        $plugin_slug . '/' . $plugin_slug . '.php',
-        $plugin_slug . '/plugin.php',
-        $plugin_slug . '/index.php',
-    );
+    $plugin_file = vh360_ss_get_plugin_file($plugin_slug);
     
-    foreach ($plugin_files as $plugin_file) {
-        if (is_plugin_active($plugin_file)) {
-            return true;
-        }
+    if ($plugin_file && is_plugin_active($plugin_file)) {
+        return true;
     }
     
     return false;
+}
+
+/**
+ * Check if a plugin is installed but not active
+ *
+ * @param string $plugin_slug Plugin slug
+ * @return bool True if installed but inactive
+ */
+function vh360_ss_is_plugin_installed($plugin_slug) {
+    $plugin_file = vh360_ss_get_plugin_file($plugin_slug);
+    
+    if ($plugin_file && file_exists(WP_PLUGIN_DIR . '/' . $plugin_file)) {
+        return true;
+    }
+    
+    return false;
+}
+
+/**
+ * Activate a plugin
+ *
+ * @param string $plugin_slug Plugin slug
+ * @return bool|WP_Error True on success, WP_Error on failure
+ */
+function vh360_ss_activate_plugin($plugin_slug) {
+    if (!function_exists('activate_plugin')) {
+        include_once ABSPATH . 'wp-admin/includes/plugin.php';
+    }
+    
+    $plugin_file = vh360_ss_get_plugin_file($plugin_slug);
+    
+    if (!$plugin_file) {
+        return new WP_Error('plugin_not_found', sprintf(__('Plugin file not found for: %s', 'videohub360-starter-sites'), $plugin_slug));
+    }
+    
+    if (!file_exists(WP_PLUGIN_DIR . '/' . $plugin_file)) {
+        return new WP_Error('plugin_not_installed', sprintf(__('Plugin not installed: %s', 'videohub360-starter-sites'), $plugin_slug));
+    }
+    
+    $result = activate_plugin($plugin_file);
+    
+    if (is_wp_error($result)) {
+        return $result;
+    }
+    
+    return true;
 }
 
 /**
