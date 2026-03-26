@@ -166,6 +166,12 @@
         });
     });
 
+    wp.customize('vh360_site_header_bg_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('site-header-bg-color', newval);
+        });
+    });
+
     wp.customize('vh360_bg_light_color', function(value) {
         value.bind(function(newval) {
             updateCSSVariable('bg-light', newval);
