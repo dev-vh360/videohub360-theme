@@ -52,9 +52,9 @@ function vh360_register_required_plugins() {
             'name'     => 'VideoHub360 Starter Sites',
             'slug'     => 'videohub360-starter-sites',
             'source'   => get_template_directory() . '/bundled-plugins/videohub360-starter-sites.zip',
-            'required' => false,
+            'required' => true,
             'version'  => '1.0.0',
-            'force_activation'   => false,
+            'force_activation'   => true,
             'force_deactivation' => false,
         ),
     );
