@@ -34,14 +34,24 @@ function vh360_starter_sites_check_theme() {
     $theme = wp_get_theme();
     $parent_theme = $theme->parent();
     
-    $theme_slug = $parent_theme ? $parent_theme->get_stylesheet() : $theme->get_stylesheet();
+    // Get the actual theme object (parent if child theme)
+    $active_theme = $parent_theme ? $parent_theme : $theme;
     
-    if ($theme_slug !== 'videohub360-theme') {
-        add_action('admin_notices', 'vh360_starter_sites_theme_notice');
-        return false;
+    // Check theme name (more reliable than slug)
+    $theme_name = $active_theme->get('Name');
+    $theme_template = $active_theme->get_template();
+    
+    // Accept if theme name contains "VideoHub360" or template contains "videohub360"
+    if (
+        stripos($theme_name, 'VideoHub360') !== false ||
+        stripos($theme_template, 'videohub360') !== false ||
+        function_exists('vh360_get_theme_version') // VH360-specific function exists
+    ) {
+        return true;
     }
     
-    return true;
+    add_action('admin_notices', 'vh360_starter_sites_theme_notice');
+    return false;
 }
 
 /**
