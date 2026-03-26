@@ -10,7 +10,7 @@
 (function($) {
     'use strict';
     
-    const VH360Notifications = {
+    window.VH360Notifications = {
         
         /**
          * Initialize
@@ -138,7 +138,7 @@
             
             let html = '';
             notifications.forEach(function(notification) {
-                html += VH360Notifications.getNotificationItemHTML(notification);
+                html += window.VH360Notifications.getNotificationItemHTML(notification);
             });
             
             this.notificationList.html(html);
@@ -296,7 +296,7 @@
     
     // Initialize on document ready
     $(document).ready(function() {
-        VH360Notifications.init();
+        window.VH360Notifications.init();
     });
     
 })(jQuery);

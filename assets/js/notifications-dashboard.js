@@ -276,6 +276,13 @@
                             .removeClass('vh360-notification-item--unread')
                             .find('.vh360-notification-unread-indicator').remove();
                         
+                        // Update header badge with server response count
+                        if (response.data && typeof response.data.count !== 'undefined') {
+                            if (window.VH360Notifications && window.VH360Notifications.updateBadge) {
+                                window.VH360Notifications.updateBadge(response.data.count);
+                            }
+                        }
+                        
                         self.updateStats();
                     }
                 }
@@ -301,6 +308,13 @@
                         $('.vh360-notification-item-dashboard')
                             .removeClass('vh360-notification-item--unread')
                             .find('.vh360-notification-unread-indicator').remove();
+                        
+                        // Update header badge with server response count (should be 0)
+                        if (response.data && typeof response.data.count !== 'undefined') {
+                            if (window.VH360Notifications && window.VH360Notifications.updateBadge) {
+                                window.VH360Notifications.updateBadge(response.data.count);
+                            }
+                        }
                         
                         self.updateStats();
                         self.showNotification(vh360NotificationsDashboard.strings.markedAllRead, 'success');
@@ -336,6 +350,13 @@
                                 }
                             });
                         
+                        // Update header badge with server response count
+                        if (response.data && typeof response.data.count !== 'undefined') {
+                            if (window.VH360Notifications && window.VH360Notifications.updateBadge) {
+                                window.VH360Notifications.updateBadge(response.data.count);
+                            }
+                        }
+                        
                         self.updateStats();
                     } else {
                         self.showNotification(response.data.message || vh360NotificationsDashboard.strings.error, 'error');
@@ -362,6 +383,14 @@
                     if (response.success) {
                         self.currentPage = 1;
                         self.loadNotifications(true);
+                        
+                        // Update header badge with server response count
+                        if (response.data && typeof response.data.count !== 'undefined') {
+                            if (window.VH360Notifications && window.VH360Notifications.updateBadge) {
+                                window.VH360Notifications.updateBadge(response.data.count);
+                            }
+                        }
+                        
                         self.updateStats();
                         self.showNotification(vh360NotificationsDashboard.strings.deletedRead, 'success');
                     } else {
@@ -389,6 +418,14 @@
                     if (response.success) {
                         self.container.empty();
                         self.showEmpty();
+                        
+                        // Update header badge with server response count (should be 0)
+                        if (response.data && typeof response.data.count !== 'undefined') {
+                            if (window.VH360Notifications && window.VH360Notifications.updateBadge) {
+                                window.VH360Notifications.updateBadge(response.data.count);
+                            }
+                        }
+                        
                         self.updateStats();
                         self.showNotification(vh360NotificationsDashboard.strings.clearedAll, 'success');
                     } else {
