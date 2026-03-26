@@ -12,7 +12,7 @@
    ========================================================================== */
 
 .site-header {
-    background-color: var(--bg-color);
+    background-color: var(--site-header-bg-color, var(--bg-color));
     border-bottom: 1px solid var(--border-color);
     min-height: var(--header-height);
     display: flex;

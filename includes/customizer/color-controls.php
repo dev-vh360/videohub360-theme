@@ -71,6 +71,12 @@ function vh360_register_color_controls($wp_customize) {
             'description' => __('Page background, card backgrounds', 'videohub360-theme'),
             'priority'    => 60,
         ),
+        'vh360_site_header_bg_color' => array(
+            'default'     => '#ffffff',
+            'label'       => __('Site Header Background', 'videohub360-theme'),
+            'description' => __('Navigation header background color', 'videohub360-theme'),
+            'priority'    => 65,
+        ),
         'vh360_bg_light_color' => array(
             'default'     => '#f9fafb',
             'label'       => __('Light Background', 'videohub360-theme'),
