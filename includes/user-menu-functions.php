@@ -512,10 +512,6 @@ function vh360_render_mobile_drawer_menu_meta_box() {
     // Build drawer menu items with query-based URLs (tab=... format)
     $drawer_menu_items = array(
         array(
-            'title' => __('Go Live', 'videohub360-theme'),
-            'tab'   => 'go-live',
-        ),
-        array(
             'title' => __('Dashboard', 'videohub360-theme'),
             'tab' => 'overview',
         ),
@@ -580,9 +576,6 @@ function vh360_render_mobile_drawer_menu_meta_box() {
                 foreach ($drawer_menu_items as $drawer_item) : 
                     // Use the new helper function for consistent URL generation
                     $item_url = vh360_get_dashboard_tab_url( $drawer_item['tab'] );
-                    
-                    // Auto-assign CTA class for "Go Live" item
-                    $item_classes = ( $drawer_item['tab'] === 'go-live' ) ? 'vh360-go-live-cta' : '';
                 ?>
                 <li>
                     <label class="menu-item-title">
@@ -731,69 +724,3 @@ function vh360_get_dashboard_tab_url( $tab ) {
     // Append tab parameter safely using add_query_arg()
     return add_query_arg( 'tab', $tab, $base_dashboard_url );
 }
-
-/**
- * Enforce Go Live CTA class on menu save
- * 
- * Automatically adds vh360-go-live-cta class to items with tab=go-live in vh360_mobile_drawer menu
- * and ensures only one CTA item exists in that menu.
- * 
- * @param int $menu_id Menu ID
- * @param int $menu_item_db_id Menu item database ID
- * @param array $args Menu item data
- */
-function vh360_enforce_go_live_cta_class( $menu_id, $menu_item_db_id, $args ) {
-    // Get the menu locations
-    $locations = get_nav_menu_locations();
-    
-    // Check if this menu is assigned to vh360_mobile_drawer location
-    $is_mobile_drawer_menu = false;
-    if ( ! empty( $locations['vh360_mobile_drawer'] ) && (int) $locations['vh360_mobile_drawer'] === (int) $menu_id ) {
-        $is_mobile_drawer_menu = true;
-    }
-    
-    if ( ! $is_mobile_drawer_menu ) {
-        return;
-    }
-    
-    // Get current item's URL
-    $item_url = isset( $args['menu-item-url'] ) ? $args['menu-item-url'] : '';
-    
-    // Check if this item contains tab=go-live
-    $contains_go_live = ! empty( $item_url ) && false !== strpos( $item_url, 'tab=go-live' );
-    
-    if ( $contains_go_live ) {
-        // Get current classes
-        $classes = isset( $args['menu-item-classes'] ) ? $args['menu-item-classes'] : '';
-        $classes_array = is_array( $classes ) ? $classes : explode( ' ', $classes );
-        $classes_array = array_filter( array_map( 'trim', $classes_array ) );
-        
-        // Add vh360-go-live-cta class if not present
-        if ( ! in_array( 'vh360-go-live-cta', $classes_array, true ) ) {
-            $classes_array[] = 'vh360-go-live-cta';
-            
-            // Update the classes
-            update_post_meta( $menu_item_db_id, '_menu_item_classes', $classes_array );
-        }
-        
-        // Remove vh360-go-live-cta from any other items in this menu
-        $all_items = wp_get_nav_menu_items( $menu_id );
-        if ( ! empty( $all_items ) && is_array( $all_items ) ) {
-            foreach ( $all_items as $other_item ) {
-                // Skip the current item
-                if ( (int) $other_item->ID === (int) $menu_item_db_id ) {
-                    continue;
-                }
-                
-                // Check if other item has the CTA class
-                if ( vh360_menu_item_has_class( $other_item, 'vh360-go-live-cta' ) ) {
-                    // Remove the CTA class from this item
-                    $other_classes = isset( $other_item->classes ) && is_array( $other_item->classes ) ? $other_item->classes : array();
-                    $other_classes = array_diff( $other_classes, array( 'vh360-go-live-cta' ) );
-                    update_post_meta( $other_item->ID, '_menu_item_classes', array_values( $other_classes ) );
-                }
-            }
-        }
-    }
-}
-add_action( 'wp_update_nav_menu_item', 'vh360_enforce_go_live_cta_class', 10, 3 );

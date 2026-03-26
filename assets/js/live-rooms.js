@@ -1,7 +1,7 @@
 /**
- * Go Live Form JavaScript
+ * Live Rooms Form JavaScript
  *
- * Handles featured image preview for the Go Live form in the dashboard.
+ * Handles featured image preview for the Live Rooms form in the dashboard.
  *
  * @package Videohub360_Theme
  * @since 1.0.0
@@ -11,9 +11,9 @@
     'use strict';
 
     /**
-     * Go Live Form Handler
+     * Live Rooms Form Handler
      */
-    var VH360GoLive = {
+    var VH360LiveRooms = {
         
         /**
          * Initialize
@@ -28,18 +28,18 @@
         bindEvents: function() {
             var self = this;
 
-            // Handle upload button click to trigger file input (scoped to go-live form)
+            // Handle upload button click to trigger file input
             $(document).on('click', '.vh360-live-room-form #vh360-upload-trigger', function(e) {
                 e.preventDefault();
                 $('.vh360-live-room-form #vh360_featured_image').trigger('click');
             });
 
-            // Handle file input change for image preview (scoped to go-live form)
+            // Handle file input change for image preview
             $(document).on('change', '.vh360-live-room-form #vh360_featured_image', function(e) {
                 self.handleImageSelect(e);
             });
 
-            // Handle remove image button (scoped to go-live form)
+            // Handle remove image button
             $(document).on('click', '.vh360-live-room-form #vh360-remove-image', function(e) {
                 e.preventDefault();
                 self.removeImage();
@@ -101,7 +101,7 @@
                 '<span>' + message + '</span>' +
                 '</div>';
             
-            // Insert after file input (scoped to go-live form)
+            // Insert after file input
             $('.vh360-live-room-form #vh360_featured_image').after(errorHtml);
             
             // Auto-hide after 5 seconds
@@ -131,7 +131,7 @@
 
     // Initialize on document ready
     $(document).ready(function() {
-        VH360GoLive.init();
+        VH360LiveRooms.init();
     });
 
 })(jQuery);

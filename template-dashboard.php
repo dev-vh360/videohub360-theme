@@ -77,11 +77,6 @@ get_header();
                     <?php get_template_part('template-parts/dashboard/live-rooms'); ?>
                 </div>
 
-                <!-- Go Live Tab -->
-                <div id="go-live" class="vh360-dashboard-tab-content">
-                    <?php get_template_part('template-parts/dashboard/go-live'); ?>
-                </div>
-
                 <!-- Create Post Tab -->
                 <div id="create-post" class="vh360-dashboard-tab-content">
                     <?php get_template_part('template-parts/dashboard/create-post'); ?>

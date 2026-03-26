@@ -57,12 +57,6 @@ function vh360_get_dashboard_tabs_registry( $user_id = null ) {
             'show_callback' => '__return_true',
             'icon_svg' => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="13" height="12" rx="2"></rect><path d="M15 10l5-3v10l-5-3V10z"></path></svg>',
         ),
-        'go-live' => array(
-            'label' => __( 'Go Live', 'videohub360-theme' ),
-            'label_callback' => null,
-            'show_callback' => '__return_true',
-            'icon_svg' => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M16.24 7.76a6 6 0 0 1 0 8.48"></path><path d="M7.76 7.76a6 6 0 0 0 0 8.48"></path></svg>',
-        ),
         'messages' => array(
             'label' => __( 'Messages', 'videohub360-theme' ),
             'label_callback' => null,
