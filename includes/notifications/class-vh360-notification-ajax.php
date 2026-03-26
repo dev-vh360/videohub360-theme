@@ -375,9 +375,10 @@ class VH360_Notification_Ajax {
         $result = vh360_delete_read_notifications($user_id);
         
         if ($result !== false) {
+            $count = vh360_get_unread_notification_count($user_id);
             wp_send_json_success(array(
                 'message' => __('Read notifications deleted.', 'videohub360-theme'),
-                'count' => $result
+                'count' => $count
             ));
         } else {
             wp_send_json_error(array(
@@ -408,9 +409,10 @@ class VH360_Notification_Ajax {
         $result = vh360_clear_all_notifications($user_id);
         
         if ($result !== false) {
+            $count = vh360_get_unread_notification_count($user_id);
             wp_send_json_success(array(
                 'message' => __('All notifications cleared.', 'videohub360-theme'),
-                'count' => $result
+                'count' => $count
             ));
         } else {
             wp_send_json_error(array(

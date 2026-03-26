@@ -369,7 +369,7 @@ class VH360_Notification_System {
      *
      * @param int $user_id User ID
      */
-    private function update_unread_count_cache($user_id) {
+    public function update_unread_count_cache($user_id) {
         $count = $this->get_unread_count($user_id);
         update_user_meta($user_id, 'vh360_unread_notification_count', $count);
         
