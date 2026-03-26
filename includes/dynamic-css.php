@@ -25,6 +25,7 @@ function vh360_output_dynamic_css() {
     $text_color        = get_theme_mod('vh360_text_color', '#1f2937');
     $text_light_color  = get_theme_mod('vh360_text_light_color', '#6b7280');
     $bg_color          = get_theme_mod('vh360_bg_color', '#ffffff');
+    $site_header_bg    = get_theme_mod('vh360_site_header_bg_color', '#ffffff');
     $bg_light_color    = get_theme_mod('vh360_bg_light_color', '#f9fafb');
     $border_color      = get_theme_mod('vh360_border_color', '#e5e7eb');
     $success_color     = get_theme_mod('vh360_success_color', '#10b981');
@@ -134,6 +135,7 @@ function vh360_output_dynamic_css() {
             --text-color: <?php echo esc_attr($text_color); ?>;
             --text-light: <?php echo esc_attr($text_light_color); ?>;
             --bg-color: <?php echo esc_attr($bg_color); ?>;
+            --site-header-bg-color: <?php echo esc_attr($site_header_bg); ?>;
             --bg-light: <?php echo esc_attr($bg_light_color); ?>;
             --border-color: <?php echo esc_attr($border_color); ?>;
             
