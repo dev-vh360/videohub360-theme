@@ -102,10 +102,21 @@ class VH360_Starter_Sites_Installer {
      * Set the install flag on theme activation
      */
     public function set_install_flag() {
-        // Only set if not already complete
-        if (!get_option($this->complete_flag)) {
-            update_option($this->run_flag, 1);
-            vh360_debug_log('VH360 Starter Sites Installer: Install flag set on theme activation');
+        // Check if plugin is actually active before honoring complete flag
+        if (get_option($this->complete_flag) && $this->is_plugin_active()) {
+            // Complete flag is valid, plugin is active, don't set run flag
+            vh360_debug_log('VH360 Starter Sites Installer: Plugin already active, skipping install flag');
+            return;
+        }
+        
+        // Set run flag - either complete flag doesn't exist or plugin is not active
+        update_option($this->run_flag, 1);
+        vh360_debug_log('VH360 Starter Sites Installer: Install flag set on theme activation');
+        
+        // Clear stale complete flag if plugin is not active
+        if (get_option($this->complete_flag) && !$this->is_plugin_active()) {
+            delete_option($this->complete_flag);
+            vh360_debug_log('VH360 Starter Sites Installer: Cleared stale complete flag (plugin not active)');
         }
     }
 
@@ -160,10 +171,19 @@ class VH360_Starter_Sites_Installer {
             return false;
         }
 
-        // Must not be already complete
+        // Self-healing check: if complete flag exists but plugin is not active/installed, clear it
         if (get_option($this->complete_flag)) {
-            delete_option($this->run_flag);
-            return false;
+            if (!$this->is_plugin_active() && !$this->is_plugin_installed()) {
+                // Complete flag is stale, plugin is missing entirely
+                delete_option($this->complete_flag);
+                vh360_debug_log('VH360 Starter Sites Installer: Cleared stale complete flag (plugin missing)');
+                // Allow installer to continue
+            } elseif ($this->is_plugin_active()) {
+                // Plugin is active and complete flag is set - installation truly complete
+                delete_option($this->run_flag);
+                return false;
+            }
+            // If plugin is installed but not active, let installer continue to activate it
         }
 
         return true;
@@ -246,9 +266,9 @@ class VH360_Starter_Sites_Installer {
 
         WP_Filesystem();
 
-        // Use silent skin for background installation
+        // Use automatic upgrader skin for quiet background installation
         include_once ABSPATH . 'wp-admin/includes/class-wp-upgrader-skins.php';
-        $skin = new WP_Ajax_Upgrader_Skin();
+        $skin = new Automatic_Upgrader_Skin();
 
         // Create upgrader instance
         $upgrader = new Plugin_Upgrader($skin);
