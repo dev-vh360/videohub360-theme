@@ -54,6 +54,13 @@ class VH360_Starter_Sites_Installer {
     private $error_flag = 'vh360_starter_sites_install_error';
 
     /**
+     * Flag to track if install/activation occurred during this request
+     *
+     * @var bool
+     */
+    private $did_install_or_activate = false;
+
+    /**
      * Singleton instance
      *
      * @var VH360_Starter_Sites_Installer
@@ -86,6 +93,9 @@ class VH360_Starter_Sites_Installer {
 
         // Display admin notices for errors
         add_action('admin_notices', array($this, 'display_error_notice'));
+
+        // Display success notice after redirect
+        add_action('admin_notices', array($this, 'display_success_notice'));
     }
 
     /**
@@ -199,12 +209,17 @@ class VH360_Starter_Sites_Installer {
         if (is_wp_error($result)) {
             $this->store_error('Activation failed: ' . $result->get_error_message());
             vh360_debug_log('VH360 Starter Sites Installer: Activation failed', array('error' => $result->get_error_message()));
+            delete_option($this->run_flag);
         } else {
+            // Mark that activation occurred during this request
+            $this->did_install_or_activate = true;
+            
             $this->mark_complete();
             vh360_debug_log('VH360 Starter Sites Installer: Plugin activated successfully');
+            
+            // Redirect to Starter Sites page
+            $this->redirect_to_starter_sites();
         }
-
-        delete_option($this->run_flag);
     }
 
     /**
@@ -314,6 +329,73 @@ class VH360_Starter_Sites_Installer {
             </p>
         </div>
         <?php
+    }
+
+    /**
+     * Display success notice after installation
+     */
+    public function display_success_notice() {
+        // Check if we're on the Starter Sites page with the installed flag
+        if (!isset($_GET['vh360_installed']) || $_GET['vh360_installed'] != '1') {
+            return;
+        }
+
+        // Only show to users who can install plugins
+        if (!current_user_can('install_plugins')) {
+            return;
+        }
+
+        // Verify we're on the right page
+        $current_screen = get_current_screen();
+        if (!$current_screen || strpos($current_screen->id, 'vh360-starter-sites') === false) {
+            return;
+        }
+
+        ?>
+        <div class="notice notice-success is-dismissible">
+            <p><strong>Starter Sites installed successfully!</strong></p>
+            <p>Choose a demo below to get started with your site.</p>
+        </div>
+        <?php
+    }
+
+    /**
+     * Redirect to Starter Sites page after successful installation
+     */
+    private function redirect_to_starter_sites() {
+        // Only redirect if install/activation occurred during this request
+        if (!$this->did_install_or_activate) {
+            return;
+        }
+
+        // Don't redirect during AJAX requests
+        if (defined('DOING_AJAX') && DOING_AJAX) {
+            return;
+        }
+
+        // Don't redirect during cron
+        if (defined('DOING_CRON') && DOING_CRON) {
+            return;
+        }
+
+        // Don't redirect if headers already sent
+        if (headers_sent()) {
+            return;
+        }
+
+        // Don't redirect if not in admin
+        if (!is_admin()) {
+            return;
+        }
+
+        vh360_debug_log('VH360 Starter Sites Installer: Redirecting to Starter Sites page');
+
+        // Build redirect URL with success flag
+        $redirect_url = admin_url('admin.php?page=vh360-starter-sites&vh360_installed=1');
+
+        // Perform redirect and exit
+        wp_safe_redirect($redirect_url);
+        exit;
     }
 }
 
