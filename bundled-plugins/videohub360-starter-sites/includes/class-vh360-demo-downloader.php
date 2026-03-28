@@ -214,6 +214,15 @@ class VH360_Demo_Downloader {
     /**
      * Download all files from manifest
      *
+     * Expected manifest format:
+     * "files": {
+     *   "content": {"path": "content.xml"},
+     *   "widgets": {"path": "widgets.json"},
+     *   "customizer": {"path": "customizer.json"},
+     *   "elementor_kit": {"path": "elementor-kit.zip"},
+     *   "theme_options": {"path": "theme-options.json"}
+     * }
+     *
      * @param array $manifest Manifest data
      * @return array|WP_Error Array of local file paths keyed by file type, or error
      */
@@ -229,8 +238,9 @@ class VH360_Demo_Downloader {
         $errors = array();
         
         foreach ($manifest['files'] as $file_type => $file_info) {
+            // Each file entry must be an array with a 'path' key
             if (!is_array($file_info) || !isset($file_info['path'])) {
-                $this->logger->warning(sprintf('Skipping invalid file entry: %s', $file_type));
+                $this->logger->warning(sprintf('Skipping invalid file entry: %s (expected format: {"path": "filename"})', $file_type));
                 continue;
             }
             

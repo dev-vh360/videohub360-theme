@@ -51,9 +51,10 @@ function vh360_ss_check_elementor($min_version = '3.0.0') {
  */
 function vh360_ss_get_plugin_file($plugin_slug) {
     // Explicit mapping for known VH360 bundled plugins
+    // Note: videohub360-core.zip installs to videohub360/ directory
     $plugin_files = array(
-        'videohub360' => 'videohub360-core/videohub360.php',
-        'videohub360-core' => 'videohub360-core/videohub360.php',
+        'videohub360' => 'videohub360/videohub360.php',
+        'videohub360-core' => 'videohub360/videohub360.php',
         'videohub360-community' => 'videohub360-community/videohub360-community.php',
         'vh360-pwa-app' => 'vh360-pwa-app/vh360-pwa-app.php',
         'videohub360-starter-sites' => 'videohub360-starter-sites/videohub360-starter-sites.php',
