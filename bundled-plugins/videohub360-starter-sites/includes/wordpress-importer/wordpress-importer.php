@@ -29,11 +29,17 @@ if (!defined('IMPORT_DEBUG')) {
 
 /** WordPress Import Administration API */
 if (!function_exists('get_file_description')) {
-    require_once ABSPATH . 'wp-admin/includes/file.php';
+    $file_path = ABSPATH . 'wp-admin/includes/file.php';
+    if (file_exists($file_path)) {
+        require_once $file_path;
+    }
 }
 
 if (!function_exists('wp_importers')) {
-    require_once ABSPATH . 'wp-admin/includes/import.php';
+    $import_path = ABSPATH . 'wp-admin/includes/import.php';
+    if (file_exists($import_path)) {
+        require_once $import_path;
+    }
 }
 
 /** Load WP_Importer base class if not already available */
