@@ -1,63 +1,84 @@
 <?php
 /**
- * WordPress Importer Stub
+ * WordPress Importer Bootstrap for Starter Sites
  * 
- * Note: In a production environment, you would include the actual WordPress Importer plugin
- * files here. For this implementation, we're creating a stub that documents the requirement.
+ * Bundled version of WordPress Importer v0.9.5
  * 
- * The actual WordPress Importer can be obtained from:
+ * This file loads the WordPress Importer classes for use with the Starter Sites plugin.
+ * Based on the official WordPress Importer plugin:
  * https://wordpress.org/plugins/wordpress-importer/
- * 
- * Required files:
- * - class-wp-import.php
- * - parsers.php
- * - wordpress-importer.php
  * 
  * @package VideoHub360_Starter_Sites
  * @since 1.0.0
+ * @version 0.9.5
+ * 
+ * Original WordPress Importer credits:
+ * - Plugin URI: https://wordpress.org/plugins/wordpress-importer/
+ * - Author: wordpressdotorg
+ * - License: GPLv2 or later
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-/**
- * Check if WP_Import class is available
- * If not, provide a fallback or error message
- */
-if (!class_exists('WP_Import')) {
-    /**
-     * Stub class for WP_Import
-     * This should be replaced with the actual WordPress Importer
-     */
-    class WP_Import {
-        public $fetch_attachments = true;
-        
-        public function import($file) {
-            return new WP_Error(
-                'importer_not_available',
-                __('WordPress Importer is not available. Please install the WordPress Importer plugin or include the importer files in the includes/wordpress-importer directory.', 'videohub360-starter-sites')
-            );
-        }
+/** Display verbose errors */
+if (!defined('IMPORT_DEBUG')) {
+    define('IMPORT_DEBUG', false);
+}
+
+/** WordPress Import Administration API */
+if (!function_exists('get_file_description')) {
+    require_once ABSPATH . 'wp-admin/includes/file.php';
+}
+
+if (!function_exists('wp_importers')) {
+    require_once ABSPATH . 'wp-admin/includes/import.php';
+}
+
+/** Load WP_Importer base class if not already available */
+if (!class_exists('WP_Importer')) {
+    $class_wp_importer = ABSPATH . 'wp-admin/includes/class-wp-importer.php';
+    if (file_exists($class_wp_importer)) {
+        require_once $class_wp_importer;
     }
 }
 
+/** Functions missing in older WordPress versions */
+require_once __DIR__ . '/compat.php';
+
+/** Load PHP XML Toolkit if needed */
+if (!class_exists('WordPress\XML\XMLProcessor')) {
+    require_once __DIR__ . '/php-toolkit/load.php';
+}
+
+/** WXR_Parser class - Base parser interface */
+require_once __DIR__ . '/parsers/class-wxr-parser.php';
+
+/** WXR_Parser_SimpleXML class - SimpleXML-based parser */
+require_once __DIR__ . '/parsers/class-wxr-parser-simplexml.php';
+
+/** WXR_Parser_XML class - XML Reader-based parser */
+require_once __DIR__ . '/parsers/class-wxr-parser-xml.php';
+
 /**
- * NOTE TO DEVELOPER:
+ * WXR_Parser_Regex class - Legacy regex-based parser
+ * @deprecated 0.9.0 Use WXR_Parser_XML_Processor instead
+ */
+require_once __DIR__ . '/parsers/class-wxr-parser-regex.php';
+
+/** WXR_Parser_XML_Processor class - Modern XML processor parser */
+require_once __DIR__ . '/parsers/class-wxr-parser-xml-processor.php';
+
+/** WP_Import class - Main importer class */
+require_once __DIR__ . '/class-wp-import.php';
+
+/**
+ * The WP_Import class is now available for use.
  * 
- * To enable full content import functionality, you need to:
+ * Usage example:
  * 
- * 1. Download the WordPress Importer plugin from:
- *    https://wordpress.org/plugins/wordpress-importer/
- * 
- * 2. Extract the following files to this directory:
- *    - class-wp-import.php
- *    - parsers.php
- *    - wordpress-importer.php
- * 
- * 3. Replace this stub file with a proper wordpress-importer.php that includes
- *    the actual importer files
- * 
- * Alternative: You can also use the Elementor importer or another importer library
- * that supports WordPress XML format.
+ * $importer = new WP_Import();
+ * $importer->fetch_attachments = true;
+ * $result = $importer->import($file_path);
  */
