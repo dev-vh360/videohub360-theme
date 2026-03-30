@@ -279,9 +279,10 @@ class VH360_Demo_Importer {
             
             return $response;
             
-        } catch (Exception $e) {
-            $this->logger->error('Import failed: ' . $e->getMessage());
-            $this->logger->error('Exception in file: ' . $e->getFile() . ' on line ' . $e->getLine());
+        } catch (Throwable $t) {
+            // Catch all throwables (Exception + PHP 7+ Error types)
+            $this->logger->error('Import failed: ' . $t->getMessage());
+            $this->logger->error('Error in file: ' . $t->getFile() . ' on line ' . $t->getLine());
             
             // Cleanup on error - use safe cleanup
             $log_step('Cleaning up after error');
@@ -293,19 +294,7 @@ class VH360_Demo_Importer {
             $this->logger->save();
             $log_step('Error log saved');
             
-            return new WP_Error('import_failed', $e->getMessage());
-        } catch (Throwable $t) {
-            // Catch PHP 7+ errors (TypeError, ParseError, etc)
-            $this->logger->error('Import failed with fatal error: ' . $t->getMessage());
-            $this->logger->error('Error in file: ' . $t->getFile() . ' on line ' . $t->getLine());
-            
-            // Cleanup on error
-            $this->cleanup_safely();
-            
-            vh360_ss_clear_import_running();
-            $this->logger->save();
-            
-            return new WP_Error('import_fatal_error', $t->getMessage());
+            return new WP_Error('import_failed', $t->getMessage());
         }
     }
     

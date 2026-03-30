@@ -239,7 +239,7 @@ class VH360_Demo_Post_Import {
             // Cache clearing should never crash a successful import
             $this->logger->warning('Cache clearing failed: ' . $e->getMessage());
         } catch (Throwable $t) {
-            // Catch PHP 7+ errors as well
+            // Catch PHP 7+ Error types (TypeError, ParseError, etc) not extending Exception
             $this->logger->warning('Cache clearing failed with error: ' . $t->getMessage());
         }
     }
