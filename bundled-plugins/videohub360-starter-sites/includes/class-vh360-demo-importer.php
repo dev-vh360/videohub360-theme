@@ -290,7 +290,7 @@ class VH360_Demo_Importer {
         
         $missing_plugins = array();
         $activated_plugins = array();
-        // Track plugins that were both installed and successfully activated
+        // Track plugins that were newly installed during this import and successfully activated
         $installed_plugins = array();
         
         foreach ($this->current_demo['required_plugins'] as $plugin_slug) {
