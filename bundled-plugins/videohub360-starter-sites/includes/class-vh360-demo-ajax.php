@@ -159,8 +159,8 @@ class VH360_Demo_AJAX {
             // Run import
             $last_import_step = 'Calling importer->import_demo()';
             $importer = VH360_Demo_Importer::get_instance();
-            $result = $importer->import_demo($demo_id, function($step) use (&$last_import_step) {
-                $last_import_step = $step;
+            $result = $importer->import_demo($demo_id, function($step_name) use (&$last_import_step) {
+                $last_import_step = $step_name;
             });
             
             $last_import_step = 'Import completed, checking result';

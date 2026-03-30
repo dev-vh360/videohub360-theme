@@ -108,7 +108,9 @@ class VH360_Demo_Importer {
         $start_time = microtime(true);
         $start_memory = memory_get_usage(true);
         
-        // Helper to log step with diagnostics
+        // Helper closure to log each step with diagnostic information
+        // Logs: step name, elapsed time, current memory, peak memory
+        // Also invokes progress callback to track last successful step in AJAX handler
         $log_step = function($step_name) use ($start_time, $progress_callback) {
             $elapsed = microtime(true) - $start_time;
             $memory_current = memory_get_usage(true);
