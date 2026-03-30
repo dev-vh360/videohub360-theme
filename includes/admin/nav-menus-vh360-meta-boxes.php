@@ -257,9 +257,9 @@ function vh360_render_mobile_bottom_menu_items_meta_box() {
  * @param array $args            An array of arguments used to update the menu item.
  */
 function vh360_save_mobile_nav_menu_item_icon( $menu_id, $menu_item_db_id, $args ) {
-    // Verify nonce for security
-    $nonce = isset( $_POST['update-nav-menu-nonce'] ) ? wp_unslash( $_POST['update-nav-menu-nonce'] ) : '';
-    if ( ! wp_verify_nonce( $nonce, 'update-nav_menu' ) ) {
+    // Verify nonce for security (WordPress menu save nonce)
+    $nonce = isset( $_POST['update-nav-menu-nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['update-nav-menu-nonce'] ) ) : '';
+    if ( ! wp_verify_nonce( $nonce, 'update-nav-menu' ) ) {
         return;
     }
     
