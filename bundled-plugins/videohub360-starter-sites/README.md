@@ -82,6 +82,94 @@ Each demo package is controlled by a `manifest.json` file:
 }
 ```
 
+## Elementor Kit Structure
+
+The Elementor kit importer supports both simple and full Elementor export formats:
+
+### Supported Formats
+
+**Full Elementor Export (Recommended)**
+```
+elementor-kit.zip
+└── elementor-kit/
+    ├── manifest.json              # Package metadata
+    ├── site-settings.json         # Global Elementor settings
+    ├── elementor-{id}.json        # Template/document files
+    ├── content/
+    │   └── *.json                 # Additional content structures
+    └── taxonomies/
+        └── *.json                 # Taxonomy data
+```
+
+**Legacy Format (Still Supported)**
+```
+elementor-kit.json                 # Single JSON file with settings
+```
+
+### Import Process
+
+1. **ZIP Extraction & Normalization**: Extracts and normalizes the directory structure
+   - Removes `__MACOSX`, `.DS_Store`, and hidden files
+   - Detects nested folders (e.g., if extraction creates `elementor-kit/` subfolder)
+   - Uses the actual kit root, not the extraction root
+
+2. **Recursive File Discovery**: Scans all nested directories for JSON files
+
+3. **File Role Detection**: Categorizes files by purpose:
+   - `manifest.json` → Package structure reference
+   - `site-settings.json` → Global Elementor kit settings
+   - `elementor-*.json` → Templates/documents
+   - `content/*.json` → Additional content structures
+   - `taxonomies/*.json` → Taxonomy-related data
+
+4. **Sequential Import**:
+   - Import site settings (global kit configuration)
+   - Import template/document files using Elementor's `Source_Local` API
+   - Templates imported as actual Elementor documents (creates WordPress posts with Elementor metadata)
+   - Log detailed diagnostics for each step
+
+### Template Import Details
+
+Templates are imported using Elementor's official `Source_Local` API:
+- Each `elementor-*.json` file is passed to Elementor's local template source
+- Uses the programmatic import pathway: `templates_manager->get_source('local')->import_template()`
+- Creates WordPress posts with proper Elementor document metadata
+- Templates become editable in Elementor after import
+- Import method signature: `import_template($filename, $file_path)`
+
+**Why Source_Local instead of direct import?**
+- `Source_Local` is the recommended approach for programmatic template imports
+- Direct `templates_manager->import_template()` may not be available in all contexts (e.g., AJAX requests)
+- `Source_Local` provides better compatibility and error handling
+
+### Logging
+
+The importer provides detailed diagnostics:
+- Detected root directory
+- Number of JSON files found
+- Presence of `manifest.json` and `site-settings.json`
+- Template count and individual import results
+- Per-template success/failure with specific reasons:
+  - File not found
+  - Invalid JSON (with error details)
+  - Elementor not initialized
+  - templates_manager not available
+  - get_source method not available
+  - Local source not available
+  - Source import_template method not available
+  - Template creation failures
+- Final summary differentiates site settings vs templates:
+  - "Site settings: imported | Templates: 4 found, 4 imported, 0 failed"
+
+### Error Handling
+
+Elementor kit import is **non-fatal**:
+- Import failures log warnings but don't crash the full demo import
+- Each template failure logged individually with specific reason
+- Detailed error messages help identify structural issues
+- Import continues even if Elementor is not fully initialized
+- Final summary shows exactly what succeeded vs failed
+
 ## Theme Options Security
 
 Only whitelisted theme options are imported. The allowlist is defined in `includes/helpers.php`:
