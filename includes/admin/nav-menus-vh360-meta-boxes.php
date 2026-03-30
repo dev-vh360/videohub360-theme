@@ -257,6 +257,11 @@ function vh360_render_mobile_bottom_menu_items_meta_box() {
  * @param array $args            An array of arguments used to update the menu item.
  */
 function vh360_save_mobile_nav_menu_item_icon( $menu_id, $menu_item_db_id, $args ) {
+    // Verify nonce for security
+    if ( ! isset( $_POST['update-nav-menu-nonce'] ) || ! wp_verify_nonce( $_POST['update-nav-menu-nonce'], 'update-nav_menu' ) ) {
+        return;
+    }
+    
     // Check if icon data is present in the request
     if ( isset( $_POST['menu-item-vh360-icon'][ $menu_item_db_id ] ) ) {
         $icon_slug = sanitize_key( $_POST['menu-item-vh360-icon'][ $menu_item_db_id ] );
@@ -266,6 +271,10 @@ function vh360_save_mobile_nav_menu_item_icon( $menu_id, $menu_item_db_id, $args
             $allowed_icons = array_keys( vh360_cm_icon_choices() );
             if ( in_array( $icon_slug, $allowed_icons, true ) ) {
                 update_post_meta( $menu_item_db_id, '_vh360_menu_icon', $icon_slug );
+            }
+        }
+    }
+}
             }
         }
     }

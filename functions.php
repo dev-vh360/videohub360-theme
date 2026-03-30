@@ -1701,7 +1701,42 @@ function vh360_mobile_bottom_nav_limit_items( $items, $args ) {
 add_filter( 'wp_nav_menu_objects', 'vh360_mobile_bottom_nav_limit_items', 10, 2 );
 
 /**
- * Render icons + labels for mobile bottom nav items, based on CSS classes.
+ * Allowed SVG tags for mobile bottom nav icons
+ *
+ * Performance optimization: Define once instead of on every menu item render.
+ *
+ * @since 1.0.0
+ */
+function vh360_get_mobile_nav_allowed_svg_tags() {
+    static $allowed_tags = null;
+    
+    if ( null === $allowed_tags ) {
+        $allowed_tags = array(
+            'svg' => array(
+                'viewBox'     => true,
+                'fill'        => true,
+                'aria-hidden' => true,
+                'focusable'   => true,
+            ),
+            'path' => array(
+                'd' => true,
+            ),
+            'circle' => array(
+                'cx' => true,
+                'cy' => true,
+                'r'  => true,
+            ),
+        );
+    }
+    
+    return $allowed_tags;
+}
+
+/**
+ * Render icons + labels for mobile bottom nav items
+ *
+ * Uses shared icon meta system (_vh360_menu_icon) and icon registry.
+ * Special behaviors (avatar drawer, notification badge) use CSS class flags.
  */
 function vh360_mobile_bottom_nav_item_output( $item_output, $item, $depth, $args ) {
     if ( empty( $args->theme_location ) || 'vh360_mobile_bottom' !== $args->theme_location ) {
@@ -1745,23 +1780,7 @@ function vh360_mobile_bottom_nav_item_output( $item_output, $item, $depth, $args
     // Wrap icon SVG with mobile nav class if present
     $icon_html = '';
     if ( ! empty( $icon_svg ) ) {
-        $allowed_svg_tags = array(
-            'svg' => array(
-                'viewBox'     => true,
-                'fill'        => true,
-                'aria-hidden' => true,
-                'focusable'   => true,
-            ),
-            'path' => array(
-                'd' => true,
-            ),
-            'circle' => array(
-                'cx' => true,
-                'cy' => true,
-                'r'  => true,
-            ),
-        );
-        $icon_html = '<span class="vh360-mobile-bottom-nav__icon" aria-hidden="true">' . wp_kses( $icon_svg, $allowed_svg_tags ) . '</span>';
+        $icon_html = '<span class="vh360-mobile-bottom-nav__icon" aria-hidden="true">' . wp_kses( $icon_svg, vh360_get_mobile_nav_allowed_svg_tags() ) . '</span>';
     }
 
     $href = ! empty( $item->url ) ? $item->url : '#';
