@@ -268,7 +268,7 @@ function vh360_ss_install_repository_plugin($plugin_slug) {
     $api = plugins_api('plugin_information', array(
         'slug' => $plugin_slug,
         'fields' => array(
-            'downloadlink' => true,
+            'download_link' => true,
         ),
     ));
     
