@@ -368,43 +368,109 @@ function vh360_ss_cleanup_old_temp_files($max_age = 86400) {
  * Get allowed theme options for import
  * Only these options will be imported from demo packages
  *
- * @return array Allowed option keys
+ * Returns a mapping of JSON group names to WordPress option names with their allowed keys.
+ * The JSON structure uses simple group names (appearance, profile, etc.) while WordPress
+ * stores them with the vh360_ prefix (vh360_appearance_options, etc.).
+ *
+ * @return array Allowed option keys mapping: JSON_group_name => [wp_option_name, [allowed_keys]]
  */
 function vh360_ss_get_allowed_theme_options() {
     return apply_filters('vh360_ss_allowed_theme_options', array(
         // Appearance options
-        'vh360_appearance_options' => array(
-            'site_layout',
-            'content_width',
-            'sidebar_position',
-            'enable_breadcrumbs',
-            'enable_back_to_top',
-            'gallery_columns',
-            'gallery_spacing',
+        'appearance' => array(
+            'option_name' => 'vh360_appearance_options',
+            'allowed_keys' => array(
+                'site_layout',
+                'content_width',
+                'sidebar_position',
+                'enable_breadcrumbs',
+                'enable_back_to_top',
+                'gallery_columns',
+                'gallery_spacing',
+            ),
         ),
         
         // Profile display options (non-sensitive)
-        'vh360_profile_options' => array(
-            'show_profile_stats',
-            'show_follow_button',
-            'show_channel_link',
-            'profile_layout',
+        'profile' => array(
+            'option_name' => 'vh360_profile_options',
+            'allowed_keys' => array(
+                // Core toggles
+                'enable_profiles',
+                'show_avatar',
+                'show_cover',
+                'show_social',
+                'show_stats',
+                'show_header_follow_button',
+                
+                // Avatar cropper
+                'enable_avatar_cropper',
+                
+                // Social platforms
+                'social_platforms',
+                
+                // File size limits
+                'avatar_max_size',
+                'cover_max_size',
+                
+                // Avatar processing settings
+                'avatar_output_size',
+                'avatar_min_width',
+                'avatar_min_height',
+                'avatar_quality',
+                'avatar_allowed_types',
+            ),
         ),
         
         // Activity feed display options
-        'vh360_activity_options' => array(
-            'items_per_page',
-            'show_load_more',
-            'enable_infinite_scroll',
-            'show_activity_filters',
+        'activity' => array(
+            'option_name' => 'vh360_activity_options',
+            'allowed_keys' => array(
+                'items_per_page',
+                'show_load_more',
+                'enable_infinite_scroll',
+                'show_activity_filters',
+            ),
         ),
         
         // Members directory display options
-        'vh360_members_options' => array(
-            'members_per_page',
-            'default_sort',
-            'show_search',
-            'show_filters',
+        'members' => array(
+            'option_name' => 'vh360_members_options',
+            'allowed_keys' => array(
+                // Core toggles
+                'enable_directory',
+                'enable_search',
+                'show_card_stats',
+                'show_card_follow_button',
+                'enable_category_filter',
+                
+                // Display settings
+                'per_page',
+                'default_sort',
+                
+                // Visibility & access
+                'directory_audience',
+                'visible_roles',
+                
+                // Professional accounts
+                'professionals_account_types',
+                'professionals_require_approval',
+                
+                // Categories
+                'member_categories',
+            ),
+        ),
+        
+        // Advanced options
+        'advanced' => array(
+            'option_name' => 'vh360_advanced_options',
+            'allowed_keys' => array(
+                'enable_custom_css',
+                'custom_css',
+                'enable_custom_js',
+                'custom_js',
+                'enable_maintenance_mode',
+                'maintenance_message',
+            ),
         ),
     ));
 }

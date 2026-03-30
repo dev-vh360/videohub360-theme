@@ -1086,6 +1086,10 @@ class VH360_Demo_Importer {
     /**
      * Import theme options with allowlist
      *
+     * Maps JSON group names to WordPress option names and imports only allowlisted keys.
+     * JSON structure uses simple group names (appearance, profile, etc.) while WordPress
+     * stores them with the vh360_ prefix (vh360_appearance_options, etc.).
+     *
      * @return bool|WP_Error True on success, error on failure
      */
     private function import_theme_options() {
@@ -1113,27 +1117,69 @@ class VH360_Demo_Importer {
             return new WP_Error('options_invalid_json', __('Invalid theme options JSON', 'videohub360-starter-sites'));
         }
         
-        // Get allowed options
+        // Get allowed options mapping
         $allowed_options = vh360_ss_get_allowed_theme_options();
         
         $imported_count = 0;
+        $skipped_groups = array();
         
-        foreach ($allowed_options as $option_name => $allowed_keys) {
-            if (!isset($options_data[$option_name])) {
+        // Iterate through the mapping configuration
+        foreach ($allowed_options as $json_group_name => $config) {
+            // Check if this group exists in the JSON data
+            if (!isset($options_data[$json_group_name])) {
+                $skipped_groups[] = sprintf('%s: not found in JSON', $json_group_name);
                 continue;
             }
             
-            $option_value = get_option($option_name, array());
+            $json_group_data = $options_data[$json_group_name];
+            
+            // Skip empty groups
+            if (empty($json_group_data) || !is_array($json_group_data)) {
+                $skipped_groups[] = sprintf('%s: empty or invalid data', $json_group_name);
+                continue;
+            }
+            
+            // Get the WordPress option name and allowed keys
+            $wp_option_name = $config['option_name'];
+            $allowed_keys = $config['allowed_keys'];
+            
+            // Get current option value (or empty array)
+            $option_value = get_option($wp_option_name, array());
+            if (!is_array($option_value)) {
+                $option_value = array();
+            }
+            
+            // Track how many keys we actually import for this group
+            $keys_imported = 0;
             
             // Only import allowed keys
             foreach ($allowed_keys as $key) {
-                if (isset($options_data[$option_name][$key])) {
-                    $option_value[$key] = $options_data[$option_name][$key];
+                if (isset($json_group_data[$key])) {
+                    $option_value[$key] = $json_group_data[$key];
+                    $keys_imported++;
                 }
             }
             
-            update_option($option_name, $option_value);
-            $imported_count++;
+            // Only update and count if we actually imported keys
+            if ($keys_imported > 0) {
+                update_option($wp_option_name, $option_value);
+                $imported_count++;
+                $this->logger->info(sprintf(
+                    'Imported %s → %s (%d keys)',
+                    $json_group_name,
+                    $wp_option_name,
+                    $keys_imported
+                ));
+            } else {
+                $skipped_groups[] = sprintf('%s: no allowlisted keys matched', $json_group_name);
+            }
+        }
+        
+        // Log skipped groups for debugging
+        if (!empty($skipped_groups)) {
+            foreach ($skipped_groups as $skip_reason) {
+                $this->logger->info('Skipped group: ' . $skip_reason);
+            }
         }
         
         $this->logger->success(sprintf('Imported %d theme option groups', $imported_count));
