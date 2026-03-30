@@ -1027,21 +1027,34 @@ class VH360_Demo_Importer {
             return new WP_Error('templates_manager_missing', __('Elementor templates manager not available', 'videohub360-starter-sites'));
         }
         
-        // Check if import_template method exists
-        if (!method_exists($elementor_plugin->templates_manager, 'import_template')) {
-            $this->logger->warning("Template import failed for $filename: import_template method not found");
-            return new WP_Error('import_method_missing', __('Elementor import_template method not available', 'videohub360-starter-sites'));
-        }
-        
         try {
-            // Elementor's import_template expects fileData (base64 encoded) and fileName
-            // NOT a decoded JSON array
-            $import_data = array(
-                'fileData' => base64_encode($template_data),
-                'fileName' => $filename,
-            );
+            // Use Elementor's Source_Local for template import
+            // This is the recommended approach for programmatic imports
+            $templates_manager = $elementor_plugin->templates_manager;
             
-            $result = $elementor_plugin->templates_manager->import_template($import_data);
+            // Check if get_source method exists
+            if (!method_exists($templates_manager, 'get_source')) {
+                $this->logger->warning("Template import failed for $filename: get_source method not available");
+                return new WP_Error('get_source_missing', __('Elementor get_source method not available', 'videohub360-starter-sites'));
+            }
+            
+            // Get the local template source
+            $source = $templates_manager->get_source('local');
+            
+            if (!$source) {
+                $this->logger->warning("Template import failed for $filename: Local source not available");
+                return new WP_Error('local_source_missing', __('Elementor local template source not available', 'videohub360-starter-sites'));
+            }
+            
+            // Check if import_template method exists on the source
+            if (!method_exists($source, 'import_template')) {
+                $this->logger->warning("Template import failed for $filename: Source import_template method not found");
+                return new WP_Error('source_import_missing', __('Elementor source import_template method not available', 'videohub360-starter-sites'));
+            }
+            
+            // Import the template using Source_Local
+            // The method signature is: import_template( $file_name, $file_path )
+            $result = $source->import_template($filename, $template_file);
             
             if (is_wp_error($result)) {
                 $this->logger->warning("Template import failed for $filename: " . $result->get_error_message());
@@ -1049,9 +1062,10 @@ class VH360_Demo_Importer {
             }
             
             if ($result && is_array($result) && !empty($result)) {
-                // Elementor returns array with template data on success
-                $template_id = isset($result[0]['template_id']) ? $result[0]['template_id'] : 'unknown';
-                $this->logger->info("Successfully imported template $filename (ID: $template_id)");
+                // Source_Local returns array with template data on success
+                $template_id = isset($result[0]['template_id']) ? $result[0]['template_id'] : (isset($result['template_id']) ? $result['template_id'] : 'unknown');
+                $template_title = isset($result[0]['title']) ? $result[0]['title'] : (isset($result['title']) ? $result['title'] : 'Unknown');
+                $this->logger->info("Successfully imported template $filename (ID: $template_id, Title: $template_title)");
                 return true;
             }
             
