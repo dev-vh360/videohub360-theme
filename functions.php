@@ -2656,37 +2656,45 @@ function vh360_create_default_menus() {
             $members_url = function_exists( 'vh360_get_members_page_url' ) ? vh360_get_members_page_url() : home_url( '/members/' );
             
             // Add 4 default items: Activity, Notifications, Members, Menu (avatar)
-            wp_update_nav_menu_item( $mobile_bottom_menu_id, 0, array(
+            $activity_id = wp_update_nav_menu_item( $mobile_bottom_menu_id, 0, array(
                 'menu-item-title'   => __( 'Activity', 'videohub360-theme' ),
                 'menu-item-url'     => $activity_url,
                 'menu-item-status'  => 'publish',
                 'menu-item-type'    => 'custom',
-                'menu-item-classes' => 'vh360-icon-activity',
             ) );
+            if ( ! is_wp_error( $activity_id ) ) {
+                update_post_meta( $activity_id, '_vh360_menu_icon', 'activity' );
+            }
             
-            wp_update_nav_menu_item( $mobile_bottom_menu_id, 0, array(
+            $notifications_id = wp_update_nav_menu_item( $mobile_bottom_menu_id, 0, array(
                 'menu-item-title'   => __( 'Notifications', 'videohub360-theme' ),
                 'menu-item-url'     => add_query_arg( 'tab', 'notifications', $dashboard_url ),
                 'menu-item-status'  => 'publish',
                 'menu-item-type'    => 'custom',
-                'menu-item-classes' => 'vh360-icon-notifications',
+                'menu-item-classes' => 'vh360-icon-notifications', // Behavior flag for badge
             ) );
+            if ( ! is_wp_error( $notifications_id ) ) {
+                update_post_meta( $notifications_id, '_vh360_menu_icon', 'notifications' );
+            }
             
-            wp_update_nav_menu_item( $mobile_bottom_menu_id, 0, array(
+            $members_id = wp_update_nav_menu_item( $mobile_bottom_menu_id, 0, array(
                 'menu-item-title'   => __( 'Members', 'videohub360-theme' ),
                 'menu-item-url'     => $members_url,
                 'menu-item-status'  => 'publish',
                 'menu-item-type'    => 'custom',
-                'menu-item-classes' => 'vh360-icon-members',
             ) );
+            if ( ! is_wp_error( $members_id ) ) {
+                update_post_meta( $members_id, '_vh360_menu_icon', 'members' );
+            }
             
-            wp_update_nav_menu_item( $mobile_bottom_menu_id, 0, array(
+            $avatar_id = wp_update_nav_menu_item( $mobile_bottom_menu_id, 0, array(
                 'menu-item-title'   => __( 'Menu', 'videohub360-theme' ),
                 'menu-item-url'     => '#',
                 'menu-item-status'  => 'publish',
                 'menu-item-type'    => 'custom',
-                'menu-item-classes' => 'vh360-icon-avatar',
+                'menu-item-classes' => 'vh360-icon-avatar', // Behavior flag for drawer
             ) );
+            // Avatar item doesn't need icon meta since it renders the user avatar
             
             // Assign to location
             $existing_locations['vh360_mobile_bottom'] = $mobile_bottom_menu_id;
