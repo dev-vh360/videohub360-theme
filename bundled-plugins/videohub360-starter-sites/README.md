@@ -124,8 +124,17 @@ elementor-kit.json                 # Single JSON file with settings
 
 4. **Sequential Import**:
    - Import site settings (global kit configuration)
-   - Import template/document files
+   - Import template/document files using Elementor's `import_template()` API
+   - Templates imported as actual Elementor documents (creates WordPress posts with Elementor metadata)
    - Log detailed diagnostics for each step
+
+### Template Import Details
+
+Templates are imported using Elementor's official `import_template()` API:
+- Each `elementor-*.json` file is base64-encoded and passed to Elementor's templates manager
+- Creates WordPress posts with proper Elementor document metadata
+- Templates become editable in Elementor after import
+- Import format: `['fileData' => base64_encode($json), 'fileName' => 'template.json']`
 
 ### Logging
 
@@ -134,14 +143,23 @@ The importer provides detailed diagnostics:
 - Number of JSON files found
 - Presence of `manifest.json` and `site-settings.json`
 - Template count and individual import results
-- Specific error messages (not just "no JSON found")
+- Per-template success/failure with specific reasons:
+  - File not found
+  - Invalid JSON (with error details)
+  - Elementor not initialized
+  - Import method not available
+  - Template creation failures
+- Final summary differentiates site settings vs templates:
+  - "Site settings: imported | Templates: 4 found, 4 imported, 0 failed"
 
 ### Error Handling
 
 Elementor kit import is **non-fatal**:
 - Import failures log warnings but don't crash the full demo import
+- Each template failure logged individually with specific reason
 - Detailed error messages help identify structural issues
 - Import continues even if Elementor is not fully initialized
+- Final summary shows exactly what succeeded vs failed
 
 ## Theme Options Security
 
