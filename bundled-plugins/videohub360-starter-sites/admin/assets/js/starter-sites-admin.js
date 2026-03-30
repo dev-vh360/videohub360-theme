@@ -322,8 +322,7 @@
                 
                 // Show stats
                 if (data.log) {
-                    var duration = (typeof data.duration !== 'undefined') ? data.duration : 
-                                   (data.log.duration || 0);
+                    var duration = (typeof data.duration !== 'undefined') ? data.duration : (data.log.duration || 0);
                     $('#vh360-ss-stat-duration').text(this.formatDuration(duration));
                     $('#vh360-ss-stat-demo').text(data.demo_name || data.demo_id);
                     $('#vh360-ss-stat-errors').text(data.log.error_count || 0);

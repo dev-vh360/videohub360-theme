@@ -270,7 +270,7 @@ class VH360_Demo_Importer {
             $response = array(
                 'success' => true,
                 'demo_id' => $demo_id,
-                'demo_name' => isset($demo['name']) ? $demo['name'] : 'Unknown',
+                'demo_name' => $demo['name'], // Already validated in earlier steps
                 'verification' => $verification,
                 'log' => $this->logger->get_last_log(),
                 'duration' => round($elapsed_total, 2),

@@ -82,6 +82,8 @@ class VH360_Demo_AJAX {
      */
     public function ajax_import_demo() {
         // Register shutdown handler to catch fatal errors
+        // The handler will only execute if $shutdown_handler_registered remains true
+        // It's set to false after successful completion to prevent double-execution
         $shutdown_handler_registered = false;
         $last_import_step = 'AJAX handler entered';
         
