@@ -292,7 +292,7 @@ class VH360_Demo_Importer {
             $log_step('Error log saved');
             
             return new WP_Error('import_failed', $e->getMessage());
-        } catch (\Throwable $t) {
+        } catch (Throwable $t) {
             // Catch PHP 7+ errors (TypeError, ParseError, etc)
             $this->logger->error('Import failed with fatal error: ' . $t->getMessage());
             $this->logger->error('Error in file: ' . $t->getFile() . ' on line ' . $t->getLine());
@@ -318,7 +318,7 @@ class VH360_Demo_Importer {
             if (!empty($this->downloaded_files)) {
                 $this->downloader->cleanup_files($this->downloaded_files);
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->logger->warning('Failed to cleanup downloaded files: ' . $e->getMessage());
         }
         
@@ -326,7 +326,7 @@ class VH360_Demo_Importer {
             if (!empty($this->extracted_dirs)) {
                 $this->cleanup_extracted_dirs();
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->logger->warning('Failed to cleanup extracted directories: ' . $e->getMessage());
         }
     }

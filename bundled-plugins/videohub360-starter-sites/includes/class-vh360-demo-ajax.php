@@ -189,7 +189,7 @@ class VH360_Demo_AJAX {
             $last_import_step = 'Sending JSON success response';
             wp_send_json_success($result);
             
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Catch all throwables (Exception + Error in PHP 7+)
             $last_import_step = 'Caught exception: ' . $e->getMessage();
             
