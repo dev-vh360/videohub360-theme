@@ -312,33 +312,37 @@ class VH360_Demo_Importer {
                     $activated_plugins[] = $plugin_slug;
                 }
             } else {
-                // Plugin not installed - try to install if it's bundled
+                // Plugin not installed - try to install from bundled ZIP or WordPress.org
+                $install_result = null;
+                
                 if (vh360_ss_is_bundled_plugin($plugin_slug)) {
+                    // Install from bundled ZIP
                     $this->logger->info(sprintf('Installing bundled plugin: %s', $plugin_slug));
                     $install_result = vh360_ss_install_bundled_plugin($plugin_slug);
+                } else {
+                    // Try to install from WordPress.org repository
+                    $this->logger->info(sprintf('Installing plugin from WordPress.org: %s', $plugin_slug));
+                    $install_result = vh360_ss_install_repository_plugin($plugin_slug);
+                }
+                
+                if (is_wp_error($install_result)) {
+                    $this->logger->error(sprintf('Failed to install plugin %s: %s', $plugin_slug, $install_result->get_error_message()));
+                    $missing_plugins[] = $plugin_slug;
+                } else {
+                    $this->logger->success(sprintf('Installed plugin: %s', $plugin_slug));
+                    $installed_plugins[] = $plugin_slug;
                     
-                    if (is_wp_error($install_result)) {
-                        $this->logger->error(sprintf('Failed to install plugin %s: %s', $plugin_slug, $install_result->get_error_message()));
+                    // Now activate the newly installed plugin
+                    $this->logger->info(sprintf('Activating newly installed plugin: %s', $plugin_slug));
+                    $activation_result = vh360_ss_activate_plugin($plugin_slug);
+                    
+                    if (is_wp_error($activation_result)) {
+                        $this->logger->error(sprintf('Failed to activate plugin %s: %s', $plugin_slug, $activation_result->get_error_message()));
                         $missing_plugins[] = $plugin_slug;
                     } else {
-                        $this->logger->success(sprintf('Installed plugin: %s', $plugin_slug));
-                        $installed_plugins[] = $plugin_slug;
-                        
-                        // Now activate the newly installed plugin
-                        $this->logger->info(sprintf('Activating newly installed plugin: %s', $plugin_slug));
-                        $activation_result = vh360_ss_activate_plugin($plugin_slug);
-                        
-                        if (is_wp_error($activation_result)) {
-                            $this->logger->error(sprintf('Failed to activate plugin %s: %s', $plugin_slug, $activation_result->get_error_message()));
-                            $missing_plugins[] = $plugin_slug;
-                        } else {
-                            $this->logger->success(sprintf('Activated plugin: %s', $plugin_slug));
-                            $activated_plugins[] = $plugin_slug;
-                        }
+                        $this->logger->success(sprintf('Activated plugin: %s', $plugin_slug));
+                        $activated_plugins[] = $plugin_slug;
                     }
-                } else {
-                    $this->logger->error(sprintf('Required plugin not installed and not bundled: %s', $plugin_slug));
-                    $missing_plugins[] = $plugin_slug;
                 }
             }
         }

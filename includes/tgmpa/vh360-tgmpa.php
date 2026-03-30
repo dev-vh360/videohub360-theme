@@ -22,6 +22,13 @@ function vh360_register_required_plugins() {
             'force_deactivation' => false,
         ),
         array(
+            'name'               => 'Contact Form 7',
+            'slug'               => 'contact-form-7',
+            'required'           => true,
+            'force_activation'   => false,
+            'force_deactivation' => false,
+        ),
+        array(
             'name'     => 'PWA App',
             'slug'     => 'vh360-pwa-app',
             'source'   => get_template_directory() . '/bundled-plugins/vh360-pwa-app.zip',
