@@ -334,10 +334,10 @@
                 $icon.html('✗').addClass('error').removeClass('success');
                 $title.text('Import Failed');
                 
-                // Build detailed error message
+                // Build error message (production-safe)
                 var errorHtml = '<p>' + (data.message || 'An error occurred during import.') + '</p>';
                 
-                // Add diagnostic information if available
+                // Add diagnostic information only if provided (debug mode)
                 if (data.last_step) {
                     errorHtml += '<p><strong>Last successful step:</strong> ' + data.last_step + '</p>';
                 }

@@ -99,21 +99,29 @@ class VH360_Demo_AJAX {
                     status_header(200); // Override 500
                     header('Content-Type: application/json; charset=utf-8');
                     
+                    // Build response with diagnostics gated behind WP_DEBUG
+                    $response_data = array(
+                        'message' => __('A fatal error occurred during import. Please check the debug log for details.', 'videohub360-starter-sites'),
+                        'log' => VH360_Demo_Logger::get_last_log(),
+                    );
+                    
+                    // Add detailed diagnostics only in debug mode
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        $response_data['message'] = sprintf(
+                            'Fatal error during import: %s in %s on line %d',
+                            $error['message'],
+                            $error['file'],
+                            $error['line']
+                        );
+                        $response_data['last_step'] = $last_import_step;
+                        $response_data['error_type'] = 'fatal';
+                        $response_data['error_details'] = $error;
+                        $response_data['memory_peak'] = memory_get_peak_usage(true);
+                    }
+                    
                     $response = array(
                         'success' => false,
-                        'data' => array(
-                            'message' => sprintf(
-                                'Fatal error during import: %s in %s on line %d',
-                                $error['message'],
-                                $error['file'],
-                                $error['line']
-                            ),
-                            'last_step' => $last_import_step,
-                            'error_type' => 'fatal',
-                            'error_details' => $error,
-                            'memory_peak' => memory_get_peak_usage(true),
-                            'log' => VH360_Demo_Logger::get_last_log(),
-                        ),
+                        'data' => $response_data,
                     );
                     
                     echo json_encode($response);
@@ -169,23 +177,33 @@ class VH360_Demo_AJAX {
             
             if (is_wp_error($result)) {
                 $last_import_step = 'Import returned WP_Error';
-                wp_send_json_error(array(
+                
+                // Build error response with diagnostics gated behind WP_DEBUG
+                $error_data = array(
                     'message' => $result->get_error_message(),
                     'error_code' => $result->get_error_code(),
                     'log' => VH360_Demo_Logger::get_last_log(),
-                    'last_step' => $last_import_step,
-                ));
+                );
+                
+                // Add detailed diagnostics only in debug mode
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    $error_data['last_step'] = $last_import_step;
+                }
+                
+                wp_send_json_error($error_data);
             }
             
             $last_import_step = 'Preparing JSON success response';
             
-            // Add diagnostics to success response
+            // Add diagnostics to success response only in debug mode
             if (is_array($result)) {
-                $result['diagnostics'] = array(
-                    'memory_peak' => memory_get_peak_usage(true),
-                    'memory_current' => memory_get_usage(true),
-                    'last_step' => $last_import_step,
-                );
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    $result['diagnostics'] = array(
+                        'memory_peak' => memory_get_peak_usage(true),
+                        'memory_current' => memory_get_usage(true),
+                        'last_step' => $last_import_step,
+                    );
+                }
             }
             
             $last_import_step = 'Sending JSON success response';
@@ -195,17 +213,27 @@ class VH360_Demo_AJAX {
             // Catch all throwables (Exception + Error in PHP 7+)
             $last_import_step = 'Caught exception: ' . $e->getMessage();
             
-            wp_send_json_error(array(
-                'message' => 'Import failed with exception: ' . $e->getMessage(),
-                'error_type' => 'exception',
-                'error_class' => get_class($e),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString(),
-                'last_step' => $last_import_step,
-                'memory_peak' => memory_get_peak_usage(true),
+            // Build error response with diagnostics gated behind WP_DEBUG
+            $error_data = array(
+                'message' => sprintf(
+                    __('Import failed: %s', 'videohub360-starter-sites'),
+                    $e->getMessage()
+                ),
                 'log' => VH360_Demo_Logger::get_last_log(),
-            ));
+            );
+            
+            // Add detailed diagnostics only in debug mode
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                $error_data['error_type'] = 'exception';
+                $error_data['error_class'] = get_class($e);
+                $error_data['file'] = $e->getFile();
+                $error_data['line'] = $e->getLine();
+                $error_data['trace'] = $e->getTraceAsString();
+                $error_data['last_step'] = $last_import_step;
+                $error_data['memory_peak'] = memory_get_peak_usage(true);
+            }
+            
+            wp_send_json_error($error_data);
         }
         
         $shutdown_handler_registered = false;
