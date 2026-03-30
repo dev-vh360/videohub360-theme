@@ -850,11 +850,6 @@ class VH360_Demo_Importer {
         // Import the kit using Elementor's import functionality
         if (class_exists('\Elementor\Plugin')) {
             try {
-                // Check if Elementor instance is available
-                if (!\Elementor\Plugin::$instance) {
-                    $this->logger->warning('Elementor instance not fully initialized');
-                }
-                
                 $imported_items = 0;
                 
                 // Step 1: Import site settings if available
@@ -941,9 +936,14 @@ class VH360_Demo_Importer {
                     // Store settings in active kit post meta
                     foreach ($settings_json as $key => $value) {
                         if ($key !== 'settings') {
-                            // Sanitize key and prefix with _elementor_
+                            // Sanitize key and validate it's Elementor-related
                             $sanitized_key = sanitize_key($key);
-                            update_post_meta($active_kit_id, '_elementor_' . $sanitized_key, $value);
+                            // Only import keys that are Elementor-related for security
+                            if (strpos($sanitized_key, 'elementor') === 0 || strpos($key, 'elementor') === 0) {
+                                update_post_meta($active_kit_id, '_elementor_' . $sanitized_key, $value);
+                            } else {
+                                $this->logger->warning('Skipped non-Elementor meta key: ' . $key);
+                            }
                         }
                     }
                     $this->logger->info('Imported Elementor site settings to active kit');
@@ -984,10 +984,17 @@ class VH360_Demo_Importer {
             if (isset($elementor_plugin->templates_manager) && method_exists($elementor_plugin->templates_manager, 'import_template')) {
                 try {
                     // Prepare template data for import
-                    $import_data = array(
-                        'content' => $template_json,
-                        'page_settings' => isset($template_json['page_settings']) ? $template_json['page_settings'] : array(),
-                    );
+                    // Check if template_json already has a 'content' field
+                    if (isset($template_json['content'])) {
+                        // Use the structure as-is
+                        $import_data = $template_json;
+                    } else {
+                        // Wrap entire JSON as content (legacy support)
+                        $import_data = array(
+                            'content' => $template_json,
+                            'page_settings' => isset($template_json['page_settings']) ? $template_json['page_settings'] : array(),
+                        );
+                    }
                     
                     $result = $elementor_plugin->templates_manager->import_template($import_data);
                     
