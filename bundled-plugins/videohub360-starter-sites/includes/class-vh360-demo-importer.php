@@ -101,27 +101,57 @@ class VH360_Demo_Importer {
      * Import a demo site
      *
      * @param string $demo_id Demo ID to import
+     * @param callable $progress_callback Optional callback to track progress
      * @return array|WP_Error Result array or error
      */
-    public function import_demo($demo_id) {
+    public function import_demo($demo_id, $progress_callback = null) {
+        $start_time = microtime(true);
+        $start_memory = memory_get_usage(true);
+        
+        // Helper closure to log each step with diagnostic information
+        // Logs: step name, elapsed time, current memory, peak memory
+        // Also invokes progress callback to track last successful step in AJAX handler
+        $log_step = function($step_name) use ($start_time, $progress_callback) {
+            $elapsed = microtime(true) - $start_time;
+            $memory_current = memory_get_usage(true);
+            $memory_peak = memory_get_peak_usage(true);
+            
+            $this->logger->info(sprintf(
+                '[%s] Elapsed: %.2fs | Memory: %s | Peak: %s',
+                $step_name,
+                $elapsed,
+                vh360_ss_format_bytes($memory_current),
+                vh360_ss_format_bytes($memory_peak)
+            ));
+            
+            if ($progress_callback && is_callable($progress_callback)) {
+                call_user_func($progress_callback, $step_name);
+            }
+        };
+        
         // Clear previous log
         $this->logger->clear();
         $this->logger->set_demo_id($demo_id);
         
         $this->logger->info('========== STARTING DEMO IMPORT ==========');
         $this->logger->info('Demo ID: ' . $demo_id);
+        $log_step('Import initialized');
         
         try {
             // Step 1: Validate environment (BEFORE setting lock)
+            $log_step('Validating environment');
             $validation = $this->validate_environment();
             if (is_wp_error($validation)) {
                 throw new Exception($validation->get_error_message());
             }
+            $log_step('Environment validation complete');
             
             // Set import in progress flag AFTER validation passes
             vh360_ss_set_import_running($demo_id);
+            $log_step('Import lock acquired');
             
             // Step 2: Get demo data from registry
+            $log_step('Fetching demo from registry');
             $demo = $this->registry->get_demo($demo_id);
             if (is_wp_error($demo)) {
                 throw new Exception($demo->get_error_message());
@@ -129,104 +159,168 @@ class VH360_Demo_Importer {
             
             $this->current_demo = $demo;
             $this->logger->info('Demo: ' . $demo['name'] . ' v' . $demo['version']);
+            $log_step('Demo metadata loaded');
             
             // Step 3: Download and parse manifest
+            $log_step('Downloading manifest');
             $manifest = $this->downloader->download_manifest($demo['package_manifest_url']);
             if (is_wp_error($manifest)) {
                 throw new Exception($manifest->get_error_message());
             }
             
             $this->current_manifest = $manifest;
+            $log_step('Manifest downloaded and parsed');
             
             // Step 4: Download package files
+            $log_step('Downloading package files');
             $files = $this->downloader->download_package_files($manifest);
             if (is_wp_error($files)) {
                 throw new Exception($files->get_error_message());
             }
             
             $this->downloaded_files = $files;
+            $log_step('Package files downloaded');
             
             // Step 5: Ensure required plugins are active
+            $log_step('Ensuring required plugins');
             $plugins_result = $this->ensure_required_plugins();
             if (is_wp_error($plugins_result)) {
                 throw new Exception($plugins_result->get_error_message());
             }
+            $log_step('Required plugins ensured');
             
             // Step 6: Import content
+            $log_step('Importing content');
             $content_result = $this->import_content();
             if (is_wp_error($content_result)) {
                 throw new Exception($content_result->get_error_message());
             }
+            $log_step('Content import complete');
             
             // Step 7: Import widgets
+            $log_step('Importing widgets');
             $widgets_result = $this->import_widgets();
             if (is_wp_error($widgets_result)) {
                 $this->logger->warning('Widget import failed: ' . $widgets_result->get_error_message());
             }
+            $log_step('Widgets import complete');
             
             // Step 8: Import Customizer settings
+            $log_step('Importing customizer settings');
             $customizer_result = $this->import_customizer();
             if (is_wp_error($customizer_result)) {
                 $this->logger->warning('Customizer import failed: ' . $customizer_result->get_error_message());
             }
+            $log_step('Customizer import complete');
             
             // Step 9: Import Elementor kit
+            $log_step('Importing Elementor kit');
             $elementor_result = $this->import_elementor_kit();
             if (is_wp_error($elementor_result)) {
                 $this->logger->warning('Elementor kit import failed: ' . $elementor_result->get_error_message());
             }
+            $log_step('Elementor kit import complete');
             
             // Step 10: Import theme options
+            $log_step('Importing theme options');
             $options_result = $this->import_theme_options();
             if (is_wp_error($options_result)) {
                 $this->logger->warning('Theme options import failed: ' . $options_result->get_error_message());
             }
+            $log_step('Theme options import complete');
             
             // Step 11: Run post-import setup
+            $log_step('Running post-import setup');
             $post_import_result = $this->post_import->run($manifest);
             if (is_wp_error($post_import_result)) {
                 $this->logger->warning('Post-import setup failed: ' . $post_import_result->get_error_message());
             }
+            $log_step('Post-import setup complete');
             
             // Step 12: Verify import
+            $log_step('Verifying import');
             $verification = $this->post_import->verify_import($manifest);
+            $log_step('Import verification complete');
             
             // Step 13: Cleanup downloaded files and extracted directories
-            $this->downloader->cleanup_files($this->downloaded_files);
-            $this->cleanup_extracted_dirs();
+            $log_step('Cleaning up temporary files');
+            $this->cleanup_safely();
+            $log_step('Cleanup complete');
             
             // Clear import in progress flag
+            $log_step('Clearing import lock');
             vh360_ss_clear_import_running();
+            $log_step('Import lock released');
             
             // Log completion BEFORE saving
-            $this->logger->info('========== DEMO IMPORT COMPLETED ==========');
+            $elapsed_total = microtime(true) - $start_time;
+            $this->logger->info(sprintf(
+                '========== DEMO IMPORT COMPLETED (%.2fs) ==========',
+                $elapsed_total
+            ));
+            $log_step('Logging completion message');
             
             // Save log AFTER all entries are written
+            $log_step('Saving import log');
             $this->logger->save();
+            $log_step('Import log saved');
             
-            return array(
+            // Build response
+            $log_step('Building response payload');
+            $response = array(
                 'success' => true,
                 'demo_id' => $demo_id,
                 'demo_name' => $demo['name'],
                 'verification' => $verification,
                 'log' => $this->logger->get_last_log(),
+                'duration' => round($elapsed_total, 2),
             );
+            $log_step('Response payload built');
             
-        } catch (Exception $e) {
-            $this->logger->error('Import failed: ' . $e->getMessage());
+            return $response;
             
-            // Cleanup on error
+        } catch (Throwable $t) {
+            // Catch all throwables (Exception + PHP 7+ Error types)
+            // Server-side logging always includes full details for support/debugging
+            $this->logger->error('Import failed: ' . $t->getMessage());
+            $this->logger->error('Error in file: ' . $t->getFile() . ' on line ' . $t->getLine());
+            
+            // Cleanup on error - use safe cleanup
+            $log_step('Cleaning up after error');
+            $this->cleanup_safely();
+            
+            vh360_ss_clear_import_running();
+            $log_step('Import lock released after error');
+            
+            $this->logger->save();
+            $log_step('Error log saved');
+            
+            // Return WP_Error with message only - AJAX handler gates detailed info behind WP_DEBUG
+            return new WP_Error('import_failed', $t->getMessage());
+        }
+    }
+    
+    /**
+     * Safe cleanup of temporary files and directories
+     * Catches and logs errors instead of throwing them
+     *
+     * @return void
+     */
+    private function cleanup_safely() {
+        try {
             if (!empty($this->downloaded_files)) {
                 $this->downloader->cleanup_files($this->downloaded_files);
             }
+        } catch (Exception $e) {
+            $this->logger->warning('Failed to cleanup downloaded files: ' . $e->getMessage());
+        }
+        
+        try {
             if (!empty($this->extracted_dirs)) {
                 $this->cleanup_extracted_dirs();
             }
-            
-            vh360_ss_clear_import_running();
-            $this->logger->save();
-            
-            return new WP_Error('import_failed', $e->getMessage());
+        } catch (Exception $e) {
+            $this->logger->warning('Failed to cleanup extracted directories: ' . $e->getMessage());
         }
     }
     
@@ -290,6 +384,7 @@ class VH360_Demo_Importer {
         
         $missing_plugins = array();
         $activated_plugins = array();
+        // Track plugins that were newly installed during this import and successfully activated
         $installed_plugins = array();
         
         foreach ($this->current_demo['required_plugins'] as $plugin_slug) {
@@ -312,33 +407,38 @@ class VH360_Demo_Importer {
                     $activated_plugins[] = $plugin_slug;
                 }
             } else {
-                // Plugin not installed - try to install if it's bundled
+                // Plugin not installed - try to install from bundled ZIP or WordPress.org
+                $install_result = null;
+                
                 if (vh360_ss_is_bundled_plugin($plugin_slug)) {
+                    // Install from bundled ZIP
                     $this->logger->info(sprintf('Installing bundled plugin: %s', $plugin_slug));
                     $install_result = vh360_ss_install_bundled_plugin($plugin_slug);
+                } else {
+                    // Try to install from WordPress.org repository
+                    $this->logger->info(sprintf('Installing plugin from WordPress.org: %s', $plugin_slug));
+                    $install_result = vh360_ss_install_repository_plugin($plugin_slug);
+                }
+                
+                if (is_wp_error($install_result)) {
+                    $this->logger->error(sprintf('Failed to install plugin %s: %s', $plugin_slug, $install_result->get_error_message()));
+                    $missing_plugins[] = $plugin_slug;
+                } else {
+                    $this->logger->success(sprintf('Installed plugin: %s', $plugin_slug));
                     
-                    if (is_wp_error($install_result)) {
-                        $this->logger->error(sprintf('Failed to install plugin %s: %s', $plugin_slug, $install_result->get_error_message()));
+                    // Now activate the newly installed plugin
+                    $this->logger->info(sprintf('Activating newly installed plugin: %s', $plugin_slug));
+                    $activation_result = vh360_ss_activate_plugin($plugin_slug);
+                    
+                    if (is_wp_error($activation_result)) {
+                        $this->logger->error(sprintf('Failed to activate plugin %s: %s', $plugin_slug, $activation_result->get_error_message()));
                         $missing_plugins[] = $plugin_slug;
                     } else {
-                        $this->logger->success(sprintf('Installed plugin: %s', $plugin_slug));
+                        $this->logger->success(sprintf('Activated plugin: %s', $plugin_slug));
+                        // Only add to installed and activated lists after successful activation
                         $installed_plugins[] = $plugin_slug;
-                        
-                        // Now activate the newly installed plugin
-                        $this->logger->info(sprintf('Activating newly installed plugin: %s', $plugin_slug));
-                        $activation_result = vh360_ss_activate_plugin($plugin_slug);
-                        
-                        if (is_wp_error($activation_result)) {
-                            $this->logger->error(sprintf('Failed to activate plugin %s: %s', $plugin_slug, $activation_result->get_error_message()));
-                            $missing_plugins[] = $plugin_slug;
-                        } else {
-                            $this->logger->success(sprintf('Activated plugin: %s', $plugin_slug));
-                            $activated_plugins[] = $plugin_slug;
-                        }
+                        $activated_plugins[] = $plugin_slug;
                     }
-                } else {
-                    $this->logger->error(sprintf('Required plugin not installed and not bundled: %s', $plugin_slug));
-                    $missing_plugins[] = $plugin_slug;
                 }
             }
         }

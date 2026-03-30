@@ -193,9 +193,33 @@
                     }
                 },
                 error: function(xhr, status, error) {
-                    self.handleImportError({
+                    // Handle different error scenarios
+                    var errorData = {
                         message: 'Import failed: ' + error
-                    });
+                    };
+                    
+                    // Try to parse JSON error response
+                    if (xhr.responseJSON) {
+                        errorData = xhr.responseJSON.data || errorData;
+                    } else if (xhr.responseText) {
+                        try {
+                            var parsed = JSON.parse(xhr.responseText);
+                            if (parsed.data) {
+                                errorData = parsed.data;
+                            }
+                        } catch (e) {
+                            // Not JSON, use plain text
+                            errorData.message = 'Server error (HTTP ' + xhr.status + ')';
+                            errorData.details = xhr.responseText.substring(0, 500);
+                        }
+                    }
+                    
+                    // Add diagnostic info
+                    errorData.http_status = xhr.status;
+                    errorData.http_status_text = xhr.statusText;
+                    errorData.ajax_status = status;
+                    
+                    self.handleImportError(errorData);
                 }
             });
             
@@ -298,7 +322,8 @@
                 
                 // Show stats
                 if (data.log) {
-                    $('#vh360-ss-stat-duration').text(this.formatDuration(data.log.duration || 0));
+                    var duration = (typeof data.duration !== 'undefined') ? data.duration : (data.log.duration || 0);
+                    $('#vh360-ss-stat-duration').text(this.formatDuration(duration));
                     $('#vh360-ss-stat-demo').text(data.demo_name || data.demo_id);
                     $('#vh360-ss-stat-errors').text(data.log.error_count || 0);
                     $('#vh360-ss-complete-stats').show();
@@ -308,7 +333,33 @@
             } else {
                 $icon.html('✗').addClass('error').removeClass('success');
                 $title.text('Import Failed');
-                $message.html('<p>' + (data.message || 'An error occurred during import.') + '</p>');
+                
+                // Build error message (production-safe)
+                var errorHtml = '<p>' + (data.message || 'An error occurred during import.') + '</p>';
+                
+                // Add diagnostic information only if provided (debug mode)
+                if (data.last_step) {
+                    errorHtml += '<p><strong>Last successful step:</strong> ' + data.last_step + '</p>';
+                }
+                
+                if (data.error_type) {
+                    errorHtml += '<p><strong>Error type:</strong> ' + data.error_type + '</p>';
+                }
+                
+                if (data.file && data.line) {
+                    errorHtml += '<p><strong>Location:</strong> ' + data.file + ':' + data.line + '</p>';
+                }
+                
+                if (data.memory_peak) {
+                    var memoryMB = Math.round(data.memory_peak / 1024 / 1024);
+                    errorHtml += '<p><strong>Peak memory:</strong> ' + memoryMB + ' MB</p>';
+                }
+                
+                if (data.http_status) {
+                    errorHtml += '<p><strong>HTTP Status:</strong> ' + data.http_status + ' ' + (data.http_status_text || '') + '</p>';
+                }
+                
+                $message.html(errorHtml);
                 $('#vh360-ss-complete-stats').hide();
                 $('#vh360-ss-complete-view-site').hide();
             }

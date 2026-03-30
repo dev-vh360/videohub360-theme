@@ -207,25 +207,41 @@ class VH360_Demo_Post_Import {
      * Clear caches and transients
      */
     private function clear_caches() {
-        // Clear WordPress object cache
-        wp_cache_flush();
-        
-        // Clear theme-specific transients
-        $transients = array(
-            'vh360_ss_demos_cache',
-            'vh360_ss_import_in_progress',
-        );
-        
-        foreach ($transients as $transient) {
-            delete_transient($transient);
+        try {
+            // Clear WordPress object cache
+            wp_cache_flush();
+            
+            // Clear theme-specific transients
+            $transients = array(
+                'vh360_ss_demos_cache',
+                'vh360_ss_import_in_progress',
+            );
+            
+            foreach ($transients as $transient) {
+                delete_transient($transient);
+            }
+            
+            // Clear Elementor cache if active and instance is available
+            if (class_exists('\Elementor\Plugin') && 
+                isset(\Elementor\Plugin::$instance) && 
+                \Elementor\Plugin::$instance !== null &&
+                isset(\Elementor\Plugin::$instance->files_manager)) {
+                
+                \Elementor\Plugin::$instance->files_manager->clear_cache();
+                $this->logger->info('Cleared Elementor cache');
+            } elseif (class_exists('\Elementor\Plugin')) {
+                $this->logger->warning('Elementor is loaded but instance not available for cache clearing');
+            }
+            
+            $this->logger->info('Cleared caches and transients');
+            
+        } catch (Exception $e) {
+            // Cache clearing should never crash a successful import
+            $this->logger->warning('Cache clearing failed: ' . $e->getMessage());
+        } catch (Throwable $t) {
+            // Catch PHP 7+ Error types (TypeError, ParseError, etc) not extending Exception
+            $this->logger->warning('Cache clearing failed with error: ' . $t->getMessage());
         }
-        
-        // Clear Elementor cache if active
-        if (class_exists('\Elementor\Plugin')) {
-            \Elementor\Plugin::$instance->files_manager->clear_cache();
-        }
-        
-        $this->logger->info('Cleared caches and transients');
     }
     
     /**
