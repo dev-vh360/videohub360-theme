@@ -237,9 +237,17 @@ function vh360_ss_install_bundled_plugin($plugin_slug) {
 
 /**
  * Install a plugin from WordPress.org repository
+ * 
+ * Fetches plugin information from the WordPress.org API and installs it using
+ * the standard WordPress Plugin_Upgrader class.
  *
- * @param string $plugin_slug Plugin slug
+ * @param string $plugin_slug Plugin slug (e.g., 'elementor', 'contact-form-7')
  * @return bool|WP_Error True on success, WP_Error on failure
+ * 
+ * Possible WP_Error codes:
+ * - 'plugin_api_failed': Failed to retrieve plugin info from WordPress.org API
+ * - 'install_failed': Plugin installation failed (upgrader returned false)
+ * - Other error codes from Plugin_Upgrader::install() (e.g., 'folder_exists', 'incompatible_archive')
  */
 function vh360_ss_install_repository_plugin($plugin_slug) {
     // Load required WordPress classes
@@ -256,22 +264,11 @@ function vh360_ss_install_repository_plugin($plugin_slug) {
     }
     
     // Get plugin info from WordPress.org API
+    // Only request the download link to minimize API response size
     $api = plugins_api('plugin_information', array(
         'slug' => $plugin_slug,
         'fields' => array(
-            'short_description' => false,
-            'sections' => false,
-            'requires' => false,
-            'rating' => false,
-            'ratings' => false,
-            'downloaded' => false,
             'downloadlink' => true,
-            'last_updated' => false,
-            'added' => false,
-            'tags' => false,
-            'compatibility' => false,
-            'homepage' => false,
-            'donate_link' => false,
         ),
     ));
     
