@@ -281,6 +281,7 @@ class VH360_Demo_Importer {
             
         } catch (Throwable $t) {
             // Catch all throwables (Exception + PHP 7+ Error types)
+            // Server-side logging always includes full details for support/debugging
             $this->logger->error('Import failed: ' . $t->getMessage());
             $this->logger->error('Error in file: ' . $t->getFile() . ' on line ' . $t->getLine());
             
@@ -294,6 +295,7 @@ class VH360_Demo_Importer {
             $this->logger->save();
             $log_step('Error log saved');
             
+            // Return WP_Error with message only - AJAX handler gates detailed info behind WP_DEBUG
             return new WP_Error('import_failed', $t->getMessage());
         }
     }
