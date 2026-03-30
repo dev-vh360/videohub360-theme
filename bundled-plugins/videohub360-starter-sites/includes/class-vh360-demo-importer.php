@@ -265,12 +265,12 @@ class VH360_Demo_Importer {
             $this->logger->save();
             $log_step('Import log saved');
             
-            // Build response with defensive checks
+            // Build response
             $log_step('Building response payload');
             $response = array(
                 'success' => true,
                 'demo_id' => $demo_id,
-                'demo_name' => $demo['name'], // Already validated in earlier steps
+                'demo_name' => $demo['name'],
                 'verification' => $verification,
                 'log' => $this->logger->get_last_log(),
                 'duration' => round($elapsed_total, 2),
