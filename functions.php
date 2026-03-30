@@ -1767,6 +1767,8 @@ function vh360_mobile_bottom_nav_item_output( $item_output, $item, $depth, $args
     }
 
     // Get icon from shared icon meta system
+    // Note: get_post_meta() is cached - WordPress pre-loads all menu item meta
+    // via update_post_caches() when wp_nav_menu() calls wp_get_nav_menu_items()
     $icon_slug = sanitize_key( get_post_meta( $item->ID, '_vh360_menu_icon', true ) );
     $icon_svg  = '';
     
