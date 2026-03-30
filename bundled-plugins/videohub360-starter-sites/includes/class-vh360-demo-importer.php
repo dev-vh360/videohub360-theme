@@ -850,13 +850,16 @@ class VH360_Demo_Importer {
         // Import the kit using Elementor's import functionality
         if (class_exists('\Elementor\Plugin')) {
             try {
-                $imported_items = 0;
+                $site_settings_imported = false;
+                $templates_imported = 0;
+                $templates_found = 0;
+                $templates_failed = 0;
                 
                 // Step 1: Import site settings if available
                 if ($categorized_files['site_settings'] && file_exists($categorized_files['site_settings'])) {
                     $result = $this->import_elementor_site_settings($categorized_files['site_settings']);
                     if ($result === true) {
-                        $imported_items++;
+                        $site_settings_imported = true;
                     } elseif (is_wp_error($result)) {
                         $this->logger->warning('Site settings import failed: ' . $result->get_error_message());
                     }
@@ -864,22 +867,43 @@ class VH360_Demo_Importer {
                 
                 // Step 2: Import template files if available
                 if (!empty($categorized_files['templates'])) {
+                    $templates_found = count($categorized_files['templates']);
+                    
                     foreach ($categorized_files['templates'] as $template_file) {
                         $result = $this->import_elementor_template_file($template_file);
                         if ($result === true) {
-                            $imported_items++;
-                        } elseif (is_wp_error($result)) {
-                            $this->logger->warning('Template import failed for ' . basename($template_file) . ': ' . $result->get_error_message());
+                            $templates_imported++;
+                        } else {
+                            $templates_failed++;
+                            // Detailed logging already done in import_elementor_template_file
                         }
                     }
                 }
                 
-                if ($imported_items > 0) {
-                    $this->logger->success(sprintf('Elementor kit imported successfully (%d items)', $imported_items));
+                // Generate detailed summary
+                $summary_parts = array();
+                
+                if ($site_settings_imported) {
+                    $summary_parts[] = 'Site settings: imported';
+                } else {
+                    $summary_parts[] = 'Site settings: not imported';
+                }
+                
+                if ($templates_found > 0) {
+                    $summary_parts[] = sprintf('Templates: %d found, %d imported, %d failed', 
+                        $templates_found, $templates_imported, $templates_failed);
+                } else {
+                    $summary_parts[] = 'Templates: none found';
+                }
+                
+                $summary = implode(' | ', $summary_parts);
+                
+                if ($site_settings_imported || $templates_imported > 0) {
+                    $this->logger->success('Elementor kit import complete: ' . $summary);
                     return true;
                 } else {
-                    $this->logger->warning('No Elementor kit items could be imported');
-                    return new WP_Error('elementor_kit_no_items', __('No valid Elementor kit items found to import', 'videohub360-starter-sites'));
+                    $this->logger->warning('Elementor kit import incomplete: ' . $summary);
+                    return new WP_Error('elementor_kit_incomplete', __('Elementor kit import incomplete', 'videohub360-starter-sites'));
                 }
                 
             } catch (Exception $e) {
@@ -963,55 +987,86 @@ class VH360_Demo_Importer {
      * @return bool|WP_Error True on success, error on failure
      */
     private function import_elementor_template_file($template_file) {
+        $filename = basename($template_file);
+        
         if (!file_exists($template_file)) {
+            $this->logger->warning("Template import failed for $filename: File not found");
             return new WP_Error('template_not_found', __('Template file not found', 'videohub360-starter-sites'));
         }
         
         $template_data = file_get_contents($template_file);
         if (!$template_data) {
+            $this->logger->warning("Template import failed for $filename: Could not read file");
             return new WP_Error('template_read_failed', __('Failed to read template file', 'videohub360-starter-sites'));
         }
         
+        // Validate JSON
         $template_json = json_decode($template_data, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
+            $this->logger->warning("Template import failed for $filename: Invalid JSON - " . json_last_error_msg());
             return new WP_Error('template_invalid_json', __('Invalid JSON in template file', 'videohub360-starter-sites'));
         }
         
-        // Try to import using Elementor's template manager
-        if (class_exists('\Elementor\Plugin') && \Elementor\Plugin::$instance) {
-            $elementor_plugin = \Elementor\Plugin::instance();
-            
-            if (isset($elementor_plugin->templates_manager) && method_exists($elementor_plugin->templates_manager, 'import_template')) {
-                try {
-                    // Prepare template data for import
-                    // Check if template_json already has a 'content' field
-                    if (isset($template_json['content'])) {
-                        // Use the structure as-is
-                        $import_data = $template_json;
-                    } else {
-                        // Wrap entire JSON as content (legacy support)
-                        $import_data = array(
-                            'content' => $template_json,
-                            'page_settings' => isset($template_json['page_settings']) ? $template_json['page_settings'] : array(),
-                        );
-                    }
-                    
-                    $result = $elementor_plugin->templates_manager->import_template($import_data);
-                    
-                    if ($result && !is_wp_error($result)) {
-                        $this->logger->info('Imported template: ' . basename($template_file));
-                        return true;
-                    }
-                } catch (Exception $e) {
-                    $this->logger->warning('Template import exception for ' . basename($template_file) . ': ' . $e->getMessage());
-                    return new WP_Error('template_import_exception', $e->getMessage());
-                }
-            }
+        // Check if Elementor Plugin class exists
+        if (!class_exists('\Elementor\Plugin')) {
+            $this->logger->warning("Template import failed for $filename: Elementor Plugin class not found");
+            return new WP_Error('elementor_not_loaded', __('Elementor Plugin class not available', 'videohub360-starter-sites'));
         }
         
-        // Fallback: Just log that we found the template but couldn't import
-        $this->logger->info('Found template file but could not import: ' . basename($template_file));
-        return false;
+        // Check if Elementor instance is available
+        if (!\Elementor\Plugin::$instance) {
+            $this->logger->warning("Template import failed for $filename: Elementor instance not initialized");
+            return new WP_Error('elementor_not_initialized', __('Elementor instance not initialized', 'videohub360-starter-sites'));
+        }
+        
+        $elementor_plugin = \Elementor\Plugin::instance();
+        
+        // Check if templates_manager exists
+        if (!isset($elementor_plugin->templates_manager)) {
+            $this->logger->warning("Template import failed for $filename: templates_manager not available");
+            return new WP_Error('templates_manager_missing', __('Elementor templates manager not available', 'videohub360-starter-sites'));
+        }
+        
+        // Check if import_template method exists
+        if (!method_exists($elementor_plugin->templates_manager, 'import_template')) {
+            $this->logger->warning("Template import failed for $filename: import_template method not found");
+            return new WP_Error('import_method_missing', __('Elementor import_template method not available', 'videohub360-starter-sites'));
+        }
+        
+        try {
+            // Elementor's import_template expects fileData (base64 encoded) and fileName
+            // NOT a decoded JSON array
+            $import_data = array(
+                'fileData' => base64_encode($template_data),
+                'fileName' => $filename,
+            );
+            
+            $result = $elementor_plugin->templates_manager->import_template($import_data);
+            
+            if (is_wp_error($result)) {
+                $this->logger->warning("Template import failed for $filename: " . $result->get_error_message());
+                return $result;
+            }
+            
+            if ($result && is_array($result) && !empty($result)) {
+                // Elementor returns array with template data on success
+                $template_id = isset($result[0]['template_id']) ? $result[0]['template_id'] : 'unknown';
+                $this->logger->info("Successfully imported template $filename (ID: $template_id)");
+                return true;
+            }
+            
+            if ($result) {
+                $this->logger->info("Successfully imported template $filename");
+                return true;
+            }
+            
+            $this->logger->warning("Template import failed for $filename: import_template returned no result");
+            return new WP_Error('import_no_result', __('Template import returned no result', 'videohub360-starter-sites'));
+            
+        } catch (Exception $e) {
+            $this->logger->warning("Template import exception for $filename: " . $e->getMessage());
+            return new WP_Error('template_import_exception', $e->getMessage());
+        }
     }
     
     /**
