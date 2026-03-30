@@ -1782,6 +1782,8 @@ function vh360_mobile_bottom_nav_item_output( $item_output, $item, $depth, $args
     // Wrap icon SVG with mobile nav class if present
     $icon_html = '';
     if ( ! empty( $icon_svg ) ) {
+        // Defense in depth: wp_kses() even though SVG is from trusted registry
+        // Protects against potential future modifications to the icon registry
         $icon_html = '<span class="vh360-mobile-bottom-nav__icon">' . wp_kses( $icon_svg, vh360_get_mobile_nav_allowed_svg_tags() ) . '</span>';
     }
 

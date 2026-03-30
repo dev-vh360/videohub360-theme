@@ -260,12 +260,13 @@ function vh360_render_mobile_bottom_menu_items_meta_box() {
  * @return void
  */
 function vh360_save_mobile_nav_menu_item_icon( $menu_id, $menu_item_db_id, $args ) {
-    // Check user capabilities
+    // Check user capabilities first (more restrictive than nonce)
+    // Capability check ensures only authorized users proceed, even if nonce is valid
     if ( ! current_user_can( 'edit_theme_options' ) ) {
         return;
     }
     
-    // Verify nonce for security (WordPress menu save nonce)
+    // Verify nonce for CSRF protection (WordPress menu save nonce)
     // Note: Do not sanitize nonce before verification - pass raw value
     if ( ! isset( $_POST['update-nav-menu-nonce'] ) || ! wp_verify_nonce( wp_unslash( $_POST['update-nav-menu-nonce'] ), 'update-nav-menu' ) ) {
         return;
