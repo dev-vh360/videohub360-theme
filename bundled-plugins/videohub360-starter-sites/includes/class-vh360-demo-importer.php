@@ -671,8 +671,8 @@ class VH360_Demo_Importer {
         }
         
         // If extraction produced a single subfolder, use that as root
-        if (count($filtered_items) === 1 && is_dir($extract_dir . '/' . $filtered_items[0])) {
-            $nested_dir = $extract_dir . '/' . $filtered_items[0];
+        if (count($filtered_items) === 1 && is_dir(trailingslashit($extract_dir) . $filtered_items[0])) {
+            $nested_dir = trailingslashit($extract_dir) . $filtered_items[0];
             $this->logger->info('Detected nested Elementor kit directory: ' . basename($nested_dir));
             return $nested_dir;
         }
@@ -694,20 +694,24 @@ class VH360_Demo_Importer {
             return $json_files;
         }
         
-        $iterator = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::SELF_FIRST
-        );
-        
-        foreach ($iterator as $file) {
-            if ($file->isFile() && strtolower($file->getExtension()) === 'json') {
-                // Skip macOS metadata
-                if (strpos($file->getPathname(), '__MACOSX') !== false) {
-                    continue;
+        try {
+            $iterator = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
+                RecursiveIteratorIterator::SELF_FIRST
+            );
+            
+            foreach ($iterator as $file) {
+                if ($file->isFile() && strtolower($file->getExtension()) === 'json') {
+                    // Skip macOS metadata
+                    if (strpos($file->getPathname(), '__MACOSX') !== false) {
+                        continue;
+                    }
+                    
+                    $json_files[] = $file->getPathname();
                 }
-                
-                $json_files[] = $file->getPathname();
             }
+        } catch (UnexpectedValueException $e) {
+            $this->logger->warning('Failed to scan directory: ' . $e->getMessage());
         }
         
         return $json_files;
@@ -732,7 +736,7 @@ class VH360_Demo_Importer {
         
         foreach ($json_files as $file_path) {
             $basename = basename($file_path);
-            $relative_path = str_replace($kit_root . '/', '', $file_path);
+            $relative_path = str_replace(trailingslashit($kit_root), '', $file_path);
             
             // Detect file role by name and location
             if ($basename === 'manifest.json') {
@@ -917,7 +921,12 @@ class VH360_Demo_Importer {
         // Import settings based on Elementor's structure
         if (isset($settings_json['settings']) && is_array($settings_json['settings'])) {
             foreach ($settings_json['settings'] as $setting_key => $setting_value) {
-                update_option($setting_key, $setting_value);
+                // Only import options that start with 'elementor' for security
+                if (strpos($setting_key, 'elementor') === 0) {
+                    update_option($setting_key, $setting_value);
+                } else {
+                    $this->logger->warning('Skipped non-Elementor option: ' . $setting_key);
+                }
             }
             $this->logger->info('Imported Elementor site settings');
             return true;
@@ -932,7 +941,9 @@ class VH360_Demo_Importer {
                     // Store settings in active kit post meta
                     foreach ($settings_json as $key => $value) {
                         if ($key !== 'settings') {
-                            update_post_meta($active_kit_id, '_elementor_' . $key, $value);
+                            // Sanitize key and prefix with _elementor_
+                            $sanitized_key = sanitize_key($key);
+                            update_post_meta($active_kit_id, '_elementor_' . $sanitized_key, $value);
                         }
                     }
                     $this->logger->info('Imported Elementor site settings to active kit');
