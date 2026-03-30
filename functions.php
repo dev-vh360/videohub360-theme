@@ -1710,37 +1710,13 @@ function vh360_mobile_bottom_nav_item_output( $item_output, $item, $depth, $args
 
     $classes = is_array( $item->classes ) ? $item->classes : array();
 
+    // Special behavior flags (not icon sources)
     $is_avatar        = in_array( 'vh360-icon-avatar', $classes, true );
     $is_notifications = in_array( 'vh360-icon-notifications', $classes, true );
-    $is_activity      = in_array( 'vh360-icon-activity', $classes, true );
-    $is_members       = in_array( 'vh360-icon-members', $classes, true );
-    $is_communities   = in_array( 'vh360-icon-communities', $classes, true );
-    $is_home          = in_array( 'vh360-icon-home', $classes, true );
-
-    // Inline SVGs (tiny + dependency-free).
-    $svg_home     = '<svg class="vh360-mobile-bottom-nav__icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 10.5L12 3l9 7.5"></path><path d="M5 10v11h14V10"></path><path d="M9 21v-6h6v6"></path></svg>';
-    $svg_activity = '<svg class="vh360-mobile-bottom-nav__icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19h16"></path><path d="M4 15l4-4 4 4 8-8"></path></svg>';
-    $svg_bell     = '<svg class="vh360-mobile-bottom-nav__icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>';
-    $svg_users    = '<svg class="vh360-mobile-bottom-nav__icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>';
-    $svg_user     = '<svg class="vh360-mobile-bottom-nav__icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
-    $svg_menu     = '<svg class="vh360-mobile-bottom-nav__icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16"></path><path d="M4 12h16"></path><path d="M4 18h16"></path></svg>';
-
-    $icon_html = $svg_menu;
-    if ( $is_home ) {
-        $icon_html = $svg_home;
-    } elseif ( $is_activity ) {
-        $icon_html = $svg_activity;
-    } elseif ( $is_notifications ) {
-        $icon_html = $svg_bell;
-    } elseif ( $is_communities ) {
-        $icon_html = $svg_users;
-    } elseif ( $is_members ) {
-        $icon_html = $svg_user;
-    }
 
     $label = isset( $item->title ) ? $item->title : '';
 
-    // Avatar item becomes a button that opens the drawer.
+    // Avatar item becomes a button that opens the drawer
     if ( $is_avatar ) {
         $user_id    = get_current_user_id();
         $avatar_url = get_avatar_url( $user_id, array( 'size' => 64 ) );
@@ -1755,12 +1731,46 @@ function vh360_mobile_bottom_nav_item_output( $item_output, $item, $depth, $args
         return $button;
     }
 
+    // Get icon from shared icon meta system
+    $icon_slug = sanitize_key( get_post_meta( $item->ID, '_vh360_menu_icon', true ) );
+    $icon_svg  = '';
+    
+    if ( ! empty( $icon_slug ) ) {
+        $allowed_icons = array_keys( vh360_cm_icon_choices() );
+        if ( in_array( $icon_slug, $allowed_icons, true ) ) {
+            $icon_svg = vh360_cm_get_icon_svg( $icon_slug );
+        }
+    }
+
+    // Wrap icon SVG with mobile nav class if present
+    $icon_html = '';
+    if ( ! empty( $icon_svg ) ) {
+        $allowed_svg_tags = array(
+            'svg' => array(
+                'viewBox'     => true,
+                'fill'        => true,
+                'aria-hidden' => true,
+                'focusable'   => true,
+            ),
+            'path' => array(
+                'd' => true,
+            ),
+            'circle' => array(
+                'cx' => true,
+                'cy' => true,
+                'r'  => true,
+            ),
+        );
+        $icon_html = '<span class="vh360-mobile-bottom-nav__icon" aria-hidden="true">' . wp_kses( $icon_svg, $allowed_svg_tags ) . '</span>';
+    }
+
     $href = ! empty( $item->url ) ? $item->url : '#';
 
     $out  = '<a class="vh360-mobile-bottom-nav__item" href="' . esc_url( $href ) . '" aria-label="' . esc_attr( $label ) . '">';
     $out .= $icon_html;
     $out .= '<span class="vh360-mobile-bottom-nav__label">' . esc_html( $label ) . '</span>';
 
+    // Add unread badge to notifications items
     if ( $is_notifications ) {
         $count = vh360_mobile_bottom_nav_unread_notifications_count( get_current_user_id() );
         if ( $count > 0 ) {
