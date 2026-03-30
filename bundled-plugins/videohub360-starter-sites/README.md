@@ -82,6 +82,67 @@ Each demo package is controlled by a `manifest.json` file:
 }
 ```
 
+## Elementor Kit Structure
+
+The Elementor kit importer supports both simple and full Elementor export formats:
+
+### Supported Formats
+
+**Full Elementor Export (Recommended)**
+```
+elementor-kit.zip
+└── elementor-kit/
+    ├── manifest.json              # Package metadata
+    ├── site-settings.json         # Global Elementor settings
+    ├── elementor-{id}.json        # Template/document files
+    ├── content/
+    │   └── *.json                 # Additional content structures
+    └── taxonomies/
+        └── *.json                 # Taxonomy data
+```
+
+**Legacy Format (Still Supported)**
+```
+elementor-kit.json                 # Single JSON file with settings
+```
+
+### Import Process
+
+1. **ZIP Extraction & Normalization**: Extracts and normalizes the directory structure
+   - Removes `__MACOSX`, `.DS_Store`, and hidden files
+   - Detects nested folders (e.g., if extraction creates `elementor-kit/` subfolder)
+   - Uses the actual kit root, not the extraction root
+
+2. **Recursive File Discovery**: Scans all nested directories for JSON files
+
+3. **File Role Detection**: Categorizes files by purpose:
+   - `manifest.json` → Package structure reference
+   - `site-settings.json` → Global Elementor kit settings
+   - `elementor-*.json` → Templates/documents
+   - `content/*.json` → Additional content structures
+   - `taxonomies/*.json` → Taxonomy-related data
+
+4. **Sequential Import**:
+   - Import site settings (global kit configuration)
+   - Import template/document files
+   - Log detailed diagnostics for each step
+
+### Logging
+
+The importer provides detailed diagnostics:
+- Detected root directory
+- Number of JSON files found
+- Presence of `manifest.json` and `site-settings.json`
+- Template count and individual import results
+- Specific error messages (not just "no JSON found")
+
+### Error Handling
+
+Elementor kit import is **non-fatal**:
+- Import failures log warnings but don't crash the full demo import
+- Detailed error messages help identify structural issues
+- Import continues even if Elementor is not fully initialized
+
 ## Theme Options Security
 
 Only whitelisted theme options are imported. The allowlist is defined in `includes/helpers.php`:
