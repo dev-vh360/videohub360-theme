@@ -631,6 +631,130 @@ class VH360_Demo_Importer {
     }
     
     /**
+     * Normalize extracted Elementor kit directory
+     * 
+     * Removes system files and detects the actual kit root folder
+     *
+     * @param string $extract_dir Extraction directory
+     * @return string|WP_Error Normalized root directory or error
+     */
+    private function normalize_elementor_kit_directory($extract_dir) {
+        if (!is_dir($extract_dir)) {
+            return new WP_Error('invalid_dir', __('Invalid extraction directory', 'videohub360-starter-sites'));
+        }
+        
+        // Scan directory contents
+        $items = scandir($extract_dir);
+        if ($items === false) {
+            return new WP_Error('scan_failed', __('Failed to scan extraction directory', 'videohub360-starter-sites'));
+        }
+        
+        // Filter out system files and hidden files
+        $filtered_items = array();
+        foreach ($items as $item) {
+            // Skip current/parent directory references
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+            
+            // Skip macOS metadata folder
+            if ($item === '__MACOSX') {
+                continue;
+            }
+            
+            // Skip hidden files and .DS_Store
+            if (strpos($item, '.') === 0) {
+                continue;
+            }
+            
+            $filtered_items[] = $item;
+        }
+        
+        // If extraction produced a single subfolder, use that as root
+        if (count($filtered_items) === 1 && is_dir($extract_dir . '/' . $filtered_items[0])) {
+            $nested_dir = $extract_dir . '/' . $filtered_items[0];
+            $this->logger->info('Detected nested Elementor kit directory: ' . basename($nested_dir));
+            return $nested_dir;
+        }
+        
+        // Otherwise, use the extraction directory itself
+        return $extract_dir;
+    }
+    
+    /**
+     * Recursively discover all JSON files in a directory
+     *
+     * @param string $dir Directory to scan
+     * @return array Array of JSON file paths
+     */
+    private function discover_json_files_recursive($dir) {
+        $json_files = array();
+        
+        if (!is_dir($dir)) {
+            return $json_files;
+        }
+        
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::SELF_FIRST
+        );
+        
+        foreach ($iterator as $file) {
+            if ($file->isFile() && strtolower($file->getExtension()) === 'json') {
+                // Skip macOS metadata
+                if (strpos($file->getPathname(), '__MACOSX') !== false) {
+                    continue;
+                }
+                
+                $json_files[] = $file->getPathname();
+            }
+        }
+        
+        return $json_files;
+    }
+    
+    /**
+     * Detect file roles in Elementor kit
+     *
+     * @param array $json_files Array of JSON file paths
+     * @param string $kit_root Kit root directory
+     * @return array Array with categorized files
+     */
+    private function detect_elementor_file_roles($json_files, $kit_root) {
+        $categorized = array(
+            'manifest' => null,
+            'site_settings' => null,
+            'templates' => array(),
+            'content' => array(),
+            'taxonomies' => array(),
+            'other' => array()
+        );
+        
+        foreach ($json_files as $file_path) {
+            $basename = basename($file_path);
+            $relative_path = str_replace($kit_root . '/', '', $file_path);
+            
+            // Detect file role by name and location
+            if ($basename === 'manifest.json') {
+                $categorized['manifest'] = $file_path;
+            } elseif ($basename === 'site-settings.json') {
+                $categorized['site_settings'] = $file_path;
+            } elseif (strpos($basename, 'elementor-') === 0) {
+                // Elementor template/document files
+                $categorized['templates'][] = $file_path;
+            } elseif (strpos($relative_path, 'content/') === 0) {
+                $categorized['content'][] = $file_path;
+            } elseif (strpos($relative_path, 'taxonomies/') === 0) {
+                $categorized['taxonomies'][] = $file_path;
+            } else {
+                $categorized['other'][] = $file_path;
+            }
+        }
+        
+        return $categorized;
+    }
+    
+    /**
      * Import Elementor kit
      *
      * @return bool|WP_Error True on success, error on failure
@@ -655,6 +779,7 @@ class VH360_Demo_Importer {
         }
         
         // Extract ZIP if needed
+        $kit_root = null;
         if (pathinfo($kit_file, PATHINFO_EXTENSION) === 'zip') {
             $extract_dir = vh360_ss_get_temp_dir() . '/elementor-kit-' . time();
             $extract_result = $this->downloader->extract_zip($kit_file, $extract_dir);
@@ -666,71 +791,98 @@ class VH360_Demo_Importer {
             // Track extracted directory for cleanup
             $this->extracted_dirs[] = $extract_dir;
             
-            // Find the kit JSON file in extracted directory
-            $kit_json_files = glob($extract_dir . '/*.json');
-            if (empty($kit_json_files)) {
-                return new WP_Error('elementor_kit_no_json', __('No JSON file found in Elementor kit', 'videohub360-starter-sites'));
+            // Normalize the extraction directory (handle nested folders, ignore system files)
+            $kit_root = $this->normalize_elementor_kit_directory($extract_dir);
+            if (is_wp_error($kit_root)) {
+                return $kit_root;
             }
             
-            $kit_file = $kit_json_files[0];
+            $this->logger->info('Elementor kit root: ' . basename($kit_root));
+            
+            // Recursively discover all JSON files
+            $json_files = $this->discover_json_files_recursive($kit_root);
+            
+            if (empty($json_files)) {
+                return new WP_Error('elementor_kit_no_json', sprintf(
+                    __('No JSON files found in Elementor kit. Scanned directory: %s', 'videohub360-starter-sites'),
+                    basename($kit_root)
+                ));
+            }
+            
+            $this->logger->info(sprintf('Found %d JSON files in Elementor kit', count($json_files)));
+            
+            // Detect file roles
+            $categorized_files = $this->detect_elementor_file_roles($json_files, $kit_root);
+            
+            // Log what we found
+            if ($categorized_files['manifest']) {
+                $this->logger->info('Found manifest.json');
+            } else {
+                $this->logger->warning('No manifest.json found');
+            }
+            
+            if ($categorized_files['site_settings']) {
+                $this->logger->info('Found site-settings.json');
+            } else {
+                $this->logger->warning('No site-settings.json found');
+            }
+            
+            if (!empty($categorized_files['templates'])) {
+                $this->logger->info(sprintf('Found %d template files', count($categorized_files['templates'])));
+            }
+            
+        } else {
+            // Single JSON file (legacy support)
+            $categorized_files = array(
+                'manifest' => null,
+                'site_settings' => $kit_file,
+                'templates' => array(),
+                'content' => array(),
+                'taxonomies' => array(),
+                'other' => array()
+            );
         }
         
         // Import the kit using Elementor's import functionality
         if (class_exists('\Elementor\Plugin')) {
             try {
-                // Try to use Elementor's import system if available
-                if (class_exists('\Elementor\Core\Base\Document') && class_exists('\Elementor\TemplateLibrary\Source_Local')) {
-                    $elementor_plugin = \Elementor\Plugin::instance();
-                    
-                    // Read the kit JSON
-                    $kit_data = file_get_contents($kit_file);
-                    if (!$kit_data) {
-                        return new WP_Error('elementor_kit_read_failed', __('Failed to read Elementor kit file', 'videohub360-starter-sites'));
+                // Check if Elementor instance is available
+                if (!\Elementor\Plugin::$instance) {
+                    $this->logger->warning('Elementor instance not fully initialized');
+                }
+                
+                $imported_items = 0;
+                
+                // Step 1: Import site settings if available
+                if ($categorized_files['site_settings'] && file_exists($categorized_files['site_settings'])) {
+                    $result = $this->import_elementor_site_settings($categorized_files['site_settings']);
+                    if ($result === true) {
+                        $imported_items++;
+                    } elseif (is_wp_error($result)) {
+                        $this->logger->warning('Site settings import failed: ' . $result->get_error_message());
                     }
-                    
-                    $kit_json = json_decode($kit_data, true);
-                    if (json_last_error() !== JSON_ERROR_NONE) {
-                        return new WP_Error('elementor_kit_invalid_json', __('Invalid Elementor kit JSON', 'videohub360-starter-sites'));
-                    }
-                    
-                    // Import global settings if available
-                    if (isset($kit_json['settings']) && method_exists($elementor_plugin->kits_manager, 'update_kit_settings_based_on_option')) {
-                        foreach ($kit_json['settings'] as $setting_key => $setting_value) {
-                            update_option($setting_key, $setting_value);
-                        }
-                        $this->logger->info('Imported Elementor global settings');
-                    }
-                    
-                    // Import templates if available
-                    if (isset($kit_json['templates']) && is_array($kit_json['templates'])) {
-                        $templates_imported = 0;
-                        foreach ($kit_json['templates'] as $template_data) {
-                            if (method_exists($elementor_plugin->templates_manager, 'import_template')) {
-                                // This is a simplified approach - actual implementation may vary
-                                $templates_imported++;
-                            }
-                        }
-                        if ($templates_imported > 0) {
-                            $this->logger->info(sprintf('Imported %d Elementor templates', $templates_imported));
-                        }
-                    }
-                    
-                    $this->logger->success('Elementor kit imported successfully');
-                    return true;
-                } else {
-                    // Fallback: Just import Elementor options if classes not available
-                    $kit_data = file_get_contents($kit_file);
-                    if ($kit_data) {
-                        $kit_json = json_decode($kit_data, true);
-                        if ($kit_json && isset($kit_json['settings'])) {
-                            foreach ($kit_json['settings'] as $setting_key => $setting_value) {
-                                update_option($setting_key, $setting_value);
-                            }
-                            $this->logger->success('Imported Elementor settings (basic mode)');
-                            return true;
+                }
+                
+                // Step 2: Import template files if available
+                if (!empty($categorized_files['templates'])) {
+                    foreach ($categorized_files['templates'] as $template_file) {
+                        $result = $this->import_elementor_template_file($template_file);
+                        if ($result === true) {
+                            $imported_items++;
+                        } elseif (is_wp_error($result)) {
+                            $this->logger->warning('Template import failed for ' . basename($template_file) . ': ' . $result->get_error_message());
                         }
                     }
                 }
+                
+                if ($imported_items > 0) {
+                    $this->logger->success(sprintf('Elementor kit imported successfully (%d items)', $imported_items));
+                    return true;
+                } else {
+                    $this->logger->warning('No Elementor kit items could be imported');
+                    return new WP_Error('elementor_kit_no_items', __('No valid Elementor kit items found to import', 'videohub360-starter-sites'));
+                }
+                
             } catch (Exception $e) {
                 $this->logger->error('Elementor kit import exception: ' . $e->getMessage());
                 return new WP_Error('elementor_kit_import_failed', $e->getMessage());
@@ -739,6 +891,109 @@ class VH360_Demo_Importer {
         
         // If we get here, Elementor import failed
         return new WP_Error('elementor_kit_import_unavailable', __('Elementor import functionality not available', 'videohub360-starter-sites'));
+    }
+    
+    /**
+     * Import Elementor site settings from JSON file
+     *
+     * @param string $settings_file Path to site-settings.json
+     * @return bool|WP_Error True on success, error on failure
+     */
+    private function import_elementor_site_settings($settings_file) {
+        if (!file_exists($settings_file)) {
+            return new WP_Error('settings_not_found', __('Site settings file not found', 'videohub360-starter-sites'));
+        }
+        
+        $settings_data = file_get_contents($settings_file);
+        if (!$settings_data) {
+            return new WP_Error('settings_read_failed', __('Failed to read site settings file', 'videohub360-starter-sites'));
+        }
+        
+        $settings_json = json_decode($settings_data, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return new WP_Error('settings_invalid_json', __('Invalid JSON in site settings file', 'videohub360-starter-sites'));
+        }
+        
+        // Import settings based on Elementor's structure
+        if (isset($settings_json['settings']) && is_array($settings_json['settings'])) {
+            foreach ($settings_json['settings'] as $setting_key => $setting_value) {
+                update_option($setting_key, $setting_value);
+            }
+            $this->logger->info('Imported Elementor site settings');
+            return true;
+        }
+        
+        // Alternative: Import as post meta for active kit
+        if (class_exists('\Elementor\Plugin') && \Elementor\Plugin::$instance) {
+            $elementor_plugin = \Elementor\Plugin::instance();
+            if (isset($elementor_plugin->kits_manager)) {
+                $active_kit_id = $elementor_plugin->kits_manager->get_active_id();
+                if ($active_kit_id) {
+                    // Store settings in active kit post meta
+                    foreach ($settings_json as $key => $value) {
+                        if ($key !== 'settings') {
+                            update_post_meta($active_kit_id, '_elementor_' . $key, $value);
+                        }
+                    }
+                    $this->logger->info('Imported Elementor site settings to active kit');
+                    return true;
+                }
+            }
+        }
+        
+        $this->logger->warning('Could not import site settings - no valid method available');
+        return false;
+    }
+    
+    /**
+     * Import individual Elementor template file
+     *
+     * @param string $template_file Path to template JSON file
+     * @return bool|WP_Error True on success, error on failure
+     */
+    private function import_elementor_template_file($template_file) {
+        if (!file_exists($template_file)) {
+            return new WP_Error('template_not_found', __('Template file not found', 'videohub360-starter-sites'));
+        }
+        
+        $template_data = file_get_contents($template_file);
+        if (!$template_data) {
+            return new WP_Error('template_read_failed', __('Failed to read template file', 'videohub360-starter-sites'));
+        }
+        
+        $template_json = json_decode($template_data, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return new WP_Error('template_invalid_json', __('Invalid JSON in template file', 'videohub360-starter-sites'));
+        }
+        
+        // Try to import using Elementor's template manager
+        if (class_exists('\Elementor\Plugin') && \Elementor\Plugin::$instance) {
+            $elementor_plugin = \Elementor\Plugin::instance();
+            
+            if (isset($elementor_plugin->templates_manager) && method_exists($elementor_plugin->templates_manager, 'import_template')) {
+                try {
+                    // Prepare template data for import
+                    $import_data = array(
+                        'content' => $template_json,
+                        'page_settings' => isset($template_json['page_settings']) ? $template_json['page_settings'] : array(),
+                    );
+                    
+                    $result = $elementor_plugin->templates_manager->import_template($import_data);
+                    
+                    if ($result && !is_wp_error($result)) {
+                        $this->logger->info('Imported template: ' . basename($template_file));
+                        return true;
+                    }
+                } catch (Exception $e) {
+                    $this->logger->warning('Template import exception for ' . basename($template_file) . ': ' . $e->getMessage());
+                    return new WP_Error('template_import_exception', $e->getMessage());
+                }
+            }
+        }
+        
+        // Fallback: Just log that we found the template but couldn't import
+        $this->logger->info('Found template file but could not import: ' . basename($template_file));
+        return false;
     }
     
     /**
