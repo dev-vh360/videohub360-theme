@@ -124,17 +124,23 @@ elementor-kit.json                 # Single JSON file with settings
 
 4. **Sequential Import**:
    - Import site settings (global kit configuration)
-   - Import template/document files using Elementor's `import_template()` API
+   - Import template/document files using Elementor's `Source_Local` API
    - Templates imported as actual Elementor documents (creates WordPress posts with Elementor metadata)
    - Log detailed diagnostics for each step
 
 ### Template Import Details
 
-Templates are imported using Elementor's official `import_template()` API:
-- Each `elementor-*.json` file is base64-encoded and passed to Elementor's templates manager
+Templates are imported using Elementor's official `Source_Local` API:
+- Each `elementor-*.json` file is passed to Elementor's local template source
+- Uses the programmatic import pathway: `templates_manager->get_source('local')->import_template()`
 - Creates WordPress posts with proper Elementor document metadata
 - Templates become editable in Elementor after import
-- Import format: `['fileData' => base64_encode($json), 'fileName' => 'template.json']`
+- Import method signature: `import_template($filename, $file_path)`
+
+**Why Source_Local instead of direct import?**
+- `Source_Local` is the recommended approach for programmatic template imports
+- Direct `templates_manager->import_template()` may not be available in all contexts (e.g., AJAX requests)
+- `Source_Local` provides better compatibility and error handling
 
 ### Logging
 
@@ -147,7 +153,10 @@ The importer provides detailed diagnostics:
   - File not found
   - Invalid JSON (with error details)
   - Elementor not initialized
-  - Import method not available
+  - templates_manager not available
+  - get_source method not available
+  - Local source not available
+  - Source import_template method not available
   - Template creation failures
 - Final summary differentiates site settings vs templates:
   - "Site settings: imported | Templates: 4 found, 4 imported, 0 failed"
