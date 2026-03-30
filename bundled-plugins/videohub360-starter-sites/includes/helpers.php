@@ -264,11 +264,26 @@ function vh360_ss_install_repository_plugin($plugin_slug) {
     }
     
     // Get plugin info from WordPress.org API
-    // Only request the download link to minimize API response size
+    // Minimize API response size by excluding unnecessary fields
     $api = plugins_api('plugin_information', array(
         'slug' => $plugin_slug,
         'fields' => array(
-            'download_link' => true,
+            'sections' => false,
+            'short_description' => false,
+            'description' => false,
+            'tested' => false,
+            'requires' => false,
+            'rating' => false,
+            'ratings' => false,
+            'downloaded' => false,
+            'last_updated' => false,
+            'added' => false,
+            'tags' => false,
+            'compatibility' => false,
+            'homepage' => false,
+            'donate_link' => false,
+            'banners' => false,
+            'icons' => false,
         ),
     ));
     
