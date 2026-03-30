@@ -225,8 +225,7 @@ class VH360_Demo_Post_Import {
             if (class_exists('\Elementor\Plugin') && 
                 isset(\Elementor\Plugin::$instance) && 
                 \Elementor\Plugin::$instance !== null &&
-                isset(\Elementor\Plugin::$instance->files_manager) &&
-                method_exists(\Elementor\Plugin::$instance->files_manager, 'clear_cache')) {
+                isset(\Elementor\Plugin::$instance->files_manager)) {
                 
                 \Elementor\Plugin::$instance->files_manager->clear_cache();
                 $this->logger->info('Cleared Elementor cache');
