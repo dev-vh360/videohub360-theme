@@ -330,7 +330,6 @@ class VH360_Demo_Importer {
                     $missing_plugins[] = $plugin_slug;
                 } else {
                     $this->logger->success(sprintf('Installed plugin: %s', $plugin_slug));
-                    $installed_plugins[] = $plugin_slug;
                     
                     // Now activate the newly installed plugin
                     $this->logger->info(sprintf('Activating newly installed plugin: %s', $plugin_slug));
@@ -341,6 +340,8 @@ class VH360_Demo_Importer {
                         $missing_plugins[] = $plugin_slug;
                     } else {
                         $this->logger->success(sprintf('Activated plugin: %s', $plugin_slug));
+                        // Only add to installed and activated lists after successful activation
+                        $installed_plugins[] = $plugin_slug;
                         $activated_plugins[] = $plugin_slug;
                     }
                 }

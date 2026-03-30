@@ -284,6 +284,7 @@ function vh360_ss_install_repository_plugin($plugin_slug) {
             'donate_link' => false,
             'banners' => false,
             'icons' => false,
+            // We need the download_link to install the plugin
         ),
     ));
     
