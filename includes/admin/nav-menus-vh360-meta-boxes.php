@@ -252,11 +252,19 @@ function vh360_render_mobile_bottom_menu_items_meta_box() {
  * Hooks into wp_update_nav_menu_item to save the icon meta when menu items
  * are added via the Mobile Bottom Nav meta box.
  *
+ * @since 1.0.0
+ *
  * @param int   $menu_id         ID of the updated menu.
  * @param int   $menu_item_db_id ID of the updated menu item.
  * @param array $args            An array of arguments used to update the menu item.
+ * @return void
  */
 function vh360_save_mobile_nav_menu_item_icon( $menu_id, $menu_item_db_id, $args ) {
+    // Check user capabilities
+    if ( ! current_user_can( 'edit_theme_options' ) ) {
+        return;
+    }
+    
     // Verify nonce for security (WordPress menu save nonce)
     // Note: Do not sanitize nonce before verification - pass raw value
     if ( ! isset( $_POST['update-nav-menu-nonce'] ) || ! wp_verify_nonce( wp_unslash( $_POST['update-nav-menu-nonce'] ), 'update-nav-menu' ) ) {
