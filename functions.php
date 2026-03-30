@@ -1780,7 +1780,7 @@ function vh360_mobile_bottom_nav_item_output( $item_output, $item, $depth, $args
     // Wrap icon SVG with mobile nav class if present
     $icon_html = '';
     if ( ! empty( $icon_svg ) ) {
-        $icon_html = '<span class="vh360-mobile-bottom-nav__icon" aria-hidden="true">' . wp_kses( $icon_svg, vh360_get_mobile_nav_allowed_svg_tags() ) . '</span>';
+        $icon_html = '<span class="vh360-mobile-bottom-nav__icon">' . wp_kses( $icon_svg, vh360_get_mobile_nav_allowed_svg_tags() ) . '</span>';
     }
 
     $href = ! empty( $item->url ) ? $item->url : '#';

@@ -258,7 +258,8 @@ function vh360_render_mobile_bottom_menu_items_meta_box() {
  */
 function vh360_save_mobile_nav_menu_item_icon( $menu_id, $menu_item_db_id, $args ) {
     // Verify nonce for security
-    if ( ! isset( $_POST['update-nav-menu-nonce'] ) || ! wp_verify_nonce( $_POST['update-nav-menu-nonce'], 'update-nav_menu' ) ) {
+    $nonce = isset( $_POST['update-nav-menu-nonce'] ) ? wp_unslash( $_POST['update-nav-menu-nonce'] ) : '';
+    if ( ! wp_verify_nonce( $nonce, 'update-nav_menu' ) ) {
         return;
     }
     
@@ -271,6 +272,8 @@ function vh360_save_mobile_nav_menu_item_icon( $menu_id, $menu_item_db_id, $args
             $allowed_icons = array_keys( vh360_cm_icon_choices() );
             if ( in_array( $icon_slug, $allowed_icons, true ) ) {
                 update_post_meta( $menu_item_db_id, '_vh360_menu_icon', $icon_slug );
+            }
+        }
             }
         }
     }
