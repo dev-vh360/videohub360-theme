@@ -1193,6 +1193,9 @@ if (is_admin()) {
 
     // Menu meta boxes for Dashboard and Mobile Bottom Nav items
     require_once VH360_THEME_DIR . '/includes/admin/nav-menus-vh360-meta-boxes.php';
+
+    // Starter Sites auto-installer
+    require_once VH360_THEME_DIR . '/includes/admin/class-vh360-starter-sites-installer.php';
 }
 
 // -----------------------------------------------------------------------------

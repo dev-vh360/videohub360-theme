@@ -48,6 +48,15 @@ function vh360_register_required_plugins() {
             'force_activation'   => false,
             'force_deactivation' => false,
         ),
+        array(
+            'name'     => 'VideoHub360 Starter Sites',
+            'slug'     => 'videohub360-starter-sites',
+            'source'   => get_template_directory() . '/bundled-plugins/videohub360-starter-sites.zip',
+            'required' => true,
+            'version'  => '1.0.0',
+            'force_activation'   => true,
+            'force_deactivation' => false,
+        ),
     );
 
     $config = array(
