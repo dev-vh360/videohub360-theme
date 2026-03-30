@@ -181,7 +181,6 @@ class VH360_Demo_Importer {
             
             // Step 5: Ensure required plugins are active
             $log_step('Ensuring required plugins');
-            $log_step('Ensuring required plugins');
             $plugins_result = $this->ensure_required_plugins();
             if (is_wp_error($plugins_result)) {
                 throw new Exception($plugins_result->get_error_message());
