@@ -81,45 +81,132 @@ class VH360_Demo_AJAX {
      * AJAX: Import demo
      */
     public function ajax_import_demo() {
-        check_ajax_referer('vh360_ss_nonce', 'nonce');
+        // Register shutdown handler to catch fatal errors
+        $shutdown_handler_registered = false;
+        $last_import_step = 'AJAX handler entered';
         
-        if (!current_user_can('manage_options')) {
+        register_shutdown_function(function() use (&$last_import_step, &$shutdown_handler_registered) {
+            if (!$shutdown_handler_registered) {
+                return;
+            }
+            
+            $error = error_get_last();
+            if ($error && in_array($error['type'], array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR))) {
+                // Fatal error occurred - send structured error response
+                if (!headers_sent()) {
+                    status_header(200); // Override 500
+                    header('Content-Type: application/json; charset=utf-8');
+                    
+                    $response = array(
+                        'success' => false,
+                        'data' => array(
+                            'message' => sprintf(
+                                'Fatal error during import: %s in %s on line %d',
+                                $error['message'],
+                                $error['file'],
+                                $error['line']
+                            ),
+                            'last_step' => $last_import_step,
+                            'error_type' => 'fatal',
+                            'error_details' => $error,
+                            'memory_peak' => memory_get_peak_usage(true),
+                            'log' => VH360_Demo_Logger::get_last_log(),
+                        ),
+                    );
+                    
+                    echo json_encode($response);
+                    die();
+                }
+            }
+        });
+        
+        $shutdown_handler_registered = true;
+        
+        try {
+            $last_import_step = 'Checking nonce';
+            check_ajax_referer('vh360_ss_nonce', 'nonce');
+            
+            $last_import_step = 'Checking permissions';
+            if (!current_user_can('manage_options')) {
+                wp_send_json_error(array(
+                    'message' => __('You do not have permission to import demos.', 'videohub360-starter-sites'),
+                ));
+            }
+            
+            $last_import_step = 'Validating demo_id parameter';
+            if (!isset($_POST['demo_id'])) {
+                wp_send_json_error(array(
+                    'message' => __('Demo ID is required.', 'videohub360-starter-sites'),
+                ));
+            }
+            
+            $demo_id = sanitize_key($_POST['demo_id']);
+            $last_import_step = 'Sanitized demo_id: ' . $demo_id;
+            
+            // Check if import is already running
+            $last_import_step = 'Checking for concurrent imports';
+            if (vh360_ss_is_import_running()) {
+                wp_send_json_error(array(
+                    'message' => __('Another import is already in progress.', 'videohub360-starter-sites'),
+                ));
+            }
+            
+            // Increase time limit and memory limit
+            $last_import_step = 'Setting time and memory limits';
+            set_time_limit(0);
+            @ini_set('memory_limit', '512M');
+            
+            // Run import
+            $last_import_step = 'Calling importer->import_demo()';
+            $importer = VH360_Demo_Importer::get_instance();
+            $result = $importer->import_demo($demo_id, function($step) use (&$last_import_step) {
+                $last_import_step = $step;
+            });
+            
+            $last_import_step = 'Import completed, checking result';
+            
+            if (is_wp_error($result)) {
+                $last_import_step = 'Import returned WP_Error';
+                wp_send_json_error(array(
+                    'message' => $result->get_error_message(),
+                    'error_code' => $result->get_error_code(),
+                    'log' => VH360_Demo_Logger::get_last_log(),
+                    'last_step' => $last_import_step,
+                ));
+            }
+            
+            $last_import_step = 'Preparing JSON success response';
+            
+            // Add diagnostics to success response
+            if (is_array($result)) {
+                $result['diagnostics'] = array(
+                    'memory_peak' => memory_get_peak_usage(true),
+                    'memory_current' => memory_get_usage(true),
+                    'last_step' => $last_import_step,
+                );
+            }
+            
+            $last_import_step = 'Sending JSON success response';
+            wp_send_json_success($result);
+            
+        } catch (\Throwable $e) {
+            // Catch all throwables (Exception + Error in PHP 7+)
+            $last_import_step = 'Caught exception: ' . $e->getMessage();
+            
             wp_send_json_error(array(
-                'message' => __('You do not have permission to import demos.', 'videohub360-starter-sites'),
-            ));
-        }
-        
-        if (!isset($_POST['demo_id'])) {
-            wp_send_json_error(array(
-                'message' => __('Demo ID is required.', 'videohub360-starter-sites'),
-            ));
-        }
-        
-        $demo_id = sanitize_key($_POST['demo_id']);
-        
-        // Check if import is already running
-        if (vh360_ss_is_import_running()) {
-            wp_send_json_error(array(
-                'message' => __('Another import is already in progress.', 'videohub360-starter-sites'),
-            ));
-        }
-        
-        // Increase time limit and memory limit
-        set_time_limit(0);
-        @ini_set('memory_limit', '512M');
-        
-        // Run import
-        $importer = VH360_Demo_Importer::get_instance();
-        $result = $importer->import_demo($demo_id);
-        
-        if (is_wp_error($result)) {
-            wp_send_json_error(array(
-                'message' => $result->get_error_message(),
+                'message' => 'Import failed with exception: ' . $e->getMessage(),
+                'error_type' => 'exception',
+                'error_class' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+                'last_step' => $last_import_step,
+                'memory_peak' => memory_get_peak_usage(true),
                 'log' => VH360_Demo_Logger::get_last_log(),
             ));
         }
         
-        wp_send_json_success($result);
+        $shutdown_handler_registered = false;
     }
     
     /**
