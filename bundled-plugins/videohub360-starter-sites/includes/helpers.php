@@ -380,6 +380,14 @@ function vh360_ss_get_allowed_theme_options() {
         'appearance' => array(
             'option_name' => 'vh360_appearance_options',
             'allowed_keys' => array(
+                'enable_profiles',
+                'enable_bulletins',
+                'enable_activity',
+                'enable_members',
+                'enable_user_menu',
+                'custom_css',
+                'enable_minification',
+                'enable_lazy_loading',
                 'site_layout',
                 'content_width',
                 'sidebar_position',
@@ -425,6 +433,10 @@ function vh360_ss_get_allowed_theme_options() {
         'activity' => array(
             'option_name' => 'vh360_activity_options',
             'allowed_keys' => array(
+                'enable_tracking',
+                'track_types',
+                'retention_days',
+                'per_page',
                 'items_per_page',
                 'show_load_more',
                 'enable_infinite_scroll',
@@ -464,6 +476,10 @@ function vh360_ss_get_allowed_theme_options() {
         'advanced' => array(
             'option_name' => 'vh360_advanced_options',
             'allowed_keys' => array(
+                'debug_mode',
+                'enable_logging',
+                'show_deprecated',
+                'transient_expiration',
                 'enable_custom_css',
                 'custom_css',
                 'enable_custom_js',
