@@ -81,8 +81,9 @@ function vh360_get_dashboard_menu_item_definitions() {
 /**
  * Get Mobile Bottom Nav Item Definitions
  *
- * Returns an array of mobile bottom navigation items with correct URLs and CSS classes.
- * The CSS classes control which icon is displayed in the mobile bottom nav.
+ * Returns an array of mobile bottom navigation items with correct URLs and icon meta.
+ * Icon meta is used for icon display via the shared icon system, and specific CSS 
+ * classes are used only for special behavior flags (avatar drawer, notification badge).
  *
  * @return array Array of menu item definitions.
  * @since 1.0.0
@@ -95,25 +96,29 @@ function vh360_get_mobile_bottom_nav_item_definitions() {
             'id'      => 'vh360-mobile-activity',
             'title'   => __('Activity', 'videohub360-theme'),
             'url'     => vh360_get_activity_page_url(),
-            'classes' => array('vh360-icon-activity'),
+            'icon'    => 'activity',
+            'classes' => array(),
         ),
         array(
             'id'      => 'vh360-mobile-notifications',
             'title'   => __('Notifications', 'videohub360-theme'),
             'url'     => add_query_arg('tab', 'notifications', $dashboard_url),
-            'classes' => array('vh360-icon-notifications'),
+            'icon'    => 'notifications',
+            'classes' => array('vh360-icon-notifications'), // Behavior flag for badge
         ),
         array(
             'id'      => 'vh360-mobile-members',
             'title'   => __('Members', 'videohub360-theme'),
             'url'     => vh360_get_members_page_url(),
-            'classes' => array('vh360-icon-members'),
+            'icon'    => 'members',
+            'classes' => array(),
         ),
         array(
             'id'      => 'vh360-mobile-menu',
             'title'   => __('Menu', 'videohub360-theme'),
             'url'     => '#',
-            'classes' => array('vh360-icon-avatar'),
+            'icon'    => '',
+            'classes' => array('vh360-icon-avatar'), // Behavior flag for drawer
         ),
     );
 
@@ -186,7 +191,8 @@ function vh360_render_dashboard_menu_items_meta_box() {
  * Render Mobile Bottom Nav Items Meta Box
  *
  * Outputs a checklist of mobile bottom nav items with icons.
- * Includes CSS classes that control which icon displays in the mobile nav.
+ * Icon meta is saved via the shared icon system, and specific CSS classes
+ * are used only for special behavior flags.
  */
 function vh360_render_mobile_bottom_menu_items_meta_box() {
     global $_nav_menu_placeholder, $nav_menu_selected_id;
@@ -198,7 +204,7 @@ function vh360_render_mobile_bottom_menu_items_meta_box() {
     <div id="vh360-mobile-bottom-menu-items" class="posttypediv">
         <div id="tabs-panel-vh360-mobile-bottom-menu-items" class="tabs-panel tabs-panel-active">
             <p class="description" style="margin: 10px 12px;">
-                <?php esc_html_e( 'Mobile Bottom Nav uses CSS classes for icons; these items set them automatically. Keep 3–5 items (maximum 5 enforced automatically).', 'videohub360-theme' ); ?>
+                <?php esc_html_e( 'Add mobile bottom nav items. Keep 3–5 items (maximum 5 enforced automatically).', 'videohub360-theme' ); ?>
             </p>
 
             <ul id="vh360-mobile-bottom-menu-items-checklist" class="categorychecklist form-no-clear">
@@ -207,6 +213,7 @@ function vh360_render_mobile_bottom_menu_items_meta_box() {
                     $item_id = $_nav_menu_placeholder;
                     $_nav_menu_placeholder--;
                     $classes_str = ! empty( $item['classes'] ) ? implode( ' ', $item['classes'] ) : '';
+                    $icon = ! empty( $item['icon'] ) ? $item['icon'] : '';
                     ?>
                     <li>
                         <label class="menu-item-title">
@@ -217,6 +224,9 @@ function vh360_render_mobile_bottom_menu_items_meta_box() {
                         <input type="hidden" class="menu-item-title" name="menu-item[<?php echo esc_attr( $item_id ); ?>][menu-item-title]" value="<?php echo esc_attr( $item['title'] ); ?>" />
                         <input type="hidden" class="menu-item-url" name="menu-item[<?php echo esc_attr( $item_id ); ?>][menu-item-url]" value="<?php echo esc_url( $item['url'] ); ?>" />
                         <input type="hidden" class="menu-item-classes" name="menu-item[<?php echo esc_attr( $item_id ); ?>][menu-item-classes]" value="<?php echo esc_attr( $classes_str ); ?>" />
+                        <?php if ( $icon ) : ?>
+                            <input type="hidden" name="menu-item[<?php echo esc_attr( $item_id ); ?>][menu-item-vh360-icon]" value="<?php echo esc_attr( $icon ); ?>" />
+                        <?php endif; ?>
                     </li>
                 <?php endforeach; ?>
             </ul>
@@ -234,3 +244,46 @@ function vh360_render_mobile_bottom_menu_items_meta_box() {
     </div>
     <?php
 }
+
+
+/**
+ * Save menu item icon meta from custom field
+ *
+ * Hooks into wp_update_nav_menu_item to save the icon meta when menu items
+ * are added via the Mobile Bottom Nav meta box.
+ *
+ * @since 1.0.0
+ *
+ * @param int   $menu_id         ID of the updated menu.
+ * @param int   $menu_item_db_id ID of the updated menu item.
+ * @param array $args            An array of arguments used to update the menu item.
+ * @return void
+ */
+function vh360_save_mobile_nav_menu_item_icon( $menu_id, $menu_item_db_id, $args ) {
+    // Check user capabilities first (more restrictive than nonce)
+    // Capability check ensures only authorized users proceed, even if nonce is valid
+    if ( ! current_user_can( 'edit_theme_options' ) ) {
+        return;
+    }
+    
+    // Verify nonce for CSRF protection (WordPress menu save nonce)
+    // Note: Do not sanitize nonce before verification - pass raw value
+    if ( ! isset( $_POST['update-nav-menu-nonce'] ) || ! wp_verify_nonce( wp_unslash( $_POST['update-nav-menu-nonce'] ), 'update-nav-menu' ) ) {
+        return;
+    }
+    
+    // Check if icon data is present in the request
+    if ( isset( $_POST['menu-item-vh360-icon'][ $menu_item_db_id ] ) ) {
+        $icon_slug = sanitize_key( wp_unslash( $_POST['menu-item-vh360-icon'][ $menu_item_db_id ] ) );
+        
+        // Validate icon against allowed icons
+        if ( ! empty( $icon_slug ) ) {
+            $allowed_icons = array_keys( vh360_cm_icon_choices() );
+            if ( in_array( $icon_slug, $allowed_icons, true ) ) {
+                update_post_meta( $menu_item_db_id, '_vh360_menu_icon', $icon_slug );
+            }
+        }
+    }
+}
+add_action( 'wp_update_nav_menu_item', 'vh360_save_mobile_nav_menu_item_icon', 10, 3 );
+

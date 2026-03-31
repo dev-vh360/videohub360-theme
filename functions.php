@@ -1701,7 +1701,42 @@ function vh360_mobile_bottom_nav_limit_items( $items, $args ) {
 add_filter( 'wp_nav_menu_objects', 'vh360_mobile_bottom_nav_limit_items', 10, 2 );
 
 /**
- * Render icons + labels for mobile bottom nav items, based on CSS classes.
+ * Allowed SVG tags for mobile bottom nav icons
+ *
+ * Performance optimization: Define once instead of on every menu item render.
+ *
+ * @since 1.0.0
+ */
+function vh360_get_mobile_nav_allowed_svg_tags() {
+    static $allowed_tags = null;
+    
+    if ( null === $allowed_tags ) {
+        $allowed_tags = array(
+            'svg' => array(
+                'viewBox'     => true,
+                'fill'        => true,
+                'aria-hidden' => true,
+                'focusable'   => true,
+            ),
+            'path' => array(
+                'd' => true,
+            ),
+            'circle' => array(
+                'cx' => true,
+                'cy' => true,
+                'r'  => true,
+            ),
+        );
+    }
+    
+    return $allowed_tags;
+}
+
+/**
+ * Render icons + labels for mobile bottom nav items
+ *
+ * Uses shared icon meta system (_vh360_menu_icon) and icon registry.
+ * Special behaviors (avatar drawer, notification badge) use CSS class flags.
  */
 function vh360_mobile_bottom_nav_item_output( $item_output, $item, $depth, $args ) {
     if ( empty( $args->theme_location ) || 'vh360_mobile_bottom' !== $args->theme_location ) {
@@ -1710,37 +1745,13 @@ function vh360_mobile_bottom_nav_item_output( $item_output, $item, $depth, $args
 
     $classes = is_array( $item->classes ) ? $item->classes : array();
 
+    // Special behavior flags (not icon sources)
     $is_avatar        = in_array( 'vh360-icon-avatar', $classes, true );
     $is_notifications = in_array( 'vh360-icon-notifications', $classes, true );
-    $is_activity      = in_array( 'vh360-icon-activity', $classes, true );
-    $is_members       = in_array( 'vh360-icon-members', $classes, true );
-    $is_communities   = in_array( 'vh360-icon-communities', $classes, true );
-    $is_home          = in_array( 'vh360-icon-home', $classes, true );
-
-    // Inline SVGs (tiny + dependency-free).
-    $svg_home     = '<svg class="vh360-mobile-bottom-nav__icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 10.5L12 3l9 7.5"></path><path d="M5 10v11h14V10"></path><path d="M9 21v-6h6v6"></path></svg>';
-    $svg_activity = '<svg class="vh360-mobile-bottom-nav__icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19h16"></path><path d="M4 15l4-4 4 4 8-8"></path></svg>';
-    $svg_bell     = '<svg class="vh360-mobile-bottom-nav__icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>';
-    $svg_users    = '<svg class="vh360-mobile-bottom-nav__icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>';
-    $svg_user     = '<svg class="vh360-mobile-bottom-nav__icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
-    $svg_menu     = '<svg class="vh360-mobile-bottom-nav__icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16"></path><path d="M4 12h16"></path><path d="M4 18h16"></path></svg>';
-
-    $icon_html = $svg_menu;
-    if ( $is_home ) {
-        $icon_html = $svg_home;
-    } elseif ( $is_activity ) {
-        $icon_html = $svg_activity;
-    } elseif ( $is_notifications ) {
-        $icon_html = $svg_bell;
-    } elseif ( $is_communities ) {
-        $icon_html = $svg_users;
-    } elseif ( $is_members ) {
-        $icon_html = $svg_user;
-    }
 
     $label = isset( $item->title ) ? $item->title : '';
 
-    // Avatar item becomes a button that opens the drawer.
+    // Avatar item becomes a button that opens the drawer
     if ( $is_avatar ) {
         $user_id    = get_current_user_id();
         $avatar_url = get_avatar_url( $user_id, array( 'size' => 64 ) );
@@ -1755,12 +1766,34 @@ function vh360_mobile_bottom_nav_item_output( $item_output, $item, $depth, $args
         return $button;
     }
 
+    // Get icon from shared icon meta system
+    // Note: get_post_meta() is cached - WordPress pre-loads all menu item meta
+    // via update_post_caches() when wp_nav_menu() calls wp_get_nav_menu_items()
+    $icon_slug = sanitize_key( get_post_meta( $item->ID, '_vh360_menu_icon', true ) );
+    $icon_svg  = '';
+    
+    if ( ! empty( $icon_slug ) ) {
+        $allowed_icons = array_keys( vh360_cm_icon_choices() );
+        if ( in_array( $icon_slug, $allowed_icons, true ) ) {
+            $icon_svg = vh360_cm_get_icon_svg( $icon_slug );
+        }
+    }
+
+    // Wrap icon SVG with mobile nav class if present
+    $icon_html = '';
+    if ( ! empty( $icon_svg ) ) {
+        // Defense in depth: wp_kses() even though SVG is from trusted registry
+        // Protects against potential future modifications to the icon registry
+        $icon_html = '<span class="vh360-mobile-bottom-nav__icon">' . wp_kses( $icon_svg, vh360_get_mobile_nav_allowed_svg_tags() ) . '</span>';
+    }
+
     $href = ! empty( $item->url ) ? $item->url : '#';
 
     $out  = '<a class="vh360-mobile-bottom-nav__item" href="' . esc_url( $href ) . '" aria-label="' . esc_attr( $label ) . '">';
     $out .= $icon_html;
     $out .= '<span class="vh360-mobile-bottom-nav__label">' . esc_html( $label ) . '</span>';
 
+    // Add unread badge to notifications items
     if ( $is_notifications ) {
         $count = vh360_mobile_bottom_nav_unread_notifications_count( get_current_user_id() );
         if ( $count > 0 ) {
@@ -2646,37 +2679,45 @@ function vh360_create_default_menus() {
             $members_url = function_exists( 'vh360_get_members_page_url' ) ? vh360_get_members_page_url() : home_url( '/members/' );
             
             // Add 4 default items: Activity, Notifications, Members, Menu (avatar)
-            wp_update_nav_menu_item( $mobile_bottom_menu_id, 0, array(
+            $activity_id = wp_update_nav_menu_item( $mobile_bottom_menu_id, 0, array(
                 'menu-item-title'   => __( 'Activity', 'videohub360-theme' ),
                 'menu-item-url'     => $activity_url,
                 'menu-item-status'  => 'publish',
                 'menu-item-type'    => 'custom',
-                'menu-item-classes' => 'vh360-icon-activity',
             ) );
+            if ( ! is_wp_error( $activity_id ) ) {
+                update_post_meta( $activity_id, '_vh360_menu_icon', 'activity' );
+            }
             
-            wp_update_nav_menu_item( $mobile_bottom_menu_id, 0, array(
+            $notifications_id = wp_update_nav_menu_item( $mobile_bottom_menu_id, 0, array(
                 'menu-item-title'   => __( 'Notifications', 'videohub360-theme' ),
                 'menu-item-url'     => add_query_arg( 'tab', 'notifications', $dashboard_url ),
                 'menu-item-status'  => 'publish',
                 'menu-item-type'    => 'custom',
-                'menu-item-classes' => 'vh360-icon-notifications',
+                'menu-item-classes' => 'vh360-icon-notifications', // Behavior flag for badge
             ) );
+            if ( ! is_wp_error( $notifications_id ) ) {
+                update_post_meta( $notifications_id, '_vh360_menu_icon', 'notifications' );
+            }
             
-            wp_update_nav_menu_item( $mobile_bottom_menu_id, 0, array(
+            $members_id = wp_update_nav_menu_item( $mobile_bottom_menu_id, 0, array(
                 'menu-item-title'   => __( 'Members', 'videohub360-theme' ),
                 'menu-item-url'     => $members_url,
                 'menu-item-status'  => 'publish',
                 'menu-item-type'    => 'custom',
-                'menu-item-classes' => 'vh360-icon-members',
             ) );
+            if ( ! is_wp_error( $members_id ) ) {
+                update_post_meta( $members_id, '_vh360_menu_icon', 'members' );
+            }
             
-            wp_update_nav_menu_item( $mobile_bottom_menu_id, 0, array(
+            $avatar_id = wp_update_nav_menu_item( $mobile_bottom_menu_id, 0, array(
                 'menu-item-title'   => __( 'Menu', 'videohub360-theme' ),
                 'menu-item-url'     => '#',
                 'menu-item-status'  => 'publish',
                 'menu-item-type'    => 'custom',
-                'menu-item-classes' => 'vh360-icon-avatar',
+                'menu-item-classes' => 'vh360-icon-avatar', // Behavior flag for drawer
             ) );
+            // Avatar item doesn't need icon meta since it renders the user avatar
             
             // Assign to location
             $existing_locations['vh360_mobile_bottom'] = $mobile_bottom_menu_id;
