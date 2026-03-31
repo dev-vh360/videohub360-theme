@@ -254,11 +254,10 @@ class VH360_Demo_Post_Import {
             $this->logger->info('Ran vh360_after_demo_import action');
         }
         
-        // Ensure default menus are created if they don't exist
-        if (function_exists('vh360_create_default_menus')) {
-            vh360_create_default_menus();
-            $this->logger->info('Ensured default VH360 menus exist');
-        }
+        // Note: Demo imports rely on content.xml for menu creation and manifest.json 
+        // for menu location assignment. Default menu creation (vh360_create_default_menus) 
+        // should NOT run during demo import as it creates duplicate menus.
+        // It only runs on fresh theme activation without demo content.
         
         // Ensure administrator capabilities are set
         if (function_exists('vh360_ensure_administrator_core_caps')) {
