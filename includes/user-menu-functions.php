@@ -493,73 +493,18 @@ add_action('admin_init', 'vh360_register_mobile_drawer_menu_meta_box');
 
 /**
  * Render the Mobile Drawer Items meta box
+ *
+ * Uses the centralized dashboard tabs registry to build drawer items,
+ * eliminating duplication and ensuring consistency with dashboard navigation.
  */
 function vh360_render_mobile_drawer_menu_meta_box() {
     global $_nav_menu_placeholder;
     
     // Continue from current placeholder value to avoid ID collisions
-    $menu_item_id = $_nav_menu_placeholder - 1;
+    $_nav_menu_placeholder = 0 > $_nav_menu_placeholder ? $_nav_menu_placeholder - 1 : -1;
     
-    // Discover dashboard page URL using template lookup (matches mobile-user-drawer.php approach)
-    $dashboard_pages = get_pages(array(
-        'meta_key' => '_wp_page_template',
-        'meta_value' => 'template-dashboard.php',
-        'number' => 1,
-    ));
-    
-    $base_dashboard_url = !empty($dashboard_pages) ? get_permalink($dashboard_pages[0]->ID) : home_url('/dashboard/');
-    
-    // Build drawer menu items with query-based URLs (tab=... format)
-    $drawer_menu_items = array(
-        array(
-            'title' => __('Dashboard', 'videohub360-theme'),
-            'tab' => 'overview',
-        ),
-        array(
-            'title' => __('Create Video', 'videohub360-theme'),
-            'tab' => 'create-video',
-        ),
-        array(
-            'title' => __('My Videos', 'videohub360-theme'),
-            'tab' => 'videos',
-        ),
-        array(
-            'title' => __('Live Rooms', 'videohub360-theme'),
-            'tab' => 'live-rooms',
-        ),
-        array(
-            'title' => __('Messages', 'videohub360-theme'),
-            'tab' => 'messages',
-        ),
-        array(
-            'title' => __('Notifications', 'videohub360-theme'),
-            'tab' => 'notifications',
-        ),
-        array(
-            'title' => __('Push Notifications', 'videohub360-theme'),
-            'tab' => 'push-notifications',
-        ),
-        array(
-            'title' => __('Create Post', 'videohub360-theme'),
-            'tab' => 'create-post',
-        ),
-        array(
-            'title' => __('Galleries', 'videohub360-theme'),
-            'tab' => 'galleries',
-        ),
-        array(
-            'title' => __('Events', 'videohub360-theme'),
-            'tab' => 'events',
-        ),
-        array(
-            'title' => __('Bulletins', 'videohub360-theme'),
-            'tab' => 'bulletins',
-        ),
-        array(
-            'title' => __('Settings', 'videohub360-theme'),
-            'tab' => 'settings',
-        ),
-    );
+    // Get drawer menu items from the shared helper (using query URL format)
+    $drawer_menu_items = vh360_get_dashboard_surface_item_definitions( 'query' );
     
     /**
      * Filter mobile drawer items available in meta box
@@ -571,53 +516,45 @@ function vh360_render_mobile_drawer_menu_meta_box() {
     
     <div id="posttype-vh360-mobile-drawer" class="posttypediv">
         <div id="tabs-panel-vh360-mobile-drawer" class="tabs-panel tabs-panel-active">
+            <p class="description" style="margin: 10px 12px;">
+                <?php esc_html_e( 'Mobile drawer items are built from the dashboard tabs registry. Visibility and labels automatically match dashboard permissions and account types.', 'videohub360-theme' ); ?>
+            </p>
             <ul id="vh360-mobile-drawer-checklist" class="categorychecklist form-no-clear">
                 <?php 
                 foreach ($drawer_menu_items as $drawer_item) : 
-                    // Use the new helper function for consistent URL generation
-                    $item_url = vh360_get_dashboard_tab_url( $drawer_item['tab'] );
-                    // No CSS classes needed for mobile drawer items
-                    $item_classes = '';
+                    $item_id = $_nav_menu_placeholder;
+                    $_nav_menu_placeholder--;
                 ?>
                 <li>
                     <label class="menu-item-title">
                         <input type="checkbox" class="menu-item-checkbox" 
-                               name="menu-item[<?php echo esc_attr($menu_item_id); ?>][menu-item-object-id]" 
-                               value="-1" /> 
+                               name="menu-item[<?php echo esc_attr($item_id); ?>][menu-item-object-id]" 
+                               value="<?php echo esc_attr($item_id); ?>" /> 
                         <?php echo esc_html($drawer_item['title']); ?>
                     </label>
                     <input type="hidden" class="menu-item-type" 
-                           name="menu-item[<?php echo esc_attr($menu_item_id); ?>][menu-item-type]" 
+                           name="menu-item[<?php echo esc_attr($item_id); ?>][menu-item-type]" 
                            value="custom" />
                     <input type="hidden" class="menu-item-title" 
-                           name="menu-item[<?php echo esc_attr($menu_item_id); ?>][menu-item-title]" 
+                           name="menu-item[<?php echo esc_attr($item_id); ?>][menu-item-title]" 
                            value="<?php echo esc_attr($drawer_item['title']); ?>" />
                     <input type="hidden" class="menu-item-url" 
-                           name="menu-item[<?php echo esc_attr($menu_item_id); ?>][menu-item-url]" 
-                           value="<?php echo esc_url($item_url); ?>" />
+                           name="menu-item[<?php echo esc_attr($item_id); ?>][menu-item-url]" 
+                           value="<?php echo esc_url($drawer_item['url']); ?>" />
                     <input type="hidden" class="menu-item-classes" 
-                           name="menu-item[<?php echo esc_attr($menu_item_id); ?>][menu-item-classes]" 
-                           value="<?php echo esc_attr( $item_classes ); ?>" />
-                    <input type="hidden" class="menu-item-description" 
-                           name="menu-item[<?php echo esc_attr($menu_item_id); ?>][menu-item-description]" 
+                           name="menu-item[<?php echo esc_attr($item_id); ?>][menu-item-classes]" 
                            value="" />
                 </li>
-                <?php 
-                    $menu_item_id--; // Move to next negative ID
-                endforeach; 
-                
-                // Update global placeholder for subsequent metaboxes
-                $_nav_menu_placeholder = $menu_item_id;
-                ?>
+                <?php endforeach; ?>
             </ul>
         </div>
         
-        <p class="button-controls">
+        <p class="button-controls wp-clearfix">
             <span class="list-controls">
-                <a href="<?php echo esc_url(admin_url('nav-menus.php#posttype-vh360-mobile-drawer')); ?>" class="select-all aria-button-if-js"><?php esc_html_e('Select All', 'videohub360-theme'); ?></a>
+                <a href="<?php echo esc_url(admin_url('nav-menus.php#posttype-vh360-mobile-drawer')); ?>" class="select-all"><?php esc_html_e('Select All', 'videohub360-theme'); ?></a>
             </span>
             <span class="add-to-menu">
-                <input type="submit" class="button-secondary submit-add-to-menu right" 
+                <input type="submit" class="button submit-add-to-menu right" 
                        value="<?php esc_attr_e('Add to Menu', 'videohub360-theme'); ?>" 
                        name="add-post-type-menu-item" id="submit-posttype-vh360-mobile-drawer" />
                 <span class="spinner"></span>
