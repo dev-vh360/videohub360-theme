@@ -576,6 +576,8 @@ function vh360_render_mobile_drawer_menu_meta_box() {
                 foreach ($drawer_menu_items as $drawer_item) : 
                     // Use the new helper function for consistent URL generation
                     $item_url = vh360_get_dashboard_tab_url( $drawer_item['tab'] );
+                    // No CSS classes needed for mobile drawer items
+                    $item_classes = '';
                 ?>
                 <li>
                     <label class="menu-item-title">
