@@ -639,27 +639,3 @@ function vh360_filter_menu_items_excluding_class( $items, $class ) {
         return ! vh360_menu_item_has_class( $item, $class );
     } );
 }
-
-/**
- * Get dashboard tab URL
- * 
- * @param string $tab Dashboard tab name (e.g. 'go-live', 'overview', 'videos')
- * @return string Dashboard URL with tab parameter
- */
-function vh360_get_dashboard_tab_url( $tab ) {
-    if ( empty( $tab ) ) {
-        return '';
-    }
-    
-    // Discover dashboard page URL using template lookup (same logic as mobile drawer)
-    $dashboard_pages = get_pages( array(
-        'meta_key'   => '_wp_page_template',
-        'meta_value' => 'template-dashboard.php',
-        'number'     => 1,
-    ) );
-    
-    $base_dashboard_url = ! empty( $dashboard_pages ) ? get_permalink( $dashboard_pages[0]->ID ) : home_url( '/dashboard/' );
-    
-    // Append tab parameter safely using add_query_arg()
-    return add_query_arg( 'tab', $tab, $base_dashboard_url );
-}
