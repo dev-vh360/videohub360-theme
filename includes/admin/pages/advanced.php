@@ -106,28 +106,54 @@ $options = wp_parse_args($options, $defaults);
         </form>
     </div>
     
-    <!-- Import/Export Settings -->
+    <!-- Import/Export Theme Options -->
     <div class="vh360-admin-card">
-        <h2><?php esc_html_e('Import/Export Settings', 'videohub360-theme'); ?></h2>
-        <p><?php esc_html_e('Export your theme settings to a JSON file or import settings from a previously exported file.', 'videohub360-theme'); ?></p>
+        <h2><?php esc_html_e('Import/Export Theme Options', 'videohub360-theme'); ?></h2>
+        <p><?php esc_html_e('Export or import theme admin option groups (Appearance, Profile, Activity, Members, Advanced, Access). This does not include WordPress Customizer settings.', 'videohub360-theme'); ?></p>
         
-        <h3><?php esc_html_e('Export Settings', 'videohub360-theme'); ?></h3>
-        <p><?php esc_html_e('Click the button below to export all theme settings as a JSON file.', 'videohub360-theme'); ?></p>
+        <h3><?php esc_html_e('Export Theme Options', 'videohub360-theme'); ?></h3>
+        <p><?php esc_html_e('Click the button below to export theme admin option groups as a JSON file.', 'videohub360-theme'); ?></p>
         <button type="button" class="button button-secondary" id="vh360-export-settings">
             <span class="dashicons dashicons-download"></span>
-            <?php esc_html_e('Export Settings as JSON', 'videohub360-theme'); ?>
+            <?php esc_html_e('Export Theme Options JSON', 'videohub360-theme'); ?>
         </button>
         
         <hr style="margin: 30px 0;">
         
-        <h3><?php esc_html_e('Import Settings', 'videohub360-theme'); ?></h3>
-        <p><?php esc_html_e('Upload a JSON file to import theme settings. This will overwrite your current settings.', 'videohub360-theme'); ?></p>
+        <h3><?php esc_html_e('Import Theme Options', 'videohub360-theme'); ?></h3>
+        <p><?php esc_html_e('Upload a theme options JSON file to import admin option groups. This will overwrite your current theme option settings.', 'videohub360-theme'); ?></p>
         <form method="post" enctype="multipart/form-data" id="vh360-import-form">
             <?php wp_nonce_field('vh360_import_settings', 'vh360_import_nonce'); ?>
             <input type="file" name="vh360_import_file" accept=".json" required>
             <button type="submit" class="button button-secondary" style="margin-left: 10px;">
                 <span class="dashicons dashicons-upload"></span>
-                <?php esc_html_e('Import Settings from JSON', 'videohub360-theme'); ?>
+                <?php esc_html_e('Import Theme Options JSON', 'videohub360-theme'); ?>
+            </button>
+        </form>
+    </div>
+    
+    <!-- Import/Export Customizer Settings -->
+    <div class="vh360-admin-card">
+        <h2><?php esc_html_e('Import/Export Customizer Settings', 'videohub360-theme'); ?></h2>
+        <p><?php esc_html_e('Export or import WordPress Customizer settings. This includes all theme modifications stored via the WordPress Customizer.', 'videohub360-theme'); ?></p>
+        
+        <h3><?php esc_html_e('Export Customizer Settings', 'videohub360-theme'); ?></h3>
+        <p><?php esc_html_e('Click the button below to export WordPress Customizer settings as customizer.json.', 'videohub360-theme'); ?></p>
+        <button type="button" class="button button-secondary" id="vh360-export-customizer">
+            <span class="dashicons dashicons-download"></span>
+            <?php esc_html_e('Export Customizer JSON', 'videohub360-theme'); ?>
+        </button>
+        
+        <hr style="margin: 30px 0;">
+        
+        <h3><?php esc_html_e('Import Customizer Settings', 'videohub360-theme'); ?></h3>
+        <p><?php esc_html_e('Upload a customizer.json file to import Customizer settings. This will overwrite your current Customizer configuration.', 'videohub360-theme'); ?></p>
+        <form method="post" enctype="multipart/form-data" id="vh360-import-customizer-form">
+            <?php wp_nonce_field('vh360_import_customizer', 'vh360_import_customizer_nonce'); ?>
+            <input type="file" name="vh360_import_customizer_file" accept=".json" required>
+            <button type="submit" class="button button-secondary" style="margin-left: 10px;">
+                <span class="dashicons dashicons-upload"></span>
+                <?php esc_html_e('Import Customizer JSON', 'videohub360-theme'); ?>
             </button>
         </form>
     </div>
@@ -190,7 +216,7 @@ $options = wp_parse_args($options, $defaults);
 
 <script>
 jQuery(document).ready(function($) {
-    // Export settings
+    // Export theme options
     $('#vh360-export-settings').on('click', function() {
         var settings = {
             appearance: <?php echo wp_json_encode(get_option('vh360_appearance_options', array())); ?>,
@@ -209,7 +235,7 @@ jQuery(document).ready(function($) {
         downloadAnchorNode.remove();
     });
     
-    // Import settings - use nonce from localized script
+    // Import theme options - use nonce from localized script
     $('#vh360-import-form').on('submit', function(e) {
         e.preventDefault();
         
@@ -247,6 +273,79 @@ jQuery(document).ready(function($) {
                 
             } catch (error) {
                 alert('<?php esc_html_e('Invalid JSON file. Please make sure you are uploading a valid settings export file.', 'videohub360-theme'); ?>');
+            }
+        };
+        
+        reader.readAsText(file);
+    });
+    
+    // Export Customizer settings
+    $('#vh360-export-customizer').on('click', function() {
+        var button = $(this);
+        button.prop('disabled', true);
+        
+        $.post(vh360Admin.ajaxUrl, {
+            action: 'vh360_export_customizer',
+            nonce: vh360Admin.nonce
+        }, function(response) {
+            button.prop('disabled', false);
+            
+            if (response.success) {
+                // Create download
+                var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(response.data, null, 2));
+                var downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", dataStr);
+                downloadAnchorNode.setAttribute("download", "customizer.json");
+                document.body.appendChild(downloadAnchorNode);
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+            } else {
+                alert('<?php esc_html_e('Error exporting Customizer settings: ', 'videohub360-theme'); ?>' + response.data);
+            }
+        }).fail(function() {
+            button.prop('disabled', false);
+            alert('<?php esc_html_e('Failed to export Customizer settings.', 'videohub360-theme'); ?>');
+        });
+    });
+    
+    // Import Customizer settings
+    $('#vh360-import-customizer-form').on('submit', function(e) {
+        e.preventDefault();
+        
+        var fileInput = $(this).find('input[type="file"]')[0];
+        if (fileInput.files.length === 0) {
+            alert('<?php esc_html_e('Please select a file to import.', 'videohub360-theme'); ?>');
+            return;
+        }
+        
+        var file = fileInput.files[0];
+        var reader = new FileReader();
+        
+        reader.onload = function(e) {
+            try {
+                var customizerData = JSON.parse(e.target.result);
+                
+                // Confirm import
+                if (!confirm('<?php esc_html_e('Are you sure you want to import Customizer settings? This will overwrite your current Customizer configuration.', 'videohub360-theme'); ?>')) {
+                    return;
+                }
+                
+                // Send to server via AJAX
+                $.post(vh360Admin.ajaxUrl, {
+                    action: 'vh360_import_customizer',
+                    nonce: vh360Admin.customizerImportNonce,
+                    customizer_data: customizerData
+                }, function(response) {
+                    if (response.success) {
+                        alert('<?php esc_html_e('Customizer settings imported successfully!', 'videohub360-theme'); ?>');
+                        location.reload();
+                    } else {
+                        alert('<?php esc_html_e('Error importing Customizer settings: ', 'videohub360-theme'); ?>' + response.data);
+                    }
+                });
+                
+            } catch (error) {
+                alert('<?php esc_html_e('Invalid JSON file. Please make sure you are uploading a valid customizer.json file.', 'videohub360-theme'); ?>');
             }
         };
         

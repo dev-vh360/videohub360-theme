@@ -44,6 +44,8 @@ class VH360_Theme_Admin {
         add_action('admin_init', array($this, 'handle_admin_actions'));
         add_action('admin_init', array($this, 'sync_permissions_capabilities'));
         add_action('wp_ajax_vh360_import_settings', array($this, 'ajax_import_settings'));
+        add_action('wp_ajax_vh360_export_customizer', array($this, 'ajax_export_customizer'));
+        add_action('wp_ajax_vh360_import_customizer', array($this, 'ajax_import_customizer'));
         add_action('wp_ajax_vh360_clear_cache', array($this, 'ajax_clear_cache'));
         
         // Notification admin AJAX handlers
@@ -232,6 +234,7 @@ class VH360_Theme_Admin {
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('vh360_admin_nonce'),
             'importNonce' => wp_create_nonce('vh360_import_settings'),
+            'customizerImportNonce' => wp_create_nonce('vh360_import_customizer'),
             'confirmReset' => __('Are you sure you want to reset all settings? This action cannot be undone.', 'videohub360-theme'),
             'confirmClearCache' => __('Are you sure you want to clear all theme cache?', 'videohub360-theme'),
             'confirmClearActivities' => __('Are you sure you want to clear old activities? This action cannot be undone.', 'videohub360-theme'),
@@ -1350,6 +1353,71 @@ class VH360_Theme_Admin {
         }
         
         wp_send_json_success(__('Settings imported successfully', 'videohub360-theme'));
+    }
+    
+    /**
+     * AJAX handler for exporting Customizer settings
+     */
+    public function ajax_export_customizer() {
+        // Check nonce
+        if (!check_ajax_referer('vh360_admin_nonce', 'nonce', false)) {
+            wp_send_json_error(__('Security check failed', 'videohub360-theme'));
+        }
+        
+        // Check permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Insufficient permissions', 'videohub360-theme'));
+        }
+        
+        // Get all theme mods
+        $theme_mods = get_theme_mods();
+        
+        // Build payload in the format expected by the Starter Sites importer
+        $customizer_data = array(
+            'mods' => $theme_mods ? $theme_mods : array(),
+            'options' => array(), // Empty as theme uses theme mods, not Customizer options
+        );
+        
+        wp_send_json_success($customizer_data);
+    }
+    
+    /**
+     * AJAX handler for importing Customizer settings
+     */
+    public function ajax_import_customizer() {
+        // Check nonce
+        if (!check_ajax_referer('vh360_import_customizer', 'nonce', false)) {
+            wp_send_json_error(__('Security check failed', 'videohub360-theme'));
+        }
+        
+        // Check permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Insufficient permissions', 'videohub360-theme'));
+        }
+        
+        // Get customizer data from POST
+        if (!isset($_POST['customizer_data']) || !is_array($_POST['customizer_data'])) {
+            wp_send_json_error(__('No customizer data provided', 'videohub360-theme'));
+        }
+        
+        // Sanitize recursively
+        $customizer_data = $this->sanitize_settings_array($_POST['customizer_data']);
+        
+        // Import theme mods
+        if (isset($customizer_data['mods']) && is_array($customizer_data['mods'])) {
+            foreach ($customizer_data['mods'] as $key => $value) {
+                set_theme_mod($key, $value);
+            }
+        }
+        
+        // Import options
+        if (isset($customizer_data['options']) && is_array($customizer_data['options'])) {
+            foreach ($customizer_data['options'] as $key => $value) {
+                update_option($key, $value);
+            }
+        }
+        
+        wp_send_json_success(__('Customizer settings imported successfully', 'videohub360-theme'));
     }
     
     /**
