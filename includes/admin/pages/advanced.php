@@ -224,6 +224,7 @@ jQuery(document).ready(function($) {
             activity: <?php echo wp_json_encode(get_option('vh360_activity_options', array())); ?>,
             members: <?php echo wp_json_encode(get_option('vh360_members_options', array())); ?>,
             advanced: <?php echo wp_json_encode(get_option('vh360_advanced_options', array())); ?>,
+            access: <?php echo wp_json_encode(get_option('vh360_access_options', array())); ?>,
         };
         
         var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(settings, null, 2));

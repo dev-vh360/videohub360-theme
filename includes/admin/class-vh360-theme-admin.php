@@ -1291,6 +1291,51 @@ class VH360_Theme_Admin {
     }
     
     /**
+     * Sanitize Customizer data recursively while preserving native types
+     *
+     * Unlike sanitize_settings_array(), this preserves booleans, integers, floats, and arrays.
+     * Only string values are sanitized with sanitize_text_field().
+     *
+     * @param mixed $data The data to sanitize
+     * @return mixed Sanitized data with preserved types
+     */
+    private function sanitize_customizer_data($data) {
+        // Preserve null
+        if (is_null($data)) {
+            return null;
+        }
+        
+        // Preserve booleans
+        if (is_bool($data)) {
+            return $data;
+        }
+        
+        // Preserve integers and floats
+        if (is_int($data) || is_float($data)) {
+            return $data;
+        }
+        
+        // Recursively sanitize arrays
+        if (is_array($data)) {
+            $sanitized = array();
+            foreach ($data as $key => $value) {
+                // Sanitize key but preserve numeric keys
+                $sanitized_key = is_string($key) ? sanitize_key($key) : $key;
+                $sanitized[$sanitized_key] = $this->sanitize_customizer_data($value);
+            }
+            return $sanitized;
+        }
+        
+        // Sanitize strings
+        if (is_string($data)) {
+            return sanitize_text_field($data);
+        }
+        
+        // For any other type, return as-is (shouldn't normally happen)
+        return $data;
+    }
+    
+    /**
      * Sanitize array input field
      *
      * Helper method to sanitize array inputs from checkboxes or multi-select fields.
@@ -1372,6 +1417,18 @@ class VH360_Theme_Admin {
         // Get all theme mods
         $theme_mods = get_theme_mods();
         
+        // Filter out invalid keys (numeric keys like "0")
+        if (is_array($theme_mods)) {
+            $filtered_mods = array();
+            foreach ($theme_mods as $key => $value) {
+                // Only include valid string keys (not numeric indices)
+                if (is_string($key) && !is_numeric($key)) {
+                    $filtered_mods[$key] = $value;
+                }
+            }
+            $theme_mods = $filtered_mods;
+        }
+        
         // Build payload in the format expected by the Starter Sites importer
         $customizer_data = array(
             'mods' => $theme_mods ? $theme_mods : array(),
@@ -1400,8 +1457,8 @@ class VH360_Theme_Admin {
             wp_send_json_error(__('No customizer data provided', 'videohub360-theme'));
         }
         
-        // Sanitize recursively
-        $customizer_data = $this->sanitize_settings_array($_POST['customizer_data']);
+        // Sanitize recursively while preserving native types
+        $customizer_data = $this->sanitize_customizer_data($_POST['customizer_data']);
         
         // Import theme mods
         if (isset($customizer_data['mods']) && is_array($customizer_data['mods'])) {
