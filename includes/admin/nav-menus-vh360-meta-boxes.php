@@ -43,29 +43,14 @@ add_action('admin_init', 'vh360_register_nav_menu_meta_boxes');
  *
  * Returns an array of dashboard tab items with correct URLs and labels.
  * Built from the dashboard tabs registry for consistency.
+ * Uses the shared helper to avoid duplication with mobile drawer.
  *
  * @return array Array of menu item definitions.
  * @since 1.0.0
  */
 function vh360_get_dashboard_menu_item_definitions() {
-    $dashboard_url = vh360_get_dashboard_page_url();
-    $registry = vh360_get_dashboard_tabs_registry();
-
-    $definitions = array();
-
-    foreach ( $registry as $tab_id => $tab_config ) {
-        // Get label (use callback if available, otherwise use default label)
-        $label = $tab_config['label'];
-        if ( $tab_config['label_callback'] && is_callable( $tab_config['label_callback'] ) ) {
-            $label = call_user_func( $tab_config['label_callback'], get_current_user_id() );
-        }
-
-        $definitions[] = array(
-            'id'    => 'vh360-dashboard-' . $tab_id,
-            'title' => $label,
-            'url'   => $dashboard_url . '#' . $tab_id,
-        );
-    }
+    // Use the shared helper with fragment URL format (#tab-id)
+    $definitions = vh360_get_dashboard_surface_item_definitions( 'fragment' );
 
     /**
      * Filter dashboard menu item definitions.

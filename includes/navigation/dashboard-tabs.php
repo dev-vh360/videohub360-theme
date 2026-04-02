@@ -180,3 +180,74 @@ function vh360_get_dashboard_tabs_registry( $user_id = null ) {
      */
     return apply_filters( 'vh360_dashboard_tabs_registry', $tabs, $user_id );
 }
+
+/**
+ * Get Dashboard Surface Item Definitions
+ *
+ * Shared helper that builds menu item definitions from the dashboard tabs registry.
+ * Used by both Dashboard Menu Items and Mobile Drawer meta boxes to maintain consistency.
+ *
+ * @param string   $url_format How to format URLs: 'fragment' for #tab-id, 'query' for ?tab=tab-id.
+ * @param int|null $user_id    User ID for context-sensitive visibility and labels. Defaults to current user.
+ * @return array Array of menu item definitions with id, title, and url.
+ * @since 1.0.0
+ */
+function vh360_get_dashboard_surface_item_definitions( $url_format = 'fragment', $user_id = null ) {
+    if ( ! $user_id ) {
+        $user_id = get_current_user_id();
+    }
+
+    // Get dashboard base URL
+    $dashboard_url = function_exists( 'vh360_get_dashboard_page_url' ) 
+        ? vh360_get_dashboard_page_url() 
+        : home_url( '/dashboard/' );
+
+    // Get the full registry with all tab configurations
+    $registry = vh360_get_dashboard_tabs_registry( $user_id );
+
+    $definitions = array();
+
+    foreach ( $registry as $tab_id => $tab_config ) {
+        // Check visibility - skip if show_callback returns false
+        $show_callback = $tab_config['show_callback'];
+        if ( $show_callback && is_callable( $show_callback ) ) {
+            if ( ! call_user_func( $show_callback, $user_id ) ) {
+                continue; // Skip this item if visibility check fails
+            }
+        }
+
+        // Get label (use label_callback if available, otherwise use default label)
+        $label = $tab_config['label'];
+        if ( $tab_config['label_callback'] && is_callable( $tab_config['label_callback'] ) ) {
+            $label = call_user_func( $tab_config['label_callback'], $user_id );
+        }
+
+        // Build URL based on format
+        if ( $url_format === 'query' ) {
+            // Query-based URL format: ?tab=tab-id (used by mobile drawer)
+            $url = add_query_arg( 'tab', $tab_id, $dashboard_url );
+        } else {
+            // Fragment-based URL format: #tab-id (default, used by dashboard menu)
+            $url = $dashboard_url . '#' . $tab_id;
+        }
+
+        $definitions[] = array(
+            'id'    => 'vh360-dashboard-' . $tab_id,
+            'title' => $label,
+            'url'   => $url,
+            'tab'   => $tab_id, // Include tab ID for compatibility
+        );
+    }
+
+    /**
+     * Filter dashboard surface item definitions.
+     *
+     * Allows plugins to add or modify dashboard surface items.
+     *
+     * @param array  $definitions Array of menu item definitions.
+     * @param string $url_format  The URL format being used.
+     * @param int    $user_id     User ID for context.
+     * @since 1.0.0
+     */
+    return apply_filters( 'vh360_dashboard_surface_item_definitions', $definitions, $url_format, $user_id );
+}
