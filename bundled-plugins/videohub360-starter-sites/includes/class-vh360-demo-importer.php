@@ -625,6 +625,12 @@ class VH360_Demo_Importer {
         
         // Import theme mods
         if (isset($customizer_data['mods'])) {
+            // Remove nav_menu_locations - these contain source-site term IDs that are not portable.
+            // Menu locations must be assigned via manifest.json post-import logic only.
+            if (isset($customizer_data['mods']['nav_menu_locations'])) {
+                unset($customizer_data['mods']['nav_menu_locations']);
+            }
+            
             foreach ($customizer_data['mods'] as $key => $value) {
                 set_theme_mod($key, $value);
             }
