@@ -40,14 +40,8 @@ $followers = isset($stats['followers']) ? $stats['followers'] : 0;
 $following = isset($stats['following']) ? $stats['following'] : 0;
 $likes = isset($stats['likes']) ? $stats['likes'] : 0;
 
-// Find the connections page
-$connections_page = get_pages(array(
-    'meta_key' => '_wp_page_template',
-    'meta_value' => 'template-connections.php',
-    'number' => 1,
-));
-$connections_url = !empty($connections_page) ? get_permalink($connections_page[0]->ID) : '';
-$has_connections_page = !empty($connections_url);
+// Get author URL for follower/following links
+$author_url = get_author_posts_url($author_id);
 ?>
 
 <div class="vh360-profile-stats">
@@ -67,41 +61,23 @@ $has_connections_page = !empty($connections_url);
         </span>
     </div>
 
-    <!-- Followers (clickable if connections page exists) -->
-    <?php if ($has_connections_page) : ?>
-    <a href="<?php echo esc_url(add_query_arg(array('user_id' => $author_id, 'tab' => 'followers'), $connections_url)); ?>" 
+    <!-- Followers (clickable, links to author page followers tab) -->
+    <a href="<?php echo esc_url(add_query_arg('tab', 'followers', $author_url)); ?>" 
        class="vh360-profile-stat vh360-profile-stat--link">
         <span class="vh360-profile-stat-value"><?php echo esc_html(vh360_format_number($followers)); ?></span>
         <span class="vh360-profile-stat-label">
             <?php echo esc_html(_n('Follower', 'Followers', $followers, 'videohub360-theme')); ?>
         </span>
     </a>
-    <?php else : ?>
-    <div class="vh360-profile-stat">
-        <span class="vh360-profile-stat-value"><?php echo esc_html(vh360_format_number($followers)); ?></span>
-        <span class="vh360-profile-stat-label">
-            <?php echo esc_html(_n('Follower', 'Followers', $followers, 'videohub360-theme')); ?>
-        </span>
-    </div>
-    <?php endif; ?>
 
-    <!-- Following (clickable if connections page exists) -->
-    <?php if ($has_connections_page) : ?>
-    <a href="<?php echo esc_url(add_query_arg(array('user_id' => $author_id, 'tab' => 'following'), $connections_url)); ?>" 
+    <!-- Following (clickable, links to author page following tab) -->
+    <a href="<?php echo esc_url(add_query_arg('tab', 'following', $author_url)); ?>" 
        class="vh360-profile-stat vh360-profile-stat--link">
         <span class="vh360-profile-stat-value"><?php echo esc_html(vh360_format_number($following)); ?></span>
         <span class="vh360-profile-stat-label">
             <?php esc_html_e('Following', 'videohub360-theme'); ?>
         </span>
     </a>
-    <?php else : ?>
-    <div class="vh360-profile-stat">
-        <span class="vh360-profile-stat-value"><?php echo esc_html(vh360_format_number($following)); ?></span>
-        <span class="vh360-profile-stat-label">
-            <?php esc_html_e('Following', 'videohub360-theme'); ?>
-        </span>
-    </div>
-    <?php endif; ?>
 
     <!-- Likes -->
     <?php if ($likes > 0) : ?>

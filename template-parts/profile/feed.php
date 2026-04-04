@@ -28,29 +28,29 @@ if (!$author) {
 // Check if current user is viewing their own profile
 $is_own_profile = is_user_logged_in() && get_current_user_id() === $author_id;
 
-// Define valid content filters
-$valid_filters = array(
-    'all'       => array('label' => __('All Posts', 'videohub360-theme'), 'post_type' => 'vh360_post'),
+// Define valid content tabs (only content-type tabs, not followers/following/about)
+$valid_content_tabs = array(
+    'posts'     => array('label' => __('Posts', 'videohub360-theme'), 'post_type' => 'vh360_post'),
     'photos'    => array('label' => __('Photos', 'videohub360-theme'), 'post_type' => 'vh360_post', 'meta_key' => 'vh360_post_media_type', 'meta_value' => 'photo'),
     'videos'    => array('label' => __('Videos', 'videohub360-theme'), 'post_type' => 'vh360_post', 'meta_key' => 'vh360_post_media_type', 'meta_value' => 'video'),
     'bulletins' => array('label' => __('Bulletins', 'videohub360-theme'), 'post_type' => 'vh360_bulletin'),
     'events'    => array('label' => __('Events', 'videohub360-theme'), 'post_type' => 'vh360_event'),
 );
 
-// Get content filter from URL (sanitized and validated)
-$content_filter = isset($_GET['filter']) ? sanitize_key(wp_unslash($_GET['filter'])) : 'all';
-if (!array_key_exists($content_filter, $valid_filters)) {
-    $content_filter = 'all';
+// Get content tab from URL (sanitized and validated)
+$current_tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : 'posts';
+if (!array_key_exists($current_tab, $valid_content_tabs)) {
+    $current_tab = 'posts';
 }
 
 // Get pagination
 $paged = vh360_get_current_page();
 $posts_per_page = 20;
 
-// Build query args based on filter
-$filter_config = $valid_filters[$content_filter];
+// Build query args based on tab
+$tab_config = $valid_content_tabs[$current_tab];
 $args = array(
-    'post_type'      => $filter_config['post_type'],
+    'post_type'      => $tab_config['post_type'],
     'post_status'    => 'publish',
     'author'         => $author_id,
     'posts_per_page' => $posts_per_page,
@@ -59,12 +59,12 @@ $args = array(
     'order'          => 'DESC',
 );
 
-// Apply meta query for videos filter
-if (isset($filter_config['meta_key']) && isset($filter_config['meta_value'])) {
+// Apply meta query for specific media types
+if (isset($tab_config['meta_key']) && isset($tab_config['meta_value'])) {
     $args['meta_query'] = array(
         array(
-            'key'     => $filter_config['meta_key'],
-            'value'   => $filter_config['meta_value'],
+            'key'     => $tab_config['meta_key'],
+            'value'   => $tab_config['meta_value'],
             'compare' => '=',
         ),
     );
@@ -115,10 +115,10 @@ $profile_url = get_author_posts_url($author_id);
     <?php if ($profile_posts->max_num_pages > 1) : ?>
         <div class="vh360-profile-pagination">
             <?php
-            // Build query args to preserve filter
+            // Build query args to preserve tab
             $query_args = array();
-            if (!empty($content_filter) && $content_filter !== 'all') {
-                $query_args['filter'] = $content_filter;
+            if (!empty($current_tab) && $current_tab !== 'posts') {
+                $query_args['tab'] = $current_tab;
             }
             
             // Get pagination arguments and display
