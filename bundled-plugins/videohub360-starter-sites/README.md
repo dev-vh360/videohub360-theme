@@ -19,6 +19,7 @@ This plugin is bundled with the VideoHub360 theme and installed automatically vi
 
 - PHP 7.4 or higher
 - WordPress 5.0 or higher
+- **WordPress 6.7+ recommended** (for automatic URL rewriting in custom menu links and content)
 - VideoHub360 Theme (active)
 - Recommended: 256MB PHP memory limit
 - Recommended: 300 seconds max execution time
@@ -31,6 +32,9 @@ The import process follows this sequence:
 2. **Download Package** - Fetch manifest and download package files to temp directory
 3. **Check Plugins** - Ensure required plugins are active
 4. **Import Content** - Import WordPress XML with pages, posts, custom post types, and media
+   - **Note:** On WordPress 6.7+, all URLs (including custom menu links) are automatically
+     rewritten from the demo domain to your site domain
+   - On WordPress < 6.7, menu custom links will need manual adjustment after import
 5. **Import Widgets** - Import widget settings to sidebars
 6. **Import Customizer** - Import Customizer theme mods and options
 7. **Import Elementor Kit** - Import Elementor global settings and templates
