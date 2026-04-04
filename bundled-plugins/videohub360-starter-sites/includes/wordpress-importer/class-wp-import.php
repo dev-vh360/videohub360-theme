@@ -1296,6 +1296,29 @@ class WP_Import extends WP_Importer {
 			$_menu_item_classes = implode( ' ', $_menu_item_classes );
 		}
 
+		// Rewrite custom menu item URLs if URL rewriting is enabled.
+		// Only applies to custom link menu items; post/page/taxonomy items reference
+		// local content IDs and must not be touched. External URLs (non-matching base
+		// domain) are left unchanged by WPURL::replace_base_url().
+		if (
+			'custom' === $_menu_item_type &&
+			! empty( $this->options['rewrite_urls'] ) &&
+			$this->base_url_parsed &&
+			$this->site_url_parsed
+		) {
+			$url_candidate = WPURL::replace_base_url(
+				$_menu_item_url,
+				array(
+					'old_base_url' => $this->base_url_parsed,
+					'new_base_url' => $this->site_url_parsed,
+				)
+			);
+
+			if ( false !== $url_candidate ) {
+				$_menu_item_url = (string) $url_candidate;
+			}
+		}
+
 		$args = array(
 			'menu-item-object-id'   => $_menu_item_object_id,
 			'menu-item-object'      => $_menu_item_object,

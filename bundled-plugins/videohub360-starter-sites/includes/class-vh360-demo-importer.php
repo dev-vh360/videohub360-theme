@@ -503,8 +503,20 @@ class VH360_Demo_Importer {
         
         $importer = new WP_Import();
         $importer->fetch_attachments = true; // Import attachments
-        
-        $import_result = $importer->import($content_file);
+
+        // Enable URL rewriting (requires WordPress 6.7+)
+        $import_options = array(
+            'rewrite_urls' => true,
+        );
+
+        $wp_version = get_bloginfo('version');
+        if (version_compare($wp_version, '6.7', '>=')) {
+            $this->logger->info('URL rewriting enabled - URLs in content and custom menu links will be updated to target domain');
+        } else {
+            $this->logger->warning('URL rewriting requires WordPress 6.7+ - custom menu links will retain original domain');
+        }
+
+        $import_result = $importer->import($content_file, $import_options);
         
         $output = ob_get_clean();
         
