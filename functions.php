@@ -368,21 +368,8 @@ function videohub360_theme_scripts() {
         }
     }
 
-    // Enqueue connections page styles
-    if (is_page_template('template-connections.php')) {
-        wp_enqueue_style(
-            'vh360-profiles',
-            VH360_THEME_URI . '/assets/css/profiles.css',
-            array('videohub360-theme-style'),
-            VH360_THEME_VERSION
-        );
-        wp_enqueue_style(
-            'vh360-connections',
-            VH360_THEME_URI . '/assets/css/connections.css',
-            array('vh360-profiles'),
-            VH360_THEME_VERSION
-        );
-    }
+    // Note: Connections page styles removed - followers/following now integrated into profile mode
+    // The separate template-connections.php page is no longer part of core author navigation
 
     // Enqueue follow system script
     wp_enqueue_script(
