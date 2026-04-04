@@ -65,9 +65,11 @@ $following_paged = array_slice($following, $offset, $per_page);
         <?php if ($total_pages > 1) : ?>
             <div class="vh360-profile-pagination">
                 <?php
+                // Preserve tab parameter in pagination
+                $base_url = add_query_arg('tab', 'following', get_author_posts_url($author_id));
                 echo paginate_links(array(
-                    'base' => str_replace(999999999, '%#%', esc_url(get_pagenum_link(999999999))),
-                    'format' => '?paged=%#%',
+                    'base' => add_query_arg('paged', '%#%', $base_url),
+                    'format' => '',
                     'current' => max(1, $paged),
                     'total' => $total_pages,
                     'prev_text' => '&laquo; ' . esc_html__('Previous', 'videohub360-theme'),
