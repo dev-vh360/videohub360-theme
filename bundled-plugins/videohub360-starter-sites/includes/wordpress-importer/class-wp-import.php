@@ -1338,6 +1338,33 @@ class WP_Import extends WP_Importer {
 		$id = wp_update_nav_menu_item( $menu_id, 0, $args );
 		if ( $id && ! is_wp_error( $id ) ) {
 			$this->processed_menu_items[ intval( $item['post_id'] ) ] = (int) $id;
+
+			// Restore custom nav-menu-item meta (e.g., _vh360_menu_icon).
+			// Core _menu_item_* fields are already handled by wp_update_nav_menu_item().
+			if ( ! empty( $item['postmeta'] ) && is_array( $item['postmeta'] ) ) {
+				foreach ( $item['postmeta'] as $meta ) {
+					if ( empty( $meta['key'] ) ) {
+						continue;
+					}
+
+					$meta_key = $meta['key'];
+
+					// Core nav menu fields are already handled by wp_update_nav_menu_item().
+					if ( 0 === strpos( $meta_key, '_menu_item_' ) ) {
+						continue;
+					}
+
+					// Skip irrelevant editor/import metadata.
+					if ( in_array( $meta_key, array( '_edit_lock', '_edit_last' ), true ) ) {
+						continue;
+					}
+
+					$meta_value = isset( $meta['value'] ) ? $this->maybe_unserialize( $meta['value'] ) : '';
+
+					delete_post_meta( $id, $meta_key );
+					add_post_meta( $id, wp_slash( $meta_key ), wp_slash_strings_only( $meta_value ) );
+				}
+			}
 		}
 	}
 
