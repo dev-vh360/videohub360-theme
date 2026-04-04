@@ -24,7 +24,7 @@ if (!$author) {
 $following = function_exists('vh360_get_following_user_ids') ? vh360_get_following_user_ids($author_id) : array();
 
 // Get pagination
-$paged = (get_query_var('paged')) ? get_query_var('paged') : 1;
+$paged = max(1, absint(get_query_var('paged')));
 $per_page = 24;
 $total_following = count($following);
 $total_pages = ceil($total_following / $per_page);
