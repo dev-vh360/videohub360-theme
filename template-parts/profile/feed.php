@@ -33,7 +33,6 @@ $valid_content_tabs = array(
     'posts'     => array('label' => __('Posts', 'videohub360-theme'), 'post_type' => 'vh360_post'),
     'photos'    => array('label' => __('Photos', 'videohub360-theme'), 'post_type' => 'vh360_post', 'meta_key' => 'vh360_post_media_type', 'meta_value' => 'photo'),
     'videos'    => array('label' => __('Videos', 'videohub360-theme'), 'post_type' => 'vh360_post', 'meta_key' => 'vh360_post_media_type', 'meta_value' => 'video'),
-    'bulletins' => array('label' => __('Bulletins', 'videohub360-theme'), 'post_type' => 'vh360_bulletin'),
     'events'    => array('label' => __('Events', 'videohub360-theme'), 'post_type' => 'vh360_event'),
 );
 

@@ -23,7 +23,7 @@ if (!$author_id) {
 $profile_url = get_author_posts_url($author_id);
 
 // Get current tab from URL (sanitize and validate against whitelist)
-$allowed_tabs = array('posts', 'photos', 'videos', 'bulletins', 'events', 'followers', 'following', 'about');
+$allowed_tabs = array('posts', 'photos', 'videos', 'events', 'followers', 'following', 'about');
 $current_tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : 'posts';
 if (!in_array($current_tab, $allowed_tabs, true)) {
     $current_tab = 'posts';
@@ -45,11 +45,6 @@ $nav_items = array(
         'label' => __('Videos', 'videohub360-theme'),
         'url' => add_query_arg('tab', 'videos', $profile_url),
         'active' => $current_tab === 'videos',
-    ),
-    'bulletins' => array(
-        'label' => __('Bulletins', 'videohub360-theme'),
-        'url' => add_query_arg('tab', 'bulletins', $profile_url),
-        'active' => $current_tab === 'bulletins',
     ),
     'events' => array(
         'label' => __('Events', 'videohub360-theme'),
