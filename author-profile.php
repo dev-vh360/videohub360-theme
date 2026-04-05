@@ -27,7 +27,7 @@ if (!$author) {
 
 // Get current tab from URL, default to 'posts'
 $current_tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : 'posts';
-$valid_tabs = array('posts', 'videos', 'about');
+$valid_tabs = array('posts', 'photos', 'videos', 'bulletins', 'events', 'followers', 'following', 'about');
 if (!in_array($current_tab, $valid_tabs, true)) {
     $current_tab = 'posts';
 }
@@ -63,8 +63,20 @@ $profile_url = get_author_posts_url($author_id);
                     // Left sidebar: Static profile info
                     get_template_part('template-parts/profile/rail'); 
                     
-                    // Right column: Activity feed
-                    get_template_part('template-parts/profile/feed');
+                    // Right column: Conditional content based on tab
+                    if (in_array($current_tab, array('posts', 'photos', 'videos', 'bulletins', 'events'), true)) {
+                        // Activity feed for content tabs
+                        get_template_part('template-parts/profile/feed');
+                    } elseif ('followers' === $current_tab) {
+                        // Followers list
+                        get_template_part('template-parts/profile/followers');
+                    } elseif ('following' === $current_tab) {
+                        // Following list
+                        get_template_part('template-parts/profile/following');
+                    } elseif ('about' === $current_tab) {
+                        // About/intro section
+                        get_template_part('template-parts/profile/intro');
+                    }
                     ?>
                 </div>
                 
@@ -76,15 +88,20 @@ $profile_url = get_author_posts_url($author_id);
 
                     <!-- Tab Content -->
                     <div class="vh360-profile-tab-panels">
-                        <?php if ('posts' === $current_tab) : ?>
-                            <!-- Profile Posts Section -->
-                            <div class="vh360-profile-tab-content active" id="vh360-tab-posts" role="tabpanel">
-                                <?php get_template_part('template-parts/profile/posts'); ?>
+                        <?php if (in_array($current_tab, array('posts', 'photos', 'videos', 'bulletins', 'events'), true)) : ?>
+                            <!-- Profile Content Section -->
+                            <div class="vh360-profile-tab-content active" id="vh360-tab-<?php echo esc_attr($current_tab); ?>" role="tabpanel">
+                                <?php get_template_part('template-parts/profile/feed'); ?>
                             </div>
-                        <?php elseif ('videos' === $current_tab) : ?>
-                            <!-- Profile Videos Section -->
-                            <div class="vh360-profile-tab-content active" id="vh360-tab-videos" role="tabpanel">
-                                <?php get_template_part('template-parts/profile/videos'); ?>
+                        <?php elseif ('followers' === $current_tab) : ?>
+                            <!-- Profile Followers Section -->
+                            <div class="vh360-profile-tab-content active" id="vh360-tab-followers" role="tabpanel">
+                                <?php get_template_part('template-parts/profile/followers'); ?>
+                            </div>
+                        <?php elseif ('following' === $current_tab) : ?>
+                            <!-- Profile Following Section -->
+                            <div class="vh360-profile-tab-content active" id="vh360-tab-following" role="tabpanel">
+                                <?php get_template_part('template-parts/profile/following'); ?>
                             </div>
                         <?php elseif ('about' === $current_tab) : ?>
                             <!-- Profile Intro Section -->
