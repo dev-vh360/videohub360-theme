@@ -119,6 +119,17 @@ function vh360_enqueue_profile_assets() {
                 VH360_THEME_VERSION
             );
             
+            // Load events styles if viewing events tab
+            $current_tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : 'posts';
+            if ($current_tab === 'events') {
+                wp_enqueue_style(
+                    'vh360-events',
+                    VH360_THEME_URI . '/assets/css/events.css',
+                    array('videohub360-theme-style'),
+                    VH360_THEME_VERSION
+                );
+            }
+            
             // Load profile JavaScript for video sorting and other interactions
             wp_enqueue_script(
                 'vh360-profile-js',
