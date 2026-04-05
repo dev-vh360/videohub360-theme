@@ -33,7 +33,6 @@ $valid_content_tabs = array(
     'posts'     => array('label' => __('Posts', 'videohub360-theme'), 'post_type' => 'vh360_post'),
     'photos'    => array('label' => __('Photos', 'videohub360-theme'), 'post_type' => 'vh360_post', 'meta_key' => 'vh360_post_media_type', 'meta_value' => 'photo'),
     'videos'    => array('label' => __('Videos', 'videohub360-theme'), 'post_type' => 'vh360_post', 'meta_key' => 'vh360_post_media_type', 'meta_value' => 'video'),
-    'bulletins' => array('label' => __('Bulletins', 'videohub360-theme'), 'post_type' => 'vh360_bulletin'),
     'events'    => array('label' => __('Events', 'videohub360-theme'), 'post_type' => 'vh360_event'),
 );
 
@@ -80,11 +79,32 @@ $profile_url = get_author_posts_url($author_id);
     <div class="vh360-profile-posts-feed">
         <?php
         if ($profile_posts->have_posts()) :
+            // Check if we're displaying events
+            $is_events_tab = ($current_tab === 'events' && $tab_config['post_type'] === 'vh360_event');
+            
+            // Open events grid wrapper if needed
+            if ($is_events_tab) {
+                echo '<div class="vh360-events-list">';
+            }
+            
             while ($profile_posts->have_posts()) :
                 $profile_posts->the_post();
                 $post_obj = get_post();
-                vh360_render_community_post($post_obj, true);
+                
+                // Render events using the event card component
+                if ($is_events_tab) {
+                    get_template_part('template-parts/events/card-event', null, array('event_id' => $post_obj->ID));
+                } else {
+                    // Render community posts normally
+                    vh360_render_community_post($post_obj, true);
+                }
             endwhile;
+            
+            // Close events grid wrapper if needed
+            if ($is_events_tab) {
+                echo '</div>';
+            }
+            
             wp_reset_postdata();
         else :
             ?>

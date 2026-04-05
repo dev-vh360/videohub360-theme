@@ -27,7 +27,7 @@ if (!$author) {
 
 // Get current tab from URL, default to 'posts'
 $current_tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : 'posts';
-$valid_tabs = array('posts', 'photos', 'videos', 'bulletins', 'events', 'followers', 'following', 'about');
+$valid_tabs = array('posts', 'photos', 'videos', 'events', 'followers', 'following', 'about');
 if (!in_array($current_tab, $valid_tabs, true)) {
     $current_tab = 'posts';
 }
@@ -64,7 +64,7 @@ $profile_url = get_author_posts_url($author_id);
                     get_template_part('template-parts/profile/rail'); 
                     
                     // Right column: Conditional content based on tab
-                    if (in_array($current_tab, array('posts', 'photos', 'videos', 'bulletins', 'events'), true)) {
+                    if (in_array($current_tab, array('posts', 'photos', 'videos', 'events'), true)) {
                         // Activity feed for content tabs
                         get_template_part('template-parts/profile/feed');
                     } elseif ('followers' === $current_tab) {
@@ -88,7 +88,7 @@ $profile_url = get_author_posts_url($author_id);
 
                     <!-- Tab Content -->
                     <div class="vh360-profile-tab-panels">
-                        <?php if (in_array($current_tab, array('posts', 'photos', 'videos', 'bulletins', 'events'), true)) : ?>
+                        <?php if (in_array($current_tab, array('posts', 'photos', 'videos', 'events'), true)) : ?>
                             <!-- Profile Content Section -->
                             <div class="vh360-profile-tab-content active" id="vh360-tab-<?php echo esc_attr($current_tab); ?>" role="tabpanel">
                                 <?php get_template_part('template-parts/profile/feed'); ?>
