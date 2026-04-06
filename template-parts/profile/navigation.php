@@ -3,7 +3,7 @@
  * Profile Navigation Template Part
  *
  * Global navigation component that appears below the profile header on ALL profile-related pages.
- * Provides navigation between different content filters and the connections page.
+ * Provides tab-based navigation between different content types (posts, videos, followers, etc.).
  *
  * @package Videohub360_Theme
  * @since 1.0.0

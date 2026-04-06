@@ -2,8 +2,9 @@
 /**
  * User Card Component
  *
- * Simplified user card for connections page displaying avatar,
- * username, bio excerpt, and follow button.
+ * Reusable user card component for displaying users in follower/following lists,
+ * member directories, and other user listing contexts. Shows avatar, username,
+ * bio excerpt, and follow button.
  *
  * @package Videohub360_Theme
  * @since 1.0.0
