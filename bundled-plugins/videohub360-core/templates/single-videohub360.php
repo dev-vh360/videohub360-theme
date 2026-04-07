@@ -241,6 +241,48 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
 
     <div class="videohub360-main-wrapper <?php echo ($video_layout === 'full-width') ? 'videohub360-full-width' : 'videohub360-sidebar-layout'; ?>">
         <div class="videohub360-content-area">
+            <?php
+            // Check membership requirement before rendering video
+            $required_plan = function_exists('vh360_post_requires_membership') ? vh360_post_requires_membership(get_the_ID()) : false;
+            $user_has_access = true;
+            
+            if ($required_plan) {
+                $current_user_id = get_current_user_id();
+                
+                if (!$current_user_id) {
+                    // Not logged in
+                    $options = get_option('vh360_membership_options', array());
+                    $login_required = isset($options['login_required']) ? $options['login_required'] : true;
+                    $user_has_access = !$login_required;
+                } else {
+                    // Check if user has the required plan
+                    if ($required_plan === 'any') {
+                        $user_has_access = function_exists('vh360_user_has_active_membership') ? vh360_user_has_active_membership($current_user_id) : false;
+                    } else {
+                        $user_has_access = function_exists('vh360_user_has_membership_plan') ? vh360_user_has_membership_plan($current_user_id, $required_plan) : false;
+                    }
+                }
+            }
+            
+            if (!$user_has_access) {
+                // Render membership gate instead of video
+                if (class_exists('VH360_Membership_Frontend')) {
+                    $frontend = VH360_Membership_Frontend::get_instance();
+                    $reflection = new ReflectionClass($frontend);
+                    
+                    if (!get_current_user_id()) {
+                        $method = $reflection->getMethod('render_login_required_notice');
+                        $method->setAccessible(true);
+                        echo $method->invoke($frontend);
+                    } else {
+                        $method = $reflection->getMethod('render_upgrade_required_notice');
+                        $method->setAccessible(true);
+                        echo $method->invoke($frontend, $required_plan);
+                    }
+                }
+            } else {
+                // User has access, render video
+            ?>
             <?php if ($livestream_fields['is_live'] === 'yes' && $livestream_fields['stream_stopped'] !== 'yes'): ?>
                 <div class="videohub360-video-player" id="videohub360-livestream-player-root">
                     <?php echo videohub360_render_livestream($livestream_fields, $chat_enabled, $chat_placement, $is_user_logged_in, $user_avatar, $user_display_name, $user_logout_url); ?>
@@ -382,6 +424,7 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                 </div>
                 <?php endif; ?>
             <?php endif; ?>
+            <?php } // End membership access check ?>
 
             <!-- Video Engagement Actions (Like, Dislike, Save, Share) -->
             <div class="videohub360-engagement-bar">
