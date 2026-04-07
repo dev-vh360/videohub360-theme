@@ -149,7 +149,8 @@ add_filter('woocommerce_checkout_fields', function ($fields) {
  */
 add_action('woocommerce_checkout_process', function () {
     // Only validate when Woo is creating an account.
-    $creating_account = !empty($_POST['createaccount']);
+    // Note: WooCommerce nonce is validated before this hook fires.
+    $creating_account = isset($_POST['createaccount']) ? (bool) $_POST['createaccount'] : false;
     if (!$creating_account) {
         return;
     }
@@ -181,7 +182,8 @@ add_action('woocommerce_checkout_process', function () {
     }
 
     // Check if WooCommerce is creating an account for this order
-    $creating_account = !empty($_POST['createaccount']);
+    // Note: WooCommerce nonce is validated before this hook fires.
+    $creating_account = isset($_POST['createaccount']) ? (bool) $_POST['createaccount'] : false;
     
     if (!$creating_account) {
         // This should not happen due to the filters above, but guard against it anyway
