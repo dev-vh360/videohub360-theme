@@ -62,14 +62,28 @@ function vh360_user_has_active_membership($user_id = 0, $plan_key = null) {
         return false;
     }
     
+    // Get grace period setting
+    $options = get_option('vh360_membership_options', array());
+    $grace_period_days = isset($options['grace_period_days']) ? absint($options['grace_period_days']) : 0;
+    
     global $wpdb;
     $table = VH360_Membership_Database::get_memberships_table();
+    
+    // Build expiration check with grace period
+    if ($grace_period_days > 0) {
+        $expiration_check = $wpdb->prepare(
+            "(expires_at IS NULL OR DATE_ADD(expires_at, INTERVAL %d DAY) > NOW())",
+            $grace_period_days
+        );
+    } else {
+        $expiration_check = "(expires_at IS NULL OR expires_at > NOW())";
+    }
     
     $sql = $wpdb->prepare(
         "SELECT COUNT(*) FROM {$table} 
         WHERE user_id = %d 
         AND status = 'active'
-        AND (expires_at IS NULL OR expires_at > NOW())",
+        AND {$expiration_check}",
         $user_id
     );
     
@@ -78,6 +92,9 @@ function vh360_user_has_active_membership($user_id = 0, $plan_key = null) {
     }
     
     $count = (int) $wpdb->get_var($sql);
+    
+    return apply_filters('vh360_user_has_active_membership', $count > 0, $user_id, $plan_key);
+}
     
     return apply_filters('vh360_user_has_active_membership', $count > 0, $user_id, $plan_key);
 }
@@ -211,14 +228,28 @@ function vh360_get_active_membership($user_id = 0) {
         return false;
     }
     
+    // Get grace period setting
+    $options = get_option('vh360_membership_options', array());
+    $grace_period_days = isset($options['grace_period_days']) ? absint($options['grace_period_days']) : 0;
+    
     global $wpdb;
     $table = VH360_Membership_Database::get_memberships_table();
+    
+    // Build expiration check with grace period
+    if ($grace_period_days > 0) {
+        $expiration_check = $wpdb->prepare(
+            "(expires_at IS NULL OR DATE_ADD(expires_at, INTERVAL %d DAY) > NOW())",
+            $grace_period_days
+        );
+    } else {
+        $expiration_check = "(expires_at IS NULL OR expires_at > NOW())";
+    }
     
     $membership = $wpdb->get_row($wpdb->prepare(
         "SELECT * FROM {$table} 
         WHERE user_id = %d 
         AND status = 'active'
-        AND (expires_at IS NULL OR expires_at > NOW())
+        AND {$expiration_check}
         ORDER BY created_at DESC
         LIMIT 1",
         $user_id

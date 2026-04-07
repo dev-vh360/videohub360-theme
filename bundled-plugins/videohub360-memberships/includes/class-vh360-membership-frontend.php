@@ -37,6 +37,7 @@ class VH360_Membership_Frontend {
     private function __construct() {
         add_action('wp_enqueue_scripts', array($this, 'enqueue_assets'));
         add_filter('the_content', array($this, 'filter_content'), 10);
+        add_filter('vh360_current_page_requires_membership', array($this, 'check_page_membership_requirement'));
     }
     
     /**
@@ -69,25 +70,34 @@ class VH360_Membership_Frontend {
             return $content;
         }
         
+        // Get membership options
+        $options = get_option('vh360_membership_options', array());
+        $login_required = isset($options['login_required']) ? $options['login_required'] : true;
+        
         // Check if user has access
         $user_id = get_current_user_id();
         
-        if (!$user_id) {
+        // If login_required is false, show locked content notice even for logged-out users
+        if (!$user_id && $login_required) {
             return $this->render_login_required_notice();
         }
         
-        // Check if user has the required plan
-        if ($required_plan === 'any') {
-            $has_access = vh360_user_has_active_membership($user_id);
-        } else {
-            $has_access = vh360_user_has_membership_plan($user_id, $required_plan);
+        // For logged-in users or when login not required, check membership
+        if ($user_id) {
+            // Check if user has the required plan
+            if ($required_plan === 'any') {
+                $has_access = vh360_user_has_active_membership($user_id);
+            } else {
+                $has_access = vh360_user_has_membership_plan($user_id, $required_plan);
+            }
+            
+            if ($has_access) {
+                return $content;
+            }
         }
         
-        if (!$has_access) {
-            return $this->render_upgrade_required_notice($required_plan);
-        }
-        
-        return $content;
+        // User doesn't have access - show upgrade notice
+        return $this->render_upgrade_required_notice($required_plan);
     }
     
     /**
@@ -128,6 +138,7 @@ class VH360_Membership_Frontend {
     private function render_upgrade_required_notice($required_plan) {
         $options = get_option('vh360_membership_options', array());
         $pricing_url = isset($options['pricing_page_url']) ? $options['pricing_page_url'] : '';
+        $custom_message = isset($options['locked_message']) ? $options['locked_message'] : '';
         
         ob_start();
         ?>
@@ -139,7 +150,13 @@ class VH360_Membership_Frontend {
                     <path d="M2 12l10 5 10-5"></path>
                 </svg>
                 <h3><?php esc_html_e('Premium Content', 'videohub360-memberships'); ?></h3>
-                <p><?php esc_html_e('This content requires an active membership to access.', 'videohub360-memberships'); ?></p>
+                <?php if ($custom_message) : ?>
+                    <div class="vh360-membership-custom-message">
+                        <?php echo wp_kses_post($custom_message); ?>
+                    </div>
+                <?php else : ?>
+                    <p><?php esc_html_e('This content requires an active membership to access.', 'videohub360-memberships'); ?></p>
+                <?php endif; ?>
                 <?php if ($pricing_url) : ?>
                     <a href="<?php echo esc_url($pricing_url); ?>" class="vh360-membership-gate-button">
                         <?php esc_html_e('View Plans', 'videohub360-memberships'); ?>
@@ -149,5 +166,46 @@ class VH360_Membership_Frontend {
         </div>
         <?php
         return ob_get_clean();
+    }
+    
+    /**
+     * Check if current page requires membership
+     *
+     * @param bool $requires Current value
+     * @return bool
+     */
+    public function check_page_membership_requirement($requires) {
+        // Check if memberships are enabled
+        $options = get_option('vh360_membership_options', array());
+        if (empty($options['enable_memberships'])) {
+            return $requires;
+        }
+        
+        // Check for specific page templates that require membership
+        global $post;
+        if ($post) {
+            $template = get_page_template_slug($post->ID);
+            
+            // Activity feed requires membership
+            if ($template === 'template-activity-feed.php') {
+                return true;
+            }
+            
+            // Check post meta for individual pages
+            $page_requires = get_post_meta($post->ID, '_vh360_page_requires_membership', true);
+            if ($page_requires) {
+                return true;
+            }
+        }
+        
+        // Check for post types that require membership
+        if (is_singular(array('vh360_event', 'vh360_bulletin', 'vh360_gallery'))) {
+            $required_plan = vh360_post_requires_membership(get_the_ID());
+            if ($required_plan) {
+                return true;
+            }
+        }
+        
+        return $requires;
     }
 }

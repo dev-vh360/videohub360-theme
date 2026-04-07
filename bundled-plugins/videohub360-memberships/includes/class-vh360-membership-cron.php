@@ -38,6 +38,9 @@ class VH360_Membership_Cron {
         // Register cron hooks
         add_action('vh360_membership_check_expirations', array($this, 'check_expirations'));
         add_action('vh360_membership_send_renewal_reminders', array($this, 'send_renewal_reminders'));
+        
+        // Register renewal reminder handler
+        add_action('vh360_send_membership_renewal_reminder', array($this, 'send_renewal_reminder_email'), 10, 1);
     }
     
     /**
@@ -136,5 +139,55 @@ class VH360_Membership_Cron {
         }
         
         do_action('vh360_membership_renewal_reminders_sent', count($expiring_soon));
+    }
+    
+    /**
+     * Send renewal reminder email
+     *
+     * @param object $membership Membership object
+     */
+    public function send_renewal_reminder_email($membership) {
+        // Get user
+        $user = get_userdata($membership->user_id);
+        if (!$user) {
+            return;
+        }
+        
+        // Get plan info
+        $plans = VH360_Membership_Plans::get_plan_registry();
+        $plan_label = isset($plans[$membership->plan_key]) ? $plans[$membership->plan_key]['label'] : $membership->plan_key;
+        
+        // Get pricing URL
+        $options = get_option('vh360_membership_options', array());
+        $pricing_url = isset($options['pricing_page_url']) ? $options['pricing_page_url'] : home_url();
+        
+        // Format expiration date
+        $expires_at = $membership->expires_at ? date_i18n(get_option('date_format'), strtotime($membership->expires_at)) : __('Never', 'videohub360-memberships');
+        
+        // Prepare email
+        $to = $user->user_email;
+        $subject = sprintf(
+            __('[%s] Your membership is expiring soon', 'videohub360-memberships'),
+            get_bloginfo('name')
+        );
+        
+        $message = sprintf(
+            __('Hi %s,', 'videohub360-memberships') . "\n\n" .
+            __('Your %s membership will expire on %s.', 'videohub360-memberships') . "\n\n" .
+            __('To continue enjoying premium access, please renew your membership:', 'videohub360-memberships') . "\n" .
+            '%s' . "\n\n" .
+            __('Thank you for being a member!', 'videohub360-memberships') . "\n\n" .
+            __('- The %s Team', 'videohub360-memberships'),
+            $user->display_name,
+            $plan_label,
+            $expires_at,
+            $pricing_url,
+            get_bloginfo('name')
+        );
+        
+        $headers = array('Content-Type: text/plain; charset=UTF-8');
+        
+        // Send email
+        wp_mail($to, $subject, $message, $headers);
     }
 }

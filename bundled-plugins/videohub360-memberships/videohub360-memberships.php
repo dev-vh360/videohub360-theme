@@ -24,6 +24,10 @@ define('VH360_MEMBERSHIPS_DIR', plugin_dir_path(__FILE__));
 define('VH360_MEMBERSHIPS_URL', plugin_dir_url(__FILE__));
 define('VH360_MEMBERSHIPS_VERSION', '1.0.0');
 
+// Load required classes for activation/deactivation hooks
+require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-database.php';
+require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-cron.php';
+
 /**
  * Main plugin class
  */
