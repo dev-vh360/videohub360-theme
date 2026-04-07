@@ -95,9 +95,6 @@ function vh360_user_has_active_membership($user_id = 0, $plan_key = null) {
     
     return apply_filters('vh360_user_has_active_membership', $count > 0, $user_id, $plan_key);
 }
-    
-    return apply_filters('vh360_user_has_active_membership', $count > 0, $user_id, $plan_key);
-}
 
 /**
  * Check if user has specific membership plan

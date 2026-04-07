@@ -75,6 +75,45 @@ $vh360_header_desc  = get_theme_mod('vh360_activity_header_description', __('Sta
         </header>
         <?php endif; ?>
 
+        <!-- Membership Check -->
+        <?php
+        // Check if activity feed requires membership
+        if (function_exists('vh360_can_access_membership_feature') && !vh360_can_access_membership_feature('activity_feed', get_current_user_id())) {
+            // Get membership options
+            $membership_options = get_option('vh360_membership_options', array());
+            $pricing_url = isset($membership_options['pricing_page_url']) ? $membership_options['pricing_page_url'] : home_url('/');
+            $custom_message = isset($membership_options['locked_message']) ? $membership_options['locked_message'] : '';
+            ?>
+            <div class="vh360-container">
+                <div class="vh360-membership-gate vh360-membership-upgrade-required" style="text-align: center; padding: 60px 20px;">
+                    <div class="vh360-membership-gate-content" style="max-width: 500px; margin: 0 auto;">
+                        <svg class="vh360-membership-gate-icon" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom: 20px;">
+                            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                            <path d="M2 17l10 5 10-5"></path>
+                            <path d="M2 12l10 5 10-5"></path>
+                        </svg>
+                        <h3 style="font-size: 24px; margin-bottom: 15px;"><?php esc_html_e('Premium Feature', 'videohub360-theme'); ?></h3>
+                        <?php if ($custom_message) : ?>
+                            <div class="vh360-membership-custom-message" style="margin-bottom: 20px;">
+                                <?php echo wp_kses_post($custom_message); ?>
+                            </div>
+                        <?php else : ?>
+                            <p style="margin-bottom: 20px; color: #666;"><?php esc_html_e('The activity feed requires an active membership to access.', 'videohub360-theme'); ?></p>
+                        <?php endif; ?>
+                        <?php if ($pricing_url) : ?>
+                            <a href="<?php echo esc_url($pricing_url); ?>" class="button button-primary" style="display: inline-block;">
+                                <?php esc_html_e('View Membership Plans', 'videohub360-theme'); ?>
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+            <?php
+            get_footer();
+            exit;
+        }
+        ?>
+
         <!-- Unified Community Feed (Composer + Posts + Sidebar) -->
         <div class="vh360-community-feed">
             <div class="vh360-container">

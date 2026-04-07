@@ -272,6 +272,15 @@ function vh360_can_user_view_appointment_page($live_room_id, $user_id) {
  * }
  */
 function vh360_can_user_join_appointment_room($live_room_id, $user_id) {
+    // Check membership access first
+    if (function_exists('vh360_can_access_membership_feature') && !vh360_can_access_membership_feature('appointments', $user_id)) {
+        return array(
+            'can_join' => false,
+            'message' => __('An active membership is required to join appointments.', 'videohub360-theme'),
+            'status' => 'membership_required',
+        );
+    }
+    
     $state = vh360_get_appointment_session_state($live_room_id, $user_id);
     
     return array(

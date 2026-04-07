@@ -98,6 +98,18 @@ $count_label = ($mode['audience'] === 'professionals_only')
         </header>
         <?php endif; ?>
         
+        <!-- Membership Check -->
+        <?php
+        // Check if members directory requires membership - default to limiting results
+        $user_has_directory_access = true;
+        $limit_directory_results = false;
+        
+        if (function_exists('vh360_can_access_membership_feature') && !vh360_can_access_membership_feature('members_directory', get_current_user_id())) {
+            $user_has_directory_access = false;
+            $limit_directory_results = true;
+        }
+        ?>
+        
         <!-- Search and Filters -->
         <?php if ($members_options['enable_search']) : ?>
         <div class="vh360-members-controls">
@@ -265,7 +277,7 @@ $count_label = ($mode['audience'] === 'professionals_only')
                         'audience' => $mode['audience'],
                         'account_types' => $mode['professionals_account_types'],
                         'require_professional_approval' => $mode['professionals_require_approval'],
-                        'number' => $per_page,
+                        'number' => $limit_directory_results ? 5 : $per_page, // Limit to 5 if no membership
                         'orderby' => $default_sort['orderby'],
                         'order' => $default_sort['order'],
                     );
@@ -282,6 +294,23 @@ $count_label = ($mode['audience'] === 'professionals_only')
                                 'avatar_size' => 80,
                             ));
                         endforeach;
+                        
+                        // Show upgrade notice if results are limited
+                        if ($limit_directory_results) :
+                            $membership_options = get_option('vh360_membership_options', array());
+                            $pricing_url = isset($membership_options['pricing_page_url']) ? $membership_options['pricing_page_url'] : home_url('/');
+                            ?>
+                            <div class="vh360-membership-upgrade-notice" style="grid-column: 1 / -1; text-align: center; padding: 40px 20px; border-top: 1px solid #ddd; margin-top: 30px;">
+                                <h4 style="font-size: 18px; margin-bottom: 10px;"><?php esc_html_e('View Full Directory', 'videohub360-theme'); ?></h4>
+                                <p style="margin-bottom: 20px; color: #666;"><?php esc_html_e('Upgrade to view all members in the directory.', 'videohub360-theme'); ?></p>
+                                <?php if ($pricing_url) : ?>
+                                    <a href="<?php echo esc_url($pricing_url); ?>" class="button button-primary">
+                                        <?php esc_html_e('Upgrade Now', 'videohub360-theme'); ?>
+                                    </a>
+                                <?php endif; ?>
+                            </div>
+                            <?php
+                        endif;
                     endif;
                     ?>
                 </div>
