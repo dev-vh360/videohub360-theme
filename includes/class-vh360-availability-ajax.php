@@ -204,6 +204,9 @@ class VH360_Availability_Ajax {
             $slot_start->format(get_option('date_format') . ' ' . get_option('time_format'))
         );
         
+        // Fire action for membership check (and other integrations)
+        do_action('vh360_before_create_live_room_post', $professional_id);
+        
         $live_room_id = wp_insert_post(array(
             'post_title' => $live_room_title,
             'post_type' => 'videohub360',

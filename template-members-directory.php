@@ -98,6 +98,18 @@ $count_label = ($mode['audience'] === 'professionals_only')
         </header>
         <?php endif; ?>
         
+        <!-- Membership Check -->
+        <?php
+        // Check if members directory requires membership - default to limiting results
+        $user_has_directory_access = true;
+        $limit_directory_results = false;
+        
+        if (function_exists('vh360_can_access_membership_feature') && !vh360_can_access_membership_feature('members_directory', get_current_user_id())) {
+            $user_has_directory_access = false;
+            $limit_directory_results = true;
+        }
+        ?>
+        
         <!-- Search and Filters -->
         <?php if ($members_options['enable_search']) : ?>
         <div class="vh360-members-controls">
@@ -265,7 +277,7 @@ $count_label = ($mode['audience'] === 'professionals_only')
                         'audience' => $mode['audience'],
                         'account_types' => $mode['professionals_account_types'],
                         'require_professional_approval' => $mode['professionals_require_approval'],
-                        'number' => $per_page,
+                        'number' => $limit_directory_results ? 5 : $per_page, // Limit to 5 if no membership
                         'orderby' => $default_sort['orderby'],
                         'order' => $default_sort['order'],
                     );
@@ -282,6 +294,11 @@ $count_label = ($mode['audience'] === 'professionals_only')
                                 'avatar_size' => 80,
                             ));
                         endforeach;
+                        
+                        // Show upgrade notice if results are limited
+                        if ($limit_directory_results) :
+                            echo vh360_render_membership_gate();
+                        endif;
                     endif;
                     ?>
                 </div>

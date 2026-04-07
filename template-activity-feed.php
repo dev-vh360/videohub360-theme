@@ -75,6 +75,20 @@ $vh360_header_desc  = get_theme_mod('vh360_activity_header_description', __('Sta
         </header>
         <?php endif; ?>
 
+        <!-- Membership Check -->
+        <?php
+        // Check if activity feed requires membership
+        if (function_exists('vh360_can_access_membership_feature') && !vh360_can_access_membership_feature('activity_feed', get_current_user_id())) {
+            ?>
+            <div class="vh360-container">
+                <?php echo vh360_render_membership_gate(); ?>
+            </div>
+            <?php
+            get_footer();
+            exit;
+        }
+        ?>
+
         <!-- Unified Community Feed (Composer + Posts + Sidebar) -->
         <div class="vh360-community-feed">
             <div class="vh360-container">

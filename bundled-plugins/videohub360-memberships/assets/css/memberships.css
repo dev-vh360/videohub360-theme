@@ -1,0 +1,100 @@
+/**
+ * VideoHub360 Memberships - Frontend Styles
+ */
+
+.vh360-membership-gate {
+    background: #f7f7f7;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 40px 20px;
+    margin: 20px 0;
+    text-align: center;
+}
+
+.vh360-membership-gate-content {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.vh360-membership-gate-icon {
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.vh360-membership-gate h3 {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 0 10px;
+    color: #333;
+}
+
+.vh360-membership-gate p {
+    font-size: 16px;
+    color: #666;
+    margin: 0 0 20px;
+    line-height: 1.5;
+}
+
+.vh360-membership-gate-button {
+    display: inline-block;
+    background: #0073aa;
+    color: #fff !important;
+    padding: 12px 30px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.vh360-membership-gate-button:hover {
+    background: #005a87;
+}
+
+.vh360-membership-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 8px;
+}
+
+.vh360-membership-status {
+    padding: 15px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.vh360-membership-status h4 {
+    margin: 0 0 10px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.vh360-membership-status-active {
+    border-left: 4px solid #46b450;
+}
+
+.vh360-membership-status-expired {
+    border-left: 4px solid #dc3232;
+}
+
+.vh360-membership-status-cancelled {
+    border-left: 4px solid #ffb900;
+}
+
+.vh360-membership-expiry {
+    font-size: 14px;
+    color: #666;
+}
+
+.vh360-membership-expiry-soon {
+    color: #dc3232;
+    font-weight: 600;
+}

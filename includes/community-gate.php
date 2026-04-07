@@ -19,6 +19,8 @@ add_action('template_redirect', 'vh360_community_access_gate', 5);
 function vh360_community_access_gate() {
     // Skip if user is logged in
     if (is_user_logged_in()) {
+        // Check for membership requirements even for logged-in users
+        vh360_membership_access_gate();
         return;
     }
     
@@ -55,6 +57,47 @@ function vh360_community_access_gate() {
         exit;
     }
 }
+
+/**
+ * Membership access gate for logged-in users
+ * 
+ * Checks if current content requires a membership and redirects to pricing page if needed.
+ * 
+ * @since 1.0.0
+ */
+function vh360_membership_access_gate() {
+    // Only run for logged-in users
+    if (!is_user_logged_in()) {
+        return;
+    }
+    
+    // Skip admin, AJAX, REST requests
+    if (is_admin() || wp_doing_ajax() || (defined('REST_REQUEST') && REST_REQUEST)) {
+        return;
+    }
+    
+    // Check if memberships are enabled
+    if (!function_exists('vh360_user_has_active_membership')) {
+        return;
+    }
+    
+    $options = get_option('vh360_membership_options', array());
+    if (empty($options['enable_memberships'])) {
+        return;
+    }
+    
+    // Apply filter to allow custom membership requirements
+    $requires_membership = apply_filters('vh360_current_page_requires_membership', false);
+    
+    if ($requires_membership && !vh360_user_has_active_membership()) {
+        $pricing_url = isset($options['pricing_page_url']) ? $options['pricing_page_url'] : home_url();
+        if ($pricing_url) {
+            wp_safe_redirect($pricing_url, 302);
+            exit;
+        }
+    }
+}
+
 
 /**
  * Check if current page is an auth page

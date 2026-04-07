@@ -192,6 +192,16 @@ class VH360_Theme_Admin {
             array($this, 'render_business')
         );
         
+        // Membership submenu
+        add_submenu_page(
+            'vh360-theme',
+            __('Membership Settings', 'videohub360-theme'),
+            __('Memberships', 'videohub360-theme'),
+            'manage_options',
+            'vh360-theme-memberships',
+            array($this, 'render_memberships')
+        );
+        
         // Advanced submenu
         add_submenu_page(
             'vh360-theme',
@@ -421,6 +431,20 @@ class VH360_Theme_Admin {
             'sanitize_callback' => array($this, 'sanitize_business_settings'),
             'default' => array(
                 'require_professional_approval' => false,
+            ),
+        ));
+        
+        // Membership settings
+        register_setting('vh360_membership_settings', 'vh360_membership_options', array(
+            'type' => 'array',
+            'sanitize_callback' => array($this, 'sanitize_membership_settings'),
+            'default' => array(
+                'enable_memberships' => true,
+                'pricing_page_url' => '',
+                'login_required' => true,
+                'locked_message' => '',
+                'reminder_days' => 7,
+                'grace_period_days' => 0,
             ),
         ));
     }
@@ -1049,6 +1073,16 @@ class VH360_Theme_Admin {
     }
     
     /**
+     * Render Memberships settings page
+     */
+    public function render_memberships() {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You do not have sufficient permissions to access this page.', 'videohub360-theme'));
+        }
+        include VH360_THEME_DIR . '/includes/admin/pages/memberships.php';
+    }
+    
+    /**
      * Sanitize permissions settings
      */
     public function sanitize_permissions_settings($input) {
@@ -1125,6 +1159,37 @@ class VH360_Theme_Admin {
         
         // Sanitize require_professional_approval checkbox
         $output['require_professional_approval'] = !empty($input['require_professional_approval']) ? 1 : 0;
+        
+        return $output;
+    }
+    
+    /**
+     * Sanitize membership settings
+     */
+    public function sanitize_membership_settings($input) {
+        if (!is_array($input)) {
+            $input = array();
+        }
+        
+        $output = array();
+        
+        // Sanitize enable_memberships checkbox
+        $output['enable_memberships'] = !empty($input['enable_memberships']) ? 1 : 0;
+        
+        // Sanitize pricing_page_url
+        $output['pricing_page_url'] = !empty($input['pricing_page_url']) ? esc_url_raw($input['pricing_page_url']) : '';
+        
+        // Sanitize login_required checkbox
+        $output['login_required'] = !empty($input['login_required']) ? 1 : 0;
+        
+        // Sanitize locked_message
+        $output['locked_message'] = !empty($input['locked_message']) ? wp_kses_post($input['locked_message']) : '';
+        
+        // Sanitize reminder_days
+        $output['reminder_days'] = isset($input['reminder_days']) ? absint($input['reminder_days']) : 7;
+        
+        // Sanitize grace_period_days
+        $output['grace_period_days'] = isset($input['grace_period_days']) ? absint($input['grace_period_days']) : 0;
         
         return $output;
     }
@@ -1395,6 +1460,10 @@ class VH360_Theme_Admin {
         
         if (isset($settings['access'])) {
             update_option('vh360_access_options', $settings['access']);
+        }
+        
+        if (isset($settings['membership'])) {
+            update_option('vh360_membership_options', $settings['membership']);
         }
         
         wp_send_json_success(__('Settings imported successfully', 'videohub360-theme'));

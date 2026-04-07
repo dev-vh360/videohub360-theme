@@ -512,6 +512,17 @@ class VH360_Ajax_Handlers {
         $members_options = get_option('vh360_members_options', array());
         $per_page = isset($members_options['per_page']) ? absint($members_options['per_page']) : 12;
         
+        // Check membership access for directory
+        $has_directory_access = true;
+        if (function_exists('vh360_can_access_membership_feature')) {
+            $has_directory_access = vh360_can_access_membership_feature('members_directory', get_current_user_id());
+        }
+        
+        // Limit results for non-members
+        if (!$has_directory_access) {
+            $per_page = 5;
+        }
+        
         // Get parameters
         $search = isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '';
         $role = isset($_POST['role']) ? sanitize_text_field($_POST['role']) : '';
@@ -530,7 +541,7 @@ class VH360_Ajax_Handlers {
             'orderby' => $orderby,
             'order' => $order,
             'number' => $per_page,
-            'offset' => ($page - 1) * $per_page,
+            'offset' => $has_directory_access ? (($page - 1) * $per_page) : 0, // Non-members always see page 1
         );
         
         // For all_members mode, include role filter
@@ -619,6 +630,11 @@ class VH360_Ajax_Handlers {
             ));
         }
         
+        // Add upgrade notice for non-members
+        if (!$has_directory_access) {
+            echo vh360_render_membership_gate();
+        }
+        
         $html = ob_get_clean();
         
         // Get total count using shared helper (no pagination)
@@ -631,6 +647,11 @@ class VH360_Ajax_Handlers {
         unset($total_args['number']);
         unset($total_args['offset']);
         $total = vh360_get_member_count($total_args);
+        
+        // Limit total for non-members to prevent pagination beyond first page
+        if (!$has_directory_access) {
+            $total = min($total, 5);
+        }
         
         wp_send_json_success(array(
             'html' => $html,

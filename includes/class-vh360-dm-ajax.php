@@ -76,6 +76,10 @@ class VH360_DM_Ajax {
         
         $current_user_id = get_current_user_id();
         $recipient_id = isset($_POST['recipient_id']) ? absint($_POST['recipient_id']) : 0;
+        
+        // Fire action for membership check (and other integrations)
+        do_action('vh360_dm_before_send_message', $current_user_id, $recipient_id);
+        
         $message = isset($_POST['message']) ? $_POST['message'] : '';
         
         if (!$recipient_id || empty($message)) {
