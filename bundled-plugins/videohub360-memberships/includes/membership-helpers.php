@@ -351,3 +351,114 @@ function vh360_membership_show_callback($feature_key, $additional_check = null) 
         return true;
     };
 }
+
+/**
+ * Render centralized membership gate
+ * 
+ * This is the single source of truth for all membership gate rendering across the platform.
+ * It respects login_required and locked_message settings consistently.
+ * 
+ * @param array $context Optional context array with 'required_plan' key
+ * @return string HTML for membership gate
+ * @since 1.0.0
+ */
+function vh360_render_membership_gate($context = array()) {
+    // Get membership options
+    $options = get_option('vh360_membership_options', array());
+    $login_required = isset($options['login_required']) ? $options['login_required'] : true;
+    $pricing_url = isset($options['pricing_page_url']) ? $options['pricing_page_url'] : '';
+    $custom_message = isset($options['locked_message']) ? $options['locked_message'] : '';
+    
+    // Get required plan from context
+    $required_plan = isset($context['required_plan']) ? $context['required_plan'] : '';
+    
+    // Determine which gate to show
+    $user_id = get_current_user_id();
+    
+    // If user is not logged in and login is required, show login gate
+    if (!$user_id && $login_required) {
+        return vh360_render_login_gate();
+    }
+    
+    // Otherwise, show upgrade gate (for logged-in users or when login not required)
+    return vh360_render_upgrade_gate($required_plan, $custom_message, $pricing_url);
+}
+
+/**
+ * Render login required gate
+ * 
+ * @return string HTML for login gate
+ * @since 1.0.0
+ */
+function vh360_render_login_gate() {
+    $login_url = function_exists('vh360_get_login_page_url') 
+        ? vh360_get_login_page_url() 
+        : wp_login_url(get_permalink());
+        
+    ob_start();
+    ?>
+    <div class="vh360-membership-gate vh360-membership-login-required">
+        <div class="vh360-membership-gate-content">
+            <svg class="vh360-membership-gate-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <h3><?php esc_html_e('Login Required', 'videohub360-memberships'); ?></h3>
+            <p><?php esc_html_e('Please log in to access this content.', 'videohub360-memberships'); ?></p>
+            <a href="<?php echo esc_url($login_url); ?>" class="vh360-membership-gate-button">
+                <?php esc_html_e('Log In', 'videohub360-memberships'); ?>
+            </a>
+        </div>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+
+/**
+ * Render upgrade required gate
+ * 
+ * @param string $required_plan Required plan key
+ * @param string $custom_message Custom message from settings
+ * @param string $pricing_url Pricing page URL
+ * @return string HTML for upgrade gate
+ * @since 1.0.0
+ */
+function vh360_render_upgrade_gate($required_plan = '', $custom_message = '', $pricing_url = '') {
+    // Get options if not provided
+    if (empty($custom_message) || empty($pricing_url)) {
+        $options = get_option('vh360_membership_options', array());
+        if (empty($pricing_url)) {
+            $pricing_url = isset($options['pricing_page_url']) ? $options['pricing_page_url'] : '';
+        }
+        if (empty($custom_message)) {
+            $custom_message = isset($options['locked_message']) ? $options['locked_message'] : '';
+        }
+    }
+    
+    ob_start();
+    ?>
+    <div class="vh360-membership-gate vh360-membership-upgrade-required">
+        <div class="vh360-membership-gate-content">
+            <svg class="vh360-membership-gate-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                <path d="M2 17l10 5 10-5"></path>
+                <path d="M2 12l10 5 10-5"></path>
+            </svg>
+            <h3><?php esc_html_e('Premium Content', 'videohub360-memberships'); ?></h3>
+            <?php if ($custom_message) : ?>
+                <div class="vh360-membership-custom-message">
+                    <?php echo wp_kses_post($custom_message); ?>
+                </div>
+            <?php else : ?>
+                <p><?php esc_html_e('This content requires an active membership to access.', 'videohub360-memberships'); ?></p>
+            <?php endif; ?>
+            <?php if ($pricing_url) : ?>
+                <a href="<?php echo esc_url($pricing_url); ?>" class="vh360-membership-gate-button">
+                    <?php esc_html_e('View Plans', 'videohub360-memberships'); ?>
+                </a>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php
+    return ob_get_clean();
+}

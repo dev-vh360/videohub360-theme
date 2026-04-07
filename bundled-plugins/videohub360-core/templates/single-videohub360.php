@@ -265,20 +265,7 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
             
             if (!$user_has_access) {
                 // Render membership gate instead of video
-                if (class_exists('VH360_Membership_Frontend')) {
-                    $frontend = VH360_Membership_Frontend::get_instance();
-                    $reflection = new ReflectionClass($frontend);
-                    
-                    if (!get_current_user_id()) {
-                        $method = $reflection->getMethod('render_login_required_notice');
-                        $method->setAccessible(true);
-                        echo $method->invoke($frontend);
-                    } else {
-                        $method = $reflection->getMethod('render_upgrade_required_notice');
-                        $method->setAccessible(true);
-                        echo $method->invoke($frontend, $required_plan);
-                    }
-                }
+                echo vh360_render_membership_gate(array('required_plan' => $required_plan));
             } else {
                 // User has access, render video
             ?>

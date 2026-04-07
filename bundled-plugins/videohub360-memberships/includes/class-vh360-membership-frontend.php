@@ -70,19 +70,10 @@ class VH360_Membership_Frontend {
             return $content;
         }
         
-        // Get membership options
-        $options = get_option('vh360_membership_options', array());
-        $login_required = isset($options['login_required']) ? $options['login_required'] : true;
-        
         // Check if user has access
         $user_id = get_current_user_id();
         
-        // If login_required is false, show locked content notice even for logged-out users
-        if (!$user_id && $login_required) {
-            return $this->render_login_required_notice();
-        }
-        
-        // For logged-in users or when login not required, check membership
+        // Check membership access
         if ($user_id) {
             // Check if user has the required plan
             if ($required_plan === 'any') {
@@ -96,8 +87,8 @@ class VH360_Membership_Frontend {
             }
         }
         
-        // User doesn't have access - show upgrade notice
-        return $this->render_upgrade_required_notice($required_plan);
+        // User doesn't have access - use centralized gate renderer
+        return vh360_render_membership_gate(array('required_plan' => $required_plan));
     }
     
     /**
