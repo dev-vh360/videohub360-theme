@@ -84,8 +84,8 @@ class VH360_Memberships {
         // Load helper functions
         require_once VH360_MEMBERSHIPS_DIR . 'includes/membership-helpers.php';
         
-        // Load platform integrations (examples - uncomment specific integrations as needed)
-        // require_once VH360_MEMBERSHIPS_DIR . 'includes/platform-integrations.php';
+        // Load platform integrations
+        require_once VH360_MEMBERSHIPS_DIR . 'includes/platform-integrations.php';
     }
     
     /**
