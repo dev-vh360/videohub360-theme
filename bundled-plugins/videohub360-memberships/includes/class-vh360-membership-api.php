@@ -219,7 +219,7 @@ class VH360_Membership_API {
      * @return string|null Expiration datetime or null for lifetime
      */
     private function calculate_expiration_date($duration, $duration_unit, $base_date = null) {
-        if ($duration_unit === 'lifetime' || $duration == 0) {
+        if ($duration_unit === 'lifetime' || $duration === 0) {
             return null;
         }
         

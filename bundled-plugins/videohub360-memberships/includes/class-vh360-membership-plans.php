@@ -118,7 +118,7 @@ class VH360_Membership_Plans {
     /**
      * Add meta box to products
      */
-    public function add_meta_box() {
+    public function add_product_meta_box() {
         add_meta_box(
             'vh360_membership_mapping',
             __('VH360 Membership Mapping', 'videohub360-memberships'),
