@@ -186,9 +186,10 @@ class VH360_Membership_Frontend {
         if ($post) {
             $template = get_page_template_slug($post->ID);
             
-            // Activity feed requires membership
+            // Activity feed has its own template-level gate, do NOT redirect
+            // Let the template handle gating to show inline upgrade notice
             if ($template === 'template-activity-feed.php') {
-                return true;
+                return false; // Skip redirect gate for activity feed
             }
             
             // Check post meta for individual pages

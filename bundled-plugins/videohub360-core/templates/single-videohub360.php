@@ -250,10 +250,9 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                 $current_user_id = get_current_user_id();
                 
                 if (!$current_user_id) {
-                    // Not logged in
-                    $options = get_option('vh360_membership_options', array());
-                    $login_required = isset($options['login_required']) ? $options['login_required'] : true;
-                    $user_has_access = !$login_required;
+                    // Not logged in - always deny access
+                    // Logged-out users should see login/upgrade gate, not content
+                    $user_has_access = false;
                 } else {
                     // Check if user has the required plan
                     if ($required_plan === 'any') {

@@ -136,6 +136,9 @@ class VH360_Membership_API {
             return false;
         }
         
+        // Clear renewal reminder flag so future reminders can be sent
+        delete_user_meta($membership->user_id, "_vh360_membership_reminder_sent_{$membership_id}");
+        
         // Log event
         $this->log_event($membership_id, 'extended', array(
             'duration' => $duration,

@@ -54,6 +54,12 @@ function vh360_get_user_memberships($user_id = 0, $status = null) {
  * @return bool
  */
 function vh360_user_has_active_membership($user_id = 0, $plan_key = null) {
+    // Check if memberships are globally enabled
+    $options = get_option('vh360_membership_options', array());
+    if (empty($options['enable_memberships'])) {
+        return true; // When memberships disabled, all users have "access"
+    }
+    
     if (!$user_id) {
         $user_id = get_current_user_id();
     }
@@ -63,7 +69,6 @@ function vh360_user_has_active_membership($user_id = 0, $plan_key = null) {
     }
     
     // Get grace period setting
-    $options = get_option('vh360_membership_options', array());
     $grace_period_days = isset($options['grace_period_days']) ? absint($options['grace_period_days']) : 0;
     
     global $wpdb;
@@ -158,6 +163,12 @@ function vh360_get_user_membership_status($user_id = 0, $plan_key = null) {
  * @return bool
  */
 function vh360_can_access_membership_feature($feature_key, $user_id = 0) {
+    // Check if memberships are globally enabled
+    $options = get_option('vh360_membership_options', array());
+    if (empty($options['enable_memberships'])) {
+        return true; // When memberships disabled, all features are accessible
+    }
+    
     if (!$user_id) {
         $user_id = get_current_user_id();
     }

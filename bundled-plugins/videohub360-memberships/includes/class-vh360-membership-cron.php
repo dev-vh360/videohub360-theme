@@ -73,12 +73,27 @@ class VH360_Membership_Cron {
         global $wpdb;
         $table = VH360_Membership_Database::get_memberships_table();
         
+        // Get grace period setting
+        $options = get_option('vh360_membership_options', array());
+        $grace_period_days = isset($options['grace_period_days']) ? absint($options['grace_period_days']) : 0;
+        
+        // Build expiration check that respects grace period
+        if ($grace_period_days > 0) {
+            $expiration_condition = $wpdb->prepare(
+                "AND DATE_ADD(expires_at, INTERVAL %d DAY) <= NOW()",
+                $grace_period_days
+            );
+        } else {
+            $expiration_condition = "AND expires_at <= NOW()";
+        }
+        
         // Find expired memberships that are still marked as active
+        // Only expire after grace period ends (if configured)
         $expired_memberships = $wpdb->get_results(
             "SELECT id FROM {$table} 
             WHERE status = 'active' 
             AND expires_at IS NOT NULL 
-            AND expires_at <= NOW()"
+            {$expiration_condition}"
         );
         
         $api = VH360_Membership_API::get_instance();
