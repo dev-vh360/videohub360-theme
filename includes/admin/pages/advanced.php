@@ -109,7 +109,7 @@ $options = wp_parse_args($options, $defaults);
     <!-- Import/Export Theme Options -->
     <div class="vh360-admin-card">
         <h2><?php esc_html_e('Import/Export Theme Options', 'videohub360-theme'); ?></h2>
-        <p><?php esc_html_e('Export or import theme admin option groups (Appearance, Profile, Activity, Members, Advanced, Access). This does not include WordPress Customizer settings.', 'videohub360-theme'); ?></p>
+        <p><?php esc_html_e('Export or import theme admin option groups (Appearance, Profile, Activity, Members, Advanced, Access, Memberships). This does not include WordPress Customizer settings.', 'videohub360-theme'); ?></p>
         
         <h3><?php esc_html_e('Export Theme Options', 'videohub360-theme'); ?></h3>
         <p><?php esc_html_e('Click the button below to export theme admin option groups as a JSON file.', 'videohub360-theme'); ?></p>
@@ -225,6 +225,7 @@ jQuery(document).ready(function($) {
             members: <?php echo wp_json_encode(get_option('vh360_members_options', array())); ?>,
             advanced: <?php echo wp_json_encode(get_option('vh360_advanced_options', array())); ?>,
             access: <?php echo wp_json_encode(get_option('vh360_access_options', array())); ?>,
+            membership: <?php echo wp_json_encode(get_option('vh360_membership_options', array())); ?>,
         };
         
         var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(settings, null, 2));

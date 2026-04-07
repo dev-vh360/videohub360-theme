@@ -1462,6 +1462,10 @@ class VH360_Theme_Admin {
             update_option('vh360_access_options', $settings['access']);
         }
         
+        if (isset($settings['membership'])) {
+            update_option('vh360_membership_options', $settings['membership']);
+        }
+        
         wp_send_json_success(__('Settings imported successfully', 'videohub360-theme'));
     }
     

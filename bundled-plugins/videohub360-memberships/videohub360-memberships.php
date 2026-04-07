@@ -75,6 +75,7 @@ class VH360_Memberships {
         require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-woocommerce.php';
         require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-cron.php';
         require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-frontend.php';
+        require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-content-gates.php';
         
         // Load helper functions
         require_once VH360_MEMBERSHIPS_DIR . 'includes/membership-helpers.php';
@@ -97,6 +98,7 @@ class VH360_Memberships {
         VH360_Membership_WooCommerce::get_instance();
         VH360_Membership_Cron::get_instance();
         VH360_Membership_Frontend::get_instance();
+        VH360_Membership_Content_Gates::get_instance();
         
         // Load textdomain
         load_plugin_textdomain('videohub360-memberships', false, dirname(plugin_basename(__FILE__)) . '/languages');
