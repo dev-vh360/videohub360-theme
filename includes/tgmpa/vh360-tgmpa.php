@@ -29,6 +29,14 @@ function vh360_register_required_plugins() {
             'force_deactivation' => false,
         ),
         array(
+            'name'               => 'WooCommerce',
+            'slug'               => 'woocommerce',
+            'required'           => true,
+            'version'            => '5.0.0',
+            'force_activation'   => false,
+            'force_deactivation' => false,
+        ),
+        array(
             'name'     => 'PWA App',
             'slug'     => 'vh360-pwa-app',
             'source'   => get_template_directory() . '/bundled-plugins/vh360-pwa-app.zip',
@@ -62,6 +70,15 @@ function vh360_register_required_plugins() {
             'required' => true,
             'version'  => '1.0.0',
             'force_activation'   => true,
+            'force_deactivation' => false,
+        ),
+        array(
+            'name'     => 'VideoHub360 Memberships',
+            'slug'     => 'videohub360-memberships',
+            'source'   => get_template_directory() . '/bundled-plugins/videohub360-memberships.zip',
+            'required' => true,
+            'version'  => '1.0.0',
+            'force_activation'   => false,
             'force_deactivation' => false,
         ),
     );
