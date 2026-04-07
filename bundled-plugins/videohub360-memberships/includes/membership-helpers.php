@@ -294,3 +294,52 @@ function vh360_get_membership_expiration($user_id = 0, $plan_key = null) {
     
     return apply_filters('vh360_get_membership_expiration', $expires_at, $user_id, $plan_key);
 }
+
+/**
+ * Check if membership is required for dashboard tab
+ * 
+ * Helper function to use in dashboard tab show_callback
+ *
+ * @param string $feature_key Feature identifier
+ * @param int $user_id User ID. Defaults to current user.
+ * @return bool True if user can access, false otherwise
+ */
+function vh360_membership_allows_dashboard_tab($feature_key, $user_id = 0) {
+    if (!$user_id) {
+        $user_id = get_current_user_id();
+    }
+    
+    if (!$user_id) {
+        return false;
+    }
+    
+    // Check if membership system is enabled
+    if (!function_exists('vh360_can_access_membership_feature')) {
+        return true; // If membership system not active, allow access
+    }
+    
+    return vh360_can_access_membership_feature($feature_key, $user_id);
+}
+
+/**
+ * Create membership-aware show_callback for dashboard tabs
+ *
+ * @param string $feature_key Feature identifier
+ * @param callable|null $additional_check Optional additional check function
+ * @return callable
+ */
+function vh360_membership_show_callback($feature_key, $additional_check = null) {
+    return function($user_id) use ($feature_key, $additional_check) {
+        // First check membership
+        if (!vh360_membership_allows_dashboard_tab($feature_key, $user_id)) {
+            return false;
+        }
+        
+        // Then check additional conditions if provided
+        if ($additional_check && is_callable($additional_check)) {
+            return call_user_func($additional_check, $user_id);
+        }
+        
+        return true;
+    };
+}
