@@ -41,7 +41,7 @@ class VH360_Membership_Cron {
         add_action('vh360_membership_send_renewal_reminders', array($this, 'send_renewal_reminders'));
         
         // Register renewal reminder handler
-        add_action('vh360_send_membership_renewal_reminder', array($this, 'send_renewal_reminder_email'), 10, 1);
+        add_action('vh360_send_membership_renewal_reminder', array($this, 'send_renewal_reminder_email'), 10, 2);
     }
     
     /**
