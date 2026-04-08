@@ -222,6 +222,12 @@ class VH360_Theme_Admin {
             return;
         }
         
+        // Enqueue color picker on membership settings page
+        if (strpos($hook, 'memberships') !== false) {
+            wp_enqueue_style('wp-color-picker');
+            wp_enqueue_script('wp-color-picker');
+        }
+        
         // Enqueue admin CSS
         wp_enqueue_style(
             'vh360-theme-admin',
@@ -457,6 +463,15 @@ class VH360_Theme_Admin {
                 'gate_members_directory' => 0,
                 'gate_appointments' => 0,
                 'gate_push_notifications' => 0,
+                // Subscription card styling
+                'subscription_card_bg_color' => '',
+                'subscription_card_border_color' => '',
+                'subscription_card_title_color' => '',
+                'subscription_card_price_color' => '',
+                'subscription_card_text_color' => '',
+                'subscription_card_button_label' => '',
+                'subscription_card_button_bg_color' => '',
+                'subscription_card_button_text_color' => '',
             ),
         ));
         
@@ -1232,6 +1247,21 @@ class VH360_Theme_Admin {
         $output['gate_members_directory'] = !empty($input['gate_members_directory']) ? 1 : 0;
         $output['gate_appointments'] = !empty($input['gate_appointments']) ? 1 : 0;
         $output['gate_push_notifications'] = !empty($input['gate_push_notifications']) ? 1 : 0;
+        
+        // Sanitize subscription card styling
+        $color_fields = array(
+            'subscription_card_bg_color',
+            'subscription_card_border_color',
+            'subscription_card_title_color',
+            'subscription_card_price_color',
+            'subscription_card_text_color',
+            'subscription_card_button_bg_color',
+            'subscription_card_button_text_color',
+        );
+        foreach ($color_fields as $field) {
+            $output[$field] = isset($input[$field]) ? sanitize_text_field($input[$field]) : '';
+        }
+        $output['subscription_card_button_label'] = isset($input['subscription_card_button_label']) ? sanitize_text_field($input['subscription_card_button_label']) : '';
         
         return $output;
     }

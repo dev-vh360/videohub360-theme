@@ -29,6 +29,14 @@ $options = get_option('vh360_membership_options', array(
     'gate_members_directory' => 0,
     'gate_appointments' => 0,
     'gate_push_notifications' => 0,
+    'subscription_card_bg_color' => '',
+    'subscription_card_border_color' => '',
+    'subscription_card_title_color' => '',
+    'subscription_card_price_color' => '',
+    'subscription_card_text_color' => '',
+    'subscription_card_button_label' => '',
+    'subscription_card_button_bg_color' => '',
+    'subscription_card_button_text_color' => '',
 ));
 
 // Get Stripe settings
@@ -358,6 +366,148 @@ if (isset($_POST['vh360_save_plan_config']) && check_admin_referer('vh360_plan_c
                     </tr>
                 </tbody>
             </table>
+            
+            <h3><?php esc_html_e('Subscription Card Styling', 'videohub360-theme'); ?></h3>
+            <p class="description" style="margin-bottom: 15px;">
+                <?php esc_html_e('Customize the appearance of the recurring subscription plan card shown to non-members. Leave fields empty to use defaults.', 'videohub360-theme'); ?>
+            </p>
+            
+            <table class="form-table" role="presentation">
+                <tbody>
+                    <tr>
+                        <th scope="row">
+                            <label for="subscription_card_bg_color">
+                                <?php esc_html_e('Card Background Color', 'videohub360-theme'); ?>
+                            </label>
+                        </th>
+                        <td>
+                            <input type="text" 
+                                   name="vh360_membership_options[subscription_card_bg_color]" 
+                                   id="subscription_card_bg_color" 
+                                   value="<?php echo esc_attr($options['subscription_card_bg_color']); ?>" 
+                                   class="vh360-color-picker" 
+                                   data-default-color="" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="subscription_card_border_color">
+                                <?php esc_html_e('Card Border Color', 'videohub360-theme'); ?>
+                            </label>
+                        </th>
+                        <td>
+                            <input type="text" 
+                                   name="vh360_membership_options[subscription_card_border_color]" 
+                                   id="subscription_card_border_color" 
+                                   value="<?php echo esc_attr($options['subscription_card_border_color']); ?>" 
+                                   class="vh360-color-picker" 
+                                   data-default-color="" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="subscription_card_title_color">
+                                <?php esc_html_e('Plan Title Color', 'videohub360-theme'); ?>
+                            </label>
+                        </th>
+                        <td>
+                            <input type="text" 
+                                   name="vh360_membership_options[subscription_card_title_color]" 
+                                   id="subscription_card_title_color" 
+                                   value="<?php echo esc_attr($options['subscription_card_title_color']); ?>" 
+                                   class="vh360-color-picker" 
+                                   data-default-color="" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="subscription_card_price_color">
+                                <?php esc_html_e('Plan Price Color', 'videohub360-theme'); ?>
+                            </label>
+                        </th>
+                        <td>
+                            <input type="text" 
+                                   name="vh360_membership_options[subscription_card_price_color]" 
+                                   id="subscription_card_price_color" 
+                                   value="<?php echo esc_attr($options['subscription_card_price_color']); ?>" 
+                                   class="vh360-color-picker" 
+                                   data-default-color="" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="subscription_card_text_color">
+                                <?php esc_html_e('Plan Text Color', 'videohub360-theme'); ?>
+                            </label>
+                        </th>
+                        <td>
+                            <input type="text" 
+                                   name="vh360_membership_options[subscription_card_text_color]" 
+                                   id="subscription_card_text_color" 
+                                   value="<?php echo esc_attr($options['subscription_card_text_color']); ?>" 
+                                   class="vh360-color-picker" 
+                                   data-default-color="" />
+                            <p class="description">
+                                <?php esc_html_e('Applies to description, features, and trial text.', 'videohub360-theme'); ?>
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="subscription_card_button_label">
+                                <?php esc_html_e('Subscribe Button Label', 'videohub360-theme'); ?>
+                            </label>
+                        </th>
+                        <td>
+                            <input type="text" 
+                                   name="vh360_membership_options[subscription_card_button_label]" 
+                                   id="subscription_card_button_label" 
+                                   value="<?php echo esc_attr($options['subscription_card_button_label']); ?>" 
+                                   class="regular-text" 
+                                   placeholder="<?php esc_attr_e('Subscribe', 'videohub360-theme'); ?>" />
+                            <p class="description">
+                                <?php esc_html_e('Custom label for the subscribe button. Leave empty to use default.', 'videohub360-theme'); ?>
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="subscription_card_button_bg_color">
+                                <?php esc_html_e('Subscribe Button Background Color', 'videohub360-theme'); ?>
+                            </label>
+                        </th>
+                        <td>
+                            <input type="text" 
+                                   name="vh360_membership_options[subscription_card_button_bg_color]" 
+                                   id="subscription_card_button_bg_color" 
+                                   value="<?php echo esc_attr($options['subscription_card_button_bg_color']); ?>" 
+                                   class="vh360-color-picker" 
+                                   data-default-color="" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">
+                            <label for="subscription_card_button_text_color">
+                                <?php esc_html_e('Subscribe Button Text Color', 'videohub360-theme'); ?>
+                            </label>
+                        </th>
+                        <td>
+                            <input type="text" 
+                                   name="vh360_membership_options[subscription_card_button_text_color]" 
+                                   id="subscription_card_button_text_color" 
+                                   value="<?php echo esc_attr($options['subscription_card_button_text_color']); ?>" 
+                                   class="vh360-color-picker" 
+                                   data-default-color="" />
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <script>
+            jQuery(document).ready(function($) {
+                $('.vh360-color-picker').wpColorPicker();
+            });
+            </script>
             
             <?php submit_button(__('Save Settings', 'videohub360-theme')); ?>
         </form>
