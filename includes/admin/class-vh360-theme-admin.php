@@ -459,6 +459,23 @@ class VH360_Theme_Admin {
                 'gate_push_notifications' => 0,
             ),
         ));
+        
+        // Stripe / recurring billing settings
+        register_setting('vh360_stripe_settings', 'vh360_stripe_settings', array(
+            'type' => 'array',
+            'sanitize_callback' => array($this, 'sanitize_stripe_settings'),
+            'default' => array(
+                'enable_recurring' => 0,
+                'test_mode' => 1,
+                'publishable_key' => '',
+                'secret_key' => '',
+                'test_publishable_key' => '',
+                'test_secret_key' => '',
+                'webhook_secret' => '',
+                'enable_portal' => 0,
+                'cancellation_behavior' => 'at_period_end',
+            ),
+        ));
     }
     
     /**
@@ -1215,6 +1232,39 @@ class VH360_Theme_Admin {
         $output['gate_members_directory'] = !empty($input['gate_members_directory']) ? 1 : 0;
         $output['gate_appointments'] = !empty($input['gate_appointments']) ? 1 : 0;
         $output['gate_push_notifications'] = !empty($input['gate_push_notifications']) ? 1 : 0;
+        
+        return $output;
+    }
+    
+    /**
+     * Sanitize Stripe settings
+     */
+    public function sanitize_stripe_settings($input) {
+        if (!is_array($input)) {
+            $input = array();
+        }
+        
+        $output = array();
+        
+        $output['enable_recurring'] = !empty($input['enable_recurring']) ? 1 : 0;
+        $output['test_mode'] = !empty($input['test_mode']) ? 1 : 0;
+        
+        // Live keys
+        $output['publishable_key'] = isset($input['publishable_key']) ? sanitize_text_field($input['publishable_key']) : '';
+        $output['secret_key'] = isset($input['secret_key']) ? sanitize_text_field($input['secret_key']) : '';
+        
+        // Test keys
+        $output['test_publishable_key'] = isset($input['test_publishable_key']) ? sanitize_text_field($input['test_publishable_key']) : '';
+        $output['test_secret_key'] = isset($input['test_secret_key']) ? sanitize_text_field($input['test_secret_key']) : '';
+        
+        // Webhook secret
+        $output['webhook_secret'] = isset($input['webhook_secret']) ? sanitize_text_field($input['webhook_secret']) : '';
+        
+        // Portal and behavior
+        $output['enable_portal'] = !empty($input['enable_portal']) ? 1 : 0;
+        $output['cancellation_behavior'] = isset($input['cancellation_behavior']) && in_array($input['cancellation_behavior'], array('at_period_end', 'immediate'), true)
+            ? $input['cancellation_behavior']
+            : 'at_period_end';
         
         return $output;
     }

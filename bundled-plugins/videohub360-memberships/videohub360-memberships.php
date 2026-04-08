@@ -2,8 +2,8 @@
 /*
 Plugin Name: VideoHub360 Memberships
 Plugin URI: https://videohub360.com
-Description: Native membership system for VideoHub360 with WooCommerce integration for payment processing.
-Version: 1.0.0
+Description: Native membership system for VideoHub360 with WooCommerce integration and Stripe recurring subscription support.
+Version: 2.0.0
 Author: VideoHub360
 Author URI: https://videohub360.com
 Requires at least: 5.0
@@ -22,7 +22,7 @@ if (!defined('ABSPATH')) exit;
 define('VH360_MEMBERSHIPS_FILE', __FILE__);
 define('VH360_MEMBERSHIPS_DIR', plugin_dir_path(__FILE__));
 define('VH360_MEMBERSHIPS_URL', plugin_dir_url(__FILE__));
-define('VH360_MEMBERSHIPS_VERSION', '1.0.0');
+define('VH360_MEMBERSHIPS_VERSION', '2.0.0');
 
 // Load required classes for activation/deactivation hooks
 require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-database.php';
@@ -81,6 +81,13 @@ class VH360_Memberships {
         require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-frontend.php';
         require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-content-gates.php';
         
+        // Load Stripe integration classes
+        require_once VH360_MEMBERSHIPS_DIR . 'includes/stripe/class-vh360-stripe-bootstrap.php';
+        require_once VH360_MEMBERSHIPS_DIR . 'includes/stripe/class-vh360-stripe-checkout.php';
+        require_once VH360_MEMBERSHIPS_DIR . 'includes/stripe/class-vh360-stripe-webhook.php';
+        require_once VH360_MEMBERSHIPS_DIR . 'includes/stripe/class-vh360-stripe-sync.php';
+        require_once VH360_MEMBERSHIPS_DIR . 'includes/stripe/class-vh360-stripe-portal.php';
+        
         // Load helper functions
         require_once VH360_MEMBERSHIPS_DIR . 'includes/membership-helpers.php';
         
@@ -98,7 +105,7 @@ class VH360_Memberships {
             return;
         }
         
-        // Initialize components
+        // Initialize core components
         VH360_Membership_Database::get_instance();
         VH360_Membership_Plans::get_instance();
         VH360_Membership_API::get_instance();
@@ -106,6 +113,18 @@ class VH360_Memberships {
         VH360_Membership_Cron::get_instance();
         VH360_Membership_Frontend::get_instance();
         VH360_Membership_Content_Gates::get_instance();
+        
+        // Initialize Stripe components
+        VH360_Stripe_Bootstrap::get_instance();
+        VH360_Stripe_Webhook::get_instance();
+        
+        // Only initialize checkout/portal if Stripe is configured
+        $stripe = VH360_Stripe_Bootstrap::get_instance();
+        if ($stripe->is_configured()) {
+            VH360_Stripe_Checkout::get_instance();
+            VH360_Stripe_Portal::get_instance();
+            VH360_Stripe_Sync::get_instance();
+        }
         
         // Load textdomain
         load_plugin_textdomain('videohub360-memberships', false, dirname(plugin_basename(__FILE__)) . '/languages');
