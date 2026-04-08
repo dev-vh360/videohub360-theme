@@ -42,7 +42,10 @@ function vh360_user_can_host_live_rooms($user_id = 0) {
     
     // Check membership if feature gating is enabled
     if (function_exists('vh360_can_access_membership_feature')) {
-        $options = get_option('vh360_membership_options', array());
+        static $options = null;
+        if ($options === null) {
+            $options = get_option('vh360_membership_options', array());
+        }
         
         // Only enforce membership if system is enabled AND this specific gate is on
         if (!empty($options['enable_memberships']) && !empty($options['gate_live_rooms'])) {
@@ -84,7 +87,10 @@ function vh360_user_can_create_videos($user_id = 0) {
     
     // Check membership if feature gating is enabled
     if (function_exists('vh360_can_access_membership_feature')) {
-        $options = get_option('vh360_membership_options', array());
+        static $options = null;
+        if ($options === null) {
+            $options = get_option('vh360_membership_options', array());
+        }
         
         // Only enforce membership if system is enabled AND this specific gate is on
         if (!empty($options['enable_memberships']) && !empty($options['gate_create_videos'])) {
@@ -126,7 +132,10 @@ function vh360_user_can_create_posts($user_id = 0) {
     
     // Check membership if feature gating is enabled
     if (function_exists('vh360_can_access_membership_feature')) {
-        $options = get_option('vh360_membership_options', array());
+        static $options = null;
+        if ($options === null) {
+            $options = get_option('vh360_membership_options', array());
+        }
         
         // Only enforce membership if system is enabled AND this specific gate is on
         if (!empty($options['enable_memberships']) && !empty($options['gate_create_posts'])) {
@@ -166,7 +175,10 @@ function vh360_user_can_create_events($user_id = 0) {
     
     // Check membership if feature gating is enabled
     if (function_exists('vh360_can_access_membership_feature')) {
-        $options = get_option('vh360_membership_options', array());
+        static $options = null;
+        if ($options === null) {
+            $options = get_option('vh360_membership_options', array());
+        }
         
         // Only enforce membership if system is enabled AND this specific gate is on
         if (!empty($options['enable_memberships']) && !empty($options['gate_create_events'])) {
@@ -206,7 +218,10 @@ function vh360_user_can_create_bulletins($user_id = 0) {
     
     // Check membership if feature gating is enabled
     if (function_exists('vh360_can_access_membership_feature')) {
-        $options = get_option('vh360_membership_options', array());
+        static $options = null;
+        if ($options === null) {
+            $options = get_option('vh360_membership_options', array());
+        }
         
         // Only enforce membership if system is enabled AND this specific gate is on
         if (!empty($options['enable_memberships']) && !empty($options['gate_create_bulletins'])) {
@@ -285,7 +300,10 @@ function vh360_user_can_create_galleries($user_id = 0) {
     
     // Check membership if feature gating is enabled
     if (function_exists('vh360_can_access_membership_feature')) {
-        $options = get_option('vh360_membership_options', array());
+        static $options = null;
+        if ($options === null) {
+            $options = get_option('vh360_membership_options', array());
+        }
         
         // Only enforce membership if system is enabled AND this specific gate is on
         if (!empty($options['enable_memberships']) && !empty($options['gate_create_galleries'])) {

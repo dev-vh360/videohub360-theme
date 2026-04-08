@@ -11,6 +11,21 @@
 if (!defined('ABSPATH')) exit;
 
 /**
+ * Get cached membership options to avoid repeated database queries.
+ *
+ * @return array Membership options array
+ */
+function vh360_get_cached_membership_options() {
+    static $cached_options = null;
+    
+    if ($cached_options === null) {
+        $cached_options = get_option('vh360_membership_options', array());
+    }
+    
+    return $cached_options;
+}
+
+/**
  * Dashboard Tab Visibility Integration
  *
  * Gates dashboard tabs based on membership access.
@@ -95,7 +110,7 @@ function vh360_memberships_check_live_room_creation($user_id) {
  * These filters are now option-aware based on backend settings.
  */
 add_filter('vh360_feature_live_rooms_required_plans', function($plans) {
-    $options = get_option('vh360_membership_options', array());
+    $options = vh360_get_cached_membership_options();
     
     // If memberships disabled globally, return empty array (no restriction)
     if (empty($options['enable_memberships'])) {
@@ -112,7 +127,7 @@ add_filter('vh360_feature_live_rooms_required_plans', function($plans) {
 });
 
 add_filter('vh360_feature_direct_messages_required_plans', function($plans) {
-    $options = get_option('vh360_membership_options', array());
+    $options = vh360_get_cached_membership_options();
     
     // If memberships disabled globally, return empty array (no restriction)
     if (empty($options['enable_memberships'])) {
@@ -129,7 +144,7 @@ add_filter('vh360_feature_direct_messages_required_plans', function($plans) {
 });
 
 add_filter('vh360_feature_activity_feed_required_plans', function($plans) {
-    $options = get_option('vh360_membership_options', array());
+    $options = vh360_get_cached_membership_options();
     
     // If memberships disabled globally, return empty array (no restriction)
     if (empty($options['enable_memberships'])) {
@@ -146,7 +161,7 @@ add_filter('vh360_feature_activity_feed_required_plans', function($plans) {
 });
 
 add_filter('vh360_feature_members_directory_required_plans', function($plans) {
-    $options = get_option('vh360_membership_options', array());
+    $options = vh360_get_cached_membership_options();
     
     // If memberships disabled globally, return empty array (no restriction)
     if (empty($options['enable_memberships'])) {
@@ -164,7 +179,7 @@ add_filter('vh360_feature_members_directory_required_plans', function($plans) {
 });
 
 add_filter('vh360_feature_appointments_required_plans', function($plans) {
-    $options = get_option('vh360_membership_options', array());
+    $options = vh360_get_cached_membership_options();
     
     // If memberships disabled globally, return empty array (no restriction)
     if (empty($options['enable_memberships'])) {
@@ -181,7 +196,7 @@ add_filter('vh360_feature_appointments_required_plans', function($plans) {
 });
 
 add_filter('vh360_feature_push_notifications_required_plans', function($plans) {
-    $options = get_option('vh360_membership_options', array());
+    $options = vh360_get_cached_membership_options();
     
     // If memberships disabled globally, return empty array (no restriction)
     if (empty($options['enable_memberships'])) {
@@ -204,7 +219,7 @@ add_filter('vh360_feature_push_notifications_required_plans', function($plans) {
  * content creation features.
  */
 add_filter('vh360_feature_create_videos_required_plans', function($plans) {
-    $options = get_option('vh360_membership_options', array());
+    $options = vh360_get_cached_membership_options();
     
     // If memberships disabled globally, return empty array (no restriction)
     if (empty($options['enable_memberships'])) {
@@ -221,7 +236,7 @@ add_filter('vh360_feature_create_videos_required_plans', function($plans) {
 });
 
 add_filter('vh360_feature_create_posts_required_plans', function($plans) {
-    $options = get_option('vh360_membership_options', array());
+    $options = vh360_get_cached_membership_options();
     
     // If memberships disabled globally, return empty array (no restriction)
     if (empty($options['enable_memberships'])) {
@@ -238,7 +253,7 @@ add_filter('vh360_feature_create_posts_required_plans', function($plans) {
 });
 
 add_filter('vh360_feature_create_events_required_plans', function($plans) {
-    $options = get_option('vh360_membership_options', array());
+    $options = vh360_get_cached_membership_options();
     
     // If memberships disabled globally, return empty array (no restriction)
     if (empty($options['enable_memberships'])) {
@@ -255,7 +270,7 @@ add_filter('vh360_feature_create_events_required_plans', function($plans) {
 });
 
 add_filter('vh360_feature_create_bulletins_required_plans', function($plans) {
-    $options = get_option('vh360_membership_options', array());
+    $options = vh360_get_cached_membership_options();
     
     // If memberships disabled globally, return empty array (no restriction)
     if (empty($options['enable_memberships'])) {
@@ -272,7 +287,7 @@ add_filter('vh360_feature_create_bulletins_required_plans', function($plans) {
 });
 
 add_filter('vh360_feature_create_galleries_required_plans', function($plans) {
-    $options = get_option('vh360_membership_options', array());
+    $options = vh360_get_cached_membership_options();
     
     // If memberships disabled globally, return empty array (no restriction)
     if (empty($options['enable_memberships'])) {
