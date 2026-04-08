@@ -255,10 +255,13 @@ class VH360_Membership_Subscription_Management {
                         );
                         foreach ($style_map as $option_key => $css_var) {
                             if (!empty($card_options[$option_key])) {
-                                $card_style_props[] = esc_attr($css_var) . ':' . esc_attr($card_options[$option_key]);
+                                $color = sanitize_hex_color($card_options[$option_key]);
+                                if ($color) {
+                                    $card_style_props[] = $css_var . ':' . $color;
+                                }
                             }
                         }
-                        $card_style_attr = !empty($card_style_props) ? ' style="' . implode(';', $card_style_props) . '"' : '';
+                        $card_style_attr = !empty($card_style_props) ? ' style="' . esc_attr(implode(';', $card_style_props)) . '"' : '';
                         $button_label = !empty($card_options['subscription_card_button_label']) ? $card_options['subscription_card_button_label'] : __('Subscribe', 'videohub360-memberships');
                     ?>
                         <h4><?php esc_html_e('Available Plans', 'videohub360-memberships'); ?></h4>
