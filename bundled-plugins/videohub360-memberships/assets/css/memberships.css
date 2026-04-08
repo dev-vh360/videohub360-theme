@@ -322,7 +322,7 @@
     list-style: none;
     padding: 0;
     margin: 0 0 16px;
-    text-align: left;
+    text-align: center;
     color: var(--vh360-card-text, #666);
 }
 
