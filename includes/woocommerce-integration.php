@@ -15,6 +15,40 @@
 defined('ABSPATH') || exit;
 
 /**
+ * Check if cart contains any membership products.
+ *
+ * @return bool True if cart contains a membership product, false otherwise.
+ */
+function vh360_wc_cart_contains_membership() {
+    if (!function_exists('WC') || !WC()->cart) {
+        return false;
+    }
+
+    // Check if VH360_Membership_Plans class is available
+    if (!class_exists('VH360_Membership_Plans')) {
+        return false;
+    }
+
+    foreach (WC()->cart->get_cart() as $cart_item) {
+        $product_id = isset($cart_item['product_id']) ? $cart_item['product_id'] : 0;
+        
+        if (!$product_id) {
+            continue;
+        }
+
+        // Use the membership mapping as the source of truth
+        $mapping = VH360_Membership_Plans::get_product_membership_mapping($product_id);
+        
+        // Product is a membership product if mapping exists and has a non-empty plan_key
+        if ($mapping && !empty($mapping['plan_key'])) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
  * Build a display name from checkout fields.
  */
 function vh360_wc_build_display_name_from_checkout() {
@@ -40,6 +74,43 @@ function vh360_wc_build_display_name_from_checkout() {
 
     return '';
 }
+
+/**
+ * Force account creation when cart contains membership products.
+ * This prevents guest checkout for membership purchases.
+ */
+add_filter('woocommerce_checkout_registration_required', function ($registration_required) {
+    // If cart contains a membership product, account creation is required
+    if (vh360_wc_cart_contains_membership()) {
+        return true;
+    }
+    
+    return $registration_required;
+}, 999);
+
+/**
+ * Disable guest checkout when cart contains membership products.
+ */
+add_filter('pre_option_woocommerce_enable_guest_checkout', function ($value) {
+    // If cart contains a membership product, disable guest checkout
+    if (vh360_wc_cart_contains_membership()) {
+        return 'no';
+    }
+    
+    return $value;
+}, 999);
+
+/**
+ * Force account creation checkbox to be checked for membership products.
+ */
+add_filter('woocommerce_create_account_default_checked', function ($checked) {
+    // If cart contains a membership product, pre-check the account creation box
+    if (vh360_wc_cart_contains_membership()) {
+        return true;
+    }
+    
+    return $checked;
+}, 999);
 
 /**
  * Add optional theme registration fields to WooCommerce checkout when creating an account.
@@ -78,7 +149,8 @@ add_filter('woocommerce_checkout_fields', function ($fields) {
  */
 add_action('woocommerce_checkout_process', function () {
     // Only validate when Woo is creating an account.
-    $creating_account = !empty($_POST['createaccount']);
+    // Note: WooCommerce nonce is validated before this hook fires.
+    $creating_account = isset($_POST['createaccount']) ? (bool) $_POST['createaccount'] : false;
     if (!$creating_account) {
         return;
     }
@@ -91,6 +163,36 @@ add_action('woocommerce_checkout_process', function () {
         wc_add_notice(__('Please enter your first and last name to create an account.', 'videohub360-theme'), 'error');
     }
 }, 20);
+
+/**
+ * Hard validation guard: Prevent membership checkout without account creation.
+ * 
+ * This ensures that any cart containing a membership product cannot complete
+ * checkout unless the customer is logged in OR an account will be created.
+ */
+add_action('woocommerce_checkout_process', function () {
+    // Only check for membership products
+    if (!vh360_wc_cart_contains_membership()) {
+        return;
+    }
+
+    // If user is already logged in, they have an account - allow checkout
+    if (is_user_logged_in()) {
+        return;
+    }
+
+    // Check if WooCommerce is creating an account for this order
+    // Note: WooCommerce nonce is validated before this hook fires.
+    $creating_account = isset($_POST['createaccount']) ? (bool) $_POST['createaccount'] : false;
+    
+    if (!$creating_account) {
+        // This should not happen due to the filters above, but guard against it anyway
+        wc_add_notice(
+            __('Membership products require a user account. Please create an account to continue.', 'videohub360-theme'),
+            'error'
+        );
+    }
+}, 999);
 
 /**
  * Store the theme's custom registration fields as user meta (same keys used by theme registration).
