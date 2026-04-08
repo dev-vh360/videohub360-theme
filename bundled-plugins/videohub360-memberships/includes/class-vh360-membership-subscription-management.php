@@ -241,9 +241,31 @@ class VH360_Membership_Subscription_Management {
                 <div class="vh360-no-membership">
                     <p><?php esc_html_e('You do not have an active membership.', 'videohub360-memberships'); ?></p>
                     
-                    <?php if (!empty($recurring_plans) && $stripe->is_configured()) : ?>
+                    <?php if (!empty($recurring_plans) && $stripe->is_configured()) : 
+                        $card_options = get_option('vh360_membership_options', array());
+                        $card_style_props = array();
+                        $style_map = array(
+                            'subscription_card_bg_color'          => '--vh360-card-bg',
+                            'subscription_card_border_color'      => '--vh360-card-border',
+                            'subscription_card_title_color'       => '--vh360-card-title',
+                            'subscription_card_price_color'       => '--vh360-card-price',
+                            'subscription_card_text_color'        => '--vh360-card-text',
+                            'subscription_card_button_bg_color'   => '--vh360-card-btn-bg',
+                            'subscription_card_button_text_color' => '--vh360-card-btn-text',
+                        );
+                        foreach ($style_map as $option_key => $css_var) {
+                            if (!empty($card_options[$option_key])) {
+                                $color = sanitize_hex_color($card_options[$option_key]);
+                                if ($color) {
+                                    $card_style_props[] = $css_var . ':' . $color;
+                                }
+                            }
+                        }
+                        $card_style_attr = !empty($card_style_props) ? ' style="' . esc_attr(implode(';', $card_style_props)) . '"' : '';
+                        $button_label = !empty($card_options['subscription_card_button_label']) ? $card_options['subscription_card_button_label'] : __('Subscribe', 'videohub360-memberships');
+                    ?>
                         <h4><?php esc_html_e('Available Plans', 'videohub360-memberships'); ?></h4>
-                        <div class="vh360-subscription-plans">
+                        <div class="vh360-subscription-plans"<?php echo $card_style_attr; ?>>
                             <?php foreach ($recurring_plans as $key => $plan) : 
                                 $plan_title = !empty($plan['display_label']) ? $plan['display_label'] : $plan['label'];
                                 $plan_price = isset($plan['display_price']) ? $plan['display_price'] : '';
@@ -271,7 +293,7 @@ class VH360_Membership_Subscription_Management {
                                     <button type="button" 
                                             class="vh360-btn vh360-btn-primary vh360-start-subscription" 
                                             data-plan-key="<?php echo esc_attr($key); ?>">
-                                        <?php esc_html_e('Subscribe', 'videohub360-memberships'); ?>
+                                        <?php echo esc_html($button_label); ?>
                                     </button>
                                 </div>
                             <?php endforeach; ?>

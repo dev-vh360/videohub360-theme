@@ -287,8 +287,8 @@
 }
 
 .vh360-subscription-plan-card {
-    background: #fff;
-    border: 1px solid #e0e0e0;
+    background: var(--vh360-card-bg, #fff);
+    border: 1px solid var(--vh360-card-border, #e0e0e0);
     border-radius: 8px;
     padding: 24px;
     text-align: center;
@@ -301,14 +301,52 @@
     margin: 0 0 12px;
     font-size: 18px;
     font-weight: 600;
+    color: var(--vh360-card-title, inherit);
+}
+
+.vh360-plan-price {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0 0 12px;
+    color: var(--vh360-card-price, inherit);
+}
+
+.vh360-plan-description {
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0 0 12px;
+    color: var(--vh360-card-text, #666);
+}
+
+.vh360-plan-features {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 16px;
+    text-align: center;
+    color: var(--vh360-card-text, #666);
+}
+
+.vh360-plan-features li {
+    padding: 4px 0;
+    font-size: 14px;
+    line-height: 1.4;
 }
 
 .vh360-plan-trial {
-    color: #0073aa;
+    color: var(--vh360-card-text, #0073aa);
     font-size: 13px;
     margin: 0 0 16px;
 }
 
 .vh360-subscription-plan-card .vh360-btn {
     width: 100%;
+}
+
+.vh360-subscription-plan-card .vh360-btn-primary {
+    background: var(--vh360-card-btn-bg, #0073aa);
+    color: var(--vh360-card-btn-text, #fff);
+}
+
+.vh360-subscription-plan-card .vh360-btn-primary:hover:not(:disabled) {
+    opacity: 0.9;
 }
