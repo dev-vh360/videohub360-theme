@@ -98,3 +98,211 @@
     color: #dc3232;
     font-weight: 600;
 }
+
+/* ---------------------------------------------------------------
+   Subscription Management Card
+   --------------------------------------------------------------- */
+
+.vh360-membership-management {
+    max-width: 600px;
+}
+
+.vh360-membership-card {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.vh360-membership-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e0e0e0;
+    background: #fafafa;
+}
+
+.vh360-membership-card-header h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.vh360-membership-badge-active {
+    background: #46b450;
+}
+
+.vh360-membership-badge-expired {
+    background: #dc3232;
+}
+
+.vh360-membership-badge-cancelled {
+    background: #999;
+}
+
+.vh360-membership-badge-pending {
+    background: #f0ad4e;
+}
+
+.vh360-membership-card-body {
+    padding: 24px;
+}
+
+.vh360-membership-detail {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.vh360-membership-detail:last-child {
+    border-bottom: none;
+}
+
+.vh360-membership-detail-label {
+    font-weight: 500;
+    color: #555;
+}
+
+.vh360-membership-detail-value {
+    color: #333;
+    font-weight: 600;
+}
+
+.vh360-billing-status-active {
+    color: #46b450;
+}
+
+.vh360-billing-status-trialing {
+    color: #0073aa;
+}
+
+.vh360-billing-status-past_due {
+    color: #dc3232;
+}
+
+.vh360-billing-status-canceled {
+    color: #999;
+}
+
+.vh360-membership-notice {
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.vh360-membership-notice-warning {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    color: #856404;
+}
+
+.vh360-membership-notice-error {
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+}
+
+.vh360-membership-card-actions {
+    padding: 16px 24px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* Buttons */
+.vh360-btn {
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+    text-align: center;
+    transition: background 0.2s, opacity 0.2s;
+}
+
+.vh360-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.vh360-btn-primary {
+    background: #0073aa;
+    color: #fff;
+}
+
+.vh360-btn-primary:hover:not(:disabled) {
+    background: #005a87;
+}
+
+.vh360-btn-secondary {
+    background: #f0f0f0;
+    color: #333;
+}
+
+.vh360-btn-secondary:hover:not(:disabled) {
+    background: #e0e0e0;
+}
+
+.vh360-btn-danger {
+    background: #dc3232;
+    color: #fff;
+}
+
+.vh360-btn-danger:hover:not(:disabled) {
+    background: #b02828;
+}
+
+/* No membership state */
+.vh360-no-membership {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.vh360-no-membership p {
+    color: #666;
+    font-size: 16px;
+}
+
+/* Subscription plan cards */
+.vh360-subscription-plans {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.vh360-subscription-plan-card {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 24px;
+    text-align: center;
+    min-width: 200px;
+    flex: 1;
+    max-width: 280px;
+}
+
+.vh360-subscription-plan-card h4 {
+    margin: 0 0 12px;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.vh360-plan-trial {
+    color: #0073aa;
+    font-size: 13px;
+    margin: 0 0 16px;
+}
+
+.vh360-subscription-plan-card .vh360-btn {
+    width: 100%;
+}

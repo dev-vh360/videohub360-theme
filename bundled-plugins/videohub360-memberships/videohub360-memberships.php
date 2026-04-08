@@ -88,6 +88,9 @@ class VH360_Memberships {
         require_once VH360_MEMBERSHIPS_DIR . 'includes/stripe/class-vh360-stripe-sync.php';
         require_once VH360_MEMBERSHIPS_DIR . 'includes/stripe/class-vh360-stripe-portal.php';
         
+        // Load subscription management
+        require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-subscription-management.php';
+        
         // Load helper functions
         require_once VH360_MEMBERSHIPS_DIR . 'includes/membership-helpers.php';
         
@@ -125,6 +128,9 @@ class VH360_Memberships {
             VH360_Stripe_Portal::get_instance();
             VH360_Stripe_Sync::get_instance();
         }
+        
+        // Initialize subscription management frontend
+        VH360_Membership_Subscription_Management::get_instance();
         
         // Load textdomain
         load_plugin_textdomain('videohub360-memberships', false, dirname(plugin_basename(__FILE__)) . '/languages');

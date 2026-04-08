@@ -29,9 +29,27 @@ function vh360_get_cached_membership_options() {
  * Dashboard Tab Visibility Integration
  *
  * Gates dashboard tabs based on membership access.
+ * Also adds a "Membership" tab for subscription management.
  */
 add_filter('vh360_dashboard_tabs_registry', 'vh360_memberships_gate_dashboard_tabs', 10, 1);
 function vh360_memberships_gate_dashboard_tabs($tabs) {
+    // Add Membership management tab
+    $tabs['membership'] = array(
+        'label' => __('Membership', 'videohub360-memberships'),
+        'label_callback' => null,
+        'show_callback' => function($user_id) {
+            $options = get_option('vh360_membership_options', array());
+            return !empty($options['enable_memberships']);
+        },
+        'icon_svg' => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>',
+        'content_callback' => function() {
+            if (class_exists('VH360_Membership_Subscription_Management')) {
+                $manager = VH360_Membership_Subscription_Management::get_instance();
+                echo $manager->render_shortcode(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- shortcode handles its own escaping
+            }
+        },
+    );
+    
     // Gate "Live Rooms" tab to members with live_rooms feature
     if (isset($tabs['live-rooms'])) {
         $tabs['live-rooms']['show_callback'] = function($user_id) {
