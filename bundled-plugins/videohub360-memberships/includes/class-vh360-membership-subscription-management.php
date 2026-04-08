@@ -244,9 +244,27 @@ class VH360_Membership_Subscription_Management {
                     <?php if (!empty($recurring_plans) && $stripe->is_configured()) : ?>
                         <h4><?php esc_html_e('Available Plans', 'videohub360-memberships'); ?></h4>
                         <div class="vh360-subscription-plans">
-                            <?php foreach ($recurring_plans as $key => $plan) : ?>
+                            <?php foreach ($recurring_plans as $key => $plan) : 
+                                $plan_title = !empty($plan['display_label']) ? $plan['display_label'] : $plan['label'];
+                                $plan_price = isset($plan['display_price']) ? $plan['display_price'] : '';
+                                $plan_desc = isset($plan['display_description']) ? $plan['display_description'] : '';
+                                $plan_features = isset($plan['display_features']) && is_array($plan['display_features']) ? $plan['display_features'] : array();
+                            ?>
                                 <div class="vh360-subscription-plan-card">
-                                    <h4><?php echo esc_html($plan['label']); ?></h4>
+                                    <h4><?php echo esc_html($plan_title); ?></h4>
+                                    <?php if (!empty($plan_price)) : ?>
+                                        <div class="vh360-plan-price"><?php echo esc_html($plan_price); ?></div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($plan_desc)) : ?>
+                                        <p class="vh360-plan-description"><?php echo esc_html($plan_desc); ?></p>
+                                    <?php endif; ?>
+                                    <?php if (!empty($plan_features)) : ?>
+                                        <ul class="vh360-plan-features">
+                                            <?php foreach ($plan_features as $feature) : ?>
+                                                <li><?php echo esc_html($feature); ?></li>
+                                            <?php endforeach; ?>
+                                        </ul>
+                                    <?php endif; ?>
                                     <?php if (!empty($plan['trial_days'])) : ?>
                                         <p class="vh360-plan-trial"><?php printf(esc_html__('%d-day free trial', 'videohub360-memberships'), $plan['trial_days']); ?></p>
                                     <?php endif; ?>
