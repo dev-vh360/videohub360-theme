@@ -64,9 +64,17 @@ class VH360_Stripe_Portal {
             wp_send_json_error(array('message' => __('No billing account found.', 'videohub360-memberships')));
         }
         
+        $portal_return_url = home_url();
+        if ( function_exists( 'vh360_get_dashboard_page_url' ) ) {
+            $dashboard_url = vh360_get_dashboard_page_url();
+            if ( $dashboard_url ) {
+                $portal_return_url = add_query_arg( 'tab', 'membership', $dashboard_url );
+            }
+        }
+        
         $result = $stripe->api_request('/v1/billing_portal/sessions', array(
             'customer'   => $customer_id,
-            'return_url' => home_url(),
+            'return_url' => $portal_return_url,
         ));
         
         if (is_wp_error($result)) {

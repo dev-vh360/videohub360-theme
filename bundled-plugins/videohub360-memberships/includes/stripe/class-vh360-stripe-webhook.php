@@ -101,6 +101,17 @@ class VH360_Stripe_Webhook {
             return new WP_REST_Response(array('status' => 'error', 'message' => $result->get_error_message()), 200);
         }
         
+        // Ensure a durable event record exists for deduplication.
+        // Individual handlers log events with stripe_event_id on specific memberships,
+        // but we also need a fallback record for events that don't resolve to a
+        // membership (unhandled types, subscription.created without user, etc.)
+        if (!VH360_Membership_Database::is_stripe_event_processed($event_id)) {
+            $api = VH360_Membership_API::get_instance();
+            $api->log_event(0, 'stripe_event_received', array(
+                'event_type' => $event_type,
+            ), 0, $event_id);
+        }
+        
         return new WP_REST_Response(array('status' => 'processed'), 200);
     }
     

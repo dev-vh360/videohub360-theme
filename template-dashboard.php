@@ -154,6 +154,16 @@ get_header();
                     <?php get_template_part('template-parts/dashboard/settings'); ?>
                 </div>
                 
+                <!-- Membership Tab (shown when memberships are enabled) -->
+                <?php
+                $vh360_membership_opts = get_option( 'vh360_membership_options', array() );
+                if ( ! empty( $vh360_membership_opts['enable_memberships'] ) ) :
+                ?>
+                <div id="membership" class="vh360-dashboard-tab-content">
+                    <?php get_template_part('template-parts/dashboard/membership'); ?>
+                </div>
+                <?php endif; ?>
+                
             </div><!-- .vh360-dashboard-content -->
             
         </div><!-- .vh360-dashboard -->

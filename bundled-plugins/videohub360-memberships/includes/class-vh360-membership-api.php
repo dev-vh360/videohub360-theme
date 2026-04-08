@@ -211,7 +211,23 @@ class VH360_Membership_API {
             return (int) $existing->id;
         }
         
-        // Create new
+        // No existing subscription record — check for active fixed-term memberships
+        // and handle the transition properly
+        if (!empty($args['user_id'])) {
+            global $wpdb;
+            $table = VH360_Membership_Database::get_memberships_table();
+            
+            $has_active_fixed = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$table} WHERE user_id = %d AND billing_mode = 'one_time' AND status = 'active' AND (expires_at IS NULL OR expires_at > NOW())",
+                $args['user_id']
+            ));
+            
+            if ($has_active_fixed > 0) {
+                return $this->handle_fixed_to_recurring_transition($args['user_id'], $args['plan_key'], $args);
+            }
+        }
+        
+        // Create new subscription membership
         return $this->create_subscription_membership($args);
     }
     
@@ -442,6 +458,10 @@ class VH360_Membership_API {
     /**
      * Handle plan change (upgrade/downgrade)
      *
+     * Implements explicit transition rules for recurring subscription changes.
+     * Detects upgrade vs downgrade direction, handles tier hierarchy,
+     * and manages the resulting access state.
+     *
      * @param int $membership_id Membership ID
      * @param string $old_plan_key Old plan key
      * @param string $new_plan_key New plan key
@@ -450,6 +470,14 @@ class VH360_Membership_API {
     public function handle_plan_change($membership_id, $old_plan_key, $new_plan_key) {
         global $wpdb;
         $table = VH360_Membership_Database::get_memberships_table();
+        
+        $membership = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $membership_id));
+        if (!$membership) {
+            return false;
+        }
+        
+        // Determine transition direction
+        $direction = $this->determine_plan_transition_direction($old_plan_key, $new_plan_key);
         
         $result = $wpdb->update(
             $table,
@@ -466,14 +494,186 @@ class VH360_Membership_API {
             return false;
         }
         
+        // On upgrade, clear any cancel_at_period_end from the old subscription
+        if ($direction === 'upgrade' && $membership->cancel_at_period_end) {
+            $wpdb->update(
+                $table,
+                array(
+                    'cancel_at_period_end' => 0,
+                    'cancelled_at'         => null,
+                ),
+                array('id' => $membership_id)
+            );
+        }
+        
         $this->log_event($membership_id, 'plan_changed', array(
-            'old_plan' => $old_plan_key,
-            'new_plan' => $new_plan_key,
+            'old_plan'  => $old_plan_key,
+            'new_plan'  => $new_plan_key,
+            'direction' => $direction,
         ));
         
-        do_action('vh360_membership_plan_changed', $membership_id, $old_plan_key, $new_plan_key);
+        do_action('vh360_membership_plan_changed', $membership_id, $old_plan_key, $new_plan_key, $direction);
         
         return true;
+    }
+    
+    /**
+     * Handle transition from a fixed-term membership to a recurring subscription
+     *
+     * When a user with an active fixed-term membership starts a recurring subscription,
+     * the recurring membership is created separately. The fixed-term membership is marked
+     * as superseded so the access helpers know to prefer the recurring one.
+     *
+     * @param int    $user_id     WordPress user ID
+     * @param string $new_plan_key New recurring plan key
+     * @param array  $subscription_args Subscription membership args for create_subscription_membership()
+     * @return int|false New membership ID or false
+     */
+    public function handle_fixed_to_recurring_transition($user_id, $new_plan_key, $subscription_args) {
+        global $wpdb;
+        $table = VH360_Membership_Database::get_memberships_table();
+        
+        // Find existing active fixed-term memberships for this user
+        $fixed_memberships = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$table} WHERE user_id = %d AND billing_mode = 'one_time' AND status = 'active'",
+            $user_id
+        ));
+        
+        // Create the new recurring membership
+        $new_membership_id = $this->create_subscription_membership($subscription_args);
+        
+        if (!$new_membership_id) {
+            return false;
+        }
+        
+        // Mark overlapping fixed-term memberships as superseded
+        foreach ($fixed_memberships as $fixed) {
+            $this->log_event($fixed->id, 'superseded_by_recurring', array(
+                'new_membership_id' => $new_membership_id,
+                'new_plan_key'      => $new_plan_key,
+            ));
+            
+            $wpdb->update(
+                $table,
+                array(
+                    'status'     => 'superseded',
+                    'updated_at' => current_time('mysql'),
+                ),
+                array('id' => $fixed->id),
+                array('%s', '%s'),
+                array('%d')
+            );
+        }
+        
+        $this->log_event($new_membership_id, 'transitioned_from_fixed', array(
+            'superseded_ids' => wp_list_pluck($fixed_memberships, 'id'),
+        ));
+        
+        return $new_membership_id;
+    }
+    
+    /**
+     * Get the effective (highest-priority) membership for a user
+     *
+     * When a user has multiple active membership records, this applies
+     * precedence rules to determine which one controls access.
+     *
+     * Precedence order:
+     * 1. Active recurring subscription (most recently synced)
+     * 2. Active fixed-term / one-time membership (latest created)
+     * 3. Superseded memberships are skipped
+     *
+     * @param int    $user_id         WordPress user ID
+     * @param int    $grace_period_days Grace period in days
+     * @return object|null Membership row or null
+     */
+    public function get_effective_membership($user_id, $grace_period_days = 0) {
+        global $wpdb;
+        $table = VH360_Membership_Database::get_memberships_table();
+        
+        // Build expiration check with grace period
+        if ($grace_period_days > 0) {
+            $expiration_check = $wpdb->prepare(
+                "(expires_at IS NULL OR DATE_ADD(expires_at, INTERVAL %d DAY) > NOW())",
+                $grace_period_days
+            );
+        } else {
+            $expiration_check = "(expires_at IS NULL OR expires_at > NOW())";
+        }
+        
+        // First try: active recurring subscription (highest priority)
+        $recurring = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$table}
+            WHERE user_id = %d
+            AND status = 'active'
+            AND billing_mode = 'recurring'
+            AND {$expiration_check}
+            ORDER BY last_billing_sync_at DESC, created_at DESC
+            LIMIT 1",
+            $user_id
+        ));
+        
+        if ($recurring) {
+            return $recurring;
+        }
+        
+        // Second try: active one-time/fixed-term membership
+        $fixed = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$table}
+            WHERE user_id = %d
+            AND status = 'active'
+            AND billing_mode != 'recurring'
+            AND {$expiration_check}
+            ORDER BY created_at DESC
+            LIMIT 1",
+            $user_id
+        ));
+        
+        return $fixed ? $fixed : null;
+    }
+    
+    /**
+     * Determine the transition direction between two plan keys
+     *
+     * Uses a tier hierarchy to classify changes as upgrade, downgrade, or lateral.
+     *
+     * @param string $old_plan Old plan key
+     * @param string $new_plan New plan key
+     * @return string 'upgrade', 'downgrade', or 'lateral'
+     */
+    private function determine_plan_transition_direction($old_plan, $new_plan) {
+        $tiers = $this->get_plan_tier_hierarchy();
+        
+        $old_tier = isset($tiers[$old_plan]) ? $tiers[$old_plan] : 0;
+        $new_tier = isset($tiers[$new_plan]) ? $tiers[$new_plan] : 0;
+        
+        if ($new_tier > $old_tier) {
+            return 'upgrade';
+        } elseif ($new_tier < $old_tier) {
+            return 'downgrade';
+        }
+        
+        return 'lateral';
+    }
+    
+    /**
+     * Get plan tier hierarchy
+     *
+     * Returns a numeric tier level for each plan key.
+     * Higher numbers = higher tier. Filterable for customization.
+     *
+     * @return array plan_key => tier_level
+     */
+    private function get_plan_tier_hierarchy() {
+        $default_hierarchy = array(
+            'basic_monthly' => 10,
+            'basic_yearly'  => 10,
+            'pro_monthly'   => 20,
+            'pro_yearly'    => 20,
+            'lifetime'      => 30,
+        );
+        
+        return apply_filters('vh360_plan_tier_hierarchy', $default_hierarchy);
     }
     
     /**

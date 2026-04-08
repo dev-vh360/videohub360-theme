@@ -224,6 +224,11 @@ function vh360_post_requires_membership($post_id) {
 /**
  * Get active membership for user
  *
+ * Applies precedence rules when multiple active memberships exist:
+ * 1. Active recurring subscription (most recently synced)
+ * 2. Active fixed-term / one-time membership (latest created)
+ * 3. Superseded memberships are skipped
+ *
  * @param int $user_id User ID. Defaults to current user.
  * @return object|false Membership object or false if no active membership
  */
@@ -240,6 +245,15 @@ function vh360_get_active_membership($user_id = 0) {
     $options = get_option('vh360_membership_options', array());
     $grace_period_days = isset($options['grace_period_days']) ? absint($options['grace_period_days']) : 0;
     
+    // Use API precedence method if available
+    if (class_exists('VH360_Membership_API')) {
+        $api = VH360_Membership_API::get_instance();
+        $membership = $api->get_effective_membership($user_id, $grace_period_days);
+        
+        return apply_filters('vh360_get_active_membership', $membership ? $membership : false, $user_id);
+    }
+    
+    // Fallback: simple query (legacy path)
     global $wpdb;
     $table = VH360_Membership_Database::get_memberships_table();
     
