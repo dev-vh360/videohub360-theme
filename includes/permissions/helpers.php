@@ -30,9 +30,29 @@ function vh360_user_can_host_live_rooms($user_id = 0) {
         return false;
     }
     
-    $can = user_can($user_id, 'manage_options') || user_can($user_id, 'vh360_host_live_rooms');
+    // Admins always have access
+    if (user_can($user_id, 'manage_options')) {
+        return true;
+    }
     
-    return apply_filters('vh360_user_can_host_live_rooms', $can, $user_id);
+    // Check capability
+    if (!user_can($user_id, 'vh360_host_live_rooms')) {
+        return false;
+    }
+    
+    // Check membership if feature gating is enabled
+    if (function_exists('vh360_can_access_membership_feature')) {
+        $options = get_option('vh360_membership_options', array());
+        
+        // Only enforce membership if system is enabled AND this specific gate is on
+        if (!empty($options['enable_memberships']) && !empty($options['gate_live_rooms'])) {
+            if (!vh360_can_access_membership_feature('live_rooms', $user_id)) {
+                return false;
+            }
+        }
+    }
+    
+    return apply_filters('vh360_user_can_host_live_rooms', true, $user_id);
 }
 
 /**
@@ -52,9 +72,29 @@ function vh360_user_can_create_videos($user_id = 0) {
         return false;
     }
     
-    $can = user_can($user_id, 'manage_options') || user_can($user_id, 'vh360_create_videos');
+    // Admins always have access
+    if (user_can($user_id, 'manage_options')) {
+        return true;
+    }
     
-    return apply_filters('vh360_user_can_create_videos', $can, $user_id);
+    // Check capability
+    if (!user_can($user_id, 'vh360_create_videos')) {
+        return false;
+    }
+    
+    // Check membership if feature gating is enabled
+    if (function_exists('vh360_can_access_membership_feature')) {
+        $options = get_option('vh360_membership_options', array());
+        
+        // Only enforce membership if system is enabled AND this specific gate is on
+        if (!empty($options['enable_memberships']) && !empty($options['gate_create_videos'])) {
+            if (!vh360_can_access_membership_feature('create_videos', $user_id)) {
+                return false;
+            }
+        }
+    }
+    
+    return apply_filters('vh360_user_can_create_videos', true, $user_id);
 }
 
 /**
@@ -74,9 +114,29 @@ function vh360_user_can_create_posts($user_id = 0) {
         return false;
     }
     
-    $can = user_can($user_id, 'manage_options') || user_can($user_id, 'vh360_create_posts');
+    // Admins always have access
+    if (user_can($user_id, 'manage_options')) {
+        return true;
+    }
     
-    return apply_filters('vh360_user_can_create_posts', $can, $user_id);
+    // Check capability
+    if (!user_can($user_id, 'vh360_create_posts')) {
+        return false;
+    }
+    
+    // Check membership if feature gating is enabled
+    if (function_exists('vh360_can_access_membership_feature')) {
+        $options = get_option('vh360_membership_options', array());
+        
+        // Only enforce membership if system is enabled AND this specific gate is on
+        if (!empty($options['enable_memberships']) && !empty($options['gate_create_posts'])) {
+            if (!vh360_can_access_membership_feature('create_posts', $user_id)) {
+                return false;
+            }
+        }
+    }
+    
+    return apply_filters('vh360_user_can_create_posts', true, $user_id);
 }
 
 /**
@@ -94,9 +154,29 @@ function vh360_user_can_create_events($user_id = 0) {
         return false;
     }
     
-    $can_create = user_can($user_id, 'vh360_create_events') || user_can($user_id, 'manage_options');
+    // Admins always have access
+    if (user_can($user_id, 'manage_options')) {
+        return true;
+    }
     
-    return apply_filters('vh360_user_can_create_events', $can_create, $user_id);
+    // Check capability
+    if (!user_can($user_id, 'vh360_create_events')) {
+        return false;
+    }
+    
+    // Check membership if feature gating is enabled
+    if (function_exists('vh360_can_access_membership_feature')) {
+        $options = get_option('vh360_membership_options', array());
+        
+        // Only enforce membership if system is enabled AND this specific gate is on
+        if (!empty($options['enable_memberships']) && !empty($options['gate_create_events'])) {
+            if (!vh360_can_access_membership_feature('create_events', $user_id)) {
+                return false;
+            }
+        }
+    }
+    
+    return apply_filters('vh360_user_can_create_events', true, $user_id);
 }
 
 /**
@@ -114,9 +194,29 @@ function vh360_user_can_create_bulletins($user_id = 0) {
         return false;
     }
     
-    $can_create = user_can($user_id, 'vh360_create_bulletins') || user_can($user_id, 'manage_options');
+    // Admins always have access
+    if (user_can($user_id, 'manage_options')) {
+        return true;
+    }
     
-    return apply_filters('vh360_user_can_create_bulletins', $can_create, $user_id);
+    // Check capability
+    if (!user_can($user_id, 'vh360_create_bulletins')) {
+        return false;
+    }
+    
+    // Check membership if feature gating is enabled
+    if (function_exists('vh360_can_access_membership_feature')) {
+        $options = get_option('vh360_membership_options', array());
+        
+        // Only enforce membership if system is enabled AND this specific gate is on
+        if (!empty($options['enable_memberships']) && !empty($options['gate_create_bulletins'])) {
+            if (!vh360_can_access_membership_feature('create_bulletins', $user_id)) {
+                return false;
+            }
+        }
+    }
+    
+    return apply_filters('vh360_user_can_create_bulletins', true, $user_id);
 }
 
 /**
@@ -173,9 +273,29 @@ function vh360_user_can_create_galleries($user_id = 0) {
         return false;
     }
     
-    $can_create = user_can($user_id, 'create_vh360_galleries') || user_can($user_id, 'manage_options');
+    // Admins always have access
+    if (user_can($user_id, 'manage_options')) {
+        return true;
+    }
     
-    return apply_filters('vh360_user_can_create_galleries', $can_create, $user_id);
+    // Check capability
+    if (!user_can($user_id, 'create_vh360_galleries')) {
+        return false;
+    }
+    
+    // Check membership if feature gating is enabled
+    if (function_exists('vh360_can_access_membership_feature')) {
+        $options = get_option('vh360_membership_options', array());
+        
+        // Only enforce membership if system is enabled AND this specific gate is on
+        if (!empty($options['enable_memberships']) && !empty($options['gate_create_galleries'])) {
+            if (!vh360_can_access_membership_feature('create_galleries', $user_id)) {
+                return false;
+            }
+        }
+    }
+    
+    return apply_filters('vh360_user_can_create_galleries', true, $user_id);
 }
 
 /**
