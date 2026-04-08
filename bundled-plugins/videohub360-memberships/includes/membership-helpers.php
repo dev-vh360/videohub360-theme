@@ -49,6 +49,10 @@ function vh360_get_user_memberships($user_id = 0, $status = null) {
 /**
  * Check if user has active membership
  *
+ * When checking for a specific plan ($plan_key is set), this delegates
+ * to the effective-membership precedence policy so that only the
+ * highest-priority record controls plan-specific access.
+ *
  * @param int $user_id User ID. Defaults to current user.
  * @param string $plan_key Optional plan key to check for specific plan.
  * @return bool
@@ -68,7 +72,19 @@ function vh360_user_has_active_membership($user_id = 0, $plan_key = null) {
         return false;
     }
     
-    // Get grace period setting
+    // Plan-specific check: use effective membership precedence so that
+    // superseded / lower-priority records cannot satisfy plan gates.
+    if ($plan_key) {
+        $effective = vh360_get_active_membership($user_id);
+        if (!$effective) {
+            return apply_filters('vh360_user_has_active_membership', false, $user_id, $plan_key);
+        }
+        $match = (isset($effective->plan_key) && $effective->plan_key === $plan_key);
+        return apply_filters('vh360_user_has_active_membership', $match, $user_id, $plan_key);
+    }
+    
+    // "Any active membership" check – keep the existing COUNT-based query
+    // because precedence is irrelevant when we only need "at least one active".
     $grace_period_days = isset($options['grace_period_days']) ? absint($options['grace_period_days']) : 0;
     
     global $wpdb;
@@ -91,10 +107,6 @@ function vh360_user_has_active_membership($user_id = 0, $plan_key = null) {
         AND {$expiration_check}",
         $user_id
     );
-    
-    if ($plan_key) {
-        $sql .= $wpdb->prepare(" AND plan_key = %s", $plan_key);
-    }
     
     $count = (int) $wpdb->get_var($sql);
     
