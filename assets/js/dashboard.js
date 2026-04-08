@@ -60,7 +60,12 @@
             
             // After sanitization, tabId is safe to use in jQuery selectors (no escaping needed)
             var $targetTab = $('.vh360-dashboard-tab[data-tab="' + tabId + '"]');
-            if (!$targetTab.length) {
+            var $targetContent = $(document.getElementById(tabId));
+
+            // Require at least a matching content pane to activate.
+            // This allows tabs like "membership" to activate from ?tab= even
+            // when the sidebar menu does not contain a matching nav item.
+            if (!$targetTab.length && !$targetContent.length) {
                 return false;
             }
 
@@ -68,11 +73,17 @@
             $('.vh360-dashboard-tab').removeClass('active');
             $('.vh360-dashboard-tab-content').removeClass('active');
 
-            // Add active class to target tab and corresponding content
-            $targetTab.addClass('active');
-            $(document.getElementById(tabId)).addClass('active');
+            // Activate nav item if it exists (may not for programmatic tabs)
+            if ($targetTab.length) {
+                $targetTab.addClass('active');
+            }
 
-            // Update URL hash if requested (only if tab exists)
+            // Activate content pane
+            if ($targetContent.length) {
+                $targetContent.addClass('active');
+            }
+
+            // Update URL hash if requested
             if (updateHistory && history.pushState) {
                 history.pushState(null, null, '#' + tabId);
             }

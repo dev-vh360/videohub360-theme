@@ -2,7 +2,8 @@
 /**
  * Membership Plans Registry
  *
- * Central registry for membership plan definitions and WooCommerce product mapping.
+ * Central registry for membership plan definitions, WooCommerce product mapping,
+ * and recurring billing configuration.
  *
  * @package VideoHub360_Memberships
  * @since 1.0.0
@@ -43,6 +44,9 @@ class VH360_Membership_Plans {
     /**
      * Get default plan registry
      *
+     * Returns hardcoded defaults merged with admin-configured billing overrides
+     * stored in vh360_membership_plan_config option.
+     *
      * @return array
      */
     public static function get_plan_registry() {
@@ -51,35 +55,171 @@ class VH360_Membership_Plans {
                 'label' => __('Basic (Monthly)', 'videohub360-memberships'),
                 'duration' => 30,
                 'duration_unit' => 'days',
+                'billing_mode' => 'one_time',
+                'stripe_price_id' => '',
+                'auto_renew' => false,
+                'trial_days' => 0,
                 'features' => array(),
             ),
             'basic_yearly' => array(
                 'label' => __('Basic (Yearly)', 'videohub360-memberships'),
                 'duration' => 365,
                 'duration_unit' => 'days',
+                'billing_mode' => 'one_time',
+                'stripe_price_id' => '',
+                'auto_renew' => false,
+                'trial_days' => 0,
                 'features' => array(),
             ),
             'pro_monthly' => array(
                 'label' => __('Pro (Monthly)', 'videohub360-memberships'),
                 'duration' => 30,
                 'duration_unit' => 'days',
+                'billing_mode' => 'one_time',
+                'stripe_price_id' => '',
+                'auto_renew' => false,
+                'trial_days' => 0,
                 'features' => array(),
             ),
             'pro_yearly' => array(
                 'label' => __('Pro (Yearly)', 'videohub360-memberships'),
                 'duration' => 365,
                 'duration_unit' => 'days',
+                'billing_mode' => 'one_time',
+                'stripe_price_id' => '',
+                'auto_renew' => false,
+                'trial_days' => 0,
                 'features' => array(),
             ),
             'lifetime' => array(
                 'label' => __('Lifetime', 'videohub360-memberships'),
                 'duration' => 0,
                 'duration_unit' => 'lifetime',
+                'billing_mode' => 'one_time',
+                'stripe_price_id' => '',
+                'auto_renew' => false,
+                'trial_days' => 0,
                 'features' => array(),
             ),
         );
         
+        // Merge with admin-stored plan configuration
+        $stored_config = get_option('vh360_membership_plan_config', array());
+        if (!empty($stored_config) && is_array($stored_config)) {
+            foreach ($stored_config as $plan_key => $overrides) {
+                if (isset($plans[$plan_key]) && is_array($overrides)) {
+                    $plans[$plan_key] = array_merge($plans[$plan_key], $overrides);
+                }
+            }
+        }
+        
         return apply_filters('vh360_membership_plans', $plans);
+    }
+    
+    /**
+     * Get plan billing configuration
+     *
+     * @param string $plan_key Plan key
+     * @return array|false Plan billing config or false
+     */
+    public static function get_plan_billing_config($plan_key) {
+        $plans = self::get_plan_registry();
+        
+        if (!isset($plans[$plan_key])) {
+            return false;
+        }
+        
+        $plan = $plans[$plan_key];
+        
+        return array(
+            'billing_mode'    => isset($plan['billing_mode']) ? $plan['billing_mode'] : 'one_time',
+            'stripe_price_id' => isset($plan['stripe_price_id']) ? $plan['stripe_price_id'] : '',
+            'auto_renew'      => isset($plan['auto_renew']) ? (bool) $plan['auto_renew'] : false,
+            'trial_days'      => isset($plan['trial_days']) ? (int) $plan['trial_days'] : 0,
+        );
+    }
+    
+    /**
+     * Get all recurring plans
+     *
+     * @return array Plans configured for recurring billing
+     */
+    public static function get_recurring_plans() {
+        $plans = self::get_plan_registry();
+        $recurring = array();
+        
+        foreach ($plans as $key => $plan) {
+            if (isset($plan['billing_mode']) && $plan['billing_mode'] === 'recurring') {
+                $recurring[$key] = $plan;
+            }
+        }
+        
+        return $recurring;
+    }
+    
+    /**
+     * Get plan key by Stripe price ID
+     *
+     * @param string $stripe_price_id Stripe price ID
+     * @return string|false Plan key or false
+     */
+    public static function get_plan_key_by_stripe_price($stripe_price_id) {
+        if (empty($stripe_price_id)) {
+            return false;
+        }
+        
+        $plans = self::get_plan_registry();
+        
+        foreach ($plans as $key => $plan) {
+            if (isset($plan['stripe_price_id']) && $plan['stripe_price_id'] === $stripe_price_id) {
+                return $key;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Save plan billing configuration
+     *
+     * @param array $config Array of plan_key => billing overrides
+     * @return bool
+     */
+    public static function save_plan_config($config) {
+        if (!is_array($config)) {
+            return false;
+        }
+        
+        $sanitized = array();
+        $allowed_keys = array('billing_mode', 'stripe_price_id', 'auto_renew', 'trial_days');
+        
+        foreach ($config as $plan_key => $overrides) {
+            $plan_key = sanitize_key($plan_key);
+            $sanitized[$plan_key] = array();
+            
+            foreach ($overrides as $key => $value) {
+                if (!in_array($key, $allowed_keys, true)) {
+                    continue;
+                }
+                
+                switch ($key) {
+                    case 'billing_mode':
+                        $sanitized[$plan_key][$key] = in_array($value, array('one_time', 'recurring'), true) ? $value : 'one_time';
+                        break;
+                    case 'stripe_price_id':
+                        $sanitized[$plan_key][$key] = sanitize_text_field($value);
+                        break;
+                    case 'auto_renew':
+                        $sanitized[$plan_key][$key] = (bool) $value;
+                        break;
+                    case 'trial_days':
+                        $sanitized[$plan_key][$key] = absint($value);
+                        break;
+                }
+            }
+        }
+        
+        return update_option('vh360_membership_plan_config', $sanitized);
     }
     
     /**
