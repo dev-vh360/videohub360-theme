@@ -24,17 +24,8 @@ if ( ! is_user_logged_in() ) {
 
 $current_user_id = get_current_user_id();
 
-// Check if capabilities class exists before calling static methods.
-if ( ! class_exists( 'VH360_Gallery_Capabilities' ) ) {
-	?>
-	<div class="vh360-dashboard-notice">
-		<p><?php esc_html_e( 'Gallery system is not available.', 'videohub360-theme' ); ?></p>
-	</div>
-	<?php
-	return;
-}
-
-$can_create = VH360_Gallery_Capabilities::can_create_gallery();
+// Check if user can create galleries using centralized permission helper.
+$can_create = function_exists( 'vh360_user_can_create_galleries' ) && vh360_user_can_create_galleries( $current_user_id );
 
 // Verify user has at least edit capability for galleries.
 // Note: Using edit_vh360_galleries (primitive cap) instead of read_vh360_gallery (meta cap)
