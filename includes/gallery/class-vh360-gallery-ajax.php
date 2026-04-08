@@ -94,7 +94,8 @@ class VH360_Gallery_Ajax {
 			$this->send_error( $verify );
 		}
 
-		if ( ! VH360_Gallery_Capabilities::can_create_gallery() ) {
+		// Use centralized membership-aware permission helper.
+		if ( ! function_exists( 'vh360_user_can_create_galleries' ) || ! vh360_user_can_create_galleries() ) {
 			$this->send_error( __( 'You do not have permission to create galleries.', 'videohub360-theme' ) );
 		}
 

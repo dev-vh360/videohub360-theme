@@ -11,6 +11,21 @@
 if (!defined('ABSPATH')) exit;
 
 /**
+ * Get cached membership options to avoid repeated database queries.
+ *
+ * @return array Membership options array
+ */
+function vh360_get_cached_membership_options() {
+    static $cached_options = null;
+    
+    if ($cached_options === null) {
+        $cached_options = get_option('vh360_membership_options', array());
+    }
+    
+    return $cached_options;
+}
+
+/**
  * Dashboard Tab Visibility Integration
  *
  * Gates dashboard tabs based on membership access.
@@ -92,34 +107,199 @@ function vh360_memberships_check_live_room_creation($user_id) {
  * Define Feature Plan Requirements
  *
  * Specify which membership plans grant access to which features.
+ * These filters are now option-aware based on backend settings.
  */
 add_filter('vh360_feature_live_rooms_required_plans', function($plans) {
-    // Allow any active membership to access live rooms
+    $options = vh360_get_cached_membership_options();
+    
+    // If memberships disabled globally, return empty array (no restriction)
+    if (empty($options['enable_memberships'])) {
+        return array();
+    }
+    
+    // If memberships enabled but this feature gate is off, return empty array
+    if (empty($options['gate_live_rooms'])) {
+        return array();
+    }
+    
+    // Feature gate is on - require any active membership
     return array('any');
 });
 
 add_filter('vh360_feature_direct_messages_required_plans', function($plans) {
-    // Allow any active membership for direct messages
+    $options = vh360_get_cached_membership_options();
+    
+    // If memberships disabled globally, return empty array (no restriction)
+    if (empty($options['enable_memberships'])) {
+        return array();
+    }
+    
+    // If memberships enabled but this feature gate is off, return empty array
+    if (empty($options['gate_direct_messages'])) {
+        return array();
+    }
+    
+    // Feature gate is on - require any active membership
     return array('any');
 });
 
 add_filter('vh360_feature_activity_feed_required_plans', function($plans) {
-    // Allow any active membership for activity feed
+    $options = vh360_get_cached_membership_options();
+    
+    // If memberships disabled globally, return empty array (no restriction)
+    if (empty($options['enable_memberships'])) {
+        return array();
+    }
+    
+    // If memberships enabled but this feature gate is off, return empty array
+    if (empty($options['gate_activity_feed'])) {
+        return array();
+    }
+    
+    // Feature gate is on - require any active membership
     return array('any');
 });
 
 add_filter('vh360_feature_members_directory_required_plans', function($plans) {
-    // Allow any active membership for full directory access
+    $options = vh360_get_cached_membership_options();
+    
+    // If memberships disabled globally, return empty array (no restriction)
+    if (empty($options['enable_memberships'])) {
+        return array();
+    }
+    
+    // If memberships enabled but this feature gate is off, return empty array
+    if (empty($options['gate_members_directory'])) {
+        return array();
+    }
+    
+    // Feature gate is on - require any active membership
     // (non-members get limited results via query filter)
     return array('any');
 });
 
 add_filter('vh360_feature_appointments_required_plans', function($plans) {
-    // Allow any active membership for appointments
+    $options = vh360_get_cached_membership_options();
+    
+    // If memberships disabled globally, return empty array (no restriction)
+    if (empty($options['enable_memberships'])) {
+        return array();
+    }
+    
+    // If memberships enabled but this feature gate is off, return empty array
+    if (empty($options['gate_appointments'])) {
+        return array();
+    }
+    
+    // Feature gate is on - require any active membership
     return array('any');
 });
 
 add_filter('vh360_feature_push_notifications_required_plans', function($plans) {
-    // Allow any active membership for push notifications
+    $options = vh360_get_cached_membership_options();
+    
+    // If memberships disabled globally, return empty array (no restriction)
+    if (empty($options['enable_memberships'])) {
+        return array();
+    }
+    
+    // If memberships enabled but this feature gate is off, return empty array
+    if (empty($options['gate_push_notifications'])) {
+        return array();
+    }
+    
+    // Feature gate is on - require any active membership
     return array('any');
 });
+
+/**
+ * Define Feature Plan Requirements for Creation Actions
+ *
+ * These filters control membership requirements for frontend dashboard
+ * content creation features.
+ */
+add_filter('vh360_feature_create_videos_required_plans', function($plans) {
+    $options = vh360_get_cached_membership_options();
+    
+    // If memberships disabled globally, return empty array (no restriction)
+    if (empty($options['enable_memberships'])) {
+        return array();
+    }
+    
+    // If memberships enabled but this feature gate is off, return empty array
+    if (empty($options['gate_create_videos'])) {
+        return array();
+    }
+    
+    // Feature gate is on - require any active membership
+    return array('any');
+});
+
+add_filter('vh360_feature_create_posts_required_plans', function($plans) {
+    $options = vh360_get_cached_membership_options();
+    
+    // If memberships disabled globally, return empty array (no restriction)
+    if (empty($options['enable_memberships'])) {
+        return array();
+    }
+    
+    // If memberships enabled but this feature gate is off, return empty array
+    if (empty($options['gate_create_posts'])) {
+        return array();
+    }
+    
+    // Feature gate is on - require any active membership
+    return array('any');
+});
+
+add_filter('vh360_feature_create_events_required_plans', function($plans) {
+    $options = vh360_get_cached_membership_options();
+    
+    // If memberships disabled globally, return empty array (no restriction)
+    if (empty($options['enable_memberships'])) {
+        return array();
+    }
+    
+    // If memberships enabled but this feature gate is off, return empty array
+    if (empty($options['gate_create_events'])) {
+        return array();
+    }
+    
+    // Feature gate is on - require any active membership
+    return array('any');
+});
+
+add_filter('vh360_feature_create_bulletins_required_plans', function($plans) {
+    $options = vh360_get_cached_membership_options();
+    
+    // If memberships disabled globally, return empty array (no restriction)
+    if (empty($options['enable_memberships'])) {
+        return array();
+    }
+    
+    // If memberships enabled but this feature gate is off, return empty array
+    if (empty($options['gate_create_bulletins'])) {
+        return array();
+    }
+    
+    // Feature gate is on - require any active membership
+    return array('any');
+});
+
+add_filter('vh360_feature_create_galleries_required_plans', function($plans) {
+    $options = vh360_get_cached_membership_options();
+    
+    // If memberships disabled globally, return empty array (no restriction)
+    if (empty($options['enable_memberships'])) {
+        return array();
+    }
+    
+    // If memberships enabled but this feature gate is off, return empty array
+    if (empty($options['gate_create_galleries'])) {
+        return array();
+    }
+    
+    // Feature gate is on - require any active membership
+    return array('any');
+});
+
