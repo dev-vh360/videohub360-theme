@@ -60,7 +60,16 @@ if (isset($_POST['vh360_save_plan_config']) && check_admin_referer('vh360_plan_c
                 'stripe_price_id' => isset($config['stripe_price_id']) ? sanitize_text_field($config['stripe_price_id']) : '',
                 'auto_renew'      => !empty($config['auto_renew']),
                 'trial_days'      => isset($config['trial_days']) ? absint($config['trial_days']) : 0,
+                'display_label'   => isset($config['display_label']) ? sanitize_text_field($config['display_label']) : '',
+                'display_price'   => isset($config['display_price']) ? sanitize_text_field($config['display_price']) : '',
+                'display_description' => isset($config['display_description']) ? sanitize_textarea_field($config['display_description']) : '',
+                'display_features' => array(),
             );
+            // Parse display_features from newline-separated textarea
+            if (isset($config['display_features']) && is_string($config['display_features'])) {
+                $lines = preg_split('/\r\n|\r|\n/', $config['display_features']);
+                $new_config[$plan_key]['display_features'] = array_values(array_filter(array_map('sanitize_text_field', $lines)));
+            }
         }
     }
     
@@ -571,29 +580,27 @@ if (isset($_POST['vh360_save_plan_config']) && check_admin_referer('vh360_plan_c
                 <?php esc_html_e('Configure billing mode and Stripe price IDs for each membership plan. Plans set to "Recurring" will use Stripe for subscription billing. Plans set to "One-Time" will continue using WooCommerce orders.', 'videohub360-theme'); ?>
             </p>
             
-            <table class="widefat">
-                <thead>
+            <?php foreach ($plans as $key => $plan) : 
+                $config = isset($plan_config[$key]) ? $plan_config[$key] : array();
+                $billing_mode = isset($plan['billing_mode']) ? $plan['billing_mode'] : 'one_time';
+                $stripe_price_id = isset($plan['stripe_price_id']) ? $plan['stripe_price_id'] : '';
+                $auto_renew = isset($plan['auto_renew']) ? $plan['auto_renew'] : false;
+                $trial_days = isset($plan['trial_days']) ? $plan['trial_days'] : 0;
+                $display_label = isset($plan['display_label']) ? $plan['display_label'] : '';
+                $display_price = isset($plan['display_price']) ? $plan['display_price'] : '';
+                $display_description = isset($plan['display_description']) ? $plan['display_description'] : '';
+                $display_features = isset($plan['display_features']) && is_array($plan['display_features']) ? $plan['display_features'] : array();
+            ?>
+            <div class="vh360-plan-config-block" style="background: #fff; border: 1px solid #ccd0d4; padding: 15px 20px; margin-bottom: 20px;">
+                <h3 style="margin-top: 0;">
+                    <?php echo esc_html($plan['label']); ?>
+                    <code style="font-size: 12px; margin-left: 8px;"><?php echo esc_html($key); ?></code>
+                </h3>
+
+                <h4 style="margin-bottom: 8px;"><?php esc_html_e('Billing Configuration', 'videohub360-theme'); ?></h4>
+                <table class="form-table" style="margin-top: 0;">
                     <tr>
-                        <th><?php esc_html_e('Plan', 'videohub360-theme'); ?></th>
-                        <th><?php esc_html_e('Billing Mode', 'videohub360-theme'); ?></th>
-                        <th><?php esc_html_e('Stripe Price ID', 'videohub360-theme'); ?></th>
-                        <th><?php esc_html_e('Auto-Renew', 'videohub360-theme'); ?></th>
-                        <th><?php esc_html_e('Trial Days', 'videohub360-theme'); ?></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($plans as $key => $plan) : 
-                        $config = isset($plan_config[$key]) ? $plan_config[$key] : array();
-                        $billing_mode = isset($plan['billing_mode']) ? $plan['billing_mode'] : 'one_time';
-                        $stripe_price_id = isset($plan['stripe_price_id']) ? $plan['stripe_price_id'] : '';
-                        $auto_renew = isset($plan['auto_renew']) ? $plan['auto_renew'] : false;
-                        $trial_days = isset($plan['trial_days']) ? $plan['trial_days'] : 0;
-                    ?>
-                    <tr>
-                        <td>
-                            <strong><?php echo esc_html($plan['label']); ?></strong>
-                            <br /><code><?php echo esc_html($key); ?></code>
-                        </td>
+                        <th scope="row"><?php esc_html_e('Billing Mode', 'videohub360-theme'); ?></th>
                         <td>
                             <select name="plan_config[<?php echo esc_attr($key); ?>][billing_mode]">
                                 <option value="one_time" <?php selected($billing_mode, 'one_time'); ?>>
@@ -604,6 +611,9 @@ if (isset($_POST['vh360_save_plan_config']) && check_admin_referer('vh360_plan_c
                                 </option>
                             </select>
                         </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php esc_html_e('Stripe Price ID', 'videohub360-theme'); ?></th>
                         <td>
                             <input type="text" 
                                    name="plan_config[<?php echo esc_attr($key); ?>][stripe_price_id]" 
@@ -611,6 +621,9 @@ if (isset($_POST['vh360_save_plan_config']) && check_admin_referer('vh360_plan_c
                                    class="regular-text" 
                                    placeholder="price_..." />
                         </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php esc_html_e('Auto-Renew', 'videohub360-theme'); ?></th>
                         <td>
                             <label>
                                 <input type="checkbox" 
@@ -619,6 +632,9 @@ if (isset($_POST['vh360_save_plan_config']) && check_admin_referer('vh360_plan_c
                                        <?php checked(true, $auto_renew); ?> />
                             </label>
                         </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php esc_html_e('Trial Days', 'videohub360-theme'); ?></th>
                         <td>
                             <input type="number" 
                                    name="plan_config[<?php echo esc_attr($key); ?>][trial_days]" 
@@ -627,9 +643,52 @@ if (isset($_POST['vh360_save_plan_config']) && check_admin_referer('vh360_plan_c
                                    class="small-text" />
                         </td>
                     </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                </table>
+
+                <h4 style="margin-bottom: 8px;"><?php esc_html_e('Frontend Display', 'videohub360-theme'); ?></h4>
+                <table class="form-table" style="margin-top: 0;">
+                    <tr>
+                        <th scope="row"><?php esc_html_e('Display Name', 'videohub360-theme'); ?></th>
+                        <td>
+                            <input type="text" 
+                                   name="plan_config[<?php echo esc_attr($key); ?>][display_label]" 
+                                   value="<?php echo esc_attr($display_label); ?>" 
+                                   class="regular-text" 
+                                   placeholder="<?php echo esc_attr($plan['label']); ?>" />
+                            <p class="description"><?php esc_html_e('Leave empty to use the default plan name.', 'videohub360-theme'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php esc_html_e('Display Price', 'videohub360-theme'); ?></th>
+                        <td>
+                            <input type="text" 
+                                   name="plan_config[<?php echo esc_attr($key); ?>][display_price]" 
+                                   value="<?php echo esc_attr($display_price); ?>" 
+                                   class="regular-text" 
+                                   placeholder="<?php esc_attr_e('e.g. $9.99/mo', 'videohub360-theme'); ?>" />
+                            <p class="description"><?php esc_html_e('Price text shown on the frontend plan card.', 'videohub360-theme'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php esc_html_e('Short Description', 'videohub360-theme'); ?></th>
+                        <td>
+                            <textarea name="plan_config[<?php echo esc_attr($key); ?>][display_description]" 
+                                      rows="3" 
+                                      class="large-text"><?php echo esc_textarea($display_description); ?></textarea>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php esc_html_e('Features', 'videohub360-theme'); ?></th>
+                        <td>
+                            <textarea name="plan_config[<?php echo esc_attr($key); ?>][display_features]" 
+                                      rows="4" 
+                                      class="large-text"><?php echo esc_textarea(implode("\n", $display_features)); ?></textarea>
+                            <p class="description"><?php esc_html_e('One feature per line. Displayed as a list on the frontend plan card.', 'videohub360-theme'); ?></p>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <?php endforeach; ?>
             
             <?php submit_button(__('Save Plan Configuration', 'videohub360-theme')); ?>
         </form>

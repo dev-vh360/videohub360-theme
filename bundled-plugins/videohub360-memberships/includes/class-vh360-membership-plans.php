@@ -60,6 +60,10 @@ class VH360_Membership_Plans {
                 'auto_renew' => false,
                 'trial_days' => 0,
                 'features' => array(),
+                'display_label' => '',
+                'display_price' => '',
+                'display_description' => '',
+                'display_features' => array(),
             ),
             'basic_yearly' => array(
                 'label' => __('Basic (Yearly)', 'videohub360-memberships'),
@@ -70,6 +74,10 @@ class VH360_Membership_Plans {
                 'auto_renew' => false,
                 'trial_days' => 0,
                 'features' => array(),
+                'display_label' => '',
+                'display_price' => '',
+                'display_description' => '',
+                'display_features' => array(),
             ),
             'pro_monthly' => array(
                 'label' => __('Pro (Monthly)', 'videohub360-memberships'),
@@ -80,6 +88,10 @@ class VH360_Membership_Plans {
                 'auto_renew' => false,
                 'trial_days' => 0,
                 'features' => array(),
+                'display_label' => '',
+                'display_price' => '',
+                'display_description' => '',
+                'display_features' => array(),
             ),
             'pro_yearly' => array(
                 'label' => __('Pro (Yearly)', 'videohub360-memberships'),
@@ -90,6 +102,10 @@ class VH360_Membership_Plans {
                 'auto_renew' => false,
                 'trial_days' => 0,
                 'features' => array(),
+                'display_label' => '',
+                'display_price' => '',
+                'display_description' => '',
+                'display_features' => array(),
             ),
             'lifetime' => array(
                 'label' => __('Lifetime', 'videohub360-memberships'),
@@ -100,6 +116,10 @@ class VH360_Membership_Plans {
                 'auto_renew' => false,
                 'trial_days' => 0,
                 'features' => array(),
+                'display_label' => '',
+                'display_price' => '',
+                'display_description' => '',
+                'display_features' => array(),
             ),
         );
         
@@ -180,9 +200,9 @@ class VH360_Membership_Plans {
     }
     
     /**
-     * Save plan billing configuration
+     * Save plan configuration (billing and frontend display)
      *
-     * @param array $config Array of plan_key => billing overrides
+     * @param array $config Array of plan_key => config overrides
      * @return bool
      */
     public static function save_plan_config($config) {
@@ -191,7 +211,7 @@ class VH360_Membership_Plans {
         }
         
         $sanitized = array();
-        $allowed_keys = array('billing_mode', 'stripe_price_id', 'auto_renew', 'trial_days');
+        $allowed_keys = array('billing_mode', 'stripe_price_id', 'auto_renew', 'trial_days', 'display_label', 'display_price', 'display_description', 'display_features');
         
         foreach ($config as $plan_key => $overrides) {
             $plan_key = sanitize_key($plan_key);
@@ -214,6 +234,22 @@ class VH360_Membership_Plans {
                         break;
                     case 'trial_days':
                         $sanitized[$plan_key][$key] = absint($value);
+                        break;
+                    case 'display_label':
+                    case 'display_price':
+                        $sanitized[$plan_key][$key] = sanitize_text_field($value);
+                        break;
+                    case 'display_description':
+                        $sanitized[$plan_key][$key] = sanitize_textarea_field($value);
+                        break;
+                    case 'display_features':
+                        if (is_array($value)) {
+                            $sanitized[$plan_key][$key] = array_values(array_filter(array_map('sanitize_text_field', $value)));
+                        } else {
+                            // Support newline-separated string from textarea
+                            $lines = preg_split('/\r\n|\r|\n/', (string) $value);
+                            $sanitized[$plan_key][$key] = array_values(array_filter(array_map('sanitize_text_field', $lines)));
+                        }
                         break;
                 }
             }
