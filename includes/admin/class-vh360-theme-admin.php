@@ -445,6 +445,18 @@ class VH360_Theme_Admin {
                 'locked_message' => '',
                 'reminder_days' => 7,
                 'grace_period_days' => 0,
+                // Feature gating toggles (default to 0 = not gated)
+                'gate_live_rooms' => 0,
+                'gate_create_videos' => 0,
+                'gate_create_posts' => 0,
+                'gate_create_events' => 0,
+                'gate_create_bulletins' => 0,
+                'gate_create_galleries' => 0,
+                'gate_direct_messages' => 0,
+                'gate_activity_feed' => 0,
+                'gate_members_directory' => 0,
+                'gate_appointments' => 0,
+                'gate_push_notifications' => 0,
             ),
         ));
     }
@@ -1190,6 +1202,19 @@ class VH360_Theme_Admin {
         
         // Sanitize grace_period_days
         $output['grace_period_days'] = isset($input['grace_period_days']) ? absint($input['grace_period_days']) : 0;
+        
+        // Sanitize feature gating toggles
+        $output['gate_live_rooms'] = !empty($input['gate_live_rooms']) ? 1 : 0;
+        $output['gate_create_videos'] = !empty($input['gate_create_videos']) ? 1 : 0;
+        $output['gate_create_posts'] = !empty($input['gate_create_posts']) ? 1 : 0;
+        $output['gate_create_events'] = !empty($input['gate_create_events']) ? 1 : 0;
+        $output['gate_create_bulletins'] = !empty($input['gate_create_bulletins']) ? 1 : 0;
+        $output['gate_create_galleries'] = !empty($input['gate_create_galleries']) ? 1 : 0;
+        $output['gate_direct_messages'] = !empty($input['gate_direct_messages']) ? 1 : 0;
+        $output['gate_activity_feed'] = !empty($input['gate_activity_feed']) ? 1 : 0;
+        $output['gate_members_directory'] = !empty($input['gate_members_directory']) ? 1 : 0;
+        $output['gate_appointments'] = !empty($input['gate_appointments']) ? 1 : 0;
+        $output['gate_push_notifications'] = !empty($input['gate_push_notifications']) ? 1 : 0;
         
         return $output;
     }

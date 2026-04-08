@@ -18,6 +18,17 @@ $options = get_option('vh360_membership_options', array(
     'locked_message' => '',
     'reminder_days' => 7,
     'grace_period_days' => 0,
+    'gate_live_rooms' => 0,
+    'gate_create_videos' => 0,
+    'gate_create_posts' => 0,
+    'gate_create_events' => 0,
+    'gate_create_bulletins' => 0,
+    'gate_create_galleries' => 0,
+    'gate_direct_messages' => 0,
+    'gate_activity_feed' => 0,
+    'gate_members_directory' => 0,
+    'gate_appointments' => 0,
+    'gate_push_notifications' => 0,
 ));
 
 ?>
@@ -159,6 +170,129 @@ $options = get_option('vh360_membership_options', array(
                         <p class="description">
                             <?php esc_html_e('Allow continued access for this many days after expiration. Set to 0 for no grace period.', 'videohub360-theme'); ?>
                         </p>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <th colspan="2">
+                        <h3 style="margin-top: 30px; margin-bottom: 10px;">
+                            <?php esc_html_e('Feature Gating', 'videohub360-theme'); ?>
+                        </h3>
+                        <p class="description" style="margin-bottom: 20px;">
+                            <?php esc_html_e('Select which features should require an active membership when the membership system is enabled. Features not selected will be controlled only by role/capability permissions.', 'videohub360-theme'); ?>
+                        </p>
+                    </th>
+                </tr>
+                
+                <tr>
+                    <th scope="row">
+                        <?php esc_html_e('Frontend Creation Features', 'videohub360-theme'); ?>
+                    </th>
+                    <td>
+                        <fieldset>
+                            <label>
+                                <input type="checkbox" 
+                                       name="vh360_membership_options[gate_create_videos]" 
+                                       value="1" 
+                                       <?php checked(1, $options['gate_create_videos']); ?> />
+                                <?php esc_html_e('Video Creation', 'videohub360-theme'); ?>
+                            </label>
+                            <br />
+                            <label>
+                                <input type="checkbox" 
+                                       name="vh360_membership_options[gate_create_posts]" 
+                                       value="1" 
+                                       <?php checked(1, $options['gate_create_posts']); ?> />
+                                <?php esc_html_e('Post Creation', 'videohub360-theme'); ?>
+                            </label>
+                            <br />
+                            <label>
+                                <input type="checkbox" 
+                                       name="vh360_membership_options[gate_create_events]" 
+                                       value="1" 
+                                       <?php checked(1, $options['gate_create_events']); ?> />
+                                <?php esc_html_e('Event Creation', 'videohub360-theme'); ?>
+                            </label>
+                            <br />
+                            <label>
+                                <input type="checkbox" 
+                                       name="vh360_membership_options[gate_create_bulletins]" 
+                                       value="1" 
+                                       <?php checked(1, $options['gate_create_bulletins']); ?> />
+                                <?php esc_html_e('Bulletin Creation', 'videohub360-theme'); ?>
+                            </label>
+                            <br />
+                            <label>
+                                <input type="checkbox" 
+                                       name="vh360_membership_options[gate_create_galleries]" 
+                                       value="1" 
+                                       <?php checked(1, $options['gate_create_galleries']); ?> />
+                                <?php esc_html_e('Gallery Creation', 'videohub360-theme'); ?>
+                            </label>
+                            <p class="description">
+                                <?php esc_html_e('Restrict dashboard content creation features to members only.', 'videohub360-theme'); ?>
+                            </p>
+                        </fieldset>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <th scope="row">
+                        <?php esc_html_e('Platform Features', 'videohub360-theme'); ?>
+                    </th>
+                    <td>
+                        <fieldset>
+                            <label>
+                                <input type="checkbox" 
+                                       name="vh360_membership_options[gate_live_rooms]" 
+                                       value="1" 
+                                       <?php checked(1, $options['gate_live_rooms']); ?> />
+                                <?php esc_html_e('Live Rooms', 'videohub360-theme'); ?>
+                            </label>
+                            <br />
+                            <label>
+                                <input type="checkbox" 
+                                       name="vh360_membership_options[gate_direct_messages]" 
+                                       value="1" 
+                                       <?php checked(1, $options['gate_direct_messages']); ?> />
+                                <?php esc_html_e('Direct Messages', 'videohub360-theme'); ?>
+                            </label>
+                            <br />
+                            <label>
+                                <input type="checkbox" 
+                                       name="vh360_membership_options[gate_activity_feed]" 
+                                       value="1" 
+                                       <?php checked(1, $options['gate_activity_feed']); ?> />
+                                <?php esc_html_e('Activity Feed', 'videohub360-theme'); ?>
+                            </label>
+                            <br />
+                            <label>
+                                <input type="checkbox" 
+                                       name="vh360_membership_options[gate_members_directory]" 
+                                       value="1" 
+                                       <?php checked(1, $options['gate_members_directory']); ?> />
+                                <?php esc_html_e('Members Directory', 'videohub360-theme'); ?>
+                            </label>
+                            <br />
+                            <label>
+                                <input type="checkbox" 
+                                       name="vh360_membership_options[gate_appointments]" 
+                                       value="1" 
+                                       <?php checked(1, $options['gate_appointments']); ?> />
+                                <?php esc_html_e('Appointments', 'videohub360-theme'); ?>
+                            </label>
+                            <br />
+                            <label>
+                                <input type="checkbox" 
+                                       name="vh360_membership_options[gate_push_notifications]" 
+                                       value="1" 
+                                       <?php checked(1, $options['gate_push_notifications']); ?> />
+                                <?php esc_html_e('Push Notifications', 'videohub360-theme'); ?>
+                            </label>
+                            <p class="description">
+                                <?php esc_html_e('Restrict platform features to members only.', 'videohub360-theme'); ?>
+                            </p>
+                        </fieldset>
                     </td>
                 </tr>
             </tbody>
