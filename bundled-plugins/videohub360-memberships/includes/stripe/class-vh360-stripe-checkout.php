@@ -240,10 +240,13 @@ class VH360_Stripe_Checkout {
         }
         
         // Check session payment/subscription status
+        // A subscription checkout is valid if either payment is 'paid' OR a subscription_id
+        // is present (covers trialing, free trials, etc. where payment_status may not be 'paid').
         $payment_status = isset( $session['payment_status'] ) ? $session['payment_status'] : '';
         $subscription_id = isset( $session['subscription'] ) ? $session['subscription'] : '';
+        $session_status = isset( $session['status'] ) ? $session['status'] : '';
         
-        if ( $payment_status !== 'paid' && empty( $subscription_id ) ) {
+        if ( $session_status !== 'complete' && empty( $subscription_id ) ) {
             $this->set_return_notice( $user_id, 'warning', __( 'Your payment is still being processed. Your membership will be activated shortly.', 'videohub360-memberships' ) );
             wp_safe_redirect( self::get_dashboard_membership_url() );
             exit;

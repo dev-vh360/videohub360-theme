@@ -107,8 +107,10 @@ class VH360_Stripe_Webhook {
         // membership (unhandled types, subscription.created without user, etc.)
         if (!VH360_Membership_Database::is_stripe_event_processed($event_id)) {
             $api = VH360_Membership_API::get_instance();
+            $object = isset($event['data']['object']) ? $event['data']['object'] : array();
             $api->log_event(0, 'stripe_event_received', array(
-                'event_type' => $event_type,
+                'event_type'  => $event_type,
+                'customer_id' => isset($object['customer']) ? $object['customer'] : '',
             ), 0, $event_id);
         }
         
