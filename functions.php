@@ -115,6 +115,17 @@ function videohub360_theme_setup() {
     // Add support for wide and full alignment
     add_theme_support('align-wide');
 
+    // WooCommerce theme support
+    add_theme_support('woocommerce', array(
+        'product_grid' => array(
+            'default_columns' => 3,
+            'default_rows'    => 4,
+        ),
+    ));
+    add_theme_support('wc-product-gallery-zoom');
+    add_theme_support('wc-product-gallery-lightbox');
+    add_theme_support('wc-product-gallery-slider');
+
     // Content width
     if (!isset($content_width)) {
         $content_width = 1280;
@@ -1210,6 +1221,37 @@ require_once VH360_THEME_DIR . '/includes/recommended.php';
  */
 if (class_exists('WooCommerce')) {
     require_once VH360_THEME_DIR . '/includes/woocommerce-integration.php';
+
+    /**
+     * Enqueue dedicated WooCommerce stylesheet on WooCommerce pages.
+     */
+    function vh360_enqueue_woocommerce_styles() {
+        if ( is_woocommerce() || is_cart() || is_checkout() || is_account_page() ) {
+            wp_enqueue_style(
+                'vh360-woocommerce',
+                VH360_THEME_URI . '/assets/css/woocommerce.css',
+                array( 'videohub360-theme-style' ),
+                VH360_THEME_VERSION
+            );
+        }
+    }
+    add_action( 'wp_enqueue_scripts', 'vh360_enqueue_woocommerce_styles' );
+
+    /**
+     * Disable the generic WordPress comment template on single products.
+     *
+     * WooCommerce handles reviews through its own tab system. The generic
+     * comments_template() call in single.php is no longer reached because
+     * products now use single-product.php, but this filter provides a
+     * safety net if any code path still invokes it for products.
+     */
+    function vh360_disable_product_comments( $open, $post_id ) {
+        if ( get_post_type( $post_id ) === 'product' ) {
+            return false;
+        }
+        return $open;
+    }
+    add_filter( 'comments_open', 'vh360_disable_product_comments', 20, 2 );
 }
 
 /**

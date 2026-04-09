@@ -120,7 +120,7 @@ function vh360_register_sidebar_customizer_controls($wp_customize) {
     
     if (class_exists('WooCommerce')) {
         $wp_customize->add_setting('vh360_sidebar_layout_product', array(
-            'default'           => 'right',
+            'default'           => 'none',
             'sanitize_callback' => 'vh360_sanitize_sidebar_layout',
             'transport'         => 'refresh',
         ));
