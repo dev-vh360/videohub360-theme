@@ -105,7 +105,7 @@ class VH360_Membership_Subscription_Management {
         }
         
         $plans = VH360_Membership_Plans::get_plan_registry();
-        $plan_label = isset($plans[$membership->plan_key]) ? $plans[$membership->plan_key]['label'] : $membership->plan_key;
+        $plan_label = $this->resolve_plan_display_label($plans, $membership->plan_key);
         
         $data = array(
             'has_membership'       => true,
@@ -146,7 +146,7 @@ class VH360_Membership_Subscription_Management {
         <div class="vh360-membership-management" id="vh360-membership-management">
             
             <?php if ($membership) : 
-                $plan_label = isset($plans[$membership->plan_key]) ? $plans[$membership->plan_key]['label'] : $membership->plan_key;
+                $plan_label = $this->resolve_plan_display_label($plans, $membership->plan_key);
                 $is_recurring = isset($membership->billing_mode) && $membership->billing_mode === 'recurring';
                 $cancel_pending = isset($membership->cancel_at_period_end) && $membership->cancel_at_period_end;
                 $sub_status = isset($membership->subscription_status) ? $membership->subscription_status : '';
@@ -267,7 +267,7 @@ class VH360_Membership_Subscription_Management {
                         <h4><?php esc_html_e('Available Plans', 'videohub360-memberships'); ?></h4>
                         <div class="vh360-subscription-plans"<?php echo $card_style_attr; ?>>
                             <?php foreach ($recurring_plans as $key => $plan) : 
-                                $plan_title = !empty($plan['display_label']) ? $plan['display_label'] : $plan['label'];
+                                $plan_title = $this->resolve_plan_display_label($plans, $key);
                                 $plan_price = isset($plan['display_price']) ? $plan['display_price'] : '';
                                 $plan_desc = isset($plan['display_description']) ? $plan['display_description'] : '';
                                 $plan_features = isset($plan['display_features']) && is_array($plan['display_features']) ? $plan['display_features'] : array();
@@ -314,6 +314,29 @@ class VH360_Membership_Subscription_Management {
         return ob_get_clean();
     }
     
+    /**
+     * Resolve the effective display title for a plan.
+     *
+     * Uses display_label if set, then label, then the raw plan key.
+     *
+     * @param array  $plans    Full plan registry.
+     * @param string $plan_key The plan key to look up.
+     * @return string Resolved display title.
+     */
+    private function resolve_plan_display_label($plans, $plan_key) {
+        if (!isset($plans[$plan_key])) {
+            return $plan_key;
+        }
+        $plan = $plans[$plan_key];
+        if (!empty($plan['display_label'])) {
+            return $plan['display_label'];
+        }
+        if (!empty($plan['label'])) {
+            return $plan['label'];
+        }
+        return $plan_key;
+    }
+
     /**
      * Format subscription status for display
      *
