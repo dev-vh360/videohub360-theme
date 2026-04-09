@@ -93,7 +93,7 @@ function vh360_resolve_sidebar($post_id = null) {
     }
 
     // WooCommerce cart, checkout, and account pages (not caught by is_woocommerce)
-    if (function_exists('is_cart') && (is_cart() || is_checkout() || is_account_page())) {
+    if (class_exists('WooCommerce') && (is_cart() || is_checkout() || is_account_page())) {
         $result['show_sidebar'] = false;
         return apply_filters('vh360_sidebar_config', $result, $post_id);
     }
