@@ -19,6 +19,11 @@
     padding: 2rem var(--spacing);
 }
 
+/* Shop archive uses a wider container for a more open commerce feel */
+.vh360-shop-archive .container {
+    max-width: 1440px;
+}
+
 /* ==========================================================================
    2. SHOP ARCHIVE – HEADER
    ========================================================================== */
@@ -89,6 +94,12 @@ ul.products {
     list-style: none;
     padding: 0;
     margin: 0 0 2rem;
+}
+
+@media (min-width: 1200px) {
+    .vh360-shop-archive ul.products {
+        grid-template-columns: repeat(4, 1fr);
+    }
 }
 
 @media (max-width: 991px) {
