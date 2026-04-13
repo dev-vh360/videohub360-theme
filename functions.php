@@ -1236,22 +1236,6 @@ if (class_exists('WooCommerce')) {
         }
     }
     add_action( 'wp_enqueue_scripts', 'vh360_enqueue_woocommerce_styles' );
-
-    /**
-     * Disable the generic WordPress comment template on single products.
-     *
-     * WooCommerce handles reviews through its own tab system. The generic
-     * comments_template() call in single.php is no longer reached because
-     * products now use single-product.php, but this filter provides a
-     * safety net if any code path still invokes it for products.
-     */
-    function vh360_disable_product_comments( $open, $post_id ) {
-        if ( get_post_type( $post_id ) === 'product' ) {
-            return false;
-        }
-        return $open;
-    }
-    add_filter( 'comments_open', 'vh360_disable_product_comments', 20, 2 );
 }
 
 /**

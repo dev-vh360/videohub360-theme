@@ -21,9 +21,9 @@ get_header();
 ?>
 
 <div id="primary" class="site-content vh360-woocommerce-page vh360-shop-archive">
-    <div class="container no-sidebar">
+    <div class="vh360-shop-archive-layout">
 
-        <main id="main" class="content-area">
+        <main id="main" class="content-area vh360-shop-archive-main">
 
             <?php if ( apply_filters( 'woocommerce_show_page_title', true ) ) : ?>
                 <header class="vh360-shop-header">
@@ -87,7 +87,7 @@ get_header();
 
         </main><!-- #main -->
 
-    </div><!-- .container -->
+    </div><!-- .vh360-shop-archive-layout -->
 </div><!-- #primary -->
 
 <?php
