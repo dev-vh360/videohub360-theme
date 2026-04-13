@@ -1,0 +1,736 @@
+/**
+ * WooCommerce – Videohub360 Theme Styles
+ *
+ * Dedicated WooCommerce presentation layer. Enqueued only on pages where
+ * WooCommerce is active. Uses the theme's existing CSS custom properties
+ * so colours, spacing, and radii stay consistent site-wide.
+ *
+ * @package Videohub360_Theme
+ * @since   1.1.0
+ */
+
+/* ==========================================================================
+   1. GENERAL WOOCOMMERCE PAGE WRAPPER
+   ========================================================================== */
+
+.vh360-woocommerce-page {
+    padding: 2rem 0 3rem;
+}
+
+.vh360-woocommerce-page .container {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 2rem var(--spacing);
+}
+
+/* Shop archive intentionally uses its own wide commerce wrapper instead of the
+   theme's standard boxed .container.no-sidebar layout. */
+.vh360-shop-archive {
+    padding-top: 1.5rem;
+}
+
+.vh360-shop-archive-layout {
+    width: min(1800px, calc(100vw - 3rem));
+    margin: 0 auto;
+    padding: 0;
+}
+
+.vh360-shop-archive-main {
+    width: 100%;
+}
+
+.vh360-single-product .container,
+.woocommerce-cart .container,
+.woocommerce-checkout .container,
+.woocommerce-account .container {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 2rem var(--spacing);
+}
+
+/* ==========================================================================
+   2. SHOP ARCHIVE – HEADER
+   ========================================================================== */
+
+.vh360-shop-header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.vh360-shop-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 0 0 0.5rem;
+}
+
+.vh360-shop-header .term-description,
+.vh360-shop-header .page-description {
+    color: var(--text-light);
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+/* ==========================================================================
+   3. SHOP ARCHIVE – TOOLBAR (result count + ordering)
+   ========================================================================== */
+
+.vh360-shop-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.vh360-shop-toolbar .woocommerce-result-count {
+    margin: 0;
+    color: var(--text-light);
+    font-size: 0.875rem;
+}
+
+.vh360-shop-toolbar .woocommerce-ordering select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 0.5rem 2rem 0.5rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-size: 0.875rem;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7280'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 10px 6px;
+}
+
+/* ==========================================================================
+   4. PRODUCT GRID
+   ========================================================================== */
+
+.vh360-shop-archive ul.products {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2rem;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 2.5rem;
+}
+
+@media (max-width: 991px) {
+    .vh360-shop-archive ul.products {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1.5rem;
+    }
+}
+
+@media (max-width: 575px) {
+    .vh360-shop-archive ul.products {
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+    }
+}
+
+/* ==========================================================================
+   5. PRODUCT CARD
+   ========================================================================== */
+
+ul.products li.product {
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow 0.25s ease, transform 0.25s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+ul.products li.product:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+/* --- Thumbnail area --- */
+
+ul.products li.product a img,
+ul.products li.product .woocommerce-product-gallery img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    display: block;
+}
+
+/* Wrap text portion */
+ul.products li.product .vh360-product-card-body,
+ul.products li.product > a ~ a,
+ul.products li.product > a ~ span,
+ul.products li.product > .price,
+ul.products li.product > .button,
+ul.products li.product > a.button,
+ul.products li.product > .added_to_cart {
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+/* --- Title --- */
+
+.vh360-shop-archive ul.products li.product .woocommerce-loop-product__title,
+.woocommerce ul.products li.product .woocommerce-loop-product__title {
+    display: block;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin: 0.75rem 0 0.25rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    line-height: 1.4;
+    box-sizing: border-box;
+}
+
+ul.products li.product a {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* --- Price --- */
+
+.vh360-shop-archive ul.products li.product .price,
+.woocommerce ul.products li.product .price {
+    display: block;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin: 0.25rem 0 0.75rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    box-sizing: border-box;
+}
+
+ul.products li.product .price del {
+    color: var(--text-light);
+    font-weight: 400;
+    margin-right: 0.35rem;
+}
+
+ul.products li.product .price ins {
+    text-decoration: none;
+}
+
+/* --- Add-to-cart button --- */
+
+ul.products li.product .button,
+ul.products li.product a.button,
+ul.products li.product a.added_to_cart {
+    display: block;
+    width: calc(100% - 2rem);
+    margin: auto 1rem 1rem;
+    padding: 0.6rem 1rem;
+    text-align: center;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+    text-decoration: none;
+}
+
+ul.products li.product .button,
+ul.products li.product a.button {
+    background-color: var(--primary-color);
+    color: #fff;
+}
+
+ul.products li.product .button:hover,
+ul.products li.product a.button:hover {
+    background-color: var(--secondary-color);
+    color: #fff;
+}
+
+ul.products li.product a.added_to_cart {
+    background-color: var(--success-color);
+    color: #fff;
+}
+
+/* --- Sale badge --- */
+
+ul.products li.product .onsale,
+.vh360-single-product .onsale {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    z-index: 1;
+    background: var(--accent-red);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 0.25rem 0.6rem;
+    border-radius: var(--border-radius);
+    line-height: 1;
+}
+
+ul.products li.product {
+    position: relative;
+}
+
+/* ==========================================================================
+   6. PAGINATION
+   ========================================================================== */
+
+.woocommerce-pagination {
+    text-align: center;
+    margin: 2rem 0 1rem;
+}
+
+.woocommerce-pagination ul.page-numbers {
+    display: inline-flex;
+    gap: 0.35rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.woocommerce-pagination ul.page-numbers li a,
+.woocommerce-pagination ul.page-numbers li span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.25rem;
+    height: 2.25rem;
+    padding: 0 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 0.875rem;
+    color: var(--text-color);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.woocommerce-pagination ul.page-numbers li a:hover {
+    background: var(--bg-light);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.woocommerce-pagination ul.page-numbers li span.current {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+}
+
+/* ==========================================================================
+   7. SINGLE PRODUCT – LAYOUT
+   ========================================================================== */
+
+.vh360-single-product .product {
+    max-width: var(--max-width);
+    margin: 0 auto;
+}
+
+.vh360-single-product div.product div.summary {
+    margin-bottom: 2rem;
+}
+
+/* WooCommerce default uses a two-column float layout via .images + .summary.
+   We reinforce it with modern layout. */
+
+.vh360-single-product div.product {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2.5rem;
+    align-items: start;
+}
+
+/* Gallery and summary occupy the two columns */
+.vh360-single-product div.product div.images,
+.vh360-single-product div.product .woocommerce-product-gallery {
+    grid-column: 1 / 2;
+    width: 100% !important; /* override WooCommerce inline width */
+    float: none !important;
+}
+
+.vh360-single-product div.product div.summary {
+    grid-column: 2 / 3;
+    width: 100% !important;
+    float: none !important;
+}
+
+/* Everything after the first two children (gallery + summary) spans full width */
+.vh360-single-product div.product .woocommerce-tabs,
+.vh360-single-product div.product .related.products,
+.vh360-single-product div.product .up-sells,
+.vh360-single-product div.product .upsells,
+.vh360-single-product div.product .cross-sells {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 767px) {
+    .vh360-single-product div.product {
+        display: block;
+    }
+
+    .vh360-single-product div.product div.images,
+    .vh360-single-product div.product .woocommerce-product-gallery {
+        margin-bottom: 1.5rem;
+    }
+}
+
+/* --- Gallery image --- */
+
+.vh360-single-product div.product div.images img,
+.vh360-single-product div.product .woocommerce-product-gallery img {
+    border-radius: var(--border-radius);
+    width: 100%;
+    height: auto;
+}
+
+/* ==========================================================================
+   8. SINGLE PRODUCT – SUMMARY COMPONENTS
+   ========================================================================== */
+
+/* --- Title --- */
+.vh360-single-product div.product .product_title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 0 0 0.5rem;
+    line-height: 1.3;
+}
+
+/* --- Price --- */
+.vh360-single-product div.product .price {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.vh360-single-product div.product .price del {
+    color: var(--text-light);
+    font-weight: 400;
+    margin-right: 0.35rem;
+}
+
+.vh360-single-product div.product .price ins {
+    text-decoration: none;
+}
+
+/* --- Short description --- */
+.vh360-single-product div.product .woocommerce-product-details__short-description {
+    color: var(--text-light);
+    font-size: 0.95rem;
+    line-height: 1.7;
+    margin-bottom: 1.25rem;
+}
+
+/* --- Quantity field --- */
+.vh360-single-product div.product .quantity .qty {
+    width: 4rem;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 0.95rem;
+    text-align: center;
+}
+
+/* --- Add-to-cart button (single) --- */
+.vh360-single-product div.product .single_add_to_cart_button,
+.vh360-single-product div.product button.single_add_to_cart_button {
+    display: inline-block;
+    padding: 0.85rem 2rem;
+    font-size: 1rem;
+    font-weight: 700;
+    background-color: var(--primary-color);
+    color: #fff;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.vh360-single-product div.product .single_add_to_cart_button:hover {
+    background-color: var(--secondary-color);
+}
+
+/* --- Variations / select fields --- */
+.vh360-single-product div.product .variations td select {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 0.95rem;
+    color: var(--text-color);
+}
+
+.vh360-single-product div.product .variations td.label label {
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+/* --- Breadcrumbs --- */
+.vh360-woocommerce-page .woocommerce-breadcrumb {
+    font-size: 0.8125rem;
+    color: var(--text-light);
+    margin-bottom: 1.25rem;
+}
+
+.vh360-woocommerce-page .woocommerce-breadcrumb a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.vh360-woocommerce-page .woocommerce-breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+/* --- Notices --- */
+.vh360-woocommerce-page .woocommerce-message,
+.vh360-woocommerce-page .woocommerce-info,
+.vh360-woocommerce-page .woocommerce-error {
+    border-radius: var(--border-radius);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+}
+
+.vh360-woocommerce-page .woocommerce-message {
+    background: #ecfdf5;
+    border-left: 4px solid var(--success-color);
+    color: #065f46;
+}
+
+.vh360-woocommerce-page .woocommerce-info {
+    background: #eff6ff;
+    border-left: 4px solid var(--primary-color);
+    color: #1e3a5f;
+}
+
+.vh360-woocommerce-page .woocommerce-error {
+    background: #fef2f2;
+    border-left: 4px solid var(--error-color);
+    color: #991b1b;
+}
+
+/* ==========================================================================
+   9. SINGLE PRODUCT – TABS
+   ========================================================================== */
+
+.vh360-single-product .woocommerce-tabs {
+    margin-top: 2rem;
+}
+
+.vh360-single-product .woocommerce-tabs ul.tabs {
+    list-style: none;
+    display: flex;
+    gap: 0;
+    padding: 0;
+    margin: 0 0 1.5rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.vh360-single-product .woocommerce-tabs ul.tabs::before,
+.vh360-single-product .woocommerce-tabs ul.tabs::after {
+    display: none; /* remove default WooCommerce pseudo borders */
+}
+
+.vh360-single-product .woocommerce-tabs ul.tabs li {
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    border-radius: 0;
+}
+
+.vh360-single-product .woocommerce-tabs ul.tabs li a {
+    display: block;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-light);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.vh360-single-product .woocommerce-tabs ul.tabs li a:hover {
+    color: var(--text-color);
+}
+
+.vh360-single-product .woocommerce-tabs ul.tabs li.active a {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.vh360-single-product .woocommerce-tabs .panel {
+    padding: 0;
+}
+
+.vh360-single-product .woocommerce-tabs .panel h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0 0 1rem;
+    color: var(--text-color);
+}
+
+/* ==========================================================================
+   10. RELATED / UP-SELL PRODUCTS
+   ========================================================================== */
+
+.vh360-single-product .related.products,
+.vh360-single-product .up-sells,
+.vh360-single-product .upsells {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.vh360-single-product .related.products > h2,
+.vh360-single-product .up-sells > h2,
+.vh360-single-product .upsells > h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    color: var(--text-color);
+}
+
+/* ==========================================================================
+   11. MEMBERSHIP PRODUCT – PREMIUM-PLAN PRESENTATION
+   ========================================================================== */
+
+.vh360-membership-product div.product .product_title {
+    font-size: 2rem;
+    font-weight: 800;
+}
+
+.vh360-membership-product div.product .price {
+    font-size: 2rem;
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.vh360-membership-product div.product .single_add_to_cart_button,
+.vh360-membership-product div.product button.single_add_to_cart_button {
+    padding: 1rem 2.5rem;
+    font-size: 1.1rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+}
+
+.vh360-membership-product div.product .single_add_to_cart_button:hover {
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
+    transform: translateY(-1px);
+}
+
+.vh360-membership-product div.product .woocommerce-product-details__short-description {
+    font-size: 1.05rem;
+    line-height: 1.8;
+    color: var(--text-color);
+}
+
+/* ==========================================================================
+   12. WOOCOMMERCE REVIEWS (replace generic WP comments)
+   ========================================================================== */
+
+.vh360-single-product #reviews h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.vh360-single-product #reviews .commentlist {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.vh360-single-product #reviews .commentlist li {
+    padding: 1.25rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.vh360-single-product #reviews .comment-form-rating label {
+    font-weight: 600;
+}
+
+.vh360-single-product #reviews .comment-form textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 0.95rem;
+    resize: vertical;
+}
+
+.vh360-single-product #reviews .comment-form .form-submit input[type="submit"] {
+    background-color: var(--primary-color);
+    color: #fff;
+    border: none;
+    border-radius: var(--border-radius);
+    padding: 0.65rem 1.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.vh360-single-product #reviews .comment-form .form-submit input[type="submit"]:hover {
+    background-color: var(--secondary-color);
+}
+
+/* ==========================================================================
+   13. NO-PRODUCTS / EMPTY STATE
+   ========================================================================== */
+
+.vh360-shop-archive .woocommerce-info {
+    text-align: center;
+    padding: 3rem 1rem;
+}
+
+/* ==========================================================================
+   14. STAR RATING
+   ========================================================================== */
+
+.vh360-woocommerce-page .star-rating {
+    color: var(--warning-color);
+    font-size: 0.875rem;
+}
+
+.vh360-shop-archive ul.products li.product .star-rating,
+.woocommerce ul.products li.product .star-rating {
+    display: block;
+    margin: 0 0 0.5rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    box-sizing: border-box;
+}
+
+/* ==========================================================================
+   15. GENERAL UTILITY OVERRIDES
+   ========================================================================== */
+
+/* Make WooCommerce images responsive globally */
+.vh360-woocommerce-page img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Reset default float layout that WooCommerce applies */
+.vh360-woocommerce-page .product::after {
+    content: "";
+    display: table;
+    clear: both;
+}

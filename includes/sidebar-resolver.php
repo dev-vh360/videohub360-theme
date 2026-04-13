@@ -86,20 +86,16 @@ function vh360_resolve_sidebar($post_id = null) {
     
     // FORCED RULES - These override everything else
     
-    // WooCommerce pages
+    // WooCommerce pages – all commerce screens default to no sidebar
     if (function_exists('is_woocommerce') && is_woocommerce()) {
-        // Checkout and cart pages should never have sidebars
-        if (is_checkout() || is_cart()) {
-            $result['show_sidebar'] = false;
-            return apply_filters('vh360_sidebar_config', $result, $post_id);
-        }
-        
-        // My Account page can optionally have a sidebar
-        // Default to no sidebar for cleaner UX
-        if (is_account_page()) {
-            $result['show_sidebar'] = false;
-            return apply_filters('vh360_sidebar_config', $result, $post_id);
-        }
+        $result['show_sidebar'] = false;
+        return apply_filters('vh360_sidebar_config', $result, $post_id);
+    }
+
+    // WooCommerce cart, checkout, and account pages (not caught by is_woocommerce)
+    if (class_exists('WooCommerce') && (is_cart() || is_checkout() || is_account_page())) {
+        $result['show_sidebar'] = false;
+        return apply_filters('vh360_sidebar_config', $result, $post_id);
     }
     
     // Elementor full-width pages

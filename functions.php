@@ -115,6 +115,17 @@ function videohub360_theme_setup() {
     // Add support for wide and full alignment
     add_theme_support('align-wide');
 
+    // WooCommerce theme support
+    add_theme_support('woocommerce', array(
+        'product_grid' => array(
+            'default_columns' => 3,
+            'default_rows'    => 4,
+        ),
+    ));
+    add_theme_support('wc-product-gallery-zoom');
+    add_theme_support('wc-product-gallery-lightbox');
+    add_theme_support('wc-product-gallery-slider');
+
     // Content width
     if (!isset($content_width)) {
         $content_width = 1280;
@@ -1210,6 +1221,21 @@ require_once VH360_THEME_DIR . '/includes/recommended.php';
  */
 if (class_exists('WooCommerce')) {
     require_once VH360_THEME_DIR . '/includes/woocommerce-integration.php';
+
+    /**
+     * Enqueue dedicated WooCommerce stylesheet on WooCommerce pages.
+     */
+    function vh360_enqueue_woocommerce_styles() {
+        if ( is_woocommerce() || is_cart() || is_checkout() || is_account_page() ) {
+            wp_enqueue_style(
+                'vh360-woocommerce',
+                VH360_THEME_URI . '/assets/css/woocommerce.css',
+                array( 'videohub360-theme-style' ),
+                VH360_THEME_VERSION
+            );
+        }
+    }
+    add_action( 'wp_enqueue_scripts', 'vh360_enqueue_woocommerce_styles' );
 }
 
 /**
