@@ -13,15 +13,39 @@
    1. GENERAL WOOCOMMERCE PAGE WRAPPER
    ========================================================================== */
 
+.vh360-woocommerce-page {
+    padding: 2rem 0 3rem;
+}
+
 .vh360-woocommerce-page .container {
     max-width: var(--max-width);
     margin: 0 auto;
     padding: 2rem var(--spacing);
 }
 
-/* Shop archive uses a wider container for a more open commerce feel */
-.vh360-shop-archive .container {
-    max-width: 1440px;
+/* Shop archive intentionally uses its own wide commerce wrapper instead of the
+   theme's standard boxed .container.no-sidebar layout. */
+.vh360-shop-archive {
+    padding-top: 1.5rem;
+}
+
+.vh360-shop-archive-layout {
+    width: min(1800px, calc(100vw - 3rem));
+    margin: 0 auto;
+    padding: 0;
+}
+
+.vh360-shop-archive-main {
+    width: 100%;
+}
+
+.vh360-single-product .container,
+.woocommerce-cart .container,
+.woocommerce-checkout .container,
+.woocommerce-account .container {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 2rem var(--spacing);
 }
 
 /* ==========================================================================
@@ -29,8 +53,8 @@
    ========================================================================== */
 
 .vh360-shop-header {
-    margin-bottom: 2rem;
-    padding-bottom: 1.25rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
     border-bottom: 1px solid var(--border-color);
 }
 
@@ -87,30 +111,26 @@
    4. PRODUCT GRID
    ========================================================================== */
 
-ul.products {
+.vh360-shop-archive ul.products {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2rem;
     list-style: none;
     padding: 0;
-    margin: 0 0 2rem;
-}
-
-@media (min-width: 1200px) {
-    .vh360-shop-archive ul.products {
-        grid-template-columns: repeat(4, 1fr);
-    }
+    margin: 0 0 2.5rem;
 }
 
 @media (max-width: 991px) {
-    ul.products {
-        grid-template-columns: repeat(2, 1fr);
+    .vh360-shop-archive ul.products {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1.5rem;
     }
 }
 
 @media (max-width: 575px) {
-    ul.products {
+    .vh360-shop-archive ul.products {
         grid-template-columns: 1fr;
+        gap: 1.25rem;
     }
 }
 
