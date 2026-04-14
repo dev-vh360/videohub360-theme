@@ -33,13 +33,11 @@ class VideoHub360_License {
     /**
      * Products array for update checks.
      *
+     * Populated via get_plugin_products() to keep the registry in one place.
+     *
      * @var array
      */
-    private $products = array(
-        'videohub360-core'      => 'videohub360/videohub360.php',
-        'videohub360-community' => 'videohub360-community/videohub360-community.php',
-        'vh360-pwa-app'         => 'vh360-pwa-app/vh360-pwa-app.php',
-    );
+    private $products = array();
 
     /**
      * Theme slug for update checks.
@@ -49,9 +47,32 @@ class VideoHub360_License {
     private $theme_slug = 'videohub360-theme';
 
     /**
+     * Return the canonical map of product slugs to plugin file paths.
+     *
+     * Every bundled plugin that should be checked for updates via the
+     * licensing server must be listed here. The key is the product_slug
+     * sent to the API; the value is the WordPress plugin file path
+     * (folder/main-file.php).
+     *
+     * @since 1.1.0
+     * @return array<string,string>
+     */
+    private static function get_plugin_products() {
+        return array(
+            'videohub360-core'           => 'videohub360/videohub360.php',
+            'videohub360-community'      => 'videohub360-community/videohub360-community.php',
+            'vh360-pwa-app'              => 'vh360-pwa-app/vh360-pwa-app.php',
+            'videohub360-memberships'    => 'videohub360-memberships/videohub360-memberships.php',
+            'videohub360-starter-sites'  => 'videohub360-starter-sites/videohub360-starter-sites.php',
+        );
+    }
+
+    /**
      * Constructor.
      */
     public function __construct() {
+        $this->products = self::get_plugin_products();
+
         if ( is_admin() ) {
             $this->init_admin_hooks();
         }
