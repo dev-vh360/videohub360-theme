@@ -57,9 +57,11 @@ function vh360_ss_get_plugin_file($plugin_slug) {
         'videohub360-core' => 'videohub360/videohub360.php',
         'videohub360-community' => 'videohub360-community/videohub360-community.php',
         'vh360-pwa-app' => 'vh360-pwa-app/vh360-pwa-app.php',
+        'videohub360-memberships' => 'videohub360-memberships/videohub360-memberships.php',
         'videohub360-starter-sites' => 'videohub360-starter-sites/videohub360-starter-sites.php',
         'elementor' => 'elementor/elementor.php',
         'contact-form-7' => 'contact-form-7/wp-contact-form-7.php',
+        'woocommerce' => 'woocommerce/woocommerce.php',
     );
     
     // Check if we have an explicit mapping
@@ -162,6 +164,7 @@ function vh360_ss_get_bundled_plugin_path($plugin_slug) {
         'videohub360-core' => 'videohub360-core.zip',
         'videohub360-community' => 'videohub360-community.zip',
         'vh360-pwa-app' => 'vh360-pwa-app.zip',
+        'videohub360-memberships' => 'videohub360-memberships.zip',
         'videohub360-starter-sites' => 'videohub360-starter-sites.zip',
     );
     
