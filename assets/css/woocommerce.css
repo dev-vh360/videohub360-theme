@@ -740,37 +740,57 @@ ul.products li.product {
    ========================================================================== */
 
 /*
- * The theme must fully own the My Account two-column structure.
- * WooCommerce ships default float/width rules on the navigation and content
- * columns that conflict with modern grid layout. We reset those entirely so
- * the grid declared here is the single source of truth.
+ * The theme fully owns the My Account two-column structure.
+ * WooCommerce ships default float/width/clear rules on the navigation and
+ * content columns that conflict with modern grid layout.  We reset those
+ * entirely and then *explicitly* place each section into its grid cell so
+ * the browser never falls back to auto-placement.
  */
 
 /* --- Reset native WooCommerce account column behaviour --- */
 .woocommerce-account .woocommerce-MyAccount-navigation,
 .woocommerce-account .woocommerce-MyAccount-content {
     float: none !important;
+    clear: none !important;
     width: auto !important;
-    max-width: none !important;
+    max-width: none;
     min-width: 0;
     margin: 0;
+    display: block;
     box-sizing: border-box;
 }
 
-/* --- Authoritative two-column grid --- */
+/* --- Authoritative two-column grid wrapper --- */
 .woocommerce-account .woocommerce {
     display: grid;
     grid-template-columns: 240px minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
     gap: 2rem;
     align-items: start;
 }
 
-/* Notices span full width above the two-column layout */
+/* Notices span full width in the first row, above the account columns */
 .woocommerce-account .woocommerce > .woocommerce-message,
 .woocommerce-account .woocommerce > .woocommerce-info,
 .woocommerce-account .woocommerce > .woocommerce-error,
 .woocommerce-account .woocommerce > .woocommerce-notices-wrapper {
     grid-column: 1 / -1;
+    grid-row: 1;
+}
+
+/* --- Explicit grid placement: navigation → left column, row 2 --- */
+.woocommerce-account .woocommerce-MyAccount-navigation {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: start;
+}
+
+/* --- Explicit grid placement: content → right column, row 2 --- */
+.woocommerce-account .woocommerce-MyAccount-content {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: stretch;
+    width: 100%;
 }
 
 /* Ensure direct children inside the content column are not
@@ -779,9 +799,17 @@ ul.products li.product {
     max-width: 100%;
 }
 
+/* --- Responsive: stack on small screens --- */
 @media (max-width: 767px) {
     .woocommerce-account .woocommerce {
         display: block;
+    }
+
+    .woocommerce-account .woocommerce-MyAccount-navigation,
+    .woocommerce-account .woocommerce-MyAccount-content {
+        grid-column: unset;
+        grid-row: unset;
+        width: auto !important;
     }
 
     .woocommerce-account .woocommerce-MyAccount-navigation {
