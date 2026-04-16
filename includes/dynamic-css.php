@@ -90,7 +90,7 @@ function vh360_output_dynamic_css() {
     $body_font_family    = vh360_get_font_family($body_font);
 
     // Additional settings for branding
-    $logo_max_width = get_theme_mod('vh360_logo_max_width', 220);
+    $logo_max_width = get_theme_mod('vh360_logo_max_width', 110);
     
     // Calculate header height based on logo size (min 80px, scales with logo)
     // Header height = logo width * 0.6, with 80px minimum for usability
