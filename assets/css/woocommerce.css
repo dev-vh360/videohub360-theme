@@ -854,8 +854,8 @@ ul.products li.product {
     box-shadow: var(--shadow-sm);
     padding: 1.75rem 2rem;
     min-height: 320px;
-    /* Prevent grid blowout from wide tables or pre-formatted text */
-    overflow: hidden;
+    /* Prevent grid blowout from wide tables; allow horizontal scroll */
+    overflow-x: auto;
 }
 
 .woocommerce-account .woocommerce-MyAccount-content > p:first-child {
