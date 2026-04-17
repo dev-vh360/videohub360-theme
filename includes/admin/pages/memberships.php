@@ -1,6 +1,6 @@
 <?php
 /**
- * Membership Settings Admin Page
+ * Paid Membership Settings Admin Page
  * 
  * @package Videohub360_Theme
  * @since 1.0.0
@@ -93,7 +93,7 @@ if (isset($_POST['vh360_save_plan_config']) && check_admin_referer('vh360_plan_c
 ?>
 
 <div class="wrap">
-    <h1><?php esc_html_e('Membership Settings', 'videohub360-theme'); ?></h1>
+    <h1><?php esc_html_e('Paid Membership Settings', 'videohub360-theme'); ?></h1>
     
     <?php settings_errors(); ?>
     

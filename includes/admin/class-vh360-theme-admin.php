@@ -195,8 +195,8 @@ class VH360_Theme_Admin {
         // Membership submenu
         add_submenu_page(
             'vh360-theme',
-            __('Membership Settings', 'videohub360-theme'),
-            __('Memberships', 'videohub360-theme'),
+            __('Paid Membership Settings', 'videohub360-theme'),
+            __('Paid Memberships', 'videohub360-theme'),
             'manage_options',
             'vh360-theme-memberships',
             array($this, 'render_memberships')
