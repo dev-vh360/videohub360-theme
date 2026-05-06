@@ -68,7 +68,7 @@ class VH360_Affiliates_Product_Meta {
         <p>
             <label><?php esc_html_e('Commission type', 'videohub360-affiliates'); ?></label><br>
             <select name="vh360_affiliate_commission_type">
-                <option value=""          <?php selected('',           $type === 'percentage' ? '' : $type); ?>><?php esc_html_e('— Use global —', 'videohub360-affiliates'); ?></option>
+                <option value=""          <?php selected('', $type); ?>><?php esc_html_e('— Use global —', 'videohub360-affiliates'); ?></option>
                 <option value="percentage" <?php selected('percentage', $type); ?>><?php esc_html_e('Percentage (%)', 'videohub360-affiliates'); ?></option>
                 <option value="flat"       <?php selected('flat',       $type); ?>><?php esc_html_e('Flat amount',    'videohub360-affiliates'); ?></option>
             </select>

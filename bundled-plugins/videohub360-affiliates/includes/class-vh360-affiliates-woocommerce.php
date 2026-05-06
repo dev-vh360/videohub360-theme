@@ -179,6 +179,15 @@ class VH360_Affiliates_WooCommerce {
                 continue;
             }
 
+            // Determine shared initial status so the referral and commission always match.
+            $initial_status = isset($settings['commission_status']) && $settings['commission_status']
+                ? sanitize_key($settings['commission_status'])
+                : 'pending';
+            $allowed_initial_statuses = array('pending', 'approved');
+            if (!in_array($initial_status, $allowed_initial_statuses, true)) {
+                $initial_status = 'pending';
+            }
+
             // Insert referral row
             $referral_id = VH360_Affiliates_Database::insert_referral(array(
                 'affiliate_id'  => $aff_id,
@@ -189,7 +198,7 @@ class VH360_Affiliates_WooCommerce {
                 'product_id'    => $product_id,
                 'amount'        => $base_amount,
                 'currency'      => $currency,
-                'status'        => 'pending',
+                'status'        => $initial_status,
             ));
 
             // Insert commission row
@@ -204,7 +213,7 @@ class VH360_Affiliates_WooCommerce {
                 'commission_rate' => $comm_rate,
                 'commission_amount' => round($comm_amount, 2),
                 'currency'        => $currency,
-                'status'          => $settings['commission_status'] ?? 'pending',
+                'status'          => $initial_status,
             ));
 
             $created = true;

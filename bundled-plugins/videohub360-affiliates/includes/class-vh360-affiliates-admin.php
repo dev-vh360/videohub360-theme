@@ -141,9 +141,6 @@ class VH360_Affiliates_Admin {
             case 'reject_commission':
                 $this->change_commission_status($commission_id, 'rejected');
                 break;
-            case 'mark_commission_paid':
-                $this->mark_commission_paid($commission_id);
-                break;
             case 'reverse_commission':
                 $this->change_commission_status($commission_id, 'reversed');
                 break;
@@ -295,7 +292,14 @@ class VH360_Affiliates_Admin {
                 echo '<td>' . esc_html($user ? $user->user_email : '') . '</td>';
                 echo '<td><code>' . esc_html($aff->affiliate_code) . '</code></td>';
                 echo '<td>' . esc_html(vh360_affiliates_status_label($aff->status)) . '</td>';
-                echo '<td>' . esc_html($aff->commission_rate . '%') . '</td>';
+                if ('flat' === $aff->commission_type) {
+                    $rate_display = function_exists('wc_price')
+                        ? wc_price((float) $aff->commission_rate)
+                        : '$' . number_format_i18n((float) $aff->commission_rate, 2);
+                } else {
+                    $rate_display = number_format_i18n((float) $aff->commission_rate, 2) . '%';
+                }
+                echo '<td>' . wp_kses_post($rate_display) . '</td>';
                 echo '<td>' . esc_html($visits) . '</td>';
                 echo '<td>' . esc_html($refs) . '</td>';
                 echo '<td>' . wp_kses_post(wc_price($totals['pending'])) . '</td>';
@@ -609,8 +613,7 @@ class VH360_Affiliates_Admin {
             $links[] = '<a href="' . esc_url(add_query_arg(array('vh360_aff_action' => 'reject_commission',  'commission_id' => $c->id, '_wpnonce' => $nonce), $base)) . '">' . esc_html__('Reject',  'videohub360-affiliates') . '</a>';
         }
         if ($c->status === 'approved') {
-            $links[] = '<a href="' . esc_url(add_query_arg(array('vh360_aff_action' => 'mark_commission_paid', 'commission_id' => $c->id, '_wpnonce' => $nonce), $base)) . '">' . esc_html__('Mark Paid', 'videohub360-affiliates') . '</a>';
-            $links[] = '<a href="' . esc_url(add_query_arg(array('vh360_aff_action' => 'reject_commission',   'commission_id' => $c->id, '_wpnonce' => $nonce), $base)) . '">' . esc_html__('Reject',    'videohub360-affiliates') . '</a>';
+            $links[] = '<a href="' . esc_url(add_query_arg(array('vh360_aff_action' => 'reject_commission', 'commission_id' => $c->id, '_wpnonce' => $nonce), $base)) . '">' . esc_html__('Reject', 'videohub360-affiliates') . '</a>';
         }
         if ($c->status === 'paid') {
             $links[] = '<a href="' . esc_url(add_query_arg(array('vh360_aff_action' => 'reverse_commission', 'commission_id' => $c->id, '_wpnonce' => $nonce), $base)) . '">' . esc_html__('Reverse', 'videohub360-affiliates') . '</a>';
