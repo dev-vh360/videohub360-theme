@@ -3,8 +3,10 @@
  * Affiliate registration template.
  *
  * Variables available:
- *   $error   (string) – validation/processing error message, or empty string
- *   $success (string) – success message after form submitted, or empty string
+ *   $error    (string) – validation/processing error message, or empty string
+ *   $success  (string) – success message after form submitted, or empty string
+ *   $settings (array)  – plugin settings
+ *   $user     (WP_User) – current user
  *
  * @package VideoHub360_Affiliates
  */
@@ -14,44 +16,78 @@ if (!defined('ABSPATH')) exit;
 $settings = vh360_affiliates_get_settings();
 $user     = wp_get_current_user();
 ?>
-<div class="vh360-affiliate-registration">
-
-    <?php if ($error): ?>
-        <p class="vh360-aff-error"><?php echo esc_html($error); ?></p>
-    <?php endif; ?>
+<div class="vh360-affiliate-page">
 
     <?php if ($success): ?>
-        <p class="vh360-aff-success"><?php echo esc_html($success); ?></p>
+
+        <div class="vh360-affiliate-status-card vh360-affiliate-status-active">
+            <h3><?php esc_html_e('Application Submitted', 'videohub360-affiliates'); ?></h3>
+            <p><?php echo esc_html($success); ?></p>
+        </div>
+
     <?php else: ?>
 
-        <h2><?php esc_html_e('Apply to Become an Affiliate', 'videohub360-affiliates'); ?></h2>
+        <div class="vh360-affiliate-hero-card">
+            <p class="vh360-affiliate-eyebrow"><?php esc_html_e('Partner Program', 'videohub360-affiliates'); ?></p>
+            <h2><?php esc_html_e('Become a VideoHub360 Affiliate', 'videohub360-affiliates'); ?></h2>
+            <p class="vh360-affiliate-hero-desc"><?php esc_html_e('Earn commission when you refer new customers. Promote VideoHub360 with your referral link and track your clicks, referrals, and commissions from your dashboard.', 'videohub360-affiliates'); ?></p>
+            <div class="vh360-affiliate-benefits-grid">
+                <div class="vh360-affiliate-benefit">
+                    <span class="vh360-affiliate-benefit-icon">&#10003;</span>
+                    <span><?php esc_html_e('Earn commission on eligible purchases', 'videohub360-affiliates'); ?></span>
+                </div>
+                <div class="vh360-affiliate-benefit">
+                    <span class="vh360-affiliate-benefit-icon">&#10003;</span>
+                    <span><?php esc_html_e('Track referrals from your dashboard', 'videohub360-affiliates'); ?></span>
+                </div>
+                <div class="vh360-affiliate-benefit">
+                    <span class="vh360-affiliate-benefit-icon">&#10003;</span>
+                    <span><?php esc_html_e('Simple referral link sharing', 'videohub360-affiliates'); ?></span>
+                </div>
+                <div class="vh360-affiliate-benefit">
+                    <span class="vh360-affiliate-benefit-icon">&#10003;</span>
+                    <span><?php esc_html_e('Manual payout records', 'videohub360-affiliates'); ?></span>
+                </div>
+            </div>
+        </div>
 
-        <?php if (!empty($settings['terms_page_url'])): ?>
-            <p><?php printf(
-                /* translators: %s: terms page link */
-                esc_html__('By applying, you agree to our %s.', 'videohub360-affiliates'),
-                '<a href="' . esc_url($settings['terms_page_url']) . '" target="_blank">' . esc_html__('Affiliate Terms', 'videohub360-affiliates') . '</a>'
-            ); ?></p>
-        <?php endif; ?>
+        <div class="vh360-affiliate-form-card">
 
-        <form method="post" class="vh360-aff-form">
-            <?php wp_nonce_field('vh360_aff_registration', 'vh360_aff_reg_nonce'); ?>
+            <?php if ($error): ?>
+                <div class="vh360-affiliate-notice vh360-affiliate-notice--error"><?php echo esc_html($error); ?></div>
+            <?php endif; ?>
 
-            <p>
-                <label for="vh360-payment-email"><?php esc_html_e('Payment Email', 'videohub360-affiliates'); ?></label><br>
-                <input type="email" id="vh360-payment-email" name="payment_email"
-                       value="<?php echo esc_attr($user->user_email); ?>" required
-                       class="vh360-aff-input">
-                <span class="description"><?php esc_html_e('This is where your payments will be sent.', 'videohub360-affiliates'); ?></span>
-            </p>
+            <h3><?php esc_html_e('Apply Now', 'videohub360-affiliates'); ?></h3>
 
-            <p>
-                <button type="submit" class="vh360-aff-button">
+            <form method="post" class="vh360-affiliate-form">
+                <?php wp_nonce_field('vh360_aff_registration', 'vh360_aff_reg_nonce'); ?>
+
+                <div class="vh360-affiliate-form-group">
+                    <label for="vh360-payment-email"><?php esc_html_e('Payment Email', 'videohub360-affiliates'); ?></label>
+                    <input type="email" id="vh360-payment-email" name="payment_email"
+                           value="<?php echo esc_attr($user->user_email); ?>" required>
+                    <span class="vh360-affiliate-field-hint"><?php esc_html_e('This is where your payments will be sent.', 'videohub360-affiliates'); ?></span>
+                </div>
+
+                <?php if (!empty($settings['terms_page_url'])): ?>
+                    <p class="vh360-affiliate-terms-notice">
+                        <?php printf(
+                            /* translators: %s: terms page link */
+                            esc_html__('By applying, you agree to our %s.', 'videohub360-affiliates'),
+                            '<a href="' . esc_url($settings['terms_page_url']) . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Affiliate Terms', 'videohub360-affiliates') . '</a>'
+                        ); ?>
+                    </p>
+                <?php endif; ?>
+
+                <button type="submit" class="vh360-affiliate-button">
                     <?php esc_html_e('Submit Application', 'videohub360-affiliates'); ?>
                 </button>
-            </p>
-        </form>
+
+            </form>
+
+        </div>
 
     <?php endif; ?>
 
 </div>
+
