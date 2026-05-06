@@ -192,9 +192,6 @@ function vh360_affiliates_send_email($to, $subject, $message) {
     $from_email = !empty($settings['email_from_email']) ? $settings['email_from_email'] : vh360_affiliates_default_from_email();
     $reply_to   = !empty($settings['email_reply_to'])   ? $settings['email_reply_to']   : vh360_affiliates_default_reply_to_email();
 
-    // Strip any newlines to guard against header injection.
-    $from_name = preg_replace('/[\r\n]+/', '', $from_name);
-
     $headers = array(
         'Content-Type: text/html; charset=UTF-8',
         'From: ' . $from_name . ' <' . $from_email . '>',

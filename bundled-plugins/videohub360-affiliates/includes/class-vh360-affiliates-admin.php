@@ -882,7 +882,7 @@ class VH360_Affiliates_Admin {
                                 value="<?php echo esc_attr($s['email_from_email']); ?>"
                                 placeholder="<?php echo esc_attr(vh360_affiliates_default_from_email()); ?>"
                                 class="regular-text">
-                            <p class="description"><?php esc_html_e('Leave blank to use noreply@your-domain.com. Must be an authorised sender for your domain.', 'videohub360-affiliates'); ?></p>
+                            <p class="description"><?php esc_html_e('Leave blank to use noreply@your-domain.com. Must be an authorized sender for your domain.', 'videohub360-affiliates'); ?></p>
                         </td>
                     </tr>
                     <tr>
