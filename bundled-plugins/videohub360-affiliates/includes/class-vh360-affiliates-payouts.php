@@ -60,6 +60,11 @@ class VH360_Affiliates_Payouts {
                 'approved',
                 array('approved_at' => current_time('mysql'))
             );
+            // Keep the linked referral status in sync.
+            $commission = VH360_Affiliates_Database::get_commission_by_id($row->id);
+            if ($commission && !empty($commission->referral_id)) {
+                VH360_Affiliates_Database::update_referral_status($commission->referral_id, 'approved');
+            }
         }
     }
 

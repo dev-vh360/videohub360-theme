@@ -86,7 +86,6 @@ class VH360_Affiliates_Admin {
         $output['auto_approve_days']       = absint($input['auto_approve_days'] ?? 0);
         $output['min_payout_amount']       = (float) ($input['min_payout_amount'] ?? 50);
         $output['allow_self_referrals']    = !empty($input['allow_self_referrals']) ? 1 : 0;
-        $output['exclude_existing']        = !empty($input['exclude_existing']) ? 1 : 0;
         $output['payout_instructions']     = wp_kses_post($input['payout_instructions'] ?? '');
         $output['terms_page_url']          = esc_url_raw($input['terms_page_url'] ?? '');
         $output['visit_retention_days']    = absint($input['visit_retention_days'] ?? 180);
@@ -131,6 +130,11 @@ class VH360_Affiliates_Admin {
             case 'restore_affiliate':
                 $this->change_affiliate_status($affiliate_id, 'active');
                 break;
+            case 'save_affiliate':
+                $this->save_affiliate_edit($affiliate_id);
+                // After save, redirect back to edit page (not list) so admin can review
+                wp_safe_redirect(admin_url('admin.php?page=vh360-affiliates&action=edit&affiliate_id=' . $affiliate_id . '&updated=1'));
+                exit;
             case 'approve_commission':
                 $this->approve_commission($commission_id);
                 break;
@@ -208,6 +212,7 @@ class VH360_Affiliates_Admin {
             'approved',
             array('approved_at' => current_time('mysql'))
         );
+        $this->sync_referral_status($commission_id, 'approved');
     }
 
     private function change_commission_status($commission_id, $status) {
@@ -219,6 +224,7 @@ class VH360_Affiliates_Admin {
             $extra['rejected_at'] = current_time('mysql');
         }
         VH360_Affiliates_Database::update_commission_status($commission_id, $status, $extra);
+        $this->sync_referral_status($commission_id, $status);
     }
 
     private function mark_commission_paid($commission_id) {
@@ -230,6 +236,20 @@ class VH360_Affiliates_Admin {
             'paid',
             array('paid_at' => current_time('mysql'))
         );
+        $this->sync_referral_status($commission_id, 'paid');
+    }
+
+    /**
+     * Sync the referral row status to match a commission status change.
+     *
+     * @param int    $commission_id
+     * @param string $status
+     */
+    private function sync_referral_status($commission_id, $status) {
+        $commission = VH360_Affiliates_Database::get_commission_by_id($commission_id);
+        if ($commission && !empty($commission->referral_id)) {
+            VH360_Affiliates_Database::update_referral_status($commission->referral_id, $status);
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -241,6 +261,13 @@ class VH360_Affiliates_Admin {
         $cap = current_user_can('vh360_manage_affiliates') ? 'vh360_manage_affiliates' : 'manage_options';
         if (!current_user_can($cap)) {
             wp_die(esc_html__('Access denied.', 'videohub360-affiliates'));
+        }
+
+        // Show edit form when requested
+        $action = isset($_GET['action']) ? sanitize_key(wp_unslash($_GET['action'])) : '';
+        if ($action === 'edit' && isset($_GET['affiliate_id'])) {
+            $this->page_edit_affiliate((int) $_GET['affiliate_id']);
+            return;
         }
 
         $table      = $wpdb->prefix . 'vh360_affiliates';
@@ -302,8 +329,163 @@ class VH360_Affiliates_Admin {
             $links[] = '<a href="' . esc_url(add_query_arg(array('vh360_aff_action' => 'restore_affiliate', 'affiliate_id' => $aff->id, '_wpnonce' => $nonce), $base)) . '">' . esc_html__('Restore', 'videohub360-affiliates') . '</a>';
         }
         $links[] = '<a href="' . esc_url(admin_url('user-edit.php?user_id=' . $aff->user_id)) . '">' . esc_html__('Edit User', 'videohub360-affiliates') . '</a>';
+        $links[] = '<a href="' . esc_url(admin_url('admin.php?page=vh360-affiliates&action=edit&affiliate_id=' . $aff->id)) . '">' . esc_html__('Edit Affiliate', 'videohub360-affiliates') . '</a>';
 
         return implode(' | ', $links);
+    }
+
+    // -----------------------------------------------------------------------
+    // Affiliate edit form
+    // -----------------------------------------------------------------------
+
+    /**
+     * Render the affiliate edit form.
+     *
+     * @param int $affiliate_id
+     */
+    private function page_edit_affiliate($affiliate_id) {
+        $aff = VH360_Affiliates_Database::get_affiliate_by_id($affiliate_id);
+        if (!$aff) {
+            echo '<div class="wrap"><p>' . esc_html__('Affiliate not found.', 'videohub360-affiliates') . '</p></div>';
+            return;
+        }
+
+        $nonce    = wp_create_nonce('vh360_aff_action');
+        $updated  = isset($_GET['updated']) && $_GET['updated'] === '1';
+        $list_url = admin_url('admin.php?page=vh360-affiliates');
+        $form_url = add_query_arg(array(
+            'vh360_aff_action' => 'save_affiliate',
+            'affiliate_id'     => $aff->id,
+            '_wpnonce'         => $nonce,
+        ), admin_url('admin.php?page=vh360-affiliates'));
+
+        ?>
+        <div class="wrap">
+            <h1><?php esc_html_e('Edit Affiliate', 'videohub360-affiliates'); ?></h1>
+            <p><a href="<?php echo esc_url($list_url); ?>">&larr; <?php esc_html_e('Back to Affiliates', 'videohub360-affiliates'); ?></a></p>
+            <?php if ($updated) : ?>
+                <div class="notice notice-success is-dismissible"><p><?php esc_html_e('Affiliate updated.', 'videohub360-affiliates'); ?></p></div>
+            <?php endif; ?>
+            <form method="post" action="<?php echo esc_url($form_url); ?>">
+                <table class="form-table">
+                    <tr>
+                        <th scope="row"><label for="vh360_aff_code"><?php esc_html_e('Affiliate Code', 'videohub360-affiliates'); ?></label></th>
+                        <td>
+                            <input type="text" id="vh360_aff_code" name="vh360_aff_code"
+                                value="<?php echo esc_attr($aff->affiliate_code); ?>"
+                                class="regular-text" maxlength="80" pattern="[a-z0-9\-]+"
+                                title="<?php esc_attr_e('Lowercase letters, numbers and dashes only.', 'videohub360-affiliates'); ?>">
+                            <p class="description"><?php esc_html_e('Lowercase letters, numbers, and dashes only. Must be unique.', 'videohub360-affiliates'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><label for="vh360_aff_status"><?php esc_html_e('Status', 'videohub360-affiliates'); ?></label></th>
+                        <td>
+                            <select id="vh360_aff_status" name="vh360_aff_status">
+                                <?php foreach (array('pending', 'active', 'rejected', 'suspended') as $s) : ?>
+                                    <option value="<?php echo esc_attr($s); ?>" <?php selected($s, $aff->status); ?>><?php echo esc_html(vh360_affiliates_status_label($s)); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><label for="vh360_aff_comm_type"><?php esc_html_e('Commission Type', 'videohub360-affiliates'); ?></label></th>
+                        <td>
+                            <select id="vh360_aff_comm_type" name="vh360_aff_comm_type">
+                                <option value="percentage" <?php selected('percentage', $aff->commission_type); ?>><?php esc_html_e('Percentage (%)', 'videohub360-affiliates'); ?></option>
+                                <option value="flat"       <?php selected('flat',       $aff->commission_type); ?>><?php esc_html_e('Flat Amount',    'videohub360-affiliates'); ?></option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><label for="vh360_aff_comm_rate"><?php esc_html_e('Commission Rate', 'videohub360-affiliates'); ?></label></th>
+                        <td>
+                            <input type="number" id="vh360_aff_comm_rate" name="vh360_aff_comm_rate"
+                                value="<?php echo esc_attr($aff->commission_rate); ?>"
+                                step="0.01" min="0" class="small-text">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><label for="vh360_aff_payment_email"><?php esc_html_e('Payment Email', 'videohub360-affiliates'); ?></label></th>
+                        <td>
+                            <input type="email" id="vh360_aff_payment_email" name="vh360_aff_payment_email"
+                                value="<?php echo esc_attr($aff->payment_email ?? ''); ?>"
+                                class="regular-text">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><label for="vh360_aff_notes"><?php esc_html_e('Internal Notes', 'videohub360-affiliates'); ?></label></th>
+                        <td>
+                            <textarea id="vh360_aff_notes" name="vh360_aff_notes" rows="5" class="large-text"><?php echo esc_textarea($aff->notes ?? ''); ?></textarea>
+                        </td>
+                    </tr>
+                </table>
+                <?php submit_button(__('Save Affiliate', 'videohub360-affiliates')); ?>
+            </form>
+        </div>
+        <?php
+    }
+
+    /**
+     * Process the affiliate edit form POST.
+     *
+     * @param int $affiliate_id
+     */
+    private function save_affiliate_edit($affiliate_id) {
+        if (!$affiliate_id) {
+            return;
+        }
+
+        $existing = VH360_Affiliates_Database::get_affiliate_by_id($affiliate_id);
+        if (!$existing) {
+            return;
+        }
+
+        // Sanitize and validate code
+        $new_code = strtolower(sanitize_title(wp_unslash($_POST['vh360_aff_code'] ?? '')));
+        $new_code = preg_replace('/[^a-z0-9\-]/', '', $new_code);
+        $new_code = substr($new_code, 0, 80);
+
+        if (empty($new_code)) {
+            $new_code = $existing->affiliate_code;
+        }
+
+        // Reserved words check
+        $reserved = array('admin', 'administrator', 'login', 'logout', 'register', 'checkout', 'cart', 'account', 'support', 'dashboard', 'videohub360', 'vh360');
+        if (in_array($new_code, $reserved, true)) {
+            $new_code = $existing->affiliate_code; // revert to original if reserved
+        }
+
+        // Uniqueness: if code changed, ensure no other affiliate uses it
+        if ($new_code !== $existing->affiliate_code) {
+            $conflict = VH360_Affiliates_Database::get_affiliate_by_code($new_code);
+            if ($conflict) {
+                $new_code = $existing->affiliate_code; // revert on conflict
+            }
+        }
+
+        $status = sanitize_key(wp_unslash($_POST['vh360_aff_status'] ?? 'pending'));
+        if (!in_array($status, array('pending', 'active', 'rejected', 'suspended'), true)) {
+            $status = 'pending';
+        }
+
+        $comm_type = sanitize_key(wp_unslash($_POST['vh360_aff_comm_type'] ?? 'percentage'));
+        if (!in_array($comm_type, array('percentage', 'flat'), true)) {
+            $comm_type = 'percentage';
+        }
+
+        $comm_rate     = max(0, (float) wp_unslash($_POST['vh360_aff_comm_rate'] ?? 0));
+        $payment_email = sanitize_email(wp_unslash($_POST['vh360_aff_payment_email'] ?? ''));
+        $notes         = sanitize_textarea_field(wp_unslash($_POST['vh360_aff_notes'] ?? ''));
+
+        VH360_Affiliates_Database::update_affiliate($affiliate_id, array(
+            'affiliate_code'  => $new_code,
+            'status'          => $status,
+            'commission_type' => $comm_type,
+            'commission_rate' => $comm_rate,
+            'payment_email'   => $payment_email ?: null,
+            'notes'           => $notes,
+        ));
     }
 
     public function page_visits() {
@@ -565,9 +747,12 @@ class VH360_Affiliates_Admin {
                 'paid_at'               => current_time('mysql'),
             ));
 
-            // Mark commissions as paid
+            // Mark commissions as paid and sync referral status
             foreach ($commissions as $c) {
                 VH360_Affiliates_Database::update_commission_status($c->id, 'paid', array('paid_at' => current_time('mysql')));
+                if (!empty($c->referral_id)) {
+                    VH360_Affiliates_Database::update_referral_status($c->referral_id, 'paid');
+                }
             }
 
             // Notify affiliate
@@ -660,10 +845,6 @@ class VH360_Affiliates_Admin {
                     <tr>
                         <th><?php esc_html_e('Allow Self-referrals', 'videohub360-affiliates'); ?></th>
                         <td><input type="checkbox" name="vh360_affiliates_settings[allow_self_referrals]" value="1" <?php checked(1, $s['allow_self_referrals']); ?>></td>
-                    </tr>
-                    <tr>
-                        <th><?php esc_html_e('Exclude Existing Customers', 'videohub360-affiliates'); ?></th>
-                        <td><input type="checkbox" name="vh360_affiliates_settings[exclude_existing]" value="1" <?php checked(1, $s['exclude_existing']); ?>></td>
                     </tr>
                     <tr>
                         <th><?php esc_html_e('Payout Instructions', 'videohub360-affiliates'); ?></th>

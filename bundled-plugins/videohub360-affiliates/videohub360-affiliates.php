@@ -70,6 +70,9 @@ class VH360_Affiliates_Plugin {
             return;
         }
 
+        // Run DB schema upgrade check on every load (idempotent).
+        VH360_Affiliates_Database::maybe_upgrade();
+
         // Admin screens are always bootstrapped so admins can access the Settings page
         // to enable the program even if it is currently disabled.
         VH360_Affiliates_Admin::get_instance();
@@ -119,6 +122,9 @@ function vh360_affiliates_activate() {
  * Deactivation hook.
  */
 function vh360_affiliates_deactivate() {
+    // Clear scheduled cron events so they do not fire after deactivation.
+    wp_clear_scheduled_hook('vh360_affiliates_daily_cron');
+    wp_clear_scheduled_hook('vh360_affiliates_cleanup_cron');
     flush_rewrite_rules();
 }
 

@@ -12,8 +12,6 @@ class VH360_Affiliates_Database {
     /** @var VH360_Affiliates_Database|null */
     private static $instance = null;
 
-    private $db_version = '1.0.0';
-
     public static function get_instance() {
         if (null === self::$instance) {
             self::$instance = new self();
@@ -22,12 +20,17 @@ class VH360_Affiliates_Database {
     }
 
     private function __construct() {
-        add_action('plugins_loaded', array($this, 'check_db_version'));
+        // Instance kept for potential future instance-level hooks.
     }
 
-    public function check_db_version() {
+    /**
+     * Run table creation if the stored DB version is older than current.
+     * Called directly during plugin initialisation so it fires reliably
+     * regardless of which action hook is active when the plugin loads.
+     */
+    public static function maybe_upgrade() {
         $current = get_option('vh360_affiliates_db_version', '0');
-        if (version_compare($current, $this->db_version, '<')) {
+        if (version_compare($current, '1.0.0', '<')) {
             self::create_tables();
         }
     }
@@ -188,14 +191,12 @@ class VH360_Affiliates_Database {
     public static function insert_affiliate($data) {
         global $wpdb;
         $now = current_time('mysql');
-        $result = $wpdb->insert(
-            $wpdb->prefix . 'vh360_affiliates',
-            array_merge(array(
-                'created_at' => $now,
-                'updated_at' => $now,
-            ), $data),
-            array('%d', '%s', '%s', '%s', '%f', '%s', '%s', '%s', '%s')
-        );
+        $row = array_merge($data, array(
+            'created_at' => $now,
+            'updated_at' => $now,
+        ));
+        // Let $wpdb->insert() infer formats to avoid column/format ordering mismatches.
+        $result = $wpdb->insert($wpdb->prefix . 'vh360_affiliates', $row);
         return $result ? $wpdb->insert_id : false;
     }
 
@@ -244,6 +245,15 @@ class VH360_Affiliates_Database {
             $wpdb->prefix . 'vh360_affiliate_referrals',
             array('status' => $status, 'updated_at' => current_time('mysql')),
             array('id' => $referral_id)
+        );
+    }
+
+    /** Get commission row by ID. */
+    public static function get_commission_by_id($id) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'vh360_affiliate_commissions';
+        return $wpdb->get_row(
+            $wpdb->prepare("SELECT * FROM {$table} WHERE id = %d LIMIT 1", $id)
         );
     }
 

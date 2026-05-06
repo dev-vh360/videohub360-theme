@@ -158,8 +158,9 @@ class VH360_Affiliates_WooCommerce {
                 continue;
             }
 
-            // Calculate base: item subtotal (after discounts, excl. tax)
-            $base_amount = (float) $item->get_subtotal();
+            // Calculate base: line total after discounts, excluding tax and shipping.
+            // get_total() returns the discounted line total; get_subtotal() is pre-discount.
+            $base_amount = (float) $item->get_total();
             if ($base_amount <= 0) {
                 continue;
             }
@@ -396,7 +397,11 @@ class VH360_Affiliates_WooCommerce {
     /**
      * Determine commission type and rate for a product line item.
      *
-     * Priority: variation override → product override → affiliate override → global default.
+     * Model: global commission applies by default.
+     * A product (or variation) can override by having both commission_type and
+     * commission_rate set in meta.  An empty/missing type or rate means "use global".
+     * The variation is checked first; if it has no override, the parent product is
+     * checked; if that also has no override, the affiliate-level or global default is used.
      *
      * @param int    $product_id
      * @param int    $variation_id
@@ -405,35 +410,23 @@ class VH360_Affiliates_WooCommerce {
      * @return array [type, rate]
      */
     private function get_product_commission($product_id, $variation_id, $affiliate, $settings) {
-        $source_id = $product_id;
-
-        // Try variation first
+        // Try variation override first
         if ($variation_id) {
-            $var_enabled    = get_post_meta($variation_id, '_vh360_affiliate_enabled', true);
-            $var_use_global = get_post_meta($variation_id, '_vh360_affiliate_use_global', true);
-            $var_type       = get_post_meta($variation_id, '_vh360_affiliate_commission_type', true);
-            $var_rate       = get_post_meta($variation_id, '_vh360_affiliate_commission_rate', true);
-
-            if ($var_enabled === '1' && $var_use_global !== '1' && $var_type && $var_rate !== '') {
+            $var_type = get_post_meta($variation_id, '_vh360_affiliate_commission_type', true);
+            $var_rate = get_post_meta($variation_id, '_vh360_affiliate_commission_rate', true);
+            if ($var_type && $var_rate !== '') {
                 return array($var_type, (float) $var_rate);
             }
-            if ($var_enabled === '1' && $var_use_global === '1') {
-                $source_id = 0; // fall through to global
-            }
         }
 
-        if ($source_id) {
-            $enabled    = get_post_meta($product_id, '_vh360_affiliate_enabled', true);
-            $use_global = get_post_meta($product_id, '_vh360_affiliate_use_global', true);
-            $type       = get_post_meta($product_id, '_vh360_affiliate_commission_type', true);
-            $rate       = get_post_meta($product_id, '_vh360_affiliate_commission_rate', true);
-
-            if ($enabled === '1' && $use_global !== '1' && $type && $rate !== '') {
-                return array($type, (float) $rate);
-            }
+        // Try product-level override
+        $prod_type = get_post_meta($product_id, '_vh360_affiliate_commission_type', true);
+        $prod_rate = get_post_meta($product_id, '_vh360_affiliate_commission_rate', true);
+        if ($prod_type && $prod_rate !== '') {
+            return array($prod_type, (float) $prod_rate);
         }
 
-        // Affiliate-level override
+        // Affiliate-level override (stored on the affiliate record)
         if ($affiliate->commission_rate !== null && $affiliate->commission_type) {
             return array($affiliate->commission_type, (float) $affiliate->commission_rate);
         }

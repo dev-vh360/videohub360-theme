@@ -23,8 +23,10 @@ class VH360_Affiliates_Memberships {
     }
 
     private function __construct() {
-        // Only hook in if the Memberships plugin is active
-        add_action('plugins_loaded', array($this, 'maybe_init'), 20);
+        // Initialise immediately — this class is only instantiated after plugins_loaded
+        // has already fired (from inside the plugin's 'init' callback), so hooking back
+        // onto plugins_loaded would never run.  Call maybe_init() directly instead.
+        $this->maybe_init();
     }
 
     /**
