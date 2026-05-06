@@ -224,18 +224,6 @@ class VH360_Affiliates_Admin {
         $this->sync_referral_status($commission_id, $status);
     }
 
-    private function mark_commission_paid($commission_id) {
-        if (!$commission_id) {
-            return;
-        }
-        VH360_Affiliates_Database::update_commission_status(
-            $commission_id,
-            'paid',
-            array('paid_at' => current_time('mysql'))
-        );
-        $this->sync_referral_status($commission_id, 'paid');
-    }
-
     /**
      * Sync the referral row status to match a commission status change.
      *
@@ -591,7 +579,7 @@ class VH360_Affiliates_Admin {
                 echo '<td>' . ($c->order_id ? '<a href="' . esc_url(admin_url('post.php?post=' . $c->order_id . '&action=edit')) . '">#' . esc_html($c->order_id) . '</a>' : '—') . '</td>';
                 echo '<td>' . esc_html($product) . '</td>';
                 echo '<td>' . wp_kses_post(wc_price($c->base_amount)) . '</td>';
-                echo '<td>' . esc_html($c->commission_rate . ($c->commission_type === 'percentage' ? '%' : '')) . '</td>';
+                echo '<td>' . $this->format_commission_rate_display($c->commission_type, $c->commission_rate) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside helper
                 echo '<td>' . wp_kses_post(wc_price($c->commission_amount)) . '</td>';
                 echo '<td>' . esc_html($c->currency) . '</td>';
                 echo '<td>' . esc_html(vh360_affiliates_status_label($c->status)) . '</td>';
@@ -604,6 +592,17 @@ class VH360_Affiliates_Admin {
             echo '<tr><td colspan="11">' . esc_html__('No commissions found.', 'videohub360-affiliates') . '</td></tr>';
         }
         echo '</tbody></table></div>';
+    }
+
+    private function format_commission_rate_display($commission_type, $commission_rate) {
+        $rate = (float) $commission_rate;
+        if ('flat' === $commission_type) {
+            if (function_exists('wc_price')) {
+                return wp_kses_post(wc_price($rate));
+            }
+            return esc_html('$' . number_format_i18n($rate, 2));
+        }
+        return esc_html(number_format_i18n($rate, 2) . '%');
     }
 
     private function build_commission_actions($c, $base, $nonce) {
