@@ -30,10 +30,10 @@ class VH360_Affiliates_Frontend {
     }
 
     public function enqueue_assets() {
+        wp_enqueue_style('vh360-affiliates-frontend', VH360_AFFILIATES_URL . 'assets/css/frontend.css', array(), VH360_AFFILIATES_VERSION);
         if (!is_user_logged_in()) {
             return;
         }
-        wp_enqueue_style('vh360-affiliates-frontend', VH360_AFFILIATES_URL . 'assets/css/frontend.css', array(), VH360_AFFILIATES_VERSION);
         wp_enqueue_script('vh360-affiliates-frontend', VH360_AFFILIATES_URL . 'assets/js/frontend.js', array('jquery'), VH360_AFFILIATES_VERSION, true);
         wp_localize_script('vh360-affiliates-frontend', 'vh360AffFrontend', array(
             'ajaxUrl' => admin_url('admin-ajax.php'),
@@ -48,14 +48,44 @@ class VH360_Affiliates_Frontend {
 
     public function shortcode_registration($atts) {
         if (!is_user_logged_in()) {
-            return '<p class="vh360-aff-notice">' . esc_html__('You must be logged in to apply as an affiliate.', 'videohub360-affiliates') . '</p>';
+            return '<div class="vh360-affiliate-page"><div class="vh360-affiliate-status-card vh360-affiliate-status-login">'
+                . '<h3>' . esc_html__('Sign in to apply', 'videohub360-affiliates') . '</h3>'
+                . '<p>' . esc_html__('You need an account before joining the affiliate program.', 'videohub360-affiliates') . '</p>'
+                . '</div></div>';
         }
 
         $user_id   = get_current_user_id();
         $existing  = VH360_Affiliates_Database::get_affiliate_by_user_id($user_id);
 
         if ($existing) {
-            return '<p class="vh360-aff-notice">' . esc_html__('You have already submitted an affiliate application. Current status: ', 'videohub360-affiliates') . '<strong>' . esc_html(vh360_affiliates_status_label($existing->status)) . '</strong></p>';
+            $status_class = 'vh360-affiliate-status-' . sanitize_html_class($existing->status);
+            $label        = esc_html(vh360_affiliates_status_label($existing->status));
+
+            if ($existing->status === 'pending') {
+                $title = esc_html__('Application Under Review', 'videohub360-affiliates');
+                $desc  = esc_html__('Your affiliate application is being reviewed. You will be notified by email once a decision is made.', 'videohub360-affiliates');
+            } elseif ($existing->status === 'active') {
+                $title = esc_html__('You Are an Active Affiliate', 'videohub360-affiliates');
+                $desc  = esc_html__('Your affiliate account is active. Visit your dashboard to view your referral link and commissions.', 'videohub360-affiliates');
+            } elseif ($existing->status === 'rejected') {
+                $title = esc_html__('Application Not Approved', 'videohub360-affiliates');
+                $desc  = esc_html__('Your affiliate application was not approved. Please contact support for more information.', 'videohub360-affiliates');
+            } elseif ($existing->status === 'suspended') {
+                $title = esc_html__('Account Suspended', 'videohub360-affiliates');
+                $desc  = esc_html__('Your affiliate account is currently suspended. Please contact support.', 'videohub360-affiliates');
+            } else {
+                $title = sprintf(
+                    /* translators: %s: status label */
+                    esc_html__('Application Status: %s', 'videohub360-affiliates'),
+                    $label
+                );
+                $desc = '';
+            }
+
+            return '<div class="vh360-affiliate-page"><div class="vh360-affiliate-status-card ' . esc_attr($status_class) . '">'
+                . '<h3>' . $title . '</h3>'
+                . ($desc ? '<p>' . $desc . '</p>' : '')
+                . '</div></div>';
         }
 
         // Handle form submission
@@ -152,26 +182,41 @@ class VH360_Affiliates_Frontend {
 
     public function shortcode_dashboard($atts) {
         if (!is_user_logged_in()) {
-            return '<p class="vh360-aff-notice">' . esc_html__('You must be logged in to view your affiliate dashboard.', 'videohub360-affiliates') . '</p>';
+            return '<div class="vh360-affiliate-dashboard"><div class="vh360-affiliate-status-card vh360-affiliate-status-login">'
+                . '<h3>' . esc_html__('Sign in to view your dashboard', 'videohub360-affiliates') . '</h3>'
+                . '<p>' . esc_html__('You must be logged in to access your affiliate dashboard.', 'videohub360-affiliates') . '</p>'
+                . '</div></div>';
         }
 
         $user_id   = get_current_user_id();
         $affiliate = VH360_Affiliates_Database::get_affiliate_by_user_id($user_id);
 
         if (!$affiliate) {
-            return '<p class="vh360-aff-notice">' . esc_html__('You are not registered as an affiliate. ', 'videohub360-affiliates') . '</p>';
+            return '<div class="vh360-affiliate-dashboard"><div class="vh360-affiliate-status-card vh360-affiliate-status-login">'
+                . '<h3>' . esc_html__('Not Registered as an Affiliate', 'videohub360-affiliates') . '</h3>'
+                . '<p>' . esc_html__('You are not registered as an affiliate. Apply through the affiliate registration page.', 'videohub360-affiliates') . '</p>'
+                . '</div></div>';
         }
 
         if ($affiliate->status === 'pending') {
-            return '<p class="vh360-aff-notice">' . esc_html__('Your affiliate application is currently under review. You will be notified once it is approved.', 'videohub360-affiliates') . '</p>';
+            return '<div class="vh360-affiliate-dashboard"><div class="vh360-affiliate-status-card vh360-affiliate-status-pending">'
+                . '<h3>' . esc_html__('Application Under Review', 'videohub360-affiliates') . '</h3>'
+                . '<p>' . esc_html__('Your affiliate application is currently under review. You will be notified once it is approved.', 'videohub360-affiliates') . '</p>'
+                . '</div></div>';
         }
 
         if ($affiliate->status === 'rejected') {
-            return '<p class="vh360-aff-notice">' . esc_html__('Your affiliate application was not approved. Please contact support for more information.', 'videohub360-affiliates') . '</p>';
+            return '<div class="vh360-affiliate-dashboard"><div class="vh360-affiliate-status-card vh360-affiliate-status-rejected">'
+                . '<h3>' . esc_html__('Application Not Approved', 'videohub360-affiliates') . '</h3>'
+                . '<p>' . esc_html__('Your affiliate application was not approved. Please contact support for more information.', 'videohub360-affiliates') . '</p>'
+                . '</div></div>';
         }
 
         if ($affiliate->status === 'suspended') {
-            return '<p class="vh360-aff-notice">' . esc_html__('Your affiliate account is currently suspended. Please contact support.', 'videohub360-affiliates') . '</p>';
+            return '<div class="vh360-affiliate-dashboard"><div class="vh360-affiliate-status-card vh360-affiliate-status-suspended">'
+                . '<h3>' . esc_html__('Account Suspended', 'videohub360-affiliates') . '</h3>'
+                . '<p>' . esc_html__('Your affiliate account is currently suspended. Please contact support.', 'videohub360-affiliates') . '</p>'
+                . '</div></div>';
         }
 
         // Active — show full dashboard

@@ -29,6 +29,9 @@ function vh360_affiliates_get_settings() {
         'terms_page_url'           => '',
         'visit_retention_days'     => 180,
         'email_notifications'      => 1,
+        'email_from_name'          => '',
+        'email_from_email'         => '',
+        'email_reply_to'           => '',
     );
     $saved = get_option('vh360_affiliates_settings', array());
     return wp_parse_args($saved, $defaults);
@@ -119,6 +122,60 @@ function vh360_affiliates_build_referral_url($code, $url = '') {
 }
 
 /**
+ * Return the default From name for affiliate notification emails.
+ *
+ * @return string
+ */
+function vh360_affiliates_default_from_name() {
+    $name = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
+    $name = wp_strip_all_tags( $name );
+    $name = preg_replace( '/[\r\n]+/', '', $name );
+
+    return $name ?: 'VideoHub360';
+}
+
+/**
+ * Return the default From email address for affiliate notification emails.
+ *
+ * Uses noreply@<site-domain> so the sending domain matches the site,
+ * improving deliverability. Falls back to admin_email if the domain
+ * cannot be determined.
+ *
+ * @return string
+ */
+function vh360_affiliates_default_from_email() {
+    $host = wp_parse_url( home_url(), PHP_URL_HOST );
+
+    if ( empty( $host ) ) {
+        return sanitize_email( get_option( 'admin_email' ) );
+    }
+
+    $host  = strtolower( preg_replace( '/^www\./i', '', $host ) );
+    $email = 'noreply@' . $host;
+
+    if ( ! is_email( $email ) ) {
+        return sanitize_email( get_option( 'admin_email' ) );
+    }
+
+    return $email;
+}
+
+/**
+ * Return the default Reply-To email address for affiliate notification emails.
+ *
+ * @return string
+ */
+function vh360_affiliates_default_reply_to_email() {
+    $admin_email = sanitize_email( get_option( 'admin_email' ) );
+
+    if ( is_email( $admin_email ) ) {
+        return $admin_email;
+    }
+
+    return vh360_affiliates_default_from_email();
+}
+
+/**
  * Send an email notification from the plugin.
  *
  * @param string $to
@@ -130,7 +187,16 @@ function vh360_affiliates_send_email($to, $subject, $message) {
     if (empty($settings['email_notifications'])) {
         return;
     }
-    $headers = array('Content-Type: text/html; charset=UTF-8');
+
+    $from_name  = !empty($settings['email_from_name'])  ? $settings['email_from_name']  : vh360_affiliates_default_from_name();
+    $from_email = !empty($settings['email_from_email']) ? $settings['email_from_email'] : vh360_affiliates_default_from_email();
+    $reply_to   = !empty($settings['email_reply_to'])   ? $settings['email_reply_to']   : vh360_affiliates_default_reply_to_email();
+
+    $headers = array(
+        'Content-Type: text/html; charset=UTF-8',
+        'From: ' . $from_name . ' <' . $from_email . '>',
+        'Reply-To: ' . $reply_to,
+    );
     wp_mail($to, $subject, nl2br(esc_html($message)), $headers);
 }
 

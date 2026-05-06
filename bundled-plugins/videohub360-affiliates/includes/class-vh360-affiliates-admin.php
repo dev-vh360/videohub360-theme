@@ -90,6 +90,14 @@ class VH360_Affiliates_Admin {
         $output['terms_page_url']          = esc_url_raw($input['terms_page_url'] ?? '');
         $output['visit_retention_days']    = absint($input['visit_retention_days'] ?? 180);
         $output['email_notifications']     = !empty($input['email_notifications']) ? 1 : 0;
+
+        // Email sender overrides.
+        $from_name  = sanitize_text_field($input['email_from_name'] ?? '');
+        $from_name  = preg_replace('/[\r\n]+/', '', $from_name);
+        $output['email_from_name']  = $from_name;
+        $output['email_from_email'] = sanitize_email($input['email_from_email'] ?? '');
+        $output['email_reply_to']   = sanitize_email($input['email_reply_to'] ?? '');
+
         return $output;
     }
 
@@ -856,6 +864,36 @@ class VH360_Affiliates_Admin {
                     <tr>
                         <th><?php esc_html_e('Email Notifications', 'videohub360-affiliates'); ?></th>
                         <td><input type="checkbox" name="vh360_affiliates_settings[email_notifications]" value="1" <?php checked(1, $s['email_notifications']); ?>></td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Email From Name', 'videohub360-affiliates'); ?></th>
+                        <td>
+                            <input type="text" name="vh360_affiliates_settings[email_from_name]"
+                                value="<?php echo esc_attr($s['email_from_name']); ?>"
+                                placeholder="<?php echo esc_attr(vh360_affiliates_default_from_name()); ?>"
+                                class="regular-text">
+                            <p class="description"><?php esc_html_e('Leave blank to use the site title.', 'videohub360-affiliates'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Email From Address', 'videohub360-affiliates'); ?></th>
+                        <td>
+                            <input type="email" name="vh360_affiliates_settings[email_from_email]"
+                                value="<?php echo esc_attr($s['email_from_email']); ?>"
+                                placeholder="<?php echo esc_attr(vh360_affiliates_default_from_email()); ?>"
+                                class="regular-text">
+                            <p class="description"><?php esc_html_e('Leave blank to use noreply@your-domain.com. Must be an authorized sender for your domain.', 'videohub360-affiliates'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Email Reply-To Address', 'videohub360-affiliates'); ?></th>
+                        <td>
+                            <input type="email" name="vh360_affiliates_settings[email_reply_to]"
+                                value="<?php echo esc_attr($s['email_reply_to']); ?>"
+                                placeholder="<?php echo esc_attr(vh360_affiliates_default_reply_to_email()); ?>"
+                                class="regular-text">
+                            <p class="description"><?php esc_html_e('Leave blank to use the WordPress admin email.', 'videohub360-affiliates'); ?></p>
+                        </td>
                     </tr>
                 </table>
                 <?php submit_button(); ?>
