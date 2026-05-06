@@ -25,7 +25,6 @@ function vh360_affiliates_get_settings() {
         'auto_approve_days'        => 0,
         'min_payout_amount'        => 50.00,
         'allow_self_referrals'     => 0,
-        'exclude_existing'         => 0,
         'payout_instructions'      => '',
         'terms_page_url'           => '',
         'visit_retention_days'     => 180,
