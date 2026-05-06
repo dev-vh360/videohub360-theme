@@ -61,7 +61,9 @@ class VH360_Affiliates_Plugin {
     }
 
     private function init_hooks() {
-        add_action('init', array($this, 'init'));
+        // Priority 0 ensures the plugin is fully initialised before the tracking
+        // class registers handle_referral_visit() at init priority 1.
+        add_action('init', array($this, 'init'), 0);
     }
 
     public function init() {
