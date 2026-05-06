@@ -1,0 +1,150 @@
+/* VideoHub360 Affiliates – Frontend Styles */
+
+.vh360-affiliate-dashboard,
+.vh360-affiliate-registration {
+    max-width: 800px;
+    margin: 0 auto;
+    font-family: inherit;
+}
+
+/* Notices */
+.vh360-aff-notice,
+.vh360-aff-error,
+.vh360-aff-success {
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin-bottom: 16px;
+}
+
+.vh360-aff-notice  { background: #e8f4f8; border-left: 4px solid #5bc0de; }
+.vh360-aff-error   { background: #fdf3f3; border-left: 4px solid #e74c3c; color: #c0392b; }
+.vh360-aff-success { background: #f0fdf4; border-left: 4px solid #27ae60; color: #196f3d; }
+
+/* Stats grid */
+.vh360-aff-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    margin: 20px 0;
+}
+
+.vh360-aff-stat {
+    background: #f8f8f8;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+}
+
+.vh360-aff-stat .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #777;
+    margin-bottom: 4px;
+}
+
+.vh360-aff-stat .value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #222;
+    word-break: break-all;
+}
+
+/* Referral URL row spans full width — class added via PHP template */
+.vh360-aff-stat--full-width {
+    grid-column: 1 / -1;
+}
+
+/* Progressive enhancement: modern browsers with :has() support */
+.vh360-aff-stat:has(.vh360-aff-url-input) {
+    grid-column: 1 / -1;
+}
+
+/* URL input + copy button */
+.vh360-aff-url-input {
+    width: calc(100% - 90px);
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 13px;
+    vertical-align: middle;
+}
+
+.vh360-aff-copy-btn {
+    padding: 6px 14px;
+    background: #555d6e;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    vertical-align: middle;
+    transition: background 0.15s;
+}
+
+.vh360-aff-copy-btn:hover {
+    background: #3a4050;
+}
+
+/* Tables */
+.vh360-aff-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 24px;
+    font-size: 14px;
+}
+
+.vh360-aff-table th,
+.vh360-aff-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #e0e0e0;
+    text-align: left;
+}
+
+.vh360-aff-table th {
+    background: #f0f0f0;
+    font-weight: 600;
+}
+
+/* Form elements */
+.vh360-aff-form p {
+    margin-bottom: 14px;
+}
+
+.vh360-aff-input {
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    min-width: 280px;
+}
+
+.vh360-aff-button {
+    padding: 10px 20px;
+    background: #444;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.15s;
+}
+
+.vh360-aff-button:hover {
+    background: #222;
+}
+
+@media (max-width: 600px) {
+    .vh360-aff-stats {
+        grid-template-columns: 1fr 1fr;
+    }
+    .vh360-aff-url-input {
+        width: 100%;
+        margin-bottom: 8px;
+    }
+    .vh360-aff-copy-btn {
+        width: 100%;
+    }
+}

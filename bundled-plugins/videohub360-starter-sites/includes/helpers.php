@@ -59,6 +59,7 @@ function vh360_ss_get_plugin_file($plugin_slug) {
         'vh360-pwa-app' => 'vh360-pwa-app/vh360-pwa-app.php',
         'videohub360-memberships' => 'videohub360-memberships/videohub360-memberships.php',
         'videohub360-starter-sites' => 'videohub360-starter-sites/videohub360-starter-sites.php',
+        'videohub360-affiliates' => 'videohub360-affiliates/videohub360-affiliates.php',
         'elementor' => 'elementor/elementor.php',
         'contact-form-7' => 'contact-form-7/wp-contact-form-7.php',
         'woocommerce' => 'woocommerce/woocommerce.php',
@@ -166,6 +167,7 @@ function vh360_ss_get_bundled_plugin_path($plugin_slug) {
         'vh360-pwa-app' => 'vh360-pwa-app.zip',
         'videohub360-memberships' => 'videohub360-memberships.zip',
         'videohub360-starter-sites' => 'videohub360-starter-sites.zip',
+        'videohub360-affiliates' => 'videohub360-affiliates.zip',
     );
     
     if (!isset($bundled_plugins[$plugin_slug])) {

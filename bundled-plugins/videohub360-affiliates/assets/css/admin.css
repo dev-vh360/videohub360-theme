@@ -1,0 +1,27 @@
+/* VideoHub360 Affiliates – Admin Styles */
+
+.vh360-aff-table-wrap {
+    overflow-x: auto;
+}
+
+/* Commission status badges */
+.vh360-aff-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.vh360-aff-status-pending   { background: #fff3cd; color: #856404; }
+.vh360-aff-status-active    { background: #d4edda; color: #155724; }
+.vh360-aff-status-approved  { background: #d4edda; color: #155724; }
+.vh360-aff-status-paid      { background: #cce5ff; color: #004085; }
+.vh360-aff-status-rejected  { background: #f8d7da; color: #721c24; }
+.vh360-aff-status-reversed  { background: #e2e3e5; color: #383d41; }
+.vh360-aff-status-suspended { background: #ffeeba; color: #856404; }
+
+/* Payout select-all checkbox helper */
+#vh360-select-all {
+    cursor: pointer;
+}
