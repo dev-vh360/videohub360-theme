@@ -130,7 +130,12 @@ function vh360_affiliates_send_email($to, $subject, $message) {
     if (empty($settings['email_notifications'])) {
         return;
     }
-    $headers = array('Content-Type: text/html; charset=UTF-8');
+    $from_name  = wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES);
+    $from_email = get_option('admin_email');
+    $headers = array(
+        'Content-Type: text/html; charset=UTF-8',
+        'From: ' . $from_name . ' <' . $from_email . '>',
+    );
     wp_mail($to, $subject, nl2br(esc_html($message)), $headers);
 }
 
