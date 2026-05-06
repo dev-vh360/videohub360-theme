@@ -881,10 +881,21 @@ function vh360_custom_password_reset_subject($title, $user_login, $user_data) {
 add_filter('retrieve_password_title', 'vh360_custom_password_reset_subject', 10, 3);
 
 /**
- * Filter the From address used for all WordPress emails to use the site admin email.
+ * Filter the From address used for all WordPress emails.
+ *
+ * Uses noreply@<site-domain> so the sender is always on the site's own
+ * authorized sending domain, avoiding rejections from external providers
+ * (Gmail, Yahoo, Outlook, etc.) that may be set as the admin email.
  */
 function vh360_mail_from($original_email) {
-    return get_option('admin_email', $original_email);
+    $domain = wp_parse_url(home_url(), PHP_URL_HOST);
+    if ($domain) {
+        $address = sanitize_email('noreply@' . $domain);
+        if (is_email($address)) {
+            return $address;
+        }
+    }
+    return $original_email;
 }
 add_filter('wp_mail_from', 'vh360_mail_from');
 
