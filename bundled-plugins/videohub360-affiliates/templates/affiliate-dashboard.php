@@ -40,7 +40,7 @@ if (!defined('ABSPATH')) exit;
             <span class="label"><?php esc_html_e('Affiliate Code', 'videohub360-affiliates'); ?></span>
             <span class="value"><code><?php echo esc_html($affiliate->affiliate_code); ?></code></span>
         </div>
-        <div class="vh360-aff-stat">
+        <div class="vh360-aff-stat vh360-aff-stat--full-width">
             <span class="label"><?php esc_html_e('Referral Link', 'videohub360-affiliates'); ?></span>
             <span class="value">
                 <input type="text" id="vh360-referral-url" value="<?php echo esc_url($referral_url); ?>" readonly class="vh360-aff-url-input">

@@ -52,7 +52,12 @@
     word-break: break-all;
 }
 
-/* Referral URL row spans full width */
+/* Referral URL row spans full width — class added via PHP template */
+.vh360-aff-stat--full-width {
+    grid-column: 1 / -1;
+}
+
+/* Progressive enhancement: modern browsers with :has() support */
 .vh360-aff-stat:has(.vh360-aff-url-input) {
     grid-column: 1 / -1;
 }

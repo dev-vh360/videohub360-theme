@@ -271,9 +271,9 @@ class VH360_Affiliates_Admin {
                 echo '<td>' . esc_html($aff->commission_rate . '%') . '</td>';
                 echo '<td>' . esc_html($visits) . '</td>';
                 echo '<td>' . esc_html($refs) . '</td>';
-                echo '<td>' . esc_html(wc_price($totals['pending'])) . '</td>';
-                echo '<td>' . esc_html(wc_price($totals['approved'])) . '</td>';
-                echo '<td>' . esc_html(wc_price($totals['paid'])) . '</td>';
+                echo '<td>' . wp_kses_post(wc_price($totals['pending'])) . '</td>';
+                echo '<td>' . wp_kses_post(wc_price($totals['approved'])) . '</td>';
+                echo '<td>' . wp_kses_post(wc_price($totals['paid'])) . '</td>';
                 echo '<td>' . esc_html(date_i18n(get_option('date_format'), strtotime($aff->created_at))) . '</td>';
                 echo '<td>' . $actions . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- already escaped inside build_affiliate_actions
                 echo '</tr>';
@@ -364,7 +364,7 @@ class VH360_Affiliates_Admin {
                 echo '<td>' . ($r->order_id ? '<a href="' . esc_url(admin_url('post.php?post=' . $r->order_id . '&action=edit')) . '">#' . esc_html($r->order_id) . '</a>' : '—') . '</td>';
                 echo '<td>' . esc_html($product) . '</td>';
                 echo '<td>' . esc_html($cust ? $cust->user_email : '—') . '</td>';
-                echo '<td>' . esc_html(wc_price($r->amount)) . '</td>';
+                echo '<td>' . wp_kses_post(wc_price($r->amount)) . '</td>';
                 echo '<td>' . esc_html($r->currency) . '</td>';
                 echo '<td>' . esc_html(vh360_affiliates_status_label($r->status)) . '</td>';
                 echo '<td>' . esc_html(date_i18n(get_option('date_format'), strtotime($r->created_at))) . '</td>';
@@ -404,9 +404,9 @@ class VH360_Affiliates_Admin {
                 echo '<td>' . esc_html($aff ? $aff->affiliate_code : '#' . $c->affiliate_id) . '</td>';
                 echo '<td>' . ($c->order_id ? '<a href="' . esc_url(admin_url('post.php?post=' . $c->order_id . '&action=edit')) . '">#' . esc_html($c->order_id) . '</a>' : '—') . '</td>';
                 echo '<td>' . esc_html($product) . '</td>';
-                echo '<td>' . esc_html(wc_price($c->base_amount)) . '</td>';
+                echo '<td>' . wp_kses_post(wc_price($c->base_amount)) . '</td>';
                 echo '<td>' . esc_html($c->commission_rate . ($c->commission_type === 'percentage' ? '%' : '')) . '</td>';
-                echo '<td>' . esc_html(wc_price($c->commission_amount)) . '</td>';
+                echo '<td>' . wp_kses_post(wc_price($c->commission_amount)) . '</td>';
                 echo '<td>' . esc_html($c->currency) . '</td>';
                 echo '<td>' . esc_html(vh360_affiliates_status_label($c->status)) . '</td>';
                 echo '<td>' . esc_html($c->reason ?? '') . '</td>';
@@ -474,7 +474,7 @@ class VH360_Affiliates_Admin {
                 echo '<td><input type="checkbox" name="commission_ids[]" value="' . esc_attr($c->id) . '"></td>';
                 echo '<td>' . esc_html($aff ? $aff->affiliate_code : '#' . $c->affiliate_id) . '</td>';
                 echo '<td>' . ($c->order_id ? '#' . esc_html($c->order_id) : '—') . '</td>';
-                echo '<td>' . esc_html(wc_price($c->commission_amount)) . '</td>';
+                echo '<td>' . wp_kses_post(wc_price($c->commission_amount)) . '</td>';
                 echo '<td>' . esc_html($c->currency) . '</td>';
                 echo '<td>' . esc_html(date_i18n(get_option('date_format'), strtotime($c->created_at))) . '</td>';
                 echo '</tr>';
@@ -505,7 +505,7 @@ class VH360_Affiliates_Admin {
                 $aff = VH360_Affiliates_Database::get_affiliate_by_id($p->affiliate_id);
                 echo '<tr>';
                 echo '<td>' . esc_html($aff ? $aff->affiliate_code : '#' . $p->affiliate_id) . '</td>';
-                echo '<td>' . esc_html(wc_price($p->amount)) . '</td>';
+                echo '<td>' . wp_kses_post(wc_price($p->amount)) . '</td>';
                 echo '<td>' . esc_html($p->currency) . '</td>';
                 echo '<td>' . esc_html($p->method ?? '') . '</td>';
                 echo '<td>' . esc_html($p->transaction_reference ?? '') . '</td>';

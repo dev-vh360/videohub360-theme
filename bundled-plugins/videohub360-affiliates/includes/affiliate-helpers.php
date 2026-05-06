@@ -65,7 +65,7 @@ function vh360_affiliates_generate_code($base = '') {
 
         // Safety guard: generate random suffix after too many collisions
         if ($suffix > 100) {
-            $attempt = $base . '-' . substr(wp_generate_password(8, false), 0, 8);
+            $attempt = $base . '-' . wp_generate_password(8, false);
         }
     }
 }

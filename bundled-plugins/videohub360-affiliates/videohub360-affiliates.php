@@ -48,8 +48,8 @@ class VH360_Affiliates_Plugin {
     }
 
     private function load_dependencies() {
+        // database is already required at file-load for activation hooks; require_once is safe
         require_once VH360_AFFILIATES_DIR . 'includes/affiliate-helpers.php';
-        require_once VH360_AFFILIATES_DIR . 'includes/class-vh360-affiliates-database.php';
         require_once VH360_AFFILIATES_DIR . 'includes/class-vh360-affiliates-tracking.php';
         require_once VH360_AFFILIATES_DIR . 'includes/class-vh360-affiliates-woocommerce.php';
         require_once VH360_AFFILIATES_DIR . 'includes/class-vh360-affiliates-memberships.php';
@@ -70,6 +70,10 @@ class VH360_Affiliates_Plugin {
             return;
         }
 
+        // Admin screens are always bootstrapped so admins can access the Settings page
+        // to enable the program even if it is currently disabled.
+        VH360_Affiliates_Admin::get_instance();
+
         $settings = get_option('vh360_affiliates_settings', array());
         if (empty($settings['enabled'])) {
             return;
@@ -89,17 +93,6 @@ class VH360_Affiliates_Plugin {
         do_action('vh360_affiliates_init');
     }
 
-    /**
-     * Always register admin screens regardless of enabled state so admins
-     * can turn the program on from the settings page.
-     */
-    public function init_admin() {
-        if (!class_exists('WooCommerce')) {
-            return;
-        }
-        VH360_Affiliates_Admin::get_instance();
-    }
-
     public function woocommerce_missing_notice() {
         echo '<div class="notice notice-error"><p>';
         echo esc_html__('VideoHub360 Affiliates requires WooCommerce to be installed and activated.', 'videohub360-affiliates');
@@ -111,7 +104,6 @@ class VH360_Affiliates_Plugin {
  * Activation hook.
  */
 function vh360_affiliates_activate() {
-    require_once VH360_AFFILIATES_DIR . 'includes/class-vh360-affiliates-database.php';
     VH360_Affiliates_Database::create_tables();
 
     // Assign custom capability to admins
@@ -130,20 +122,8 @@ function vh360_affiliates_deactivate() {
     flush_rewrite_rules();
 }
 
-/**
- * Uninstall hook (registered via uninstall.php).
- */
-
 register_activation_hook(__FILE__, 'vh360_affiliates_activate');
 register_deactivation_hook(__FILE__, 'vh360_affiliates_deactivate');
 
 // Boot the plugin after all plugins are loaded
 add_action('plugins_loaded', array('VH360_Affiliates_Plugin', 'get_instance'));
-
-// Admin screens are always bootstrapped (they include the enable toggle)
-add_action('plugins_loaded', function () {
-    if (is_admin() && class_exists('WooCommerce')) {
-        require_once VH360_AFFILIATES_DIR . 'includes/class-vh360-affiliates-admin.php';
-        VH360_Affiliates_Admin::get_instance();
-    }
-});
