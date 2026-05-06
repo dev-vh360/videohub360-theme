@@ -881,6 +881,23 @@ function vh360_custom_password_reset_subject($title, $user_login, $user_data) {
 add_filter('retrieve_password_title', 'vh360_custom_password_reset_subject', 10, 3);
 
 /**
+ * Filter the From address used for all WordPress emails to use the site admin email.
+ */
+function vh360_mail_from($original_email) {
+    return get_option('admin_email', $original_email);
+}
+add_filter('wp_mail_from', 'vh360_mail_from');
+
+/**
+ * Filter the From display name used for all WordPress emails to use the site name.
+ */
+function vh360_mail_from_name($original_name) {
+    $blogname = get_option('blogname');
+    return wp_specialchars_decode($blogname ?: $original_name, ENT_QUOTES);
+}
+add_filter('wp_mail_from_name', 'vh360_mail_from_name');
+
+/**
  * Handle custom logout
  * 
  * Custom logout handler that bypasses wp-login.php completely to avoid WordPress branding.
