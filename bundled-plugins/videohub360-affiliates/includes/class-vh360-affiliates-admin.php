@@ -280,14 +280,7 @@ class VH360_Affiliates_Admin {
                 echo '<td>' . esc_html($user ? $user->user_email : '') . '</td>';
                 echo '<td><code>' . esc_html($aff->affiliate_code) . '</code></td>';
                 echo '<td>' . esc_html(vh360_affiliates_status_label($aff->status)) . '</td>';
-                if ('flat' === $aff->commission_type) {
-                    $rate_display = function_exists('wc_price')
-                        ? wc_price((float) $aff->commission_rate)
-                        : '$' . number_format_i18n((float) $aff->commission_rate, 2);
-                } else {
-                    $rate_display = number_format_i18n((float) $aff->commission_rate, 2) . '%';
-                }
-                echo '<td>' . wp_kses_post($rate_display) . '</td>';
+                echo '<td>' . wp_kses_post($this->format_commission_rate_display($aff->commission_type, $aff->commission_rate)) . '</td>';
                 echo '<td>' . esc_html($visits) . '</td>';
                 echo '<td>' . esc_html($refs) . '</td>';
                 echo '<td>' . wp_kses_post(wc_price($totals['pending'])) . '</td>';
@@ -579,7 +572,7 @@ class VH360_Affiliates_Admin {
                 echo '<td>' . ($c->order_id ? '<a href="' . esc_url(admin_url('post.php?post=' . $c->order_id . '&action=edit')) . '">#' . esc_html($c->order_id) . '</a>' : '—') . '</td>';
                 echo '<td>' . esc_html($product) . '</td>';
                 echo '<td>' . wp_kses_post(wc_price($c->base_amount)) . '</td>';
-                echo '<td>' . $this->format_commission_rate_display($c->commission_type, $c->commission_rate) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside helper
+                echo '<td>' . wp_kses_post($this->format_commission_rate_display($c->commission_type, $c->commission_rate)) . '</td>';
                 echo '<td>' . wp_kses_post(wc_price($c->commission_amount)) . '</td>';
                 echo '<td>' . esc_html($c->currency) . '</td>';
                 echo '<td>' . esc_html(vh360_affiliates_status_label($c->status)) . '</td>';
