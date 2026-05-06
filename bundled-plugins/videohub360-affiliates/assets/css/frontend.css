@@ -1,5 +1,10 @@
 /* ============================================================
    VideoHub360 Affiliates – Frontend Styles
+   ============================================================
+   CSS custom properties used below (--vh360-primary-color,
+   --vh360-primary-dark) are expected to be defined by the
+   parent theme. Fallback values are provided so this stylesheet
+   works standalone without the theme.
    ============================================================ */
 
 /* Base layout
