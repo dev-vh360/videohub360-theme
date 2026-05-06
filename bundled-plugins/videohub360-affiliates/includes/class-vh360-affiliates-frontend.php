@@ -124,9 +124,9 @@ class VH360_Affiliates_Frontend {
             __('New affiliate application received', 'videohub360-affiliates'),
             sprintf(
                 /* translators: %1$s: display name, %2$s: email */
-                __("A new affiliate application has been received from %1\$s (%2\$s).\n\nPlease review it in the Affiliates admin panel.", 'videohub360-affiliates'),
-                $user->display_name,
-                $user->user_email
+                __('A new affiliate application has been received from %1$s (%2$s). Please review it in the Affiliates admin panel.', 'videohub360-affiliates'),
+                sanitize_text_field($user->display_name),
+                sanitize_email($user->user_email)
             )
         );
 

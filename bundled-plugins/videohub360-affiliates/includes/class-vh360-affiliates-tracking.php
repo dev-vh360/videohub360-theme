@@ -101,7 +101,7 @@ class VH360_Affiliates_Tracking {
             ? wp_unslash($_SERVER['REQUEST_URI'])
             : '';
         // Only use REQUEST_URI if it starts with '/' to avoid open-redirect
-        $safe_uri     = (strlen($raw_uri) && $raw_uri[0] === '/') ? $raw_uri : '/';
+        $safe_uri     = (!empty($raw_uri) && $raw_uri[0] === '/') ? $raw_uri : '/';
         $landing_url  = esc_url_raw(home_url($safe_uri));
         $referrer_url = isset($_SERVER['HTTP_REFERER'])
             ? esc_url_raw(sanitize_text_field(wp_unslash($_SERVER['HTTP_REFERER'])))

@@ -54,20 +54,21 @@ function vh360_affiliates_generate_code($base = '') {
 
     $attempt = $base;
     $suffix  = 1;
+    $max_attempts = 120;
 
-    while (true) {
+    while ($suffix <= $max_attempts) {
         if (!in_array($attempt, $reserved, true) &&
             !VH360_Affiliates_Database::get_affiliate_by_code($attempt)) {
             return $attempt;
         }
-        $attempt = $base . '-' . $suffix;
+        $attempt = ($suffix <= 100)
+            ? $base . '-' . $suffix
+            : $base . '-' . wp_generate_password(8, false);
         $suffix++;
-
-        // Safety guard: generate random suffix after too many collisions
-        if ($suffix > 100) {
-            $attempt = $base . '-' . wp_generate_password(8, false);
-        }
     }
+
+    // Final fallback: fully random code unlikely to collide
+    return 'aff-' . wp_generate_password(12, false);
 }
 
 /**

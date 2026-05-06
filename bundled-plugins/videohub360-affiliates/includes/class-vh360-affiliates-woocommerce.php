@@ -165,7 +165,7 @@ class VH360_Affiliates_WooCommerce {
             }
 
             // Determine commission type/rate
-            list($comm_type, $comm_rate) = $this->get_product_commission($product_id, $variation_id, $affiliate, $settings);
+            [$comm_type, $comm_rate] = $this->get_product_commission($product_id, $variation_id, $affiliate, $settings);
 
             if ($comm_type === 'percentage') {
                 $comm_amount = $base_amount * $comm_rate / 100;
