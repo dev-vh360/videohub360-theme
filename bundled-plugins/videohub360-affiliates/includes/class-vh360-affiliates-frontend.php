@@ -25,8 +25,7 @@ class VH360_Affiliates_Frontend {
 
         add_action('wp_enqueue_scripts', array($this, 'enqueue_assets'));
 
-        // AJAX: update payment email
-        add_action('wp_ajax_vh360_aff_update_payment_email', array($this, 'ajax_update_payment_email'));
+        add_action('wp_ajax_vh360_aff_update_payout_details', array($this, 'ajax_update_payout_details'));
     }
 
     public function enqueue_assets() {
@@ -127,9 +126,14 @@ class VH360_Affiliates_Frontend {
         }
 
         $user          = wp_get_current_user();
-        $payment_email = isset($_POST['payment_email'])
-            ? sanitize_email(wp_unslash($_POST['payment_email']))
-            : $user->user_email;
+
+        $allowed_methods = array( 'paypal', 'zelle', 'cashapp', 'bank_transfer', 'other' );
+        $payment_method  = sanitize_key( wp_unslash( $_POST['payment_method'] ?? 'other' ) );
+        if ( ! in_array( $payment_method, $allowed_methods, true ) ) {
+            $payment_method = 'other';
+        }
+
+        $payout_details = sanitize_text_field( wp_unslash( $_POST['payment_email'] ?? $user->user_email ) );
 
         $settings  = vh360_affiliates_get_settings();
         $status    = empty($settings['require_manual_approval']) ? 'active' : 'pending';
@@ -141,7 +145,8 @@ class VH360_Affiliates_Frontend {
             'status'           => $status,
             'commission_type'  => $settings['default_commission_type'],
             'commission_rate'  => $settings['default_commission_rate'],
-            'payment_email'    => $payment_email,
+            'payment_email'    => $payout_details,
+            'payment_method'   => $payment_method,
         ));
 
         if (!$aff_id) {
@@ -223,12 +228,12 @@ class VH360_Affiliates_Frontend {
         $error   = '';
         $success = '';
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vh360_aff_email_nonce'])) {
-            $result = $this->process_email_update($affiliate->id);
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vh360_aff_payout_nonce'])) {
+            $result = $this->process_payout_update($affiliate->id);
             if (is_wp_error($result)) {
                 $error = $result->get_error_message();
             } else {
-                $success   = __('Payment email updated.', 'videohub360-affiliates');
+                $success   = __('Payout preferences updated.', 'videohub360-affiliates');
                 $affiliate = VH360_Affiliates_Database::get_affiliate_by_user_id($user_id); // reload
             }
         }
@@ -247,14 +252,14 @@ class VH360_Affiliates_Frontend {
     }
 
     /**
-     * Process payment email update from dashboard.
+     * Process payout preferences update from dashboard.
      *
      * @param int $affiliate_id
      * @return true|WP_Error
      */
-    private function process_email_update($affiliate_id) {
-        if (!isset($_POST['vh360_aff_email_nonce']) ||
-            !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['vh360_aff_email_nonce'])), 'vh360_aff_update_email')) {
+    private function process_payout_update($affiliate_id) {
+        if (!isset($_POST['vh360_aff_payout_nonce']) ||
+            !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['vh360_aff_payout_nonce'])), 'vh360_aff_update_payout')) {
             return new WP_Error('nonce', __('Security check failed.', 'videohub360-affiliates'));
         }
 
@@ -263,19 +268,28 @@ class VH360_Affiliates_Frontend {
             return new WP_Error('auth', __('Access denied.', 'videohub360-affiliates'));
         }
 
-        $email = sanitize_email(wp_unslash($_POST['payment_email'] ?? ''));
-        if (!is_email($email)) {
-            return new WP_Error('email', __('Please provide a valid email address.', 'videohub360-affiliates'));
+        $allowed_methods = array( 'paypal', 'zelle', 'cashapp', 'bank_transfer', 'other' );
+        $payment_method  = sanitize_key( wp_unslash( $_POST['payment_method'] ?? 'other' ) );
+        if ( ! in_array( $payment_method, $allowed_methods, true ) ) {
+            $payment_method = 'other';
         }
 
-        VH360_Affiliates_Database::update_affiliate($affiliate_id, array('payment_email' => $email));
+        $payout_details = sanitize_text_field( wp_unslash( $_POST['payment_email'] ?? '' ) );
+        if ( empty( $payout_details ) ) {
+            return new WP_Error('details', __('Please provide your payout details.', 'videohub360-affiliates'));
+        }
+
+        VH360_Affiliates_Database::update_affiliate($affiliate_id, array(
+            'payment_email'  => $payout_details,
+            'payment_method' => $payment_method,
+        ));
         return true;
     }
 
     /**
-     * AJAX handler: update payment email.
+     * AJAX handler: update payout details.
      */
-    public function ajax_update_payment_email() {
+    public function ajax_update_payout_details() {
         check_ajax_referer('vh360_aff_frontend', 'nonce');
 
         if (!is_user_logged_in()) {
@@ -289,12 +303,21 @@ class VH360_Affiliates_Frontend {
             wp_send_json_error(array('message' => __('No affiliate record found.', 'videohub360-affiliates')));
         }
 
-        $email = sanitize_email(wp_unslash($_POST['payment_email'] ?? ''));
-        if (!is_email($email)) {
-            wp_send_json_error(array('message' => __('Invalid email address.', 'videohub360-affiliates')));
+        $allowed_methods = array( 'paypal', 'zelle', 'cashapp', 'bank_transfer', 'other' );
+        $payment_method  = sanitize_key( wp_unslash( $_POST['payment_method'] ?? 'other' ) );
+        if ( ! in_array( $payment_method, $allowed_methods, true ) ) {
+            $payment_method = 'other';
         }
 
-        VH360_Affiliates_Database::update_affiliate($affiliate->id, array('payment_email' => $email));
-        wp_send_json_success(array('message' => __('Payment email updated.', 'videohub360-affiliates')));
+        $payout_details = sanitize_text_field( wp_unslash( $_POST['payment_email'] ?? '' ) );
+        if ( empty( $payout_details ) ) {
+            wp_send_json_error(array('message' => __('Please provide your payout details.', 'videohub360-affiliates')));
+        }
+
+        VH360_Affiliates_Database::update_affiliate($affiliate->id, array(
+            'payment_email'  => $payout_details,
+            'payment_method' => $payment_method,
+        ));
+        wp_send_json_success(array('message' => __('Payout preferences updated.', 'videohub360-affiliates')));
     }
 }

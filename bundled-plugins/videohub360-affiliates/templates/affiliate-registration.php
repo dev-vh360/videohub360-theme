@@ -63,10 +63,22 @@ $user     = wp_get_current_user();
                 <?php wp_nonce_field('vh360_aff_registration', 'vh360_aff_reg_nonce'); ?>
 
                 <div class="vh360-affiliate-form-group">
-                    <label for="vh360-payment-email"><?php esc_html_e('Payment Email', 'videohub360-affiliates'); ?></label>
-                    <input type="email" id="vh360-payment-email" name="payment_email"
+                    <label for="vh360-payment-method"><?php esc_html_e('Preferred Payout Method', 'videohub360-affiliates'); ?></label>
+                    <select id="vh360-payment-method" name="payment_method" required>
+                        <option value="paypal"><?php esc_html_e('PayPal', 'videohub360-affiliates'); ?></option>
+                        <option value="zelle"><?php esc_html_e('Zelle', 'videohub360-affiliates'); ?></option>
+                        <option value="cashapp"><?php esc_html_e('Cash App', 'videohub360-affiliates'); ?></option>
+                        <option value="bank_transfer"><?php esc_html_e('Bank Transfer', 'videohub360-affiliates'); ?></option>
+                        <option value="other"><?php esc_html_e('Other', 'videohub360-affiliates'); ?></option>
+                    </select>
+                    <span class="vh360-affiliate-field-hint"><?php esc_html_e('Choose how you would prefer to receive affiliate payouts.', 'videohub360-affiliates'); ?></span>
+                </div>
+
+                <div class="vh360-affiliate-form-group">
+                    <label for="vh360-payment-email"><?php esc_html_e('Payout Details', 'videohub360-affiliates'); ?></label>
+                    <input type="text" id="vh360-payment-email" name="payment_email"
                            value="<?php echo esc_attr($user->user_email); ?>" required>
-                    <span class="vh360-affiliate-field-hint"><?php esc_html_e('This is where your payments will be sent.', 'videohub360-affiliates'); ?></span>
+                    <span class="vh360-affiliate-field-hint"><?php esc_html_e('Enter the email, phone number, $Cashtag, or instructions needed to pay you manually. Examples: PayPal: paypal@example.com · Zelle: email or phone number · Cash App: $YourCashtag · Bank Transfer: admin will contact you before payout.', 'videohub360-affiliates'); ?></span>
                 </div>
 
                 <?php if (!empty($settings['terms_page_url'])): ?>

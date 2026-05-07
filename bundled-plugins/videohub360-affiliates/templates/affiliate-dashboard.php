@@ -117,13 +117,38 @@ if (!defined('ABSPATH')) exit;
         </div>
 
         <div class="vh360-affiliate-card vh360-affiliate-payment-card">
-            <h3><?php esc_html_e('Payout Details', 'videohub360-affiliates'); ?></h3>
+            <h3><?php esc_html_e('Payout Preferences', 'videohub360-affiliates'); ?></h3>
+            <p class="vh360-affiliate-field-hint"><?php esc_html_e('These details help the site owner pay your approved affiliate commissions manually.', 'videohub360-affiliates'); ?></p>
             <form method="post" class="vh360-affiliate-form">
-                <?php wp_nonce_field('vh360_aff_update_email', 'vh360_aff_email_nonce'); ?>
+                <?php wp_nonce_field('vh360_aff_update_payout', 'vh360_aff_payout_nonce'); ?>
                 <div class="vh360-affiliate-form-group">
-                    <label for="vh360-payment-email-update"><?php esc_html_e('Payment Email', 'videohub360-affiliates'); ?></label>
-                    <input type="email" id="vh360-payment-email-update" name="payment_email"
+                    <label for="vh360-payment-method-update"><?php esc_html_e('Preferred Payout Method', 'videohub360-affiliates'); ?></label>
+                    <select id="vh360-payment-method-update" name="payment_method" required>
+                        <?php
+                        $current_method = $affiliate->payment_method ?? 'other';
+                        $methods = array(
+                            'paypal'       => __('PayPal', 'videohub360-affiliates'),
+                            'zelle'        => __('Zelle', 'videohub360-affiliates'),
+                            'cashapp'      => __('Cash App', 'videohub360-affiliates'),
+                            'bank_transfer'=> __('Bank Transfer', 'videohub360-affiliates'),
+                            'other'        => __('Other', 'videohub360-affiliates'),
+                        );
+                        foreach ($methods as $value => $label) {
+                            printf(
+                                '<option value="%s"%s>%s</option>',
+                                esc_attr($value),
+                                selected($value, $current_method, false),
+                                esc_html($label)
+                            );
+                        }
+                        ?>
+                    </select>
+                </div>
+                <div class="vh360-affiliate-form-group">
+                    <label for="vh360-payment-email-update"><?php esc_html_e('Payout Details', 'videohub360-affiliates'); ?></label>
+                    <input type="text" id="vh360-payment-email-update" name="payment_email"
                            value="<?php echo esc_attr($affiliate->payment_email ?? ''); ?>" required>
+                    <span class="vh360-affiliate-field-hint"><?php esc_html_e('Enter the email, phone number, $Cashtag, or instructions needed to send your payout.', 'videohub360-affiliates'); ?></span>
                 </div>
                 <button type="submit" class="vh360-affiliate-button">
                     <?php esc_html_e('Save', 'videohub360-affiliates'); ?>

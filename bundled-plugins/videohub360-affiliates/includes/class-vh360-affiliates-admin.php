@@ -270,7 +270,7 @@ class VH360_Affiliates_Admin {
         echo '<h1>' . esc_html__('Affiliates', 'videohub360-affiliates') . '</h1>';
         echo '<table class="wp-list-table widefat fixed striped">';
         echo '<thead><tr>';
-        foreach (array(__('User'), __('Email'), __('Code'), __('Status'), __('Rate'), __('Visits'), __('Referrals'), __('Pending'), __('Approved'), __('Paid'), __('Created'), __('Actions')) as $col) {
+        foreach (array(__('User'), __('Email'), __('Code'), __('Status'), __('Rate'), __('Payout Method'), __('Payout Details'), __('Visits'), __('Referrals'), __('Pending'), __('Approved'), __('Paid'), __('Created'), __('Actions')) as $col) {
             echo '<th>' . esc_html($col) . '</th>';
         }
         echo '</tr></thead><tbody>';
@@ -289,6 +289,8 @@ class VH360_Affiliates_Admin {
                 echo '<td><code>' . esc_html($aff->affiliate_code) . '</code></td>';
                 echo '<td>' . esc_html(vh360_affiliates_status_label($aff->status)) . '</td>';
                 echo '<td>' . wp_kses_post($this->format_commission_rate_display($aff->commission_type, $aff->commission_rate)) . '</td>';
+                echo '<td>' . esc_html($this->payout_method_label($aff->payment_method ?? 'other')) . '</td>';
+                echo '<td>' . esc_html($aff->payment_email ?? '') . '</td>';
                 echo '<td>' . esc_html($visits) . '</td>';
                 echo '<td>' . esc_html($refs) . '</td>';
                 echo '<td>' . wp_kses_post(wc_price($totals['pending'])) . '</td>';
@@ -299,7 +301,7 @@ class VH360_Affiliates_Admin {
                 echo '</tr>';
             }
         } else {
-            echo '<tr><td colspan="12">' . esc_html__('No affiliates found.', 'videohub360-affiliates') . '</td></tr>';
+            echo '<tr><td colspan="14">' . esc_html__('No affiliates found.', 'videohub360-affiliates') . '</td></tr>';
         }
 
         echo '</tbody></table></div>';
@@ -399,11 +401,37 @@ class VH360_Affiliates_Admin {
                         </td>
                     </tr>
                     <tr>
-                        <th scope="row"><label for="vh360_aff_payment_email"><?php esc_html_e('Payment Email', 'videohub360-affiliates'); ?></label></th>
+                        <th scope="row"><label for="vh360_aff_payment_method"><?php esc_html_e('Preferred Payout Method', 'videohub360-affiliates'); ?></label></th>
                         <td>
-                            <input type="email" id="vh360_aff_payment_email" name="vh360_aff_payment_email"
+                            <select id="vh360_aff_payment_method" name="vh360_aff_payment_method">
+                                <?php
+                                $current_method = $aff->payment_method ?? 'other';
+                                $methods = array(
+                                    'paypal'        => __('PayPal', 'videohub360-affiliates'),
+                                    'zelle'         => __('Zelle', 'videohub360-affiliates'),
+                                    'cashapp'       => __('Cash App', 'videohub360-affiliates'),
+                                    'bank_transfer' => __('Bank Transfer', 'videohub360-affiliates'),
+                                    'other'         => __('Other', 'videohub360-affiliates'),
+                                );
+                                foreach ($methods as $value => $label) {
+                                    printf(
+                                        '<option value="%s"%s>%s</option>',
+                                        esc_attr($value),
+                                        selected($value, $current_method, false),
+                                        esc_html($label)
+                                    );
+                                }
+                                ?>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><label for="vh360_aff_payment_email"><?php esc_html_e('Payout Details', 'videohub360-affiliates'); ?></label></th>
+                        <td>
+                            <input type="text" id="vh360_aff_payment_email" name="vh360_aff_payment_email"
                                 value="<?php echo esc_attr($aff->payment_email ?? ''); ?>"
                                 class="regular-text">
+                            <p class="description"><?php esc_html_e('Email, phone number, $Cashtag, or instructions needed to send the payout manually.', 'videohub360-affiliates'); ?></p>
                         </td>
                     </tr>
                     <tr>
@@ -467,8 +495,14 @@ class VH360_Affiliates_Admin {
             $comm_type = 'percentage';
         }
 
-        $comm_rate     = max(0, (float) wp_unslash($_POST['vh360_aff_comm_rate'] ?? 0));
-        $payment_email = sanitize_email(wp_unslash($_POST['vh360_aff_payment_email'] ?? ''));
+        $comm_rate = max(0, (float) wp_unslash($_POST['vh360_aff_comm_rate'] ?? 0));
+
+        $allowed_methods = array( 'paypal', 'zelle', 'cashapp', 'bank_transfer', 'other' );
+        $payment_method  = sanitize_key( wp_unslash( $_POST['vh360_aff_payment_method'] ?? 'other' ) );
+        if ( ! in_array( $payment_method, $allowed_methods, true ) ) {
+            $payment_method = 'other';
+        }
+        $payment_email = sanitize_text_field(wp_unslash($_POST['vh360_aff_payment_email'] ?? ''));
         $notes         = sanitize_textarea_field(wp_unslash($_POST['vh360_aff_notes'] ?? ''));
 
         VH360_Affiliates_Database::update_affiliate($affiliate_id, array(
@@ -477,6 +511,7 @@ class VH360_Affiliates_Admin {
             'commission_type' => $comm_type,
             'commission_rate' => $comm_rate,
             'payment_email'   => $payment_email ?: null,
+            'payment_method'  => $payment_method,
             'notes'           => $notes,
         ));
     }
@@ -606,6 +641,23 @@ class VH360_Affiliates_Admin {
         return esc_html(number_format_i18n($rate, 2) . '%');
     }
 
+    /**
+     * Return a human-readable label for a payout method slug.
+     *
+     * @param string $method
+     * @return string
+     */
+    private function payout_method_label($method) {
+        $labels = array(
+            'paypal'        => __('PayPal', 'videohub360-affiliates'),
+            'zelle'         => __('Zelle', 'videohub360-affiliates'),
+            'cashapp'       => __('Cash App', 'videohub360-affiliates'),
+            'bank_transfer' => __('Bank Transfer', 'videohub360-affiliates'),
+            'other'         => __('Other', 'videohub360-affiliates'),
+        );
+        return isset($labels[$method]) ? $labels[$method] : ucwords(str_replace('_', ' ', $method));
+    }
+
     private function build_commission_actions($c, $base, $nonce) {
         $links = array();
         if ($c->status === 'pending') {
@@ -649,15 +701,19 @@ class VH360_Affiliates_Admin {
             echo '<h2>' . esc_html__('Approved Commissions Ready for Payout', 'videohub360-affiliates') . '</h2>';
             echo '<table class="wp-list-table widefat fixed striped"><thead><tr>';
             echo '<th><input type="checkbox" id="vh360-select-all"></th>';
-            foreach (array(__('Affiliate'), __('Order'), __('Amount'), __('Currency'), __('Created')) as $col) {
+            foreach (array(__('Affiliate'), __('Payout Method'), __('Payout Details'), __('Order'), __('Amount'), __('Currency'), __('Created')) as $col) {
                 echo '<th>' . esc_html($col) . '</th>';
             }
             echo '</tr></thead><tbody>';
             foreach ($approved as $c) {
-                $aff = VH360_Affiliates_Database::get_affiliate_by_id($c->affiliate_id);
+                $aff         = VH360_Affiliates_Database::get_affiliate_by_id($c->affiliate_id);
+                $aff_method  = $aff ? ($aff->payment_method ?? 'other') : '';
+                $aff_details = $aff ? ($aff->payment_email ?? '') : '';
                 echo '<tr>';
                 echo '<td><input type="checkbox" name="commission_ids[]" value="' . esc_attr($c->id) . '"></td>';
                 echo '<td>' . esc_html($aff ? $aff->affiliate_code : '#' . $c->affiliate_id) . '</td>';
+                echo '<td>' . esc_html($this->payout_method_label($aff_method)) . '</td>';
+                echo '<td>' . esc_html($aff_details) . '</td>';
                 echo '<td>' . ($c->order_id ? '#' . esc_html($c->order_id) : '—') . '</td>';
                 echo '<td>' . wp_kses_post(wc_price($c->commission_amount)) . '</td>';
                 echo '<td>' . esc_html($c->currency) . '</td>';
@@ -665,6 +721,7 @@ class VH360_Affiliates_Admin {
                 echo '</tr>';
             }
             echo '</tbody></table>';
+            echo '<p class="description">' . esc_html__('Use the affiliate\'s preferred payout method and details shown above to send the payment outside WordPress, then record the payout here.', 'videohub360-affiliates') . '</p>';
             echo '<p>';
             echo '<label>' . esc_html__('Method:', 'videohub360-affiliates') . ' <input type="text" name="payout_method" placeholder="e.g. PayPal, Bank Transfer"></label> ';
             echo '<label>' . esc_html__('Reference:', 'videohub360-affiliates') . ' <input type="text" name="payout_reference" placeholder="Transaction ID"></label> ';
