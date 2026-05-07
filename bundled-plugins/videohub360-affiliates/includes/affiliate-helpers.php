@@ -86,7 +86,8 @@ function vh360_affiliates_sanitize_payout_method( $method ) {
         return $method;
     }
 
-    $first_enabled = array_key_first( $enabled );
+    $enabled_keys  = array_keys( $enabled );
+    $first_enabled = ! empty( $enabled_keys ) ? reset( $enabled_keys ) : '';
 
     return $first_enabled ?: 'other';
 }
