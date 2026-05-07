@@ -33,6 +33,9 @@ class VH360_Affiliates_Database {
         if (version_compare($current, '1.0.0', '<')) {
             self::create_tables();
         }
+        if (version_compare($current, '1.1.0', '<')) {
+            self::migrate_1_1_0();
+        }
     }
 
     /**
@@ -57,6 +60,7 @@ class VH360_Affiliates_Database {
             commission_type VARCHAR(20) NOT NULL DEFAULT 'percentage',
             commission_rate DECIMAL(10,2) NOT NULL DEFAULT 20.00,
             payment_email VARCHAR(190) NULL,
+            payment_method VARCHAR(40) NULL DEFAULT 'other',
             notes TEXT NULL,
             created_at DATETIME NOT NULL,
             updated_at DATETIME NOT NULL,
@@ -154,6 +158,30 @@ class VH360_Affiliates_Database {
         ) {$charset_collate};");
 
         update_option('vh360_affiliates_db_version', '1.0.0');
+    }
+
+    /**
+     * Migration 1.1.0: add payment_method column to the affiliates table.
+     */
+    public static function migrate_1_1_0() {
+        global $wpdb;
+        $table = $wpdb->prefix . 'vh360_affiliates';
+
+        // Only add the column if it does not already exist.
+        $col_exists = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+                 WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = 'payment_method'",
+                DB_NAME,
+                $table
+            )
+        );
+
+        if (empty($col_exists)) {
+            $wpdb->query( "ALTER TABLE `{$table}` ADD COLUMN `payment_method` VARCHAR(40) NULL DEFAULT 'other' AFTER `payment_email`" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.SchemaChange
+        }
+
+        update_option('vh360_affiliates_db_version', '1.1.0');
     }
 
     // -----------------------------------------------------------
