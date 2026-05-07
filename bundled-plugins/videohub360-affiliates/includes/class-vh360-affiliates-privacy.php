@@ -66,12 +66,13 @@ class VH360_Affiliates_Privacy {
             'group_label' => __('Affiliate Account', 'videohub360-affiliates'),
             'item_id'     => 'affiliate-' . $affiliate->id,
             'data'        => array(
-                array('name' => __('Affiliate Code',    'videohub360-affiliates'), 'value' => $affiliate->affiliate_code),
-                array('name' => __('Status',            'videohub360-affiliates'), 'value' => $affiliate->status),
-                array('name' => __('Payment Email',     'videohub360-affiliates'), 'value' => $affiliate->payment_email),
-                array('name' => __('Commission Type',   'videohub360-affiliates'), 'value' => $affiliate->commission_type),
-                array('name' => __('Commission Rate',   'videohub360-affiliates'), 'value' => $affiliate->commission_rate),
-                array('name' => __('Created',           'videohub360-affiliates'), 'value' => $affiliate->created_at),
+                array('name' => __('Affiliate Code',          'videohub360-affiliates'), 'value' => $affiliate->affiliate_code),
+                array('name' => __('Status',                  'videohub360-affiliates'), 'value' => $affiliate->status),
+                array('name' => __('Preferred Payout Method', 'videohub360-affiliates'), 'value' => $affiliate->payment_method ?? ''),
+                array('name' => __('Payout Details',          'videohub360-affiliates'), 'value' => $affiliate->payment_email ?? ''),
+                array('name' => __('Commission Type',         'videohub360-affiliates'), 'value' => $affiliate->commission_type),
+                array('name' => __('Commission Rate',         'videohub360-affiliates'), 'value' => $affiliate->commission_rate),
+                array('name' => __('Created',                 'videohub360-affiliates'), 'value' => $affiliate->created_at),
             ),
         );
 
@@ -112,17 +113,18 @@ class VH360_Affiliates_Privacy {
             return array('items_removed' => 0, 'items_retained' => 0, 'messages' => array(), 'done' => true);
         }
 
-        // Anonymise payment email; keep financial records intact
+        // Anonymise payout details; keep financial records intact
         VH360_Affiliates_Database::update_affiliate($affiliate->id, array(
-            'payment_email' => '',
-            'notes'         => __('[Personal data erased]', 'videohub360-affiliates'),
+            'payment_email'  => '',
+            'payment_method' => 'other',
+            'notes'          => __('[Personal data erased]', 'videohub360-affiliates'),
         ));
 
         return array(
             'items_removed'  => 1,
             'items_retained' => 1,
             'messages'       => array(
-                __('Affiliate payment email was erased. Commission and payout records are retained for financial compliance.', 'videohub360-affiliates'),
+                __('Affiliate payout details were erased. Commission and payout records are retained for financial compliance.', 'videohub360-affiliates'),
             ),
             'done'           => true,
         );
