@@ -426,9 +426,9 @@ class VH360_Affiliates_Admin {
                         </td>
                     </tr>
                     <tr>
-                        <th scope="row"><label for="vh360_aff_payment_email"><?php esc_html_e('Payout Details', 'videohub360-affiliates'); ?></label></th>
+                        <th scope="row"><label for="vh360_aff_payout_details"><?php esc_html_e('Payout Details', 'videohub360-affiliates'); ?></label></th>
                         <td>
-                            <input type="text" id="vh360_aff_payment_email" name="vh360_aff_payment_email"
+                            <input type="text" id="vh360_aff_payout_details" name="vh360_aff_payout_details"
                                 value="<?php echo esc_attr($aff->payment_email ?? ''); ?>"
                                 class="regular-text">
                             <p class="description"><?php esc_html_e('Email, phone number, $Cashtag, or instructions needed to send the payout manually.', 'videohub360-affiliates'); ?></p>
@@ -502,7 +502,7 @@ class VH360_Affiliates_Admin {
         if ( ! in_array( $payment_method, $allowed_methods, true ) ) {
             $payment_method = 'other';
         }
-        $payment_email = sanitize_text_field(wp_unslash($_POST['vh360_aff_payment_email'] ?? ''));
+        $payment_email = sanitize_text_field(wp_unslash($_POST['vh360_aff_payout_details'] ?? ''));
         $notes         = sanitize_textarea_field(wp_unslash($_POST['vh360_aff_notes'] ?? ''));
 
         VH360_Affiliates_Database::update_affiliate($affiliate_id, array(

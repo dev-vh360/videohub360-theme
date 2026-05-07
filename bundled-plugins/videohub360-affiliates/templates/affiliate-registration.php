@@ -75,8 +75,8 @@ $user     = wp_get_current_user();
                 </div>
 
                 <div class="vh360-affiliate-form-group">
-                    <label for="vh360-payment-email"><?php esc_html_e('Payout Details', 'videohub360-affiliates'); ?></label>
-                    <input type="text" id="vh360-payment-email" name="payment_email"
+                    <label for="vh360-payout-details"><?php esc_html_e('Payout Details', 'videohub360-affiliates'); ?></label>
+                    <input type="text" id="vh360-payout-details" name="payout_details"
                            value="<?php echo esc_attr($user->user_email); ?>" required>
                     <span class="vh360-affiliate-field-hint"><?php esc_html_e('Enter the email, phone number, $Cashtag, or instructions needed to pay you manually. Examples: PayPal: paypal@example.com · Zelle: email or phone number · Cash App: $YourCashtag · Bank Transfer: admin will contact you before payout.', 'videohub360-affiliates'); ?></span>
                 </div>

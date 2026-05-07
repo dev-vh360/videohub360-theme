@@ -145,8 +145,8 @@ if (!defined('ABSPATH')) exit;
                     </select>
                 </div>
                 <div class="vh360-affiliate-form-group">
-                    <label for="vh360-payment-email-update"><?php esc_html_e('Payout Details', 'videohub360-affiliates'); ?></label>
-                    <input type="text" id="vh360-payment-email-update" name="payment_email"
+                    <label for="vh360-payout-details-update"><?php esc_html_e('Payout Details', 'videohub360-affiliates'); ?></label>
+                    <input type="text" id="vh360-payout-details-update" name="payout_details"
                            value="<?php echo esc_attr($affiliate->payment_email ?? ''); ?>" required>
                     <span class="vh360-affiliate-field-hint"><?php esc_html_e('Enter the email, phone number, $Cashtag, or instructions needed to send your payout.', 'videohub360-affiliates'); ?></span>
                 </div>

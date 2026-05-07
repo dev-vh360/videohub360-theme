@@ -133,7 +133,7 @@ class VH360_Affiliates_Frontend {
             $payment_method = 'other';
         }
 
-        $payout_details = sanitize_text_field( wp_unslash( $_POST['payment_email'] ?? $user->user_email ) );
+        $payout_details = sanitize_text_field( wp_unslash( $_POST['payout_details'] ?? $user->user_email ) );
 
         $settings  = vh360_affiliates_get_settings();
         $status    = empty($settings['require_manual_approval']) ? 'active' : 'pending';
@@ -274,7 +274,7 @@ class VH360_Affiliates_Frontend {
             $payment_method = 'other';
         }
 
-        $payout_details = sanitize_text_field( wp_unslash( $_POST['payment_email'] ?? '' ) );
+        $payout_details = sanitize_text_field( wp_unslash( $_POST['payout_details'] ?? '' ) );
         if ( empty( $payout_details ) ) {
             return new WP_Error('details', __('Please provide your payout details.', 'videohub360-affiliates'));
         }
@@ -309,7 +309,7 @@ class VH360_Affiliates_Frontend {
             $payment_method = 'other';
         }
 
-        $payout_details = sanitize_text_field( wp_unslash( $_POST['payment_email'] ?? '' ) );
+        $payout_details = sanitize_text_field( wp_unslash( $_POST['payout_details'] ?? '' ) );
         if ( empty( $payout_details ) ) {
             wp_send_json_error(array('message' => __('Please provide your payout details.', 'videohub360-affiliates')));
         }
