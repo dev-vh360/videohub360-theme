@@ -126,13 +126,18 @@ if (!defined('ABSPATH')) exit;
                     <select id="vh360-payment-method-update" name="payment_method" required>
                         <?php
                         $current_method = $affiliate->payment_method ?? 'other';
-                        $methods = array(
-                            'paypal'       => __('PayPal', 'videohub360-affiliates'),
-                            'zelle'        => __('Zelle', 'videohub360-affiliates'),
-                            'cashapp'      => __('Cash App', 'videohub360-affiliates'),
-                            'bank_transfer'=> __('Bank Transfer', 'videohub360-affiliates'),
-                            'other'        => __('Other', 'videohub360-affiliates'),
-                        );
+                        $methods        = vh360_affiliates_get_enabled_payout_methods();
+
+                        if ( $current_method && ! isset( $methods[ $current_method ] ) ) {
+                            $methods = array(
+                                $current_method => sprintf(
+                                    /* translators: %s: payout method label */
+                                    __( '%s (currently unavailable)', 'videohub360-affiliates' ),
+                                    vh360_affiliates_get_payout_method_label( $current_method )
+                                ),
+                            ) + $methods;
+                        }
+
                         foreach ($methods as $value => $label) {
                             printf(
                                 '<option value="%s"%s>%s</option>',
