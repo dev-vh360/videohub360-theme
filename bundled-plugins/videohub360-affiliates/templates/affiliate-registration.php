@@ -99,14 +99,11 @@ $user     = wp_get_current_user();
                             ),
                         );
 
-                        // Escape the notice text first (plain text from settings),
-                        // then replace the {terms_link} placeholder with the safe
-                        // pre-built link HTML. wp_kses() allows only the <a> tag.
-                        $escaped_notice = esc_html( $terms_notice );
-                        echo wp_kses(
-                            str_replace( '{terms_link}', $terms_link, $escaped_notice ),
-                            $allowed_html
-                        );
+                        // Split on the placeholder, escape each text segment individually,
+                        // then rejoin with the pre-built safe link HTML.
+                        $parts         = explode( '{terms_link}', $terms_notice );
+                        $escaped_parts = array_map( 'esc_html', $parts );
+                        echo wp_kses( implode( $terms_link, $escaped_parts ), $allowed_html );
                         ?>
                     </p>
                 <?php endif; ?>

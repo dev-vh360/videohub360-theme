@@ -168,7 +168,7 @@ function vh360_affiliates_get_settings() {
 function vh360_affiliates_get_setting_text( $key, $fallback = '' ) {
     $settings = vh360_affiliates_get_settings();
 
-    if ( isset( $settings[ $key ] ) && '' !== trim( (string) $settings[ $key ] ) ) {
+    if ( isset( $settings[ $key ] ) && is_string( $settings[ $key ] ) && '' !== trim( $settings[ $key ] ) ) {
         return $settings[ $key ];
     }
 
