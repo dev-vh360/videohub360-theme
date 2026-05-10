@@ -120,6 +120,41 @@ class VH360_Affiliates_Admin {
 
         $output['enabled_payout_methods'] = $enabled_payout_methods;
 
+        // Registration page text fields.
+        $text_fields = array(
+            'registration_eyebrow',
+            'registration_heading',
+            'registration_benefit_1',
+            'registration_benefit_2',
+            'registration_benefit_3',
+            'registration_benefit_4',
+            'registration_form_heading',
+            'registration_payout_method_hint',
+            'registration_payout_details_label',
+            'registration_payout_details_hint',
+            'registration_submit_button',
+            'registration_success_heading',
+            'registration_terms_link_text',
+        );
+
+        foreach ( $text_fields as $field ) {
+            if ( isset( $input[ $field ] ) ) {
+                $output[ $field ] = sanitize_text_field( wp_unslash( $input[ $field ] ) );
+            }
+        }
+
+        if ( isset( $input['registration_description'] ) ) {
+            $output['registration_description'] = sanitize_textarea_field(
+                wp_unslash( $input['registration_description'] )
+            );
+        }
+
+        if ( isset( $input['registration_terms_notice'] ) ) {
+            $output['registration_terms_notice'] = sanitize_text_field(
+                wp_unslash( $input['registration_terms_notice'] )
+            );
+        }
+
         return $output;
     }
 
@@ -995,6 +1030,75 @@ class VH360_Affiliates_Admin {
                         </td>
                     </tr>
                 </table>
+
+                <h2><?php esc_html_e( 'Affiliate Registration Page Text', 'videohub360-affiliates' ); ?></h2>
+                <p><?php esc_html_e( 'Customize the text displayed by the [vh360_affiliate_registration] shortcode.', 'videohub360-affiliates' ); ?></p>
+                <table class="form-table">
+                    <tr>
+                        <th><label for="vh360_reg_eyebrow"><?php esc_html_e( 'Eyebrow Text', 'videohub360-affiliates' ); ?></label></th>
+                        <td><input type="text" id="vh360_reg_eyebrow" name="vh360_affiliates_settings[registration_eyebrow]" value="<?php echo esc_attr( $s['registration_eyebrow'] ); ?>" class="regular-text"></td>
+                    </tr>
+                    <tr>
+                        <th><label for="vh360_reg_heading"><?php esc_html_e( 'Heading', 'videohub360-affiliates' ); ?></label></th>
+                        <td><input type="text" id="vh360_reg_heading" name="vh360_affiliates_settings[registration_heading]" value="<?php echo esc_attr( $s['registration_heading'] ); ?>" class="regular-text"></td>
+                    </tr>
+                    <tr>
+                        <th><label for="vh360_reg_description"><?php esc_html_e( 'Description', 'videohub360-affiliates' ); ?></label></th>
+                        <td><textarea id="vh360_reg_description" name="vh360_affiliates_settings[registration_description]" rows="4" class="large-text"><?php echo esc_textarea( $s['registration_description'] ); ?></textarea></td>
+                    </tr>
+                    <tr>
+                        <th><label for="vh360_reg_benefit_1"><?php esc_html_e( 'Benefit 1', 'videohub360-affiliates' ); ?></label></th>
+                        <td><input type="text" id="vh360_reg_benefit_1" name="vh360_affiliates_settings[registration_benefit_1]" value="<?php echo esc_attr( $s['registration_benefit_1'] ); ?>" class="regular-text"></td>
+                    </tr>
+                    <tr>
+                        <th><label for="vh360_reg_benefit_2"><?php esc_html_e( 'Benefit 2', 'videohub360-affiliates' ); ?></label></th>
+                        <td><input type="text" id="vh360_reg_benefit_2" name="vh360_affiliates_settings[registration_benefit_2]" value="<?php echo esc_attr( $s['registration_benefit_2'] ); ?>" class="regular-text"></td>
+                    </tr>
+                    <tr>
+                        <th><label for="vh360_reg_benefit_3"><?php esc_html_e( 'Benefit 3', 'videohub360-affiliates' ); ?></label></th>
+                        <td><input type="text" id="vh360_reg_benefit_3" name="vh360_affiliates_settings[registration_benefit_3]" value="<?php echo esc_attr( $s['registration_benefit_3'] ); ?>" class="regular-text"></td>
+                    </tr>
+                    <tr>
+                        <th><label for="vh360_reg_benefit_4"><?php esc_html_e( 'Benefit 4', 'videohub360-affiliates' ); ?></label></th>
+                        <td><input type="text" id="vh360_reg_benefit_4" name="vh360_affiliates_settings[registration_benefit_4]" value="<?php echo esc_attr( $s['registration_benefit_4'] ); ?>" class="regular-text"></td>
+                    </tr>
+                    <tr>
+                        <th><label for="vh360_reg_form_heading"><?php esc_html_e( 'Form Heading', 'videohub360-affiliates' ); ?></label></th>
+                        <td><input type="text" id="vh360_reg_form_heading" name="vh360_affiliates_settings[registration_form_heading]" value="<?php echo esc_attr( $s['registration_form_heading'] ); ?>" class="regular-text"></td>
+                    </tr>
+                    <tr>
+                        <th><label for="vh360_reg_payout_method_hint"><?php esc_html_e( 'Payout Method Help Text', 'videohub360-affiliates' ); ?></label></th>
+                        <td><input type="text" id="vh360_reg_payout_method_hint" name="vh360_affiliates_settings[registration_payout_method_hint]" value="<?php echo esc_attr( $s['registration_payout_method_hint'] ); ?>" class="large-text"></td>
+                    </tr>
+                    <tr>
+                        <th><label for="vh360_reg_payout_details_label"><?php esc_html_e( 'Payout Details Label', 'videohub360-affiliates' ); ?></label></th>
+                        <td><input type="text" id="vh360_reg_payout_details_label" name="vh360_affiliates_settings[registration_payout_details_label]" value="<?php echo esc_attr( $s['registration_payout_details_label'] ); ?>" class="regular-text"></td>
+                    </tr>
+                    <tr>
+                        <th><label for="vh360_reg_payout_details_hint"><?php esc_html_e( 'Payout Details Help Text', 'videohub360-affiliates' ); ?></label></th>
+                        <td><input type="text" id="vh360_reg_payout_details_hint" name="vh360_affiliates_settings[registration_payout_details_hint]" value="<?php echo esc_attr( $s['registration_payout_details_hint'] ); ?>" class="large-text"></td>
+                    </tr>
+                    <tr>
+                        <th><label for="vh360_reg_submit_button"><?php esc_html_e( 'Submit Button Text', 'videohub360-affiliates' ); ?></label></th>
+                        <td><input type="text" id="vh360_reg_submit_button" name="vh360_affiliates_settings[registration_submit_button]" value="<?php echo esc_attr( $s['registration_submit_button'] ); ?>" class="regular-text"></td>
+                    </tr>
+                    <tr>
+                        <th><label for="vh360_reg_success_heading"><?php esc_html_e( 'Success Heading', 'videohub360-affiliates' ); ?></label></th>
+                        <td><input type="text" id="vh360_reg_success_heading" name="vh360_affiliates_settings[registration_success_heading]" value="<?php echo esc_attr( $s['registration_success_heading'] ); ?>" class="regular-text"></td>
+                    </tr>
+                    <tr>
+                        <th><label for="vh360_reg_terms_link_text"><?php esc_html_e( 'Terms Link Text', 'videohub360-affiliates' ); ?></label></th>
+                        <td><input type="text" id="vh360_reg_terms_link_text" name="vh360_affiliates_settings[registration_terms_link_text]" value="<?php echo esc_attr( $s['registration_terms_link_text'] ); ?>" class="regular-text"></td>
+                    </tr>
+                    <tr>
+                        <th><label for="vh360_reg_terms_notice"><?php esc_html_e( 'Terms Notice', 'videohub360-affiliates' ); ?></label></th>
+                        <td>
+                            <input type="text" id="vh360_reg_terms_notice" name="vh360_affiliates_settings[registration_terms_notice]" value="<?php echo esc_attr( $s['registration_terms_notice'] ); ?>" class="large-text">
+                            <p class="description"><?php esc_html_e( 'Use {terms_link} where the Affiliate Terms link should appear.', 'videohub360-affiliates' ); ?></p>
+                        </td>
+                    </tr>
+                </table>
+
                 <?php submit_button(); ?>
             </form>
         </div>
