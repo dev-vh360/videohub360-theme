@@ -127,11 +127,9 @@ class VH360_Affiliates_Frontend {
 
         $user          = wp_get_current_user();
 
-        $allowed_methods = array( 'paypal', 'zelle', 'cashapp', 'bank_transfer', 'other' );
-        $payment_method  = sanitize_key( wp_unslash( $_POST['payment_method'] ?? 'other' ) );
-        if ( ! in_array( $payment_method, $allowed_methods, true ) ) {
-            $payment_method = 'other';
-        }
+        $payment_method = vh360_affiliates_sanitize_payout_method(
+            wp_unslash( $_POST['payment_method'] ?? '' )
+        );
 
         $payout_details = sanitize_text_field( wp_unslash( $_POST['payout_details'] ?? $user->user_email ) );
 
@@ -268,11 +266,9 @@ class VH360_Affiliates_Frontend {
             return new WP_Error('auth', __('Access denied.', 'videohub360-affiliates'));
         }
 
-        $allowed_methods = array( 'paypal', 'zelle', 'cashapp', 'bank_transfer', 'other' );
-        $payment_method  = sanitize_key( wp_unslash( $_POST['payment_method'] ?? 'other' ) );
-        if ( ! in_array( $payment_method, $allowed_methods, true ) ) {
-            $payment_method = 'other';
-        }
+        $payment_method = vh360_affiliates_sanitize_payout_method(
+            wp_unslash( $_POST['payment_method'] ?? '' )
+        );
 
         $payout_details = sanitize_text_field( wp_unslash( $_POST['payout_details'] ?? '' ) );
         if ( empty( $payout_details ) ) {
@@ -303,11 +299,9 @@ class VH360_Affiliates_Frontend {
             wp_send_json_error(array('message' => __('No affiliate record found.', 'videohub360-affiliates')));
         }
 
-        $allowed_methods = array( 'paypal', 'zelle', 'cashapp', 'bank_transfer', 'other' );
-        $payment_method  = sanitize_key( wp_unslash( $_POST['payment_method'] ?? 'other' ) );
-        if ( ! in_array( $payment_method, $allowed_methods, true ) ) {
-            $payment_method = 'other';
-        }
+        $payment_method = vh360_affiliates_sanitize_payout_method(
+            wp_unslash( $_POST['payment_method'] ?? '' )
+        );
 
         $payout_details = sanitize_text_field( wp_unslash( $_POST['payout_details'] ?? '' ) );
         if ( empty( $payout_details ) ) {

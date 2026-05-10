@@ -98,6 +98,28 @@ class VH360_Affiliates_Admin {
         $output['email_from_email'] = sanitize_email($input['email_from_email'] ?? '');
         $output['email_reply_to']   = sanitize_email($input['email_reply_to'] ?? '');
 
+        // Enabled payout methods.
+        $all_payout_methods     = vh360_affiliates_get_all_payout_methods();
+        $enabled_payout_methods = array();
+
+        if ( isset( $input['enabled_payout_methods'] ) && is_array( $input['enabled_payout_methods'] ) ) {
+            foreach ( $input['enabled_payout_methods'] as $method ) {
+                $method = sanitize_key( wp_unslash( $method ) );
+
+                if ( isset( $all_payout_methods[ $method ] ) ) {
+                    $enabled_payout_methods[] = $method;
+                }
+            }
+        }
+
+        $enabled_payout_methods = array_values( array_unique( $enabled_payout_methods ) );
+
+        if ( empty( $enabled_payout_methods ) ) {
+            $enabled_payout_methods = array( 'other' );
+        }
+
+        $output['enabled_payout_methods'] = $enabled_payout_methods;
+
         return $output;
     }
 
@@ -406,13 +428,18 @@ class VH360_Affiliates_Admin {
                             <select id="vh360_aff_payment_method" name="vh360_aff_payment_method">
                                 <?php
                                 $current_method = $aff->payment_method ?? 'other';
-                                $methods = array(
-                                    'paypal'        => __('PayPal', 'videohub360-affiliates'),
-                                    'zelle'         => __('Zelle', 'videohub360-affiliates'),
-                                    'cashapp'       => __('Cash App', 'videohub360-affiliates'),
-                                    'bank_transfer' => __('Bank Transfer', 'videohub360-affiliates'),
-                                    'other'         => __('Other', 'videohub360-affiliates'),
-                                );
+                                $methods        = vh360_affiliates_get_enabled_payout_methods();
+
+                                if ( $current_method && ! isset( $methods[ $current_method ] ) ) {
+                                    $methods = array(
+                                        $current_method => sprintf(
+                                            /* translators: %s: payout method label */
+                                            __( '%s (currently unavailable)', 'videohub360-affiliates' ),
+                                            vh360_affiliates_get_payout_method_label( $current_method )
+                                        ),
+                                    ) + $methods;
+                                }
+
                                 foreach ($methods as $value => $label) {
                                     printf(
                                         '<option value="%s"%s>%s</option>',
@@ -497,9 +524,9 @@ class VH360_Affiliates_Admin {
 
         $comm_rate = max(0, (float) wp_unslash($_POST['vh360_aff_comm_rate'] ?? 0));
 
-        $allowed_methods = array( 'paypal', 'zelle', 'cashapp', 'bank_transfer', 'other' );
-        $payment_method  = sanitize_key( wp_unslash( $_POST['vh360_aff_payment_method'] ?? 'other' ) );
-        if ( ! in_array( $payment_method, $allowed_methods, true ) ) {
+        $all_methods    = vh360_affiliates_get_all_payout_methods();
+        $payment_method = sanitize_key( wp_unslash( $_POST['vh360_aff_payment_method'] ?? 'other' ) );
+        if ( ! isset( $all_methods[ $payment_method ] ) ) {
             $payment_method = 'other';
         }
         $payment_email = sanitize_text_field(wp_unslash($_POST['vh360_aff_payout_details'] ?? ''));
@@ -648,14 +675,7 @@ class VH360_Affiliates_Admin {
      * @return string
      */
     private function payout_method_label($method) {
-        $labels = array(
-            'paypal'        => __('PayPal', 'videohub360-affiliates'),
-            'zelle'         => __('Zelle', 'videohub360-affiliates'),
-            'cashapp'       => __('Cash App', 'videohub360-affiliates'),
-            'bank_transfer' => __('Bank Transfer', 'videohub360-affiliates'),
-            'other'         => __('Other', 'videohub360-affiliates'),
-        );
-        return isset($labels[$method]) ? $labels[$method] : ucwords(str_replace('_', ' ', $method));
+        return vh360_affiliates_get_payout_method_label( $method );
     }
 
     private function build_commission_actions($c, $base, $nonce) {
@@ -901,6 +921,28 @@ class VH360_Affiliates_Admin {
                     <tr>
                         <th><?php esc_html_e('Minimum Payout Amount', 'videohub360-affiliates'); ?></th>
                         <td><input type="number" name="vh360_affiliates_settings[min_payout_amount]" value="<?php echo esc_attr($s['min_payout_amount']); ?>" step="0.01" min="0" class="small-text"></td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Enabled Payout Methods', 'videohub360-affiliates'); ?></th>
+                        <td>
+                            <?php
+                            $all_methods     = vh360_affiliates_get_all_payout_methods();
+                            $enabled_methods = isset( $s['enabled_payout_methods'] ) && is_array( $s['enabled_payout_methods'] )
+                                ? $s['enabled_payout_methods']
+                                : vh360_affiliates_get_default_enabled_payout_methods();
+
+                            foreach ( $all_methods as $method_key => $method_label ) :
+                                ?>
+                                <label style="display:block;margin-bottom:4px;">
+                                    <input type="checkbox"
+                                           name="vh360_affiliates_settings[enabled_payout_methods][]"
+                                           value="<?php echo esc_attr( $method_key ); ?>"
+                                           <?php checked( in_array( $method_key, $enabled_methods, true ) ); ?>>
+                                    <?php echo esc_html( $method_label ); ?>
+                                </label>
+                            <?php endforeach; ?>
+                            <p class="description"><?php esc_html_e( 'Choose which payout methods affiliates can select during registration and from their dashboard. This only controls manual payout preferences; it does not enable automatic payouts.', 'videohub360-affiliates' ); ?></p>
+                        </td>
                     </tr>
                     <tr>
                         <th><?php esc_html_e('Allow Self-referrals', 'videohub360-affiliates'); ?></th>

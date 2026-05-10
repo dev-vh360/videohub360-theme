@@ -8,6 +8,102 @@
 if (!defined('ABSPATH')) exit;
 
 /**
+ * Return all supported payout methods.
+ *
+ * @return array
+ */
+function vh360_affiliates_get_all_payout_methods() {
+    return array(
+        'paypal'        => __( 'PayPal', 'videohub360-affiliates' ),
+        'zelle'         => __( 'Zelle', 'videohub360-affiliates' ),
+        'cashapp'       => __( 'Cash App', 'videohub360-affiliates' ),
+        'bank_transfer' => __( 'Bank Transfer', 'videohub360-affiliates' ),
+        'other'         => __( 'Other', 'videohub360-affiliates' ),
+    );
+}
+
+/**
+ * Return default enabled payout methods.
+ *
+ * @return array
+ */
+function vh360_affiliates_get_default_enabled_payout_methods() {
+    return array( 'paypal', 'zelle', 'cashapp', 'other' );
+}
+
+/**
+ * Return admin-enabled payout methods.
+ *
+ * @return array
+ */
+function vh360_affiliates_get_enabled_payout_methods() {
+    $settings    = vh360_affiliates_get_settings();
+    $all_methods = vh360_affiliates_get_all_payout_methods();
+
+    $enabled = isset( $settings['enabled_payout_methods'] ) && is_array( $settings['enabled_payout_methods'] )
+        ? $settings['enabled_payout_methods']
+        : vh360_affiliates_get_default_enabled_payout_methods();
+
+    $enabled = array_values( array_intersect( $enabled, array_keys( $all_methods ) ) );
+
+    if ( empty( $enabled ) ) {
+        $enabled = array( 'other' );
+    }
+
+    $methods = array();
+
+    foreach ( $enabled as $method_key ) {
+        if ( isset( $all_methods[ $method_key ] ) ) {
+            $methods[ $method_key ] = $all_methods[ $method_key ];
+        }
+    }
+
+    return $methods;
+}
+
+/**
+ * Check whether a payout method is enabled.
+ *
+ * @param string $method Payout method key.
+ * @return bool
+ */
+function vh360_affiliates_is_payout_method_enabled( $method ) {
+    $enabled = vh360_affiliates_get_enabled_payout_methods();
+    return isset( $enabled[ $method ] );
+}
+
+/**
+ * Get a safe payout method value, validating against enabled methods.
+ *
+ * @param string $method Submitted payout method.
+ * @return string
+ */
+function vh360_affiliates_sanitize_payout_method( $method ) {
+    $method  = sanitize_key( $method );
+    $enabled = vh360_affiliates_get_enabled_payout_methods();
+
+    if ( isset( $enabled[ $method ] ) ) {
+        return $method;
+    }
+
+    $enabled_keys  = array_keys( $enabled );
+    $first_enabled = ! empty( $enabled_keys ) ? reset( $enabled_keys ) : '';
+
+    return $first_enabled ?: 'other';
+}
+
+/**
+ * Get payout method label.
+ *
+ * @param string $method Payout method key.
+ * @return string
+ */
+function vh360_affiliates_get_payout_method_label( $method ) {
+    $all_methods = vh360_affiliates_get_all_payout_methods();
+    return isset( $all_methods[ $method ] ) ? $all_methods[ $method ] : ucwords( str_replace( '_', ' ', $method ) );
+}
+
+/**
  * Return the plugin's saved settings with defaults merged in.
  *
  * @return array
@@ -32,6 +128,7 @@ function vh360_affiliates_get_settings() {
         'email_from_name'          => '',
         'email_from_email'         => '',
         'email_reply_to'           => '',
+        'enabled_payout_methods'   => vh360_affiliates_get_default_enabled_payout_methods(),
     );
     $saved = get_option('vh360_affiliates_settings', array());
     return wp_parse_args($saved, $defaults);
