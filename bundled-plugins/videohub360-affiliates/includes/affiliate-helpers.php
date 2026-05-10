@@ -109,6 +109,12 @@ function vh360_affiliates_get_payout_method_label( $method ) {
  * @return array
  */
 function vh360_affiliates_get_settings() {
+    static $cached = null;
+
+    if ( null !== $cached ) {
+        return $cached;
+    }
+
     $defaults = array(
         'enabled'                  => 0,
         'require_manual_approval'  => 1,
@@ -128,10 +134,45 @@ function vh360_affiliates_get_settings() {
         'email_from_name'          => '',
         'email_from_email'         => '',
         'email_reply_to'           => '',
-        'enabled_payout_methods'   => vh360_affiliates_get_default_enabled_payout_methods(),
+        'enabled_payout_methods'            => vh360_affiliates_get_default_enabled_payout_methods(),
+
+        // Registration page text.
+        'registration_eyebrow'              => __( 'Partner Program', 'videohub360-affiliates' ),
+        'registration_heading'              => __( 'Become a VideoHub360 Affiliate', 'videohub360-affiliates' ),
+        'registration_description'          => __( 'Earn commission when you refer new customers. Promote VideoHub360 with your referral link and track your clicks, referrals, and commissions from your dashboard.', 'videohub360-affiliates' ),
+        'registration_benefit_1'            => __( 'Earn commission on eligible purchases', 'videohub360-affiliates' ),
+        'registration_benefit_2'            => __( 'Track referrals from your dashboard', 'videohub360-affiliates' ),
+        'registration_benefit_3'            => __( 'Simple referral link sharing', 'videohub360-affiliates' ),
+        'registration_benefit_4'            => __( 'Manual payout records', 'videohub360-affiliates' ),
+        'registration_form_heading'         => __( 'Apply Now', 'videohub360-affiliates' ),
+        'registration_payout_method_hint'   => __( 'Choose how you would prefer to receive affiliate payouts.', 'videohub360-affiliates' ),
+        'registration_payout_details_label' => __( 'Payout Details', 'videohub360-affiliates' ),
+        'registration_payout_details_hint'  => __( 'Enter the email, phone number, $Cashtag, or instructions needed to send your payout using your selected method.', 'videohub360-affiliates' ),
+        'registration_submit_button'        => __( 'Submit Application', 'videohub360-affiliates' ),
+        'registration_success_heading'      => __( 'Application Submitted', 'videohub360-affiliates' ),
+        'registration_terms_link_text'      => __( 'Affiliate Terms', 'videohub360-affiliates' ),
+        'registration_terms_notice'         => __( 'By applying, you agree to our {terms_link}.', 'videohub360-affiliates' ),
     );
-    $saved = get_option('vh360_affiliates_settings', array());
-    return wp_parse_args($saved, $defaults);
+    $saved    = get_option( 'vh360_affiliates_settings', array() );
+    $cached   = wp_parse_args( $saved, $defaults );
+    return $cached;
+}
+
+/**
+ * Get a single setting text value, falling back to a provided default.
+ *
+ * @param string $key      Setting key.
+ * @param string $fallback Fallback value if the setting is empty.
+ * @return string
+ */
+function vh360_affiliates_get_setting_text( $key, $fallback = '' ) {
+    $settings = vh360_affiliates_get_settings();
+
+    if ( isset( $settings[ $key ] ) && '' !== trim( (string) $settings[ $key ] ) ) {
+        return $settings[ $key ];
+    }
+
+    return $fallback;
 }
 
 /**
