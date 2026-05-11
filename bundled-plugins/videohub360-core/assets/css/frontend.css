@@ -2620,7 +2620,8 @@ button.videohub360-search-submit {
     opacity: 0;
     transition: opacity 0.15s;
 }
-.videohub360-videos-item:hover .videohub360-videos-play-btn {
+.videohub360-videos-item:hover .videohub360-videos-play-btn,
+.videohub360-videos-thumb-wrap:focus-within .videohub360-videos-play-btn {
     opacity: 1;
 }
 .videohub360-videos-play-btn svg {
