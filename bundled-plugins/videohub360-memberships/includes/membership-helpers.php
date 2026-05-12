@@ -233,12 +233,15 @@ function vh360_post_requires_membership($post_id) {
         return apply_filters('vh360_post_requires_membership', $required_plan, $post_id);
     }
 
-    // For videohub360 posts, check for course-level membership inheritance.
+    // For videohub360 posts, check for course-level membership inheritance,
+    // but only when the Course / Lesson Features toggle is enabled.
     // videohub360_get_effective_lesson_required_membership() reads post meta
     // directly and must NOT call vh360_post_requires_membership() to avoid
     // infinite recursion.
     if (
         get_post_type($post_id) === 'videohub360' &&
+        function_exists('videohub360_course_features_enabled') &&
+        videohub360_course_features_enabled() &&
         function_exists('videohub360_get_effective_lesson_required_membership')
     ) {
         $course_required_plan = videohub360_get_effective_lesson_required_membership($post_id);

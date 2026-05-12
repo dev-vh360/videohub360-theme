@@ -136,7 +136,7 @@ class VideoHub360_Course_Foundation {
                 'single'            => true,
                 'show_in_rest'      => true,
                 'sanitize_callback' => 'sanitize_text_field',
-                'auth_callback'     => array( $this, 'meta_auth_callback' ),
+                'auth_callback'     => array( $this, 'term_meta_auth_callback' ),
             ) );
         }
 
@@ -145,7 +145,7 @@ class VideoHub360_Course_Foundation {
             'single'            => true,
             'show_in_rest'      => true,
             'sanitize_callback' => 'sanitize_textarea_field',
-            'auth_callback'     => array( $this, 'meta_auth_callback' ),
+            'auth_callback'     => array( $this, 'term_meta_auth_callback' ),
         ) );
 
         register_term_meta( 'videohub360_series', '_vh360_course_cta_url', array(
@@ -153,7 +153,7 @@ class VideoHub360_Course_Foundation {
             'single'            => true,
             'show_in_rest'      => true,
             'sanitize_callback' => 'esc_url_raw',
-            'auth_callback'     => array( $this, 'meta_auth_callback' ),
+            'auth_callback'     => array( $this, 'term_meta_auth_callback' ),
         ) );
 
         register_term_meta( 'videohub360_series', '_vh360_course_required_membership', array(
@@ -161,7 +161,7 @@ class VideoHub360_Course_Foundation {
             'single'            => true,
             'show_in_rest'      => true,
             'sanitize_callback' => array( $this, 'sanitize_membership_key' ),
-            'auth_callback'     => array( $this, 'meta_auth_callback' ),
+            'auth_callback'     => array( $this, 'term_meta_auth_callback' ),
         ) );
 
         $course_int_fields = array(
@@ -175,7 +175,7 @@ class VideoHub360_Course_Foundation {
                 'single'            => true,
                 'show_in_rest'      => true,
                 'sanitize_callback' => 'absint',
-                'auth_callback'     => array( $this, 'meta_auth_callback' ),
+                'auth_callback'     => array( $this, 'term_meta_auth_callback' ),
             ) );
         }
     }
@@ -600,12 +600,21 @@ class VideoHub360_Course_Foundation {
     }
 
     /**
-     * Auth callback for registered meta – requires edit_posts capability.
+     * Auth callback for registered post meta – requires edit_posts capability.
      *
      * @return bool
      */
     public function meta_auth_callback() {
         return current_user_can( 'edit_posts' );
+    }
+
+    /**
+     * Auth callback for registered term meta – requires manage_categories capability.
+     *
+     * @return bool
+     */
+    public function term_meta_auth_callback() {
+        return current_user_can( 'manage_categories' );
     }
 }
 
