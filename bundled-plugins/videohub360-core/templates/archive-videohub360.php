@@ -273,59 +273,22 @@ $is_astra = function_exists('videohub360_is_astra_theme') && videohub360_is_astr
         
         <?php if ($videohub360_query->have_posts()): ?>
         <div class="videohub360-videos-grid">
-        <?php 
+        <?php
+            $widgets = VideoHub360_Core::get_instance()->get_component('widgets');
             while ($videohub360_query->have_posts()) : $videohub360_query->the_post();
-                $views = get_post_meta(get_the_ID(), '_videohub360_post_views_count', true);
-                $views = $views ? $views : 0;
-                
-                // Check live badge settings - respect stream stopped status
-                $is_live = get_post_meta(get_the_ID(), '_vh360_is_live', true);
-                $stream_stopped = get_post_meta(get_the_ID(), '_vh360_stream_stopped', true);
-                $live_badge = get_post_meta(get_the_ID(), '_vh360_live_badge', true);
-                $badge_text = get_post_meta(get_the_ID(), '_vh360_badge_text', true) ?: 'LIVE';
-                $badge_color = get_post_meta(get_the_ID(), '_vh360_badge_color', true) ?: '#e53935';
-                $show_live_badge = ($is_live === 'yes' && $stream_stopped !== 'yes' && $live_badge !== 'no');
+                if ($widgets && method_exists($widgets, 'render_video_card')) {
+                    echo $widgets->render_video_card(get_the_ID(), array(
+                        'show_author'       => 'yes',
+                        'show_avatar'       => 'yes',
+                        'show_views'        => 'yes',
+                        'show_date'         => 'yes',
+                        'show_excerpt'      => 'no',
+                        'show_live_badge'   => 'yes',
+                        'show_live_viewers' => 'yes',
+                    ));
+                }
+            endwhile;
         ?>
-            <div class="videohub360-videos-item">
-                <a href="<?php the_permalink(); ?>" class="videohub360-videos-thumb-wrap">
-                    <?php if (has_post_thumbnail()) {
-                        the_post_thumbnail('large', array('class' => 'videohub360-videos-thumb', 'alt' => get_the_title()));
-                    } else { ?>
-                        <div class="videohub360-videos-thumb" style="background:#ccc; width:100%; height:100%;"></div>
-                    <?php } ?>
-                    <?php if ($show_live_badge): ?>
-                        <span class="videohub360-live-badge" style="background-color: <?php echo esc_attr($badge_color); ?>;">
-                            <?php echo esc_html($badge_text); ?>
-                        </span>
-                    <?php endif; ?>
-                    <?php if ($show_live_badge): ?>
-                        <span class="vh360-live-viewers-badge" data-post-id="<?php echo esc_attr(get_the_ID()); ?>">
-                            <span class="vh360-viewer-count">•</span> <?php echo esc_html__('watching', 'videohub360'); ?>
-                        </span>
-                    <?php endif; ?>
-                    <span class="videohub360-videos-play-btn" aria-label="Play video">
-                        <svg viewBox="0 0 60 60">
-                            <circle cx="30" cy="30" r="28" opacity="0.18"/>
-                            <polygon points="24,18 46,30 24,42" />
-                        </svg>
-                    </span>
-                </a>
-                <div style="flex:1 1 0; min-width:0;">
-                    <a class="videohub360-videos-title" href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
-                    <?php 
-                    // videohub360_render_author_badge() handles all escaping internally
-                    echo videohub360_render_author_badge(get_the_ID(), array(
-                        'variant' => 'compact',
-                        'avatar_size' => 32,
-                        'show_username' => false, // Only show display name
-                    )); 
-                    ?>
-                    <div class="videohub360-videos-meta">
-                        <?php echo get_the_date(); ?> &bull; <?php echo esc_html( videohub360_compact_views( $views ) ); ?> views
-                    </div>
-                </div>
-            </div>
-        <?php endwhile; ?>
         </div>
         <?php
         // Custom pagination with our custom query

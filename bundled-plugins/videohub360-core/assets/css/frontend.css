@@ -2645,13 +2645,17 @@ button.videohub360-search-submit {
     width: 36px;
     height: 36px;
     flex-shrink: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #e0e0e0;
 }
 .videohub360-videos-avatar {
     width: 36px;
     height: 36px;
-    border-radius: 50%;
+    border-radius: 50% !important;
     object-fit: cover;
     display: block;
+    background: #e0e0e0;
 }
 .videohub360-videos-text {
     min-width: 0;
@@ -4124,36 +4128,32 @@ a.vh360-author-row:hover .vh360-author-name {
    Video Card Hover Animations
    ========================================================================== */
 
-/* Enhanced hover state for video cards */
+/* YouTube-style hover: no card lift or shadow; subtle thumbnail zoom */
 .videohub360-videos-item {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: none;
 }
 
 .videohub360-videos-item:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 6px 24px rgba(0, 99, 177, 0.12);
+    transform: none;
+    box-shadow: none;
 }
 
 /* Thumbnail zoom on hover */
-.videohub360-videos-thumb-wrap {
-    overflow: hidden;
-}
-
 .videohub360-videos-thumb {
     transition: transform 0.3s ease;
 }
 
 .videohub360-videos-item:hover .videohub360-videos-thumb {
-    transform: scale(1.05);
+    transform: scale(1.03);
 }
 
-/* Play button scale on hover */
+/* Play button scale on hover — keep translate so it stays centered */
 .videohub360-videos-play-btn {
     transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
 .videohub360-videos-item:hover .videohub360-videos-play-btn {
-    transform: scale(1.1);
+    transform: translate(-50%, -50%) scale(1.05);
     opacity: 1;
 }
 
