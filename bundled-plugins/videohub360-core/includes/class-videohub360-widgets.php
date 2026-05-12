@@ -792,7 +792,7 @@ class VideoHub360_Widgets {
         $terms = get_terms( array(
             'taxonomy'   => 'videohub360_series',
             'hide_empty' => ( $atts['hide_empty'] === 'yes' ),
-            'number'     => 0, // 0 = no limit
+            // Omitting 'number' fetches all terms so we can sort before limiting.
         ) );
 
         if ( is_wp_error($terms) || empty($terms) ) {
@@ -874,7 +874,7 @@ class VideoHub360_Widgets {
                     $term_link     = get_term_link( $term );
                     $lesson_count  = count( $lessons );
 
-                    // Normalise level for data attribute (lowercase, trimmed).
+                    // Normalize level for data attribute (lowercase, trimmed).
                     $level_key = strtolower( trim( $level ) );
 
                     // Determine access type for data attribute.
