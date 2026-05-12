@@ -734,10 +734,10 @@ $locations = get_terms(array(
             ?>
             <div class="vh360-form-field">
                 <label for="vh360_series" class="vh360-form-label">
-                    <?php echo $series_label; ?>
+                    <?php echo esc_html($series_label); ?>
                 </label>
                 <select id="vh360_series" name="vh360_series" class="vh360-select">
-                    <option value=""><?php echo $series_placeholder; ?></option>
+                    <option value=""><?php echo esc_html($series_placeholder); ?></option>
                     <?php 
                     $selected_series = !empty($video_data['series']) ? $video_data['series'][0] : 0;
                     foreach ($series as $serie) : 

@@ -121,18 +121,22 @@ class VideoHub360_Widgets {
         );
         
         // Register course-mode.css so the shortcode and widget can enqueue it on demand
-        $course_css_path = VIDEOHUB360_PLUGIN_DIR . 'assets/css/course-mode.css';
-        $course_css_url  = VIDEOHUB360_ASSETS_URL . 'css/course-mode.css';
-        $course_css_ver  = file_exists($course_css_path) ? filemtime($course_css_path) : VIDEOHUB360_VERSION;
-
-        if (!wp_style_is('vh360-course-mode', 'registered')) {
-            wp_register_style(
-                'vh360-course-mode',
-                $course_css_url,
-                array(),
-                $course_css_ver
-            );
+        $this->maybe_register_course_mode_style();
+    }
+    
+    /**
+     * Register course-mode.css if not already registered.
+     * Shared by register_elementor_styles() and register_global_styles().
+     */
+    private function maybe_register_course_mode_style() {
+        if ( wp_style_is('vh360-course-mode', 'registered') ) {
+            return;
         }
+        $css_path = VIDEOHUB360_PLUGIN_DIR . 'assets/css/course-mode.css';
+        $css_url  = VIDEOHUB360_ASSETS_URL . 'css/course-mode.css';
+        $css_ver  = file_exists($css_path) ? filemtime($css_path) : VIDEOHUB360_VERSION;
+
+        wp_register_style( 'vh360-course-mode', $css_url, array(), $css_ver );
     }
     
     /**
@@ -202,18 +206,7 @@ class VideoHub360_Widgets {
      * on any page type.
      */
     public function register_global_styles() {
-        if (!wp_style_is('vh360-course-mode', 'registered')) {
-            $course_css_path = VIDEOHUB360_PLUGIN_DIR . 'assets/css/course-mode.css';
-            $course_css_url  = VIDEOHUB360_ASSETS_URL . 'css/course-mode.css';
-            $course_css_ver  = file_exists($course_css_path) ? filemtime($course_css_path) : VIDEOHUB360_VERSION;
-
-            wp_register_style(
-                'vh360-course-mode',
-                $course_css_url,
-                array(),
-                $course_css_ver
-            );
-        }
+        $this->maybe_register_course_mode_style();
     }
     
     /**
