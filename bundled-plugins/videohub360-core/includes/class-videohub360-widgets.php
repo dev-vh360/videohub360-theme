@@ -616,6 +616,12 @@ class VideoHub360_Widgets {
         $badge_text = !empty($args['badge_text']) ? $args['badge_text'] : esc_html__('LIVE', 'videohub360');
         $badge_color = !empty($args['badge_color']) ? $args['badge_color'] : '#e53935';
         
+        // Gather author data for YouTube-style details row
+        $author_id    = (int) get_post_field('post_author', $post_id);
+        $display_name = get_the_author_meta('display_name', $author_id);
+        $profile_url  = function_exists('videohub360_get_profile_url') ? videohub360_get_profile_url($author_id) : get_author_posts_url($author_id);
+        $avatar_url   = function_exists('videohub360_get_avatar_url') ? videohub360_get_avatar_url($author_id, 36) : get_avatar_url($author_id, array('size' => 36));
+
         ob_start();
         ?>
         <div class="videohub360-videos-item">
@@ -649,47 +655,55 @@ class VideoHub360_Widgets {
             </a>
             
             <div class="videohub360-videos-content">
-                <a href="<?php the_permalink(); ?>" class="videohub360-videos-title">
-                    <?php the_title(); ?>
-                </a>
-                
-                <?php if ($args['show_author'] === 'yes'): ?>
-                    <?php 
-                    // videohub360_render_author_badge() handles all escaping internally
-                    echo videohub360_render_author_badge($post_id, array(
-                        'variant' => 'compact',
-                        'show_avatar' => $args['show_avatar'] === 'yes',
-                        'show_username' => false, // Only show display name
-                        'avatar_size' => 32,
-                    )); 
-                    ?>
-                <?php endif; ?>
-                
-                <?php if ($args['show_views'] === 'yes' || $args['show_date'] === 'yes'): ?>
-                    <div class="videohub360-videos-meta">
-                <?php if ($args['show_views'] === 'yes'): ?>
-                            <span class="views-count"><?php echo videohub360_compact_views($views); ?> <?php echo esc_html__('views', 'videohub360'); ?></span>
+                <div class="videohub360-videos-details">
+                    <?php if ($args['show_author'] === 'yes' && $args['show_avatar'] === 'yes'): ?>
+                        <a href="<?php echo esc_url($profile_url); ?>" class="videohub360-videos-avatar-link" tabindex="-1" aria-hidden="true">
+                            <img src="<?php echo esc_url($avatar_url); ?>" alt="<?php echo esc_attr($display_name); ?>" class="videohub360-videos-avatar" width="36" height="36" loading="lazy">
+                        </a>
+                    <?php else: ?>
+                        <span></span>
+                    <?php endif; ?>
+
+                    <div class="videohub360-videos-text">
+                        <a href="<?php the_permalink(); ?>" class="videohub360-videos-title">
+                            <?php the_title(); ?>
+                        </a>
+
+                        <?php if ($args['show_author'] === 'yes'): ?>
+                            <a href="<?php echo esc_url($profile_url); ?>" class="videohub360-videos-channel">
+                                <?php echo esc_html($display_name); ?>
+                            </a>
                         <?php endif; ?>
-                        <?php if ($args['show_date'] === 'yes'): ?>
-                            <?php if ($args['show_views'] === 'yes') echo ' • '; ?>
-                            <span class="publish-date"><?php echo get_the_date(); ?></span>
+
+                        <?php if ($args['show_views'] === 'yes' || $args['show_date'] === 'yes'): ?>
+                            <div class="videohub360-videos-meta">
+                                <?php if ($args['show_views'] === 'yes'): ?>
+                                    <span class="views-count"><?php echo videohub360_compact_views($views); ?> <?php echo esc_html__('views', 'videohub360'); ?></span>
+                                <?php endif; ?>
+                                <?php if ($args['show_views'] === 'yes' && $args['show_date'] === 'yes'): ?>
+                                    <span class="videohub360-meta-separator">•</span>
+                                <?php endif; ?>
+                                <?php if ($args['show_date'] === 'yes'): ?>
+                                    <span class="publish-date"><?php echo get_the_date(); ?></span>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if ($args['show_excerpt'] === 'yes'): ?>
+                            <div class="videohub360-videos-excerpt">
+                                <?php 
+                                $excerpt = get_the_excerpt();
+                                $excerpt_length = intval($args['excerpt_length']);
+                                if (strlen($excerpt) > $excerpt_length) {
+                                    echo esc_html(substr($excerpt, 0, $excerpt_length)) . '...';
+                                } else {
+                                    echo esc_html($excerpt);
+                                }
+                                ?>
+                            </div>
                         <?php endif; ?>
                     </div>
-                <?php endif; ?>
-                
-                <?php if ($args['show_excerpt'] === 'yes'): ?>
-                    <div class="videohub360-videos-excerpt">
-                        <?php 
-                        $excerpt = get_the_excerpt();
-                        $excerpt_length = intval($args['excerpt_length']);
-                        if (strlen($excerpt) > $excerpt_length) {
-                            echo esc_html(substr($excerpt, 0, $excerpt_length)) . '...';
-                        } else {
-                            echo esc_html($excerpt);
-                        }
-                        ?>
-                    </div>
-                <?php endif; ?>
+                </div>
             </div>
         </div>
         <?php

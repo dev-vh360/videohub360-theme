@@ -2576,26 +2576,26 @@ button.videohub360-search-submit {
    ================================================ */
 
 .videohub360-videos-item {
-    background: var(--vh360-bg-white);
-    border-radius: 7px;
+    background: transparent;
+    border-radius: 0;
     overflow: visible;
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    box-shadow: none;
     padding: 0;
-    transition: box-shadow 0.13s;
 }
 .videohub360-videos-item:hover {
-    box-shadow: 0 4px 18px rgba(0,99,177,.09);
+    box-shadow: none;
+    transform: none;
 }
 .videohub360-videos-thumb-wrap {
     position: relative;
     width: 100%;
     aspect-ratio: 16 / 9;
     overflow: hidden;
-    border-radius: 7px 7px 0 0;
-    background: #eee;
+    border-radius: 12px;
+    background: #f1f1f1;
     display: block;
 }
 .videohub360-videos-thumb {
@@ -2617,6 +2617,12 @@ button.videohub360-search-submit {
     display: flex;
     align-items: center;
     justify-content: center;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.videohub360-videos-item:hover .videohub360-videos-play-btn,
+.videohub360-videos-thumb-wrap:focus-within .videohub360-videos-play-btn {
+    opacity: 1;
 }
 .videohub360-videos-play-btn svg {
     display: block;
@@ -2625,23 +2631,79 @@ button.videohub360-search-submit {
     fill: #fff;
     margin-left: 3px;
 }
-.videohub360-videos-title {
-    font-size: 1.11em;
-    margin: 16px 0 4px 0;
-    color: #1a1a1a;
-    font-weight: 500;
-    text-decoration: none;
+
+/* YouTube-style details row */
+.videohub360-videos-details {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 12px;
+    margin-top: 12px;
+    align-items: flex-start;
+}
+.videohub360-videos-avatar-link {
     display: block;
-    padding: 0 14px;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #e0e0e0;
+}
+.videohub360-videos-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50% !important;
+    object-fit: cover;
+    display: block;
+    background: #e0e0e0;
+}
+.videohub360-videos-text {
+    min-width: 0;
+}
+.videohub360-videos-title {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.35;
+    margin: 0 0 4px 0;
+    color: #0f0f0f;
+    text-decoration: none;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    padding: 0;
 }
 .videohub360-videos-title:hover {
-    text-decoration: underline;
+    text-decoration: none;
+    color: #0f0f0f;
+}
+.videohub360-videos-channel {
+    display: block;
+    color: #606060;
+    font-size: 14px;
+    line-height: 1.35;
+    text-decoration: none;
+    margin-bottom: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.videohub360-videos-channel:hover {
+    color: #0f0f0f;
+    text-decoration: none;
 }
 .videohub360-videos-meta {
-    font-size: 0.93em;
-    color: #7a7a7a;
-    margin-bottom: 10px;
-    padding: 0 14px;
+    font-size: 14px;
+    line-height: 1.35;
+    color: #606060;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+.videohub360-meta-separator {
+    color: #606060;
 }
 
 /* Live badge */
@@ -2706,18 +2768,19 @@ button.videohub360-search-submit {
     align-items: flex-start;
     gap: 16px;
     padding: 12px;
-    border: 1px solid #e0e0e0;
+    border: 1px solid #e8e8e8;
     border-radius: 8px;
     background: #fff;
     width: 100%;
     max-width: none;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: none;
+    transition: border-color 0.15s;
 }
 
 .videohub360-videos-list .videohub360-videos-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    transform: none;
+    box-shadow: none;
+    border-color: #c8c8c8;
 }
 
 .videohub360-videos-list .videohub360-videos-thumb-wrap {
@@ -2744,13 +2807,12 @@ button.videohub360-search-submit {
 }
 
 .videohub360-videos-list .videohub360-videos-title {
-    padding: 0; /* Remove padding for list view */
     margin: 0 0 4px 0;
     font-size: 1.08em;
 }
 
 .videohub360-videos-list .videohub360-videos-meta {
-    padding: 0; /* Remove padding for list view */
+    /* inherits base styles */
 }
 
 /* Elementor container overrides for list view */
@@ -2791,7 +2853,7 @@ button.videohub360-search-submit {
 
 /* Grid view needs padding for content */
 .videohub360-videos-grid .videohub360-videos-content {
-    padding: 0 14px 14px 14px;
+    padding: 0;
 }
 
 .videohub360-videos-grid .videohub360-videos-title {
@@ -2799,13 +2861,10 @@ button.videohub360-search-submit {
     max-width: none;
     overflow-wrap: break-word;
     white-space: normal;
-    font-size: 1.08em;
-    margin: 10px 0 1px 0;
-    padding: 0 14px; /* Keep padding for grid view */
 }
 
 .videohub360-videos-grid .videohub360-videos-meta {
-    padding: 0 14px; /* Keep padding for grid view */
+    padding: 0;
 }
 
 /* ================================================
@@ -2853,37 +2912,36 @@ button.videohub360-search-submit {
     .videohub360-videos-item {
         flex-direction: column;
         align-items: stretch;
-        box-shadow: 0 1px 6px 0 rgba(0,99,177,.07);
-        border-radius: 12px;
-        padding: 0 0 14px 0;
+        box-shadow: none;
+        border-radius: 0;
+        padding: 0;
         min-height: 0;
-        background: var(--vh360-bg-white);
+        background: transparent;
         margin: 0 0 0 0;
     }
     .videohub360-videos-thumb-wrap {
         width: 100%;
         max-width: 100%;
         min-width: 0;
-        aspect-ratio: 4/3;
-        border-radius: 12px 12px 0 0;
+        aspect-ratio: 16/9;
+        border-radius: 12px;
         margin: 0;
-        background: #eee;
+        background: #f1f1f1;
         box-sizing: border-box;
         display: block;
         overflow: hidden;
         padding: 0;
     }
     .videohub360-videos-thumb {
-        border-radius: 12px 12px 0 0;
+        border-radius: 12px;
     }
     .videohub360-videos-title, .videohub360-videos-meta {
-        padding-left: 18px;
-        padding-right: 18px;
+        padding-left: 0;
+        padding-right: 0;
     }
     .videohub360-videos-title {
-        margin-top: 16px;
+        margin-top: 0;
         margin-bottom: 4px;
-        font-size: 1.15em;
     }
     .videohub360-videos-meta {
         margin-bottom: 2px;
@@ -2916,10 +2974,10 @@ button.videohub360-search-submit {
         gap: 16px;
     }
     .videohub360-videos-thumb-wrap {
-        border-radius: 10px 10px 0 0;
+        border-radius: 10px;
     }
     .videohub360-videos-thumb {
-        border-radius: 10px 10px 0 0;
+        border-radius: 10px;
     }
     .videohub360-sidebar {
         padding: 14px 6px;
@@ -4070,36 +4128,32 @@ a.vh360-author-row:hover .vh360-author-name {
    Video Card Hover Animations
    ========================================================================== */
 
-/* Enhanced hover state for video cards */
+/* YouTube-style hover: no card lift or shadow; subtle thumbnail zoom */
 .videohub360-videos-item {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: none;
 }
 
 .videohub360-videos-item:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 6px 24px rgba(0, 99, 177, 0.12);
+    transform: none;
+    box-shadow: none;
 }
 
 /* Thumbnail zoom on hover */
-.videohub360-videos-thumb-wrap {
-    overflow: hidden;
-}
-
 .videohub360-videos-thumb {
     transition: transform 0.3s ease;
 }
 
 .videohub360-videos-item:hover .videohub360-videos-thumb {
-    transform: scale(1.05);
+    transform: scale(1.03);
 }
 
-/* Play button scale on hover */
+/* Play button scale on hover — keep translate so it stays centered */
 .videohub360-videos-play-btn {
     transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
 .videohub360-videos-item:hover .videohub360-videos-play-btn {
-    transform: scale(1.1);
+    transform: translate(-50%, -50%) scale(1.05);
     opacity: 1;
 }
 
