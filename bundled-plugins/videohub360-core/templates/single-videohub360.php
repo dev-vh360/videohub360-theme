@@ -558,6 +558,30 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
             <div class="videohub360-content">
                 <?php the_content(); ?>
             </div>
+
+            <?php
+            // ---- Course / Lesson Navigation (additive block) -------------------------
+            // Only shown when Course / Lesson Features are enabled and the current post
+            // belongs to a videohub360_series term (i.e. is part of a course).
+            if (
+                function_exists('videohub360_course_features_enabled') &&
+                videohub360_course_features_enabled() &&
+                function_exists('videohub360_get_lesson_course') &&
+                function_exists('videohub360_get_lesson_navigation')
+            ) {
+                $vh360_lesson_course = videohub360_get_lesson_course(get_the_ID());
+                if ($vh360_lesson_course) {
+                    $vh360_post_id    = get_the_ID();
+                    $vh360_nav_data   = videohub360_get_lesson_navigation($vh360_post_id);
+                    $vh360_nav_file   = VIDEOHUB360_PLUGIN_DIR . 'templates/course/lesson-navigation.php';
+                    if (file_exists($vh360_nav_file)) {
+                        include $vh360_nav_file;
+                    }
+                    unset($vh360_lesson_course, $vh360_nav_data, $vh360_nav_file);
+                }
+            }
+            // ---- End Course / Lesson Navigation --------------------------------------
+            ?>
             
             <?php
             // Render chat based on chat placement. Inline and popup modes are handled directly, while

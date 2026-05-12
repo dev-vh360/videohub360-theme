@@ -24,6 +24,7 @@ class VideoHub360_Frontend {
     private function init_hooks() {
         add_action('wp_enqueue_scripts', array($this, 'register_hero_assets'), 5);
         add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_assets'));
+        add_action('wp_enqueue_scripts', array($this, 'enqueue_course_assets'));
         add_filter('template_include', array($this, 'template_include'));
         add_action('wp_head', array($this, 'add_viewport_meta'));
         
@@ -623,6 +624,18 @@ class VideoHub360_Frontend {
             }
         }
 
+        // Course landing page: load taxonomy template when Course / Lesson Features are enabled.
+        if (
+            is_tax('videohub360_series') &&
+            function_exists('videohub360_course_features_enabled') &&
+            videohub360_course_features_enabled()
+        ) {
+            $course_template = VIDEOHUB360_TEMPLATES_DIR . 'taxonomy-videohub360_series.php';
+            if (file_exists($course_template)) {
+                return $course_template;
+            }
+        }
+
         return $template;
     }
 
@@ -640,7 +653,35 @@ class VideoHub360_Frontend {
      * Check if current page is a VideoHub360 page
      */
     private function is_videohub360_page() {
-        return is_singular('videohub360') || is_post_type_archive('videohub360');
+        return is_singular('videohub360') || is_post_type_archive('videohub360') || is_tax('videohub360_series');
+    }
+
+    /**
+     * Enqueue course-mode CSS when Course / Lesson Features are enabled.
+     *
+     * Loaded on:
+     *   - videohub360_series taxonomy archive pages (always when features enabled)
+     *   - single videohub360 posts (may belong to a series; selectors are scoped)
+     */
+    public function enqueue_course_assets() {
+        if (!function_exists('videohub360_course_features_enabled') || !videohub360_course_features_enabled()) {
+            return;
+        }
+
+        if (!is_singular('videohub360') && !is_tax('videohub360_series')) {
+            return;
+        }
+
+        $css_path    = VIDEOHUB360_PLUGIN_DIR . 'assets/css/course-mode.css';
+        $css_url     = VIDEOHUB360_ASSETS_URL  . 'css/course-mode.css';
+        $css_version = file_exists($css_path) ? filemtime($css_path) : VIDEOHUB360_VERSION;
+
+        wp_enqueue_style(
+            'vh360-course-mode',
+            $css_url,
+            array(),
+            $css_version
+        );
     }
     
     /**
