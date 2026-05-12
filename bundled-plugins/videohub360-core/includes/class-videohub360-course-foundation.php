@@ -698,7 +698,7 @@ if ( ! function_exists( 'videohub360_get_lesson_course' ) ) {
         }
         // Sort by term_id for consistency.
         usort( $terms, function( $a, $b ) {
-            return $a->term_id - $b->term_id;
+            return $a->term_id <=> $b->term_id;
         } );
         return $terms[0];
     }
@@ -750,24 +750,29 @@ if ( ! function_exists( 'videohub360_get_course_lessons' ) ) {
             return array();
         }
 
-        // Sort by module number → lesson number → post date.
-        usort( $posts, function( $a, $b ) {
-            $mod_a = (int) get_post_meta( $a->ID, '_vh360_lesson_module_number', true );
-            $mod_b = (int) get_post_meta( $b->ID, '_vh360_lesson_module_number', true );
+        // Pre-fetch lesson meta for all posts to avoid N*log(N) DB queries.
+        $post_ids = wp_list_pluck( $posts, 'ID' );
+        $mod_nums = array();
+        $les_nums = array();
+        foreach ( $post_ids as $pid ) {
+            $mod_nums[ $pid ] = (int) get_post_meta( $pid, '_vh360_lesson_module_number', true );
+            $les_nums[ $pid ] = (int) get_post_meta( $pid, '_vh360_lesson_number', true );
+        }
 
-            if ( $mod_a !== $mod_b ) {
-                return $mod_a - $mod_b;
+        // Sort by module number → lesson number → post date.
+        usort( $posts, function( $a, $b ) use ( $mod_nums, $les_nums ) {
+            $mod_cmp = $mod_nums[ $a->ID ] <=> $mod_nums[ $b->ID ];
+            if ( $mod_cmp !== 0 ) {
+                return $mod_cmp;
             }
 
-            $num_a = (int) get_post_meta( $a->ID, '_vh360_lesson_number', true );
-            $num_b = (int) get_post_meta( $b->ID, '_vh360_lesson_number', true );
-
-            if ( $num_a !== $num_b ) {
-                return $num_a - $num_b;
+            $num_cmp = $les_nums[ $a->ID ] <=> $les_nums[ $b->ID ];
+            if ( $num_cmp !== 0 ) {
+                return $num_cmp;
             }
 
             // Fall back to post date.
-            return strtotime( $a->post_date ) - strtotime( $b->post_date );
+            return strtotime( $a->post_date ) <=> strtotime( $b->post_date );
         } );
 
         return $posts;
