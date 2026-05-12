@@ -216,8 +216,8 @@
     padding: 8px 16px;
     font-size: 15px;
     font-weight: 500;
-    color: var(--bg-color);
-    background-color: var(--primary-color);
+    color: var(--vh360-header-signin-text-color);
+    background-color: var(--vh360-header-signin-bg-color);
     border: none;
     border-radius: 6px;
     text-decoration: none;
@@ -233,13 +233,13 @@
 }
 
 .vh360-sign-in-btn:hover {
-    background-color: var(--secondary-color);
-    color: var(--bg-color);
+    background-color: var(--vh360-header-signin-hover-bg-color);
+    color: var(--vh360-header-signin-hover-text-color);
 }
 
 .vh360-sign-in-btn:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--vh360-header-signin-bg-color) 25%, transparent);
 }
 
 .vh360-sign-in-btn:active {
@@ -257,9 +257,9 @@
     padding: 8px 16px;
     font-size: 15px;
     font-weight: 500;
-    color: var(--primary-color);
+    color: var(--vh360-header-register-text-color);
     background-color: transparent;
-    border: 2px solid var(--primary-color);
+    border: 2px solid var(--vh360-header-register-border-color);
     border-radius: 6px;
     text-decoration: none;
     cursor: pointer;
@@ -272,14 +272,14 @@
 }
 
 .vh360-register-btn:hover {
-    color: var(--bg-color);
-    background-color: var(--primary-color);
+    color: var(--vh360-header-register-hover-text-color);
+    background-color: var(--vh360-header-register-hover-bg-color);
     transform: scale(1.02);
 }
 
 .vh360-register-btn:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--vh360-header-register-border-color) 25%, transparent);
 }
 
 .vh360-register-btn:active {
