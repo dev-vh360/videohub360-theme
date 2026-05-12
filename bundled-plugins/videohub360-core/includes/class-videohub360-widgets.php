@@ -33,6 +33,9 @@ class VideoHub360_Widgets {
         
         // Register scripts for Elementor to use in editor and frontend
         add_action('elementor/frontend/after_register_scripts', array($this, 'register_elementor_scripts'));
+        
+        // Register course-mode.css globally (needed for shortcode pages without Elementor)
+        add_action('wp_enqueue_scripts', array($this, 'register_global_styles'), 5);
     }
     
     /**
@@ -41,6 +44,7 @@ class VideoHub360_Widgets {
     public function register_shortcodes() {
         add_shortcode('videohub360_videos', array($this, 'enhanced_videos_shortcode'));
         add_shortcode('videohub360_hero', array($this, 'hero_banner_shortcode'));
+        add_shortcode('vh360_course_catalog', array($this, 'course_catalog_shortcode'));
     }
     
     /**
@@ -77,6 +81,12 @@ class VideoHub360_Widgets {
         if (class_exists('Elementor_VideoHub360_Continue_Watching_Widget')) {
             $widgets_manager->register(new Elementor_VideoHub360_Continue_Watching_Widget());
         }
+        
+        // Load course catalog widget
+        require_once __DIR__ . '/elementor-videohub360-course-catalog-widget.php';
+        if (class_exists('Elementor_VideoHub360_Course_Catalog_Widget')) {
+            $widgets_manager->register(new Elementor_VideoHub360_Course_Catalog_Widget());
+        }
     }
     
     /**
@@ -109,6 +119,20 @@ class VideoHub360_Widgets {
             array('vh360-variables'),
             $css_ver
         );
+        
+        // Register course-mode.css so the shortcode and widget can enqueue it on demand
+        $course_css_path = VIDEOHUB360_PLUGIN_DIR . 'assets/css/course-mode.css';
+        $course_css_url  = VIDEOHUB360_ASSETS_URL . 'css/course-mode.css';
+        $course_css_ver  = file_exists($course_css_path) ? filemtime($course_css_path) : VIDEOHUB360_VERSION;
+
+        if (!wp_style_is('vh360-course-mode', 'registered')) {
+            wp_register_style(
+                'vh360-course-mode',
+                $course_css_url,
+                array(),
+                $course_css_ver
+            );
+        }
     }
     
     /**
@@ -169,6 +193,27 @@ class VideoHub360_Widgets {
             'videoReactionNonce' => wp_create_nonce('vh360_video_reaction'),
             'playlistNonce' => wp_create_nonce('vh360_playlist'),
         ));
+    }
+    
+    /**
+     * Register global styles (non-Elementor pages)
+     *
+     * Registers course-mode.css so the shortcode can call wp_enqueue_style()
+     * on any page type.
+     */
+    public function register_global_styles() {
+        if (!wp_style_is('vh360-course-mode', 'registered')) {
+            $course_css_path = VIDEOHUB360_PLUGIN_DIR . 'assets/css/course-mode.css';
+            $course_css_url  = VIDEOHUB360_ASSETS_URL . 'css/course-mode.css';
+            $course_css_ver  = file_exists($course_css_path) ? filemtime($course_css_path) : VIDEOHUB360_VERSION;
+
+            wp_register_style(
+                'vh360-course-mode',
+                $course_css_url,
+                array(),
+                $course_css_ver
+            );
+        }
     }
     
     /**
@@ -712,6 +757,182 @@ class VideoHub360_Widgets {
         $GLOBALS['post'] = $post_backup;
         wp_reset_postdata();
         
+        return ob_get_clean();
+    }
+
+    /**
+     * Course Catalog shortcode handler
+     *
+     * Renders all videohub360_series terms as course cards.
+     * Only active when Course / Lesson Features are enabled.
+     *
+     * @param array $atts Shortcode attributes.
+     * @return string HTML output.
+     */
+    public function course_catalog_shortcode( $atts ) {
+        // Guard: Course / Lesson Features must be enabled
+        if ( ! function_exists('videohub360_course_features_enabled') || ! videohub360_course_features_enabled() ) {
+            if ( current_user_can('manage_options') ) {
+                return '<p class="vh360-course-catalog-disabled">' . esc_html__('Course / Lesson Features must be enabled to use the Course Catalog.', 'videohub360') . '</p>';
+            }
+            return '';
+        }
+
+        $atts = shortcode_atts( array(
+            'columns'            => 3,
+            'limit'              => 12,
+            'hide_empty'         => 'yes',
+            'orderby'            => 'meta_order',
+            'order'              => 'ASC',
+            'show_filters'       => 'no',
+            'show_instructor'    => 'yes',
+            'show_lesson_count'  => 'yes',
+            'show_access_badge'  => 'yes',
+            'show_description'   => 'yes',
+        ), $atts, 'vh360_course_catalog' );
+
+        // Enqueue styles
+        wp_enqueue_style('vh360-course-mode');
+
+        // Query terms
+        $terms = get_terms( array(
+            'taxonomy'   => 'videohub360_series',
+            'hide_empty' => ( $atts['hide_empty'] === 'yes' ),
+            'number'     => absint( $atts['limit'] ),
+        ) );
+
+        if ( is_wp_error($terms) || empty($terms) ) {
+            return '<p class="vh360-course-catalog-empty">' . esc_html__('No courses found.', 'videohub360') . '</p>';
+        }
+
+        // Sort by _vh360_course_order when orderby=meta_order
+        if ( $atts['orderby'] === 'meta_order' ) {
+            usort( $terms, function( $a, $b ) use ( $atts ) {
+                $order_a = (int) get_term_meta( $a->term_id, '_vh360_course_order', true );
+                $order_b = (int) get_term_meta( $b->term_id, '_vh360_course_order', true );
+                if ( $order_a === $order_b ) {
+                    return strcmp( $a->name, $b->name );
+                }
+                $cmp = $order_a <=> $order_b;
+                return ( strtoupper($atts['order']) === 'DESC' ) ? -$cmp : $cmp;
+            } );
+        } elseif ( $atts['orderby'] === 'name' ) {
+            usort( $terms, function( $a, $b ) use ( $atts ) {
+                $cmp = strcmp( $a->name, $b->name );
+                return ( strtoupper($atts['order']) === 'DESC' ) ? -$cmp : $cmp;
+            } );
+        }
+
+        $columns = max( 1, min( 6, absint( $atts['columns'] ) ) );
+
+        ob_start();
+        ?>
+        <div class="vh360-course-catalog" data-columns="<?php echo esc_attr($columns); ?>">
+            <div class="vh360-course-catalog-grid vh360-course-catalog-cols-<?php echo esc_attr($columns); ?>">
+                <?php foreach ( $terms as $term ) :
+                    $subtitle      = get_term_meta( $term->term_id, '_vh360_course_subtitle', true );
+                    $short_desc    = get_term_meta( $term->term_id, '_vh360_course_short_description', true );
+                    $level         = get_term_meta( $term->term_id, '_vh360_course_level', true );
+                    $duration      = get_term_meta( $term->term_id, '_vh360_course_duration', true );
+                    $image_id      = (int) get_term_meta( $term->term_id, '_vh360_course_featured_image_id', true );
+                    $required_plan = function_exists('videohub360_get_course_required_membership')
+                                        ? videohub360_get_course_required_membership( $term->term_id )
+                                        : '';
+                    $lessons       = function_exists('videohub360_get_course_lessons')
+                                        ? videohub360_get_course_lessons( $term->term_id )
+                                        : array();
+                    $instructor    = ( $atts['show_instructor'] === 'yes' && function_exists('videohub360_get_course_instructor') )
+                                        ? videohub360_get_course_instructor( $term->term_id )
+                                        : false;
+                    $term_link     = get_term_link( $term );
+                    $lesson_count  = count( $lessons );
+
+                    // Access badge label
+                    $access_badge_label = '';
+                    if ( $atts['show_access_badge'] === 'yes' ) {
+                        if ( empty($required_plan) || $required_plan === false ) {
+                            $access_badge_label = esc_html__( 'Free Access', 'videohub360' );
+                        } elseif ( $required_plan === 'any' ) {
+                            $access_badge_label = esc_html__( 'Member Access', 'videohub360' );
+                        } else {
+                            $access_badge_label = ucwords( str_replace( array('_', '-'), ' ', $required_plan ) );
+                        }
+                    }
+                ?>
+                <div class="vh360-course-catalog-card">
+                    <?php if ( $image_id ) : ?>
+                    <a href="<?php echo esc_url( is_wp_error($term_link) ? '#' : $term_link ); ?>" class="vh360-course-catalog-image" aria-hidden="true" tabindex="-1">
+                        <?php echo wp_get_attachment_image( $image_id, 'medium_large', false, array( 'class' => 'vh360-course-catalog-img', 'alt' => esc_attr($term->name) ) ); ?>
+                    </a>
+                    <?php else : ?>
+                    <a href="<?php echo esc_url( is_wp_error($term_link) ? '#' : $term_link ); ?>" class="vh360-course-catalog-image vh360-course-catalog-image-placeholder" aria-hidden="true" tabindex="-1">
+                        <span class="vh360-course-catalog-image-icon">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                        </span>
+                    </a>
+                    <?php endif; ?>
+
+                    <div class="vh360-course-catalog-body">
+                        <?php if ( $access_badge_label ) : ?>
+                        <span class="vh360-course-catalog-badge"><?php echo esc_html($access_badge_label); ?></span>
+                        <?php endif; ?>
+
+                        <h3 class="vh360-course-catalog-title">
+                            <a href="<?php echo esc_url( is_wp_error($term_link) ? '#' : $term_link ); ?>">
+                                <?php echo esc_html( $term->name ); ?>
+                            </a>
+                        </h3>
+
+                        <?php if ( $atts['show_description'] === 'yes' && ( $subtitle || $short_desc ) ) : ?>
+                        <p class="vh360-course-catalog-description">
+                            <?php echo esc_html( $subtitle ?: $short_desc ); ?>
+                        </p>
+                        <?php endif; ?>
+
+                        <div class="vh360-course-catalog-meta">
+                            <?php if ( $level ) : ?>
+                            <span class="vh360-course-catalog-meta-item vh360-course-catalog-level">
+                                <?php echo esc_html( ucfirst($level) ); ?>
+                            </span>
+                            <?php endif; ?>
+                            <?php if ( $duration ) : ?>
+                            <span class="vh360-course-catalog-meta-item vh360-course-catalog-duration">
+                                <?php echo esc_html( $duration ); ?>
+                            </span>
+                            <?php endif; ?>
+                            <?php if ( $atts['show_lesson_count'] === 'yes' ) : ?>
+                            <span class="vh360-course-catalog-meta-item vh360-course-catalog-lessons">
+                                <?php
+                                echo esc_html(
+                                    sprintf(
+                                        /* translators: %d: number of lessons */
+                                        _n( '%d Lesson', '%d Lessons', $lesson_count, 'videohub360' ),
+                                        $lesson_count
+                                    )
+                                );
+                                ?>
+                            </span>
+                            <?php endif; ?>
+                        </div>
+
+                        <?php if ( $atts['show_instructor'] === 'yes' && $instructor ) : ?>
+                        <div class="vh360-course-catalog-instructor">
+                            <?php echo get_avatar( $instructor->ID, 24, '', $instructor->display_name, array( 'class' => 'vh360-course-catalog-instructor-avatar' ) ); ?>
+                            <span class="vh360-course-catalog-instructor-name"><?php echo esc_html( $instructor->display_name ); ?></span>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="vh360-course-catalog-footer">
+                        <a href="<?php echo esc_url( is_wp_error($term_link) ? '#' : $term_link ); ?>" class="vh360-course-catalog-button">
+                            <?php esc_html_e( 'View Course', 'videohub360' ); ?>
+                        </a>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php
         return ob_get_clean();
     }
 }

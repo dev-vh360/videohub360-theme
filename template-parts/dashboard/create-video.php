@@ -76,6 +76,20 @@ if (isset($_GET['edit']) && !empty($_GET['edit'])) {
     }
 }
 
+// Course / Lesson feature detection
+$vh360_course_features_enabled = function_exists('videohub360_course_features_enabled') && videohub360_course_features_enabled();
+
+// Load lesson meta in edit mode when course features are enabled
+if ( $edit_mode && $vh360_course_features_enabled ) {
+    $video_data['lesson_module_title']  = get_post_meta( $edit_video_id, '_vh360_lesson_module_title', true );
+    $video_data['lesson_module_number'] = get_post_meta( $edit_video_id, '_vh360_lesson_module_number', true );
+    $video_data['lesson_number']        = get_post_meta( $edit_video_id, '_vh360_lesson_number', true );
+    $video_data['lesson_duration']      = get_post_meta( $edit_video_id, '_vh360_lesson_duration', true );
+    $video_data['lesson_resource_url']  = get_post_meta( $edit_video_id, '_vh360_lesson_resource_url', true );
+    $video_data['lesson_resource_label']= get_post_meta( $edit_video_id, '_vh360_lesson_resource_label', true );
+    $video_data['lesson_is_preview']    = get_post_meta( $edit_video_id, '_vh360_lesson_is_preview', true );
+}
+
 // Get taxonomies for form
 $categories = get_terms(array(
     'taxonomy' => 'videohub360_category',
@@ -706,12 +720,24 @@ $locations = get_terms(array(
             <?php endif; ?>
 
             <?php if (!empty($series) && !is_wp_error($series)) : ?>
+            <?php
+            $series_label = esc_html__( 'Series', 'videohub360-theme' );
+            $series_placeholder = esc_html__( 'Select a series...', 'videohub360-theme' );
+            if ( $vh360_course_features_enabled && function_exists( 'videohub360_get_course_label' ) ) {
+                $series_label       = sprintf(
+                    /* translators: %s: Course label (e.g. "Course") */
+                    esc_html__( '%s / Series', 'videohub360-theme' ),
+                    videohub360_get_course_label()
+                );
+                $series_placeholder = esc_html__( 'Select a course or series...', 'videohub360-theme' );
+            }
+            ?>
             <div class="vh360-form-field">
                 <label for="vh360_series" class="vh360-form-label">
-                    <?php esc_html_e('Series', 'videohub360-theme'); ?>
+                    <?php echo $series_label; ?>
                 </label>
                 <select id="vh360_series" name="vh360_series" class="vh360-select">
-                    <option value=""><?php esc_html_e('Select a series...', 'videohub360-theme'); ?></option>
+                    <option value=""><?php echo $series_placeholder; ?></option>
                     <?php 
                     $selected_series = !empty($video_data['series']) ? $video_data['series'][0] : 0;
                     foreach ($series as $serie) : 
@@ -760,6 +786,138 @@ $locations = get_terms(array(
                 </p>
             </div>
         </div>
+
+        <?php if ( $vh360_course_features_enabled ) : ?>
+        <!-- Lesson Details Section -->
+        <div class="vh360-form-section">
+            <h3 class="vh360-form-section-title"><?php esc_html_e( 'Lesson Details', 'videohub360-theme' ); ?></h3>
+            <p class="vh360-form-help" style="margin-bottom: 16px;">
+                <?php esc_html_e( 'Use these fields when this video is part of a course or learning track.', 'videohub360-theme' ); ?>
+            </p>
+
+            <div class="vh360-form-field">
+                <label for="vh360_lesson_module_title" class="vh360-form-label">
+                    <?php esc_html_e( 'Module Title', 'videohub360-theme' ); ?>
+                </label>
+                <input
+                    type="text"
+                    id="vh360_lesson_module_title"
+                    name="_vh360_lesson_module_title"
+                    class="vh360-input"
+                    placeholder="<?php esc_attr_e( 'e.g. Getting Started', 'videohub360-theme' ); ?>"
+                    value="<?php echo esc_attr( $video_data['lesson_module_title'] ?? '' ); ?>"
+                >
+                <p class="vh360-form-help">
+                    <?php esc_html_e( 'The module or section this lesson belongs to.', 'videohub360-theme' ); ?>
+                </p>
+            </div>
+
+            <div class="vh360-form-field">
+                <label for="vh360_lesson_module_number" class="vh360-form-label">
+                    <?php esc_html_e( 'Module Number', 'videohub360-theme' ); ?>
+                </label>
+                <input
+                    type="number"
+                    id="vh360_lesson_module_number"
+                    name="_vh360_lesson_module_number"
+                    class="vh360-input"
+                    min="0"
+                    step="1"
+                    placeholder="<?php esc_attr_e( '1', 'videohub360-theme' ); ?>"
+                    value="<?php echo esc_attr( $video_data['lesson_module_number'] ?? '' ); ?>"
+                >
+                <p class="vh360-form-help">
+                    <?php esc_html_e( 'Used to order modules within the course.', 'videohub360-theme' ); ?>
+                </p>
+            </div>
+
+            <div class="vh360-form-field">
+                <label for="vh360_lesson_number" class="vh360-form-label">
+                    <?php esc_html_e( 'Lesson Number', 'videohub360-theme' ); ?>
+                </label>
+                <input
+                    type="number"
+                    id="vh360_lesson_number"
+                    name="_vh360_lesson_number"
+                    class="vh360-input"
+                    min="0"
+                    step="1"
+                    placeholder="<?php esc_attr_e( '1', 'videohub360-theme' ); ?>"
+                    value="<?php echo esc_attr( $video_data['lesson_number'] ?? '' ); ?>"
+                >
+                <p class="vh360-form-help">
+                    <?php esc_html_e( 'Used to order lessons within a module.', 'videohub360-theme' ); ?>
+                </p>
+            </div>
+
+            <div class="vh360-form-field">
+                <label for="vh360_lesson_duration" class="vh360-form-label">
+                    <?php esc_html_e( 'Lesson Duration', 'videohub360-theme' ); ?>
+                </label>
+                <input
+                    type="text"
+                    id="vh360_lesson_duration"
+                    name="_vh360_lesson_duration"
+                    class="vh360-input"
+                    placeholder="<?php esc_attr_e( 'e.g. 12:30 or 45 min', 'videohub360-theme' ); ?>"
+                    value="<?php echo esc_attr( $video_data['lesson_duration'] ?? '' ); ?>"
+                >
+                <p class="vh360-form-help">
+                    <?php esc_html_e( 'Display duration shown on course pages.', 'videohub360-theme' ); ?>
+                </p>
+            </div>
+
+            <div class="vh360-form-field">
+                <label for="vh360_lesson_resource_url" class="vh360-form-label">
+                    <?php esc_html_e( 'Resource URL', 'videohub360-theme' ); ?>
+                </label>
+                <input
+                    type="url"
+                    id="vh360_lesson_resource_url"
+                    name="_vh360_lesson_resource_url"
+                    class="vh360-input"
+                    placeholder="<?php esc_attr_e( 'https://example.com/resource.pdf', 'videohub360-theme' ); ?>"
+                    value="<?php echo esc_attr( $video_data['lesson_resource_url'] ?? '' ); ?>"
+                >
+                <p class="vh360-form-help">
+                    <?php esc_html_e( 'Optional downloadable resource or worksheet for this lesson.', 'videohub360-theme' ); ?>
+                </p>
+            </div>
+
+            <div class="vh360-form-field">
+                <label for="vh360_lesson_resource_label" class="vh360-form-label">
+                    <?php esc_html_e( 'Resource Label', 'videohub360-theme' ); ?>
+                </label>
+                <input
+                    type="text"
+                    id="vh360_lesson_resource_label"
+                    name="_vh360_lesson_resource_label"
+                    class="vh360-input"
+                    placeholder="<?php esc_attr_e( 'e.g. Download Worksheet', 'videohub360-theme' ); ?>"
+                    value="<?php echo esc_attr( $video_data['lesson_resource_label'] ?? '' ); ?>"
+                >
+                <p class="vh360-form-help">
+                    <?php esc_html_e( 'Link text for the resource URL.', 'videohub360-theme' ); ?>
+                </p>
+            </div>
+
+            <div class="vh360-form-field">
+                <label class="vh360-checkbox-label">
+                    <input
+                        type="checkbox"
+                        id="vh360_lesson_is_preview"
+                        name="_vh360_lesson_is_preview"
+                        value="yes"
+                        <?php checked( ( $video_data['lesson_is_preview'] ?? '' ) === 'yes' ); ?>
+                    >
+                    <span><?php esc_html_e( 'Free Preview Lesson', 'videohub360-theme' ); ?></span>
+                </label>
+                <p class="vh360-form-help">
+                    <?php esc_html_e( 'Allow non-members to preview this lesson for free.', 'videohub360-theme' ); ?>
+                </p>
+            </div>
+        </div>
+        <?php endif; // $vh360_course_features_enabled ?>
 
         <!-- Ad Settings Section (Collapsible) -->
         <div class="vh360-form-section vh360-form-section-collapsible">
