@@ -62,6 +62,29 @@ function vh360_output_dynamic_css() {
     $header_menu_text_transform = get_theme_mod('vh360_header_menu_text_transform', 'none');
     $header_menu_letter_spacing = get_theme_mod('vh360_header_menu_letter_spacing', 0);
     
+    // Header Action Colors
+    $header_signin_bg_color                 = get_theme_mod('vh360_header_signin_bg_color', '#2563eb');
+    $header_signin_text_color               = get_theme_mod('vh360_header_signin_text_color', '#ffffff');
+    $header_signin_hover_bg_color           = get_theme_mod('vh360_header_signin_hover_bg_color', '#1e40af');
+    $header_signin_hover_text_color         = get_theme_mod('vh360_header_signin_hover_text_color', '#ffffff');
+
+    $header_register_text_color             = get_theme_mod('vh360_header_register_text_color', '#2563eb');
+    $header_register_border_color           = get_theme_mod('vh360_header_register_border_color', '#2563eb');
+    $header_register_hover_bg_color         = get_theme_mod('vh360_header_register_hover_bg_color', '#2563eb');
+    $header_register_hover_text_color       = get_theme_mod('vh360_header_register_hover_text_color', '#ffffff');
+
+    $header_icon_color                      = get_theme_mod('vh360_header_icon_color', '#1f2937');
+    $header_icon_hover_color                = get_theme_mod('vh360_header_icon_hover_color', '#2563eb');
+    $header_icon_hover_bg_color             = get_theme_mod('vh360_header_icon_hover_bg_color', '#f9fafb');
+
+    $header_notification_badge_bg_color     = get_theme_mod('vh360_header_notification_badge_bg_color', '#ef4444');
+    $header_notification_badge_text_color   = get_theme_mod('vh360_header_notification_badge_text_color', '#ffffff');
+    $header_notification_badge_border_color = get_theme_mod('vh360_header_notification_badge_border_color', '#ffffff');
+
+    $header_message_badge_bg_color          = get_theme_mod('vh360_header_message_badge_bg_color', '#3b82f6');
+    $header_message_badge_text_color        = get_theme_mod('vh360_header_message_badge_text_color', '#ffffff');
+    $header_message_badge_border_color      = get_theme_mod('vh360_header_message_badge_border_color', '#ffffff');
+
     // Button colors
     $button_bg_color            = get_theme_mod('vh360_button_bg_color', '#2563eb');
     $button_text_color          = get_theme_mod('vh360_button_text_color', '#ffffff');
@@ -179,6 +202,29 @@ function vh360_output_dynamic_css() {
             --button-text-color: <?php echo esc_attr($button_text_color); ?>;
             --button-hover-bg-color: <?php echo esc_attr($button_hover_bg_color); ?>;
             --button-hover-text-color: <?php echo esc_attr($button_hover_text_color); ?>;
+
+            /* Header Action Colors */
+            --vh360-header-signin-bg-color: <?php echo esc_attr($header_signin_bg_color); ?>;
+            --vh360-header-signin-text-color: <?php echo esc_attr($header_signin_text_color); ?>;
+            --vh360-header-signin-hover-bg-color: <?php echo esc_attr($header_signin_hover_bg_color); ?>;
+            --vh360-header-signin-hover-text-color: <?php echo esc_attr($header_signin_hover_text_color); ?>;
+
+            --vh360-header-register-text-color: <?php echo esc_attr($header_register_text_color); ?>;
+            --vh360-header-register-border-color: <?php echo esc_attr($header_register_border_color); ?>;
+            --vh360-header-register-hover-bg-color: <?php echo esc_attr($header_register_hover_bg_color); ?>;
+            --vh360-header-register-hover-text-color: <?php echo esc_attr($header_register_hover_text_color); ?>;
+
+            --vh360-header-icon-color: <?php echo esc_attr($header_icon_color); ?>;
+            --vh360-header-icon-hover-color: <?php echo esc_attr($header_icon_hover_color); ?>;
+            --vh360-header-icon-hover-bg-color: <?php echo esc_attr($header_icon_hover_bg_color); ?>;
+
+            --vh360-header-notification-badge-bg-color: <?php echo esc_attr($header_notification_badge_bg_color); ?>;
+            --vh360-header-notification-badge-text-color: <?php echo esc_attr($header_notification_badge_text_color); ?>;
+            --vh360-header-notification-badge-border-color: <?php echo esc_attr($header_notification_badge_border_color); ?>;
+
+            --vh360-header-message-badge-bg-color: <?php echo esc_attr($header_message_badge_bg_color); ?>;
+            --vh360-header-message-badge-text-color: <?php echo esc_attr($header_message_badge_text_color); ?>;
+            --vh360-header-message-badge-border-color: <?php echo esc_attr($header_message_badge_border_color); ?>;
             
             /* Status & Alert Colors */
             --success-color: <?php echo esc_attr($success_color); ?>;

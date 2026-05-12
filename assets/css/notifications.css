@@ -28,19 +28,19 @@
     padding: 0;
     border: none;
     background: transparent;
-    color: var(--text-color);
+    color: var(--vh360-header-icon-color);
     cursor: pointer;
     transition: var(--transition);
     border-radius: var(--border-radius);
 }
 
 .vh360-notification-bell-btn:hover {
-    background: var(--bg-light);
-    color: var(--primary-color);
+    background: var(--vh360-header-icon-hover-bg-color);
+    color: var(--vh360-header-icon-hover-color);
 }
 
 .vh360-notification-bell-btn:focus {
-    outline: 2px solid var(--primary-color);
+    outline: 2px solid var(--vh360-header-icon-hover-color);
     outline-offset: 2px;
 }
 
@@ -62,10 +62,10 @@
     font-size: 11px;
     font-weight: 600;
     line-height: 1;
-    color: #fff;
-    background: var(--error-color);
+    color: var(--vh360-header-notification-badge-text-color);
+    background: var(--vh360-header-notification-badge-bg-color);
     border-radius: 9px;
-    border: 2px solid var(--bg-color);
+    border: 2px solid var(--vh360-header-notification-badge-border-color);
 }
 
 /* ==========================================================================
@@ -306,4 +306,57 @@
 
 .vh360-notification-dropdown[style*="display: block"] {
     animation: vh360-notification-fade-in 0.2s ease-out;
+}
+
+/* ==========================================================================
+   Message Icon
+   ========================================================================== */
+
+.vh360-message-icon {
+    position: relative;
+    margin-right: 1rem;
+}
+
+.vh360-message-icon-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    color: var(--vh360-header-icon-color);
+    text-decoration: none;
+    border-radius: 6px;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.vh360-message-icon-link:hover {
+    background: var(--vh360-header-icon-hover-bg-color);
+    color: var(--vh360-header-icon-hover-color);
+}
+
+.vh360-message-icon-svg {
+    width: 24px;
+    height: 24px;
+}
+
+.vh360-message-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: var(--vh360-header-message-badge-bg-color);
+    color: var(--vh360-header-message-badge-text-color);
+    border: 2px solid var(--vh360-header-message-badge-border-color);
+    border-radius: 10px;
+    font-size: 0.625rem;
+    font-weight: 600;
+    padding: 0.125rem 0.375rem;
+    line-height: 1;
+    min-width: 18px;
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .vh360-message-icon {
+        margin-right: 0.5rem;
+    }
 }

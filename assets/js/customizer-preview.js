@@ -277,6 +277,109 @@
         });
     });
 
+    // Header Action Color Controls
+    wp.customize('vh360_header_signin_bg_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('vh360-header-signin-bg-color', newval);
+        });
+    });
+
+    wp.customize('vh360_header_signin_text_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('vh360-header-signin-text-color', newval);
+        });
+    });
+
+    wp.customize('vh360_header_signin_hover_bg_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('vh360-header-signin-hover-bg-color', newval);
+        });
+    });
+
+    wp.customize('vh360_header_signin_hover_text_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('vh360-header-signin-hover-text-color', newval);
+        });
+    });
+
+    wp.customize('vh360_header_register_text_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('vh360-header-register-text-color', newval);
+        });
+    });
+
+    wp.customize('vh360_header_register_border_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('vh360-header-register-border-color', newval);
+        });
+    });
+
+    wp.customize('vh360_header_register_hover_bg_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('vh360-header-register-hover-bg-color', newval);
+        });
+    });
+
+    wp.customize('vh360_header_register_hover_text_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('vh360-header-register-hover-text-color', newval);
+        });
+    });
+
+    wp.customize('vh360_header_icon_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('vh360-header-icon-color', newval);
+        });
+    });
+
+    wp.customize('vh360_header_icon_hover_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('vh360-header-icon-hover-color', newval);
+        });
+    });
+
+    wp.customize('vh360_header_icon_hover_bg_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('vh360-header-icon-hover-bg-color', newval);
+        });
+    });
+
+    wp.customize('vh360_header_notification_badge_bg_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('vh360-header-notification-badge-bg-color', newval);
+        });
+    });
+
+    wp.customize('vh360_header_notification_badge_text_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('vh360-header-notification-badge-text-color', newval);
+        });
+    });
+
+    wp.customize('vh360_header_notification_badge_border_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('vh360-header-notification-badge-border-color', newval);
+        });
+    });
+
+    wp.customize('vh360_header_message_badge_bg_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('vh360-header-message-badge-bg-color', newval);
+        });
+    });
+
+    wp.customize('vh360_header_message_badge_text_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('vh360-header-message-badge-text-color', newval);
+        });
+    });
+
+    wp.customize('vh360_header_message_badge_border_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('vh360-header-message-badge-border-color', newval);
+        });
+    });
+
     // Typography Controls
     wp.customize('vh360_font_size', function(value) {
         value.bind(function(newval) {
