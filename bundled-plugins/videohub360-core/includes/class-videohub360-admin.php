@@ -380,6 +380,9 @@ class VideoHub360_Admin {
             update_option('vh360_default_stream_ended_icon', sanitize_text_field($_POST['vh360_default_stream_ended_icon'] ?? '📴'));
             update_option('vh360_default_live_room_offline_icon', sanitize_text_field($_POST['vh360_default_live_room_offline_icon'] ?? '🔴'));
             
+            // Course / Lesson Features
+            update_option('videohub360_enable_course_features', isset($_POST['videohub360_enable_course_features']) ? 1 : 0);
+            
             // Refresh permalink structure if needed
             $new_post_slug = get_option('videohub360_post_slug');
             $new_category_slug = get_option('videohub360_category_slug');
@@ -410,6 +413,7 @@ class VideoHub360_Admin {
         $category_slug = get_option('videohub360_category_slug', 'videohub360-category'); 
         $location_slug = get_option('videohub360_location_slug', 'videohub360-location');
         $series_slug = get_option('videohub360_series_slug', 'videohub360-series');
+        $enable_course_features = get_option('videohub360_enable_course_features', 0);
         
         $show_category_filter = get_option('videohub360_show_category_filter', 1);
         $show_series_filter = get_option('videohub360_show_series_filter', 1);
@@ -844,6 +848,20 @@ class VideoHub360_Admin {
                         <td>
                             <textarea name="vh360_stream_ended_needs_restart_html" rows="5" style="width: 100%; max-width: 600px; font-family: monospace;"><?php echo esc_textarea($stream_ended_needs_restart_html); ?></textarea>
                             <p class="description">HTML allowed. Shown when the host needs to restart the stream.</p>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <th scope="row" colspan="2"><h3 style="margin: 20px 0 10px 0;">Course / Lesson Features</h3></th>
+                    </tr>
+                    <tr>
+                        <th scope="row">Enable Course / Lesson Features</th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="videohub360_enable_course_features" value="1" <?php checked($enable_course_features, 1); ?> />
+                                Enable Course / Lesson Features
+                            </label>
+                            <p class="description">Adds course and lesson presentation fields using existing VideoHub360 videos and series. Videos can be presented as lessons, and series can be presented as courses or learning tracks.</p>
                         </td>
                     </tr>
                     

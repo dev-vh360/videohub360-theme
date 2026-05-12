@@ -84,6 +84,8 @@ class VideoHub360_Core {
         require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-import-export.php';
         require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-video-reactions.php';
         require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-playlists.php';
+        // Course / Lesson Foundation
+        require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-course-foundation.php';
         // Licensing / updates client
         require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-license.php';
         require_once VIDEOHUB360_INCLUDES_DIR . 'vh360-license-gate.php';
@@ -102,6 +104,7 @@ class VideoHub360_Core {
         $this->components['shortcode_builder'] = new VideoHub360_Shortcode_Builder();
         $this->components['import_export'] = new VideoHub360_Import_Export();
         $this->components['license'] = new VideoHub360_License();
+        $this->components['course_foundation'] = new VideoHub360_Course_Foundation();
     }
     
     /**
