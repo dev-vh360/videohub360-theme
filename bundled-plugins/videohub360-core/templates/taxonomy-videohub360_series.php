@@ -119,4 +119,4 @@ get_header();
 
 </main><!-- #vh360-course-main -->
 
-<?php get_footer();
+<?php get_footer(); ?>

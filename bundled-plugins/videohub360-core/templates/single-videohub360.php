@@ -577,7 +577,7 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                     if (file_exists($vh360_nav_file)) {
                         include $vh360_nav_file;
                     }
-                    unset($vh360_lesson_course, $vh360_nav_data, $vh360_nav_file);
+                    unset($vh360_lesson_course, $vh360_post_id, $vh360_nav_data, $vh360_nav_file);
                 }
             }
             // ---- End Course / Lesson Navigation --------------------------------------

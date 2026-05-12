@@ -64,4 +64,4 @@ if ( ! empty( $post_id ) ) {
 
 if ( $badge_text ) : ?>
 <span class="<?php echo esc_attr( $badge_class ); ?>"><?php echo esc_html( $badge_text ); ?></span>
-<?php endif;
+<?php endif; ?>
