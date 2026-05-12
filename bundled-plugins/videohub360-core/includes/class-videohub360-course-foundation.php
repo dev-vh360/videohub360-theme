@@ -285,8 +285,8 @@ class VideoHub360_Course_Foundation {
      * @param int $post_id Post ID.
      */
     public function save_lesson_meta_box( $post_id ) {
-        if ( ! isset( $_POST['vh360_lesson_meta_nonce'] ) ||
-             ! wp_verify_nonce( $_POST['vh360_lesson_meta_nonce'], 'vh360_lesson_meta_box' ) ) {
+        $nonce = isset( $_POST['vh360_lesson_meta_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['vh360_lesson_meta_nonce'] ) ) : '';
+        if ( ! wp_verify_nonce( $nonce, 'vh360_lesson_meta_box' ) ) {
             return;
         }
 
@@ -372,8 +372,8 @@ class VideoHub360_Course_Foundation {
      * @param int $term_id Term ID.
      */
     public function save_series_term_meta( $term_id ) {
-        if ( ! isset( $_POST['vh360_course_term_nonce'] ) ||
-             ! wp_verify_nonce( $_POST['vh360_course_term_nonce'], 'vh360_course_term_meta' ) ) {
+        $nonce = isset( $_POST['vh360_course_term_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['vh360_course_term_nonce'] ) ) : '';
+        if ( ! wp_verify_nonce( $nonce, 'vh360_course_term_meta' ) ) {
             return;
         }
 
