@@ -659,16 +659,28 @@ class VideoHub360_Frontend {
     /**
      * Enqueue course-mode CSS when Course / Lesson Features are enabled.
      *
-     * Loaded on:
-     *   - videohub360_series taxonomy archive pages (always when features enabled)
-     *   - single videohub360 posts (may belong to a series; selectors are scoped)
+     * Loaded only on:
+     *   - videohub360_series taxonomy archive pages
+     *   - single videohub360 posts that belong to at least one videohub360_series term
      */
     public function enqueue_course_assets() {
-        if (!function_exists('videohub360_course_features_enabled') || !videohub360_course_features_enabled()) {
-            return;
+        $should_load_course_css = false;
+
+        if (
+            function_exists('videohub360_course_features_enabled') &&
+            videohub360_course_features_enabled()
+        ) {
+            if (is_tax('videohub360_series')) {
+                $should_load_course_css = true;
+            } elseif (is_singular('videohub360')) {
+                $post_id = get_queried_object_id();
+                if ($post_id && has_term('', 'videohub360_series', $post_id)) {
+                    $should_load_course_css = true;
+                }
+            }
         }
 
-        if (!is_singular('videohub360') && !is_tax('videohub360_series')) {
+        if (!$should_load_course_css) {
             return;
         }
 

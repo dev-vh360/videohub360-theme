@@ -530,8 +530,20 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                         </span>
                     <?php endif; ?>
                     <?php if (!empty($videohub360_series) && !is_wp_error($videohub360_series)): ?>
+                        <?php
+                        $series_label = __('Series:', 'videohub360');
+                        if (
+                            function_exists('videohub360_course_features_enabled') &&
+                            videohub360_course_features_enabled() &&
+                            function_exists('videohub360_get_lesson_course') &&
+                            videohub360_get_lesson_course(get_the_ID()) &&
+                            function_exists('videohub360_get_course_label')
+                        ) {
+                            $series_label = videohub360_get_course_label() . ':';
+                        }
+                        ?>
                         <span>
-                            <strong>Series:</strong>
+                            <strong><?php echo esc_html($series_label); ?></strong>
                             <?php
                             $series_links = array();
                             foreach ($videohub360_series as $term) {
@@ -607,7 +619,6 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
             // Show comments only when chat is disabled or not occupying the inline/sidebar location.
             if (!$chat_enabled || !in_array($chat_placement, array('inline', 'sidebar'), true)): ?>
                 <div class="videohub360-comments-section">
-                    <h2>Comments</h2>
                     <?php
                     if (comments_open() || get_comments_number()) {
                         comments_template();
