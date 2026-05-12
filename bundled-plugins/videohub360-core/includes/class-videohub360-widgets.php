@@ -787,40 +787,74 @@ class VideoHub360_Widgets {
         // Enqueue styles
         wp_enqueue_style('vh360-course-mode');
 
-        // Query terms
+        // Fix: query ALL terms first (without a limit) so we can sort correctly,
+        // then apply the limit via array_slice() after sorting.
         $terms = get_terms( array(
             'taxonomy'   => 'videohub360_series',
             'hide_empty' => ( $atts['hide_empty'] === 'yes' ),
-            'number'     => absint( $atts['limit'] ),
+            'number'     => 0, // 0 = no limit
         ) );
 
         if ( is_wp_error($terms) || empty($terms) ) {
             return '<p class="vh360-course-catalog-empty">' . esc_html__('No courses found.', 'videohub360') . '</p>';
         }
 
-        // Sort by _vh360_course_order when orderby=meta_order
+        // Sort all terms, then slice to the requested limit.
+        $desc = ( strtoupper( $atts['order'] ) === 'DESC' );
+
         if ( $atts['orderby'] === 'meta_order' ) {
-            usort( $terms, function( $a, $b ) use ( $atts ) {
+            usort( $terms, function( $a, $b ) use ( $desc ) {
                 $order_a = (int) get_term_meta( $a->term_id, '_vh360_course_order', true );
                 $order_b = (int) get_term_meta( $b->term_id, '_vh360_course_order', true );
-                if ( $order_a === $order_b ) {
-                    return strcmp( $a->name, $b->name );
-                }
-                $cmp = $order_a <=> $order_b;
-                return ( strtoupper($atts['order']) === 'DESC' ) ? -$cmp : $cmp;
+                $cmp = ( $order_a === $order_b ) ? strcmp( $a->name, $b->name ) : ( $order_a <=> $order_b );
+                return $desc ? -$cmp : $cmp;
             } );
         } elseif ( $atts['orderby'] === 'name' ) {
-            usort( $terms, function( $a, $b ) use ( $atts ) {
+            usort( $terms, function( $a, $b ) use ( $desc ) {
                 $cmp = strcmp( $a->name, $b->name );
-                return ( strtoupper($atts['order']) === 'DESC' ) ? -$cmp : $cmp;
+                return $desc ? -$cmp : $cmp;
             } );
         }
 
-        $columns = max( 1, min( 6, absint( $atts['columns'] ) ) );
+        $limit = absint( $atts['limit'] );
+        if ( $limit > 0 ) {
+            $terms = array_slice( $terms, 0, $limit );
+        }
+
+        $columns      = max( 1, min( 6, absint( $atts['columns'] ) ) );
+        $show_filters = ( $atts['show_filters'] === 'yes' );
+
+        // Unique ID so multiple catalogs on the same page work independently.
+        static $catalog_instance = 0;
+        $catalog_id = 'vh360-catalog-' . ( ++$catalog_instance );
 
         ob_start();
         ?>
-        <div class="vh360-course-catalog" data-columns="<?php echo esc_attr($columns); ?>">
+        <div class="vh360-course-catalog" id="<?php echo esc_attr($catalog_id); ?>" data-columns="<?php echo esc_attr($columns); ?>">
+
+            <?php if ( $show_filters ) : ?>
+            <div class="vh360-course-catalog-filters" role="group" aria-label="<?php esc_attr_e( 'Filter courses', 'videohub360' ); ?>">
+                <button type="button" class="vh360-catalog-filter-pill is-active" data-filter="all">
+                    <?php esc_html_e( 'All Courses', 'videohub360' ); ?>
+                </button>
+                <button type="button" class="vh360-catalog-filter-pill" data-filter="level:beginner">
+                    <?php esc_html_e( 'Beginner', 'videohub360' ); ?>
+                </button>
+                <button type="button" class="vh360-catalog-filter-pill" data-filter="level:intermediate">
+                    <?php esc_html_e( 'Intermediate', 'videohub360' ); ?>
+                </button>
+                <button type="button" class="vh360-catalog-filter-pill" data-filter="level:advanced">
+                    <?php esc_html_e( 'Advanced', 'videohub360' ); ?>
+                </button>
+                <button type="button" class="vh360-catalog-filter-pill" data-filter="access:free">
+                    <?php esc_html_e( 'Free Access', 'videohub360' ); ?>
+                </button>
+                <button type="button" class="vh360-catalog-filter-pill" data-filter="access:member">
+                    <?php esc_html_e( 'Member Access', 'videohub360' ); ?>
+                </button>
+            </div>
+            <?php endif; ?>
+
             <div class="vh360-course-catalog-grid vh360-course-catalog-cols-<?php echo esc_attr($columns); ?>">
                 <?php foreach ( $terms as $term ) :
                     $subtitle      = get_term_meta( $term->term_id, '_vh360_course_subtitle', true );
@@ -840,10 +874,16 @@ class VideoHub360_Widgets {
                     $term_link     = get_term_link( $term );
                     $lesson_count  = count( $lessons );
 
+                    // Normalise level for data attribute (lowercase, trimmed).
+                    $level_key = strtolower( trim( $level ) );
+
+                    // Determine access type for data attribute.
+                    $access_key = ( empty($required_plan) || $required_plan === false ) ? 'free' : 'member';
+
                     // Access badge label
                     $access_badge_label = '';
                     if ( $atts['show_access_badge'] === 'yes' ) {
-                        if ( empty($required_plan) || $required_plan === false ) {
+                        if ( $access_key === 'free' ) {
                             $access_badge_label = esc_html__( 'Free Access', 'videohub360' );
                         } elseif ( $required_plan === 'any' ) {
                             $access_badge_label = esc_html__( 'Member Access', 'videohub360' );
@@ -852,7 +892,9 @@ class VideoHub360_Widgets {
                         }
                     }
                 ?>
-                <div class="vh360-course-catalog-card">
+                <div class="vh360-course-catalog-card"
+                     data-level="<?php echo esc_attr( $level_key ); ?>"
+                     data-access="<?php echo esc_attr( $access_key ); ?>">
                     <?php if ( $image_id ) : ?>
                     <a href="<?php echo esc_url( is_wp_error($term_link) ? '#' : $term_link ); ?>" class="vh360-course-catalog-image" aria-hidden="true" tabindex="-1">
                         <?php echo wp_get_attachment_image( $image_id, 'medium_large', false, array( 'class' => 'vh360-course-catalog-img', 'alt' => esc_attr($term->name) ) ); ?>
@@ -924,7 +966,57 @@ class VideoHub360_Widgets {
                 </div>
                 <?php endforeach; ?>
             </div>
+
+            <?php if ( $show_filters ) : ?>
+            <p class="vh360-course-catalog-no-results" style="display:none;">
+                <?php esc_html_e( 'No courses match the selected filter.', 'videohub360' ); ?>
+            </p>
+            <?php endif; ?>
+
         </div>
+
+        <?php if ( $show_filters ) : ?>
+        <script>
+        (function() {
+            var catalog = document.getElementById(<?php echo wp_json_encode( $catalog_id ); ?>);
+            if (!catalog) return;
+            var pills = catalog.querySelectorAll('.vh360-catalog-filter-pill');
+            var cards = catalog.querySelectorAll('.vh360-course-catalog-card');
+            var noResults = catalog.querySelector('.vh360-course-catalog-no-results');
+
+            pills.forEach(function(pill) {
+                pill.addEventListener('click', function() {
+                    var filter = this.getAttribute('data-filter');
+
+                    // Update active pill
+                    pills.forEach(function(p) { p.classList.remove('is-active'); });
+                    this.classList.add('is-active');
+
+                    // Show/hide cards
+                    var visible = 0;
+                    cards.forEach(function(card) {
+                        var show = false;
+                        if (filter === 'all') {
+                            show = true;
+                        } else {
+                            var parts = filter.split(':');
+                            var type  = parts[0]; // 'level' or 'access'
+                            var value = parts[1];
+                            show = (card.getAttribute('data-' + type) === value);
+                        }
+                        card.style.display = show ? '' : 'none';
+                        if (show) visible++;
+                    });
+
+                    // Toggle no-results message
+                    if (noResults) {
+                        noResults.style.display = (visible === 0) ? '' : 'none';
+                    }
+                });
+            });
+        })();
+        </script>
+        <?php endif; ?>
         <?php
         return ob_get_clean();
     }

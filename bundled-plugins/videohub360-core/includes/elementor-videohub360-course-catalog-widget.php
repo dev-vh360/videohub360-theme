@@ -74,6 +74,16 @@ class Elementor_VideoHub360_Course_Catalog_Widget extends \Elementor\Widget_Base
             'default'      => 'yes',
         ] );
 
+        $this->add_control( 'show_filters', [
+            'label'        => __( 'Show Filters', 'videohub360' ),
+            'description'  => __( 'Displays filter pills: All Courses, Beginner, Intermediate, Advanced, Free Access, Member Access.', 'videohub360' ),
+            'type'         => \Elementor\Controls_Manager::SWITCHER,
+            'label_on'     => __( 'Yes', 'videohub360' ),
+            'label_off'    => __( 'No', 'videohub360' ),
+            'return_value' => 'yes',
+            'default'      => 'no',
+        ] );
+
         $this->end_controls_section();
 
         /* ------------------------------------------------------------------ */
@@ -172,6 +182,7 @@ class Elementor_VideoHub360_Course_Catalog_Widget extends \Elementor\Widget_Base
 
         $limit             = isset($settings['limit'])            ? absint($settings['limit'])                          : 12;
         $hide_empty        = isset($settings['hide_empty'])       ? ( $settings['hide_empty'] === 'yes' ? 'yes' : 'no' ) : 'yes';
+        $show_filters      = isset($settings['show_filters'])     ? ( $settings['show_filters']      === 'yes' ? 'yes' : 'no' ) : 'no';
         $orderby           = isset($settings['orderby'])          ? sanitize_text_field($settings['orderby'])           : 'meta_order';
         $order             = ( isset($settings['order']) && strtoupper($settings['order']) === 'DESC' ) ? 'DESC' : 'ASC';
         $show_instructor   = isset($settings['show_instructor'])  ? ( $settings['show_instructor']   === 'yes' ? 'yes' : 'no' ) : 'yes';
@@ -180,12 +191,13 @@ class Elementor_VideoHub360_Course_Catalog_Widget extends \Elementor\Widget_Base
         $show_description  = isset($settings['show_description']) ? ( $settings['show_description']  === 'yes' ? 'yes' : 'no' ) : 'yes';
 
         $shortcode = sprintf(
-            '[vh360_course_catalog columns="%s" limit="%d" hide_empty="%s" orderby="%s" order="%s" show_instructor="%s" show_lesson_count="%s" show_access_badge="%s" show_description="%s"]',
+            '[vh360_course_catalog columns="%s" limit="%d" hide_empty="%s" orderby="%s" order="%s" show_filters="%s" show_instructor="%s" show_lesson_count="%s" show_access_badge="%s" show_description="%s"]',
             esc_attr($columns),
             $limit,
             esc_attr($hide_empty),
             esc_attr($orderby),
             esc_attr($order),
+            esc_attr($show_filters),
             esc_attr($show_instructor),
             esc_attr($show_lesson_count),
             esc_attr($show_access_badge),

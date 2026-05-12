@@ -930,3 +930,48 @@ a.vh360-nav-item-inner:hover {
         grid-template-columns: 1fr;
     }
 }
+
+/* ---- Filter pills ---- */
+.vh360-course-catalog-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    align-items: center;
+}
+
+.vh360-catalog-filter-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.4rem 1rem;
+    border-radius: 999px;
+    border: 1.5px solid var(--vh360-course-border, #e7dccb);
+    background: var(--vh360-course-surface, #fffdf8);
+    color: var(--vh360-course-text, #1f2933);
+    font-size: 0.83rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color var(--vh360-course-transition, 0.2s ease),
+                border-color var(--vh360-course-transition, 0.2s ease),
+                color var(--vh360-course-transition, 0.2s ease);
+    line-height: 1;
+}
+
+.vh360-catalog-filter-pill:hover {
+    border-color: var(--vh360-course-primary, #14532d);
+    color: var(--vh360-course-primary, #14532d);
+}
+
+.vh360-catalog-filter-pill.is-active {
+    background-color: var(--vh360-course-primary, #14532d);
+    border-color: var(--vh360-course-primary, #14532d);
+    color: #fff;
+}
+
+.vh360-course-catalog-no-results {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--vh360-course-muted, #6b7280);
+    padding: 2rem 0;
+    font-style: italic;
+}
