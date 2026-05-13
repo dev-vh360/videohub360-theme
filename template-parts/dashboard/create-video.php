@@ -96,11 +96,6 @@ $categories = get_terms(array(
     'hide_empty' => false,
 ));
 
-$series = get_terms(array(
-    'taxonomy' => 'videohub360_series',
-    'hide_empty' => false,
-));
-
 // When course features are enabled, non-admin users only see their own courses in the dropdown.
 if ( $vh360_course_features_enabled && ! current_user_can( 'manage_options' ) ) {
     $series = get_terms(array(
@@ -114,6 +109,11 @@ if ( $vh360_course_features_enabled && ! current_user_can( 'manage_options' ) ) 
                 'type'    => 'NUMERIC',
             ),
         ),
+    ));
+} else {
+    $series = get_terms(array(
+        'taxonomy' => 'videohub360_series',
+        'hide_empty' => false,
     ));
 }
 

@@ -1199,9 +1199,6 @@ class VH360_Ajax_Handlers {
         $required_membership = isset($_POST['_vh360_course_required_membership'])
             ? sanitize_key(wp_unslash($_POST['_vh360_course_required_membership']))
             : '';
-        if ($required_membership === 'any') {
-            $required_membership = 'any';
-        }
         update_term_meta($term_id, '_vh360_course_required_membership', $required_membership);
 
         // Remove course image flag.
