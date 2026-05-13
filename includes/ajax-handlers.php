@@ -1016,6 +1016,24 @@ class VH360_Ajax_Handlers {
         // Series
         if (isset($_POST['vh360_series'])) {
             $series = absint($_POST['vh360_series']);
+
+            // When Course / Lesson Features are enabled, non-admin users may only assign
+            // a lesson to a series they own (server-side enforcement mirrors the dropdown filter).
+            if (
+                $series
+                && function_exists('videohub360_course_features_enabled')
+                && videohub360_course_features_enabled()
+                && !current_user_can('manage_options')
+            ) {
+                $owner_id = (int) get_term_meta($series, '_vh360_course_owner_user_id', true);
+
+                if ($owner_id !== get_current_user_id()) {
+                    wp_send_json_error(array(
+                        'message' => esc_html__('You do not have permission to assign this lesson to that course.', 'videohub360-theme'),
+                    ));
+                }
+            }
+
             wp_set_post_terms($post_id, $series ? array($series) : array(), 'videohub360_series');
         }
         
