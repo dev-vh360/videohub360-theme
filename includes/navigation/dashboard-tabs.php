@@ -51,6 +51,30 @@ function vh360_get_dashboard_tabs_registry( $user_id = null ) {
             'show_callback' => '__return_true',
             'icon_svg' => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>',
         ),
+        'courses' => array(
+            'label' => __( 'My Courses', 'videohub360-theme' ),
+            'label_callback' => function( $user_id ) {
+                if ( function_exists( 'videohub360_get_course_label' ) ) {
+                    return sprintf(
+                        /* translators: %s = plural course label */
+                        __( 'My %s', 'videohub360-theme' ),
+                        videohub360_get_course_label( true )
+                    );
+                }
+                return __( 'My Courses', 'videohub360-theme' );
+            },
+            'show_callback' => function( $user_id ) {
+                $course_enabled = function_exists( 'videohub360_course_features_enabled' ) && videohub360_course_features_enabled();
+                if ( ! $course_enabled ) {
+                    return false;
+                }
+                if ( function_exists( 'vh360_user_can_create_videos' ) ) {
+                    return vh360_user_can_create_videos( $user_id );
+                }
+                return current_user_can( 'manage_options' ) || current_user_can( 'vh360_create_videos' );
+            },
+            'icon_svg' => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"></path></svg>',
+        ),
         'live-rooms' => array(
             'label' => __( 'Live Rooms', 'videohub360-theme' ),
             'label_callback' => null,

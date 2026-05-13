@@ -72,6 +72,22 @@ get_header();
                     <?php get_template_part('template-parts/dashboard/videos'); ?>
                 </div>
                 
+                <!-- My Courses Tab -->
+                <?php
+                $vh360_course_features_enabled = function_exists('videohub360_course_features_enabled') && videohub360_course_features_enabled();
+                $vh360_can_manage_courses = $vh360_course_features_enabled && (
+                    function_exists('vh360_user_can_create_videos')
+                        ? vh360_user_can_create_videos($current_user_id)
+                        : (current_user_can('manage_options') || current_user_can('vh360_create_videos'))
+                );
+
+                if ( $vh360_can_manage_courses ) :
+                ?>
+                <div id="courses" class="vh360-dashboard-tab-content">
+                    <?php get_template_part('template-parts/dashboard/courses'); ?>
+                </div>
+                <?php endif; ?>
+                
                 <!-- Live Rooms Tab -->
                 <div id="live-rooms" class="vh360-dashboard-tab-content">
                     <?php get_template_part('template-parts/dashboard/live-rooms'); ?>

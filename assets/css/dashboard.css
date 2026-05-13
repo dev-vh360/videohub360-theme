@@ -2206,3 +2206,150 @@
         font-size: 0.9em;
     }
 }
+
+/* ==========================================================================
+   My Courses Tab
+   ========================================================================== */
+
+.vh360-dashboard-courses .vh360-dashboard-header {
+    margin-bottom: 1.5rem;
+}
+
+/* Course create/edit form */
+.vh360-course-form-wrap {
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.vh360-course-dashboard-form .vh360-form-section-title {
+    margin-top: 0;
+    margin-bottom: 1.25rem;
+    font-size: 1.15rem;
+    font-weight: 600;
+}
+
+.vh360-course-dashboard-form .vh360-form-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Image preview inside the form */
+.vh360-course-image-preview {
+    margin-top: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.vh360-course-image-preview img {
+    max-width: 180px;
+    height: auto;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    display: block;
+}
+
+/* Courses grid */
+.vh360-course-dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+/* Course card */
+.vh360-course-dashboard-card {
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: var(--transition);
+}
+
+.vh360-course-dashboard-card:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
+}
+
+/* Card thumbnail */
+.vh360-course-dashboard-image {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: var(--bg-light);
+}
+
+.vh360-course-dashboard-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.vh360-course-dashboard-image-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+}
+
+/* Card meta */
+.vh360-course-dashboard-meta {
+    padding: 1rem;
+    flex: 1;
+}
+
+.vh360-course-dashboard-title {
+    margin: 0 0 0.25rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--text-color);
+}
+
+.vh360-course-dashboard-subtitle {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.vh360-course-dashboard-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+}
+
+.vh360-course-dashboard-level,
+.vh360-course-dashboard-duration,
+.vh360-course-dashboard-count {
+    background: var(--bg-light);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+}
+
+/* Card actions */
+.vh360-course-dashboard-actions {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .vh360-course-dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}

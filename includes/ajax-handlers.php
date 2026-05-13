@@ -50,6 +50,12 @@ class VH360_Ajax_Handlers {
         // Create video frontend (logged in only)
         add_action('wp_ajax_vh360_create_video_frontend', array($this, 'create_video_frontend'));
         
+        // Save course frontend (logged in only)
+        add_action('wp_ajax_vh360_save_course_frontend', array($this, 'save_course_frontend'));
+        
+        // Delete course frontend (logged in only)
+        add_action('wp_ajax_vh360_delete_course_frontend', array($this, 'delete_course_frontend'));
+        
         // Videos tab pagination (logged in only)
         add_action('wp_ajax_vh360_load_videos_tab', array($this, 'load_videos_tab'));
     }
@@ -1010,6 +1016,24 @@ class VH360_Ajax_Handlers {
         // Series
         if (isset($_POST['vh360_series'])) {
             $series = absint($_POST['vh360_series']);
+
+            // When Course / Lesson Features are enabled, non-admin users may only assign
+            // a lesson to a series they own (server-side enforcement mirrors the dropdown filter).
+            if (
+                $series
+                && function_exists('videohub360_course_features_enabled')
+                && videohub360_course_features_enabled()
+                && !current_user_can('manage_options')
+            ) {
+                $owner_id = (int) get_term_meta($series, '_vh360_course_owner_user_id', true);
+
+                if ($owner_id !== get_current_user_id()) {
+                    wp_send_json_error(array(
+                        'message' => esc_html__('You do not have permission to assign this lesson to that course.', 'videohub360-theme'),
+                    ));
+                }
+            }
+
             wp_set_post_terms($post_id, $series ? array($series) : array(), 'videohub360_series');
         }
         
@@ -1092,6 +1116,200 @@ class VH360_Ajax_Handlers {
         ));
     }
     
+    /**
+     * Save (create or update) a course/series term from the frontend.
+     */
+    public function save_course_frontend() {
+        // Verify nonce.
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'vh360_dashboard_nonce')) {
+            wp_send_json_error(array('message' => esc_html__('Security check failed', 'videohub360-theme')));
+        }
+
+        // Must be logged in.
+        if (!is_user_logged_in()) {
+            wp_send_json_error(array('message' => esc_html__('You must be logged in to manage courses.', 'videohub360-theme')));
+        }
+
+        // Course features must be enabled.
+        if (!function_exists('videohub360_course_features_enabled') || !videohub360_course_features_enabled()) {
+            wp_send_json_error(array('message' => esc_html__('Course features are not enabled.', 'videohub360-theme')));
+        }
+
+        $current_user_id = get_current_user_id();
+
+        // Permission check.
+        $can_create_courses = function_exists('vh360_user_can_create_videos')
+            ? vh360_user_can_create_videos($current_user_id)
+            : (current_user_can('manage_options') || current_user_can('vh360_create_videos'));
+
+        if (!$can_create_courses) {
+            wp_send_json_error(array('message' => esc_html__('You do not have permission to manage courses.', 'videohub360-theme')));
+        }
+
+        // Sanitize inputs.
+        $course_name        = isset($_POST['vh360_course_name']) ? sanitize_text_field(wp_unslash($_POST['vh360_course_name'])) : '';
+        $course_description = isset($_POST['vh360_course_description']) ? wp_kses_post(wp_unslash($_POST['vh360_course_description'])) : '';
+        $course_id          = isset($_POST['course_id']) ? absint($_POST['course_id']) : 0;
+
+        if (empty($course_name)) {
+            wp_send_json_error(array('message' => esc_html__('Course name is required.', 'videohub360-theme')));
+        }
+
+        $edit_mode = $course_id > 0;
+
+        if ($edit_mode) {
+            // Verify the term exists.
+            $term = get_term($course_id, 'videohub360_series');
+            if (!$term || is_wp_error($term)) {
+                wp_send_json_error(array('message' => esc_html__('Course not found.', 'videohub360-theme')));
+            }
+
+            // Ownership check for non-admins.
+            $owner_id = (int) get_term_meta($course_id, '_vh360_course_owner_user_id', true);
+            if (!current_user_can('manage_options') && $owner_id !== $current_user_id) {
+                wp_send_json_error(array('message' => esc_html__('You do not have permission to edit this course.', 'videohub360-theme')));
+            }
+
+            // Update term name/description.
+            $result = wp_update_term($course_id, 'videohub360_series', array(
+                'name'        => $course_name,
+                'description' => $course_description,
+            ));
+
+            if (is_wp_error($result)) {
+                wp_send_json_error(array('message' => $result->get_error_message()));
+            }
+
+            $term_id = $course_id;
+
+        } else {
+            // Create new term.
+            $result = wp_insert_term(
+                $course_name,
+                'videohub360_series',
+                array(
+                    'description' => $course_description,
+                    'slug'        => sanitize_title($course_name),
+                )
+            );
+
+            if (is_wp_error($result)) {
+                wp_send_json_error(array('message' => $result->get_error_message()));
+            }
+
+            $term_id = $result['term_id'];
+
+            // Set ownership and instructor.
+            update_term_meta($term_id, '_vh360_course_owner_user_id', $current_user_id);
+            update_term_meta($term_id, '_vh360_course_instructor_user_id', $current_user_id);
+        }
+
+        // Save course term meta.
+        update_term_meta($term_id, '_vh360_course_subtitle', sanitize_text_field(wp_unslash($_POST['_vh360_course_subtitle'] ?? '')));
+        update_term_meta($term_id, '_vh360_course_short_description', sanitize_textarea_field(wp_unslash($_POST['_vh360_course_short_description'] ?? '')));
+        update_term_meta($term_id, '_vh360_course_level', sanitize_key(wp_unslash($_POST['_vh360_course_level'] ?? '')));
+        update_term_meta($term_id, '_vh360_course_duration', sanitize_text_field(wp_unslash($_POST['_vh360_course_duration'] ?? '')));
+        update_term_meta($term_id, '_vh360_course_cta_text', sanitize_text_field(wp_unslash($_POST['_vh360_course_cta_text'] ?? '')));
+        update_term_meta($term_id, '_vh360_course_cta_url', esc_url_raw(wp_unslash($_POST['_vh360_course_cta_url'] ?? '')));
+        update_term_meta($term_id, '_vh360_course_order', absint($_POST['_vh360_course_order'] ?? 0));
+
+        // Required membership — preserve special 'any' value.
+        $required_membership = isset($_POST['_vh360_course_required_membership'])
+            ? sanitize_key(wp_unslash($_POST['_vh360_course_required_membership']))
+            : '';
+        update_term_meta($term_id, '_vh360_course_required_membership', $required_membership);
+
+        // Remove course image flag.
+        if (!empty($_POST['vh360_remove_course_image'])) {
+            delete_term_meta($term_id, '_vh360_course_featured_image_id');
+        }
+
+        // Handle course featured image upload.
+        if (isset($_FILES['vh360_course_featured_image']) && $_FILES['vh360_course_featured_image']['error'] === UPLOAD_ERR_OK) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            require_once ABSPATH . 'wp-admin/includes/media.php';
+            require_once ABSPATH . 'wp-admin/includes/image.php';
+
+            $attachment_id = media_handle_upload('vh360_course_featured_image', 0);
+
+            if (!is_wp_error($attachment_id)) {
+                update_term_meta($term_id, '_vh360_course_featured_image_id', $attachment_id);
+            }
+        }
+
+        $message = $edit_mode
+            ? esc_html__('Course updated successfully!', 'videohub360-theme')
+            : esc_html__('Course created successfully!', 'videohub360-theme');
+
+        $term_link = get_term_link($term_id, 'videohub360_series');
+
+        wp_send_json_success(array(
+            'message'   => $message,
+            'term_id'   => $term_id,
+            'term_link' => is_wp_error($term_link) ? '' : $term_link,
+        ));
+    }
+
+    /**
+     * Delete a course/series term from the frontend.
+     */
+    public function delete_course_frontend() {
+        // Verify nonce.
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'vh360_dashboard_nonce')) {
+            wp_send_json_error(array('message' => esc_html__('Security check failed', 'videohub360-theme')));
+        }
+
+        // Must be logged in.
+        if (!is_user_logged_in()) {
+            wp_send_json_error(array('message' => esc_html__('You must be logged in to manage courses.', 'videohub360-theme')));
+        }
+
+        // Course features must be enabled.
+        if (!function_exists('videohub360_course_features_enabled') || !videohub360_course_features_enabled()) {
+            wp_send_json_error(array('message' => esc_html__('Course features are not enabled.', 'videohub360-theme')));
+        }
+
+        $current_user_id = get_current_user_id();
+        $course_id       = isset($_POST['course_id']) ? absint($_POST['course_id']) : 0;
+
+        if (!$course_id) {
+            wp_send_json_error(array('message' => esc_html__('Invalid course ID.', 'videohub360-theme')));
+        }
+
+        // Verify the term exists.
+        $term = get_term($course_id, 'videohub360_series');
+        if (!$term || is_wp_error($term)) {
+            wp_send_json_error(array('message' => esc_html__('Course not found.', 'videohub360-theme')));
+        }
+
+        // Ownership check for non-admins.
+        $owner_id = (int) get_term_meta($course_id, '_vh360_course_owner_user_id', true);
+        if (!current_user_can('manage_options') && $owner_id !== $current_user_id) {
+            wp_send_json_error(array('message' => esc_html__('You do not have permission to delete this course.', 'videohub360-theme')));
+        }
+
+        // Block deletion if the course has lessons assigned.
+        $lessons = function_exists('videohub360_get_course_lessons')
+            ? videohub360_get_course_lessons($course_id, array('post_status' => array('publish', 'draft', 'pending', 'private')))
+            : array();
+
+        if (!empty($lessons)) {
+            wp_send_json_error(array(
+                'message' => esc_html__('This course has lessons assigned. Remove or reassign the lessons before deleting the course.', 'videohub360-theme'),
+            ));
+        }
+
+        $result = wp_delete_term($course_id, 'videohub360_series');
+
+        if (is_wp_error($result)) {
+            wp_send_json_error(array('message' => $result->get_error_message()));
+        }
+
+        wp_send_json_success(array(
+            'message' => esc_html__('Course deleted successfully.', 'videohub360-theme'),
+        ));
+    }
+
     /**
      * Load videos tab content via AJAX (for pagination)
      */
