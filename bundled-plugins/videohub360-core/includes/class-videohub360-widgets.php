@@ -1108,14 +1108,17 @@ class VideoHub360_Widgets {
                 var total = cards.length;
                 var fmt;
                 if (visible === total) {
-                    fmt = total === 1
+                    // Singular/plural based on the visible count (equals total here).
+                    fmt = visible === 1
                         ? (<?php echo wp_json_encode( __( 'Showing %d course', 'videohub360' ) ); ?>)
                         : (<?php echo wp_json_encode( __( 'Showing %d courses', 'videohub360' ) ); ?>);
                     countEl.textContent = fmt.replace('%d', total);
                 } else {
+                    // The noun "courses" agrees with the total (Y in "Showing X of Y courses").
                     fmt = total === 1
                         ? (<?php echo wp_json_encode( __( 'Showing %d of %d course', 'videohub360' ) ); ?>)
                         : (<?php echo wp_json_encode( __( 'Showing %d of %d courses', 'videohub360' ) ); ?>);
+                    // First .replace() fills the visible count; second fills the total count.
                     countEl.textContent = fmt.replace('%d', visible).replace('%d', total);
                 }
             }
