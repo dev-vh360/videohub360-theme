@@ -975,3 +975,118 @@ a.vh360-nav-item-inner:hover {
     padding: 2rem 0;
     font-style: italic;
 }
+
+/* =========================================================
+   Course Catalog — Controls (search, filters, sort, count)
+   ========================================================= */
+
+.vh360-course-catalog-controls {
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* Search */
+.vh360-course-catalog-search-wrap {
+    width: 100%;
+}
+
+.vh360-course-catalog-search {
+    width: 100%;
+    padding: 0.55rem 1rem;
+    font-size: 0.9rem;
+    border: 1.5px solid var(--vh360-course-border, #e7dccb);
+    border-radius: var(--vh360-course-radius, 10px);
+    background: var(--vh360-course-surface, #fffdf8);
+    color: var(--vh360-course-text, #1f2933);
+    outline: none;
+    transition: border-color var(--vh360-course-transition, 0.2s ease);
+    box-sizing: border-box;
+}
+
+.vh360-course-catalog-search:focus {
+    border-color: var(--vh360-course-primary, #14532d);
+}
+
+.vh360-course-catalog-search::placeholder {
+    color: var(--vh360-course-muted, #6b7280);
+}
+
+/* Filter row */
+.vh360-course-catalog-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Filter pills inside new structure */
+.vh360-course-catalog-filter-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+/* Sort */
+.vh360-course-catalog-sort-wrap {
+    flex-shrink: 0;
+}
+
+.vh360-course-catalog-sort {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    border: 1.5px solid var(--vh360-course-border, #e7dccb);
+    border-radius: var(--vh360-course-radius, 10px);
+    background: var(--vh360-course-surface, #fffdf8);
+    color: var(--vh360-course-text, #1f2933);
+    cursor: pointer;
+    outline: none;
+    transition: border-color var(--vh360-course-transition, 0.2s ease);
+}
+
+.vh360-course-catalog-sort:focus {
+    border-color: var(--vh360-course-primary, #14532d);
+}
+
+/* Clear button */
+.vh360-course-catalog-clear {
+    padding: 0.4rem 1rem;
+    font-size: 0.83rem;
+    font-weight: 600;
+    color: var(--vh360-course-primary, #14532d);
+    background: transparent;
+    border: 1.5px solid var(--vh360-course-primary, #14532d);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background-color var(--vh360-course-transition, 0.2s ease),
+                color var(--vh360-course-transition, 0.2s ease);
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.vh360-course-catalog-clear:hover {
+    background-color: var(--vh360-course-primary, #14532d);
+    color: #fff;
+}
+
+/* Result count */
+.vh360-course-catalog-count {
+    font-size: 0.82rem;
+    color: var(--vh360-course-muted, #6b7280);
+    margin: 0;
+    min-height: 1.2em;
+}
+
+/* Responsive controls */
+@media (max-width: 600px) {
+    .vh360-course-catalog-filter-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .vh360-course-catalog-sort {
+        width: 100%;
+    }
+}

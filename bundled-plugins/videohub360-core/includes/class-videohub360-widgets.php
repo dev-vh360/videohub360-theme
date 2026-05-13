@@ -778,6 +778,10 @@ class VideoHub360_Widgets {
             'orderby'            => 'meta_order',
             'order'              => 'ASC',
             'show_filters'       => 'no',
+            'show_search'        => 'yes',
+            'show_sort'          => 'yes',
+            'search_placeholder' => '',
+            'show_result_count'  => 'yes',
             'show_instructor'    => 'yes',
             'show_lesson_count'  => 'yes',
             'show_access_badge'  => 'yes',
@@ -821,38 +825,88 @@ class VideoHub360_Widgets {
             $terms = array_slice( $terms, 0, $limit );
         }
 
-        $columns      = max( 1, min( 6, absint( $atts['columns'] ) ) );
-        $show_filters = ( $atts['show_filters'] === 'yes' );
+        $columns            = max( 1, min( 6, absint( $atts['columns'] ) ) );
+        $show_filters       = ( $atts['show_filters']      === 'yes' );
+        $show_search        = ( $atts['show_search']       === 'yes' );
+        $show_sort          = ( $atts['show_sort']         === 'yes' );
+        $show_result_count  = ( $atts['show_result_count'] === 'yes' );
+        $search_placeholder = ( $atts['search_placeholder'] !== '' )
+            ? $atts['search_placeholder']
+            : __( 'Search courses...', 'videohub360' );
 
         // Unique ID so multiple catalogs on the same page work independently.
         static $catalog_instance = 0;
         $catalog_id = 'vh360-catalog-' . ( ++$catalog_instance );
 
+        $show_controls = ( $show_search || $show_filters || $show_sort || $show_result_count );
+
         ob_start();
         ?>
         <div class="vh360-course-catalog" id="<?php echo esc_attr($catalog_id); ?>" data-columns="<?php echo esc_attr($columns); ?>">
 
-            <?php if ( $show_filters ) : ?>
-            <div class="vh360-course-catalog-filters" role="group" aria-label="<?php esc_attr_e( 'Filter courses', 'videohub360' ); ?>">
-                <button type="button" class="vh360-catalog-filter-pill is-active" data-filter="all">
-                    <?php esc_html_e( 'All Courses', 'videohub360' ); ?>
-                </button>
-                <button type="button" class="vh360-catalog-filter-pill" data-filter="level:beginner">
-                    <?php esc_html_e( 'Beginner', 'videohub360' ); ?>
-                </button>
-                <button type="button" class="vh360-catalog-filter-pill" data-filter="level:intermediate">
-                    <?php esc_html_e( 'Intermediate', 'videohub360' ); ?>
-                </button>
-                <button type="button" class="vh360-catalog-filter-pill" data-filter="level:advanced">
-                    <?php esc_html_e( 'Advanced', 'videohub360' ); ?>
-                </button>
-                <button type="button" class="vh360-catalog-filter-pill" data-filter="access:free">
-                    <?php esc_html_e( 'Free Access', 'videohub360' ); ?>
-                </button>
-                <button type="button" class="vh360-catalog-filter-pill" data-filter="access:member">
-                    <?php esc_html_e( 'Member Access', 'videohub360' ); ?>
-                </button>
-            </div>
+            <?php if ( $show_controls ) : ?>
+            <div class="vh360-course-catalog-controls">
+
+                <?php if ( $show_search ) : ?>
+                <div class="vh360-course-catalog-search-wrap">
+                    <input
+                        type="search"
+                        class="vh360-course-catalog-search"
+                        placeholder="<?php echo esc_attr( $search_placeholder ); ?>"
+                        aria-label="<?php echo esc_attr( $search_placeholder ); ?>"
+                    >
+                </div>
+                <?php endif; ?>
+
+                <div class="vh360-course-catalog-filter-row">
+                    <?php if ( $show_filters ) : ?>
+                    <div class="vh360-course-catalog-filter-pills" role="group" aria-label="<?php esc_attr_e( 'Filter courses', 'videohub360' ); ?>">
+                        <button type="button" class="vh360-catalog-filter-pill is-active" data-filter="all">
+                            <?php esc_html_e( 'All Courses', 'videohub360' ); ?>
+                        </button>
+                        <button type="button" class="vh360-catalog-filter-pill" data-filter="level:beginner">
+                            <?php esc_html_e( 'Beginner', 'videohub360' ); ?>
+                        </button>
+                        <button type="button" class="vh360-catalog-filter-pill" data-filter="level:intermediate">
+                            <?php esc_html_e( 'Intermediate', 'videohub360' ); ?>
+                        </button>
+                        <button type="button" class="vh360-catalog-filter-pill" data-filter="level:advanced">
+                            <?php esc_html_e( 'Advanced', 'videohub360' ); ?>
+                        </button>
+                        <button type="button" class="vh360-catalog-filter-pill" data-filter="access:free">
+                            <?php esc_html_e( 'Free Access', 'videohub360' ); ?>
+                        </button>
+                        <button type="button" class="vh360-catalog-filter-pill" data-filter="access:member">
+                            <?php esc_html_e( 'Member Access', 'videohub360' ); ?>
+                        </button>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if ( $show_sort ) : ?>
+                    <div class="vh360-course-catalog-sort-wrap">
+                        <select class="vh360-course-catalog-sort" aria-label="<?php esc_attr_e( 'Sort courses', 'videohub360' ); ?>">
+                            <option value="default"><?php esc_html_e( 'Default Order', 'videohub360' ); ?></option>
+                            <option value="title-asc"><?php esc_html_e( 'Name A–Z', 'videohub360' ); ?></option>
+                            <option value="title-desc"><?php esc_html_e( 'Name Z–A', 'videohub360' ); ?></option>
+                            <option value="lessons-desc"><?php esc_html_e( 'Most Lessons', 'videohub360' ); ?></option>
+                            <option value="lessons-asc"><?php esc_html_e( 'Fewest Lessons', 'videohub360' ); ?></option>
+                            <option value="order-asc"><?php esc_html_e( 'Course Order', 'videohub360' ); ?></option>
+                        </select>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if ( $show_search || $show_filters || $show_sort ) : ?>
+                    <button type="button" class="vh360-course-catalog-clear" style="display:none;">
+                        <?php esc_html_e( 'Clear Filters', 'videohub360' ); ?>
+                    </button>
+                    <?php endif; ?>
+                </div><!-- .vh360-course-catalog-filter-row -->
+
+                <?php if ( $show_result_count ) : ?>
+                <p class="vh360-course-catalog-count" aria-live="polite"></p>
+                <?php endif; ?>
+
+            </div><!-- .vh360-course-catalog-controls -->
             <?php endif; ?>
 
             <div class="vh360-course-catalog-grid vh360-course-catalog-cols-<?php echo esc_attr($columns); ?>">
@@ -891,10 +945,28 @@ class VideoHub360_Widgets {
                             $access_badge_label = ucwords( str_replace( array('_', '-'), ' ', $required_plan ) );
                         }
                     }
+
+                    // Build searchable blob for client-side search.
+                    $search_blob = implode( ' ', array_filter( array(
+                        $term->name,
+                        $term->description,
+                        $subtitle,
+                        $short_desc,
+                        $level,
+                        $duration,
+                        $instructor ? $instructor->display_name : '',
+                        $access_badge_label,
+                    ) ) );
+
+                    $course_order = (int) get_term_meta( $term->term_id, '_vh360_course_order', true );
                 ?>
                 <div class="vh360-course-catalog-card"
                      data-level="<?php echo esc_attr( $level_key ); ?>"
-                     data-access="<?php echo esc_attr( $access_key ); ?>">
+                     data-access="<?php echo esc_attr( $access_key ); ?>"
+                     data-title="<?php echo esc_attr( strtolower( $term->name ) ); ?>"
+                     data-search="<?php echo esc_attr( strtolower( wp_strip_all_tags( $search_blob ) ) ); ?>"
+                     data-lessons="<?php echo esc_attr( $lesson_count ); ?>"
+                     data-order="<?php echo esc_attr( $course_order ); ?>">
                     <?php if ( $image_id ) : ?>
                     <a href="<?php echo esc_url( is_wp_error($term_link) ? '#' : $term_link ); ?>" class="vh360-course-catalog-image" aria-hidden="true" tabindex="-1">
                         <?php echo wp_get_attachment_image( $image_id, 'medium_large', false, array( 'class' => 'vh360-course-catalog-img', 'alt' => esc_attr($term->name) ) ); ?>
@@ -967,53 +1039,140 @@ class VideoHub360_Widgets {
                 <?php endforeach; ?>
             </div>
 
-            <?php if ( $show_filters ) : ?>
+            <?php if ( $show_controls ) : ?>
             <p class="vh360-course-catalog-no-results" style="display:none;">
-                <?php esc_html_e( 'No courses match the selected filter.', 'videohub360' ); ?>
+                <?php esc_html_e( 'No courses match your search or filter.', 'videohub360' ); ?>
             </p>
             <?php endif; ?>
 
         </div>
 
-        <?php if ( $show_filters ) : ?>
+        <?php if ( $show_controls ) : ?>
         <script>
         (function() {
             var catalog = document.getElementById(<?php echo wp_json_encode( $catalog_id ); ?>);
             if (!catalog) return;
-            var pills = catalog.querySelectorAll('.vh360-catalog-filter-pill');
-            var cards = catalog.querySelectorAll('.vh360-course-catalog-card');
+
+            var cards     = catalog.querySelectorAll('.vh360-course-catalog-card');
+            var pills     = catalog.querySelectorAll('.vh360-catalog-filter-pill');
+            var searchEl  = catalog.querySelector('.vh360-course-catalog-search');
+            var sortEl    = catalog.querySelector('.vh360-course-catalog-sort');
+            var clearBtn  = catalog.querySelector('.vh360-course-catalog-clear');
+            var countEl   = catalog.querySelector('.vh360-course-catalog-count');
             var noResults = catalog.querySelector('.vh360-course-catalog-no-results');
+            var grid      = catalog.querySelector('.vh360-course-catalog-grid');
 
-            pills.forEach(function(pill) {
-                pill.addEventListener('click', function() {
-                    var filter = this.getAttribute('data-filter');
+            var state = { search: '', filter: 'all', sort: 'default' };
 
-                    // Update active pill
-                    pills.forEach(function(p) { p.classList.remove('is-active'); });
-                    this.classList.add('is-active');
+            function cardMatches(card) {
+                var matchesSearch = true;
+                var matchesFilter = true;
 
-                    // Show/hide cards
-                    var visible = 0;
-                    cards.forEach(function(card) {
-                        var show = false;
-                        if (filter === 'all') {
-                            show = true;
-                        } else {
-                            var parts = filter.split(':');
-                            var type  = parts[0]; // 'level' or 'access'
-                            var value = parts[1];
-                            show = (card.getAttribute('data-' + type) === value);
-                        }
-                        card.style.display = show ? '' : 'none';
-                        if (show) visible++;
-                    });
+                if (state.search) {
+                    var haystack = card.getAttribute('data-search') || '';
+                    matchesSearch = haystack.indexOf(state.search) !== -1;
+                }
 
-                    // Toggle no-results message
-                    if (noResults) {
-                        noResults.style.display = (visible === 0) ? '' : 'none';
+                if (state.filter !== 'all') {
+                    var parts = state.filter.split(':');
+                    matchesFilter = card.getAttribute('data-' + parts[0]) === parts[1];
+                }
+
+                return matchesSearch && matchesFilter;
+            }
+
+            function sortCards() {
+                if (!grid) return;
+                var sorted = Array.prototype.slice.call(cards);
+                sorted.sort(function(a, b) {
+                    switch (state.sort) {
+                        case 'title-asc':
+                            return (a.dataset.title || '').localeCompare(b.dataset.title || '');
+                        case 'title-desc':
+                            return (b.dataset.title || '').localeCompare(a.dataset.title || '');
+                        case 'lessons-desc':
+                            return parseInt(b.dataset.lessons || '0', 10) - parseInt(a.dataset.lessons || '0', 10);
+                        case 'lessons-asc':
+                            return parseInt(a.dataset.lessons || '0', 10) - parseInt(b.dataset.lessons || '0', 10);
+                        case 'order-asc':
+                            return parseInt(a.dataset.order || '0', 10) - parseInt(b.dataset.order || '0', 10);
+                        default:
+                            return 0;
                     }
                 });
+                sorted.forEach(function(card) { grid.appendChild(card); });
+            }
+
+            function updateCount(visible) {
+                if (!countEl) return;
+                var total = cards.length;
+                if (visible === total) {
+                    countEl.textContent = '';
+                } else {
+                    countEl.textContent = visible + ' / ' + total + ' ' + (<?php echo wp_json_encode( __( 'courses', 'videohub360' ) ); ?>);
+                }
+            }
+
+            function applyState() {
+                var visible = 0;
+                cards.forEach(function(card) {
+                    var show = cardMatches(card);
+                    card.style.display = show ? '' : 'none';
+                    if (show) visible++;
+                });
+
+                sortCards();
+
+                if (noResults) noResults.style.display = (visible === 0) ? '' : 'none';
+                updateCount(visible);
+
+                var isActive = (state.search !== '' || state.filter !== 'all' || state.sort !== 'default');
+                if (clearBtn) clearBtn.style.display = isActive ? '' : 'none';
+            }
+
+            // Search
+            if (searchEl) {
+                searchEl.addEventListener('input', function() {
+                    state.search = this.value.toLowerCase().trim();
+                    applyState();
+                });
+            }
+
+            // Filter pills
+            pills.forEach(function(pill) {
+                pill.addEventListener('click', function() {
+                    state.filter = this.getAttribute('data-filter');
+                    pills.forEach(function(p) { p.classList.remove('is-active'); });
+                    this.classList.add('is-active');
+                    applyState();
+                });
             });
+
+            // Sort
+            if (sortEl) {
+                sortEl.addEventListener('change', function() {
+                    state.sort = this.value;
+                    applyState();
+                });
+            }
+
+            // Clear
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function() {
+                    state.search = '';
+                    state.filter = 'all';
+                    state.sort   = 'default';
+                    if (searchEl) searchEl.value = '';
+                    if (sortEl)   sortEl.value   = 'default';
+                    pills.forEach(function(p) { p.classList.remove('is-active'); });
+                    var allPill = catalog.querySelector('.vh360-catalog-filter-pill[data-filter="all"]');
+                    if (allPill) allPill.classList.add('is-active');
+                    applyState();
+                });
+            }
+
+            // Initial count
+            applyState();
         })();
         </script>
         <?php endif; ?>
