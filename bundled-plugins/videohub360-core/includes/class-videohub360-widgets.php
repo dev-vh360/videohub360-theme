@@ -1087,9 +1087,9 @@ class VideoHub360_Widgets {
                 sorted.sort(function(a, b) {
                     switch (state.sort) {
                         case 'title-asc':
-                            return (a.dataset.title || '').localeCompare(b.dataset.title || '');
+                            return (a.dataset.title || '').localeCompare(b.dataset.title || '', undefined, {sensitivity:'base'});
                         case 'title-desc':
-                            return (b.dataset.title || '').localeCompare(a.dataset.title || '');
+                            return (b.dataset.title || '').localeCompare(a.dataset.title || '', undefined, {sensitivity:'base'});
                         case 'lessons-desc':
                             return parseInt(b.dataset.lessons || '0', 10) - parseInt(a.dataset.lessons || '0', 10);
                         case 'lessons-asc':
