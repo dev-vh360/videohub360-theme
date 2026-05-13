@@ -1106,11 +1106,17 @@ class VideoHub360_Widgets {
             function updateCount(visible) {
                 if (!countEl) return;
                 var total = cards.length;
-                var label = total === 1 ? (<?php echo wp_json_encode( __( 'course', 'videohub360' ) ); ?>) : (<?php echo wp_json_encode( __( 'courses', 'videohub360' ) ); ?>);
+                var fmt;
                 if (visible === total) {
-                    countEl.textContent = (<?php echo wp_json_encode( __( 'Showing', 'videohub360' ) ); ?>) + ' ' + total + ' ' + label;
+                    fmt = total === 1
+                        ? (<?php echo wp_json_encode( __( 'Showing %d course', 'videohub360' ) ); ?>)
+                        : (<?php echo wp_json_encode( __( 'Showing %d courses', 'videohub360' ) ); ?>);
+                    countEl.textContent = fmt.replace('%d', total);
                 } else {
-                    countEl.textContent = (<?php echo wp_json_encode( __( 'Showing', 'videohub360' ) ); ?>) + ' ' + visible + ' ' + (<?php echo wp_json_encode( __( 'of', 'videohub360' ) ); ?>) + ' ' + total + ' ' + label;
+                    fmt = total === 1
+                        ? (<?php echo wp_json_encode( __( 'Showing %d of %d course', 'videohub360' ) ); ?>)
+                        : (<?php echo wp_json_encode( __( 'Showing %d of %d courses', 'videohub360' ) ); ?>);
+                    countEl.textContent = fmt.replace('%d', visible).replace('%d', total);
                 }
             }
 
