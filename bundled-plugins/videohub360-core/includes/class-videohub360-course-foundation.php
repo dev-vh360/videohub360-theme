@@ -54,6 +54,9 @@ class VideoHub360_Course_Foundation {
             return;
         }
 
+        // Enqueue media uploader on Series taxonomy screen.
+        add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_course_admin_assets' ) );
+
         // Lesson meta box on videohub360 posts.
         add_action( 'add_meta_boxes',          array( $this, 'add_lesson_meta_box' ) );
         add_action( 'save_post_videohub360',   array( $this, 'save_lesson_meta_box' ) );
@@ -66,6 +69,29 @@ class VideoHub360_Course_Foundation {
 
         // Admin notice on the series list when course features are active.
         add_action( 'videohub360_series_pre_add_form', array( $this, 'series_admin_notice' ) );
+    }
+
+    /**
+     * Enqueue media uploader on the Series taxonomy admin screen.
+     *
+     * @param string $hook Current admin page hook.
+     */
+    public function enqueue_course_admin_assets( $hook ) {
+        $screen = get_current_screen();
+
+        if ( ! $screen || 'edit-videohub360_series' !== $screen->id ) {
+            return;
+        }
+
+        wp_enqueue_media();
+
+        wp_enqueue_script(
+            'vh360-course-term-media',
+            VIDEOHUB360_ASSETS_URL . 'js/course-term-media.js',
+            array( 'jquery' ),
+            VIDEOHUB360_VERSION,
+            true
+        );
     }
 
     /* ------------------------------------------------------------------ */
@@ -168,6 +194,7 @@ class VideoHub360_Course_Foundation {
             '_vh360_course_instructor_user_id',
             '_vh360_course_featured_image_id',
             '_vh360_course_order',
+            '_vh360_course_owner_user_id',
         );
         foreach ( $course_int_fields as $key ) {
             register_term_meta( 'videohub360_series', $key, array(
@@ -483,10 +510,10 @@ class VideoHub360_Course_Foundation {
             array(
                 'key'      => '_vh360_course_featured_image_id',
                 'id'       => 'vh360_course_featured_image_id',
-                'label'    => __( 'Featured Image ID', 'videohub360' ),
-                'type'     => 'number',
+                'label'    => __( 'Course Featured Image', 'videohub360' ),
+                'type'     => 'image',
                 'sanitize' => 'absint',
-                'desc'     => __( 'Attachment ID for the course card/catalog image.', 'videohub360' ),
+                'desc'     => __( 'Used on course landing pages, course catalog cards, and related course cards.', 'videohub360' ),
             ),
             array(
                 'key'      => '_vh360_course_required_membership',
@@ -565,6 +592,30 @@ class VideoHub360_Course_Foundation {
                 echo '<input type="url" id="' . $id . '" name="' . $name . '" value="' . $val . '" style="width:100%;max-width:500px;" />';
                 break;
 
+            case 'image':
+                $image_id  = absint( $value );
+                $image_url = $image_id ? wp_get_attachment_image_url( $image_id, 'medium' ) : '';
+
+                echo '<div class="vh360-course-image-field">';
+                echo '<input type="hidden" id="' . $id . '" name="' . $name . '" value="' . esc_attr( $image_id ) . '" class="vh360-course-image-id">';
+
+                echo '<div class="vh360-course-image-preview" style="margin: 0 0 10px;">';
+                if ( $image_url ) {
+                    echo '<img src="' . esc_url( $image_url ) . '" alt="" style="max-width: 220px; height: auto; border: 1px solid #ccd0d4; border-radius: 4px; display: block;">';
+                }
+                echo '</div>';
+
+                echo '<button type="button" class="button vh360-course-image-upload">';
+                esc_html_e( 'Select Image', 'videohub360' );
+                echo '</button> ';
+
+                echo '<button type="button" class="button vh360-course-image-remove"' . ( $image_id ? '' : ' style="display:none;"' ) . '>';
+                esc_html_e( 'Remove Image', 'videohub360' );
+                echo '</button>';
+
+                echo '</div>';
+                break;
+
             default: // text
                 echo '<input type="text" id="' . $id . '" name="' . $name . '" value="' . $val . '" style="width:100%;max-width:400px;" />';
                 break;
@@ -630,6 +681,18 @@ if ( ! function_exists( 'videohub360_course_features_enabled' ) ) {
      */
     function videohub360_course_features_enabled() {
         return (bool) get_option( 'videohub360_enable_course_features', 0 );
+    }
+}
+
+if ( ! function_exists( 'videohub360_get_course_owner_id' ) ) {
+    /**
+     * Return the user ID of the course owner.
+     *
+     * @param  int $term_id Course (series) term ID.
+     * @return int User ID, or 0 if not set.
+     */
+    function videohub360_get_course_owner_id( $term_id ) {
+        return (int) get_term_meta( $term_id, '_vh360_course_owner_user_id', true );
     }
 }
 

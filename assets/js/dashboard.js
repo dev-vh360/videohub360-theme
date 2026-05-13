@@ -28,6 +28,8 @@
             this.handleEditVideo();
             this.handleVideosPagination();
             this.setupVideoUpload();
+            this.initCoursesForm();
+            this.handleCourseActions();
             
             // Handle video deletion
             var self = this;
@@ -1100,6 +1102,210 @@
             $('#vh360-video-upload-trigger').show();
             $('#vh360-video-progress-fill').css('width', '0%');
             $('#vh360-video-progress-text').text('0%');
+        },
+
+        /**
+         * Initialize My Courses form functionality
+         */
+        initCoursesForm: function() {
+            var self = this;
+            var $formWrap = $('#vh360-course-form-wrap');
+            var $form     = $('#vh360-course-form');
+
+            if (!$form.length) return;
+
+            // Toggle form open/close with the "New Course" button.
+            $(document).on('click', '#vh360-course-create-toggle', function() {
+                // Reset to create mode.
+                self.resetCourseForm();
+                $formWrap.slideToggle(300);
+            });
+
+            // Cancel button hides the form.
+            $(document).on('click', '#vh360-course-form-cancel', function() {
+                $formWrap.slideUp(300);
+                self.resetCourseForm();
+            });
+
+            // Featured image file input preview.
+            $(document).on('change', '#vh360_course_featured_image', function() {
+                var file = this.files[0];
+                if (file) {
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        $('#vh360-course-preview-img').attr('src', e.target.result);
+                        $('#vh360-course-image-preview').show();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            // Remove newly selected image.
+            $(document).on('click', '#vh360-remove-course-image', function(e) {
+                e.preventDefault();
+                $('#vh360_course_featured_image').val('');
+                $('#vh360-course-image-preview').hide();
+                $('#vh360-course-preview-img').attr('src', '');
+            });
+
+            // Remove existing (already-saved) image.
+            $(document).on('click', '#vh360-remove-existing-course-image', function(e) {
+                e.preventDefault();
+                $('#vh360-course-existing-image').hide();
+                $('#vh360_remove_course_image').val('1');
+            });
+
+            // Form submission.
+            $form.on('submit', function(e) {
+                e.preventDefault();
+
+                var courseName = $('#vh360_course_name').val().trim();
+                if (!courseName) {
+                    self.showNotification('Please provide a course name.', 'error');
+                    $('#vh360_course_name').focus();
+                    return false;
+                }
+
+                var $submitBtn = $('#vh360-save-course-btn');
+                $submitBtn.prop('disabled', true).addClass('loading');
+
+                var formData = new FormData(this);
+                formData.append('action', 'vh360_save_course_frontend');
+                formData.append('nonce', vh360Dashboard.nonce);
+
+                $.ajax({
+                    url: vh360Dashboard.ajaxurl,
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        if (response.success) {
+                            self.showNotification(response.data.message, 'success');
+                            $formWrap.slideUp(300);
+                            self.resetCourseForm();
+                            // Reload page to refresh courses list.
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 1200);
+                        } else {
+                            self.showNotification(response.data.message || 'An error occurred. Please try again.', 'error');
+                        }
+                    },
+                    error: function() {
+                        self.showNotification('An error occurred. Please try again.', 'error');
+                    },
+                    complete: function() {
+                        $submitBtn.prop('disabled', false).removeClass('loading');
+                    }
+                });
+
+                return false;
+            });
+        },
+
+        /**
+         * Reset the course form to create mode.
+         */
+        resetCourseForm: function() {
+            var $form = $('#vh360-course-form');
+            $form[0].reset();
+            $('#vh360_course_id').val('');
+            $('#vh360_remove_course_image').val('');
+            $('#vh360-course-image-preview').hide();
+            $('#vh360-course-preview-img').attr('src', '');
+            $('#vh360-course-existing-image').hide();
+            $('#vh360-course-existing-img').attr('src', '');
+            $('#vh360-course-form-heading').text(
+                typeof vh360Dashboard !== 'undefined' && vh360Dashboard.i18n && vh360Dashboard.i18n.createCourse
+                    ? vh360Dashboard.i18n.createCourse
+                    : 'Create Course'
+            );
+        },
+
+        /**
+         * Handle course edit and delete button actions.
+         */
+        handleCourseActions: function() {
+            var self = this;
+            var $formWrap = $('#vh360-course-form-wrap');
+
+            // Edit button — prefill form with existing data.
+            $(document).on('click', '.vh360-course-edit-btn', function() {
+                var courseData = $(this).data('course');
+                if (!courseData) return;
+
+                // Populate form fields.
+                $('#vh360_course_id').val(courseData.id);
+                $('#vh360_course_name').val(courseData.name);
+                $('#vh360_course_description').val(courseData.description);
+                $('#vh360_course_subtitle').val(courseData.subtitle);
+                $('#vh360_course_short_description').val(courseData.short_desc);
+                $('#vh360_course_level').val(courseData.level);
+                $('#vh360_course_duration').val(courseData.duration);
+                $('#vh360_course_required_membership').val(courseData.membership);
+                $('#vh360_course_cta_text').val(courseData.cta_text);
+                $('#vh360_course_cta_url').val(courseData.cta_url);
+                $('#vh360_course_order').val(courseData.order);
+
+                // Reset image state.
+                $('#vh360_remove_course_image').val('');
+                $('#vh360-course-image-preview').hide();
+                $('#vh360-course-preview-img').attr('src', '');
+
+                if (courseData.image_url) {
+                    $('#vh360-course-existing-img').attr('src', courseData.image_url);
+                    $('#vh360-course-existing-image').show();
+                } else {
+                    $('#vh360-course-existing-image').hide();
+                }
+
+                // Update form heading to "Edit Course".
+                var heading = typeof vh360Dashboard !== 'undefined' && vh360Dashboard.i18n && vh360Dashboard.i18n.editCourse
+                    ? vh360Dashboard.i18n.editCourse
+                    : 'Edit Course';
+                $('#vh360-course-form-heading').text(heading);
+
+                // Show form and scroll to it.
+                $formWrap.slideDown(300);
+                $('html, body').animate({ scrollTop: $formWrap.offset().top - 80 }, 300);
+            });
+
+            // Delete button.
+            $(document).on('click', '.vh360-course-delete-btn', function() {
+                var courseId   = $(this).data('course-id');
+                var courseName = $(this).data('course-name');
+
+                self.confirmAction(
+                    'Are you sure you want to delete "' + courseName + '"? This action cannot be undone.',
+                    function(confirmed) {
+                        if (!confirmed) return;
+
+                        $.ajax({
+                            url: vh360Dashboard.ajaxurl,
+                            type: 'POST',
+                            data: {
+                                action: 'vh360_delete_course_frontend',
+                                nonce: vh360Dashboard.nonce,
+                                course_id: courseId
+                            },
+                            success: function(response) {
+                                if (response.success) {
+                                    self.showNotification(response.data.message, 'success');
+                                    setTimeout(function() {
+                                        window.location.reload();
+                                    }, 1200);
+                                } else {
+                                    self.showNotification(response.data.message || 'Failed to delete course.', 'error');
+                                }
+                            },
+                            error: function() {
+                                self.showNotification('An error occurred. Please try again.', 'error');
+                            }
+                        });
+                    }
+                );
+            });
         }
     };
 
