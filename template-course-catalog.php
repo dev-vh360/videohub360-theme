@@ -21,7 +21,7 @@ while ( have_posts() ) :
     $page_description   = get_the_content();
     ?>
 
-    <div id="primary" class="content-area vh360-course-catalog-template-wrap <?php echo $vh360_show_header ? '' : 'vh360-template-header-off'; ?>">
+    <div id="primary" class="content-area vh360-course-catalog-template-wrap <?php echo esc_attr( $vh360_show_header ? '' : 'vh360-template-header-off' ); ?>">
         <main id="main" class="site-main vh360-course-catalog-template">
 
             <!-- Page header -->
