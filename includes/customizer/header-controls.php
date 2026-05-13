@@ -628,7 +628,7 @@ function vh360_register_header_controls($wp_customize) {
     $wp_customize->add_section('vh360_header_settings', array(
         'title'       => __('Template Headers', 'videohub360-theme'),
         'priority'    => 32,
-        'description' => __('Control the visibility and text of headers on Activity Feed, Members Directory, Bulletins, Blog, and archive pages.', 'videohub360-theme'),
+        'description' => __('Control the visibility and text of headers on Activity Feed, Members Directory, Bulletins, Blog, Course Catalog, and archive pages.', 'videohub360-theme'),
     ));
 
     /* Activity Feed header settings */
@@ -845,6 +845,38 @@ function vh360_register_header_controls($wp_customize) {
             'step' => 1,
         ),
         'description' => __('Number of events to display per page on the events archive.', 'videohub360-theme'),
+    ));
+
+    /* Course Catalog header settings */
+    $wp_customize->add_setting('vh360_show_course_catalog_header', array(
+        'default'           => 1,
+        'sanitize_callback' => 'vh360_sanitize_checkbox',
+    ));
+    $wp_customize->add_control('vh360_show_course_catalog_header', array(
+        'label'       => __('Show Course Catalog Header', 'videohub360-theme'),
+        'section'     => 'vh360_header_settings',
+        'type'        => 'checkbox',
+        'description' => __('Controls the header displayed on the Course Catalog page template.', 'videohub360-theme'),
+    ));
+    $wp_customize->add_setting('vh360_course_catalog_header_title', array(
+        'default'           => __('Courses', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_course_catalog_header_title', array(
+        'label'   => __('Course Catalog Header Title', 'videohub360-theme'),
+        'section' => 'vh360_header_settings',
+        'type'    => 'text',
+    ));
+    $wp_customize->add_setting('vh360_course_catalog_header_description', array(
+        'default'           => __('Browse courses, lessons, and learning tracks available on this site.', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_course_catalog_header_description', array(
+        'label'   => __('Course Catalog Header Description', 'videohub360-theme'),
+        'section' => 'vh360_header_settings',
+        'type'    => 'text',
     ));
 }
 add_action('customize_register', 'vh360_register_header_controls');

@@ -15,29 +15,30 @@ get_header();
 while ( have_posts() ) :
     the_post();
 
-    $page_title       = get_the_title();
-    $page_description = get_the_content();
+    $vh360_show_header  = (bool) get_theme_mod( 'vh360_show_course_catalog_header', 1 );
+    $vh360_header_title = get_theme_mod( 'vh360_course_catalog_header_title', __( 'Courses', 'videohub360-theme' ) );
+    $vh360_header_desc  = get_theme_mod( 'vh360_course_catalog_header_description', __( 'Browse courses, lessons, and learning tracks available on this site.', 'videohub360-theme' ) );
+    $page_description   = get_the_content();
     ?>
 
-    <div id="primary" class="content-area">
+    <div id="primary" class="content-area vh360-course-catalog-template-wrap <?php echo $vh360_show_header ? '' : 'vh360-template-header-off'; ?>">
         <main id="main" class="site-main vh360-course-catalog-template">
 
             <!-- Page header -->
+            <?php if ( $vh360_show_header ) : ?>
             <header class="vh360-course-catalog-template-header">
                 <div class="vh360-container">
-                    <p class="vh360-course-catalog-eyebrow">
-                        <?php esc_html_e( 'Learning Catalog', 'videohub360' ); ?>
-                    </p>
                     <h1 class="vh360-course-catalog-page-title">
-                        <?php echo esc_html( $page_title ); ?>
+                        <?php echo esc_html( $vh360_header_title ); ?>
                     </h1>
-                    <?php if ( has_excerpt() ) : ?>
+                    <?php if ( $vh360_header_desc ) : ?>
                     <p class="vh360-course-catalog-page-description">
-                        <?php echo esc_html( get_the_excerpt() ); ?>
+                        <?php echo esc_html( $vh360_header_desc ); ?>
                     </p>
                     <?php endif; ?>
                 </div>
             </header>
+            <?php endif; ?>
 
             <!-- Optional page content (editor text above the catalog) -->
             <?php if ( $page_description ) : ?>

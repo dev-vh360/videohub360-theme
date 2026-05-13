@@ -1254,11 +1254,18 @@ body.is-auth-page.vh360-auth-hide-header.vh360-auth-hide-footer .vh360-auth-page
     color: var(--vh360-course-text, #1f2933);
 }
 
-/* Template header */
+/* Container — matches Blog/Events pattern */
+.vh360-course-catalog-template .vh360-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    box-sizing: border-box;
+}
+
+/* Template header — background/color/margin inherited from dynamic-css.php shared rule */
 .vh360-course-catalog-template-header {
-    background-color: var(--vh360-course-primary, #14532d);
-    color: #fff;
-    padding: 3.5rem 2rem 3rem;
+    padding: 3.5rem 0 3rem;
     text-align: center;
 }
 
@@ -1296,6 +1303,7 @@ body.is-auth-page.vh360-auth-hide-header.vh360-auth-hide-footer .vh360-auth-page
 .vh360-course-catalog-template-content {
     padding-top: 2.5rem;
     padding-bottom: 3rem;
+    box-sizing: border-box;
 }
 
 /* Missing / disabled notice */
@@ -1310,6 +1318,11 @@ body.is-auth-page.vh360-auth-hide-header.vh360-auth-hide-footer .vh360-auth-page
 
 /* Responsive */
 @media (max-width: 768px) {
+    .vh360-course-catalog-template .vh360-container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
     .vh360-course-catalog-template-header {
         padding: 2.5rem 1.25rem 2rem;
     }

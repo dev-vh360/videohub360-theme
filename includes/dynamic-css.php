@@ -299,6 +299,7 @@ function vh360_output_dynamic_css() {
         .vh360-bulletins-header,
         .vh360-events-header,
         .vh360-blog-header,
+        .vh360-course-catalog-template-header,
         .videohub360-archive-header {
             background: linear-gradient(135deg, var(--header-bg-color) 0%, var(--header-bg-end) 100%);
             color: #ffffff;
@@ -307,10 +308,11 @@ function vh360_output_dynamic_css() {
             margin-bottom: 2rem;
         }
 
-        /* Ensure spacing when template headers are disabled (Bulletins/Events/Blog) */
+        /* Ensure spacing when template headers are disabled (Bulletins/Events/Blog/Course Catalog) */
         .vh360-bulletins-archive.vh360-template-header-off,
         .vh360-events-archive.vh360-template-header-off,
-        .vh360-blog-archive.vh360-template-header-off {
+        .vh360-blog-archive.vh360-template-header-off,
+        .vh360-course-catalog-template-wrap.vh360-template-header-off {
             padding-top: 50px;
         }
 
@@ -392,6 +394,9 @@ function vh360_output_dynamic_css() {
         <?php endif; ?>
         <?php if (!get_theme_mod('vh360_show_archive_header', 1)) : ?>
         .videohub360-archive-header { display: none; }
+        <?php endif; ?>
+        <?php if (!get_theme_mod('vh360_show_course_catalog_header', 1)) : ?>
+        .vh360-course-catalog-template-header { display: none; }
         <?php endif; ?>
 
         /* Footer Styles */
