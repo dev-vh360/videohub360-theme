@@ -1249,9 +1249,14 @@ body.is-auth-page.vh360-auth-hide-header.vh360-auth-hide-footer .vh360-auth-page
    Course Catalog Page Template
    ========================================================================== */
 
+.vh360-course-catalog-template-wrap {
+    background-color: var(--bg-color, #ffffff);
+    min-height: 100vh;
+}
+
 .vh360-course-catalog-template {
-    background-color: var(--vh360-course-bg, #fbf7ef);
-    color: var(--vh360-course-text, #1f2933);
+    background-color: var(--bg-color, #ffffff);
+    color: var(--text-color, #1f2937);
 }
 
 /* Container — matches Blog/Events pattern */
@@ -1267,15 +1272,6 @@ body.is-auth-page.vh360-auth-hide-header.vh360-auth-hide-footer .vh360-auth-page
 .vh360-course-catalog-template-header {
     padding: 3.5rem 0 3rem;
     text-align: center;
-}
-
-.vh360-course-catalog-eyebrow {
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--vh360-course-accent, #c47f2c);
-    margin: 0 0 0.6rem;
 }
 
 .vh360-course-catalog-page-title {
