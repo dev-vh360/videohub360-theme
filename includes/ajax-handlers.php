@@ -1008,20 +1008,59 @@ class VH360_Ajax_Handlers {
         }
         
         // Series
-        if (isset($_POST['vh360_series']) && !empty($_POST['vh360_series'])) {
+        if (isset($_POST['vh360_series'])) {
             $series = absint($_POST['vh360_series']);
-            wp_set_post_terms($post_id, array($series), 'videohub360_series');
+            wp_set_post_terms($post_id, $series ? array($series) : array(), 'videohub360_series');
         }
         
         // Location
-        if (isset($_POST['vh360_location']) && !empty($_POST['vh360_location'])) {
+        if (isset($_POST['vh360_location'])) {
             $location = absint($_POST['vh360_location']);
-            wp_set_post_terms($post_id, array($location), 'videohub360_location');
+            wp_set_post_terms($post_id, $location ? array($location) : array(), 'videohub360_location');
         }
         
         // Tags (using post_tag taxonomy)
         if (!empty($tags)) {
             wp_set_post_tags($post_id, $tags);
+        }
+        
+        // Lesson Details meta (only when Course / Lesson Features are enabled)
+        if ( function_exists('videohub360_course_features_enabled') && videohub360_course_features_enabled() ) {
+            update_post_meta(
+                $post_id,
+                '_vh360_lesson_module_title',
+                isset($_POST['_vh360_lesson_module_title']) ? sanitize_text_field(wp_unslash($_POST['_vh360_lesson_module_title'])) : ''
+            );
+            update_post_meta(
+                $post_id,
+                '_vh360_lesson_module_number',
+                isset($_POST['_vh360_lesson_module_number']) ? absint($_POST['_vh360_lesson_module_number']) : 0
+            );
+            update_post_meta(
+                $post_id,
+                '_vh360_lesson_number',
+                isset($_POST['_vh360_lesson_number']) ? absint($_POST['_vh360_lesson_number']) : 0
+            );
+            update_post_meta(
+                $post_id,
+                '_vh360_lesson_duration',
+                isset($_POST['_vh360_lesson_duration']) ? sanitize_text_field(wp_unslash($_POST['_vh360_lesson_duration'])) : ''
+            );
+            update_post_meta(
+                $post_id,
+                '_vh360_lesson_resource_url',
+                isset($_POST['_vh360_lesson_resource_url']) ? esc_url_raw(wp_unslash($_POST['_vh360_lesson_resource_url'])) : ''
+            );
+            update_post_meta(
+                $post_id,
+                '_vh360_lesson_resource_label',
+                isset($_POST['_vh360_lesson_resource_label']) ? sanitize_text_field(wp_unslash($_POST['_vh360_lesson_resource_label'])) : ''
+            );
+            update_post_meta(
+                $post_id,
+                '_vh360_lesson_is_preview',
+                isset($_POST['_vh360_lesson_is_preview']) ? 'yes' : 'no'
+            );
         }
         
         // Handle featured image upload
