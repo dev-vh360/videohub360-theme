@@ -1193,6 +1193,32 @@ class VH360_Demo_Importer {
             }
         }
         
+        // Import safe standalone VideoHub360 Core options.
+        if ( isset( $options_data['videohub360_core'] ) && is_array( $options_data['videohub360_core'] ) ) {
+            $core_options = $options_data['videohub360_core'];
+            $core_keys_imported = 0;
+
+            if ( array_key_exists( 'enable_course_features', $core_options ) ) {
+                update_option(
+                    'videohub360_enable_course_features',
+                    ! empty( $core_options['enable_course_features'] ) ? 1 : 0
+                );
+
+                $core_keys_imported++;
+            }
+
+            if ( $core_keys_imported > 0 ) {
+                $imported_count++;
+
+                $this->logger->info( sprintf(
+                    'Imported videohub360_core standalone options (%d keys)',
+                    $core_keys_imported
+                ) );
+            } else {
+                $skipped_groups[] = 'videohub360_core: no allowlisted keys matched';
+            }
+        }
+
         // Log skipped groups for debugging
         if (!empty($skipped_groups)) {
             foreach ($skipped_groups as $skip_reason) {

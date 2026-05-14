@@ -1570,6 +1570,16 @@ class VH360_Theme_Admin {
         if (isset($settings['membership'])) {
             update_option('vh360_membership_options', $settings['membership']);
         }
+
+        // Import safe standalone VideoHub360 Core options.
+        if ( isset( $settings['videohub360_core'] ) && is_array( $settings['videohub360_core'] ) ) {
+            if ( array_key_exists( 'enable_course_features', $settings['videohub360_core'] ) ) {
+                update_option(
+                    'videohub360_enable_course_features',
+                    ! empty( $settings['videohub360_core']['enable_course_features'] ) ? 1 : 0
+                );
+            }
+        }
         
         wp_send_json_success(__('Settings imported successfully', 'videohub360-theme'));
     }
