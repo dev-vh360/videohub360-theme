@@ -246,7 +246,13 @@ class VideoHub360_Import_Export {
 
             foreach ($series_terms as $term_obj) {
                 // Support both WP_Term objects and associative arrays.
-                $slug = is_array($term_obj) ? ($term_obj['slug'] ?? '') : ($term_obj->slug ?? '');
+                if (is_array($term_obj)) {
+                    $slug = isset($term_obj['slug']) ? $term_obj['slug'] : '';
+                } elseif (is_object($term_obj)) {
+                    $slug = isset($term_obj->slug) ? $term_obj->slug : '';
+                } else {
+                    continue;
+                }
                 if (!$slug || isset($seen_slugs[$slug])) {
                     continue;
                 }
@@ -511,9 +517,17 @@ class VideoHub360_Import_Export {
                     
                     foreach ($terms as $term_data) {
                         // Support both associative arrays (json_decode true) and objects.
-                        $term_slug = is_array($term_data) ? ($term_data['slug'] ?? '') : ($term_data->slug ?? '');
-                        $term_name = is_array($term_data) ? ($term_data['name'] ?? '') : ($term_data->name ?? '');
-                        $term_desc = is_array($term_data) ? ($term_data['description'] ?? '') : ($term_data->description ?? '');
+                        if (is_array($term_data)) {
+                            $term_slug = isset($term_data['slug']) ? $term_data['slug'] : '';
+                            $term_name = isset($term_data['name']) ? $term_data['name'] : '';
+                            $term_desc = isset($term_data['description']) ? $term_data['description'] : '';
+                        } elseif (is_object($term_data)) {
+                            $term_slug = isset($term_data->slug) ? $term_data->slug : '';
+                            $term_name = isset($term_data->name) ? $term_data->name : '';
+                            $term_desc = isset($term_data->description) ? $term_data->description : '';
+                        } else {
+                            continue;
+                        }
 
                         $term_slug = sanitize_title($term_slug);
                         $term_name = sanitize_text_field($term_name);
@@ -604,9 +618,9 @@ class VideoHub360_Import_Export {
                 continue;
             }
 
-            $slug = sanitize_title($course_term_data['slug'] ?? '');
-            $name = sanitize_text_field($course_term_data['name'] ?? '');
-            $desc = sanitize_textarea_field($course_term_data['description'] ?? '');
+            $slug = sanitize_title(isset($course_term_data['slug']) ? $course_term_data['slug'] : '');
+            $name = sanitize_text_field(isset($course_term_data['name']) ? $course_term_data['name'] : '');
+            $desc = sanitize_textarea_field(isset($course_term_data['description']) ? $course_term_data['description'] : '');
 
             if (!$slug || !$name) {
                 continue;
