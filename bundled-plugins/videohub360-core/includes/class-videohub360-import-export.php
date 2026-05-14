@@ -22,6 +22,23 @@ class VideoHub360_Import_Export {
      * Default: 5 minutes
      */
     const EXPORT_TRANSIENT_EXPIRATION = 300;
+
+    /**
+     * Allowed course term meta keys for export and import.
+     */
+    const ALLOWED_COURSE_TERM_META = array(
+        '_vh360_course_subtitle',
+        '_vh360_course_short_description',
+        '_vh360_course_level',
+        '_vh360_course_duration',
+        '_vh360_course_required_membership',
+        '_vh360_course_cta_text',
+        '_vh360_course_cta_url',
+        '_vh360_course_order',
+        '_vh360_course_instructor_user_id',
+        '_vh360_course_owner_user_id',
+        '_vh360_course_featured_image_id',
+    );
     
     /**
      * Constructor
@@ -139,6 +156,15 @@ class VideoHub360_Import_Export {
             
             // Sidebar configuration
             '_vh360_sidebar_config' => get_post_meta($post_id, '_vh360_sidebar_config', true),
+
+            // Course lesson metadata
+            '_vh360_lesson_module_title' => get_post_meta($post_id, '_vh360_lesson_module_title', true),
+            '_vh360_lesson_module_number' => get_post_meta($post_id, '_vh360_lesson_module_number', true),
+            '_vh360_lesson_number' => get_post_meta($post_id, '_vh360_lesson_number', true),
+            '_vh360_lesson_duration' => get_post_meta($post_id, '_vh360_lesson_duration', true),
+            '_vh360_lesson_resource_url' => get_post_meta($post_id, '_vh360_lesson_resource_url', true),
+            '_vh360_lesson_resource_label' => get_post_meta($post_id, '_vh360_lesson_resource_label', true),
+            '_vh360_lesson_is_preview' => get_post_meta($post_id, '_vh360_lesson_is_preview', true),
         );
         
         // Get taxonomies
@@ -193,6 +219,8 @@ class VideoHub360_Import_Export {
      */
     public function generate_json_export($videos_data) {
         $current_user = wp_get_current_user();
+
+        $course_terms = $this->collect_course_terms($videos_data);
         
         $export_data = array(
             'videohub360_export' => array(
@@ -200,10 +228,81 @@ class VideoHub360_Import_Export {
                 'export_date' => current_time('mysql'),
                 'exported_by' => $current_user->user_login,
                 'videos' => $videos_data,
+                'course_terms' => $course_terms,
             )
         );
         
         return wp_json_encode($export_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
+     * Collect unique videohub360_series term data (including course term meta)
+     * for all series used by the exported videos.
+     *
+     * @param array $videos_data Array of video data as returned by export_video().
+     * @return array Array of course term data objects.
+     */
+    private function collect_course_terms($videos_data) {
+        $seen_slugs = array();
+        $course_terms = array();
+
+        foreach ($videos_data as $video_data) {
+            if (!isset($video_data['taxonomies']['videohub360_series'])) {
+                continue;
+            }
+
+            $series_terms = $video_data['taxonomies']['videohub360_series'];
+            if (!is_array($series_terms) || empty($series_terms)) {
+                continue;
+            }
+
+            foreach ($series_terms as $term_obj) {
+                $slug = $this->get_term_field($term_obj, 'slug');
+                if (!$slug || isset($seen_slugs[$slug])) {
+                    continue;
+                }
+
+                $term = get_term_by('slug', $slug, 'videohub360_series');
+                if (!$term) {
+                    continue;
+                }
+
+                $seen_slugs[$slug] = true;
+
+                $meta_data = array();
+                foreach (self::ALLOWED_COURSE_TERM_META as $meta_key) {
+                    $meta_data[$meta_key] = get_term_meta($term->term_id, $meta_key, true);
+                }
+
+                $course_terms[] = array(
+                    'taxonomy'    => 'videohub360_series',
+                    'name'        => $term->name,
+                    'slug'        => $term->slug,
+                    'description' => $term->description,
+                    'meta_data'   => $meta_data,
+                );
+            }
+        }
+
+        return $course_terms;
+    }
+
+    /**
+     * Safely read a named field from a term value that may be either an
+     * associative array (from json_decode with assoc=true) or an object.
+     *
+     * @param array|object $term  Term data.
+     * @param string       $field Field name.
+     * @return string
+     */
+    private function get_term_field($term, $field) {
+        if (is_array($term)) {
+            return isset($term[$field]) ? $term[$field] : '';
+        }
+        if (is_object($term)) {
+            return isset($term->$field) ? $term->$field : '';
+        }
+        return '';
     }
     
     /**
@@ -358,6 +457,11 @@ class VideoHub360_Import_Export {
                 $results['errors'][] = sprintf(__('Video %d: %s', 'videohub360'), $index + 1, $e->getMessage());
             }
         }
+
+        // Import course term meta if present in the export.
+        if (isset($json_data['videohub360_export']['course_terms']) && is_array($json_data['videohub360_export']['course_terms'])) {
+            $this->import_course_terms($json_data['videohub360_export']['course_terms']);
+        }
         
         return $results;
     }
@@ -427,29 +531,50 @@ class VideoHub360_Import_Export {
         // Import taxonomies
         if (isset($video_data['taxonomies']) && is_array($video_data['taxonomies'])) {
             foreach ($video_data['taxonomies'] as $taxonomy => $terms) {
+                if (!taxonomy_exists($taxonomy)) {
+                    continue;
+                }
+
                 if (is_array($terms) && !empty($terms)) {
                     $term_ids = array();
                     
                     foreach ($terms as $term_data) {
+                        // Support both associative arrays (json_decode true) and objects.
+                        if (!is_array($term_data) && !is_object($term_data)) {
+                            continue;
+                        }
+
+                        $term_slug = $this->get_term_field($term_data, 'slug');
+                        $term_name = $this->get_term_field($term_data, 'name');
+                        $term_desc = $this->get_term_field($term_data, 'description');
+
+                        $term_slug = sanitize_title($term_slug);
+                        $term_name = sanitize_text_field($term_name);
+                        $term_desc = sanitize_textarea_field($term_desc);
+
+                        if (!$term_slug || !$term_name) {
+                            continue;
+                        }
+
                         // Check if term exists
-                        $term = get_term_by('slug', $term_data->slug, $taxonomy);
+                        $term = get_term_by('slug', $term_slug, $taxonomy);
                         
                         if (!$term) {
                             // Create term if it doesn't exist
                             $new_term = wp_insert_term(
-                                $term_data->name,
+                                $term_name,
                                 $taxonomy,
                                 array(
-                                    'slug' => $term_data->slug,
-                                    'description' => isset($term_data->description) ? $term_data->description : '',
+                                    'slug'        => $term_slug,
+                                    'description' => $term_desc,
                                 )
                             );
                             
                             if (!is_wp_error($new_term)) {
-                                $term_ids[] = $new_term['term_id'];
+                                $term_ids[] = (int) $new_term['term_id'];
                             }
                         } else {
-                            $term_ids[] = $term->term_id;
+                            $term_ids[] = (int) $term->term_id;
                         }
                     }
                     
@@ -472,6 +597,87 @@ class VideoHub360_Import_Export {
     }
     
     /**
+     * Import course term meta from exported course_terms data.
+     *
+     * @param array $course_terms Array of course term data from JSON.
+     */
+    private function import_course_terms($course_terms) {
+        // URL meta keys within the allowed set.
+        $url_meta_keys = array('_vh360_course_cta_url');
+
+        // Numeric (integer) meta keys within the allowed set.
+        $int_meta_keys = array(
+            '_vh360_course_order',
+            '_vh360_course_instructor_user_id',
+            '_vh360_course_owner_user_id',
+            '_vh360_course_featured_image_id',
+        );
+
+        foreach ($course_terms as $course_term_data) {
+            if (!is_array($course_term_data)) {
+                continue;
+            }
+
+            $taxonomy = isset($course_term_data['taxonomy']) ? sanitize_key($course_term_data['taxonomy']) : 'videohub360_series';
+            if (!taxonomy_exists($taxonomy)) {
+                continue;
+            }
+
+            $slug = sanitize_title(isset($course_term_data['slug']) ? $course_term_data['slug'] : '');
+            $name = sanitize_text_field(isset($course_term_data['name']) ? $course_term_data['name'] : '');
+            $desc = sanitize_textarea_field(isset($course_term_data['description']) ? $course_term_data['description'] : '');
+
+            if (!$slug || !$name) {
+                continue;
+            }
+
+            $term = get_term_by('slug', $slug, $taxonomy);
+
+            if (!$term) {
+                $new_term = wp_insert_term(
+                    $name,
+                    $taxonomy,
+                    array(
+                        'slug'        => $slug,
+                        'description' => $desc,
+                    )
+                );
+
+                if (is_wp_error($new_term)) {
+                    continue;
+                }
+
+                $term_id = (int) $new_term['term_id'];
+            } else {
+                $term_id = (int) $term->term_id;
+            }
+
+            // Import course term meta.
+            if (!isset($course_term_data['meta_data']) || !is_array($course_term_data['meta_data'])) {
+                continue;
+            }
+
+            foreach ($course_term_data['meta_data'] as $meta_key => $meta_value) {
+                if (!in_array($meta_key, self::ALLOWED_COURSE_TERM_META, true)) {
+                    continue;
+                }
+
+                if (in_array($meta_key, $url_meta_keys, true)) {
+                    $sanitized = esc_url_raw((string) $meta_value);
+                } elseif (in_array($meta_key, $int_meta_keys, true)) {
+                    $sanitized = absint($meta_value);
+                } elseif ($meta_key === '_vh360_course_short_description') {
+                    $sanitized = sanitize_textarea_field((string) $meta_value);
+                } else {
+                    $sanitized = sanitize_text_field((string) $meta_value);
+                }
+
+                update_term_meta($term_id, $meta_key, $sanitized);
+            }
+        }
+    }
+
+    /**
      * Sanitize meta value based on key
      * 
      * @param string $meta_key Meta key
@@ -491,6 +697,7 @@ class VideoHub360_Import_Export {
             '_vh360_stream_url',
             '_vh360_api_url',
             '_vh360_poster',
+            '_vh360_lesson_resource_url',
         );
         
         if (in_array($meta_key, $url_fields)) {
@@ -498,7 +705,13 @@ class VideoHub360_Import_Export {
         }
         
         // Numeric fields
-        if ($meta_key === '_videohub360_post_views_count') {
+        $numeric_fields = array(
+            '_videohub360_post_views_count',
+            '_vh360_lesson_module_number',
+            '_vh360_lesson_number',
+        );
+
+        if (in_array($meta_key, $numeric_fields, true)) {
             return absint($meta_value);
         }
         
@@ -513,6 +726,23 @@ class VideoHub360_Import_Export {
                 return $meta_value;
             }
             return maybe_unserialize($meta_value);
+        }
+
+        // Lesson boolean flag: normalize to 'yes' or 'no'.
+        if ($meta_key === '_vh360_lesson_is_preview') {
+            $val = sanitize_key((string) $meta_value);
+            return $val === 'yes' ? 'yes' : 'no';
+        }
+
+        // Plain-text lesson fields.
+        $lesson_text_fields = array(
+            '_vh360_lesson_module_title',
+            '_vh360_lesson_duration',
+            '_vh360_lesson_resource_label',
+        );
+
+        if (in_array($meta_key, $lesson_text_fields, true)) {
+            return sanitize_text_field($meta_value);
         }
         
         // Default: sanitize as text
