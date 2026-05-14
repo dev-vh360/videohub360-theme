@@ -1244,3 +1244,87 @@ body.is-auth-page.vh360-auth-hide-header.vh360-auth-hide-footer .site {
 body.is-auth-page.vh360-auth-hide-header.vh360-auth-hide-footer .vh360-auth-page {
     min-height: 100vh;
 }
+
+/* ==========================================================================
+   Course Catalog Page Template
+   ========================================================================== */
+
+.vh360-course-catalog-template-wrap {
+    background-color: var(--bg-color, #ffffff);
+    min-height: 100vh;
+}
+
+.vh360-course-catalog-template {
+    background-color: var(--bg-color, #ffffff);
+    color: var(--text-color, #1f2937);
+}
+
+/* Container — matches Blog/Events pattern */
+.vh360-course-catalog-template .vh360-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    box-sizing: border-box;
+}
+
+/* Template header — background/color/margin inherited from dynamic-css.php shared rule */
+.vh360-course-catalog-template-header {
+    padding: 3.5rem 0 3rem;
+    text-align: center;
+}
+
+.vh360-course-catalog-page-title {
+    font-size: 2.25rem;
+    font-weight: 800;
+    line-height: 1.2;
+    color: #fff;
+    margin: 0 0 0.75rem;
+}
+
+.vh360-course-catalog-page-description {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.82);
+    margin: 0 auto;
+    max-width: 640px;
+}
+
+/* Intro / page content area */
+.vh360-course-catalog-intro {
+    padding-top: 2rem;
+    padding-bottom: 0.5rem;
+}
+
+/* Catalog wrapper */
+.vh360-course-catalog-template-content {
+    padding-top: 2.5rem;
+    padding-bottom: 3rem;
+    box-sizing: border-box;
+}
+
+/* Missing / disabled notice */
+.vh360-course-catalog-missing {
+    background: #fff8e1;
+    border-left: 4px solid #f9a825;
+    padding: 1.25rem 1.5rem;
+    border-radius: 6px;
+    color: #555;
+    font-size: 0.9rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .vh360-course-catalog-template .vh360-container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .vh360-course-catalog-template-header {
+        padding: 2.5rem 1.25rem 2rem;
+    }
+
+    .vh360-course-catalog-page-title {
+        font-size: 1.75rem;
+    }
+}
+

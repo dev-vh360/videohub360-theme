@@ -1301,6 +1301,20 @@
         });
     });
 
+    // Course Catalog Header - Title
+    wp.customize('vh360_course_catalog_header_title', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-course-catalog-template-header .vh360-course-catalog-page-title').text(newval);
+        });
+    });
+
+    // Course Catalog Header - Description
+    wp.customize('vh360_course_catalog_header_description', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-course-catalog-template-header .vh360-course-catalog-page-description').text(newval);
+        });
+    });
+
     // =============================================================================
     // SITE IDENTITY BINDINGS
     // =============================================================================
