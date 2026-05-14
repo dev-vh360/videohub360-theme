@@ -368,7 +368,7 @@ class VideoHub360_Import_Export {
 
         $parsed = wp_parse_url( $url );
 
-        if ( empty( $parsed['scheme'] ) || ! in_array( strtolower( $parsed['scheme'] ), array( 'http', 'https' ), true ) ) {
+        if ( ! is_array( $parsed ) || empty( $parsed['scheme'] ) || ! in_array( strtolower( $parsed['scheme'] ), array( 'http', 'https' ), true ) ) {
             return new WP_Error( 'vh360_invalid_image_url', __( 'Invalid image URL scheme.', 'videohub360' ) );
         }
 
