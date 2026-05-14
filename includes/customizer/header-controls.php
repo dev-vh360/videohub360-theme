@@ -170,7 +170,21 @@ function vh360_register_header_controls($wp_customize) {
         'type'        => 'checkbox',
         'description' => __('When disabled, search results display as one unified list with no category headings or filter tabs. Only content types available on your site will be shown.', 'videohub360-theme'),
     ));
-    
+
+    /* Include Members in Centered Search */
+    $wp_customize->add_setting('vh360_search_include_members', array(
+        'default'           => true,
+        'sanitize_callback' => 'vh360_sanitize_checkbox',
+        'transport'         => 'refresh',
+    ));
+
+    $wp_customize->add_control('vh360_search_include_members', array(
+        'label'       => __('Include Members in Centered Search', 'videohub360-theme'),
+        'section'     => 'vh360_main_header_settings',
+        'type'        => 'checkbox',
+        'description' => __('When disabled, members/users will not appear in the Centered Search Bar results or filter tabs.', 'videohub360-theme'),
+    ));
+
     /* Show Cart Icon */
     $wp_customize->add_setting('vh360_show_cart_icon', array(
         'default'           => false,

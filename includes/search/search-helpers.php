@@ -34,12 +34,14 @@ function vh360_get_available_search_types() {
         );
     }
     
-    // Members - always available (WordPress users)
-    $types['members'] = array(
-        'key' => 'members',
-        'post_type' => 'user', // Special identifier for user-based search (not a WordPress post type)
-        'label' => __('Members', 'videohub360-theme'),
-    );
+    // Members - optional WordPress user search controlled by Customizer
+    if (get_theme_mod('vh360_search_include_members', true)) {
+        $types['members'] = array(
+            'key'       => 'members',
+            'post_type' => 'user', // Special identifier for user-based search (not a WordPress post type)
+            'label'     => __('Members', 'videohub360-theme'),
+        );
+    }
     
     // Events (vh360_event)
     if (post_type_exists('vh360_event')) {
