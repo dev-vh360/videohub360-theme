@@ -392,7 +392,7 @@ class VideoHub360_Import_Export {
         require_once ABSPATH . 'wp-admin/includes/media.php';
         require_once ABSPATH . 'wp-admin/includes/image.php';
 
-        $tmp = download_url( $url, 30 );
+        $tmp = download_url( $url, 60 );
 
         if ( is_wp_error( $tmp ) ) {
             return $tmp;
@@ -403,7 +403,7 @@ class VideoHub360_Import_Export {
             : sanitize_file_name( basename( wp_parse_url( $url, PHP_URL_PATH ) ) );
 
         if ( empty( $filename ) ) {
-            $filename = 'vh360-imported-image.jpg';
+            $filename = 'vh360-imported-image';
         }
 
         $file_array = array(
@@ -421,14 +421,18 @@ class VideoHub360_Import_Export {
         $filetype = wp_check_filetype_and_ext( $tmp, $filename, $allowed_mimes );
 
         if ( empty( $filetype['type'] ) || strpos( $filetype['type'], 'image/' ) !== 0 ) {
-            @unlink( $tmp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+            if ( file_exists( $tmp ) ) {
+                unlink( $tmp );
+            }
             return new WP_Error( 'vh360_invalid_image_type', __( 'Remote file is not a supported image type.', 'videohub360' ) );
         }
 
         $attachment_id = media_handle_sideload( $file_array, absint( $parent_id ) );
 
         if ( is_wp_error( $attachment_id ) ) {
-            @unlink( $tmp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+            if ( file_exists( $tmp ) ) {
+                unlink( $tmp );
+            }
             return $attachment_id;
         }
 
