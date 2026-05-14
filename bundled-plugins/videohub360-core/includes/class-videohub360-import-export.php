@@ -139,6 +139,15 @@ class VideoHub360_Import_Export {
             
             // Sidebar configuration
             '_vh360_sidebar_config' => get_post_meta($post_id, '_vh360_sidebar_config', true),
+
+            // Course lesson metadata
+            '_vh360_lesson_module_title' => get_post_meta($post_id, '_vh360_lesson_module_title', true),
+            '_vh360_lesson_module_number' => get_post_meta($post_id, '_vh360_lesson_module_number', true),
+            '_vh360_lesson_number' => get_post_meta($post_id, '_vh360_lesson_number', true),
+            '_vh360_lesson_duration' => get_post_meta($post_id, '_vh360_lesson_duration', true),
+            '_vh360_lesson_resource_url' => get_post_meta($post_id, '_vh360_lesson_resource_url', true),
+            '_vh360_lesson_resource_label' => get_post_meta($post_id, '_vh360_lesson_resource_label', true),
+            '_vh360_lesson_is_preview' => get_post_meta($post_id, '_vh360_lesson_is_preview', true),
         );
         
         // Get taxonomies
