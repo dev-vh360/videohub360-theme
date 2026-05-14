@@ -38,7 +38,7 @@ $available_types = vh360_get_available_search_types();
             <input 
                 type="text" 
                 class="vh360-search-bar-centered__input" 
-                placeholder="<?php echo esc_attr__('Search videos, members, events...', 'videohub360-theme'); ?>"
+                placeholder="<?php echo esc_attr__('Search', 'videohub360-theme'); ?>"
                 aria-label="<?php echo esc_attr__('Search', 'videohub360-theme'); ?>"
                 autocomplete="off"
                 id="vh360-search-input"
