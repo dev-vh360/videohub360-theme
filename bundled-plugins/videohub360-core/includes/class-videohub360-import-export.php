@@ -22,6 +22,23 @@ class VideoHub360_Import_Export {
      * Default: 5 minutes
      */
     const EXPORT_TRANSIENT_EXPIRATION = 300;
+
+    /**
+     * Allowed course term meta keys for export and import.
+     */
+    const ALLOWED_COURSE_TERM_META = array(
+        '_vh360_course_subtitle',
+        '_vh360_course_short_description',
+        '_vh360_course_level',
+        '_vh360_course_duration',
+        '_vh360_course_required_membership',
+        '_vh360_course_cta_text',
+        '_vh360_course_cta_url',
+        '_vh360_course_order',
+        '_vh360_course_instructor_user_id',
+        '_vh360_course_owner_user_id',
+        '_vh360_course_featured_image_id',
+    );
     
     /**
      * Constructor
@@ -229,20 +246,6 @@ class VideoHub360_Import_Export {
         $seen_slugs = array();
         $course_terms = array();
 
-        $allowed_course_term_meta = array(
-            '_vh360_course_subtitle',
-            '_vh360_course_short_description',
-            '_vh360_course_level',
-            '_vh360_course_duration',
-            '_vh360_course_required_membership',
-            '_vh360_course_cta_text',
-            '_vh360_course_cta_url',
-            '_vh360_course_order',
-            '_vh360_course_instructor_user_id',
-            '_vh360_course_owner_user_id',
-            '_vh360_course_featured_image_id',
-        );
-
         foreach ($videos_data as $video_data) {
             if (!isset($video_data['taxonomies']['videohub360_series'])) {
                 continue;
@@ -254,14 +257,7 @@ class VideoHub360_Import_Export {
             }
 
             foreach ($series_terms as $term_obj) {
-                // Support both WP_Term objects and associative arrays.
-                if (is_array($term_obj)) {
-                    $slug = isset($term_obj['slug']) ? $term_obj['slug'] : '';
-                } elseif (is_object($term_obj)) {
-                    $slug = isset($term_obj->slug) ? $term_obj->slug : '';
-                } else {
-                    continue;
-                }
+                $slug = $this->get_term_field($term_obj, 'slug');
                 if (!$slug || isset($seen_slugs[$slug])) {
                     continue;
                 }
@@ -274,7 +270,7 @@ class VideoHub360_Import_Export {
                 $seen_slugs[$slug] = true;
 
                 $meta_data = array();
-                foreach ($allowed_course_term_meta as $meta_key) {
+                foreach (self::ALLOWED_COURSE_TERM_META as $meta_key) {
                     $meta_data[$meta_key] = get_term_meta($term->term_id, $meta_key, true);
                 }
 
@@ -289,6 +285,24 @@ class VideoHub360_Import_Export {
         }
 
         return $course_terms;
+    }
+
+    /**
+     * Safely read a named field from a term value that may be either an
+     * associative array (from json_decode with assoc=true) or an object.
+     *
+     * @param array|object $term  Term data.
+     * @param string       $field Field name.
+     * @return string
+     */
+    private function get_term_field($term, $field) {
+        if (is_array($term)) {
+            return isset($term[$field]) ? $term[$field] : '';
+        }
+        if (is_object($term)) {
+            return isset($term->$field) ? $term->$field : '';
+        }
+        return '';
     }
     
     /**
@@ -526,17 +540,13 @@ class VideoHub360_Import_Export {
                     
                     foreach ($terms as $term_data) {
                         // Support both associative arrays (json_decode true) and objects.
-                        if (is_array($term_data)) {
-                            $term_slug = isset($term_data['slug']) ? $term_data['slug'] : '';
-                            $term_name = isset($term_data['name']) ? $term_data['name'] : '';
-                            $term_desc = isset($term_data['description']) ? $term_data['description'] : '';
-                        } elseif (is_object($term_data)) {
-                            $term_slug = isset($term_data->slug) ? $term_data->slug : '';
-                            $term_name = isset($term_data->name) ? $term_data->name : '';
-                            $term_desc = isset($term_data->description) ? $term_data->description : '';
-                        } else {
+                        if (!is_array($term_data) && !is_object($term_data)) {
                             continue;
                         }
+
+                        $term_slug = $this->get_term_field($term_data, 'slug');
+                        $term_name = $this->get_term_field($term_data, 'name');
+                        $term_desc = $this->get_term_field($term_data, 'description');
 
                         $term_slug = sanitize_title($term_slug);
                         $term_name = sanitize_text_field($term_name);
@@ -592,20 +602,6 @@ class VideoHub360_Import_Export {
      * @param array $course_terms Array of course term data from JSON.
      */
     private function import_course_terms($course_terms) {
-        $allowed_course_term_meta = array(
-            '_vh360_course_subtitle',
-            '_vh360_course_short_description',
-            '_vh360_course_level',
-            '_vh360_course_duration',
-            '_vh360_course_required_membership',
-            '_vh360_course_cta_text',
-            '_vh360_course_cta_url',
-            '_vh360_course_order',
-            '_vh360_course_instructor_user_id',
-            '_vh360_course_owner_user_id',
-            '_vh360_course_featured_image_id',
-        );
-
         // URL meta keys within the allowed set.
         $url_meta_keys = array('_vh360_course_cta_url');
 
@@ -662,7 +658,7 @@ class VideoHub360_Import_Export {
             }
 
             foreach ($course_term_data['meta_data'] as $meta_key => $meta_value) {
-                if (!in_array($meta_key, $allowed_course_term_meta, true)) {
+                if (!in_array($meta_key, self::ALLOWED_COURSE_TERM_META, true)) {
                     continue;
                 }
 
@@ -732,7 +728,7 @@ class VideoHub360_Import_Export {
             return maybe_unserialize($meta_value);
         }
 
-        // Lesson boolean flag: normalise to 'yes' or 'no'.
+        // Lesson boolean flag: normalize to 'yes' or 'no'.
         if ($meta_key === '_vh360_lesson_is_preview') {
             $val = sanitize_key((string) $meta_value);
             return $val === 'yes' ? 'yes' : 'no';
