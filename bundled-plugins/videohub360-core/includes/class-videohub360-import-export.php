@@ -864,12 +864,13 @@ class VideoHub360_Import_Export {
                 $term_id = (int) $term->term_id;
             }
 
-            // Import course term meta.
-            if (!isset($course_term_data['meta_data']) || !is_array($course_term_data['meta_data'])) {
-                continue;
-            }
+            // Import course term meta. Treat missing meta_data as an empty array so that
+            // terms without meta (e.g. image-only exports) still reach the image import block.
+            $meta_data = ( isset( $course_term_data['meta_data'] ) && is_array( $course_term_data['meta_data'] ) )
+                ? $course_term_data['meta_data']
+                : array();
 
-            foreach ($course_term_data['meta_data'] as $meta_key => $meta_value) {
+            foreach ( $meta_data as $meta_key => $meta_value ) {
                 if (!in_array($meta_key, self::ALLOWED_COURSE_TERM_META, true)) {
                     continue;
                 }
