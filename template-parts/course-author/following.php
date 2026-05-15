@@ -31,12 +31,16 @@ $following_page = array_slice( $following, $offset, $per_page );
 <div class="vh360-course-author-following" id="vh360-course-tab-following">
 
     <div class="vh360-course-author-section-header">
-        <h2 class="vh360-course-author-section-title">
-            <?php
-            /* translators: %s: number of users being followed */
-            printf( esc_html__( 'Following %s', 'videohub360-theme' ), esc_html( number_format_i18n( $total ) ) );
-            ?>
-        </h2>
+        <div class="vh360-course-author-section-heading">
+            <span class="vh360-course-author-section-kicker"><?php esc_html_e( 'Community', 'videohub360-theme' ); ?></span>
+            <h2 class="vh360-course-author-section-title">
+                <?php
+                /* translators: %s: number of users being followed */
+                printf( esc_html__( 'Following %s', 'videohub360-theme' ), esc_html( number_format_i18n( $total ) ) );
+                ?>
+            </h2>
+            <p class="vh360-course-author-section-description"><?php esc_html_e( 'People this instructor follows.', 'videohub360-theme' ); ?></p>
+        </div>
     </div>
 
     <?php if ( ! empty( $following_page ) ) : ?>
@@ -73,8 +77,8 @@ $following_page = array_slice( $following, $offset, $per_page );
     <?php else : ?>
         <div class="vh360-course-author-empty-state">
             <div class="vh360-empty-icon">👥</div>
-            <h3 class="vh360-empty-title"><?php esc_html_e( 'Not following anyone yet', 'videohub360-theme' ); ?></h3>
-            <p class="vh360-empty-description"><?php esc_html_e( 'This instructor isn\'t following anyone yet.', 'videohub360-theme' ); ?></p>
+            <h3><?php esc_html_e( 'Not following anyone yet', 'videohub360-theme' ); ?></h3>
+            <p><?php esc_html_e( 'This instructor isn\'t following anyone yet.', 'videohub360-theme' ); ?></p>
         </div>
     <?php endif; ?>
 

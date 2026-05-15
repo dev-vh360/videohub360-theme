@@ -102,28 +102,42 @@ foreach ( $courses as $course ) {
 <div class="vh360-course-author-lessons" id="vh360-course-tab-lessons">
 
     <div class="vh360-course-author-section-header">
-        <h2 class="vh360-course-author-section-title">
-            <?php echo esc_html( $lesson_label_plural ); ?>
-            <?php if ( $total_lesson_count ) : ?>
-                <span class="vh360-course-author-section-count">(<?php echo esc_html( number_format_i18n( $total_lesson_count ) ); ?>)</span>
-            <?php endif; ?>
-        </h2>
+        <div class="vh360-course-author-section-heading">
+            <span class="vh360-course-author-section-kicker"><?php esc_html_e( 'Curriculum', 'videohub360-theme' ); ?></span>
+            <h2 class="vh360-course-author-section-title">
+                <?php echo esc_html( $lesson_label_plural ); ?>
+                <?php if ( $total_lesson_count ) : ?>
+                    <span class="vh360-course-author-section-count"><?php echo esc_html( number_format_i18n( $total_lesson_count ) ); ?></span>
+                <?php endif; ?>
+            </h2>
+            <p class="vh360-course-author-section-description"><?php esc_html_e( 'Browse lessons organized by course curriculum.', 'videohub360-theme' ); ?></p>
+        </div>
     </div>
 
     <?php if ( ! empty( $grouped_lessons ) ) : ?>
 
+        <div class="vh360-course-author-lesson-groups">
         <?php foreach ( $grouped_lessons as $group ) :
             $course = $group['course'];
             $lesson_ids = $group['lessons'];
+            $group_count = count( $lesson_ids );
         ?>
-            <div class="vh360-course-author-lessons-group">
-                <h3 class="vh360-course-author-lessons-group-title">
-                    <a href="<?php echo esc_url( get_term_link( $course, 'videohub360_series' ) ); ?>">
-                        <?php echo esc_html( $course->name ); ?>
-                    </a>
-                </h3>
+            <div class="vh360-course-author-lesson-group">
+                <div class="vh360-course-author-lesson-group-header">
+                    <h3 class="vh360-course-author-lesson-group-title">
+                        <a href="<?php echo esc_url( get_term_link( $course, 'videohub360_series' ) ); ?>">
+                            <?php echo esc_html( $course->name ); ?>
+                        </a>
+                    </h3>
+                    <span class="vh360-course-author-lesson-group-count">
+                        <?php
+                        /* translators: %1$s: count, %2$s: lessons label */
+                        printf( esc_html__( '%1$s %2$s', 'videohub360-theme' ), esc_html( number_format_i18n( $group_count ) ), esc_html( $lesson_label_plural ) );
+                        ?>
+                    </span>
+                </div>
 
-                <ul class="vh360-course-author-lessons-list">
+                <ul class="vh360-course-author-lesson-list">
                     <?php foreach ( $lesson_ids as $lesson_id ) :
                         $module_num = (int) get_post_meta( $lesson_id, '_vh360_lesson_module_number', true );
                         $lesson_num = (int) get_post_meta( $lesson_id, '_vh360_lesson_number', true );
@@ -133,57 +147,66 @@ foreach ( $courses as $course ) {
                         $permalink  = get_permalink( $lesson_id );
                         $title      = get_the_title( $lesson_id );
                     ?>
-                        <li class="vh360-course-lesson-item">
-                            <?php if ( $thumb_url ) : ?>
-                                <a href="<?php echo esc_url( $permalink ); ?>" class="vh360-course-lesson-thumb">
-                                    <img src="<?php echo esc_url( $thumb_url ); ?>" alt="<?php echo esc_attr( $title ); ?>" loading="lazy">
-                                </a>
-                            <?php endif; ?>
-
-                            <div class="vh360-course-lesson-info">
-                                <a href="<?php echo esc_url( $permalink ); ?>" class="vh360-course-lesson-title">
-                                    <?php echo esc_html( $title ); ?>
-                                </a>
-
-                                <div class="vh360-course-lesson-meta">
-                                    <?php if ( $module_num ) : ?>
-                                        <span class="vh360-course-lesson-module">
-                                            <?php
-                                            /* translators: %s: module number */
-                                            printf( esc_html__( 'Module %s', 'videohub360-theme' ), esc_html( $module_num ) );
-                                            ?>
-                                        </span>
-                                    <?php endif; ?>
-
-                                    <?php if ( $lesson_num ) : ?>
-                                        <span class="vh360-course-lesson-number">
-                                            <?php
-                                            /* translators: %1$s: lesson label (e.g. "Lesson"), %2$d: lesson number */
-                                            printf( esc_html__( '%1$s %2$d', 'videohub360-theme' ), esc_html( $lesson_label_singular ), absint( $lesson_num ) );
-                                            ?>
-                                        </span>
-                                    <?php endif; ?>
-
-                                    <?php if ( $duration ) : ?>
-                                        <span class="vh360-course-lesson-duration"><?php echo esc_html( $duration ); ?></span>
-                                    <?php endif; ?>
-
-                                    <?php if ( 'yes' === $is_preview ) : ?>
-                                        <span class="vh360-course-lesson-preview-badge"><?php esc_html_e( 'Free Preview', 'videohub360-theme' ); ?></span>
+                        <li>
+                            <a href="<?php echo esc_url( $permalink ); ?>" class="vh360-course-author-lesson-item">
+                                <!-- Thumbnail / number -->
+                                <div class="vh360-course-author-lesson-thumb">
+                                    <?php if ( $thumb_url ) : ?>
+                                        <img src="<?php echo esc_url( $thumb_url ); ?>" alt="<?php echo esc_attr( $title ); ?>" loading="lazy">
+                                    <?php else : ?>
+                                        <div class="vh360-course-author-lesson-thumb-placeholder">
+                                            <?php if ( $lesson_num ) : ?>
+                                                <?php echo esc_html( $lesson_num ); ?>
+                                            <?php else : ?>
+                                                ▶
+                                            <?php endif; ?>
+                                        </div>
                                     <?php endif; ?>
                                 </div>
-                            </div>
+
+                                <!-- Content -->
+                                <div class="vh360-course-author-lesson-content">
+                                    <span class="vh360-course-author-lesson-title"><?php echo esc_html( $title ); ?></span>
+                                    <div class="vh360-course-author-lesson-meta">
+                                        <?php if ( $module_num ) : ?>
+                                            <span>
+                                                <?php
+                                                /* translators: %s: module number */
+                                                printf( esc_html__( 'Module %s', 'videohub360-theme' ), esc_html( $module_num ) );
+                                                ?>
+                                            </span>
+                                        <?php endif; ?>
+                                        <?php if ( $lesson_num ) : ?>
+                                            <span>
+                                                <?php
+                                                /* translators: %1$s: lesson label (e.g. "Lesson"), %2$d: lesson number */
+                                                printf( esc_html__( '%1$s %2$d', 'videohub360-theme' ), esc_html( $lesson_label_singular ), absint( $lesson_num ) );
+                                                ?>
+                                            </span>
+                                        <?php endif; ?>
+                                        <?php if ( 'yes' === $is_preview ) : ?>
+                                            <span class="vh360-course-author-preview-badge"><?php esc_html_e( 'Free Preview', 'videohub360-theme' ); ?></span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+
+                                <!-- Duration -->
+                                <?php if ( $duration ) : ?>
+                                    <span class="vh360-course-author-lesson-duration"><?php echo esc_html( $duration ); ?></span>
+                                <?php endif; ?>
+                            </a>
                         </li>
                     <?php endforeach; ?>
                 </ul>
             </div>
         <?php endforeach; ?>
+        </div>
 
     <?php else : ?>
         <div class="vh360-course-author-empty-state">
             <div class="vh360-empty-icon">🎬</div>
-            <h3 class="vh360-empty-title"><?php esc_html_e( 'No lessons yet', 'videohub360-theme' ); ?></h3>
-            <p class="vh360-empty-description"><?php esc_html_e( 'This instructor hasn\'t published any lessons yet.', 'videohub360-theme' ); ?></p>
+            <h3><?php esc_html_e( 'No lessons yet', 'videohub360-theme' ); ?></h3>
+            <p><?php esc_html_e( 'This instructor hasn\'t published any lessons yet.', 'videohub360-theme' ); ?></p>
         </div>
     <?php endif; ?>
 

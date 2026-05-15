@@ -23,12 +23,16 @@ $courses = function_exists( 'vh360_get_user_courses' ) ? vh360_get_user_courses(
 <div class="vh360-course-author-courses" id="vh360-course-tab-courses">
 
     <div class="vh360-course-author-section-header">
-        <h2 class="vh360-course-author-section-title">
-            <?php echo esc_html( $course_label ); ?>
-            <?php if ( ! empty( $courses ) ) : ?>
-                <span class="vh360-course-author-section-count">(<?php echo esc_html( number_format_i18n( count( $courses ) ) ); ?>)</span>
-            <?php endif; ?>
-        </h2>
+        <div class="vh360-course-author-section-heading">
+            <span class="vh360-course-author-section-kicker"><?php esc_html_e( 'Learning Paths', 'videohub360-theme' ); ?></span>
+            <h2 class="vh360-course-author-section-title">
+                <?php echo esc_html( $course_label ); ?>
+                <?php if ( ! empty( $courses ) ) : ?>
+                    <span class="vh360-course-author-section-count"><?php echo esc_html( number_format_i18n( count( $courses ) ) ); ?></span>
+                <?php endif; ?>
+            </h2>
+            <p class="vh360-course-author-section-description"><?php esc_html_e( 'Explore this instructor\'s available learning paths.', 'videohub360-theme' ); ?></p>
+        </div>
     </div>
 
     <?php if ( ! empty( $courses ) ) : ?>
@@ -68,7 +72,7 @@ $courses = function_exists( 'vh360_get_user_courses' ) ? vh360_get_user_courses(
                     $thumb_url = ! empty( $first_lesson ) ? get_the_post_thumbnail_url( $first_lesson[0], 'videohub360-video-thumb' ) : '';
                 }
             ?>
-                <article class="vh360-course-card">
+            <article class="vh360-course-card">
                     <a href="<?php echo esc_url( $course_url ); ?>" class="vh360-course-card-link">
                         <!-- Thumbnail -->
                         <div class="vh360-course-card-thumb">
@@ -107,6 +111,16 @@ $courses = function_exists( 'vh360_get_user_courses' ) ? vh360_get_user_courses(
                             </div>
                         </div>
                     </a>
+
+                    <!-- Footer: View Course CTA -->
+                    <div class="vh360-course-card-footer">
+                        <a href="<?php echo esc_url( $course_url ); ?>" class="vh360-course-card-button">
+                            <?php
+                            /* translators: %s: course label singular (e.g. "Course") */
+                            printf( esc_html__( 'View %s', 'videohub360-theme' ), esc_html( function_exists( 'vh360_get_course_label' ) ? vh360_get_course_label( false ) : __( 'Course', 'videohub360-theme' ) ) );
+                            ?>
+                        </a>
+                    </div>
                 </article>
             <?php endforeach; ?>
         </div>
@@ -114,8 +128,8 @@ $courses = function_exists( 'vh360_get_user_courses' ) ? vh360_get_user_courses(
     <?php else : ?>
         <div class="vh360-course-author-empty-state">
             <div class="vh360-empty-icon">📚</div>
-            <h3 class="vh360-empty-title"><?php esc_html_e( 'No courses yet', 'videohub360-theme' ); ?></h3>
-            <p class="vh360-empty-description"><?php esc_html_e( 'This instructor hasn\'t published any courses yet.', 'videohub360-theme' ); ?></p>
+            <h3><?php esc_html_e( 'No courses yet', 'videohub360-theme' ); ?></h3>
+            <p><?php esc_html_e( 'This instructor hasn\'t published any courses yet.', 'videohub360-theme' ); ?></p>
         </div>
     <?php endif; ?>
 
