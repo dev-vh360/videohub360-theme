@@ -51,69 +51,78 @@ $lesson_label     = function_exists( 'vh360_get_lesson_label' ) ? vh360_get_less
 
 <div class="vh360-course-author-about" id="vh360-course-tab-about">
 
+    <div class="vh360-course-author-section-header">
+        <div class="vh360-course-author-section-heading">
+            <span class="vh360-course-author-section-kicker"><?php echo esc_html( $instructor_label ); ?></span>
+            <h2 class="vh360-course-author-section-title"><?php esc_html_e( 'About', 'videohub360-theme' ); ?></h2>
+            <p class="vh360-course-author-section-description"><?php esc_html_e( 'Learn more about this instructor\'s background and teaching style.', 'videohub360-theme' ); ?></p>
+        </div>
+    </div>
+
     <div class="vh360-course-author-about-layout">
 
         <!-- Main: bio + links -->
         <div class="vh360-course-author-about-main">
-            <h2 class="vh360-course-author-section-title"><?php echo esc_html( $instructor_label ); ?></h2>
 
-            <?php if ( $description ) : ?>
-                <div class="vh360-course-author-bio-full">
-                    <?php echo wpautop( wp_kses_post( $description ) ); ?>
-                </div>
-            <?php else : ?>
-                <div class="vh360-course-author-bio-full vh360-course-author-bio-empty">
-                    <p><?php esc_html_e( 'No bio yet.', 'videohub360-theme' ); ?></p>
-                </div>
-            <?php endif; ?>
+            <div class="vh360-course-author-about-card">
+                <h3 class="vh360-course-author-subsection-title"><?php esc_html_e( 'Biography', 'videohub360-theme' ); ?></h3>
+                <?php if ( $description ) : ?>
+                    <div class="vh360-course-author-bio-full">
+                        <?php echo wpautop( wp_kses_post( $description ) ); ?>
+                    </div>
+                <?php else : ?>
+                    <div class="vh360-course-author-bio-full vh360-course-author-bio-empty">
+                        <p><?php esc_html_e( 'No bio yet.', 'videohub360-theme' ); ?></p>
+                    </div>
+                <?php endif; ?>
+            </div>
 
             <!-- Links -->
             <?php if ( $website || ! empty( $social_links ) ) : ?>
-                <div class="vh360-course-author-links">
+                <div class="vh360-course-author-links-card">
                     <h3 class="vh360-course-author-subsection-title"><?php esc_html_e( 'Links', 'videohub360-theme' ); ?></h3>
-                    <ul class="vh360-course-author-links-list">
+                    <div class="vh360-course-author-social-links">
                         <?php if ( $website ) : ?>
-                            <li>
-                                <a href="<?php echo esc_url( $website ); ?>" class="vh360-course-author-link" target="_blank" rel="noopener noreferrer">
-                                    <?php
-                                    $host = wp_parse_url( $website, PHP_URL_HOST );
-                                    echo esc_html( $host ? $host : $website );
-                                    ?>
-                                </a>
-                            </li>
+                            <a href="<?php echo esc_url( $website ); ?>" class="vh360-course-author-social-link" target="_blank" rel="noopener noreferrer">
+                                <?php
+                                $host = wp_parse_url( $website, PHP_URL_HOST );
+                                echo esc_html( $host ? $host : $website );
+                                ?>
+                            </a>
                         <?php endif; ?>
                         <?php foreach ( $social_links as $platform => $url ) :
                             if ( $url ) : ?>
-                                <li>
-                                    <a href="<?php echo esc_url( $url ); ?>" class="vh360-course-author-link" target="_blank" rel="noopener noreferrer">
-                                        <?php echo esc_html( ucfirst( $platform ) ); ?>
-                                    </a>
-                                </li>
+                                <a href="<?php echo esc_url( $url ); ?>" class="vh360-course-author-social-link" target="_blank" rel="noopener noreferrer">
+                                    <?php echo esc_html( ucfirst( $platform ) ); ?>
+                                </a>
                             <?php endif;
                         endforeach; ?>
-                    </ul>
+                    </div>
                 </div>
             <?php endif; ?>
         </div>
 
         <!-- Sidebar: stats -->
         <div class="vh360-course-author-about-sidebar">
-            <div class="vh360-course-author-stats-box">
+            <div class="vh360-course-author-stats-card">
                 <h3 class="vh360-course-author-subsection-title"><?php esc_html_e( 'Teaching Stats', 'videohub360-theme' ); ?></h3>
+                <div class="vh360-course-author-stats-grid">
 
-                <div class="vh360-course-author-stat-item">
-                    <span class="vh360-course-author-stat-label"><?php echo esc_html( $course_label ); ?></span>
-                    <span class="vh360-course-author-stat-value"><?php echo esc_html( number_format_i18n( $course_count ) ); ?></span>
-                </div>
+                    <div class="vh360-course-author-stat-tile">
+                        <span class="vh360-course-author-stat-label"><?php echo esc_html( $course_label ); ?></span>
+                        <span class="vh360-course-author-stat-value"><?php echo esc_html( number_format_i18n( $course_count ) ); ?></span>
+                    </div>
 
-                <div class="vh360-course-author-stat-item">
-                    <span class="vh360-course-author-stat-label"><?php echo esc_html( $lesson_label ); ?></span>
-                    <span class="vh360-course-author-stat-value"><?php echo esc_html( number_format_i18n( $lesson_count ) ); ?></span>
-                </div>
+                    <div class="vh360-course-author-stat-tile">
+                        <span class="vh360-course-author-stat-label"><?php echo esc_html( $lesson_label ); ?></span>
+                        <span class="vh360-course-author-stat-value"><?php echo esc_html( number_format_i18n( $lesson_count ) ); ?></span>
+                    </div>
 
-                <div class="vh360-course-author-stat-item">
-                    <span class="vh360-course-author-stat-label"><?php esc_html_e( 'Joined', 'videohub360-theme' ); ?></span>
-                    <span class="vh360-course-author-stat-value"><?php echo esc_html( $join_date ); ?></span>
+                    <div class="vh360-course-author-stat-tile">
+                        <span class="vh360-course-author-stat-label"><?php esc_html_e( 'Member Since', 'videohub360-theme' ); ?></span>
+                        <span class="vh360-course-author-stat-value vh360-course-author-stat-value--sm"><?php echo esc_html( $join_date ); ?></span>
+                    </div>
+
                 </div>
             </div>
         </div>

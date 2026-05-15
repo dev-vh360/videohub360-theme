@@ -39,9 +39,9 @@ $tabs = array(
 );
 ?>
 
-<nav class="vh360-course-author-nav" role="navigation" aria-label="<?php esc_attr_e( 'Instructor Navigation', 'videohub360-theme' ); ?>">
-    <div class="container">
-        <ul class="vh360-course-author-nav-tabs" role="tablist">
+<div class="vh360-course-author-nav-wrapper">
+    <nav class="vh360-course-author-nav" role="navigation" aria-label="<?php esc_attr_e( 'Instructor Navigation', 'videohub360-theme' ); ?>">
+        <ul class="vh360-course-author-nav-list" role="tablist">
             <?php foreach ( $tabs as $tab_key => $tab_label ) : ?>
                 <li class="vh360-course-author-nav-item" role="presentation">
                     <a href="<?php echo esc_url( add_query_arg( 'tab', $tab_key, $author_url ) ); ?>"
@@ -54,5 +54,5 @@ $tabs = array(
                 </li>
             <?php endforeach; ?>
         </ul>
-    </div>
-</nav>
+    </nav>
+</div>
