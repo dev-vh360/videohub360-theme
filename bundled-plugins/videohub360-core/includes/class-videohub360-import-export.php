@@ -41,6 +41,15 @@ class VideoHub360_Import_Export {
     );
     
     /**
+     * Runtime cache of imported media URLs to attachment IDs.
+     *
+     * Prevents downloading the same image multiple times during one import.
+     *
+     * @var array
+     */
+    private $imported_media_cache = array();
+
+    /**
      * Constructor
      */
     public function __construct() {
@@ -175,18 +184,27 @@ class VideoHub360_Import_Export {
             'videohub360_tag' => wp_get_post_terms($post_id, 'videohub360_tag', array('fields' => 'all')),
         );
         
-        // Get featured image URL
+        // Get featured image URL and portable attachment data.
         $featured_image_url = '';
-        if (has_post_thumbnail($post_id)) {
-            $featured_image_url = get_the_post_thumbnail_url($post_id, 'full');
+        $featured_image     = null;
+
+        if ( has_post_thumbnail( $post_id ) ) {
+            $thumbnail_id       = get_post_thumbnail_id( $post_id );
+            $featured_image_url = get_the_post_thumbnail_url( $post_id, 'full' );
+            $featured_image     = $this->build_attachment_export_data( $thumbnail_id );
         }
         
         // Build video data array
         $video_data = array(
-            'post_data' => $post_data,
-            'meta_data' => $meta_data,
-            'taxonomies' => $taxonomies,
+            'post_data'          => $post_data,
+            'meta_data'          => $meta_data,
+            'taxonomies'         => $taxonomies,
+
+            // Backward-compatible simple URL.
             'featured_image_url' => $featured_image_url,
+
+            // Portable full attachment data for new imports.
+            'featured_image'     => $featured_image,
         );
         
         return $video_data;
@@ -274,17 +292,179 @@ class VideoHub360_Import_Export {
                     $meta_data[$meta_key] = get_term_meta($term->term_id, $meta_key, true);
                 }
 
+                $course_featured_image_id = absint( get_term_meta( $term->term_id, '_vh360_course_featured_image_id', true ) );
+                $course_featured_image    = $course_featured_image_id ? $this->build_attachment_export_data( $course_featured_image_id ) : null;
+
                 $course_terms[] = array(
-                    'taxonomy'    => 'videohub360_series',
-                    'name'        => $term->name,
-                    'slug'        => $term->slug,
-                    'description' => $term->description,
-                    'meta_data'   => $meta_data,
+                    'taxonomy'           => 'videohub360_series',
+                    'name'               => $term->name,
+                    'slug'               => $term->slug,
+                    'description'        => $term->description,
+                    'meta_data'          => $meta_data,
+
+                    // Portable course image data.
+                    'featured_image'     => $course_featured_image,
+
+                    // Backward-compatible simple URL.
+                    'featured_image_url' => $course_featured_image ? $course_featured_image['url'] : '',
                 );
             }
         }
 
         return $course_terms;
+    }
+
+    /**
+     * Build portable attachment export data.
+     *
+     * @param int $attachment_id Attachment ID.
+     * @return array|null
+     */
+    private function build_attachment_export_data( $attachment_id ) {
+        $attachment_id = absint( $attachment_id );
+
+        if ( ! $attachment_id ) {
+            return null;
+        }
+
+        $url = wp_get_attachment_url( $attachment_id );
+
+        if ( ! $url ) {
+            return null;
+        }
+
+        $attachment = get_post( $attachment_id );
+
+        return array(
+            'id'          => $attachment_id,
+            'url'         => esc_url_raw( $url ),
+            'filename'    => basename( get_attached_file( $attachment_id ) ),
+            'title'       => $attachment ? $attachment->post_title : '',
+            'caption'     => $attachment ? $attachment->post_excerpt : '',
+            'description' => $attachment ? $attachment->post_content : '',
+            'alt'         => get_post_meta( $attachment_id, '_wp_attachment_image_alt', true ),
+            'mime_type'   => get_post_mime_type( $attachment_id ),
+        );
+    }
+
+    /**
+     * Import a remote image URL into the Media Library.
+     *
+     * @param string $url        Remote image URL.
+     * @param int    $parent_id  Optional parent post ID.
+     * @param array  $image_data Optional exported attachment metadata.
+     * @return int|WP_Error Attachment ID on success.
+     */
+    private function import_remote_image( $url, $parent_id = 0, $image_data = array() ) {
+        $url = esc_url_raw( trim( (string) $url ) );
+
+        if ( empty( $url ) ) {
+            return new WP_Error( 'vh360_empty_image_url', __( 'Empty image URL.', 'videohub360' ) );
+        }
+
+        if ( isset( $this->imported_media_cache[ $url ] ) ) {
+            return absint( $this->imported_media_cache[ $url ] );
+        }
+
+        $parsed = wp_parse_url( $url );
+
+        if ( ! is_array( $parsed ) || empty( $parsed['scheme'] ) || ! in_array( strtolower( $parsed['scheme'] ), array( 'http', 'https' ), true ) ) {
+            return new WP_Error( 'vh360_invalid_image_url', __( 'Invalid image URL scheme.', 'videohub360' ) );
+        }
+
+        // Check for an already-imported attachment by original source URL.
+        $existing = get_posts( array(
+            'post_type'      => 'attachment',
+            'post_status'    => 'inherit',
+            'posts_per_page' => 1,
+            'fields'         => 'ids',
+            'meta_key'       => '_vh360_import_source_url',
+            'meta_value'     => $url,
+        ) );
+
+        if ( ! empty( $existing ) ) {
+            $attachment_id = absint( $existing[0] );
+            $this->imported_media_cache[ $url ] = $attachment_id;
+            return $attachment_id;
+        }
+
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        require_once ABSPATH . 'wp-admin/includes/media.php';
+        require_once ABSPATH . 'wp-admin/includes/image.php';
+
+        $tmp = download_url( $url, 60 );
+
+        if ( is_wp_error( $tmp ) ) {
+            return $tmp;
+        }
+
+        $filename = ! empty( $image_data['filename'] )
+            ? sanitize_file_name( $image_data['filename'] )
+            : sanitize_file_name( basename( wp_parse_url( $url, PHP_URL_PATH ) ) );
+
+        if ( empty( $filename ) ) {
+            $filename = 'vh360-imported-image';
+        }
+
+        $file_array = array(
+            'name'     => $filename,
+            'tmp_name' => $tmp,
+        );
+
+        $allowed_mimes = array(
+            'jpg|jpeg|jpe' => 'image/jpeg',
+            'png'          => 'image/png',
+            'gif'          => 'image/gif',
+            'webp'         => 'image/webp',
+        );
+
+        $filetype = wp_check_filetype_and_ext( $tmp, $filename, $allowed_mimes );
+
+        if ( empty( $filetype['type'] ) || strpos( $filetype['type'], 'image/' ) !== 0 ) {
+            if ( file_exists( $tmp ) ) {
+                unlink( $tmp );
+            }
+            return new WP_Error( 'vh360_invalid_image_type', __( 'Remote file is not a supported image type.', 'videohub360' ) );
+        }
+
+        $attachment_id = media_handle_sideload( $file_array, absint( $parent_id ) );
+
+        if ( is_wp_error( $attachment_id ) ) {
+            if ( file_exists( $tmp ) ) {
+                unlink( $tmp );
+            }
+            return $attachment_id;
+        }
+
+        update_post_meta( $attachment_id, '_vh360_import_source_url', $url );
+
+        if ( ! empty( $image_data['alt'] ) ) {
+            update_post_meta( $attachment_id, '_wp_attachment_image_alt', sanitize_text_field( $image_data['alt'] ) );
+        }
+
+        $attachment_update = array(
+            'ID' => $attachment_id,
+        );
+
+        if ( ! empty( $image_data['title'] ) ) {
+            $attachment_update['post_title'] = sanitize_text_field( $image_data['title'] );
+        }
+
+        if ( ! empty( $image_data['caption'] ) ) {
+            $attachment_update['post_excerpt'] = sanitize_textarea_field( $image_data['caption'] );
+        }
+
+        if ( ! empty( $image_data['description'] ) ) {
+            $attachment_update['post_content'] = wp_kses_post( $image_data['description'] );
+        }
+
+        if ( count( $attachment_update ) > 1 ) {
+            wp_update_post( $attachment_update );
+        }
+
+        $this->imported_media_cache[ $url ] = absint( $attachment_id );
+
+        return absint( $attachment_id );
     }
 
     /**
@@ -586,8 +766,41 @@ class VideoHub360_Import_Export {
             }
         }
         
-        // Note: Featured image URL is stored but not downloaded/imported
-        // User would need to manually set featured images or use a plugin
+        // Import and assign featured image if present.
+        $image_url  = '';
+        $image_data = array();
+
+        if ( isset( $video_data['featured_image'] ) && is_array( $video_data['featured_image'] ) ) {
+            $image_data = $video_data['featured_image'];
+            $image_url  = isset( $image_data['url'] ) ? esc_url_raw( $image_data['url'] ) : '';
+        }
+
+        if ( empty( $image_url ) && ! empty( $video_data['featured_image_url'] ) ) {
+            $image_url = esc_url_raw( $video_data['featured_image_url'] );
+        }
+
+        if ( ! empty( $image_url ) ) {
+            $attachment_id = $this->import_remote_image( $image_url, $post_id, $image_data );
+
+            if ( ! is_wp_error( $attachment_id ) && $attachment_id ) {
+                set_post_thumbnail( $post_id, $attachment_id );
+            }
+        }
+
+        // Optionally localize video poster image URLs.
+        $poster_url = get_post_meta( $post_id, '_vh360_poster', true );
+
+        if ( ! empty( $poster_url ) && preg_match( '#^https?://#i', $poster_url ) ) {
+            $poster_attachment_id = $this->import_remote_image( $poster_url, $post_id );
+
+            if ( ! is_wp_error( $poster_attachment_id ) && $poster_attachment_id ) {
+                $local_poster_url = wp_get_attachment_url( $poster_attachment_id );
+
+                if ( $local_poster_url ) {
+                    update_post_meta( $post_id, '_vh360_poster', esc_url_raw( $local_poster_url ) );
+                }
+            }
+        }
         
         if ($updating) {
             return array('updated' => true, 'post_id' => $post_id);
@@ -610,7 +823,6 @@ class VideoHub360_Import_Export {
             '_vh360_course_order',
             '_vh360_course_instructor_user_id',
             '_vh360_course_owner_user_id',
-            '_vh360_course_featured_image_id',
         );
 
         foreach ($course_terms as $course_term_data) {
@@ -652,13 +864,20 @@ class VideoHub360_Import_Export {
                 $term_id = (int) $term->term_id;
             }
 
-            // Import course term meta.
-            if (!isset($course_term_data['meta_data']) || !is_array($course_term_data['meta_data'])) {
-                continue;
-            }
+            // Import course term meta. Treat missing meta_data as an empty array so that
+            // terms without meta (e.g. image-only exports) still reach the image import block.
+            $meta_data = ( isset( $course_term_data['meta_data'] ) && is_array( $course_term_data['meta_data'] ) )
+                ? $course_term_data['meta_data']
+                : array();
 
-            foreach ($course_term_data['meta_data'] as $meta_key => $meta_value) {
+            foreach ( $meta_data as $meta_key => $meta_value ) {
                 if (!in_array($meta_key, self::ALLOWED_COURSE_TERM_META, true)) {
+                    continue;
+                }
+
+                // Do not import source-site attachment IDs directly.
+                // Course featured image ID must be remapped after sideloading.
+                if ( $meta_key === '_vh360_course_featured_image_id' ) {
                     continue;
                 }
 
@@ -673,6 +892,27 @@ class VideoHub360_Import_Export {
                 }
 
                 update_term_meta($term_id, $meta_key, $sanitized);
+            }
+
+            // Import and remap course featured image.
+            $course_image_url  = '';
+            $course_image_data = array();
+
+            if ( isset( $course_term_data['featured_image'] ) && is_array( $course_term_data['featured_image'] ) ) {
+                $course_image_data = $course_term_data['featured_image'];
+                $course_image_url  = isset( $course_image_data['url'] ) ? esc_url_raw( $course_image_data['url'] ) : '';
+            }
+
+            if ( empty( $course_image_url ) && ! empty( $course_term_data['featured_image_url'] ) ) {
+                $course_image_url = esc_url_raw( $course_term_data['featured_image_url'] );
+            }
+
+            if ( ! empty( $course_image_url ) ) {
+                $attachment_id = $this->import_remote_image( $course_image_url, 0, $course_image_data );
+
+                if ( ! is_wp_error( $attachment_id ) && $attachment_id ) {
+                    update_term_meta( $term_id, '_vh360_course_featured_image_id', absint( $attachment_id ) );
+                }
             }
         }
     }
