@@ -416,28 +416,26 @@ function vh360_get_course_lesson_count( $term_id ) {
         return is_array( $lessons ) ? count( $lessons ) : 0;
     }
 
-    // Direct query fallback.
-    $count = wp_cache_get( 'vh360_lesson_count_' . $term_id, 'vh360_course_author' );
-    if ( false !== $count ) {
-        return (int) $count;
-    }
-
-    $posts = get_posts( array(
-        'post_type'      => 'videohub360',
-        'post_status'    => 'publish',
-        'posts_per_page' => -1,
-        'fields'         => 'ids',
-        'tax_query'      => array(
-            array(
-                'taxonomy' => 'videohub360_series',
-                'field'    => 'term_id',
-                'terms'    => $term_id,
+    // Direct query fallback — no persistent caching so counts are always fresh.
+    $query = new WP_Query(
+        array(
+            'post_type'              => 'videohub360',
+            'post_status'            => 'publish',
+            'posts_per_page'         => 1,
+            'fields'                 => 'ids',
+            'no_found_rows'          => false,
+            'ignore_sticky_posts'    => true,
+            'update_post_meta_cache' => false,
+            'update_post_term_cache' => false,
+            'tax_query'              => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+                array(
+                    'taxonomy' => 'videohub360_series',
+                    'field'    => 'term_id',
+                    'terms'    => $term_id,
+                ),
             ),
-        ),
-    ) );
+        )
+    );
 
-    $count = is_array( $posts ) ? count( $posts ) : 0;
-    wp_cache_set( 'vh360_lesson_count_' . $term_id, $count, 'vh360_course_author', 5 * MINUTE_IN_SECONDS );
-
-    return $count;
+    return (int) $query->found_posts;
 }
