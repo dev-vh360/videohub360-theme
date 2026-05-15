@@ -111,16 +111,12 @@ function vh360_user_is_course_instructor( $user_id ) {
         return false;
     }
 
-    // Runtime cache (per request).
+    // Per-request static cache only. Persistent object caching is intentionally
+    // avoided because invalidating the old instructor on an instructor change
+    // would require knowing the previous value, which the term-meta hooks do not
+    // reliably provide.
     static $cache = array();
     if ( isset( $cache[ $user_id ] ) ) {
-        return $cache[ $user_id ];
-    }
-
-    $cache_key = 'vh360_instructor_' . $user_id;
-    $cached    = wp_cache_get( $cache_key, 'vh360_course_author' );
-    if ( false !== $cached ) {
-        $cache[ $user_id ] = (bool) $cached;
         return $cache[ $user_id ];
     }
 
@@ -186,7 +182,6 @@ function vh360_user_is_course_instructor( $user_id ) {
         }
     }
 
-    wp_cache_set( $cache_key, (int) $is_instructor, 'vh360_course_author', 5 * MINUTE_IN_SECONDS );
     $cache[ $user_id ] = $is_instructor;
 
     return $is_instructor;
@@ -195,16 +190,16 @@ function vh360_user_is_course_instructor( $user_id ) {
 /**
  * Invalidate the instructor cache for a user.
  *
- * Hook into lesson saves and course term meta updates so the cached result
- * stays accurate.
+ * The static per-request cache inside vh360_user_is_course_instructor() cannot
+ * be cleared from outside the function, so this is intentionally a no-op for
+ * within-request callers. It is kept as a named function so that hooks wired to
+ * it remain valid and do not need to be removed.
  *
  * @param int $user_id
  */
 function vh360_invalidate_instructor_cache( $user_id ) {
-    $user_id = absint( $user_id );
-    if ( $user_id ) {
-        wp_cache_delete( 'vh360_instructor_' . $user_id, 'vh360_course_author' );
-    }
+    // Persistent object caching was removed from vh360_user_is_course_instructor().
+    // Nothing to clear here; the per-request static array resets on the next request.
 }
 
 /**

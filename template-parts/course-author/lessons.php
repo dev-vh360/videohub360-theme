@@ -32,7 +32,9 @@ foreach ( $courses as $course ) {
             $course_lesson_ids = array();
         }
     } else {
-        // Fallback: direct query ordered by module then lesson number.
+        // Fallback: direct query ordered by module number.  Post IDs are returned
+        // here, so we follow up with a usort by module → lesson → date so the
+        // ordering matches what videohub360_get_course_lessons() would produce.
         $course_lesson_ids = get_posts( array(
             'post_type'      => 'videohub360',
             'post_status'    => 'publish',
@@ -48,13 +50,42 @@ foreach ( $courses as $course ) {
                 ),
             ),
         ) );
+
+        // Sort by module number → lesson number → post date (all ascending).
+        usort( $course_lesson_ids, function( $a, $b ) {
+            $mod_a    = (int) get_post_meta( $a, '_vh360_lesson_module_number', true );
+            $mod_b    = (int) get_post_meta( $b, '_vh360_lesson_module_number', true );
+            if ( $mod_a !== $mod_b ) {
+                return $mod_a - $mod_b;
+            }
+
+            $num_a = (int) get_post_meta( $a, '_vh360_lesson_number', true );
+            $num_b = (int) get_post_meta( $b, '_vh360_lesson_number', true );
+            if ( $num_a !== $num_b ) {
+                return $num_a - $num_b;
+            }
+
+            return strtotime( get_post_field( 'post_date', $a ) ) - strtotime( get_post_field( 'post_date', $b ) );
+        } );
     }
 
     // Only keep lessons authored by this instructor.
+    // Normalize each item: videohub360_get_course_lessons() may return WP_Post
+    // objects or plain post IDs depending on the plugin version.
     $instructor_lessons = array();
-    foreach ( $course_lesson_ids as $lesson_id ) {
+    foreach ( $course_lesson_ids as $lesson ) {
+        if ( $lesson instanceof WP_Post ) {
+            $lesson_id = (int) $lesson->ID;
+        } else {
+            $lesson_id = absint( $lesson );
+        }
+
+        if ( ! $lesson_id ) {
+            continue;
+        }
+
         if ( (int) get_post_field( 'post_author', $lesson_id ) === (int) $author_id ) {
-            $instructor_lessons[] = (int) $lesson_id;
+            $instructor_lessons[] = $lesson_id;
         }
     }
 
