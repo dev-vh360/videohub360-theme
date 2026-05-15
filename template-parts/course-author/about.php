@@ -120,7 +120,7 @@ $lesson_label     = function_exists( 'vh360_get_lesson_label' ) ? vh360_get_less
 
                     <div class="vh360-course-author-stat-tile">
                         <span class="vh360-course-author-stat-label"><?php esc_html_e( 'Member Since', 'videohub360-theme' ); ?></span>
-                        <span class="vh360-course-author-stat-value" style="font-size:0.95rem;"><?php echo esc_html( $join_date ); ?></span>
+                        <span class="vh360-course-author-stat-value vh360-course-author-stat-value--sm"><?php echo esc_html( $join_date ); ?></span>
                     </div>
 
                 </div>

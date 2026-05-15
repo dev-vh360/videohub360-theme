@@ -516,12 +516,12 @@
     white-space: nowrap;
 }
 
-.vh360-course-card-footer {
+.vh360-course-author-page .vh360-course-card-footer {
     padding: 0 20px 20px;
     flex-shrink: 0;
 }
 
-.vh360-course-card-button {
+.vh360-course-author-page .vh360-course-card-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -537,7 +537,7 @@
     box-shadow: 0 4px 12px rgba(20, 83, 45, 0.18);
 }
 
-.vh360-course-card-button:hover {
+.vh360-course-author-page .vh360-course-card-button:hover {
     background: var(--vh360-course-author-primary-dark);
     box-shadow: 0 6px 16px rgba(20, 83, 45, 0.28);
     color: #ffffff;
@@ -624,7 +624,7 @@
     background: rgba(243, 234, 220, 0.45);
 }
 
-.vh360-course-author-lesson-item:last-child {
+.vh360-course-author-lesson-list li:last-child .vh360-course-author-lesson-item {
     border-bottom: none;
 }
 
@@ -786,6 +786,10 @@
     color: var(--vh360-course-author-primary);
     font-size: 1.15rem;
     font-weight: 900;
+}
+
+.vh360-course-author-stat-value--sm {
+    font-size: 0.95rem;
 }
 
 /* Legacy stat item (keep for backwards compat) */

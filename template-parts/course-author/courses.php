@@ -47,6 +47,7 @@ $courses = function_exists( 'vh360_get_user_courses' ) ? vh360_get_user_courses(
                 // Course meta.
                 $featured_image_id = (int) get_term_meta( $term_id, '_vh360_course_featured_image_id', true );
                 $subtitle          = get_term_meta( $term_id, '_vh360_course_subtitle', true );
+                $card_description  = $subtitle ? $subtitle : $course->description;
                 $level             = get_term_meta( $term_id, '_vh360_course_level', true );
                 $duration          = get_term_meta( $term_id, '_vh360_course_duration', true );
                 $membership        = get_term_meta( $term_id, '_vh360_course_required_membership', true );
@@ -91,8 +92,8 @@ $courses = function_exists( 'vh360_get_user_courses' ) ? vh360_get_user_courses(
                         <div class="vh360-course-card-body">
                             <h3 class="vh360-course-card-title"><?php echo esc_html( $course->name ); ?></h3>
 
-                            <?php if ( $subtitle ) : ?>
-                                <p class="vh360-course-card-subtitle"><?php echo esc_html( $subtitle ); ?></p>
+                            <?php if ( $card_description ) : ?>
+                                <p class="vh360-course-card-subtitle"><?php echo esc_html( wp_strip_all_tags( $card_description ) ); ?></p>
                             <?php endif; ?>
 
                             <div class="vh360-course-card-meta">
