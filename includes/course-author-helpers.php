@@ -222,15 +222,15 @@ function vh360_maybe_invalidate_instructor_cache_on_save( $post_id ) {
 add_action( 'save_post', 'vh360_maybe_invalidate_instructor_cache_on_save', 20 );
 
 /**
- * Clear instructor cache when course owner/instructor term meta changes.
+ * Invalidate instructor cache when a course/series term is edited.
  *
- * @param int    $term_id  Term ID.
- * @param string $taxonomy Taxonomy name.
+ * The edited_{$taxonomy} hook passes ( $term_id, $tt_id ), not
+ * ( $term_id, $taxonomy ), so no taxonomy-name check is needed here.
+ *
+ * @param int $term_id Term ID.
+ * @param int $tt_id   Term taxonomy ID (unused but declared for hook signature).
  */
-function vh360_maybe_invalidate_instructor_cache_on_term_meta( $term_id, $taxonomy ) {
-    if ( $taxonomy !== 'videohub360_series' ) {
-        return;
-    }
+function vh360_maybe_invalidate_instructor_cache_on_series_edit( $term_id, $tt_id = 0 ) {
     foreach ( array( '_vh360_course_instructor_user_id', '_vh360_course_owner_user_id' ) as $meta_key ) {
         $user_id = (int) get_term_meta( $term_id, $meta_key, true );
         if ( $user_id ) {
@@ -238,7 +238,38 @@ function vh360_maybe_invalidate_instructor_cache_on_term_meta( $term_id, $taxono
         }
     }
 }
-add_action( 'edited_videohub360_series', 'vh360_maybe_invalidate_instructor_cache_on_term_meta', 20, 2 );
+add_action( 'edited_videohub360_series', 'vh360_maybe_invalidate_instructor_cache_on_series_edit', 20, 2 );
+
+/**
+ * Invalidate course author caches when course instructor/owner term meta changes.
+ *
+ * Covers programmatic meta updates (not only the admin term-edit form), so
+ * the instructor detection cache stays accurate when meta is set via REST,
+ * importer, or plugin code.
+ *
+ * @param int    $meta_id     Meta ID.
+ * @param int    $object_id   Term ID.
+ * @param string $meta_key    Meta key.
+ * @param mixed  $_meta_value New or deleted meta value.
+ */
+function vh360_invalidate_course_author_cache_on_term_meta_change( $meta_id, $object_id, $meta_key, $_meta_value ) {
+    if ( ! in_array( $meta_key, array( '_vh360_course_instructor_user_id', '_vh360_course_owner_user_id' ), true ) ) {
+        return;
+    }
+
+    $term = get_term( (int) $object_id, 'videohub360_series' );
+    if ( ! $term || is_wp_error( $term ) ) {
+        return;
+    }
+
+    $new_user_id = (int) $_meta_value;
+    if ( $new_user_id ) {
+        vh360_invalidate_instructor_cache( $new_user_id );
+    }
+}
+add_action( 'added_term_meta',   'vh360_invalidate_course_author_cache_on_term_meta_change', 20, 4 );
+add_action( 'updated_term_meta', 'vh360_invalidate_course_author_cache_on_term_meta_change', 20, 4 );
+add_action( 'deleted_term_meta', 'vh360_invalidate_course_author_cache_on_term_meta_change', 20, 4 );
 
 /* =========================================================================
    Course retrieval for author pages
@@ -250,8 +281,6 @@ add_action( 'edited_videohub360_series', 'vh360_maybe_invalidate_instructor_cach
  * Returns terms ordered by _vh360_course_order (ASC), then name (ASC).
  * Falls back to inferring courses from authored lessons when no direct
  * owner/instructor meta is found.
- *
- * Results are cached with a short object-cache TTL.
  *
  * @param int   $user_id WordPress user ID.
  * @param array $args {
@@ -275,13 +304,6 @@ function vh360_get_user_courses( $user_id, $args = array() ) {
         'number'                    => 0,
     );
     $args = wp_parse_args( $args, $defaults );
-
-    // Build a cache key that incorporates the relevant arguments.
-    $cache_key = 'vh360_user_courses_' . $user_id . '_' . md5( serialize( $args ) );
-    $cached    = wp_cache_get( $cache_key, 'vh360_course_author' );
-    if ( false !== $cached ) {
-        return $cached;
-    }
 
     $course_term_ids = array();
 
@@ -343,7 +365,6 @@ function vh360_get_user_courses( $user_id, $args = array() ) {
     $course_term_ids = array_unique( array_map( 'absint', $course_term_ids ) );
 
     if ( empty( $course_term_ids ) ) {
-        wp_cache_set( $cache_key, array(), 'vh360_course_author', 5 * MINUTE_IN_SECONDS );
         return array();
     }
 
@@ -376,8 +397,6 @@ function vh360_get_user_courses( $user_id, $args = array() ) {
     if ( is_wp_error( $terms ) ) {
         $terms = array();
     }
-
-    wp_cache_set( $cache_key, $terms, 'vh360_course_author', 5 * MINUTE_IN_SECONDS );
 
     return $terms;
 }

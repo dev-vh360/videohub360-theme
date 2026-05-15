@@ -46,10 +46,10 @@ function vh360_get_user_account_type($user_id) {
  * Determines which author template should be displayed based on the user's account type:
  * - professional/organization → business
  * - client → client
- * - creator → respects existing site-wide Profile/Channel customizer setting
+ * - creator → respects existing site-wide Profile/Channel/Course customizer setting
  * 
  * @param int $author_id Author user ID
- * @return string Display mode: 'business', 'client', 'channel', or 'profile'
+ * @return string Display mode: 'business', 'client', 'course', 'channel', or 'profile'
  */
 function vh360_get_author_display_mode($author_id) {
     if (!$author_id) {
