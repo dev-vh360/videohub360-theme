@@ -1014,6 +1014,11 @@ require_once VH360_THEME_DIR . '/includes/account-types.php';
 require_once VH360_THEME_DIR . '/includes/helpers.php';
 
 /**
+ * Course author helper functions (instructor detection, course retrieval)
+ */
+require_once VH360_THEME_DIR . '/includes/course-author-helpers.php';
+
+/**
  * Profile avatar processing functions
  */
 require_once VH360_THEME_DIR . '/includes/profile-avatar-functions.php';

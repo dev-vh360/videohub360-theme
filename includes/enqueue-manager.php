@@ -86,6 +86,14 @@ function vh360_enqueue_profile_assets() {
                 array('videohub360-theme-style'),
                 VH360_THEME_VERSION
             );
+        } elseif ($template_mode === 'course') {
+            // Load course author CSS for course mode
+            wp_enqueue_style(
+                'vh360-course-author',
+                VH360_THEME_URI . '/assets/css/course-author.css',
+                array('videohub360-theme-style'),
+                VH360_THEME_VERSION
+            );
         } elseif ($template_mode === 'channel') {
             // Load channel CSS for channel mode
             wp_enqueue_style(
