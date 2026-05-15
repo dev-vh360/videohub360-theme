@@ -958,9 +958,10 @@ if ( ! function_exists( 'videohub360_get_effective_lesson_required_membership' )
      * Return the effective membership requirement for a lesson.
      *
      * Precedence:
-     * 1. Lesson-level _vh360_membership_required (post meta) — always wins.
-     * 2. Course-level _vh360_course_required_membership (term meta).
-     * 3. false — no restriction.
+     * 1. Free preview (_vh360_lesson_is_preview = yes) — always public, returns false.
+     * 2. Lesson-level _vh360_membership_required (post meta) — overrides course.
+     * 3. Course-level _vh360_course_required_membership (term meta).
+     * 4. false — no restriction.
      *
      * IMPORTANT: this function must NOT call vh360_post_requires_membership()
      * to avoid infinite recursion.
@@ -969,13 +970,19 @@ if ( ! function_exists( 'videohub360_get_effective_lesson_required_membership' )
      * @return string|false Plan key, 'any', or false.
      */
     function videohub360_get_effective_lesson_required_membership( $post_id ) {
-        // 1. Lesson-level override.
+        // 1. Free preview lessons are always publicly accessible.
+        $is_preview = get_post_meta( $post_id, '_vh360_lesson_is_preview', true );
+        if ( $is_preview === 'yes' ) {
+            return false;
+        }
+
+        // 2. Lesson-level override.
         $lesson_plan = get_post_meta( $post_id, '_vh360_membership_required', true );
         if ( ! empty( $lesson_plan ) ) {
             return $lesson_plan;
         }
 
-        // 2. Course-level inheritance.
+        // 3. Course-level inheritance.
         $course = videohub360_get_lesson_course( $post_id );
         if ( $course ) {
             $course_plan = videohub360_get_course_required_membership( $course->term_id );
