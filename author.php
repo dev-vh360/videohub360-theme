@@ -2,7 +2,7 @@
 /**
  * Author Archive Router
  * 
- * Routes to Profile (social), Channel (video), Business, or Client template
+ * Routes to Profile (social), Channel (video), Business, Course, or Client template
  * based on account type. Enforces profile privacy settings.
  *
  * @package Videohub360_Theme
@@ -68,6 +68,10 @@ switch ($display_mode) {
         
     case 'client':
         get_template_part('author', 'client');
+        break;
+        
+    case 'course':
+        get_template_part('author', 'course');
         break;
         
     case 'channel':
