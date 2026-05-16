@@ -366,13 +366,27 @@ function vh360_register_woocommerce_shop_customizer_controls( $wp_customize ) {
         'sanitize_callback' => 'absint',
         'transport'         => 'refresh',
     ) );
+    // Build a product choices list for the select control.
+    $vh360_featured_product_choices = array( 0 => __( '— Select a product —', 'videohub360-theme' ) );
+    if ( function_exists( 'wc_get_products' ) ) {
+        $vh360_products = wc_get_products( array(
+            'status'  => 'publish',
+            'limit'   => 200,
+            'orderby' => 'title',
+            'order'   => 'ASC',
+            'return'  => 'objects',
+        ) );
+        foreach ( $vh360_products as $vh360_p ) {
+            $vh360_featured_product_choices[ $vh360_p->get_id() ] = $vh360_p->get_name();
+        }
+    }
+
     $wp_customize->add_control( 'vh360_shop_featured_product_id', array(
-        'label'       => __( 'Featured Product ID', 'videohub360-theme' ),
-        'description' => __( 'Enter the numeric post ID of the product to feature. To find a product ID, go to WooCommerce → Products, hover over the product name, and note the "post=" value in the URL shown in the browser status bar. You can also see the ID in the "ID" column of the products list.', 'videohub360-theme' ),
-        'section'     => 'vh360_woocommerce_shop',
-        'type'        => 'number',
-        'input_attrs' => array( 'min' => 0, 'step' => 1 ),
-        'priority'    => 71,
+        'label'    => __( 'Featured Product', 'videohub360-theme' ),
+        'section'  => 'vh360_woocommerce_shop',
+        'type'     => 'select',
+        'choices'  => $vh360_featured_product_choices,
+        'priority' => 71,
     ) );
 
     $wp_customize->add_setting( 'vh360_shop_featured_product_badge', array(

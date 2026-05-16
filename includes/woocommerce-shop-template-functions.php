@@ -22,19 +22,23 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Render a product category badge overlaid on the product image.
  * Hooked to woocommerce_before_shop_loop_item_title at priority 11
  * (after the thumbnail renders at priority 10).
- * Skipped for related products, up-sell, and cross-sell loops.
+ * Only outputs on shop/category/tag/taxonomy archives and product search results.
  */
 function vh360_shop_render_product_type_badge() {
     if ( ! function_exists( 'wc_get_product' ) ) {
         return;
     }
 
-    // Only output in the main shop loop – skip widget/related loops.
-    if ( function_exists( 'wc_get_loop_prop' ) ) {
-        $loop_name = wc_get_loop_prop( 'name', '' );
-        if ( in_array( $loop_name, array( 'related', 'up-sells', 'cross-sells', 'upsells', 'crosssells' ), true ) ) {
-            return;
-        }
+    // Only output on shop archive contexts – skip single product, widgets, shortcodes, etc.
+    $is_product_search = is_search() && 'product' === get_query_var( 'post_type' );
+    if (
+        ! is_shop()
+        && ! is_product_category()
+        && ! is_product_tag()
+        && ! ( function_exists( 'is_product_taxonomy' ) && is_product_taxonomy() )
+        && ! $is_product_search
+    ) {
+        return;
     }
 
     global $product;
@@ -67,19 +71,23 @@ add_action( 'woocommerce_before_shop_loop_item_title', 'vh360_shop_render_produc
 /**
  * Render a short excerpt below the product title inside the loop card.
  * Hooked to woocommerce_after_shop_loop_item_title at priority 7.
- * Skipped for related products, up-sell, and cross-sell loops.
+ * Only outputs on shop/category/tag/taxonomy archives and product search results.
  */
 function vh360_shop_render_product_excerpt() {
     if ( ! function_exists( 'wc_get_product' ) ) {
         return;
     }
 
-    // Only output in the main shop loop – skip widget/related loops.
-    if ( function_exists( 'wc_get_loop_prop' ) ) {
-        $loop_name = wc_get_loop_prop( 'name', '' );
-        if ( in_array( $loop_name, array( 'related', 'up-sells', 'cross-sells', 'upsells', 'crosssells' ), true ) ) {
-            return;
-        }
+    // Only output on shop archive contexts – skip single product, widgets, shortcodes, etc.
+    $is_product_search = is_search() && 'product' === get_query_var( 'post_type' );
+    if (
+        ! is_shop()
+        && ! is_product_category()
+        && ! is_product_tag()
+        && ! ( function_exists( 'is_product_taxonomy' ) && is_product_taxonomy() )
+        && ! $is_product_search
+    ) {
+        return;
     }
 
     global $product;

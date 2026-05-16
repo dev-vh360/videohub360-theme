@@ -86,6 +86,14 @@ function vh360_resolve_sidebar($post_id = null) {
     
     // FORCED RULES - These override everything else
 
+    // WooCommerce cart, checkout, and account pages never show a sidebar.
+    // This is checked first because is_woocommerce() does not cover these pages,
+    // and an explicit no-sidebar rule here makes the intent unambiguous.
+    if ( class_exists( 'WooCommerce' ) && ( is_cart() || is_checkout() || is_account_page() ) ) {
+        $result['show_sidebar'] = false;
+        return apply_filters( 'vh360_sidebar_config', $result, $post_id );
+    }
+
     // WooCommerce product/shop/archive pages – honour the product sidebar setting.
     if ( function_exists( 'is_woocommerce' ) && is_woocommerce() ) {
         $product_layout = get_theme_mod( 'vh360_sidebar_layout_product', 'none' );
@@ -98,12 +106,6 @@ function vh360_resolve_sidebar($post_id = null) {
             $result['show_sidebar'] = false;
         }
 
-        return apply_filters( 'vh360_sidebar_config', $result, $post_id );
-    }
-
-    // WooCommerce cart, checkout, and account pages (not caught by is_woocommerce)
-    if ( class_exists( 'WooCommerce' ) && ( is_cart() || is_checkout() || is_account_page() ) ) {
-        $result['show_sidebar'] = false;
         return apply_filters( 'vh360_sidebar_config', $result, $post_id );
     }
     
