@@ -2236,6 +2236,37 @@ body.woocommerce-page .vh360-shop-archive ul.products li.product {
     padding: 0 !important;
 }
 
+/* Disable WooCommerce's clearfix pseudo-elements on the grid container */
+body.woocommerce .vh360-shop-archive ul.products::before,
+body.woocommerce .vh360-shop-archive ul.products::after,
+body.woocommerce-page .vh360-shop-archive ul.products::before,
+body.woocommerce-page .vh360-shop-archive ul.products::after {
+    display: none !important;
+    content: none !important;
+}
+
+/* Override WooCommerce columns-N classes that set float/width on li.product */
+body.woocommerce .vh360-shop-archive ul.products[class*="columns-"] li.product,
+body.woocommerce-page .vh360-shop-archive ul.products[class*="columns-"] li.product {
+    float: none !important;
+    clear: none !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* High-specificity product image reset */
+body.woocommerce .vh360-shop-archive ul.products li.product a img,
+body.woocommerce-page .vh360-shop-archive ul.products li.product a img {
+    width: 100% !important;
+    aspect-ratio: 16 / 9;
+    height: auto;
+    object-fit: cover;
+    display: block;
+    margin: 0 !important;
+}
+
 @media (max-width: 991px) {
     body.woocommerce .vh360-shop-archive ul.products,
     body.woocommerce-page .vh360-shop-archive ul.products {
