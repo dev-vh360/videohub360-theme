@@ -1246,7 +1246,7 @@ if (class_exists('WooCommerce')) {
             );
         }
     }
-    add_action( 'wp_enqueue_scripts', 'vh360_enqueue_woocommerce_styles' );
+    add_action( 'wp_enqueue_scripts', 'vh360_enqueue_woocommerce_styles', 30 );
 }
 
 /**

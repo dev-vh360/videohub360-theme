@@ -30,7 +30,7 @@
 }
 
 .vh360-shop-archive-layout {
-    width: min(1800px, calc(100vw - 3rem));
+    width: min(1280px, calc(100vw - 3rem));
     margin: 0 auto;
     padding: 0;
 }
@@ -182,7 +182,7 @@ ul.products li.product a img,
 ul.products li.product .woocommerce-product-gallery img {
     width: 100%;
     height: auto;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 16 / 9;
     object-fit: cover;
     display: block;
 }
@@ -2205,4 +2205,49 @@ ul.products li.product {
     border: 1px solid #fbbf24;
     border-radius: var(--border-radius);
     padding: 0.75rem 1rem;
+}
+
+/* ==========================================================================
+   SHOP GRID RESET — override WooCommerce default float/width/margin rules
+   that conflict with CSS Grid on the Videohub360 shop archive.
+   High-specificity selectors are required so these declarations win against
+   WooCommerce's bundled stylesheet regardless of load order.
+   ========================================================================== */
+
+body.woocommerce .vh360-shop-archive ul.products,
+body.woocommerce-page .vh360-shop-archive ul.products {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 2rem !important;
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 0 0 2.5rem !important;
+    float: none !important;
+    width: 100% !important;
+}
+
+body.woocommerce .vh360-shop-archive ul.products li.product,
+body.woocommerce-page .vh360-shop-archive ul.products li.product {
+    float: none !important;
+    clear: none !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+@media (max-width: 991px) {
+    body.woocommerce .vh360-shop-archive ul.products,
+    body.woocommerce-page .vh360-shop-archive ul.products {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 1.5rem !important;
+    }
+}
+
+@media (max-width: 575px) {
+    body.woocommerce .vh360-shop-archive ul.products,
+    body.woocommerce-page .vh360-shop-archive ul.products {
+        grid-template-columns: 1fr !important;
+        gap: 1.25rem !important;
+    }
 }
