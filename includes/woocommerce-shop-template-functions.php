@@ -109,7 +109,7 @@ function vh360_shop_render_product_excerpt() {
     // Trim to roughly 20 words.
     $words = explode( ' ', $text );
     if ( count( $words ) > 20 ) {
-        $text = implode( ' ', array_slice( $words, 0, 20 ) ) . '&hellip;';
+        $text = implode( ' ', array_slice( $words, 0, 20 ) ) . '…';
     }
 
     echo '<p class="vh360-product-card-excerpt">' . esc_html( $text ) . '</p>';
@@ -317,7 +317,7 @@ function vh360_shop_render_featured_product() {
     // Trim excerpt to 24 words.
     $words = explode( ' ', $short_desc );
     if ( count( $words ) > 24 ) {
-        $short_desc = implode( ' ', array_slice( $words, 0, 24 ) ) . '&hellip;';
+        $short_desc = implode( ' ', array_slice( $words, 0, 24 ) ) . '…';
     }
     ?>
     <div class="vh360-shop-featured-product">
