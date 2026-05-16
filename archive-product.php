@@ -26,22 +26,40 @@ remove_action( 'woocommerce_before_shop_loop', 'woocommerce_catalog_ordering', 3
 
 get_header();
 
-/**
- * Hook: woocommerce_before_main_content.
- *
- * @hooked woocommerce_output_content_wrapper        - 10 (outputs opening divs for the wc content)
- * @hooked woocommerce_breadcrumb                    - 20
- * @hooked WC_Structured_Data::generate_website_data - 30
- */
-do_action( 'woocommerce_before_main_content' );
+// Resolve sidebar configuration for the shop archive.
+$sidebar_config = vh360_resolve_sidebar();
+$has_sidebar    = $sidebar_config['show_sidebar'];
+$sidebar_pos    = $sidebar_config['position'];
+
+$layout_class = 'vh360-shop-archive-layout';
+if ( $has_sidebar ) {
+    $layout_class .= ' has-sidebar sidebar-' . $sidebar_pos;
+}
 ?>
 
 <div id="primary" class="site-content vh360-woocommerce-page vh360-shop-archive">
-    <div class="vh360-shop-archive-layout">
+    <div class="<?php echo esc_attr( $layout_class ); ?>">
+
+        <?php if ( $has_sidebar && 'left' === $sidebar_pos ) : ?>
+            <?php get_sidebar(); ?>
+        <?php endif; ?>
 
         <main id="main" class="content-area vh360-shop-archive-main">
 
             <?php
+            /**
+             * Hook: woocommerce_before_main_content.
+             *
+             * Placed inside <main> so that any breadcrumb or third-party output
+             * from this hook lands within the content area.
+             * woocommerce_output_content_wrapper (priority 10) has been removed in
+             * woocommerce-integration.php so it does not produce a duplicate wrapper.
+             *
+             * @hooked woocommerce_breadcrumb                    - 20
+             * @hooked WC_Structured_Data::generate_website_data - 30
+             */
+            do_action( 'woocommerce_before_main_content' );
+
             // 1. Optional shop hero banner.
             if ( function_exists( 'vh360_shop_render_hero' ) ) {
                 vh360_shop_render_hero();
@@ -135,6 +153,10 @@ do_action( 'woocommerce_before_main_content' );
 
         </main><!-- #main -->
 
+        <?php if ( $has_sidebar && 'right' === $sidebar_pos ) : ?>
+            <?php get_sidebar(); ?>
+        <?php endif; ?>
+
     </div><!-- .vh360-shop-archive-layout -->
 </div><!-- #primary -->
 
@@ -142,9 +164,10 @@ do_action( 'woocommerce_before_main_content' );
 /**
  * Hook: woocommerce_after_main_content.
  *
- * @hooked woocommerce_output_content_wrapper_end - 10 (outputs closing divs for the wc content)
+ * @hooked WC_Structured_Data::generate_product_data - various
  */
 do_action( 'woocommerce_after_main_content' );
 
 get_footer();
+
 

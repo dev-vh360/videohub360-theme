@@ -35,6 +35,28 @@
     padding: 0;
 }
 
+/* Sidebar-aware grid for the shop archive layout */
+.vh360-shop-archive-layout.has-sidebar {
+    display: grid;
+    gap: 2rem;
+    align-items: start;
+}
+
+.vh360-shop-archive-layout.has-sidebar.sidebar-right {
+    grid-template-columns: minmax(0, 1fr) 300px;
+}
+
+.vh360-shop-archive-layout.has-sidebar.sidebar-left {
+    grid-template-columns: 300px minmax(0, 1fr);
+}
+
+@media (max-width: 991px) {
+    .vh360-shop-archive-layout.has-sidebar.sidebar-right,
+    .vh360-shop-archive-layout.has-sidebar.sidebar-left {
+        grid-template-columns: 1fr;
+    }
+}
+
 .vh360-shop-archive-main {
     width: 100%;
 }
@@ -2083,21 +2105,27 @@ ul.products li.product {
    S7. PRODUCT CARD ENHANCEMENTS
    ========================================================================== */
 
+/*
+ * Category badge is rendered after the thumbnail (hook priority 11) and uses
+ * position:absolute to overlay the top-right corner of the product image.
+ * The parent li.product already has position:relative.
+ * Positioned at top-right to avoid conflict with the sale badge (top-left).
+ */
 .vh360-product-card-badge {
-    display: inline-block;
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 2;
     font-size: 0.6875rem;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     padding: 0.2rem 0.55rem;
-    border-radius: 999px;
-    background: var(--bg-light);
-    color: var(--primary-color);
-    border: 1px solid var(--primary-color);
-    margin: 0.6rem 0 0 1rem;
-    box-sizing: border-box;
+    border-radius: var(--border-radius);
+    background: var(--primary-color);
+    color: #fff;
     line-height: 1.5;
-    max-width: calc(100% - 2rem);
+    max-width: calc(50% - 0.5rem);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

@@ -19,12 +19,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 // ---------------------------------------------------------------------------
 
 /**
- * Render a product category badge above the product image area.
- * Hooked to woocommerce_before_shop_loop_item_title at priority 9.
+ * Render a product category badge overlaid on the product image.
+ * Hooked to woocommerce_before_shop_loop_item_title at priority 11
+ * (after the thumbnail renders at priority 10).
+ * Skipped for related products, up-sell, and cross-sell loops.
  */
 function vh360_shop_render_product_type_badge() {
     if ( ! function_exists( 'wc_get_product' ) ) {
         return;
+    }
+
+    // Only output in the main shop loop – skip widget/related loops.
+    if ( function_exists( 'wc_get_loop_prop' ) ) {
+        $loop_name = wc_get_loop_prop( 'name', '' );
+        if ( in_array( $loop_name, array( 'related', 'up-sells', 'cross-sells', 'upsells', 'crosssells' ), true ) ) {
+            return;
+        }
     }
 
     global $product;
@@ -52,15 +62,24 @@ function vh360_shop_render_product_type_badge() {
 
     echo '<span class="vh360-product-card-badge">' . esc_html( $label ) . '</span>';
 }
-add_action( 'woocommerce_before_shop_loop_item_title', 'vh360_shop_render_product_type_badge', 9 );
+add_action( 'woocommerce_before_shop_loop_item_title', 'vh360_shop_render_product_type_badge', 11 );
 
 /**
  * Render a short excerpt below the product title inside the loop card.
  * Hooked to woocommerce_after_shop_loop_item_title at priority 7.
+ * Skipped for related products, up-sell, and cross-sell loops.
  */
 function vh360_shop_render_product_excerpt() {
     if ( ! function_exists( 'wc_get_product' ) ) {
         return;
+    }
+
+    // Only output in the main shop loop – skip widget/related loops.
+    if ( function_exists( 'wc_get_loop_prop' ) ) {
+        $loop_name = wc_get_loop_prop( 'name', '' );
+        if ( in_array( $loop_name, array( 'related', 'up-sells', 'cross-sells', 'upsells', 'crosssells' ), true ) ) {
+            return;
+        }
     }
 
     global $product;

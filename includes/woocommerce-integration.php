@@ -14,6 +14,17 @@
 
 defined('ABSPATH') || exit;
 
+/*
+ * Remove WooCommerce's default content wrapper callbacks.
+ *
+ * archive-product.php, single-product.php, and woocommerce.php all own their
+ * own layout structure.  WooCommerce's default woocommerce_output_content_wrapper
+ * and woocommerce_output_content_wrapper_end callbacks would otherwise wrap the
+ * theme's markup in a second set of layout divs, producing invalid nesting.
+ */
+remove_action( 'woocommerce_before_main_content', 'woocommerce_output_content_wrapper',     10 );
+remove_action( 'woocommerce_after_main_content',  'woocommerce_output_content_wrapper_end', 10 );
+
 /**
  * Check if cart contains any membership products.
  *

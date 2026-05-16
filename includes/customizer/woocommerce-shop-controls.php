@@ -368,7 +368,7 @@ function vh360_register_woocommerce_shop_customizer_controls( $wp_customize ) {
     ) );
     $wp_customize->add_control( 'vh360_shop_featured_product_id', array(
         'label'       => __( 'Featured Product ID', 'videohub360-theme' ),
-        'description' => __( 'Enter the product ID to feature in the shop header area.', 'videohub360-theme' ),
+        'description' => __( 'Enter the numeric post ID of the product to feature. To find a product ID, go to WooCommerce → Products, hover over the product name, and note the "post=" value in the URL shown in the browser status bar. You can also see the ID in the "ID" column of the products list.', 'videohub360-theme' ),
         'section'     => 'vh360_woocommerce_shop',
         'type'        => 'number',
         'input_attrs' => array( 'min' => 0, 'step' => 1 ),
