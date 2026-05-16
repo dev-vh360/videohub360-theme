@@ -15,6 +15,26 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+// Delegate to the dedicated product and shop/archive templates so that all
+// custom storefront sections registered in those files are actually rendered.
+if ( function_exists( 'is_product' ) && is_product() ) {
+    locate_template( 'single-product.php', true, false );
+    return;
+}
+
+if (
+    function_exists( 'is_shop' )
+    && (
+        is_shop()
+        || is_product_category()
+        || is_product_tag()
+        || is_product_taxonomy()
+    )
+) {
+    locate_template( 'archive-product.php', true, false );
+    return;
+}
+
 get_header();
 ?>
 

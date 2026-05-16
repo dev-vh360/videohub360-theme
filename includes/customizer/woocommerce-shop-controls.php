@@ -25,10 +25,15 @@ function vh360_register_woocommerce_shop_customizer_controls( $wp_customize ) {
     // SECTION
     // ======================================
 
+    // Place the section inside the native WooCommerce Customizer panel when it
+    // exists (WooCommerce registers it at priority 200).  Fall back to the
+    // Videohub360 Global Design panel so the section is always reachable.
+    $shop_panel = $wp_customize->get_panel( 'woocommerce' ) ? 'woocommerce' : 'vh360_global_design';
+
     $wp_customize->add_section( 'vh360_woocommerce_shop', array(
-        'title'       => __( 'WooCommerce Shop', 'videohub360-theme' ),
-        'priority'    => 36,
-        'panel'       => 'vh360_global_design',
+        'title'       => __( 'Videohub360 Shop', 'videohub360-theme' ),
+        'priority'    => 90,
+        'panel'       => $shop_panel,
         'description' => __( 'Configure the branded Videohub360 shop storefront.', 'videohub360-theme' ),
     ) );
 
