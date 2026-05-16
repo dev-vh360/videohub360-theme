@@ -969,6 +969,11 @@ require_once VH360_THEME_DIR . '/includes/customizer/author-template-controls.ph
 require_once VH360_THEME_DIR . '/includes/customizer/media-controls.php';
 
 /**
+ * Customizer WooCommerce shop controls
+ */
+require_once VH360_THEME_DIR . '/includes/customizer/woocommerce-shop-controls.php';
+
+/**
  * Sidebar resolver - centralized sidebar logic
  */
 require_once VH360_THEME_DIR . '/includes/sidebar-resolver.php';
@@ -1226,6 +1231,7 @@ require_once VH360_THEME_DIR . '/includes/recommended.php';
  */
 if (class_exists('WooCommerce')) {
     require_once VH360_THEME_DIR . '/includes/woocommerce-integration.php';
+    require_once VH360_THEME_DIR . '/includes/woocommerce-shop-template-functions.php';
 
     /**
      * Enqueue dedicated WooCommerce stylesheet on WooCommerce pages.
