@@ -41,14 +41,14 @@ $insurance_info = get_user_meta($author_id, '_vh360_insurance_info', true);
         </div>
     <?php endif; ?>
     
-    <?php if (($telehealth && (!function_exists('vh360_profile_field_is_public') || vh360_profile_field_is_public('telehealth', $author_id))) || ($accepting_clients && (!function_exists('vh360_profile_field_is_public') || vh360_profile_field_is_public('accepting_clients', $author_id)))) : ?>
+    <?php if (($telehealth && (!function_exists('vh360_profile_field_is_public') || vh360_profile_field_is_public('telehealth', $author_id))) || ($accepting_clients && (!function_exists('vh360_profile_field_is_public') || vh360_profile_field_is_public('accepting_new_clients', $author_id)))) : ?>
         <div class="vh360-business-availability">
             <h3><?php esc_html_e('Availability', 'videohub360-theme'); ?></h3>
             <ul>
                 <?php if ($telehealth && (!function_exists('vh360_profile_field_is_public') || vh360_profile_field_is_public('telehealth', $author_id))) : ?>
                     <li><?php esc_html_e('Telehealth services available', 'videohub360-theme'); ?></li>
                 <?php endif; ?>
-                <?php if ($accepting_clients && (!function_exists('vh360_profile_field_is_public') || vh360_profile_field_is_public('accepting_clients', $author_id))) : ?>
+                <?php if ($accepting_clients && (!function_exists('vh360_profile_field_is_public') || vh360_profile_field_is_public('accepting_new_clients', $author_id))) : ?>
                     <li><?php esc_html_e('Currently accepting new clients', 'videohub360-theme'); ?></li>
                 <?php endif; ?>
             </ul>
