@@ -410,6 +410,35 @@ function vh360_sanitize_embed_code($html) {
     return wp_kses($html, $allowed_embed_html);
 }
 
+
+function vh360_get_dashboard_tab_url( $tab = 'profile' ) {
+    $tab = sanitize_key( $tab );
+
+    $dashboard_url = function_exists( 'vh360_get_dashboard_url' )
+        ? vh360_get_dashboard_url()
+        : home_url( '/dashboard/' );
+
+    return add_query_arg( 'tab', $tab, $dashboard_url );
+}
+
+function vh360_get_profile_edit_url( $user_id = 0 ) {
+    $user_id = $user_id ? absint( $user_id ) : absint( get_current_user_id() );
+
+    if ( ! $user_id ) {
+        return wp_login_url();
+    }
+
+    $account_type = function_exists( 'vh360_get_user_account_type' )
+        ? vh360_get_user_account_type( $user_id )
+        : get_user_meta( $user_id, '_vh360_account_type', true );
+
+    $tab = in_array( $account_type, array( 'professional', 'organization' ), true )
+        ? 'business-profile'
+        : 'profile';
+
+    return vh360_get_dashboard_tab_url( $tab );
+}
+
 /**
  * Get user avatar URL (not HTML)
  *
@@ -418,27 +447,33 @@ function vh360_sanitize_embed_code($html) {
  * @return string Avatar URL or empty string if no avatar.
  */
 function vh360_get_user_avatar_url($user_id, $size = 150) {
+    $user_id = absint($user_id);
     if (!$user_id) {
         return '';
     }
 
-    // Check for custom uploaded avatar in user meta
-    $custom_avatar = get_user_meta($user_id, '_vh360_custom_avatar', true);
-    if ($custom_avatar) {
-        // If it's an attachment ID, get the image URL
-        if (is_numeric($custom_avatar)) {
-            $avatar_url = wp_get_attachment_image_url($custom_avatar, array($size, $size));
+    $attachment_id = absint(get_user_meta($user_id, 'vh360_profile_picture_id', true));
+    if ($attachment_id) {
+        $avatar_url = wp_get_attachment_image_url($attachment_id, array($size, $size));
+        if ($avatar_url) {
+            return $avatar_url;
+        }
+    }
+
+    $legacy_avatar = get_user_meta($user_id, '_vh360_custom_avatar', true);
+    if ($legacy_avatar) {
+        if (is_numeric($legacy_avatar)) {
+            $avatar_url = wp_get_attachment_image_url(absint($legacy_avatar), array($size, $size));
             if ($avatar_url) {
                 return $avatar_url;
             }
         }
-        // If it's a direct URL
-        if (filter_var($custom_avatar, FILTER_VALIDATE_URL)) {
-            return $custom_avatar;
+
+        if (filter_var($legacy_avatar, FILTER_VALIDATE_URL)) {
+            return esc_url_raw($legacy_avatar);
         }
     }
 
-    // Fallback to WordPress get_avatar_url (includes Gravatar)
     $avatar_url = get_avatar_url($user_id, array('size' => $size));
 
     return $avatar_url ? $avatar_url : '';

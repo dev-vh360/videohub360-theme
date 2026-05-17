@@ -97,6 +97,10 @@ $profile_options = wp_parse_args($profile_options, $profile_defaults);
                 <?php endforeach; ?>
             <?php endif; ?>
         </div>
+
+        <?php if ( function_exists( 'vh360_render_public_profile_fields' ) ) : ?>
+            <?php vh360_render_public_profile_fields( $author_id ); ?>
+        <?php endif; ?>
     </div>
     
     <!-- Stats Card -->

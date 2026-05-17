@@ -165,17 +165,7 @@ $can_edit = vh360_user_can_edit_profile($author_id);
                     
                     // Show Edit Profile button if user can edit this profile
                     if ($can_edit) :
-                        // Look for a page using the profile edit template
-                        $edit_profile_page = get_pages(array(
-                            'meta_key' => '_wp_page_template',
-                            'meta_value' => 'template-profile-edit.php',
-                            'number' => 1,
-                        ));
-                        
-                        // If no page exists, user can create one or we link to wp-admin
-                        $edit_url = !empty($edit_profile_page) 
-                            ? get_permalink($edit_profile_page[0]->ID) 
-                            : admin_url('profile.php');
+                        $edit_url = function_exists( 'vh360_get_profile_edit_url' ) ? vh360_get_profile_edit_url( $author_id ) : home_url( '/dashboard/?tab=profile' );
                         ?>
                         <a href="<?php echo esc_url($edit_url); ?>" class="vh360-edit-profile-btn">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

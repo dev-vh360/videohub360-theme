@@ -64,11 +64,11 @@ if (is_user_logged_in() && $current_user_id !== $author_id) {
         <div class="vh360-business-info">
             <h1 class="vh360-business-name"><?php echo esc_html($display_name); ?></h1>
             
-            <?php if ($business_type) : ?>
+            <?php if ($business_type && (!function_exists('vh360_profile_field_is_public') || vh360_profile_field_is_public('business_type', $author_id))) : ?>
                 <p class="vh360-business-type"><?php echo esc_html($business_type); ?></p>
             <?php endif; ?>
             
-            <?php if ($location) : ?>
+            <?php if ($location && (!function_exists('vh360_profile_field_is_public') || vh360_profile_field_is_public('location', $author_id))) : ?>
                 <p class="vh360-business-location">
                     <span class="dashicons dashicons-location"></span>
                     <?php echo esc_html($location); ?>

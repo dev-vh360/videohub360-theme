@@ -403,7 +403,7 @@ function vh360_handle_business_registration() {
         // Redirect to dashboard with profile tab (unified editor for all profile fields)
         $redirect_to = home_url('/dashboard/');
         if (get_page_by_path('dashboard')) {
-            $redirect_to = add_query_arg('tab', 'profile', $redirect_to);
+            $redirect_to = function_exists( 'vh360_get_dashboard_tab_url' ) ? vh360_get_dashboard_tab_url( 'business-profile' ) : add_query_arg('tab', 'business-profile', $redirect_to);
         }
     } else {
         // Redirect to dashboard for clients
