@@ -41,4 +41,8 @@ $business_name = get_user_meta($author_id, '_vh360_business_name', true);
         <p><?php esc_html_e('No information available.', 'videohub360-theme'); ?></p>
     <?php endif; ?>
     
+    <?php if (function_exists('vh360_render_public_profile_fields')) : ?>
+        <?php vh360_render_public_profile_fields($author_id, array('exclude' => array('business_name'))); ?>
+    <?php endif; ?>
+    
 </div>

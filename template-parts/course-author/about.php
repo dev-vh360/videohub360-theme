@@ -75,6 +75,10 @@ $lesson_label     = function_exists( 'vh360_get_lesson_label' ) ? vh360_get_less
                         <p><?php esc_html_e( 'No bio yet.', 'videohub360-theme' ); ?></p>
                     </div>
                 <?php endif; ?>
+                
+                <?php if ( function_exists( 'vh360_render_public_profile_fields' ) ) : ?>
+                    <?php vh360_render_public_profile_fields( $author_id ); ?>
+                <?php endif; ?>
             </div>
 
             <!-- Links -->

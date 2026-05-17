@@ -49,6 +49,10 @@ $social_links = function_exists('vh360_get_user_social_links') ? vh360_get_user_
                     <p><?php esc_html_e('No channel description yet.', 'videohub360-theme'); ?></p>
                 </div>
             <?php endif; ?>
+            
+            <?php if (function_exists('vh360_render_public_profile_fields')) : ?>
+                <?php vh360_render_public_profile_fields($author_id); ?>
+            <?php endif; ?>
 
             <!-- Links Section -->
             <?php if ($website || !empty($social_links)) : ?>

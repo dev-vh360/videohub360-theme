@@ -62,6 +62,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vh360_edit_profile_no
                     update_user_meta($current_user_id, '_vh360_' . $field, $value);
                 }
                 
+                // Save any registered custom profile fields for the general edit context.
+                if (function_exists('vh360_save_profile_fields')) {
+                    vh360_save_profile_fields($current_user_id, $_POST, 'edit');
+                }
+                
                 // Handle profile picture upload (avatar)
                 if (!empty($_FILES['profile_picture']['name'])) {
                     // Prepare crop data from hidden fields with sanitization
@@ -322,6 +327,17 @@ $profile_picture_url = $profile_picture_id ? wp_get_attachment_image_url($profil
                     <input type="url" name="instagram" id="instagram" class="vh360-form-input" value="<?php echo isset($social_links['instagram']) ? esc_url($social_links['instagram']) : ''; ?>" placeholder="https://instagram.com/username">
                 </div>
             </div>
+            
+            <!-- Additional Profile Fields (custom fields for this user's account type) -->
+            <?php if (function_exists('vh360_render_profile_fields')) : ?>
+                <?php $edit_fields = vh360_get_profile_fields_for_user($current_user_id, 'edit'); ?>
+                <?php if (!empty($edit_fields)) : ?>
+                <div class="vh360-form-section">
+                    <h3 class="vh360-form-section-title"><?php esc_html_e('Additional Information', 'videohub360-theme'); ?></h3>
+                    <?php vh360_render_profile_fields($current_user_id, 'edit'); ?>
+                </div>
+                <?php endif; ?>
+            <?php endif; ?>
             
             <!-- Submit Button -->
             <div class="vh360-form-actions">
