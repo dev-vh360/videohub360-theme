@@ -14,11 +14,9 @@ if (!defined('ABSPATH')) {
 }
 
 // Get the author being displayed
-$author_id = isset( $author_id ) ? absint( $author_id ) : absint( get_queried_object_id() );
-
-if ( ! $author_id ) {
-    $author_id = absint( get_the_author_meta( 'ID' ) );
-}
+$author_id = isset( $args['author_id'] )
+    ? absint( $args['author_id'] )
+    : ( isset( $author_id ) ? absint( $author_id ) : absint( get_the_author_meta( 'ID' ) ) );
 
 if ( ! $author_id ) {
     return;
