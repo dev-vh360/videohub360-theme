@@ -624,26 +624,96 @@ function vh360_get_user_content_count($user_id) {
     return $total_count;
 }
 
+
+/**
+ * Get social platform registry.
+ *
+ * @return array
+ */
+function vh360_get_social_platform_registry() {
+    return array(
+        'twitter' => array(
+            'label'       => __( 'Twitter (X)', 'videohub360-theme' ),
+            'meta_key'    => '_vh360_twitter',
+            'placeholder' => 'https://twitter.com/username',
+        ),
+        'facebook' => array(
+            'label'       => __( 'Facebook', 'videohub360-theme' ),
+            'meta_key'    => '_vh360_facebook',
+            'placeholder' => 'https://facebook.com/username',
+        ),
+        'youtube' => array(
+            'label'       => __( 'YouTube', 'videohub360-theme' ),
+            'meta_key'    => '_vh360_youtube',
+            'placeholder' => 'https://youtube.com/channel/...',
+        ),
+        'instagram' => array(
+            'label'       => __( 'Instagram', 'videohub360-theme' ),
+            'meta_key'    => '_vh360_instagram',
+            'placeholder' => 'https://instagram.com/username',
+        ),
+        'linkedin' => array(
+            'label'       => __( 'LinkedIn', 'videohub360-theme' ),
+            'meta_key'    => '_vh360_linkedin',
+            'placeholder' => 'https://linkedin.com/in/username',
+        ),
+        'tiktok' => array(
+            'label'       => __( 'TikTok', 'videohub360-theme' ),
+            'meta_key'    => '_vh360_tiktok',
+            'placeholder' => 'https://tiktok.com/@username',
+        ),
+        'twitch' => array(
+            'label'       => __( 'Twitch', 'videohub360-theme' ),
+            'meta_key'    => '_vh360_twitch',
+            'placeholder' => 'https://twitch.tv/username',
+        ),
+    );
+}
+
+/**
+ * Get enabled social platforms based on profile settings.
+ *
+ * @return array
+ */
+function vh360_get_enabled_social_platforms() {
+    $registry = vh360_get_social_platform_registry();
+    $options  = get_option( 'vh360_profile_options', array() );
+
+    $enabled = isset( $options['social_platforms'] ) && is_array( $options['social_platforms'] )
+        ? array_map( 'sanitize_key', $options['social_platforms'] )
+        : array( 'twitter', 'facebook', 'youtube', 'instagram' );
+
+    return array_intersect_key( $registry, array_flip( $enabled ) );
+}
+
 /**
  * Get user social media links
  *
  * @param int $user_id The user ID.
  * @return array Social media links array.
  */
-function vh360_get_user_social_links($user_id) {
+function vh360_get_user_social_links($user_id, $include_disabled = false) {
+    $user_id = absint($user_id);
     if (!$user_id) {
         return array();
     }
 
-    $social_links = array(
-        'twitter' => get_user_meta($user_id, '_vh360_twitter', true),
-        'facebook' => get_user_meta($user_id, '_vh360_facebook', true),
-        'youtube' => get_user_meta($user_id, '_vh360_youtube', true),
-        'instagram' => get_user_meta($user_id, '_vh360_instagram', true),
-    );
+    $platforms = $include_disabled
+        ? vh360_get_social_platform_registry()
+        : vh360_get_enabled_social_platforms();
 
-    // Filter out empty values
-    return array_filter($social_links);
+    $social_links = array();
+
+    foreach ($platforms as $platform_key => $platform) {
+        $meta_key = isset($platform['meta_key']) ? $platform['meta_key'] : '_vh360_' . $platform_key;
+        $url = get_user_meta($user_id, $meta_key, true);
+
+        if ($url) {
+            $social_links[$platform_key] = esc_url_raw($url);
+        }
+    }
+
+    return $social_links;
 }
 
 /**

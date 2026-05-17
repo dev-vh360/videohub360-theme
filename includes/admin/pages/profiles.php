@@ -121,22 +121,16 @@ $options = wp_parse_args($options, $defaults);
                         <th scope="row"><?php esc_html_e('Available Platforms', 'videohub360-theme'); ?></th>
                         <td>
                             <?php
-                            $platforms = array(
-                                'twitter' => __('Twitter (X)', 'videohub360-theme'),
-                                'facebook' => __('Facebook', 'videohub360-theme'),
-                                'youtube' => __('YouTube', 'videohub360-theme'),
-                                'instagram' => __('Instagram', 'videohub360-theme'),
-                                'linkedin' => __('LinkedIn', 'videohub360-theme'),
-                                'tiktok' => __('TikTok', 'videohub360-theme'),
-                                'twitch' => __('Twitch', 'videohub360-theme'),
-                            );
-                            
-                            foreach ($platforms as $key => $label) :
-                                $checked = in_array($key, $options['social_platforms']);
+                            $platforms = function_exists( 'vh360_get_social_platform_registry' )
+                                ? vh360_get_social_platform_registry()
+                                : array();
+
+                            foreach ($platforms as $key => $platform) :
+                                $checked = in_array($key, $options['social_platforms'], true);
                                 ?>
                                 <label style="display: block; margin-bottom: 8px;">
                                     <input type="checkbox" name="vh360_profile_options[social_platforms][]" value="<?php echo esc_attr($key); ?>" <?php checked($checked, true); ?>>
-                                    <?php echo esc_html($label); ?>
+                                    <?php echo esc_html($platform['label']); ?>
                                 </label>
                             <?php endforeach; ?>
                         </td>
