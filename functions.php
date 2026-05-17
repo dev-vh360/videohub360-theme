@@ -227,6 +227,13 @@ require_once VH360_THEME_DIR . '/includes/tgmpa/vh360-tgmpa.php';
 require_once VH360_THEME_DIR . '/includes/elementor-dependency-check.php';
 
 /**
+ * Profile Fields Manager
+ * Must be loaded before auth-helpers.php so vh360_save_profile_fields() is available.
+ */
+require_once VH360_THEME_DIR . '/includes/profile-fields/class-vh360-profile-fields.php';
+require_once VH360_THEME_DIR . '/includes/profile-fields/profile-field-functions.php';
+
+/**
  * Authentication system
  * Note: auth-helpers.php must be loaded first as it contains base functions used by other auth files
  */
@@ -378,6 +385,14 @@ function videohub360_theme_scripts() {
             );
         }
     }
+
+    // Profile Fields public display styles (About sections + edit form toggles).
+    wp_enqueue_style(
+        'vh360-profile-fields',
+        VH360_THEME_URI . '/assets/css/profile-fields.css',
+        array('videohub360-theme-style'),
+        VH360_THEME_VERSION
+    );
 
     // Note: Connections page styles removed - followers/following now integrated into profile mode
     // The separate template-connections.php page is no longer part of core author navigation

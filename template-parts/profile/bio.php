@@ -53,6 +53,10 @@ $has_bio = !empty($bio);
             </p>
         </div>
     <?php endif; ?>
+    
+    <?php if (function_exists('vh360_render_public_profile_fields')) : ?>
+        <?php vh360_render_public_profile_fields($author_id); ?>
+    <?php endif; ?>
 </div>
 
 <style>

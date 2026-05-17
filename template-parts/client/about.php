@@ -43,4 +43,8 @@ $joined_date = get_userdata($author_id)->user_registered;
         <p><?php esc_html_e('No bio available.', 'videohub360-theme'); ?></p>
     <?php endif; ?>
     
+    <?php if (function_exists('vh360_render_public_profile_fields')) : ?>
+        <?php vh360_render_public_profile_fields($author_id); ?>
+    <?php endif; ?>
+    
 </div>

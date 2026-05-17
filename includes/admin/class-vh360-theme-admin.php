@@ -55,6 +55,11 @@ class VH360_Theme_Admin {
         // Business/Professional approval AJAX handlers
         add_action('wp_ajax_vh360_approve_professional', array($this, 'ajax_approve_professional'));
         add_action('wp_ajax_vh360_reject_professional', array($this, 'ajax_reject_professional'));
+        
+        // Custom profile fields AJAX handlers
+        add_action('wp_ajax_vh360_save_custom_profile_field', array($this, 'ajax_save_custom_profile_field'));
+        add_action('wp_ajax_vh360_delete_custom_profile_field', array($this, 'ajax_delete_custom_profile_field'));
+        add_action('wp_ajax_vh360_save_builtin_field_settings', array($this, 'ajax_save_builtin_field_settings'));
     }
     
     /**
@@ -491,6 +496,20 @@ class VH360_Theme_Admin {
                 'cancellation_behavior' => 'at_period_end',
             ),
         ));
+        
+        // Custom profile fields (admin-created).
+        register_setting('vh360_profile_settings', 'vh360_custom_profile_fields', array(
+            'type'              => 'array',
+            'sanitize_callback' => array($this, 'sanitize_custom_profile_fields'),
+            'default'           => array(),
+        ));
+        
+        // Built-in field visibility overrides.
+        register_setting('vh360_profile_settings', 'vh360_builtin_field_settings', array(
+            'type'              => 'array',
+            'sanitize_callback' => array($this, 'sanitize_builtin_field_settings'),
+            'default'           => array(),
+        ));
     }
     
     /**
@@ -578,6 +597,8 @@ class VH360_Theme_Admin {
         delete_option('vh360_members_options');
         delete_option('vh360_advanced_options');
         delete_option('vh360_access_options');
+        delete_option('vh360_custom_profile_fields');
+        delete_option('vh360_builtin_field_settings');
     }
     
     /**
@@ -984,6 +1005,146 @@ class VH360_Theme_Admin {
         $sanitized['transient_expiration'] = isset($input['transient_expiration']) ? absint($input['transient_expiration']) : 3600;
         
         return $sanitized;
+    }
+    
+    /**
+     * Sanitize custom profile fields option.
+     *
+     * Each field definition is validated via VH360_Profile_Fields.
+     *
+     * @param mixed $input Raw input.
+     * @return array Sanitized field definitions keyed by field_id.
+     */
+    public function sanitize_custom_profile_fields($input) {
+        if (!class_exists('VH360_Profile_Fields')) {
+            return array();
+        }
+        return VH360_Profile_Fields::get_instance()->sanitize_custom_fields_option($input);
+    }
+    
+    /**
+     * Sanitize built-in field visibility settings.
+     *
+     * @param mixed $input Raw input.
+     * @return array Sanitized overrides keyed by field_id.
+     */
+    public function sanitize_builtin_field_settings($input) {
+        if (!is_array($input)) {
+            return array();
+        }
+        $sanitized = array();
+        foreach ($input as $field_id => $settings) {
+            $field_id = sanitize_key($field_id);
+            if (!$field_id || !is_array($settings)) {
+                continue;
+            }
+            $sanitized[$field_id] = array(
+                'show_on_public_about' => !empty($settings['show_on_public_about']) ? 1 : 0,
+                'status'               => (isset($settings['status']) && 'inactive' === $settings['status']) ? 'inactive' : 'active',
+            );
+        }
+        return $sanitized;
+    }
+    
+    /**
+     * AJAX: Save or update a single custom profile field.
+     */
+    public function ajax_save_custom_profile_field() {
+        if (!check_ajax_referer('vh360_admin_nonce', 'nonce', false)) {
+            wp_send_json_error(__('Security check failed', 'videohub360-theme'));
+        }
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Insufficient permissions', 'videohub360-theme'));
+        }
+        
+        if (!class_exists('VH360_Profile_Fields')) {
+            wp_send_json_error(__('Profile fields system unavailable', 'videohub360-theme'));
+        }
+        
+        $raw = isset($_POST['field']) && is_array($_POST['field']) ? $_POST['field'] : array();
+        $manager = VH360_Profile_Fields::get_instance();
+        $field = $manager->sanitize_field_definition($raw);
+        
+        if (!$field) {
+            wp_send_json_error(__('Invalid field data. Check that Field Key is set and not a reserved built-in key.', 'videohub360-theme'));
+        }
+        
+        if (empty($field['label'])) {
+            wp_send_json_error(__('Field label is required.', 'videohub360-theme'));
+        }
+        
+        $existing = get_option('vh360_custom_profile_fields', array());
+        if (!is_array($existing)) {
+            $existing = array();
+        }
+        
+        $existing[$field['field_id']] = $field;
+        update_option('vh360_custom_profile_fields', $existing);
+        
+        wp_send_json_success(array(
+            'message' => __('Field saved successfully.', 'videohub360-theme'),
+            'field'   => $field,
+        ));
+    }
+    
+    /**
+     * AJAX: Delete a custom profile field definition.
+     *
+     * Does NOT delete user meta — existing saved values are preserved.
+     */
+    public function ajax_delete_custom_profile_field() {
+        if (!check_ajax_referer('vh360_admin_nonce', 'nonce', false)) {
+            wp_send_json_error(__('Security check failed', 'videohub360-theme'));
+        }
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Insufficient permissions', 'videohub360-theme'));
+        }
+        
+        $field_id = sanitize_key(isset($_POST['field_id']) ? $_POST['field_id'] : '');
+        if (!$field_id) {
+            wp_send_json_error(__('Field ID is required.', 'videohub360-theme'));
+        }
+        
+        $existing = get_option('vh360_custom_profile_fields', array());
+        if (!is_array($existing)) {
+            $existing = array();
+        }
+        
+        if (!isset($existing[$field_id])) {
+            wp_send_json_error(__('Field not found.', 'videohub360-theme'));
+        }
+        
+        unset($existing[$field_id]);
+        update_option('vh360_custom_profile_fields', $existing);
+        
+        // NOTE: User meta (_vh360_custom_profile_{field_id}) is intentionally left intact.
+        
+        wp_send_json_success(array(
+            'message' => __('Field deleted. Existing user data has been preserved.', 'videohub360-theme'),
+        ));
+    }
+    
+    /**
+     * AJAX: Save built-in field visibility overrides.
+     */
+    public function ajax_save_builtin_field_settings() {
+        if (!check_ajax_referer('vh360_admin_nonce', 'nonce', false)) {
+            wp_send_json_error(__('Security check failed', 'videohub360-theme'));
+        }
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Insufficient permissions', 'videohub360-theme'));
+        }
+        
+        $raw_settings = isset($_POST['settings']) && is_array($_POST['settings']) ? $_POST['settings'] : array();
+        $sanitized    = $this->sanitize_builtin_field_settings($raw_settings);
+        update_option('vh360_builtin_field_settings', $sanitized);
+        
+        wp_send_json_success(array(
+            'message' => __('Built-in field settings saved.', 'videohub360-theme'),
+        ));
     }
     
     /**
@@ -1579,6 +1740,18 @@ class VH360_Theme_Admin {
                     ! empty( $settings['videohub360_core']['enable_course_features'] ) ? 1 : 0
                 );
             }
+        }
+        
+        // Import custom profile field definitions (sanitized).
+        if (isset($settings['custom_profile_fields']) && is_array($settings['custom_profile_fields'])) {
+            $sanitized_fields = $this->sanitize_custom_profile_fields($settings['custom_profile_fields']);
+            update_option('vh360_custom_profile_fields', $sanitized_fields);
+        }
+        
+        // Import built-in field visibility overrides.
+        if (isset($settings['builtin_field_settings']) && is_array($settings['builtin_field_settings'])) {
+            $sanitized_builtin = $this->sanitize_builtin_field_settings($settings['builtin_field_settings']);
+            update_option('vh360_builtin_field_settings', $sanitized_builtin);
         }
         
         wp_send_json_success(__('Settings imported successfully', 'videohub360-theme'));

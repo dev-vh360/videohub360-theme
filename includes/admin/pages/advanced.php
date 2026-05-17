@@ -229,6 +229,8 @@ jQuery(document).ready(function($) {
             videohub360_core: {
                 enable_course_features: <?php echo wp_json_encode( (int) get_option( 'videohub360_enable_course_features', 0 ) ); ?>
             },
+            custom_profile_fields: <?php echo wp_json_encode(get_option('vh360_custom_profile_fields', array())); ?>,
+            builtin_field_settings: <?php echo wp_json_encode(get_option('vh360_builtin_field_settings', array())); ?>,
         };
         
         var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(settings, null, 2));

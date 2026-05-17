@@ -499,65 +499,19 @@ function vh360_handle_business_profile_save() {
         return;
     }
     
-    // Sanitize and save text fields
-    $text_fields = array(
-        'business_name' => '_vh360_business_name',
-        'business_type' => '_vh360_business_type',
-        'credentials' => '_vh360_credentials',
-        'location' => '_vh360_location',
-        'contact_phone' => '_vh360_contact_phone',
-    );
-    
-    foreach ($text_fields as $field => $meta_key) {
-        if (isset($_POST[$field])) {
-            update_user_meta($current_user_id, $meta_key, sanitize_text_field(wp_unslash($_POST[$field])));
-        }
+    // Save all registered business profile fields via the centralized manager.
+    if (function_exists('vh360_save_profile_fields')) {
+        vh360_save_profile_fields($current_user_id, $_POST, 'business_edit');
     }
     
-    // Sanitize and save textarea fields
-    $textarea_fields = array(
-        'specialties' => '_vh360_specialties',
-        'pricing_info' => '_vh360_pricing_info',
-        'insurance_info' => '_vh360_insurance_info',
-    );
-    
-    foreach ($textarea_fields as $field => $meta_key) {
-        if (isset($_POST[$field])) {
-            update_user_meta($current_user_id, $meta_key, sanitize_textarea_field(wp_unslash($_POST[$field])));
-        }
-    }
-    
-    // Sanitize and save email field
-    if (isset($_POST['contact_email'])) {
-        update_user_meta($current_user_id, '_vh360_contact_email', sanitize_email(wp_unslash($_POST['contact_email'])));
-    }
-    
-    // Sanitize and save URL field
-    if (isset($_POST['booking_url'])) {
-        update_user_meta($current_user_id, '_vh360_booking_url', esc_url_raw(wp_unslash($_POST['booking_url'])));
-    }
-    
-    // Handle checkboxes
-    $checkbox_fields = array(
-        'telehealth' => '_vh360_telehealth',
-        'accepting_new_clients' => '_vh360_accepting_new_clients',
-    );
-    
-    foreach ($checkbox_fields as $field => $meta_key) {
-        update_user_meta($current_user_id, $meta_key, isset($_POST[$field]) && $_POST[$field] === '1' ? '1' : '0');
-    }
-    
-    // Save member category if submitted
+    // Save member category (system field — managed outside the profile fields manager).
     if (isset($_POST['member_category'])) {
         $category_slug = sanitize_title(wp_unslash($_POST['member_category']));
         
-        // Validate category if not empty
         if (empty($category_slug)) {
-            // Allow clearing the category
             delete_user_meta($current_user_id, '_vh360_member_category');
         } else {
-            // Validate against enabled categories
-            $is_valid = function_exists('vh360_is_valid_member_category') 
+            $is_valid = function_exists('vh360_is_valid_member_category')
                 ? vh360_is_valid_member_category($category_slug)
                 : false;
             
