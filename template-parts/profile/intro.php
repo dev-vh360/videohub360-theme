@@ -14,9 +14,13 @@ if (!defined('ABSPATH')) {
 }
 
 // Get the author being displayed
-$author_id = get_queried_object_id();
+$author_id = isset( $author_id ) ? absint( $author_id ) : absint( get_queried_object_id() );
 
-if (!$author_id) {
+if ( ! $author_id ) {
+    $author_id = absint( get_the_author_meta( 'ID' ) );
+}
+
+if ( ! $author_id ) {
     return;
 }
 
@@ -88,7 +92,9 @@ $profile_options = wp_parse_args($profile_options, $profile_defaults);
         <?php endif; ?>
     </div>
 
-    <?php if ( function_exists( 'vh360_render_public_profile_fields' ) ) : ?>
-        <?php vh360_render_public_profile_fields( $author_id ); ?>
-    <?php endif; ?>
+    <?php
+    if ( $author_id && function_exists( 'vh360_render_public_profile_fields' ) ) {
+        vh360_render_public_profile_fields( $author_id );
+    }
+    ?>
 </div>

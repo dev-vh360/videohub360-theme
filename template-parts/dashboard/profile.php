@@ -12,11 +12,11 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-$current_user_id = get_current_user_id();
+$current_user_id = absint( get_current_user_id() );
 $user = get_userdata($current_user_id);
 
 // Get user account type to determine if cover image should be shown
-$account_type = vh360_get_user_account_type($current_user_id);
+$account_type = function_exists( 'vh360_get_user_account_type' ) ? vh360_get_user_account_type( $current_user_id ) : get_user_meta( $current_user_id, '_vh360_account_type', true );
 $is_business_mode_account = in_array($account_type, array('client', 'professional', 'organization'), true);
 
 // Initialize messages
@@ -193,6 +193,22 @@ $profile_picture_url = $profile_picture_id ? wp_get_attachment_image_url($profil
         </div>
     <?php endif; ?>
     
+
+    <?php
+    if ( in_array( $account_type, array( 'professional', 'organization' ), true ) ) :
+        $business_profile_url = function_exists( 'vh360_get_dashboard_tab_url' )
+            ? vh360_get_dashboard_tab_url( 'business-profile' )
+            : add_query_arg( 'tab', 'business-profile', home_url( '/dashboard/' ) );
+        ?>
+        <div class="vh360-message vh360-message-info vh360-business-profile-cta">
+            <strong><?php esc_html_e( 'Complete your Business Profile', 'videohub360-theme' ); ?></strong>
+            <p><?php esc_html_e( 'Your professional details are managed in the Business Profile section.', 'videohub360-theme' ); ?></p>
+            <a class="vh360-dashboard-btn vh360-dashboard-btn-secondary" href="<?php echo esc_url( $business_profile_url ); ?>">
+                <?php esc_html_e( 'Go to Business Profile', 'videohub360-theme' ); ?>
+            </a>
+        </div>
+    <?php endif; ?>
+
     <!-- Profile Form -->
     <div class="vh360-dashboard-card">
         <form method="post" enctype="multipart/form-data" class="vh360-profile-form">
