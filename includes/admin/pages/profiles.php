@@ -258,11 +258,10 @@ $options = wp_parse_args($options, $defaults);
             'url'      => __('URL', 'videohub360-theme'),
             'phone'    => __('Phone', 'videohub360-theme'),
             'number'   => __('Number', 'videohub360-theme'),
-            'select'   => __('Select', 'videohub360-theme'),
             'checkbox' => __('Checkbox', 'videohub360-theme'),
         );
         $account_type_labels = array(
-            'standard'     => __('Standard', 'videohub360-theme'),
+            'creator'      => __('Creator / Standard', 'videohub360-theme'),
             'client'       => __('Client', 'videohub360-theme'),
             'professional' => __('Professional', 'videohub360-theme'),
             'organization' => __('Organization', 'videohub360-theme'),

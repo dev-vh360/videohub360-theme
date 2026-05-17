@@ -81,8 +81,9 @@ function vh360_get_public_profile_fields( $user_id ) {
 /**
  * Output the public "Profile Details" block for a user.
  *
- * @param int $user_id Profile owner user ID.
+ * @param int   $user_id Profile owner user ID.
+ * @param array $args    Optional. Supports 'exclude' => array of field IDs to skip.
  */
-function vh360_render_public_profile_fields( $user_id ) {
-	VH360_Profile_Fields::get_instance()->render_public_fields( $user_id );
+function vh360_render_public_profile_fields( $user_id, $args = array() ) {
+	VH360_Profile_Fields::get_instance()->render_public_fields( $user_id, $args );
 }

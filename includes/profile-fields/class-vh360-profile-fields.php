@@ -467,13 +467,11 @@ class VH360_Profile_Fields {
 			case 'url':
 				return esc_url_raw( wp_unslash( $raw_value ) );
 
-			case 'select':
-				return sanitize_text_field( wp_unslash( $raw_value ) );
-
 			case 'checkbox':
 				return ( '1' === $raw_value || 1 === $raw_value || true === $raw_value ) ? '1' : '0';
 
 			default:
+				// Includes any legacy 'select' values stored before select was removed.
 				return sanitize_text_field( wp_unslash( $raw_value ) );
 		}
 	}
@@ -553,12 +551,12 @@ class VH360_Profile_Fields {
 			$vis_meta_key  = '_vh360_profile_field_public_' . $field['field_id'];
 
 			if ( ! isset( $posted_data[ $vis_form_name ] ) ) {
-				// Checkbox not submitted — treat as unchecked (user wants to hide).
-				// Only save if the form was actually submitted (indicated by context-specific submit button).
-				// We use array_key_exists on at least one related field to detect context.
+				// The visibility toggle was not rendered for this form (different context).
+				// Leave the stored preference untouched.
 				continue;
 			}
 
+			// The hidden input ensures value is always '0' (unchecked) or '1' (checked).
 			$is_public = ( '1' === $posted_data[ $vis_form_name ] ) ? '1' : '0';
 			update_user_meta( $user_id, $vis_meta_key, $is_public );
 		}
@@ -571,8 +569,8 @@ class VH360_Profile_Fields {
 	 * @return array|null Sanitized definition or null on failure.
 	 */
 	public function sanitize_field_definition( $raw ) {
-		$allowed_types        = array( 'text', 'textarea', 'email', 'url', 'phone', 'number', 'select', 'checkbox' );
-		$allowed_account_types = array( 'standard', 'client', 'professional', 'organization' );
+		$allowed_types        = array( 'text', 'textarea', 'email', 'url', 'phone', 'number', 'checkbox' );
+		$allowed_account_types = array( 'creator', 'client', 'professional', 'organization' );
 
 		$field_id = sanitize_key( isset( $raw['field_id'] ) ? $raw['field_id'] : '' );
 		if ( ! $field_id ) {
@@ -586,6 +584,7 @@ class VH360_Profile_Fields {
 
 		$type = sanitize_key( isset( $raw['type'] ) ? $raw['type'] : 'text' );
 		if ( ! in_array( $type, $allowed_types, true ) ) {
+			// Fallback: 'select' fields saved before the type was removed are treated as text.
 			$type = 'text';
 		}
 
@@ -754,21 +753,6 @@ class VH360_Profile_Fields {
 				);
 				break;
 
-			case 'select':
-				$options = isset( $field['options'] ) && is_array( $field['options'] ) ? $field['options'] : array();
-				echo '<select name="' . esc_attr( $form_name ) . '" id="' . esc_attr( $html_id ) . '" class="vh360-dashboard-select">';
-				echo '<option value="">' . esc_html__( 'Select an option', 'videohub360-theme' ) . '</option>';
-				foreach ( $options as $opt_val => $opt_label ) {
-					printf(
-						'<option value="%s"%s>%s</option>',
-						esc_attr( $opt_val ),
-						selected( $value, $opt_val, false ),
-						esc_html( $opt_label )
-					);
-				}
-				echo '</select>';
-				break;
-
 			case 'checkbox':
 				echo '<div class="vh360-dashboard-checkbox-group">';
 				echo '<label class="vh360-dashboard-checkbox-label">';
@@ -796,6 +780,11 @@ class VH360_Profile_Fields {
 			$is_visible    = ( $user_choice !== '0' );
 			echo '<div class="vh360-field-visibility-toggle">';
 			echo '<label class="vh360-dashboard-checkbox-label">';
+			// Hidden input ensures the browser always submits a value so unchecking reliably saves 0.
+			printf(
+				'<input type="hidden" name="%s" value="0">',
+				esc_attr( $vis_form_name )
+			);
 			printf(
 				'<input type="checkbox" name="%s" value="1"%s>',
 				esc_attr( $vis_form_name ),
@@ -818,13 +807,19 @@ class VH360_Profile_Fields {
 	 *
 	 * Outputs a "Profile Details" block with all applicable, non-empty fields.
 	 *
-	 * @param int $user_id Profile owner user ID.
+	 * @param int   $user_id Profile owner user ID.
+	 * @param array $args    Optional arguments:
+	 *                       - 'exclude' (array) Field IDs to skip (e.g. when a template already displays them).
 	 */
-	public function render_public_fields( $user_id ) {
+	public function render_public_fields( $user_id, $args = array() ) {
+		$exclude       = isset( $args['exclude'] ) && is_array( $args['exclude'] ) ? $args['exclude'] : array();
 		$fields        = $this->get_fields_for_context( $user_id, 'public' );
 		$field_outputs = array();
 
 		foreach ( $fields as $field_id => $field ) {
+			if ( in_array( $field_id, $exclude, true ) ) {
+				continue;
+			}
 			$value  = $this->get_field_value( $user_id, $field );
 			if ( '' === $value || null === $value || false === $value ) {
 				continue;
@@ -870,7 +865,6 @@ class VH360_Profile_Fields {
 			case 'text':
 			case 'phone':
 			case 'number':
-			case 'select':
 				return esc_html( $value );
 
 			case 'checkbox':
