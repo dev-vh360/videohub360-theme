@@ -431,7 +431,7 @@ function vh360_shop_render_toolbar() {
                     type="search"
                     name="s"
                     class="vh360-shop-toolbar-search-input"
-                    placeholder="<?php esc_attr_e( 'Search products&hellip;', 'videohub360-theme' ); ?>"
+                    placeholder="<?php esc_attr_e( 'Search products…', 'videohub360-theme' ); ?>"
                     value="<?php echo esc_attr( function_exists( 'is_search' ) && is_search() ? get_search_query() : '' ); ?>"
                     aria-label="<?php esc_attr_e( 'Search products', 'videohub360-theme' ); ?>"
                 >

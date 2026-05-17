@@ -2,7 +2,7 @@
 /**
  * WooCommerce Shop Customizer Controls
  *
- * Adds a dedicated "WooCommerce Shop" section under the Global Design panel.
+ * Adds a dedicated "Videohub360 Shop" section under the WooCommerce Customizer panel, with a Global Design fallback when WooCommerce's panel is unavailable.
  * Controls cover the shop hero, premium header card, category navigation,
  * benefits strip, and featured product module.
  *
