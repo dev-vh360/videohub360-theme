@@ -298,8 +298,20 @@ class VH360_Profile_Fields {
 	 */
 	public function get_custom_fields() {
 		if ( null === $this->custom_fields ) {
-			$raw                = get_option( 'vh360_custom_profile_fields', array() );
-			$this->custom_fields = is_array( $raw ) ? $raw : array();
+			$raw = get_option( 'vh360_custom_profile_fields', array() );
+
+			if ( ! is_array( $raw ) ) {
+				$this->custom_fields = array();
+			} else {
+				// Normalize through the sanitizer so legacy fields (e.g. type=select,
+				// account_type=standard) are healed to valid values on first load.
+				$this->custom_fields = $this->sanitize_custom_fields_option( $raw );
+			}
+
+			// Auto-heal: persist the sanitized option if it differs from what was stored.
+			if ( $this->custom_fields !== $raw ) {
+				update_option( 'vh360_custom_profile_fields', $this->custom_fields );
+			}
 		}
 		return $this->custom_fields;
 	}
@@ -592,6 +604,10 @@ class VH360_Profile_Fields {
 		if ( isset( $raw['account_types'] ) && is_array( $raw['account_types'] ) ) {
 			foreach ( $raw['account_types'] as $at ) {
 				$at = sanitize_key( $at );
+				// Migrate legacy 'standard' account type (saved before the rename) to 'creator'.
+				if ( 'standard' === $at ) {
+					$at = 'creator';
+				}
 				if ( in_array( $at, $allowed_account_types, true ) ) {
 					$account_types[] = $at;
 				}
