@@ -38,10 +38,26 @@ $product_classes = 'vh360-woocommerce-page vh360-single-product';
 if ( $is_membership_product ) {
     $product_classes .= ' vh360-membership-product';
 }
+
+// Resolve sidebar configuration for single product pages.
+$sidebar_config = vh360_resolve_sidebar();
+$has_sidebar    = $sidebar_config['show_sidebar'];
+$sidebar_pos    = $sidebar_config['position'];
+
+$container_class = 'container';
+if ( $has_sidebar ) {
+    $container_class .= ' has-sidebar sidebar-' . $sidebar_pos;
+} else {
+    $container_class .= ' no-sidebar';
+}
 ?>
 
 <div id="primary" class="site-content <?php echo esc_attr( $product_classes ); ?>">
-    <div class="container no-sidebar">
+    <div class="<?php echo esc_attr( $container_class ); ?>">
+
+        <?php if ( $has_sidebar && 'left' === $sidebar_pos ) : ?>
+            <?php get_sidebar(); ?>
+        <?php endif; ?>
 
         <main id="main" class="content-area">
 
@@ -58,8 +74,13 @@ if ( $is_membership_product ) {
 
         </main><!-- #main -->
 
+        <?php if ( $has_sidebar && 'right' === $sidebar_pos ) : ?>
+            <?php get_sidebar(); ?>
+        <?php endif; ?>
+
     </div><!-- .container -->
 </div><!-- #primary -->
 
 <?php
 get_footer();
+
