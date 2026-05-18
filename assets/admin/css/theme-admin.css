@@ -641,3 +641,26 @@
         height: 35px;
     }
 }
+
+/* ==========================================================================
+   Profile Data Viewer
+   ========================================================================== */
+
+.vh360-account-type-badge,
+.vh360-visibility-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.vh360-account-type-creator      { background: #d5e5f7; color: #2271b1; }
+.vh360-account-type-client        { background: #fcf3cf; color: #996800; }
+.vh360-account-type-professional  { background: #d7f2e6; color: #00a32a; }
+.vh360-account-type-organization  { background: #f3d9fa; color: #6f42c1; }
+
+.vh360-visibility-public  { background: #d7f2e6; color: #00a32a; }
+.vh360-visibility-private { background: #fde8e8; color: #d63638; }
