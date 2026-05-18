@@ -2980,7 +2980,7 @@ window.initializeAgoraPlayer = function(config) {
                     }
 
                     // The server-returned role is authoritative.
-                    if (tokenResponse.role !== 'host') {
+                    if (!tokenResponse || tokenResponse.role !== 'host') {
                         joinAsPresenterBtn.disabled = false;
                         joinAsPresenterBtn.textContent = '🎭 Go Live';
                         joinAsPresenterBtn.style.backgroundColor = 'transparent';
@@ -2988,7 +2988,51 @@ window.initializeAgoraPlayer = function(config) {
                         return;
                     }
 
-                    // Server approved host role — proceed to publish.
+                    if (config.requireAgoraTokens && !tokenResponse.token) {
+                        joinAsPresenterBtn.disabled = false;
+                        joinAsPresenterBtn.textContent = '🎭 Go Live';
+                        joinAsPresenterBtn.style.backgroundColor = 'transparent';
+                        showAgoraError('Unable to join as presenter because a valid host token was not issued.');
+                        return;
+                    }
+
+                    // Apply the server-approved host token to the active Agora client before
+                    // publishing. Without this the user would still hold an audience/subscriber
+                    // token and startPublishing() would be rejected by the Agora service.
+                    if (tokenResponse.token) {
+                        let tokenApplied = false;
+                        try {
+                            if (client && typeof client.renewToken === 'function') {
+                                await client.renewToken(tokenResponse.token);
+                            }
+                            if (config.mode === 'live' && client && typeof client.setClientRole === 'function') {
+                                await client.setClientRole('host');
+                            }
+                            tokenApplied = true;
+                        } catch (renewError) {
+                            window.vh360Warn('VideoHub360: Host token renewal failed; attempting leave/rejoin as host:', renewError);
+                            try {
+                                await rejoinWithHostToken(tokenResponse);
+                                tokenApplied = true;
+                            } catch (rejoinError) {
+                                window.vh360Error('VideoHub360: Host rejoin also failed:', rejoinError);
+                                joinAsPresenterBtn.disabled = false;
+                                joinAsPresenterBtn.textContent = '🎭 Go Live';
+                                joinAsPresenterBtn.style.backgroundColor = 'transparent';
+                                showAgoraError('Unable to upgrade your livestream permissions. Please leave and rejoin, then try again.');
+                                return;
+                            }
+                        }
+                        if (!tokenApplied) {
+                            joinAsPresenterBtn.disabled = false;
+                            joinAsPresenterBtn.textContent = '🎭 Go Live';
+                            joinAsPresenterBtn.style.backgroundColor = 'transparent';
+                            showAgoraError('Unable to upgrade your livestream permissions. Please leave and rejoin, then try again.');
+                            return;
+                        }
+                    }
+
+                    // Server approved host role and token is applied — proceed to publish.
                     await promoteToHost();
 
                     joinAsPresenterBtn.textContent = '⬇️ Leave Presenter';
@@ -3036,6 +3080,43 @@ window.initializeAgoraPlayer = function(config) {
             }
         });
     }
+    /**
+     * Leave and rejoin the Agora channel using a server-approved host token.
+     *
+     * Used as a fallback when client.renewToken() fails during presenter promotion.
+     * After this call the client is re-joined with publisher privileges; the caller
+     * should proceed directly to track creation / publishing without another join.
+     */
+    async function rejoinWithHostToken(tokenResponse) {
+        if (!client || !tokenResponse || !tokenResponse.token) {
+            throw new Error('Missing Agora client or host token for rejoin.');
+        }
+
+        // Stop and release any existing local tracks before leaving.
+        await stopPublishing();
+
+        try {
+            await client.leave();
+        } catch (leaveError) {
+            window.vh360Warn('VideoHub360: client.leave() before host rejoin failed:', leaveError);
+        }
+
+        if (config.mode === 'live' && typeof client.setClientRole === 'function') {
+            await client.setClientRole('host');
+        }
+
+        const rejoinUid = tokenResponse.uid || config.uid;
+        await client.join(
+            config.appId,
+            tokenResponse.channel || config.channelName,
+            tokenResponse.token,
+            Number(rejoinUid)
+        );
+
+        currentRole = 'host';
+        isPresenter = true;
+    }
+
     async function promoteToHost() {
         try {
             let audioTrack, videoTrack;

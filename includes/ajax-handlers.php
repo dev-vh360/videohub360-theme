@@ -997,12 +997,13 @@ class VH360_Ajax_Handlers {
         update_post_meta($post_id, '_vh360_agora_mode', $agora_mode);
         update_post_meta($post_id, '_vh360_agora_channel_name', $agora_channel_name);
         update_post_meta($post_id, '_vh360_agora_everyone_is_host', $agora_everyone_is_host);
-        // Hash passcode before storing; clear if requirement is disabled.
-        if ($require_passcode === 'yes' && $new_passcode !== '') {
-            update_post_meta($post_id, '_vh360_host_passcode', wp_hash_password($new_passcode));
-        } else {
+        // Hash passcode before storing; clear if requirement is disabled; keep existing if blank.
+        if ($require_passcode !== 'yes') {
             update_post_meta($post_id, '_vh360_host_passcode', '');
+        } elseif ($new_passcode !== '') {
+            update_post_meta($post_id, '_vh360_host_passcode', wp_hash_password($new_passcode));
         }
+        // If require_passcode is yes and the field is blank, keep the existing passcode.
         update_post_meta($post_id, '_vh360_stream_stopped', 'no');
         
         // Ensure context is always 'default' for frontend created videos (not live_room)
