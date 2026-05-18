@@ -74,8 +74,14 @@ $profile_url = get_author_posts_url($author_id);
                         // Following list
                         get_template_part('template-parts/profile/following');
                     } elseif ('about' === $current_tab) {
-                        // About/intro section
-                        get_template_part('template-parts/profile/intro');
+                        // About details section (desktop avoids duplicating rail intro card)
+                        get_template_part(
+                            'template-parts/profile/about-details',
+                            null,
+                            array(
+                                'author_id' => $author_id,
+                            )
+                        );
                     }
                     ?>
                 </div>
@@ -106,7 +112,15 @@ $profile_url = get_author_posts_url($author_id);
                         <?php elseif ('about' === $current_tab) : ?>
                             <!-- Profile Intro Section -->
                             <div class="vh360-profile-tab-content active" id="vh360-tab-about" role="tabpanel">
-                                <?php get_template_part('template-parts/profile/intro'); ?>
+                                <?php
+                                get_template_part(
+                                    'template-parts/profile/intro',
+                                    null,
+                                    array(
+                                        'author_id' => $author_id,
+                                    )
+                                );
+                                ?>
                             </div>
                         <?php endif; ?>
                     </div>

@@ -87,3 +87,43 @@ function vh360_get_public_profile_fields( $user_id ) {
 function vh360_render_public_profile_fields( $user_id, $args = array() ) {
 	VH360_Profile_Fields::get_instance()->render_public_fields( $user_id, $args );
 }
+
+
+/**
+ * Check whether a profile field is currently public for a user.
+ */
+function vh360_profile_field_is_public( $field_id, $user_id = 0 ) {
+	$user_id = $user_id ? absint( $user_id ) : absint( get_current_user_id() );
+	if ( ! $user_id || empty( $field_id ) ) {
+		return false;
+	}
+
+	$fields = vh360_get_profile_field_definitions();
+	if ( empty( $fields[ $field_id ] ) ) {
+		return false;
+	}
+
+	$field = $fields[ $field_id ];
+	if ( empty( $field['status'] ) || 'active' !== $field['status'] ) {
+		return false;
+	}
+
+	$account_type = function_exists( 'vh360_get_user_account_type' ) ? vh360_get_user_account_type( $user_id ) : get_user_meta( $user_id, '_vh360_account_type', true );
+	$types = isset( $field['account_types'] ) ? (array) $field['account_types'] : array();
+	if ( ! empty( $types ) && ! in_array( $account_type, $types, true ) ) {
+		return false;
+	}
+
+	if ( empty( $field['show_on_public_about'] ) ) {
+		return false;
+	}
+
+	if ( ! empty( $field['allow_user_public_toggle'] ) ) {
+		$vis_key = '_vh360_profile_field_public_' . $field['field_id'];
+		if ( '0' === (string) get_user_meta( $user_id, $vis_key, true ) ) {
+			return false;
+		}
+	}
+
+	return true;
+}

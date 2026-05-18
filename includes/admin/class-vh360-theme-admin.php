@@ -293,7 +293,7 @@ class VH360_Theme_Admin {
                 'show_social' => true,
                 'show_stats' => true,
                 'show_header_follow_button' => true,
-                'social_platforms' => array('twitter', 'facebook', 'youtube', 'instagram'),
+                'social_platforms' => array('website', 'twitter', 'facebook', 'youtube', 'instagram'),
                 'avatar_max_size' => 2,
                 'cover_max_size' => 5,
                 'enable_avatar_cropper' => true,
@@ -497,19 +497,6 @@ class VH360_Theme_Admin {
             ),
         ));
         
-        // Custom profile fields (admin-created).
-        register_setting('vh360_profile_settings', 'vh360_custom_profile_fields', array(
-            'type'              => 'array',
-            'sanitize_callback' => array($this, 'sanitize_custom_profile_fields'),
-            'default'           => array(),
-        ));
-        
-        // Built-in field visibility overrides.
-        register_setting('vh360_profile_settings', 'vh360_builtin_field_settings', array(
-            'type'              => 'array',
-            'sanitize_callback' => array($this, 'sanitize_builtin_field_settings'),
-            'default'           => array(),
-        ));
     }
     
     /**
@@ -1016,9 +1003,14 @@ class VH360_Theme_Admin {
      * @return array Sanitized field definitions keyed by field_id.
      */
     public function sanitize_custom_profile_fields($input) {
+        if (null === $input) {
+            return get_option('vh360_custom_profile_fields', array());
+        }
+
         if (!class_exists('VH360_Profile_Fields')) {
             return array();
         }
+
         return VH360_Profile_Fields::get_instance()->sanitize_custom_fields_option($input);
     }
     
@@ -1029,6 +1021,10 @@ class VH360_Theme_Admin {
      * @return array Sanitized overrides keyed by field_id.
      */
     public function sanitize_builtin_field_settings($input) {
+        if (null === $input) {
+            return get_option('vh360_builtin_field_settings', array());
+        }
+
         if (!is_array($input)) {
             return array();
         }

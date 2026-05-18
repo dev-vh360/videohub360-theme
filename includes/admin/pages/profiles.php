@@ -21,7 +21,7 @@ $defaults = array(
     'show_social' => true,
     'show_stats' => true,
     'show_header_follow_button' => true,
-    'social_platforms' => array('twitter', 'facebook', 'youtube', 'instagram'),
+    'social_platforms' => array('website', 'twitter', 'facebook', 'youtube', 'instagram'),
     'avatar_max_size' => 2, // MB
     'cover_max_size' => 5, // MB
 );
@@ -79,11 +79,11 @@ $options = wp_parse_args($options, $defaults);
                         </td>
                     </tr>
                     <tr>
-                        <th scope="row"><?php esc_html_e('Social Links', 'videohub360-theme'); ?></th>
+                        <th scope="row"><?php esc_html_e('Enable profile links', 'videohub360-theme'); ?></th>
                         <td>
                             <label>
                                 <input type="checkbox" name="vh360_profile_options[show_social]" value="1" <?php checked($options['show_social'], true); ?>>
-                                <?php esc_html_e('Show social media links on profile pages', 'videohub360-theme'); ?>
+                                <?php esc_html_e('Allow users to add Website and social links to their profiles, and display enabled links on public profile pages.', 'videohub360-theme'); ?>
                             </label>
                         </td>
                     </tr>
@@ -110,33 +110,27 @@ $options = wp_parse_args($options, $defaults);
             </table>
         </div>
         
-        <!-- Social Media Platforms -->
+        <!-- Profile Links -->
         <div class="vh360-admin-card">
-            <h2><?php esc_html_e('Social Media Platforms', 'videohub360-theme'); ?></h2>
-            <p><?php esc_html_e('Select which social media platforms users can add to their profiles.', 'videohub360-theme'); ?></p>
+            <h2><?php esc_html_e('Profile Links', 'videohub360-theme'); ?></h2>
+            <p><?php esc_html_e('Select which website and social links users can add to their profiles.', 'videohub360-theme'); ?></p>
             
             <table class="form-table">
                 <tbody>
                     <tr>
-                        <th scope="row"><?php esc_html_e('Available Platforms', 'videohub360-theme'); ?></th>
+                        <th scope="row"><?php esc_html_e('Available Profile Links', 'videohub360-theme'); ?></th>
                         <td>
                             <?php
-                            $platforms = array(
-                                'twitter' => __('Twitter (X)', 'videohub360-theme'),
-                                'facebook' => __('Facebook', 'videohub360-theme'),
-                                'youtube' => __('YouTube', 'videohub360-theme'),
-                                'instagram' => __('Instagram', 'videohub360-theme'),
-                                'linkedin' => __('LinkedIn', 'videohub360-theme'),
-                                'tiktok' => __('TikTok', 'videohub360-theme'),
-                                'twitch' => __('Twitch', 'videohub360-theme'),
-                            );
-                            
-                            foreach ($platforms as $key => $label) :
-                                $checked = in_array($key, $options['social_platforms']);
+                            $platforms = function_exists( 'vh360_get_social_platform_registry' )
+                                ? vh360_get_social_platform_registry()
+                                : array();
+
+                            foreach ($platforms as $key => $platform) :
+                                $checked = in_array($key, $options['social_platforms'], true);
                                 ?>
                                 <label style="display: block; margin-bottom: 8px;">
                                     <input type="checkbox" name="vh360_profile_options[social_platforms][]" value="<?php echo esc_attr($key); ?>" <?php checked($checked, true); ?>>
-                                    <?php echo esc_html($label); ?>
+                                    <?php echo esc_html($platform['label']); ?>
                                 </label>
                             <?php endforeach; ?>
                         </td>

@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-$author_id = get_queried_object_id();
+$author_id = absint( get_queried_object_id() );
 $author = get_userdata($author_id);
 
 if (!$author) {
@@ -42,7 +42,7 @@ $business_name = get_user_meta($author_id, '_vh360_business_name', true);
     <?php endif; ?>
     
     <?php if (function_exists('vh360_render_public_profile_fields')) : ?>
-        <?php vh360_render_public_profile_fields($author_id, array('exclude' => array('business_name'))); ?>
+        <?php vh360_render_public_profile_fields($author_id, array('exclude' => array('business_name','business_type','location','credentials','specialties','telehealth','accepting_new_clients','pricing_info','insurance_info'))); ?>
     <?php endif; ?>
     
 </div>

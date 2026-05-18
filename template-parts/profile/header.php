@@ -44,7 +44,6 @@ $cover_image = vh360_get_user_cover_image($author_id);
 $display_name = $author->display_name;
 $username = $author->user_login;
 $join_date = vh360_get_user_join_date($author_id, 'F Y');
-$website = $author->user_url;
 $social_links = vh360_get_user_social_links($author_id);
 
 // Check if current user can edit this profile
@@ -165,17 +164,7 @@ $can_edit = vh360_user_can_edit_profile($author_id);
                     
                     // Show Edit Profile button if user can edit this profile
                     if ($can_edit) :
-                        // Look for a page using the profile edit template
-                        $edit_profile_page = get_pages(array(
-                            'meta_key' => '_wp_page_template',
-                            'meta_value' => 'template-profile-edit.php',
-                            'number' => 1,
-                        ));
-                        
-                        // If no page exists, user can create one or we link to wp-admin
-                        $edit_url = !empty($edit_profile_page) 
-                            ? get_permalink($edit_profile_page[0]->ID) 
-                            : admin_url('profile.php');
+                        $edit_url = function_exists( 'vh360_get_profile_edit_url' ) ? vh360_get_profile_edit_url( $author_id ) : home_url( '/dashboard/?tab=profile' );
                         ?>
                         <a href="<?php echo esc_url($edit_url); ?>" class="vh360-edit-profile-btn">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -211,18 +200,8 @@ $can_edit = vh360_user_can_edit_profile($author_id);
                 </div>
 
                 <!-- Social Links (shown on mobile only) -->
-                <?php if ($profile_options['show_social'] && (!empty($social_links) || $website)) : ?>
+                <?php if ($profile_options['show_social'] && !empty($social_links)) : ?>
                     <div class="vh360-profile-links vh360-profile-links--mobile">
-                        <?php if ($website) : ?>
-                            <a href="<?php echo esc_url($website); ?>" class="vh360-profile-link" target="_blank" rel="noopener noreferrer">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="12" cy="12" r="10"></circle>
-                                    <line x1="2" y1="12" x2="22" y2="12"></line>
-                                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-                                </svg>
-                                <?php esc_html_e('Website', 'videohub360-theme'); ?>
-                            </a>
-                        <?php endif; ?>
 
                         <?php foreach ($social_links as $platform => $url) : ?>
                             <?php if ($url) : ?>

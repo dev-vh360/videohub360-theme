@@ -14,9 +14,11 @@ if (!defined('ABSPATH')) {
 }
 
 // Get the author being displayed
-$author_id = get_queried_object_id();
+$author_id = isset( $args['author_id'] )
+    ? absint( $args['author_id'] )
+    : ( isset( $author_id ) ? absint( $author_id ) : absint( get_the_author_meta( 'ID' ) ) );
 
-if (!$author_id) {
+if ( ! $author_id ) {
     return;
 }
 
@@ -27,7 +29,6 @@ if (!$author) {
 
 // Get user data
 $bio = vh360_get_user_bio($author_id);
-$website = $author->user_url;
 $social_links = vh360_get_user_social_links($author_id);
 
 // Get profile options
@@ -50,23 +51,7 @@ $profile_options = wp_parse_args($profile_options, $profile_defaults);
     <?php endif; ?>
     
     <div class="vh360-profile-meta-list">
-        <?php if ($profile_options['show_social'] && (!empty($social_links) || $website)) : ?>
-            <?php if ($website) : ?>
-                <div class="vh360-profile-meta-item">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="2" y1="12" x2="22" y2="12"></line>
-                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-                    </svg>
-                    <a href="<?php echo esc_url($website); ?>" target="_blank" rel="noopener noreferrer">
-                        <?php 
-                        $parsed_url = parse_url($website);
-                        $host = isset($parsed_url['host']) ? $parsed_url['host'] : $website;
-                        echo esc_html($host);
-                        ?>
-                    </a>
-                </div>
-            <?php endif; ?>
+        <?php if (!empty($social_links)) : ?>
             
             <?php foreach ($social_links as $platform => $url) : ?>
                 <?php if ($url) : ?>
@@ -87,4 +72,10 @@ $profile_options = wp_parse_args($profile_options, $profile_defaults);
             <?php endforeach; ?>
         <?php endif; ?>
     </div>
+
+    <?php
+    if ( $author_id && function_exists( 'vh360_render_public_profile_fields' ) ) {
+        vh360_render_public_profile_fields( $author_id );
+    }
+    ?>
 </div>

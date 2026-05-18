@@ -111,14 +111,7 @@ $lesson_label     = function_exists( 'vh360_get_lesson_label' ) ? vh360_get_less
                 <!-- Actions -->
                 <div class="vh360-course-author-actions">
                     <?php if ( $can_edit ) :
-                        $edit_profile_page = get_pages( array(
-                            'meta_key'   => '_wp_page_template',
-                            'meta_value' => 'template-profile-edit.php',
-                            'number'     => 1,
-                        ) );
-                        $edit_url = ! empty( $edit_profile_page )
-                            ? get_permalink( $edit_profile_page[0]->ID )
-                            : admin_url( 'profile.php' );
+                        $edit_url = function_exists( 'vh360_get_profile_edit_url' ) ? vh360_get_profile_edit_url( $author_id ) : home_url( '/dashboard/?tab=profile' );
                         ?>
                         <a href="<?php echo esc_url( $edit_url ); ?>" class="vh360-course-author-edit-btn">
                             <?php esc_html_e( 'Edit Profile', 'videohub360-theme' ); ?>

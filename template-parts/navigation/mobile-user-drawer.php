@@ -17,7 +17,7 @@ if ( ! is_user_logged_in() ) {
     return;
 }
 
-$user_id   = get_current_user_id();
+$user_id   = absint( get_current_user_id() );
 $user      = wp_get_current_user();
 $avatar    = get_avatar_url( $user_id, array( 'size' => 96 ) );
 $profile   = get_author_posts_url( $user_id );
@@ -55,7 +55,12 @@ $logout_url = function_exists( 'vh360_get_logout_url' ) ? vh360_get_logout_url( 
                 <div class="vh360-mobile-user-drawer__section-title"><?php esc_html_e( 'Account', 'videohub360-theme' ); ?></div>
                 <div class="vh360-mobile-user-drawer__links">
                     <a class="vh360-mobile-user-drawer__link" href="<?php echo esc_url( $profile ); ?>"><?php esc_html_e( 'View Profile', 'videohub360-theme' ); ?></a>
-                    <a class="vh360-mobile-user-drawer__link" href="<?php echo esc_url( add_query_arg( 'tab', 'profile', $dashboard_url ) ); ?>"><?php esc_html_e( 'Edit Profile', 'videohub360-theme' ); ?></a>
+                    <?php
+                    $edit_profile_url = function_exists( 'vh360_get_profile_edit_url' )
+                        ? vh360_get_profile_edit_url( $user_id )
+                        : add_query_arg( 'tab', 'profile', $dashboard_url );
+                    ?>
+                    <a class="vh360-mobile-user-drawer__link" href="<?php echo esc_url( $edit_profile_url ); ?>"><?php esc_html_e( 'Edit Profile', 'videohub360-theme' ); ?></a>
                     <a class="vh360-mobile-user-drawer__link" href="<?php echo esc_url( $logout_url ); ?>"><?php esc_html_e( 'Logout', 'videohub360-theme' ); ?></a>
                 </div>
             </div>

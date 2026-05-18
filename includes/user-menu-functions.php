@@ -390,7 +390,7 @@ function vh360_render_user_menu_meta_box() {
         ),
         array(
             'title' => __('Edit Profile', 'videohub360-theme'),
-            'url' => home_url('/profile-edit/'),
+            'url' => function_exists( 'vh360_get_profile_edit_url' ) ? vh360_get_profile_edit_url() : home_url('/dashboard/?tab=profile'),
             'icon' => 'edit',
         ),
         array(

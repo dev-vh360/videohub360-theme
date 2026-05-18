@@ -12,11 +12,11 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-$current_user_id = get_current_user_id();
+$current_user_id = absint( get_current_user_id() );
 $user = get_userdata($current_user_id);
 
 // Get user account type to determine if cover image should be shown
-$account_type = vh360_get_user_account_type($current_user_id);
+$account_type = function_exists( 'vh360_get_user_account_type' ) ? vh360_get_user_account_type( $current_user_id ) : get_user_meta( $current_user_id, '_vh360_account_type', true );
 $is_business_mode_account = in_array($account_type, array('client', 'professional', 'organization'), true);
 
 // Initialize messages
@@ -34,7 +34,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vh360_edit_profile_no
         // Sanitize and prepare user data
         $display_name = isset($_POST['display_name']) ? sanitize_text_field($_POST['display_name']) : '';
         $bio = isset($_POST['bio']) ? sanitize_textarea_field($_POST['bio']) : '';
-        $website = isset($_POST['website']) ? esc_url_raw($_POST['website']) : '';
+        $enabled_profile_links = function_exists( 'vh360_get_enabled_social_platforms' ) ? vh360_get_enabled_social_platforms() : array();
+        $website = $user->user_url;
+        if ( isset( $enabled_profile_links['website'] ) ) {
+            $website = isset($_POST['website']) ? esc_url_raw( wp_unslash($_POST['website']) ) : '';
+        }
         
         // Validate required fields
         if (empty($display_name)) {
@@ -55,11 +59,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vh360_edit_profile_no
                 $error_message = $result->get_error_message();
             } else {
                 
-                // Update social links
-                $social_fields = array('twitter', 'facebook', 'youtube', 'instagram');
-                foreach ($social_fields as $field) {
-                    $value = isset($_POST[$field]) ? esc_url_raw($_POST[$field]) : '';
-                    update_user_meta($current_user_id, '_vh360_' . $field, $value);
+                // Update enabled social links (preserve disabled platform values)
+                $social_platforms = function_exists( 'vh360_get_enabled_social_platforms' )
+                    ? vh360_get_enabled_social_platforms()
+                    : array();
+
+                foreach ( $social_platforms as $field => $platform ) {
+                    if ( 'website' === $field ) {
+                        continue;
+                    }
+                    $meta_key = isset( $platform['meta_key'] ) ? $platform['meta_key'] : '_vh360_' . $field;
+                    $value    = isset( $_POST[ $field ] ) ? esc_url_raw( wp_unslash( $_POST[ $field ] ) ) : '';
+
+                    if ( '' === $value ) {
+                        delete_user_meta( $current_user_id, $meta_key );
+                    } else {
+                        update_user_meta( $current_user_id, $meta_key, $value );
+                    }
                 }
                 
                 // Save any registered custom profile fields for the general edit context.
@@ -146,9 +162,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vh360_edit_profile_no
 // Get current values
 $display_name = $user->display_name;
 $bio = get_the_author_meta('description', $current_user_id);
-$website = $user->user_url;
 $cover_image = vh360_get_user_cover_image($current_user_id);
-$social_links = vh360_get_user_social_links($current_user_id);
+$social_links = function_exists( 'vh360_get_user_social_links' ) ? vh360_get_user_social_links($current_user_id, true) : array();
+$enabled_social_platforms = function_exists( 'vh360_get_enabled_social_platforms' ) ? vh360_get_enabled_social_platforms() : array();
 
 // Get profile picture (avatar)
 $profile_picture_id = get_user_meta($current_user_id, 'vh360_profile_picture_id', true);
@@ -193,6 +209,22 @@ $profile_picture_url = $profile_picture_id ? wp_get_attachment_image_url($profil
         </div>
     <?php endif; ?>
     
+
+    <?php
+    if ( in_array( $account_type, array( 'professional', 'organization' ), true ) ) :
+        $business_profile_url = function_exists( 'vh360_get_dashboard_tab_url' )
+            ? vh360_get_dashboard_tab_url( 'business-profile' )
+            : add_query_arg( 'tab', 'business-profile', home_url( '/dashboard/' ) );
+        ?>
+        <div class="vh360-message vh360-message-info vh360-business-profile-cta">
+            <strong><?php esc_html_e( 'Complete your Business Profile', 'videohub360-theme' ); ?></strong>
+            <p><?php esc_html_e( 'Your professional details are managed in the Business Profile section.', 'videohub360-theme' ); ?></p>
+            <a class="vh360-dashboard-btn vh360-dashboard-btn-secondary" href="<?php echo esc_url( $business_profile_url ); ?>">
+                <?php esc_html_e( 'Go to Business Profile', 'videohub360-theme' ); ?>
+            </a>
+        </div>
+    <?php endif; ?>
+
     <!-- Profile Form -->
     <div class="vh360-dashboard-card">
         <form method="post" enctype="multipart/form-data" class="vh360-profile-form">
@@ -273,61 +305,19 @@ $profile_picture_url = $profile_picture_id ? wp_get_attachment_image_url($profil
                 <textarea name="bio" id="bio" class="vh360-form-textarea" rows="4" maxlength="500"><?php echo esc_textarea($bio); ?></textarea>
                 <span class="vh360-form-help"><?php esc_html_e('Maximum 500 characters', 'videohub360-theme'); ?></span>
             </div>
-            
-            <!-- Website -->
-            <div class="vh360-form-group">
-                <label for="website" class="vh360-form-label"><?php esc_html_e('Website', 'videohub360-theme'); ?></label>
-                <input type="url" name="website" id="website" class="vh360-form-input" value="<?php echo esc_url($website); ?>">
-            </div>
-            
-            <!-- Social Links -->
-            <div class="vh360-form-section">
-                <h3 class="vh360-form-section-title"><?php esc_html_e('Social Media', 'videohub360-theme'); ?></h3>
-                
-                <div class="vh360-form-group">
-                    <label for="twitter" class="vh360-form-label">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"></path>
-                        </svg>
-                        <?php esc_html_e('Twitter', 'videohub360-theme'); ?>
-                    </label>
-                    <input type="url" name="twitter" id="twitter" class="vh360-form-input" value="<?php echo isset($social_links['twitter']) ? esc_url($social_links['twitter']) : ''; ?>" placeholder="https://twitter.com/username">
+<!-- Social Links -->
+            <?php if ( ! empty( $enabled_social_platforms ) ) : ?>
+                <div class="vh360-form-section">
+                    <h3 class="vh360-form-section-title"><?php esc_html_e('Profile Links', 'videohub360-theme'); ?></h3>
+                    <?php foreach ( $enabled_social_platforms as $platform_key => $platform ) : ?>
+                        <div class="vh360-form-group">
+                            <label for="<?php echo esc_attr( $platform_key ); ?>" class="vh360-form-label"><?php echo esc_html( $platform['label'] ); ?></label>
+                            <input type="url" name="<?php echo esc_attr( $platform_key ); ?>" id="<?php echo esc_attr( $platform_key ); ?>" class="vh360-form-input" value="<?php echo isset( $social_links[ $platform_key ] ) ? esc_url( $social_links[ $platform_key ] ) : ''; ?>" placeholder="<?php echo esc_attr( $platform['placeholder'] ); ?>">
+                        </div>
+                    <?php endforeach; ?>
                 </div>
-                
-                <div class="vh360-form-group">
-                    <label for="facebook" class="vh360-form-label">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"></path>
-                        </svg>
-                        <?php esc_html_e('Facebook', 'videohub360-theme'); ?>
-                    </label>
-                    <input type="url" name="facebook" id="facebook" class="vh360-form-input" value="<?php echo isset($social_links['facebook']) ? esc_url($social_links['facebook']) : ''; ?>" placeholder="https://facebook.com/username">
-                </div>
-                
-                <div class="vh360-form-group">
-                    <label for="youtube" class="vh360-form-label">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M22.54 6.42a2.78 2.78 0 00-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 00-1.94 2A29 29 0 001 11.75a29 29 0 00.46 5.33A2.78 2.78 0 003.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 001.94-2 29 29 0 00.46-5.25 29 29 0 00-.46-5.33z"></path>
-                            <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="#fff"></polygon>
-                        </svg>
-                        <?php esc_html_e('YouTube', 'videohub360-theme'); ?>
-                    </label>
-                    <input type="url" name="youtube" id="youtube" class="vh360-form-input" value="<?php echo isset($social_links['youtube']) ? esc_url($social_links['youtube']) : ''; ?>" placeholder="https://youtube.com/channel/...">
-                </div>
-                
-                <div class="vh360-form-group">
-                    <label for="instagram" class="vh360-form-label">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                            <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"></path>
-                            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-                        </svg>
-                        <?php esc_html_e('Instagram', 'videohub360-theme'); ?>
-                    </label>
-                    <input type="url" name="instagram" id="instagram" class="vh360-form-input" value="<?php echo isset($social_links['instagram']) ? esc_url($social_links['instagram']) : ''; ?>" placeholder="https://instagram.com/username">
-                </div>
-            </div>
-            
+            <?php endif; ?>
+
             <!-- Additional Profile Fields (custom fields for this user's account type) -->
             <?php if (function_exists('vh360_render_profile_fields')) : ?>
                 <?php $edit_fields = vh360_get_profile_fields_for_user($current_user_id, 'edit'); ?>
