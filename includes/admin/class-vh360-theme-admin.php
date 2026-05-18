@@ -2044,12 +2044,20 @@ class VH360_Theme_Admin {
     public function export_user_profiles_csv() {
         // Capability check.
         if ( ! current_user_can( 'manage_options' ) ) {
-            wp_die( esc_html__( 'You do not have permission to perform this action.', 'videohub360-theme' ), 403 );
+            wp_die(
+                esc_html__( 'You do not have permission to perform this action.', 'videohub360-theme' ),
+                esc_html__( 'Permission denied', 'videohub360-theme' ),
+                array( 'response' => 403 )
+            );
         }
 
         // Nonce verification.
         if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( sanitize_key( $_GET['_wpnonce'] ), 'vh360_export_user_profiles' ) ) {
-            wp_die( esc_html__( 'Security check failed.', 'videohub360-theme' ), 403 );
+            wp_die(
+                esc_html__( 'Security check failed.', 'videohub360-theme' ),
+                esc_html__( 'Security check failed', 'videohub360-theme' ),
+                array( 'response' => 403 )
+            );
         }
 
         // ----------------------------------------------------------------
@@ -2217,8 +2225,8 @@ class VH360_Theme_Admin {
 
                 // Built-in visibility toggles.
                 foreach ( array_keys( $builtin_toggle_columns ) as $meta_key ) {
-                    $raw   = isset( $user_meta[ $meta_key ][0] ) ? $user_meta[ $meta_key ][0] : '';
-                    $row[] = $raw ? __( 'Public', 'videohub360-theme' ) : __( 'Private', 'videohub360-theme' );
+                    $raw   = isset( $user_meta[ $meta_key ][0] ) ? (string) $user_meta[ $meta_key ][0] : '';
+                    $row[] = ( '0' === $raw ) ? __( 'Private', 'videohub360-theme' ) : __( 'Public', 'videohub360-theme' );
                 }
 
                 // Custom profile fields.
@@ -2229,8 +2237,8 @@ class VH360_Theme_Admin {
 
                 // Custom visibility toggles.
                 foreach ( array_keys( $custom_toggle_columns ) as $meta_key ) {
-                    $raw   = isset( $user_meta[ $meta_key ][0] ) ? $user_meta[ $meta_key ][0] : '';
-                    $row[] = $raw ? __( 'Public', 'videohub360-theme' ) : __( 'Private', 'videohub360-theme' );
+                    $raw   = isset( $user_meta[ $meta_key ][0] ) ? (string) $user_meta[ $meta_key ][0] : '';
+                    $row[] = ( '0' === $raw ) ? __( 'Private', 'videohub360-theme' ) : __( 'Public', 'videohub360-theme' );
                 }
 
                 fputcsv( $output, $row );
