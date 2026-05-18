@@ -4224,8 +4224,8 @@ body.vh360-ios-immersive-active {
 
 @supports (height: 100dvh) {
     #vh360-agora-player.vh360-ios-immersive-fullscreen {
-        height: 100dvh !important;
-        min-height: 100dvh !important;
+        height: var(--vh360-visual-viewport-height, 100dvh) !important;
+        min-height: var(--vh360-visual-viewport-height, 100dvh) !important;
     }
 }
 
@@ -4241,4 +4241,20 @@ body.vh360-ios-immersive-active {
         padding-left: env(safe-area-inset-left, 0px);
         padding-right: env(safe-area-inset-right, 0px);
     }
+}
+
+/* Raise popup overlays above the immersive player while active */
+body.vh360-ios-immersive-active #vh360-chat-popup,
+body.vh360-ios-immersive-active .vh360-chat-popup,
+body.vh360-ios-immersive-active .vh360-moderation-modal,
+body.vh360-ios-immersive-active .videohub360-moderation-modal,
+body.vh360-ios-immersive-active .vh360-unified-settings-overlay {
+    z-index: 2147483002 !important;
+}
+
+body.vh360-ios-immersive-active .vh360-chat-popup-content,
+body.vh360-ios-immersive-active .vh360-moderation-modal-content,
+body.vh360-ios-immersive-active .videohub360-moderation-content,
+body.vh360-ios-immersive-active .vh360-unified-settings-content {
+    z-index: 2147483003 !important;
 }
