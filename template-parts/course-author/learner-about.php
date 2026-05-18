@@ -20,7 +20,6 @@ if ( ! $author ) {
 }
 
 $description  = get_the_author_meta( 'description', $author_id );
-$website      = $author->user_url;
 $join_date    = vh360_get_user_join_date( $author_id, 'F j, Y' );
 $social_links = function_exists( 'vh360_get_user_social_links' ) ? vh360_get_user_social_links( $author_id ) : array();
 ?>
@@ -43,7 +42,7 @@ $social_links = function_exists( 'vh360_get_user_social_links' ) ? vh360_get_use
         <?php vh360_render_public_profile_fields( $author_id ); ?>
     <?php endif; ?>
 
-    <?php if ( $website || ! empty( $social_links ) ) : ?>
+    <?php if ( ! empty( $social_links ) ) : ?>
         <div class="vh360-course-author-links">
             <h3 class="vh360-course-author-subsection-title"><?php esc_html_e( 'Links', 'videohub360-theme' ); ?></h3>
             <ul class="vh360-course-author-links-list">

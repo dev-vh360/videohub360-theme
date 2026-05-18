@@ -59,7 +59,7 @@ $profile_options = wp_parse_args($profile_options, $profile_defaults);
         <?php endif; ?>
         
         <div class="vh360-profile-meta-list">
-            <?php if ($profile_options['show_social'] && (!empty($social_links) || $website)) : ?>
+            <?php if (!empty($social_links)) : ?>
                 
                 <?php foreach ($social_links as $platform => $url) : ?>
                     <?php if ($url) : ?>
