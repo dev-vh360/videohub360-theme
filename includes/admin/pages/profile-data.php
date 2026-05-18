@@ -391,7 +391,7 @@ $account_types = array(
 		<p style="margin:0;">
 			<?php
 			printf(
-				/* translators: %d: number of users */
+				/* translators: %s: number of users */
 				esc_html( _n( '%s user found', '%s users found', $total_users, 'videohub360-theme' ) ),
 				esc_html( number_format_i18n( $total_users ) )
 			);
