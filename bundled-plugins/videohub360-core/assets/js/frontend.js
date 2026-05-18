@@ -2444,14 +2444,38 @@ window.initializeAgoraPlayer = function(config) {
         }
     });
 
-    client.on("client-role-changed", (oldRole, newRole) => {
+    client.on("client-role-changed", async (oldRole, newRole) => {
+        window.vh360Log('VideoHub360: Client role changed', {
+            oldRole: oldRole,
+            newRole: newRole,
+            hasServerApprovedPublishToken: hasServerApprovedPublishToken
+        });
+
         currentRole = newRole;
         updateControlsVisibility();
+
         if (newRole === 'host') {
-            startPublishing();
-        } else {
-            hasServerApprovedPublishToken = false;
-            stopPublishing();
+            if (!hasServerApprovedPublishToken && config.requireAgoraTokens) {
+                window.vh360Log('VideoHub360: Host role event received before publish token approval; waiting for normal presenter flow.');
+                return;
+            }
+
+            // Avoid duplicate publish calls when the presenter flow already started publishing.
+            if (localTracks.audioTrack || localTracks.videoTrack) {
+                window.vh360Log('VideoHub360: Already publishing — skipping duplicate startPublishing() from role-change event.');
+                return;
+            }
+
+            await startPublishing();
+            return;
+        }
+
+        // Role changed away from host — reset approval state.
+        hasServerApprovedPublishToken = false;
+        isPresenter = false;
+
+        if (localTracks.audioTrack || localTracks.videoTrack) {
+            await stopPublishing();
         }
     });
 
