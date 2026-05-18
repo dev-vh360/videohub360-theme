@@ -71,14 +71,10 @@ function vh360_handle_frontend_live_room_settings_save() {
 
     $everyone_is_host = isset($_POST['vh360_agora_everyone_is_host']) ? 'yes' : 'no';
     $require_passcode = isset($_POST['vh360_require_passcode']) ? 'yes' : 'no';
-    $host_passcode    = '';
+    $new_passcode     = ($require_passcode === 'yes') ? sanitize_text_field($_POST['vh360_host_passcode'] ?? '') : '';
 
-    if ($require_passcode === 'yes') {
-        $host_passcode = isset($_POST['vh360_host_passcode']) ? sanitize_text_field($_POST['vh360_host_passcode']) : '';
-    }
-
-    $viewer_count  = isset($_POST['vh360_viewer_count']) ? 'yes' : 'no';
-    $chat_enabled  = isset($_POST['vh360_chat_enabled']) ? 'yes' : 'no';
+    $viewer_count   = isset($_POST['vh360_viewer_count']) ? 'yes' : 'no';
+    $chat_enabled   = isset($_POST['vh360_chat_enabled']) ? 'yes' : 'no';
     $chat_placement = isset($_POST['vh360_chat_placement']) ? sanitize_text_field($_POST['vh360_chat_placement']) : '';
 
     // Enforce mutual exclusivity
@@ -86,16 +82,19 @@ function vh360_handle_frontend_live_room_settings_save() {
         // Prefer passcode; disable everyone-is-host
         $everyone_is_host = 'no';
     }
-    if ($require_passcode === 'yes' && $host_passcode === '') {
-        // If passcode is required but empty, disable requirement
-        $require_passcode = 'no';
-    }
 
     update_post_meta($post_id, '_vh360_agora_everyone_is_host', $everyone_is_host);
-    update_post_meta($post_id, '_vh360_host_passcode', ($require_passcode === 'yes') ? $host_passcode : '');
     update_post_meta($post_id, '_vh360_viewer_count', $viewer_count);
     update_post_meta($post_id, '_vh360_chat_enabled', $chat_enabled);
     update_post_meta($post_id, '_vh360_chat_placement', $chat_placement);
+
+    // Handle passcode: hash new values, keep existing when blank, clear when unchecked.
+    if ($require_passcode !== 'yes') {
+        update_post_meta($post_id, '_vh360_host_passcode', '');
+    } elseif ($new_passcode !== '') {
+        update_post_meta($post_id, '_vh360_host_passcode', wp_hash_password($new_passcode));
+    }
+    // If require_passcode=yes but new_passcode is empty, keep existing passcode.
 
     // Redirect back to avoid resubmission
     $url = get_permalink($post_id);
@@ -163,8 +162,11 @@ function vh360_render_frontend_live_room_settings_panel($content) {
                     <?php esc_html_e('Require Passcode To Join', 'videohub360-theme'); ?>
                 </label>
                 <div id="vh360_passcode_field" style="<?php echo ($require_passcode === 'yes') ? '' : 'display:none;'; ?> margin-top: 8px;">
-                    <label for="vh360_host_passcode"><?php esc_html_e('Host Passcode', 'videohub360-theme'); ?></label>
-                    <input type="text" id="vh360_host_passcode" name="vh360_host_passcode" class="vh360-input" value="<?php echo esc_attr($host_passcode); ?>" />
+                    <?php if ($require_passcode === 'yes') : ?>
+                        <p style="margin-bottom:4px;"><em><?php esc_html_e('A host passcode is currently set.', 'videohub360-theme'); ?></em></p>
+                    <?php endif; ?>
+                    <label for="vh360_host_passcode"><?php esc_html_e('Set New Host Passcode', 'videohub360-theme'); ?></label>
+                    <input type="password" id="vh360_host_passcode" name="vh360_host_passcode" class="vh360-input" value="" placeholder="<?php echo ($require_passcode === 'yes') ? esc_attr__('Leave blank to keep existing passcode', 'videohub360-theme') : esc_attr__('Enter a passcode', 'videohub360-theme'); ?>" autocomplete="new-password" />
                 </div>
                 <p class="vh360-form-help" style="margin-top:6px;">
                     <?php esc_html_e('When enabled, viewers must enter a passcode to join as presenters. Cannot be used with "Allow Everyone to be Host".', 'videohub360-theme'); ?>

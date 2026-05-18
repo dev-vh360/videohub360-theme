@@ -113,18 +113,9 @@ if (!function_exists('videohub360_render_livestream')) {
             $can_moderate = $is_original_host || current_user_can('moderate_comments') || current_user_can('manage_options');
             $is_logged_in = is_user_logged_in();
 
-            // Debug: Check current user capabilities
+            // Debug info — intentionally omits sensitive data (user roles, capabilities).
             $current_user = wp_get_current_user();
             $debug_info = array(
-                'user_id' => $current_user->ID,
-                'user_login' => $current_user->user_login,
-                'user_roles' => $current_user->roles,
-                'can_manage_options' => current_user_can('manage_options'),
-                'can_moderate_comments' => current_user_can('moderate_comments'),
-                'can_edit_posts' => current_user_can('edit_posts'),
-                'can_publish_posts' => current_user_can('publish_posts'),
-                'is_admin' => current_user_can('manage_options'),
-                'is_logged_in' => $is_logged_in,
                 'agora_mode' => $fields['agora_mode'],
                 'everyone_is_host' => $fields['agora_everyone_is_host']
             );

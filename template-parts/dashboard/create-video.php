@@ -579,12 +579,13 @@ $locations = get_terms(array(
                                     <?php esc_html_e('Host Passcode', 'videohub360-theme'); ?>
                                 </label>
                                 <input 
-                                    type="text" 
+                                    type="password" 
                                     id="vh360_host_passcode" 
                                     name="vh360_host_passcode" 
                                     class="vh360-input"
                                     placeholder="<?php esc_attr_e('Enter passcode', 'videohub360-theme'); ?>"
                                     style="font-family: monospace; font-weight: bold;"
+                                    autocomplete="new-password"
                                 >
                                 <p class="vh360-form-help">
                                     <?php esc_html_e('Viewers will need to enter this passcode to join as presenters.', 'videohub360-theme'); ?>
