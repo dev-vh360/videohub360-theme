@@ -494,17 +494,4 @@ $profile_picture_url = $profile_picture_id ? wp_get_attachment_image_url($profil
     gap: 0.5rem;
     font-weight: normal;
 }
-</style>            <!-- Social Media -->
-            <?php if ( ! empty( $enabled_social_platforms ) ) : ?>
-                <div class="vh360-form-section">
-                    <h3 class="vh360-form-section-title"><?php esc_html_e('Profile Links', 'videohub360-theme'); ?></h3>
-                    <?php foreach ( $enabled_social_platforms as $platform_key => $platform ) : ?>
-                        <div class="vh360-form-group">
-                            <label for="<?php echo esc_attr( $platform_key ); ?>" class="vh360-form-label"><?php echo esc_html( $platform['label'] ); ?></label>
-                            <input type="url" name="<?php echo esc_attr( $platform_key ); ?>" id="<?php echo esc_attr( $platform_key ); ?>" class="vh360-form-input" value="<?php echo isset( $social_links[ $platform_key ] ) ? esc_url( $social_links[ $platform_key ] ) : ''; ?>" placeholder="<?php echo esc_attr( $platform['placeholder'] ); ?>">
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-
-
+</style>

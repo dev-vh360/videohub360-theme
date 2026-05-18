@@ -79,11 +79,11 @@ $options = wp_parse_args($options, $defaults);
                         </td>
                     </tr>
                     <tr>
-                        <th scope="row"><?php esc_html_e('Social Links', 'videohub360-theme'); ?></th>
+                        <th scope="row"><?php esc_html_e('Enable profile links', 'videohub360-theme'); ?></th>
                         <td>
                             <label>
                                 <input type="checkbox" name="vh360_profile_options[show_social]" value="1" <?php checked($options['show_social'], true); ?>>
-                                <?php esc_html_e('Show profile links on public profile pages', 'videohub360-theme'); ?>
+                                <?php esc_html_e('Allow users to add Website and social links to their profiles, and display enabled links on public profile pages.', 'videohub360-theme'); ?>
                             </label>
                         </td>
                     </tr>

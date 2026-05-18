@@ -682,8 +682,23 @@ function vh360_get_social_platform_registry() {
  * @return array
  */
 function vh360_get_enabled_social_platforms() {
-    $registry = vh360_get_social_platform_registry();
-    $options  = get_option( 'vh360_profile_options', array() );
+    $registry = function_exists( 'vh360_get_social_platform_registry' )
+        ? vh360_get_social_platform_registry()
+        : array();
+
+    if ( empty( $registry ) ) {
+        return array();
+    }
+
+    $options = get_option( 'vh360_profile_options', array() );
+
+    $show_profile_links = isset( $options['show_social'] )
+        ? (bool) $options['show_social']
+        : true;
+
+    if ( ! $show_profile_links ) {
+        return array();
+    }
 
     $enabled = isset( $options['social_platforms'] ) && is_array( $options['social_platforms'] )
         ? array_map( 'sanitize_key', $options['social_platforms'] )
