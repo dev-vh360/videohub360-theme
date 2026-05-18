@@ -753,7 +753,16 @@ $options = wp_parse_args($options, $defaults);
     </script>
     
     <?php endif; ?>
-    
+
+    <!-- Export Profile Data -->
+    <div class="vh360-admin-card">
+        <h2><?php esc_html_e( 'Export Profile Data', 'videohub360-theme' ); ?></h2>
+        <p><?php esc_html_e( 'This export includes WordPress user data, Videohub360 profile fields, social/profile links, business profile fields, and admin-created custom profile fields.', 'videohub360-theme' ); ?></p>
+        <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=vh360_export_user_profiles' ), 'vh360_export_user_profiles' ) ); ?>" class="button button-primary">
+            <?php esc_html_e( 'Export User Profile Data CSV', 'videohub360-theme' ); ?>
+        </a>
+    </div>
+
 </div>
 
 <?php

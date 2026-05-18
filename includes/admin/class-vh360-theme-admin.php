@@ -60,6 +60,9 @@ class VH360_Theme_Admin {
         add_action('wp_ajax_vh360_save_custom_profile_field', array($this, 'ajax_save_custom_profile_field'));
         add_action('wp_ajax_vh360_delete_custom_profile_field', array($this, 'ajax_delete_custom_profile_field'));
         add_action('wp_ajax_vh360_save_builtin_field_settings', array($this, 'ajax_save_builtin_field_settings'));
+
+        // CSV export handler
+        add_action('admin_post_vh360_export_user_profiles', array($this, 'export_user_profiles_csv'));
     }
     
     /**
@@ -2031,5 +2034,251 @@ class VH360_Theme_Admin {
         wp_send_json_success(array(
             'message' => sprintf(__('Professional %s has been rejected.', 'videohub360-theme'), $user->display_name)
         ));
+    }
+
+    /**
+     * Export all user profile data as a CSV file.
+     *
+     * Accessible only to administrators via admin-post.php.
+     */
+    public function export_user_profiles_csv() {
+        // Capability check.
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( esc_html__( 'You do not have permission to perform this action.', 'videohub360-theme' ), 403 );
+        }
+
+        // Nonce verification.
+        if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( sanitize_key( $_GET['_wpnonce'] ), 'vh360_export_user_profiles' ) ) {
+            wp_die( esc_html__( 'Security check failed.', 'videohub360-theme' ), 403 );
+        }
+
+        // ----------------------------------------------------------------
+        // Build column definitions.
+        // ----------------------------------------------------------------
+
+        // Fixed standard WP columns.
+        $standard_columns = array(
+            'user_id'          => __( 'User ID', 'videohub360-theme' ),
+            'user_login'       => __( 'Username', 'videohub360-theme' ),
+            'user_email'       => __( 'Email', 'videohub360-theme' ),
+            'display_name'     => __( 'Display Name', 'videohub360-theme' ),
+            'first_name'       => __( 'First Name', 'videohub360-theme' ),
+            'last_name'        => __( 'Last Name', 'videohub360-theme' ),
+            'user_url'         => __( 'Website URL', 'videohub360-theme' ),
+            'description'      => __( 'Bio / Description', 'videohub360-theme' ),
+            'user_registered'  => __( 'Registered Date', 'videohub360-theme' ),
+            'roles'            => __( 'Roles', 'videohub360-theme' ),
+        );
+
+        // Known VH360 meta columns.
+        $vh360_meta_columns = array(
+            '_vh360_account_type'        => __( 'Account Type', 'videohub360-theme' ),
+            'vh360_profile_picture_id'   => __( 'Profile Picture ID', 'videohub360-theme' ),
+            '_vh360_profile_cover_id'    => __( 'Cover Image ID', 'videohub360-theme' ),
+            '_vh360_twitter'             => __( 'Twitter', 'videohub360-theme' ),
+            '_vh360_facebook'            => __( 'Facebook', 'videohub360-theme' ),
+            '_vh360_youtube'             => __( 'YouTube', 'videohub360-theme' ),
+            '_vh360_instagram'           => __( 'Instagram', 'videohub360-theme' ),
+            '_vh360_linkedin'            => __( 'LinkedIn', 'videohub360-theme' ),
+            '_vh360_tiktok'              => __( 'TikTok', 'videohub360-theme' ),
+            '_vh360_twitch'              => __( 'Twitch', 'videohub360-theme' ),
+        );
+
+        // Built-in VH360 profile fields (dynamic).
+        $builtin_field_columns = array(); // meta_key => column_label
+        $builtin_toggle_columns = array(); // meta_key => column_label  (visibility toggles)
+        if ( class_exists( 'VH360_Profile_Fields' ) ) {
+            $builtin_fields = VH360_Profile_Fields::get_instance()->get_builtin_fields();
+            foreach ( $builtin_fields as $field ) {
+                $meta_key = isset( $field['meta_key'] ) ? $field['meta_key'] : '';
+                $label    = isset( $field['label'] ) ? $field['label'] : $meta_key;
+                if ( $meta_key && ! isset( $vh360_meta_columns[ $meta_key ] ) ) {
+                    $builtin_field_columns[ $meta_key ] = sprintf(
+                        /* translators: %s: field label */
+                        __( 'Built-in Field: %s', 'videohub360-theme' ),
+                        $label
+                    );
+                }
+                if ( ! empty( $field['allow_user_public_toggle'] ) ) {
+                    $field_id = isset( $field['field_id'] ) ? $field['field_id'] : '';
+                    if ( $field_id ) {
+                        $toggle_meta_key = '_vh360_profile_field_public_' . $field_id;
+                        $builtin_toggle_columns[ $toggle_meta_key ] = sprintf(
+                            /* translators: %s: field label */
+                            __( 'Visibility: %s', 'videohub360-theme' ),
+                            $label
+                        );
+                    }
+                }
+            }
+        }
+
+        // Admin-created custom fields (dynamic).
+        $custom_field_columns = array(); // meta_key => column_label
+        $custom_toggle_columns = array(); // meta_key => column_label
+        $custom_fields = get_option( 'vh360_custom_profile_fields', array() );
+        if ( is_array( $custom_fields ) ) {
+            foreach ( $custom_fields as $field ) {
+                $field_id = isset( $field['field_id'] ) ? $field['field_id'] : '';
+                $label    = isset( $field['label'] ) ? $field['label'] : $field_id;
+                if ( isset( $field['meta_key'] ) && $field['meta_key'] ) {
+                    $meta_key = $field['meta_key'];
+                } else {
+                    $meta_key = '_vh360_custom_profile_' . $field_id;
+                }
+                if ( $meta_key ) {
+                    $custom_field_columns[ $meta_key ] = sprintf(
+                        /* translators: %s: field label */
+                        __( 'Custom Field: %s', 'videohub360-theme' ),
+                        $label
+                    );
+                }
+                if ( ! empty( $field['allow_user_public_toggle'] ) && $field_id ) {
+                    $toggle_meta_key = '_vh360_profile_field_public_' . $field_id;
+                    $custom_toggle_columns[ $toggle_meta_key ] = sprintf(
+                        /* translators: %s: field label */
+                        __( 'Visibility: %s', 'videohub360-theme' ),
+                        $label
+                    );
+                }
+            }
+        }
+
+        // ----------------------------------------------------------------
+        // CSV headers.
+        // ----------------------------------------------------------------
+        $headers = array_merge(
+            array_values( $standard_columns ),
+            array_values( $vh360_meta_columns ),
+            array_values( $builtin_field_columns ),
+            array_values( $builtin_toggle_columns ),
+            array_values( $custom_field_columns ),
+            array_values( $custom_toggle_columns )
+        );
+
+        // ----------------------------------------------------------------
+        // Send HTTP headers.
+        // ----------------------------------------------------------------
+        $filename = 'vh360-user-profiles-' . gmdate( 'Y-m-d' ) . '.csv';
+        header( 'Content-Type: text/csv; charset=UTF-8' );
+        header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+        header( 'Pragma: no-cache' );
+        header( 'Expires: 0' );
+
+        $output = fopen( 'php://output', 'w' );
+
+        // UTF-8 BOM for Excel compatibility.
+        fwrite( $output, "\xEF\xBB\xBF" );
+
+        fputcsv( $output, $headers );
+
+        // ----------------------------------------------------------------
+        // Stream rows in batches.
+        // ----------------------------------------------------------------
+        $batch_size = 200;
+        $paged      = 1;
+
+        do {
+            $users = get_users( array(
+                'number'  => $batch_size,
+                'paged'   => $paged,
+                'orderby' => 'ID',
+                'order'   => 'ASC',
+            ) );
+
+            foreach ( $users as $user ) {
+                $user_meta = get_user_meta( $user->ID );
+
+                $row = array();
+
+                // Standard WP fields.
+                $row[] = $user->ID;
+                $row[] = $user->user_login;
+                $row[] = $user->user_email;
+                $row[] = $user->display_name;
+                $row[] = isset( $user_meta['first_name'][0] ) ? $user_meta['first_name'][0] : '';
+                $row[] = isset( $user_meta['last_name'][0] ) ? $user_meta['last_name'][0] : '';
+                $row[] = $user->user_url;
+                $row[] = isset( $user_meta['description'][0] ) ? $user_meta['description'][0] : '';
+                $row[] = $user->user_registered;
+                $row[] = implode( ', ', $user->roles );
+
+                // VH360 meta fields.
+                foreach ( array_keys( $vh360_meta_columns ) as $meta_key ) {
+                    $value = isset( $user_meta[ $meta_key ][0] ) ? $user_meta[ $meta_key ][0] : '';
+                    $row[] = $this->csv_format_meta_value( $value );
+                }
+
+                // Built-in profile fields.
+                foreach ( array_keys( $builtin_field_columns ) as $meta_key ) {
+                    $value = isset( $user_meta[ $meta_key ][0] ) ? $user_meta[ $meta_key ][0] : '';
+                    $row[] = $this->csv_format_meta_value( $value );
+                }
+
+                // Built-in visibility toggles.
+                foreach ( array_keys( $builtin_toggle_columns ) as $meta_key ) {
+                    $raw   = isset( $user_meta[ $meta_key ][0] ) ? $user_meta[ $meta_key ][0] : '';
+                    $row[] = $raw ? __( 'Public', 'videohub360-theme' ) : __( 'Private', 'videohub360-theme' );
+                }
+
+                // Custom profile fields.
+                foreach ( array_keys( $custom_field_columns ) as $meta_key ) {
+                    $value = isset( $user_meta[ $meta_key ][0] ) ? $user_meta[ $meta_key ][0] : '';
+                    $row[] = $this->csv_format_meta_value( $value );
+                }
+
+                // Custom visibility toggles.
+                foreach ( array_keys( $custom_toggle_columns ) as $meta_key ) {
+                    $raw   = isset( $user_meta[ $meta_key ][0] ) ? $user_meta[ $meta_key ][0] : '';
+                    $row[] = $raw ? __( 'Public', 'videohub360-theme' ) : __( 'Private', 'videohub360-theme' );
+                }
+
+                fputcsv( $output, $row );
+            }
+
+            $paged++;
+        } while ( count( $users ) === $batch_size );
+
+        fclose( $output );
+        exit;
+    }
+
+    /**
+     * Format a user meta value for CSV output.
+     *
+     * - Unserialized arrays are joined with a comma-space.
+     * - Scalar 1/0 values representing checkboxes output Yes/No.
+     * - Other scalars are returned as-is.
+     *
+     * @param mixed $value Raw meta value (already single-value, not the array wrapper).
+     * @return string
+     */
+    private function csv_format_meta_value( $value ) {
+        // Attempt to unserialize if it looks serialized.
+        $unserialized = @maybe_unserialize( $value );
+
+        if ( is_array( $unserialized ) ) {
+            // Filter out empty items and join.
+            $parts = array_filter( array_map( 'strval', $unserialized ), function( $v ) {
+                return '' !== $v;
+            } );
+            return implode( ', ', $parts );
+        }
+
+        if ( is_object( $unserialized ) ) {
+            return '';
+        }
+
+        $scalar = (string) $value;
+
+        // Treat '1'/'0' as Yes/No for checkbox-style fields.
+        if ( '1' === $scalar ) {
+            return __( 'Yes', 'videohub360-theme' );
+        }
+        if ( '0' === $scalar ) {
+            return __( 'No', 'videohub360-theme' );
+        }
+
+        return $scalar;
     }
 }
