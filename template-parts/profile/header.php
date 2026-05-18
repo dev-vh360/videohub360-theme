@@ -200,7 +200,7 @@ $can_edit = vh360_user_can_edit_profile($author_id);
                 </div>
 
                 <!-- Social Links (shown on mobile only) -->
-                <?php if ($profile_options['show_social'] && (!empty($social_links) || $website)) : ?>
+                <?php if ($profile_options['show_social'] && !empty($social_links)) : ?>
                     <div class="vh360-profile-links vh360-profile-links--mobile">
 
                         <?php foreach ($social_links as $platform => $url) : ?>
