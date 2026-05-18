@@ -2743,7 +2743,20 @@ window.initializeAgoraPlayer = function(config) {
                 isHost: isHost,
                 isOriginalHost: isOriginalHost
             });
-            
+
+            // Authorization guards must run before any camera/microphone access or local preview rendering.
+            // Fail-closed: block publishing unless a server-approved host token has already been applied.
+            if (config.requireAgoraTokens && !hasServerApprovedPublishToken) {
+                window.vh360Error("VideoHub360: Blocked publish attempt — no server-approved host token applied.");
+                showAgoraError('You do not have permission to publish to this livestream.');
+                return;
+            }
+
+            if (currentRole !== "host") {
+                window.vh360Error("VideoHub360: Blocked publish attempt — currentRole is '" + currentRole + "' not 'host'.");
+                throw new Error("Cannot publish: user role is '" + currentRole + "' but should be 'host'");
+            }
+
             window.vh360Log("Agora: Starting to publish tracks");
             
             if (!localTracks.audioTrack || !localTracks.videoTrack) {
@@ -2829,19 +2842,6 @@ window.initializeAgoraPlayer = function(config) {
                 } else {
                     window.vh360Warn("Agora: Invalid local video track for publishing");
                 }
-            }
-            
-            // Fail-closed guard: block publishing unless server-approved host token has been applied.
-            // In tokenless mode (local testing only) we rely on currentRole as a fallback.
-            if (config.requireAgoraTokens && !hasServerApprovedPublishToken) {
-                window.vh360Error("VideoHub360: Blocked publish attempt — no server-approved host token applied.");
-                showAgoraError('You do not have permission to publish to this livestream.');
-                return;
-            }
-
-            if (currentRole !== "host") {
-                window.vh360Error("VideoHub360: Blocked publish attempt — currentRole is '" + currentRole + "' not 'host'.");
-                throw new Error("Cannot publish: user role is '" + currentRole + "' but should be 'host'");
             }
             
             await client.publish([localTracks.audioTrack, localTracks.videoTrack]);

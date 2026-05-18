@@ -75,6 +75,7 @@ if ($delete_on_uninstall) {
     delete_metadata('post', 0, '_vh360_agora_app_id', '', true);
     delete_option('vh360_agora_app_id');
     delete_option('vh360_agora_app_certificate');
+    delete_option('vh360_agora_require_tokens');
     delete_metadata('post', 0, '_vh360_agora_channel_name', '', true);
     delete_metadata('post', 0, '_vh360_agora_token', '', true);
     delete_metadata('post', 0, '_vh360_agora_mode', '', true);

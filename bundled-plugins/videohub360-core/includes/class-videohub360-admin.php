@@ -340,6 +340,7 @@ class VideoHub360_Admin {
             // Update Agora settings
             update_option('vh360_agora_app_id', sanitize_text_field($_POST['vh360_agora_app_id']));
             update_option('vh360_agora_app_certificate', sanitize_text_field($_POST['vh360_agora_app_certificate']));
+            update_option('vh360_agora_require_tokens', isset($_POST['vh360_agora_require_tokens']) ? 1 : 0);
             
             // Update interactive livestream settings
             update_option('videohub360_force_login_everyone_host', isset($_POST['videohub360_force_login_everyone_host']) ? 1 : 0);
@@ -652,7 +653,24 @@ class VideoHub360_Admin {
                             </p>
                         </td>
                     </tr>
-                    
+                    <tr>
+                        <th scope="row">Require Agora Tokens</th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="vh360_agora_require_tokens" value="1" <?php checked(get_option('vh360_agora_require_tokens', 1), 1); ?> />
+                                Require secure Agora tokens before users can join livestreams
+                            </label>
+                            <p class="description">
+                                <strong>This should remain enabled on production sites.</strong><br>
+                                Disabling this is for local testing only. When disabled, users can join Agora channels without a server-issued token.
+                            </p>
+                            <?php if (!get_option('vh360_agora_require_tokens', 1)) : ?>
+                                <p style="color: #c00; font-weight: bold; margin-top: 8px;">
+                                    ⚠️ Warning: Tokenless Agora access is not recommended for production. Enable this option before going live.
+                                </p>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
                     <tr>
                         <th scope="row" colspan="2"><h3 style="margin: 20px 0 10px 0;">Chat Settings</h3></th>
                     </tr>
