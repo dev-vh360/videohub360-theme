@@ -57,6 +57,15 @@ The VideoHub360 plugin automatically uses this library when:
 - When the `vh360_agora_require_tokens` option is enabled (the default), the endpoint will return an error if no App Certificate is configured rather than allowing tokenless access.
 - Tokenless mode can only be enabled by a site administrator explicitly disabling the token requirement in settings.
 
+## Production Security Notes
+
+- The browser may request host access, but the server decides the approved Agora role.
+- The frontend must never receive the host passcode or App Certificate.
+- Publishing is allowed only after a server-approved host token is issued and applied.
+- `startPublishing()` must not elevate users to host by itself — it only publishes after authorization is already complete.
+- A dedicated frontend flag (`hasServerApprovedPublishToken`) tracks whether the host token was successfully applied. `currentRole = 'host'` or `isPresenter = true` alone are not sufficient to publish.
+- Tokenless mode is for local testing only and should remain disabled in production.
+
 ## Setup Required
 
 To enable real token generation:

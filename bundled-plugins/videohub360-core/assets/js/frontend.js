@@ -733,6 +733,10 @@ window.initializeAgoraPlayer = function(config) {
     let isAudioMuted = false;
     let isVideoMuted = false;
     let isPresenter = false;
+    // Tracks whether a server-approved host token has been applied to the active Agora client.
+    // Must be true before startPublishing() is allowed to proceed when tokens are required.
+    // Set only after server returns role:'host' AND the token is applied via renewToken() or rejoin.
+    let hasServerApprovedPublishToken = false;
     let currentUserUID = null; // Store the current user's Agora UID after joining
     
     // Voice-activated video switching variables
@@ -2446,6 +2450,7 @@ window.initializeAgoraPlayer = function(config) {
         if (newRole === 'host') {
             startPublishing();
         } else {
+            hasServerApprovedPublishToken = false;
             stopPublishing();
         }
     });
@@ -2826,30 +2831,17 @@ window.initializeAgoraPlayer = function(config) {
                 }
             }
             
-            // Critical check: Verify we have the right role before publishing
-            window.vh360Log("VideoHub360: About to publish with current role:", currentRole);
-            window.vh360Log("VideoHub360: Config mode:", config.mode);
-            window.vh360Log("VideoHub360: Config agoraMode:", config.agoraMode);
-            
+            // Fail-closed guard: block publishing unless server-approved host token has been applied.
+            // In tokenless mode (local testing only) we rely on currentRole as a fallback.
+            if (config.requireAgoraTokens && !hasServerApprovedPublishToken) {
+                window.vh360Error("VideoHub360: Blocked publish attempt — no server-approved host token applied.");
+                showAgoraError('You do not have permission to publish to this livestream.');
+                return;
+            }
+
             if (currentRole !== "host") {
-                window.vh360Error("CRITICAL ERROR: Attempting to publish with non-host role!");
-                window.vh360Error("Current role:", currentRole);
-                window.vh360Error("This will cause 'audience can not publish stream' error");
-                
-                // Attempt to fix the role before publishing in live mode
-                if (config.mode === 'live' && typeof client.setClientRole === 'function') {
-                    window.vh360Log("VideoHub360: Attempting emergency role correction to host...");
-                    try {
-                        await client.setClientRole('host');
-                        currentRole = 'host';
-                        window.vh360Log("VideoHub360: Emergency role correction successful");
-                    } catch (roleError) {
-                        window.vh360Error("VideoHub360: Emergency role correction failed:", roleError);
-                        throw new Error("Cannot publish: user role is '" + currentRole + "' but should be 'host'");
-                    }
-                } else {
-                    throw new Error("Cannot publish: user role is '" + currentRole + "' but should be 'host'");
-                }
+                window.vh360Error("VideoHub360: Blocked publish attempt — currentRole is '" + currentRole + "' not 'host'.");
+                throw new Error("Cannot publish: user role is '" + currentRole + "' but should be 'host'");
             }
             
             await client.publish([localTracks.audioTrack, localTracks.videoTrack]);
@@ -3009,13 +3001,14 @@ window.initializeAgoraPlayer = function(config) {
                                 await client.setClientRole('host');
                             }
                             tokenApplied = true;
+                            hasServerApprovedPublishToken = true;
                         } catch (renewError) {
                             window.vh360Warn('VideoHub360: Host token renewal failed; attempting leave/rejoin as host:', renewError);
                             try {
                                 await rejoinWithHostToken(tokenResponse);
                                 tokenApplied = true;
+                                hasServerApprovedPublishToken = true;
                             } catch (rejoinError) {
-                                window.vh360Error('VideoHub360: Host rejoin also failed:', rejoinError);
                                 joinAsPresenterBtn.disabled = false;
                                 joinAsPresenterBtn.textContent = '🎭 Go Live';
                                 joinAsPresenterBtn.style.backgroundColor = 'transparent';
@@ -3054,6 +3047,7 @@ window.initializeAgoraPlayer = function(config) {
                     // The user becomes audience by simply stopping publishing
                     currentRole = 'audience';
                     isPresenter = false;
+                    hasServerApprovedPublishToken = false;
                     isAudioMuted = false;
                     isVideoMuted = false;
                     joinAsPresenterBtn.textContent = '🎭 Go Live';
@@ -3176,6 +3170,7 @@ window.initializeAgoraPlayer = function(config) {
                 joinAsPresenterBtn.style.backgroundColor = 'transparent';
             }
             isPresenter = false;
+            hasServerApprovedPublishToken = false;
             showAgoraError(error.message || "Failed to join as host. Please check your camera/microphone permissions and try again.");
         }
     }
@@ -3402,6 +3397,7 @@ window.initializeAgoraPlayer = function(config) {
             // Reset UI state
             isJoined = false;
             currentRole = null;
+            hasServerApprovedPublishToken = false;
             remoteUsers = {};
             currentUserUID = null; // Clear stored UID
             
@@ -3900,6 +3896,8 @@ window.initializeAgoraPlayer = function(config) {
             
             if (currentRole === "host") {
                 window.vh360Log('VideoHub360: User is host, starting publishing...');
+                // Server approved host role and the token was issued for host — mark publish as authorized.
+                hasServerApprovedPublishToken = true;
                 await startPublishing();
             } else {
                 window.vh360Log('VideoHub360: User is audience, showing waiting message...');
@@ -3957,6 +3955,7 @@ window.initializeAgoraPlayer = function(config) {
             }
             
             await stopPublishing();
+            hasServerApprovedPublishToken = false;
             await client.leave();
             const localPlayer = document.getElementById("vh360-agora-local-player");
             if (localPlayer) localPlayer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #fff; font-size: 1.2em; background: #333;">Disconnected</div>';
