@@ -1291,9 +1291,14 @@ class VideoHub360_Admin {
                     </label>
                     <small>When enabled, viewers must enter a passcode to join as presenters. <em>Cannot be used with "Allow Everyone to be Host".</em></small>
                     <div id="vh360_passcode_field" style="margin-top: 10px; <?php echo empty($livestream_fields['host_passcode']) ? 'display: none;' : ''; ?>">
-                        <label for="vh360_host_passcode">Host Passcode:</label>
-                        <input type="text" name="vh360_host_passcode" id="vh360_host_passcode" value="<?php echo esc_attr($livestream_fields['host_passcode']); ?>" placeholder="Enter passcode" style="font-family: monospace; font-weight: bold;">
-                        <small>Viewers will need to enter this passcode to join as presenters.</small>
+                        <?php if (!empty($livestream_fields['host_passcode'])) : ?>
+                            <p style="margin-bottom: 6px;"><em><?php esc_html_e('A host passcode is currently set.', 'videohub360'); ?></em></p>
+                        <?php endif; ?>
+                        <label for="vh360_host_passcode">
+                            <?php echo !empty($livestream_fields['host_passcode']) ? esc_html__('Set New Host Passcode:', 'videohub360') : esc_html__('Host Passcode:', 'videohub360'); ?>
+                        </label>
+                        <input type="password" name="vh360_host_passcode" id="vh360_host_passcode" value="" placeholder="<?php echo !empty($livestream_fields['host_passcode']) ? esc_attr__('Leave blank to keep existing passcode', 'videohub360') : esc_attr__('Enter passcode', 'videohub360'); ?>" style="font-family: monospace; font-weight: bold;" autocomplete="new-password">
+                        <small><?php esc_html_e('Viewers will need to enter this passcode to join as presenters.', 'videohub360'); ?></small>
                     </div>
                 </div>
             </div>
@@ -1832,11 +1837,23 @@ class VideoHub360_Admin {
             'agora_channel_name' => sanitize_text_field($_POST['vh360_agora_channel_name'] ?? ''),
             'agora_mode' => sanitize_text_field($_POST['vh360_agora_mode'] ?? 'interactive'),
             'agora_everyone_is_host' => isset($_POST['vh360_agora_everyone_is_host']) ? 'yes' : 'no',
-            'host_passcode' => isset($_POST['vh360_require_passcode']) && $_POST['vh360_require_passcode'] === 'yes' 
-                             ? sanitize_text_field($_POST['vh360_host_passcode'] ?? '') 
-                             : '', // Clear passcode if checkbox is not checked
+            // host_passcode is handled separately below to support hashing and "leave blank = keep existing".
         ];
-        
+
+        // Handle host passcode separately: hash new values, keep existing when blank, clear when unchecked.
+        $require_passcode = isset($_POST['vh360_require_passcode']) && $_POST['vh360_require_passcode'] === 'yes';
+        if (!$require_passcode) {
+            // Checkbox unchecked — clear the stored passcode.
+            update_post_meta($post_id, '_vh360_host_passcode', '');
+        } else {
+            $new_passcode = sanitize_text_field($_POST['vh360_host_passcode'] ?? '');
+            if ($new_passcode !== '') {
+                // New passcode provided — hash it before storing.
+                update_post_meta($post_id, '_vh360_host_passcode', wp_hash_password($new_passcode));
+            }
+            // If blank, do nothing — existing passcode is preserved.
+        }
+
         // Fire action hooks for live room state transitions (only for live_room context)
         // Capture old state BEFORE updating meta, then update, then fire hooks based on transition
         if ($livestream_fields['context'] === 'live_room') {
@@ -1845,17 +1862,17 @@ class VideoHub360_Admin {
             // Normalize empty/falsy values to ensure consistent comparison
             $old_is_live = ($old_is_live === 'yes') ? 'yes' : 'no';
             $new_is_live = ($livestream_fields['is_live'] === 'yes') ? 'yes' : 'no';
-            
-            // Update all livestream meta fields
+
+            // Update all livestream meta fields (excluding host_passcode, handled above)
             foreach ($livestream_fields as $field => $value) {
                 update_post_meta($post_id, '_vh360_' . $field, $value);
             }
-            
+
             // Live room started: offline→live transition
             if ($old_is_live === 'no' && $new_is_live === 'yes') {
                 do_action('vh360_live_room_started', $post_id);
             }
-            
+
             // Live room ended: live→offline transition
             if ($old_is_live === 'yes' && $new_is_live === 'no') {
                 do_action('vh360_live_room_ended', $post_id);

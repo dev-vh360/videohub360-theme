@@ -97,6 +97,120 @@ class VideoHub360_Ajax {
     }
     
     /**
+     * Resolve Agora token access: determine whether the current visitor
+     * is allowed to join and/or publish in a live room.
+     *
+     * This helper is the single server-side authority for role authorization.
+     * It is called by handle_generate_agora_token() after all basic access
+     * checks (membership, appointment gate, moderation) have already passed.
+     *
+     * Role rules (in priority order):
+     *  1. Room manager / owner / admin → publisher.
+     *  2. Appointment professional → publisher; client → publisher only when session active.
+     *  3. Everyone-is-host mode → publisher (subject to optional login requirement).
+     *  4. Valid server-validated host passcode → publisher.
+     *  Everyone else → subscriber/audience token only.
+     *
+     * @param int    $post_id        Post ID of the videohub360 live room.
+     * @param string $requested_role Untrusted role hint from the browser ('host'|'audience').
+     * @param int    $uid            Agora UID for the current user (unused here, reserved).
+     * @param string $passcode       Passcode submitted by the user (may be empty).
+     * @return array {
+     *     @type bool   $can_join       Always true when called (callers enforce access gates).
+     *     @type bool   $can_publish    Whether publish/host role is approved.
+     *     @type string $role           Server-approved role: 'host' or 'audience'.
+     *     @type string $role_intent    Role that was requested by the browser.
+     *     @type string $message        Error or info message (non-empty only on denial).
+     *     @type bool   $requires_login Whether a login redirect is needed.
+     * }
+     */
+    private function resolve_agora_token_access($post_id, $requested_role = 'audience', $uid = 0, $passcode = '') {
+        $result = array(
+            'can_join'       => true,
+            'can_publish'    => false,
+            'role'           => 'audience',
+            'role_intent'    => sanitize_text_field($requested_role),
+            'message'        => '',
+            'requires_login' => false,
+        );
+
+        $is_logged_in    = is_user_logged_in();
+        $current_user_id = $is_logged_in ? (int) get_current_user_id() : 0;
+
+        // Rule 1: Room manager / owner / admin may always publish.
+        if ($this->user_can_manage_live_room($post_id)) {
+            $result['can_publish'] = true;
+            $result['role']        = 'host';
+            return $result;
+        }
+
+        // Rule 2: Appointment participants – professional always; client only when session active.
+        $appointment_event_id = get_post_meta($post_id, '_vh360_appointment_event_id', true);
+        if ($appointment_event_id && $is_logged_in && function_exists('vh360_get_appointment_session_state')) {
+            $session_state = vh360_get_appointment_session_state($post_id, $current_user_id);
+            if ($session_state['user_role'] === 'professional') {
+                $result['can_publish'] = true;
+                $result['role']        = 'host';
+                return $result;
+            }
+            if ($session_state['user_role'] === 'client' && $session_state['status'] === 'active') {
+                $result['can_publish'] = true;
+                $result['role']        = 'host';
+                return $result;
+            }
+        }
+
+        // Rule 3: Everyone-is-host mode.
+        $everyone_is_host = get_post_meta($post_id, '_vh360_agora_everyone_is_host', true);
+        if ($everyone_is_host === 'yes') {
+            $force_login = (bool) get_option('videohub360_force_login_everyone_host', 1);
+            if ($force_login && !$is_logged_in) {
+                $result['requires_login'] = true;
+                $result['message']        = __('You must be logged in to join as a host.', 'videohub360');
+            } else {
+                $result['can_publish'] = true;
+                $result['role']        = 'host';
+            }
+            return $result;
+        }
+
+        // Rule 4: Valid server-validated host passcode (only when host role was requested).
+        if ($requested_role === 'host' && $passcode !== '') {
+            $stored_passcode = get_post_meta($post_id, '_vh360_host_passcode', true);
+            if (!empty($stored_passcode)) {
+                // Support both phpass/bcrypt hashes (wp_hash_password) and legacy plain-text.
+                $passcode_valid = false;
+                if (
+                    strlen($stored_passcode) > 20 &&
+                    (
+                        substr($stored_passcode, 0, 3) === '$P$' ||
+                        substr($stored_passcode, 0, 4) === '$2y$' ||
+                        substr($stored_passcode, 0, 4) === '$2b$'
+                    )
+                ) {
+                    // Stored as a WordPress password hash.
+                    $passcode_valid = wp_check_password($passcode, $stored_passcode);
+                } else {
+                    // Legacy plain-text comparison – constant-time.
+                    $passcode_valid = hash_equals((string) $stored_passcode, (string) $passcode);
+                }
+
+                if ($passcode_valid) {
+                    $result['can_publish'] = true;
+                    $result['role']        = 'host';
+                    return $result;
+                }
+
+                // Wrong passcode – explicit denial (do not silently fall back to audience).
+                $result['message'] = __('Invalid passcode. Access denied.', 'videohub360');
+            }
+        }
+
+        // Default: audience token.
+        return $result;
+    }
+
+    /**
      * Initialize hooks
      */
     private function init_hooks() {
@@ -440,37 +554,64 @@ class VideoHub360_Ajax {
     
     /**
      * Handle Agora token generation AJAX
+     *
+     * This endpoint is the single trusted server-side enforcement point for:
+     * - Rate limiting
+     * - Membership access
+     * - Appointment room access
+     * - Moderation checks
+     * - Role authorization (via resolve_agora_token_access)
+     * - Passcode validation
+     * - App Certificate requirement
+     *
+     * $_POST['role'] is treated as an untrusted hint only.
+     * The server-approved role is always returned in the response.
      */
     public function handle_generate_agora_token() {
-        // Verify nonce for security
+        // Verify nonce for security.
         if (!wp_verify_nonce($_POST['nonce'] ?? '', 'vh360_agora_token')) {
             wp_send_json_error('Invalid nonce');
             return;
         }
-        
-        // Validate and sanitize inputs
-        $post_id = absint($_POST['post_id'] ?? 0);
-        $channel_name = sanitize_text_field($_POST['channel_name'] ?? '');
-        $uid = absint($_POST['uid'] ?? 0);
-        $role = sanitize_text_field($_POST['role'] ?? 'audience');
-        
-        // Get configuration
-        $app_id = get_option('vh360_agora_app_id', '');
+
+        // Rate-limit all token requests (20 per minute per user/IP).
+        if (!$this->check_rate_limit('generate_agora_token', 20)) {
+            wp_send_json_error(__('Too many token requests. Please wait a moment and try again.', 'videohub360'));
+            return;
+        }
+
+        // Validate and sanitize inputs.
+        $post_id        = absint($_POST['post_id'] ?? 0);
+        $channel_name   = sanitize_text_field($_POST['channel_name'] ?? '');
+        $uid            = absint($_POST['uid'] ?? 0);
+        $requested_role = sanitize_text_field($_POST['role'] ?? 'audience');
+        $passcode       = sanitize_text_field($_POST['passcode'] ?? '');
+
+        // Apply a stricter rate limit when a host role or passcode is submitted
+        // to prevent brute-force attacks on passcodes.
+        if ($requested_role === 'host' || $passcode !== '') {
+            if (!$this->check_rate_limit('generate_agora_host_token', 5)) {
+                wp_send_json_error(__('Too many presenter access attempts. Please wait and try again.', 'videohub360'));
+                return;
+            }
+        }
+
+        // Get global Agora configuration.
+        $app_id          = get_option('vh360_agora_app_id', '');
         $app_certificate = get_option('vh360_agora_app_certificate', '');
-        
-        // Validate post exists and is videohub360 type
+
+        // Validate post exists and is the correct type.
         $post = get_post($post_id);
         if (!$post || $post->post_type !== 'videohub360') {
             wp_send_json_error('Invalid video post');
             return;
         }
-        
-        // Validate required parameters
+
         if (empty($app_id)) {
             wp_send_json_error('App ID not configured. Please configure Agora App ID in VideoHub360 Settings.');
             return;
         }
-        
+
         if (empty($channel_name)) {
             wp_send_json_error('Missing required parameter: Channel Name');
             return;
@@ -480,109 +621,144 @@ class VideoHub360_Ajax {
             wp_send_json_error('Missing or invalid Agora UID');
             return;
         }
-        
-        // Validate channel name matches the post's stored channel name
+
+        // Validate channel name matches the post's stored channel name.
         $stored_channel_name = get_post_meta($post_id, '_vh360_agora_channel_name', true);
         if ($stored_channel_name && $stored_channel_name !== $channel_name) {
             wp_send_json_error('Invalid channel name for this room');
             return;
         }
-        
-        // Enforce appointment room access control
+
+        // === Membership gate ===
+        // Mirror the same access logic used by the single-video template so that
+        // the token endpoint and the page template enforce the same rules.
+        $required_plan = function_exists('vh360_post_requires_membership')
+            ? vh360_post_requires_membership($post_id)
+            : false;
+
+        if ($required_plan) {
+            $current_user_id = get_current_user_id();
+
+            if (!$current_user_id) {
+                wp_send_json_error(__('You must be logged in to access this livestream.', 'videohub360'));
+                return;
+            }
+
+            if ($required_plan === 'any') {
+                $has_access = function_exists('vh360_user_has_active_membership')
+                    ? vh360_user_has_active_membership($current_user_id)
+                    : false;
+            } else {
+                $has_access = function_exists('vh360_user_has_membership_plan')
+                    ? vh360_user_has_membership_plan($current_user_id, $required_plan)
+                    : false;
+            }
+
+            if (!$has_access && !current_user_can('edit_post', $post_id) && !current_user_can('manage_options')) {
+                wp_send_json_error(__('Your membership does not allow access to this livestream.', 'videohub360'));
+                return;
+            }
+        }
+
+        // === Appointment room access control ===
         $appointment_event_id = get_post_meta($post_id, '_vh360_appointment_event_id', true);
         if ($appointment_event_id) {
-            // This is an appointment Live Room - enforce strict membership and timing
-            
-            // Must be logged in to join appointment rooms
             if (!is_user_logged_in()) {
                 wp_send_json_error('You must be logged in to join this appointment session');
                 return;
             }
-            
+
             $current_user_id = get_current_user_id();
-            
-            // Use centralized timing helper for appointment access control
+
             if (function_exists('vh360_can_user_join_appointment_room')) {
                 $join_check = vh360_can_user_join_appointment_room($post_id, $current_user_id);
-                
                 if (!$join_check['can_join']) {
                     wp_send_json_error($join_check['message']);
                     return;
                 }
-                
-                // User has permission and timing is correct - continue to token generation
             } else {
-                // Fallback to legacy check if helper not loaded
-                // Check if user is authorized (professional, client, or admin)
-                $is_admin = current_user_can('manage_options');
+                // Fallback when helper is not loaded.
+                $is_admin      = current_user_can('manage_options');
                 $is_room_owner = ((int) $post->post_author === (int) $current_user_id);
-                $client_id = get_post_meta($post_id, '_vh360_appointment_client_id', true);
-                $is_client = ($client_id && (int) $client_id === (int) $current_user_id);
-                
+                $client_id     = get_post_meta($post_id, '_vh360_appointment_client_id', true);
+                $is_client     = ($client_id && (int) $client_id === (int) $current_user_id);
+
                 if (!$is_admin && !$is_room_owner && !$is_client) {
                     wp_send_json_error('You do not have permission to join this appointment session');
                     return;
                 }
             }
         }
-        
-        // Check user moderation status before generating token
+
+        // === Moderation check ===
         if (is_user_logged_in()) {
-            $current_user_id = get_current_user_id();
-            $moderation_status = videohub360_check_user_moderation_status($current_user_id, $post_id);
-            
+            $current_user_id    = get_current_user_id();
+            $moderation_status  = videohub360_check_user_moderation_status($current_user_id, $post_id);
+
             if ($moderation_status['status'] === 'banned') {
                 wp_send_json_error('You have been banned from this stream. Reason: ' . ($moderation_status['reason'] ?: 'No reason provided'));
                 return;
             }
-            
+
             if ($moderation_status['status'] === 'timeout') {
                 $expires = human_time_diff(current_time('timestamp'), strtotime($moderation_status['expires']));
                 wp_send_json_error('You are temporarily restricted from joining for ' . $expires . '. Reason: ' . ($moderation_status['reason'] ?: 'No reason provided'));
                 return;
             }
         }
-        
+
+        // === Resolve server-approved role ===
+        // $_POST['role'] is only an untrusted hint. The helper decides the final role.
+        $access = $this->resolve_agora_token_access($post_id, $requested_role, $uid, $passcode);
+
+        // If a passcode was submitted for host access and it was wrong, return an
+        // explicit error. Do not silently fall back to an audience token for the same request.
+        if ($requested_role === 'host' && $passcode !== '' && !$access['can_publish'] && !empty($access['message'])) {
+            wp_send_json_error($access['message']);
+            return;
+        }
+
+        $approved_role = $access['role'];
+
         try {
-            // Load Agora Token Builder library
+            // Load Agora Token Builder library.
             $library_path = VIDEOHUB360_PLUGIN_DIR . 'agora-token/src/RtcTokenBuilder.php';
-            
+
             if (!file_exists($library_path)) {
                 wp_send_json_error(__('Token generation library not found. Please contact support.', 'videohub360'));
                 return;
             }
-            
+
             require_once $library_path;
-            
-            // If no certificate is configured, return setup instructions
+
+            // Fail-closed when App Certificate is missing.
+            // Tokenless mode is only allowed when the site admin has explicitly
+            // disabled the token requirement (for local development only).
             if (empty($app_certificate)) {
-                $setup_instructions = array(
-                    'token' => '',
-                    'app_id' => $app_id,
-                    'channel' => $channel_name,
-                    'uid' => $uid,
-                    'role' => $role,
-                    'message' => 'Token not generated - App Certificate not configured',
-                    'setup_required' => true,
-                    'instructions' => array(
-                        '1. Go to VideoHub360 Settings in WordPress admin',
-                        '2. Navigate to the "Agora.io Settings" section',
-                        '3. Enter your Agora App Certificate (find it in Agora Console)',
-                        '4. Save settings and try joining the livestream again'
-                    ),
-                    'testing_note' => 'For development/testing, you can use the channel without a token by leaving this field empty.',
-                    'security_warning' => 'Production streams should always use tokens for security.'
-                );
-                
-                wp_send_json_success($setup_instructions);
+                $require_tokens = (bool) get_option('vh360_agora_require_tokens', 1);
+                if ($require_tokens) {
+                    wp_send_json_error(__('Agora App Certificate is required before livestreams can be joined.', 'videohub360'));
+                    return;
+                }
+
+                // Development mode: tokens disabled by admin.
+                wp_send_json_success(array(
+                    'token'      => '',
+                    'app_id'     => $app_id,
+                    'channel'    => $channel_name,
+                    'uid'        => $uid,
+                    'role'       => $approved_role,
+                    'role_int'   => ($approved_role === 'host') ? 1 : 2,
+                    'expires_at' => time() + 3600,
+                    'message'    => 'Token not generated - App Certificate not configured (development mode only)',
+                ));
                 return;
             }
-            
-            // Generate real Agora token using the Token Builder
-            $privilegeExpiredTs = time() + 3600; // 1 hour expiry
-            
-            // Convert role to Agora role constants
-            if ($role === 'host') {
+
+            // Generate a real Agora token using the approved (server-decided) role.
+            $privilegeExpiredTs = time() + 3600; // 1-hour expiry.
+
+            if ($approved_role === 'host') {
                 if (!defined('RtcTokenBuilder::RolePublisher')) {
                     wp_send_json_error(__('Token generation constants not available.', 'videohub360'));
                     return;
@@ -595,27 +771,26 @@ class VideoHub360_Ajax {
                 }
                 $role_int = RtcTokenBuilder::RoleSubscriber;
             }
-            
-            // Generate the token
+
             $token = RtcTokenBuilder::buildTokenWithUid($app_id, $app_certificate, $channel_name, $uid, $role_int, $privilegeExpiredTs);
-            
+
             if (!$token) {
                 wp_send_json_error(__('Failed to generate access token.', 'videohub360'));
                 return;
             }
-            
-            
+
+            // Return the server-approved role so the frontend can treat it as authoritative.
             wp_send_json_success(array(
-                'token' => $token,
-                'app_id' => $app_id,
-                'channel' => $channel_name,
-                'uid' => $uid,
-                'role' => $role,
-                'role_int' => $role_int,
+                'token'      => $token,
+                'app_id'     => $app_id,
+                'channel'    => $channel_name,
+                'uid'        => $uid,
+                'role'       => $approved_role,
+                'role_int'   => $role_int,
                 'expires_at' => $privilegeExpiredTs,
-                'message' => 'Token generated successfully'
+                'message'    => 'Token generated successfully',
             ));
-            
+
         } catch (Exception $e) {
             wp_send_json_error(__('Token generation failed: ', 'videohub360') . $e->getMessage());
         }

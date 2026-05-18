@@ -2943,36 +2943,54 @@ window.initializeAgoraPlayer = function(config) {
                 return;
             }
             
-            // Check access control - passcode and "Allow Everyone" are mutually exclusive
-            if (config.hostPasscode && config.hostPasscode.trim() !== '') {
-                // Passcode is required - prompt for it
+            // Check access control — collect passcode if required, then validate server-side.
+            let presenterPasscode = '';
+            if (config.hostPasscodeRequired) {
+                // Passcode is required — prompt the user and send it to the server for validation.
                 const userPasscode = prompt('Enter the host passcode to join as a presenter:');
                 if (!userPasscode) {
-                    // User cancelled the prompt
+                    // User cancelled the prompt.
                     return;
                 }
-                if (userPasscode.trim() !== config.hostPasscode.trim()) {
-                    showAgoraError('Invalid passcode. Access denied.');
-                    return;
-                }
-            } else if (config.allowEveryoneIsHost) {
-                // Allow Everyone to be Host is enabled - direct access allowed
-                // No additional checks needed
-            } else {
-                // Neither passcode nor "Allow Everyone" is enabled - access denied
+                presenterPasscode = userPasscode;
+            } else if (!config.allowEveryoneIsHost) {
+                // Neither passcode nor "Allow Everyone" is enabled — access denied.
                 showAgoraError('Access denied. The host has not enabled "Allow Everyone to be Host" or set up a passcode for joining as presenter.');
                 return;
             }
-            
-            // If we reach here, either no passcode was required or the correct passcode was entered
+            // Do NOT compare the passcode in JavaScript. Send it to the server.
+
+            // If we reach here, either no passcode was required or the user entered one.
             if (currentRole === 'audience') {
                 try {
                     joinAsPresenterBtn.disabled = true;
                     joinAsPresenterBtn.textContent = '⏳ Joining...';
-                    
-                    // Directly promote to host without approval system
+
+                    // Request a host token from the server.
+                    // The server validates the passcode and decides whether to approve host role.
+                    let tokenResponse;
+                    try {
+                        tokenResponse = await requestTokenFromServer(config.channelName, config.uid, 'host', presenterPasscode);
+                    } catch (tokenError) {
+                        joinAsPresenterBtn.disabled = false;
+                        joinAsPresenterBtn.textContent = '🎭 Go Live';
+                        joinAsPresenterBtn.style.backgroundColor = 'transparent';
+                        showAgoraError(tokenError.message || 'Failed to request presenter access. Please try again.');
+                        return;
+                    }
+
+                    // The server-returned role is authoritative.
+                    if (tokenResponse.role !== 'host') {
+                        joinAsPresenterBtn.disabled = false;
+                        joinAsPresenterBtn.textContent = '🎭 Go Live';
+                        joinAsPresenterBtn.style.backgroundColor = 'transparent';
+                        showAgoraError('You do not have permission to join as a presenter.');
+                        return;
+                    }
+
+                    // Server approved host role — proceed to publish.
                     await promoteToHost();
-                    
+
                     joinAsPresenterBtn.textContent = '⬇️ Leave Presenter';
                     joinAsPresenterBtn.style.backgroundColor = '#4CAF50';
                     joinAsPresenterBtn.disabled = false;
@@ -3498,68 +3516,52 @@ window.initializeAgoraPlayer = function(config) {
         overlayContent.appendChild(description);
     }
     
-    // Function to request token from server
-    // NEW: Dynamic token generation per join request (Scenario 2)
-    // - No static tokens stored anywhere
-    // - Uses global App ID/Certificate + per-video Channel Name
-    // - Fresh token generated for each user joining the stream
-    async function requestTokenFromServer(channelName, uid, role) {
-        try {
-            const normalizedUid = Number(uid);
+    // Function to request token from server.
+    // The server is the single source of truth for role authorization.
+    // Returns { token, role, message } or throws on error.
+    async function requestTokenFromServer(channelName, uid, role, presenterPasscode) {
+        const normalizedUid = Number(uid);
 
-            if (!Number.isInteger(normalizedUid) || normalizedUid <= 0) {
-                throw new Error('Invalid Agora UID for token request');
-            }
+        if (!Number.isInteger(normalizedUid) || normalizedUid <= 0) {
+            throw new Error('Invalid Agora UID for token request');
+        }
 
-            window.vh360Log('VideoHub360: Requesting token with role:', role);
-            window.vh360Log('VideoHub360: Token request params:', { channelName, uid: normalizedUid, role });
-            
-            const formData = new FormData();
-            formData.append('action', 'vh360_generate_agora_token');
-            formData.append('nonce', vh360Data.agoraTokenNonce); // Use dedicated Agora token nonce
-            formData.append('post_id', vh360Data.postId);
-            formData.append('channel_name', channelName);
-            formData.append('uid', String(normalizedUid));
-            formData.append('role', role || 'audience');
-            
-            const response = await fetch(vh360Data.ajaxUrl, {
-                method: 'POST',
-                body: formData
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                // Handle different response types
-                window.vh360Log('VideoHub360: Token response received:', data.data);
-                
-                if (data.data.placeholder_token) {
-                    // For testing/demo purposes, return the placeholder
-                    window.vh360Log('VideoHub360: Using placeholder token');
-                    return data.data.placeholder_token;
-                } else if (data.data.token) {
-                    // Real token implementation
-                    window.vh360Log('VideoHub360: Token generated with role:', data.data.role);
-                    window.vh360Log('VideoHub360: Requested role was:', role);
-                    
-                    if (data.data.role !== role) {
-                        window.vh360Error('VideoHub360: Token role mismatch! Requested:', role, 'Got:', data.data.role);
-                    }
-                    
-                    return data.data.token;
-                } else {
-                    // No token needed for testing
-                    window.vh360Log('VideoHub360: Token generation ready but not implemented. Using tokenless mode for testing.');
-                    return null;
-                }
+        window.vh360Log('VideoHub360: Requesting token with role:', role);
+        window.vh360Log('VideoHub360: Token request params:', { channelName, uid: normalizedUid, role });
+
+        const formData = new FormData();
+        formData.append('action', 'vh360_generate_agora_token');
+        formData.append('nonce', vh360Data.agoraTokenNonce);
+        formData.append('post_id', vh360Data.postId);
+        formData.append('channel_name', channelName);
+        formData.append('uid', String(normalizedUid));
+        formData.append('role', role || 'audience');
+        // Only append passcode when requesting presenter/host access.
+        formData.append('passcode', presenterPasscode || '');
+
+        const response = await fetch(vh360Data.ajaxUrl, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            window.vh360Log('VideoHub360: Token response received:', data.data);
+            const approvedRole = data.data.role || role;
+
+            if (data.data.token) {
+                window.vh360Log('VideoHub360: Token generated with server-approved role:', approvedRole);
+                return { token: data.data.token, role: approvedRole, message: data.data.message || '' };
             } else {
-                window.vh360Error('VideoHub360: Token request failed:', data.data);
-                throw new Error(data.data || 'Token request failed');
+                // No token — development/tokenless mode (only when vh360_agora_require_tokens is disabled).
+                window.vh360Log('VideoHub360: No token in response (development/tokenless mode).');
+                return { token: null, role: approvedRole, message: data.data.message || '' };
             }
-        } catch (error) {
-            window.vh360Error('VideoHub360: Token request error:', error);
-            // For testing purposes, continue without token
-            return null;
+        } else {
+            const errMsg = (typeof data.data === 'string' ? data.data : null) || 'Token request failed';
+            window.vh360Error('VideoHub360: Token request failed:', errMsg);
+            throw new Error(errMsg);
         }
     }
 
@@ -3721,7 +3723,8 @@ window.initializeAgoraPlayer = function(config) {
                 // Continue with join attempt even if moderation check fails
             }
             
-            // Request token dynamically before joining
+            // Request token dynamically before joining.
+            // requestTokenFromServer() throws on error; handle fail-closed below.
             const normalizedUid = Number(config.uid);
 
             if (!Number.isInteger(normalizedUid) || normalizedUid <= 0) {
@@ -3730,7 +3733,34 @@ window.initializeAgoraPlayer = function(config) {
 
             window.vh360Log('VideoHub360: Using Agora UID for join/token flow:', normalizedUid);
 
-            const token = await requestTokenFromServer(config.channelName, normalizedUid, currentRole);
+            let tokenResponse;
+            try {
+                tokenResponse = await requestTokenFromServer(config.channelName, normalizedUid, currentRole);
+            } catch (tokenError) {
+                if (config.requireAgoraTokens) {
+                    // Fail closed: propagate the error so the outer catch shows it.
+                    throw tokenError;
+                }
+                // Development mode only: allow tokenless join when tokens are not required.
+                window.vh360Warn('VideoHub360: Token request failed, proceeding without token (dev mode):', tokenError);
+                tokenResponse = { token: null, role: currentRole, message: '' };
+            }
+
+            const token = tokenResponse.token;
+
+            // Fail closed: if tokens are required and none was issued, stop the join.
+            if (config.requireAgoraTokens && !token) {
+                throw new Error('Unable to join livestream because a valid Agora token was not issued.');
+            }
+
+            // The server is the authority on the approved role.
+            // If the server downgraded host to audience, respect that.
+            if (currentRole === 'host' && tokenResponse.role !== 'host') {
+                window.vh360Warn('VideoHub360: Server returned role', tokenResponse.role, '— downgrading from host. Will not publish.');
+                currentRole = tokenResponse.role;
+                isHost = false;
+            }
+
             window.vh360Log('VideoHub360: Token received for role:', currentRole);
             
             // Additional verification: if we're supposed to be host, double-check before join
@@ -3816,6 +3846,9 @@ window.initializeAgoraPlayer = function(config) {
                 errorMessage = "Connection lost. Please refresh the page and try again.";
             } else if (error.message && error.message.includes('WebSocket')) {
                 errorMessage = "Connection failed. Please check your network and refresh the page.";
+            } else if (error.message) {
+                // Use the server or token error message directly (e.g. membership/access denial).
+                errorMessage = error.message;
             } else {
                 errorMessage = "Failed to connect to livestream. Please refresh and try again.";
             }

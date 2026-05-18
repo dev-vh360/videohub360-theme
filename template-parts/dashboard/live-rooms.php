@@ -75,19 +75,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
             // Room settings (frontend overrides)
             $everyone_is_host = isset($_POST['vh360_agora_everyone_is_host']) ? 'yes' : 'no';
             $require_passcode = isset($_POST['vh360_require_passcode']) ? 'yes' : 'no';
-            $host_passcode    = '';
-            if ($require_passcode === 'yes') {
-                $host_passcode = isset($_POST['vh360_host_passcode']) ? sanitize_text_field($_POST['vh360_host_passcode']) : '';
-            }
-            $viewer_count = isset($_POST['vh360_viewer_count']) ? 'yes' : 'no';
-            $chat_enabled = isset($_POST['vh360_chat_enabled']) ? 'yes' : 'no';
-            $chat_placement = isset($_POST['vh360_chat_placement']) ? sanitize_text_field($_POST['vh360_chat_placement']) : '';
+            $new_passcode     = ($require_passcode === 'yes') ? sanitize_text_field($_POST['vh360_host_passcode'] ?? '') : '';
+            $viewer_count     = isset($_POST['vh360_viewer_count']) ? 'yes' : 'no';
+            $chat_enabled     = isset($_POST['vh360_chat_enabled']) ? 'yes' : 'no';
+            $chat_placement   = isset($_POST['vh360_chat_placement']) ? sanitize_text_field($_POST['vh360_chat_placement']) : '';
 
             // Enforce mutual exclusivity: everyone host cannot be combined with passcode requirement
             if ($everyone_is_host === 'yes' && $require_passcode === 'yes') {
                 $errors[] = esc_html__('You cannot enable "Allow Everyone to be Host" while requiring a passcode. Please choose one.', 'videohub360-theme');
             }
-            if ($require_passcode === 'yes' && $host_passcode === '') {
+            if ($require_passcode === 'yes' && $new_passcode === '') {
                 $errors[] = esc_html__('Please enter a passcode or disable the passcode requirement.', 'videohub360-theme');
             }
 
@@ -131,7 +128,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
                     update_post_meta($post_id, '_vh360_chat_enabled', $chat_enabled);
                     update_post_meta($post_id, '_vh360_chat_placement', $chat_placement);
                     update_post_meta($post_id, '_vh360_agora_everyone_is_host', $everyone_is_host);
-                    update_post_meta($post_id, '_vh360_host_passcode', ($require_passcode === 'yes') ? $host_passcode : '');
+                    // Hash passcode before storing; clear if requirement is disabled.
+                    if ($require_passcode === 'yes' && $new_passcode !== '') {
+                        update_post_meta($post_id, '_vh360_host_passcode', wp_hash_password($new_passcode));
+                    } else {
+                        update_post_meta($post_id, '_vh360_host_passcode', '');
+                    }
                     update_post_meta($post_id, '_vh360_stream_stopped', 'no');
                     // Ensure the room doesn't inherit stale mappings/status from any templates/copies
                     delete_post_meta($post_id, '_vh360_went_live_post_id');
@@ -298,7 +300,7 @@ $live_rooms_query = new WP_Query(array(
                     </label>
                     <div id="vh360_passcode_field" style="display:none; margin-top: 8px;">
                         <label for="vh360_host_passcode"><?php esc_html_e('Host Passcode', 'videohub360-theme'); ?></label>
-                        <input type="text" id="vh360_host_passcode" name="vh360_host_passcode" class="vh360-input" placeholder="<?php esc_attr_e('Enter a passcode', 'videohub360-theme'); ?>" />
+                        <input type="password" id="vh360_host_passcode" name="vh360_host_passcode" class="vh360-input" placeholder="<?php esc_attr_e('Enter a passcode', 'videohub360-theme'); ?>" autocomplete="new-password" />
                     </div>
                     <p class="vh360-form-help" style="margin-top:6px;">
                         <?php esc_html_e('When enabled, viewers must enter a passcode to join as presenters. Cannot be used with "Allow Everyone to be Host".', 'videohub360-theme'); ?>

@@ -443,17 +443,8 @@ if (!function_exists('videohub360_get_livestream_bootstrap_data')) {
             'is_original_host' => $is_original_host
         );
         
-        // Debug info
+        // Debug info — intentionally omits sensitive data (roles, capabilities, passcode).
         $debug_info = array(
-            'user_id' => $current_user->ID,
-            'user_login' => $current_user->user_login,
-            'user_roles' => $current_user->roles,
-            'can_manage_options' => current_user_can('manage_options'),
-            'can_moderate_comments' => current_user_can('moderate_comments'),
-            'can_edit_posts' => current_user_can('edit_posts'),
-            'can_publish_posts' => current_user_can('publish_posts'),
-            'is_admin' => current_user_can('manage_options'),
-            'is_logged_in' => $is_logged_in,
             'agora_mode' => $fields['agora_mode'],
             'everyone_is_host' => $fields['agora_everyone_is_host'],
             'final_role' => $role,
@@ -474,7 +465,9 @@ if (!function_exists('videohub360_get_livestream_bootstrap_data')) {
             'isOriginalHost' => $is_original_host,
             'canModerate' => $can_moderate,
             'allowEveryoneIsHost' => ($fields['agora_everyone_is_host'] === 'yes'),
-            'hostPasscode' => isset($fields['host_passcode']) ? $fields['host_passcode'] : '',
+            // hostPasscodeRequired: safe boolean — never expose the actual passcode value.
+            'hostPasscodeRequired' => !empty($fields['host_passcode']),
+            'requireAgoraTokens' => (bool) get_option('vh360_agora_require_tokens', 1),
             'displayName' => $user_display_name,
             'security' => $security_context,
             'debugInfo' => $debug_info,
