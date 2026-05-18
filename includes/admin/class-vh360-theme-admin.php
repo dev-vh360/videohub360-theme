@@ -293,7 +293,7 @@ class VH360_Theme_Admin {
                 'show_social' => true,
                 'show_stats' => true,
                 'show_header_follow_button' => true,
-                'social_platforms' => array('twitter', 'facebook', 'youtube', 'instagram'),
+                'social_platforms' => array('website', 'twitter', 'facebook', 'youtube', 'instagram'),
                 'avatar_max_size' => 2,
                 'cover_max_size' => 5,
                 'enable_avatar_cropper' => true,

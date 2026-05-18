@@ -47,16 +47,6 @@ $social_links = function_exists( 'vh360_get_user_social_links' ) ? vh360_get_use
         <div class="vh360-course-author-links">
             <h3 class="vh360-course-author-subsection-title"><?php esc_html_e( 'Links', 'videohub360-theme' ); ?></h3>
             <ul class="vh360-course-author-links-list">
-                <?php if ( $website ) : ?>
-                    <li>
-                        <a href="<?php echo esc_url( $website ); ?>" class="vh360-course-author-link" target="_blank" rel="noopener noreferrer">
-                            <?php
-                            $host = wp_parse_url( $website, PHP_URL_HOST );
-                            echo esc_html( $host ? $host : $website );
-                            ?>
-                        </a>
-                    </li>
-                <?php endif; ?>
                 <?php foreach ( $social_links as $platform => $url ) :
                     if ( $url ) : ?>
                         <li>

@@ -29,7 +29,6 @@ if (!$author) {
 
 // Get user data
 $bio = vh360_get_user_bio($author_id);
-$website = $author->user_url;
 $social_links = vh360_get_user_social_links($author_id);
 
 // Get profile options
@@ -53,22 +52,6 @@ $profile_options = wp_parse_args($profile_options, $profile_defaults);
     
     <div class="vh360-profile-meta-list">
         <?php if ($profile_options['show_social'] && (!empty($social_links) || $website)) : ?>
-            <?php if ($website) : ?>
-                <div class="vh360-profile-meta-item">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="2" y1="12" x2="22" y2="12"></line>
-                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-                    </svg>
-                    <a href="<?php echo esc_url($website); ?>" target="_blank" rel="noopener noreferrer">
-                        <?php 
-                        $parsed_url = parse_url($website);
-                        $host = isset($parsed_url['host']) ? $parsed_url['host'] : $website;
-                        echo esc_html($host);
-                        ?>
-                    </a>
-                </div>
-            <?php endif; ?>
             
             <?php foreach ($social_links as $platform => $url) : ?>
                 <?php if ($url) : ?>

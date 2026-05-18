@@ -34,7 +34,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vh360_edit_profile_no
         // Sanitize and prepare user data
         $display_name = isset($_POST['display_name']) ? sanitize_text_field($_POST['display_name']) : '';
         $bio = isset($_POST['bio']) ? sanitize_textarea_field($_POST['bio']) : '';
-        $website = isset($_POST['website']) ? esc_url_raw($_POST['website']) : '';
+        $enabled_profile_links = function_exists( 'vh360_get_enabled_social_platforms' ) ? vh360_get_enabled_social_platforms() : array();
+        $website = $user->user_url;
+        if ( isset( $enabled_profile_links['website'] ) ) {
+            $website = isset($_POST['website']) ? esc_url_raw( wp_unslash($_POST['website']) ) : '';
+        }
         
         // Validate required fields
         if (empty($display_name)) {
@@ -61,6 +65,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vh360_edit_profile_no
                     : array();
 
                 foreach ( $social_platforms as $field => $platform ) {
+                    if ( 'website' === $field ) {
+                        continue;
+                    }
                     $meta_key = isset( $platform['meta_key'] ) ? $platform['meta_key'] : '_vh360_' . $field;
                     $value    = isset( $_POST[ $field ] ) ? esc_url_raw( wp_unslash( $_POST[ $field ] ) ) : '';
 
@@ -155,7 +162,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vh360_edit_profile_no
 // Get current values
 $display_name = $user->display_name;
 $bio = get_the_author_meta('description', $current_user_id);
-$website = $user->user_url;
 $cover_image = vh360_get_user_cover_image($current_user_id);
 $social_links = function_exists( 'vh360_get_user_social_links' ) ? vh360_get_user_social_links($current_user_id, true) : array();
 $enabled_social_platforms = function_exists( 'vh360_get_enabled_social_platforms' ) ? vh360_get_enabled_social_platforms() : array();
@@ -299,17 +305,10 @@ $profile_picture_url = $profile_picture_id ? wp_get_attachment_image_url($profil
                 <textarea name="bio" id="bio" class="vh360-form-textarea" rows="4" maxlength="500"><?php echo esc_textarea($bio); ?></textarea>
                 <span class="vh360-form-help"><?php esc_html_e('Maximum 500 characters', 'videohub360-theme'); ?></span>
             </div>
-            
-            <!-- Website -->
-            <div class="vh360-form-group">
-                <label for="website" class="vh360-form-label"><?php esc_html_e('Website', 'videohub360-theme'); ?></label>
-                <input type="url" name="website" id="website" class="vh360-form-input" value="<?php echo esc_url($website); ?>">
-            </div>
-            
-            <!-- Social Links -->
+<!-- Social Links -->
             <?php if ( ! empty( $enabled_social_platforms ) ) : ?>
                 <div class="vh360-form-section">
-                    <h3 class="vh360-form-section-title"><?php esc_html_e('Social Media', 'videohub360-theme'); ?></h3>
+                    <h3 class="vh360-form-section-title"><?php esc_html_e('Profile Links', 'videohub360-theme'); ?></h3>
                     <?php foreach ( $enabled_social_platforms as $platform_key => $platform ) : ?>
                         <div class="vh360-form-group">
                             <label for="<?php echo esc_attr( $platform_key ); ?>" class="vh360-form-label"><?php echo esc_html( $platform['label'] ); ?></label>
@@ -498,7 +497,7 @@ $profile_picture_url = $profile_picture_id ? wp_get_attachment_image_url($profil
 </style>            <!-- Social Media -->
             <?php if ( ! empty( $enabled_social_platforms ) ) : ?>
                 <div class="vh360-form-section">
-                    <h3 class="vh360-form-section-title"><?php esc_html_e('Social Media', 'videohub360-theme'); ?></h3>
+                    <h3 class="vh360-form-section-title"><?php esc_html_e('Profile Links', 'videohub360-theme'); ?></h3>
                     <?php foreach ( $enabled_social_platforms as $platform_key => $platform ) : ?>
                         <div class="vh360-form-group">
                             <label for="<?php echo esc_attr( $platform_key ); ?>" class="vh360-form-label"><?php echo esc_html( $platform['label'] ); ?></label>

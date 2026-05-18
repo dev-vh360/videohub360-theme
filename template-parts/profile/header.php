@@ -44,7 +44,6 @@ $cover_image = vh360_get_user_cover_image($author_id);
 $display_name = $author->display_name;
 $username = $author->user_login;
 $join_date = vh360_get_user_join_date($author_id, 'F Y');
-$website = $author->user_url;
 $social_links = vh360_get_user_social_links($author_id);
 
 // Check if current user can edit this profile
@@ -203,16 +202,6 @@ $can_edit = vh360_user_can_edit_profile($author_id);
                 <!-- Social Links (shown on mobile only) -->
                 <?php if ($profile_options['show_social'] && (!empty($social_links) || $website)) : ?>
                     <div class="vh360-profile-links vh360-profile-links--mobile">
-                        <?php if ($website) : ?>
-                            <a href="<?php echo esc_url($website); ?>" class="vh360-profile-link" target="_blank" rel="noopener noreferrer">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="12" cy="12" r="10"></circle>
-                                    <line x1="2" y1="12" x2="22" y2="12"></line>
-                                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-                                </svg>
-                                <?php esc_html_e('Website', 'videohub360-theme'); ?>
-                            </a>
-                        <?php endif; ?>
 
                         <?php foreach ($social_links as $platform => $url) : ?>
                             <?php if ($url) : ?>

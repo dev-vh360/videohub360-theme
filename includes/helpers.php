@@ -632,6 +632,12 @@ function vh360_get_user_content_count($user_id) {
  */
 function vh360_get_social_platform_registry() {
     return array(
+        'website' => array(
+            'label'       => __( 'Website Link', 'videohub360-theme' ),
+            'meta_key'    => 'user_url',
+            'placeholder' => 'https://example.com',
+            'type'        => 'user_field',
+        ),
         'twitter' => array(
             'label'       => __( 'Twitter (X)', 'videohub360-theme' ),
             'meta_key'    => '_vh360_twitter',
@@ -681,7 +687,7 @@ function vh360_get_enabled_social_platforms() {
 
     $enabled = isset( $options['social_platforms'] ) && is_array( $options['social_platforms'] )
         ? array_map( 'sanitize_key', $options['social_platforms'] )
-        : array( 'twitter', 'facebook', 'youtube', 'instagram' );
+        : array( 'website', 'twitter', 'facebook', 'youtube', 'instagram' );
 
     return array_intersect_key( $registry, array_flip( $enabled ) );
 }
@@ -705,6 +711,14 @@ function vh360_get_user_social_links($user_id, $include_disabled = false) {
     $social_links = array();
 
     foreach ($platforms as $platform_key => $platform) {
+        if ('website' === $platform_key) {
+            $user = get_userdata($user_id);
+            if ($user && !empty($user->user_url)) {
+                $social_links[$platform_key] = esc_url_raw($user->user_url);
+            }
+            continue;
+        }
+
         $meta_key = isset($platform['meta_key']) ? $platform['meta_key'] : '_vh360_' . $platform_key;
         $url = get_user_meta($user_id, $meta_key, true);
 
