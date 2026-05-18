@@ -178,21 +178,22 @@ class VideoHub360_Ajax {
         if ($requested_role === 'host' && $passcode !== '') {
             $stored_passcode = get_post_meta($post_id, '_vh360_host_passcode', true);
             if (!empty($stored_passcode)) {
-                // Support both phpass/bcrypt hashes (wp_hash_password) and legacy plain-text.
-                $passcode_valid = false;
-                if (
-                    strlen($stored_passcode) > 20 &&
-                    (
-                        substr($stored_passcode, 0, 3) === '$P$' ||
-                        substr($stored_passcode, 0, 4) === '$2y$' ||
-                        substr($stored_passcode, 0, 4) === '$2b$'
-                    )
-                ) {
-                    // Stored as a WordPress password hash.
-                    $passcode_valid = wp_check_password($passcode, $stored_passcode);
-                } else {
-                    // Legacy plain-text comparison – constant-time.
-                    $passcode_valid = hash_equals((string) $stored_passcode, (string) $passcode);
+                // Do not manually inspect hash prefixes. WordPress may change hash formats.
+                // wp_check_password() is the compatibility layer for all wp_hash_password() values.
+                $passcode_valid              = false;
+                $validated_with_legacy_plaintext = false;
+
+                if (wp_check_password((string) $passcode, (string) $stored_passcode)) {
+                    $passcode_valid = true;
+                } elseif (hash_equals((string) $stored_passcode, (string) $passcode)) {
+                    // Legacy fallback for passcodes stored as plain text before the hardening update.
+                    $passcode_valid              = true;
+                    $validated_with_legacy_plaintext = true;
+                }
+
+                // Silently upgrade legacy plain-text passcode to a hashed value.
+                if ($validated_with_legacy_plaintext) {
+                    update_post_meta($post_id, '_vh360_host_passcode', wp_hash_password((string) $passcode));
                 }
 
                 if ($passcode_valid) {
