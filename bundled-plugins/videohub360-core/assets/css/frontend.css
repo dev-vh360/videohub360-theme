@@ -4165,3 +4165,193 @@ a.vh360-author-row:hover .vh360-author-name {
 .videohub360-videos-item:hover .videohub360-videos-title {
     color: var(--vh360-color-primary, #0063b1);
 }
+
+/* =========================================================
+   iOS Immersive Fullscreen – Interactive Mode Fallback
+   Replaces the dead-end alert for iPhone/iPadOS when the
+   standard Fullscreen API is unavailable for arbitrary
+   container elements.
+   ========================================================= */
+
+html.vh360-ios-immersive-active,
+body.vh360-ios-immersive-active {
+    overflow: hidden !important;
+    position: fixed !important;
+    width: 100% !important;
+    height: 100% !important;
+    overscroll-behavior: none !important;
+    touch-action: none;
+}
+
+#vh360-agora-player.vh360-ios-immersive-fullscreen {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: var(--vh360-visual-viewport-height, 100dvh) !important;
+    min-height: var(--vh360-visual-viewport-height, 100dvh) !important;
+    max-height: var(--vh360-visual-viewport-height, 100dvh) !important;
+    box-sizing: border-box !important;
+    z-index: 2147483000 !important;
+    background: #000 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    overflow: hidden !important;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+}
+
+#vh360-agora-player.vh360-ios-immersive-fullscreen .vh360-agora-container,
+#vh360-agora-player.vh360-ios-immersive-fullscreen .vh360-player-wrapper,
+#vh360-agora-player.vh360-ios-immersive-fullscreen .vh360-agora-video-area,
+#vh360-agora-player.vh360-ios-immersive-fullscreen .vh360-multi-view-container {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: none !important;
+}
+
+#vh360-agora-player.vh360-ios-immersive-fullscreen .vh360-agora-controls,
+#vh360-agora-player.vh360-ios-immersive-fullscreen .vh360-mobile-controls,
+#vh360-agora-player.vh360-ios-immersive-fullscreen .vh360-live-controls {
+    z-index: 2147483001 !important;
+}
+
+#vh360-agora-player.vh360-ios-immersive-fullscreen video {
+    max-width: 100% !important;
+    max-height: 100% !important;
+}
+
+@supports (height: 100dvh) {
+    #vh360-agora-player.vh360-ios-immersive-fullscreen {
+        height: var(--vh360-visual-viewport-height, 100dvh) !important;
+        min-height: var(--vh360-visual-viewport-height, 100dvh) !important;
+    }
+}
+
+@supports not (height: 100dvh) {
+    #vh360-agora-player.vh360-ios-immersive-fullscreen {
+        height: 100vh !important;
+        min-height: 100vh !important;
+    }
+}
+
+@media screen and (orientation: landscape) {
+    #vh360-agora-player.vh360-ios-immersive-fullscreen {
+        padding-left: env(safe-area-inset-left, 0px);
+        padding-right: env(safe-area-inset-right, 0px);
+    }
+}
+
+/* Raise popup overlays above the immersive player while active */
+body.vh360-ios-immersive-active #vh360-chat-popup,
+body.vh360-ios-immersive-active .vh360-chat-popup,
+body.vh360-ios-immersive-active .vh360-moderation-modal,
+body.vh360-ios-immersive-active .videohub360-moderation-modal,
+body.vh360-ios-immersive-active .vh360-unified-settings-overlay {
+    z-index: 2147483002 !important;
+}
+
+body.vh360-ios-immersive-active .vh360-chat-popup-content,
+body.vh360-ios-immersive-active .vh360-moderation-modal-content,
+body.vh360-ios-immersive-active .videohub360-moderation-content,
+body.vh360-ios-immersive-active .vh360-unified-settings-content {
+    z-index: 2147483003 !important;
+}
+
+/* Fixed bottom controls bar while immersive */
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen
+#vh360-agora-controls.vh360-mobile-controls-simple {
+    position: fixed !important;
+    left: env(safe-area-inset-left, 0px) !important;
+    right: env(safe-area-inset-right, 0px) !important;
+    bottom: env(safe-area-inset-bottom, 0px) !important;
+    top: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    z-index: 2147483004 !important;
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px)) 10px !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    background: rgba(0, 0, 0, 0.92) !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    transform: none !important;
+}
+
+/* Keep controls visible even when auto-hide or stream-live classes are present */
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-stream-live
+#vh360-agora-controls.vh360-mobile-controls-simple,
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-controls-hidden
+#vh360-agora-controls.vh360-mobile-controls-simple {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+}
+
+/* Ensure control buttons/selects are touchable */
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen
+#vh360-agora-controls.vh360-mobile-controls-simple button,
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen
+#vh360-agora-controls.vh360-mobile-controls-simple select {
+    position: relative !important;
+    z-index: 2147483005 !important;
+    pointer-events: auto !important;
+    flex-shrink: 0 !important;
+}
+
+/* Reserve space so video/grid does not overlap bottom controls */
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen
+#vh360-agora-local-player,
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen
+#vh360-agora-remote-players,
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen
+.vh360-multi-view-container {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important;
+    box-sizing: border-box !important;
+}
+
+/* Emergency floating exit button */
+body.vh360-ios-immersive-active #vh360-ios-immersive-exit-btn {
+    position: fixed !important;
+    top: calc(10px + env(safe-area-inset-top, 0px)) !important;
+    right: calc(10px + env(safe-area-inset-right, 0px)) !important;
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 999px !important;
+    border: none !important;
+    background: rgba(0, 0, 0, 0.75) !important;
+    color: #fff !important;
+    font-size: 28px !important;
+    line-height: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 2147483006 !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
+}
+
+/* Body-level portal: player is a direct child of body during iOS immersive mode */
+body.vh360-ios-immersive-active > #vh360-agora-player.vh360-ios-immersive-fullscreen {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: var(--vh360-visual-viewport-height, 100dvh) !important;
+    min-height: var(--vh360-visual-viewport-height, 100dvh) !important;
+    max-height: var(--vh360-visual-viewport-height, 100dvh) !important;
+    z-index: 2147483000 !important;
+}

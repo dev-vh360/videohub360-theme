@@ -738,6 +738,13 @@ window.initializeAgoraPlayer = function(config) {
     // Set only after server returns role:'host' AND the token is applied via renewToken() or rejoin.
     let hasServerApprovedPublishToken = false;
     let currentUserUID = null; // Store the current user's Agora UID after joining
+
+    // iOS immersive fullscreen state
+    let isIOSImmersiveFullscreen = false;
+    let iosImmersiveScrollY = 0;
+    let iosImmersivePreviousActiveElement = null;
+    let iosImmersiveOriginalParent = null;
+    let iosImmersivePlaceholder = null;
     
     // Voice-activated video switching variables
     let activeSpeakerUid = null;
@@ -2548,7 +2555,12 @@ window.initializeAgoraPlayer = function(config) {
     // Page navigation detection for faster cleanup
     window.addEventListener('beforeunload', () => {
         window.vh360Log("Agora: Page navigation detected, cleaning up immediately");
-        
+
+        // Exit iOS immersive fullscreen if active before unloading
+        if (isIOSImmersiveFullscreen) {
+            exitIOSImmersiveFullscreen();
+        }
+
         // Clean up any frozen frames immediately when user navigates away
         cleanupFrozenVideoFrames();
         
@@ -3342,7 +3354,12 @@ window.initializeAgoraPlayer = function(config) {
     function disconnectFromStream(reason) {
         try {
             window.vh360Log('Agora: Disconnecting from stream -', reason);
-            
+
+            // Exit iOS immersive fullscreen if active
+            if (isIOSImmersiveFullscreen) {
+                exitIOSImmersiveFullscreen();
+            }
+
             // Set moderation flag
             isBeingModerated = true;
             
@@ -3961,6 +3978,11 @@ window.initializeAgoraPlayer = function(config) {
     }
     async function leaveChannel() {
         try {
+            // Exit iOS immersive fullscreen if active before leaving
+            if (isIOSImmersiveFullscreen) {
+                exitIOSImmersiveFullscreen();
+            }
+
             // Stop stream status polling
             stopStreamStatusPolling();
             
@@ -4666,10 +4688,10 @@ window.initializeAgoraPlayer = function(config) {
         // detection, so use the captured config directly.
         const isBroadcast = config && config.agoraMode === 'broadcast';
 
-        // If we're on iOS and not in broadcast mode, show a message and abort
+        // On iOS in interactive mode use the immersive fullscreen fallback
         if (isiOS && !isBroadcast) {
-            window.vh360Warn('VideoHub360 Mobile: Fullscreen is only available in broadcast mode on iOS');
-            alert('Fullscreen is only available on mobile in broadcast mode.');
+            window.vh360Log('VideoHub360 Mobile: iOS interactive mode – using immersive fullscreen');
+            toggleIOSImmersiveFullscreen();
             return;
         }
 
@@ -4814,6 +4836,199 @@ window.initializeAgoraPlayer = function(config) {
             svg.innerHTML = '<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>';
             fullscreenBtn.title = 'Toggle fullscreen';
         }
+    }
+
+    // == iOS Immersive Fullscreen Helpers ==
+
+    function updateIOSImmersiveFullscreenButton(isActive) {
+        const btn = document.getElementById('vh360-agora-fullscreen-btn');
+        if (!btn) {
+            return;
+        }
+        btn.classList.toggle('active', !!isActive);
+        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        btn.setAttribute('title', isActive ? 'Exit fullscreen' : 'Fullscreen');
+        btn.setAttribute('aria-label', isActive ? 'Exit fullscreen' : 'Fullscreen');
+
+        const svg = btn.querySelector('svg');
+        if (svg) {
+            if (isActive) {
+                svg.innerHTML = '<path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>';
+            } else {
+                svg.innerHTML = '<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>';
+            }
+        }
+    }
+
+    function portalIOSImmersivePlayer(player) {
+        if (!player || player.parentNode === document.body) {
+            return;
+        }
+
+        iosImmersiveOriginalParent = player.parentNode;
+
+        iosImmersivePlaceholder = document.createElement('div');
+        iosImmersivePlaceholder.id = 'vh360-ios-immersive-placeholder';
+        iosImmersivePlaceholder.setAttribute('aria-hidden', 'true');
+        iosImmersivePlaceholder.style.display = 'none';
+
+        iosImmersiveOriginalParent.insertBefore(iosImmersivePlaceholder, player);
+
+        document.body.appendChild(player);
+
+        player.classList.add('vh360-ios-immersive-portaled');
+
+        window.vh360Log('VideoHub360 iOS Immersive: Player moved to body portal.');
+    }
+
+    function restoreIOSImmersivePlayer(player) {
+        if (!player) {
+            return;
+        }
+
+        if (iosImmersiveOriginalParent && iosImmersivePlaceholder) {
+            iosImmersiveOriginalParent.insertBefore(player, iosImmersivePlaceholder);
+            iosImmersivePlaceholder.remove();
+
+            window.vh360Log('VideoHub360 iOS Immersive: Player restored from body portal.');
+        }
+
+        player.classList.remove('vh360-ios-immersive-portaled');
+
+        iosImmersiveOriginalParent = null;
+        iosImmersivePlaceholder = null;
+    }
+
+    function ensureIOSImmersiveExitButton() {
+        var exitBtn = document.getElementById('vh360-ios-immersive-exit-btn');
+
+        if (exitBtn) {
+            exitBtn.style.display = 'flex';
+            return;
+        }
+
+        exitBtn = document.createElement('button');
+        exitBtn.id = 'vh360-ios-immersive-exit-btn';
+        exitBtn.type = 'button';
+        exitBtn.setAttribute('aria-label', 'Exit fullscreen');
+        exitBtn.innerHTML = '&times;';
+        exitBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            exitIOSImmersiveFullscreen();
+        });
+
+        document.body.appendChild(exitBtn);
+    }
+
+    function enterIOSImmersiveFullscreen() {
+        const player = document.getElementById('vh360-agora-player');
+        if (!player) {
+            window.vh360Warn('VideoHub360 iOS Immersive: Player container not found.');
+            return;
+        }
+        if (isIOSImmersiveFullscreen) {
+            return;
+        }
+
+        iosImmersiveScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+        iosImmersivePreviousActiveElement = document.activeElement;
+
+        portalIOSImmersivePlayer(player);
+
+        document.documentElement.classList.add('vh360-ios-immersive-active');
+        document.body.classList.add('vh360-ios-immersive-active');
+        player.classList.add('vh360-ios-immersive-fullscreen');
+
+        document.body.style.top = '-' + iosImmersiveScrollY + 'px';
+
+        isIOSImmersiveFullscreen = true;
+
+        updateIOSImmersiveFullscreenButton(true);
+
+        ensureIOSImmersiveExitButton();
+
+        window.dispatchEvent(new Event('resize'));
+
+        window.vh360Log('VideoHub360 iOS Immersive: Entered immersive fullscreen');
+    }
+
+    function exitIOSImmersiveFullscreen() {
+        if (!isIOSImmersiveFullscreen) {
+            return;
+        }
+
+        const player = document.getElementById('vh360-agora-player');
+
+        document.documentElement.classList.remove('vh360-ios-immersive-active');
+        document.body.classList.remove('vh360-ios-immersive-active');
+
+        if (player) {
+            player.classList.remove('vh360-ios-immersive-fullscreen');
+        }
+
+        restoreIOSImmersivePlayer(player);
+
+        document.body.style.top = '';
+
+        window.scrollTo(0, iosImmersiveScrollY || 0);
+
+        isIOSImmersiveFullscreen = false;
+
+        updateIOSImmersiveFullscreenButton(false);
+
+        var exitBtn = document.getElementById('vh360-ios-immersive-exit-btn');
+        if (exitBtn) {
+            exitBtn.style.display = 'none';
+        }
+
+        if (
+            iosImmersivePreviousActiveElement &&
+            typeof iosImmersivePreviousActiveElement.focus === 'function'
+        ) {
+            try {
+                iosImmersivePreviousActiveElement.focus({ preventScroll: true });
+            } catch (focusErr) {
+                // Ignore focus restoration errors.
+            }
+        }
+
+        iosImmersivePreviousActiveElement = null;
+
+        window.dispatchEvent(new Event('resize'));
+
+        window.vh360Log('VideoHub360 iOS Immersive: Exited immersive fullscreen');
+    }
+
+    function toggleIOSImmersiveFullscreen() {
+        if (isIOSImmersiveFullscreen) {
+            exitIOSImmersiveFullscreen();
+        } else {
+            enterIOSImmersiveFullscreen();
+        }
+    }
+
+    // Handle orientation changes while in iOS immersive mode
+    window.addEventListener('orientationchange', function () {
+        if (!isIOSImmersiveFullscreen) {
+            return;
+        }
+        setTimeout(function () {
+            window.dispatchEvent(new Event('resize'));
+        }, 250);
+    });
+
+    // Keep visual viewport height custom property updated while in immersive mode
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', function () {
+            if (!isIOSImmersiveFullscreen) {
+                return;
+            }
+            document.documentElement.style.setProperty(
+                '--vh360-visual-viewport-height',
+                window.visualViewport.height + 'px'
+            );
+        });
     }
 
     // Function to update mobile controls visibility when role changes
