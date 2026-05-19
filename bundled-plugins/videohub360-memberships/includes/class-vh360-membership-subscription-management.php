@@ -7,7 +7,7 @@
  * cancel, reactivate, and access the Stripe billing portal.
  *
  * @package VideoHub360_Memberships
- * @since 2.0.0
+ * @since 1.0.0
  */
 
 if (!defined('ABSPATH')) exit;

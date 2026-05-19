@@ -24,7 +24,7 @@ class VH360_Membership_Database {
      *
      * @var string
      */
-    private $db_version = '2.0.0';
+    private $db_version = '1.0.0';
     
     /**
      * Get singleton instance
@@ -56,7 +56,7 @@ class VH360_Membership_Database {
             self::create_tables();
             
             // Run migration from 1.x to 2.0 if upgrading
-            if (version_compare($current_version, '2.0.0', '<') && version_compare($current_version, '0', '>')) {
+            if (version_compare($current_version, '1.0.0', '<') && version_compare($current_version, '0', '>')) {
                 self::migrate_to_v2();
             }
         }
@@ -130,7 +130,7 @@ class VH360_Membership_Database {
         dbDelta($events_sql);
         
         // Update database version
-        update_option('vh360_memberships_db_version', '2.0.0');
+        update_option('vh360_memberships_db_version', '1.0.0');
     }
     
     /**

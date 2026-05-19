@@ -3,7 +3,7 @@
 Plugin Name: VideoHub360 Memberships
 Plugin URI: https://videohub360.com
 Description: Native membership system for VideoHub360 with WooCommerce integration and Stripe recurring subscription support.
-Version: 2.0.0
+Version: 1.0.0
 Author: VideoHub360
 Author URI: https://videohub360.com
 Requires at least: 5.0
@@ -22,7 +22,7 @@ if (!defined('ABSPATH')) exit;
 define('VH360_MEMBERSHIPS_FILE', __FILE__);
 define('VH360_MEMBERSHIPS_DIR', plugin_dir_path(__FILE__));
 define('VH360_MEMBERSHIPS_URL', plugin_dir_url(__FILE__));
-define('VH360_MEMBERSHIPS_VERSION', '2.0.0');
+define('VH360_MEMBERSHIPS_VERSION', '1.0.0');
 
 // Load required classes for activation/deactivation hooks
 require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-database.php';
