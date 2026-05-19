@@ -4940,11 +4940,11 @@ window.initializeAgoraPlayer = function(config) {
         document.body.classList.add('vh360-ios-immersive-active');
         player.classList.add('vh360-ios-immersive-fullscreen');
 
-        updateIOSImmersiveOrientationClass();
-
         document.body.style.top = '-' + iosImmersiveScrollY + 'px';
 
         isIOSImmersiveFullscreen = true;
+
+        updateIOSImmersiveOrientationClass();
 
         updateIOSImmersiveFullscreenButton(true);
 
@@ -5024,7 +5024,9 @@ window.initializeAgoraPlayer = function(config) {
 
         var viewportWidth = window.visualViewport ? window.visualViewport.width : window.innerWidth;
         var viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-        var isLandscape = viewportWidth > viewportHeight;
+        var isLandscape = viewportWidth !== viewportHeight
+            ? viewportWidth > viewportHeight
+            : window.matchMedia('(orientation: landscape)').matches;
 
         player.classList.toggle('vh360-ios-immersive-landscape', isLandscape);
         player.classList.toggle('vh360-ios-immersive-portrait', !isLandscape);
