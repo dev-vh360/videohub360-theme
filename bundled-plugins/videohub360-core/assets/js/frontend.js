@@ -4944,6 +4944,8 @@ window.initializeAgoraPlayer = function(config) {
 
         isIOSImmersiveFullscreen = true;
 
+        updateIOSImmersiveOrientationClass();
+
         updateIOSImmersiveFullscreenButton(true);
 
         ensureIOSImmersiveExitButton();
@@ -4964,7 +4966,12 @@ window.initializeAgoraPlayer = function(config) {
         document.body.classList.remove('vh360-ios-immersive-active');
 
         if (player) {
-            player.classList.remove('vh360-ios-immersive-fullscreen');
+            player.classList.remove(
+                'vh360-ios-immersive-fullscreen',
+                'vh360-ios-immersive-portaled',
+                'vh360-ios-immersive-landscape',
+                'vh360-ios-immersive-portrait'
+            );
         }
 
         restoreIOSImmersivePlayer(player);
@@ -5008,13 +5015,42 @@ window.initializeAgoraPlayer = function(config) {
         }
     }
 
+    function updateIOSImmersiveOrientationClass() {
+        var player = document.getElementById('vh360-agora-player');
+
+        if (!player || !isIOSImmersiveFullscreen) {
+            return;
+        }
+
+        var viewportWidth = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+        var viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        var isLandscape = viewportWidth !== viewportHeight
+            ? viewportWidth > viewportHeight
+            : window.matchMedia('(orientation: landscape)').matches;
+
+        player.classList.toggle('vh360-ios-immersive-landscape', isLandscape);
+        player.classList.toggle('vh360-ios-immersive-portrait', !isLandscape);
+
+        window.vh360Log('VideoHub360 iOS Immersive: Orientation layout updated', {
+            isLandscape: isLandscape,
+            viewportWidth: viewportWidth,
+            viewportHeight: viewportHeight
+        });
+    }
+
     // Handle orientation changes while in iOS immersive mode
     window.addEventListener('orientationchange', function () {
         if (!isIOSImmersiveFullscreen) {
             return;
         }
         setTimeout(function () {
+            updateIOSImmersiveOrientationClass();
+
             window.dispatchEvent(new Event('resize'));
+
+            if (typeof updateMobileLayout === 'function') {
+                updateMobileLayout();
+            }
         }, 250);
     });
 
@@ -5028,6 +5064,8 @@ window.initializeAgoraPlayer = function(config) {
                 '--vh360-visual-viewport-height',
                 window.visualViewport.height + 'px'
             );
+
+            updateIOSImmersiveOrientationClass();
         });
     }
 
