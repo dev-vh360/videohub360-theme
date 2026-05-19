@@ -5,7 +5,7 @@
  * Renders the subscription management UI inside the frontend dashboard.
  *
  * @package Videohub360_Theme
- * @since 2.0.0
+ * @since 1.0.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
