@@ -743,6 +743,8 @@ window.initializeAgoraPlayer = function(config) {
     let isIOSImmersiveFullscreen = false;
     let iosImmersiveScrollY = 0;
     let iosImmersivePreviousActiveElement = null;
+    let iosImmersiveOriginalParent = null;
+    let iosImmersivePlaceholder = null;
     
     // Voice-activated video switching variables
     let activeSpeakerUid = null;
@@ -4858,6 +4860,45 @@ window.initializeAgoraPlayer = function(config) {
         }
     }
 
+    function portalIOSImmersivePlayer(player) {
+        if (!player || player.parentNode === document.body) {
+            return;
+        }
+
+        iosImmersiveOriginalParent = player.parentNode;
+
+        iosImmersivePlaceholder = document.createElement('div');
+        iosImmersivePlaceholder.id = 'vh360-ios-immersive-placeholder';
+        iosImmersivePlaceholder.setAttribute('aria-hidden', 'true');
+        iosImmersivePlaceholder.style.display = 'none';
+
+        iosImmersiveOriginalParent.insertBefore(iosImmersivePlaceholder, player);
+
+        document.body.appendChild(player);
+
+        player.classList.add('vh360-ios-immersive-portaled');
+
+        window.vh360Log('VideoHub360 iOS Immersive: Player moved to body portal.');
+    }
+
+    function restoreIOSImmersivePlayer(player) {
+        if (!player) {
+            return;
+        }
+
+        if (iosImmersiveOriginalParent && iosImmersivePlaceholder) {
+            iosImmersiveOriginalParent.insertBefore(player, iosImmersivePlaceholder);
+            iosImmersivePlaceholder.remove();
+
+            window.vh360Log('VideoHub360 iOS Immersive: Player restored from body portal.');
+        }
+
+        player.classList.remove('vh360-ios-immersive-portaled');
+
+        iosImmersiveOriginalParent = null;
+        iosImmersivePlaceholder = null;
+    }
+
     function ensureIOSImmersiveExitButton() {
         var exitBtn = document.getElementById('vh360-ios-immersive-exit-btn');
 
@@ -4893,6 +4934,8 @@ window.initializeAgoraPlayer = function(config) {
         iosImmersiveScrollY = window.scrollY || document.documentElement.scrollTop || 0;
         iosImmersivePreviousActiveElement = document.activeElement;
 
+        portalIOSImmersivePlayer(player);
+
         document.documentElement.classList.add('vh360-ios-immersive-active');
         document.body.classList.add('vh360-ios-immersive-active');
         player.classList.add('vh360-ios-immersive-fullscreen');
@@ -4923,6 +4966,8 @@ window.initializeAgoraPlayer = function(config) {
         if (player) {
             player.classList.remove('vh360-ios-immersive-fullscreen');
         }
+
+        restoreIOSImmersivePlayer(player);
 
         document.body.style.top = '';
 

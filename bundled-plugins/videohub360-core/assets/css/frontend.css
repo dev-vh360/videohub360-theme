@@ -4344,3 +4344,14 @@ body.vh360-ios-immersive-active #vh360-ios-immersive-exit-btn {
     pointer-events: auto !important;
     cursor: pointer !important;
 }
+
+/* Body-level portal: player is a direct child of body during iOS immersive mode */
+body.vh360-ios-immersive-active > #vh360-agora-player.vh360-ios-immersive-fullscreen {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: var(--vh360-visual-viewport-height, 100dvh) !important;
+    min-height: var(--vh360-visual-viewport-height, 100dvh) !important;
+    max-height: var(--vh360-visual-viewport-height, 100dvh) !important;
+    z-index: 2147483000 !important;
+}
