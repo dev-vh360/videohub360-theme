@@ -64,7 +64,6 @@ class VideoHub360_License {
             'vh360-pwa-app'              => 'vh360-pwa-app/vh360-pwa-app.php',
             'videohub360-memberships'    => 'videohub360-memberships/videohub360-memberships.php',
             'videohub360-starter-sites'  => 'videohub360-starter-sites/videohub360-starter-sites.php',
-            'videohub360-affiliates'     => 'videohub360-affiliates/videohub360-affiliates.php',
         );
     }
 
