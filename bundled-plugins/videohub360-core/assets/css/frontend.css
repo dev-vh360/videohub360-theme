@@ -4355,3 +4355,174 @@ body.vh360-ios-immersive-active > #vh360-agora-player.vh360-ios-immersive-fullsc
     max-height: var(--vh360-visual-viewport-height, 100dvh) !important;
     z-index: 2147483000 !important;
 }
+
+/* =========================================================
+   iOS Immersive Fullscreen – Landscape Main Stage Mode
+   When the device is landscape, the main video stage takes
+   over the full viewport; remote videos become a floating
+   thumbnail strip; controls become compact and floating.
+   ========================================================= */
+
+/* Container layout in landscape */
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape {
+    display: block !important;
+    overflow: hidden !important;
+}
+
+/* Main stage fills the entire immersive viewport */
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+#vh360-agora-local-player {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #000 !important;
+    overflow: hidden !important;
+    z-index: 2147483000 !important;
+    box-sizing: border-box !important;
+}
+
+/* Main stage video: contain so it is never cropped */
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+#vh360-agora-local-player video,
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+#vh360-agora-local-player .agora_video_player,
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+#vh360-agora-local-player [class*="agora"] video {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    object-fit: contain !important;
+    object-position: center center !important;
+    background: #000 !important;
+}
+
+/* Remote videos: floating thumbnail strip along the top */
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+#vh360-agora-remote-players {
+    position: fixed !important;
+    top: calc(8px + env(safe-area-inset-top, 0px)) !important;
+    left: calc(8px + env(safe-area-inset-left, 0px)) !important;
+    right: calc(56px + env(safe-area-inset-right, 0px)) !important;
+    width: auto !important;
+    height: 82px !important;
+    min-height: 82px !important;
+    max-height: 82px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 8px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    z-index: 2147483004 !important;
+    pointer-events: auto !important;
+    background: transparent !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Remote thumbnail tile sizing */
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+#vh360-agora-remote-players > *,
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+.vh360-remote-player {
+    flex: 0 0 120px !important;
+    width: 120px !important;
+    height: 76px !important;
+    max-width: 120px !important;
+    max-height: 76px !important;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+    background: #111 !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Remote thumbnail video fill */
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+#vh360-agora-remote-players video,
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+.vh360-remote-player video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+}
+
+/* Controls: compact pill floating above the bottom safe area */
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+#vh360-agora-controls.vh360-mobile-controls-simple {
+    position: fixed !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+    top: auto !important;
+    transform: translateX(-50%) !important;
+    width: auto !important;
+    max-width: calc(100vw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)) !important;
+    min-height: 44px !important;
+    padding: 6px 8px !important;
+    border-radius: 999px !important;
+    background: rgba(0, 0, 0, 0.78) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 2147483005 !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    pointer-events: auto !important;
+    margin: 0 !important;
+}
+
+/* Compact control buttons in landscape */
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+#vh360-agora-controls.vh360-mobile-controls-simple button {
+    min-width: 38px !important;
+    width: 38px !important;
+    height: 38px !important;
+    flex: 0 0 38px !important;
+}
+
+/* Remove portrait bottom-padding in landscape (controls are floating, no reserved space needed) */
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+#vh360-agora-local-player,
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+#vh360-agora-remote-players,
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+.vh360-multi-view-container {
+    padding-bottom: 0 !important;
+}
+
+/* Ensure exit button is always above everything */
+body.vh360-ios-immersive-active
+#vh360-ios-immersive-exit-btn {
+    z-index: 2147483006 !important;
+}
+
+/* Exit button: compact in landscape */
+@media screen and (orientation: landscape) {
+    body.vh360-ios-immersive-active
+    #vh360-ios-immersive-exit-btn {
+        top: calc(8px + env(safe-area-inset-top, 0px)) !important;
+        right: calc(8px + env(safe-area-inset-right, 0px)) !important;
+        width: 38px !important;
+        height: 38px !important;
+        font-size: 26px !important;
+    }
+}
