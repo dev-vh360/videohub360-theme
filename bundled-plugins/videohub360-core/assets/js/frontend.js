@@ -4858,6 +4858,28 @@ window.initializeAgoraPlayer = function(config) {
         }
     }
 
+    function ensureIOSImmersiveExitButton() {
+        var exitBtn = document.getElementById('vh360-ios-immersive-exit-btn');
+
+        if (exitBtn) {
+            exitBtn.style.display = 'flex';
+            return;
+        }
+
+        exitBtn = document.createElement('button');
+        exitBtn.id = 'vh360-ios-immersive-exit-btn';
+        exitBtn.type = 'button';
+        exitBtn.setAttribute('aria-label', 'Exit fullscreen');
+        exitBtn.innerHTML = '&times;';
+        exitBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            exitIOSImmersiveFullscreen();
+        });
+
+        document.body.appendChild(exitBtn);
+    }
+
     function enterIOSImmersiveFullscreen() {
         const player = document.getElementById('vh360-agora-player');
         if (!player) {
@@ -4880,6 +4902,8 @@ window.initializeAgoraPlayer = function(config) {
         isIOSImmersiveFullscreen = true;
 
         updateIOSImmersiveFullscreenButton(true);
+
+        ensureIOSImmersiveExitButton();
 
         window.dispatchEvent(new Event('resize'));
 
@@ -4907,6 +4931,11 @@ window.initializeAgoraPlayer = function(config) {
         isIOSImmersiveFullscreen = false;
 
         updateIOSImmersiveFullscreenButton(false);
+
+        var exitBtn = document.getElementById('vh360-ios-immersive-exit-btn');
+        if (exitBtn) {
+            exitBtn.style.display = 'none';
+        }
 
         if (
             iosImmersivePreviousActiveElement &&
