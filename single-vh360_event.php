@@ -344,6 +344,7 @@ while (have_posts()) :
                     if (is_array($gallery_image_ids) && !empty($gallery_image_ids)) :
                     ?>
                     <div class="vh360-event-gallery-section">
+                        <h3 class="vh360-event-gallery-heading"><?php esc_html_e('Event Gallery', 'videohub360-theme'); ?></h3>
                         <div class="vh360-event-gallery-grid">
                             <?php foreach ($gallery_image_ids as $gallery_image_id) :
                                 $gallery_image_id = absint($gallery_image_id);

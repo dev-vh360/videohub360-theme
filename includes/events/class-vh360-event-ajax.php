@@ -531,6 +531,10 @@ class VH360_Event_Ajax {
         if (isset($data['gallery_image_ids'])) {
             $gallery_ids = vh360_sanitize_event_gallery_image_ids($data['gallery_image_ids']);
 
+            $gallery_ids = array_values(array_filter($gallery_ids, function($attachment_id) {
+                return vh360_user_can_use_event_gallery_image($attachment_id);
+            }));
+
             if (!empty($gallery_ids)) {
                 update_post_meta($event_id, '_vh360_event_gallery_image_ids', $gallery_ids);
             } else {

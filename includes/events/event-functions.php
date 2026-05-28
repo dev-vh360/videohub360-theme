@@ -543,3 +543,40 @@ function vh360_sanitize_event_gallery_image_ids( $raw_ids ) {
 
     return $ids;
 }
+
+/**
+ * Check whether the current user can use an image attachment in a frontend event gallery.
+ *
+ * Returns true if the user has edit_post capability on the attachment (e.g. admins/editors)
+ * or is the attachment author.
+ *
+ * @param int $attachment_id Attachment ID.
+ * @param int $user_id       Optional. Defaults to the current user.
+ * @return bool
+ */
+function vh360_user_can_use_event_gallery_image( $attachment_id, $user_id = 0 ) {
+    $attachment_id = absint( $attachment_id );
+    $user_id       = $user_id ? absint( $user_id ) : get_current_user_id();
+
+    if ( ! $attachment_id || ! $user_id ) {
+        return false;
+    }
+
+    if ( 'attachment' !== get_post_type( $attachment_id ) ) {
+        return false;
+    }
+
+    $mime_type = get_post_mime_type( $attachment_id );
+
+    if ( ! $mime_type || 0 !== strpos( (string) $mime_type, 'image/' ) ) {
+        return false;
+    }
+
+    if ( user_can( $user_id, 'edit_post', $attachment_id ) ) {
+        return true;
+    }
+
+    $attachment_author = (int) get_post_field( 'post_author', $attachment_id );
+
+    return $attachment_author === (int) $user_id;
+}
