@@ -247,6 +247,100 @@
     };
 
     /**
+     * Event image lightbox handler
+     */
+    const VH360EventImageLightbox = {
+
+        trigger: null,
+
+        /**
+         * Initialize
+         */
+        init: function() {
+            this.bindEvents();
+        },
+
+        /**
+         * Bind event handlers
+         */
+        bindEvents: function() {
+            var self = this;
+
+            $(document).on('click', '.vh360-event-featured-image-trigger', function() {
+                self.trigger = this;
+                self.open($(this).data('full-image'), $(this).data('image-alt'));
+            });
+
+            $(document).on('click', '.vh360-event-image-lightbox-close, .vh360-event-image-lightbox-backdrop', function() {
+                self.close();
+            });
+
+            $(document).on('keydown', function(event) {
+                if (event.key === 'Escape' && $('.vh360-event-image-lightbox').hasClass('is-open')) {
+                    self.close();
+                }
+            });
+        },
+
+        /**
+         * Ensure lightbox markup exists in DOM
+         */
+        ensureMarkup: function() {
+            if ($('.vh360-event-image-lightbox').length) {
+                return;
+            }
+
+            $('body').append(
+                '<div class="vh360-event-image-lightbox" role="dialog" aria-modal="true" aria-label="' + (vh360Events && vh360Events.i18n && vh360Events.i18n.imagePreview ? vh360Events.i18n.imagePreview : 'Event image preview') + '">' +
+                    '<div class="vh360-event-image-lightbox-backdrop"></div>' +
+                    '<div class="vh360-event-image-lightbox-content">' +
+                        '<button type="button" class="vh360-event-image-lightbox-close" aria-label="' + (vh360Events && vh360Events.i18n && vh360Events.i18n.closeImage ? vh360Events.i18n.closeImage : 'Close image preview') + '">&times;</button>' +
+                        '<img src="" alt="">' +
+                    '</div>' +
+                '</div>'
+            );
+        },
+
+        /**
+         * Open lightbox
+         */
+        open: function(imageUrl, imageAlt) {
+            if (!imageUrl) {
+                return;
+            }
+
+            this.ensureMarkup();
+
+            var $lightbox = $('.vh360-event-image-lightbox');
+            var $image    = $lightbox.find('img');
+
+            $image.attr('src', imageUrl);
+            $image.attr('alt', imageAlt || '');
+
+            $('body').addClass('vh360-event-lightbox-open');
+            $lightbox.addClass('is-open');
+            $lightbox.find('.vh360-event-image-lightbox-close').trigger('focus');
+        },
+
+        /**
+         * Close lightbox
+         */
+        close: function() {
+            var $lightbox = $('.vh360-event-image-lightbox');
+
+            $lightbox.removeClass('is-open');
+            $('body').removeClass('vh360-event-lightbox-open');
+
+            $lightbox.find('img').attr('src', '').attr('alt', '');
+
+            if (this.trigger) {
+                $(this.trigger).trigger('focus');
+                this.trigger = null;
+            }
+        }
+    };
+
+    /**
      * Initialize when document is ready
      */
     $(document).ready(function() {
@@ -254,6 +348,8 @@
             VH360Events.init();
             VH360EventRSVP.init();
         }
+
+        VH360EventImageLightbox.init();
     });
 
 })(jQuery);
