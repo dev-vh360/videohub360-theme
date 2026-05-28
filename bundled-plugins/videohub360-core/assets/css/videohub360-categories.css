@@ -9,7 +9,7 @@
 .vh360-category-grid {
     display: grid;
     gap: 20px;
-    grid-template-columns: repeat(2, 1fr); /* mobile: 2 columns */
+    grid-template-columns: 1fr;
     list-style: none;
     margin: 0;
     padding: 0;

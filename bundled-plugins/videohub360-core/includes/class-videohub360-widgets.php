@@ -1399,6 +1399,14 @@ class VideoHub360_Widgets {
      * Ensure category widget CSS is loaded.
      */
     private function ensure_categories_styles() {
+        if ( ! wp_style_is( 'vh360-variables' ) ) {
+            $variables_css_path = VIDEOHUB360_PLUGIN_DIR . 'assets/css/variables.css';
+            $variables_css_url  = VIDEOHUB360_ASSETS_URL . 'css/variables.css';
+            $variables_ver      = file_exists( $variables_css_path ) ? filemtime( $variables_css_path ) : VIDEOHUB360_VERSION;
+
+            wp_enqueue_style( 'vh360-variables', $variables_css_url, array(), $variables_ver );
+        }
+
         if ( ! wp_style_is( 'vh360-categories' ) ) {
             $css_path = VIDEOHUB360_PLUGIN_DIR . 'assets/css/videohub360-categories.css';
             $css_url  = VIDEOHUB360_ASSETS_URL . 'css/videohub360-categories.css';
