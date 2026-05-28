@@ -877,6 +877,22 @@
    Responsive
    =================================================================== */
 
+@media (max-width: 900px) {
+    .vh360-event-hero {
+        grid-template-columns: 1fr;
+        padding: 1.25rem;
+        gap: 1.25rem;
+    }
+
+    .vh360-event-featured-image {
+        max-height: 260px;
+    }
+
+    .vh360-event-quick-facts {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 768px) {
     .vh360-events-title {
         font-size: 1.75rem;
@@ -900,22 +916,8 @@
         grid-template-columns: 1fr;
     }
     
-    .vh360-event-hero {
-        grid-template-columns: 1fr;
-        padding: 1.25rem;
-        gap: 1.25rem;
-    }
-    
     .vh360-event-title {
         font-size: 1.75rem;
-    }
-    
-    .vh360-event-featured-image {
-        max-height: 260px;
-    }
-    
-    .vh360-event-quick-facts {
-        grid-template-columns: 1fr;
     }
     
     .vh360-event-content-wrapper {
@@ -923,10 +925,10 @@
     }
     
     .vh360-event-sidebar {
-        order: 2;
+        order: 1;
     }
     
     .vh360-event-main-content {
-        order: 1;
+        order: 2;
     }
 }
