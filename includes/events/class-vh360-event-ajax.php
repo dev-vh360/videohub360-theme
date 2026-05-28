@@ -48,6 +48,7 @@ class VH360_Event_Ajax {
         add_action('wp_ajax_vh360_get_event', array($this, 'get_event'));
         add_action('wp_ajax_vh360_load_events', array($this, 'load_events'));
         add_action('wp_ajax_vh360_upload_event_image', array($this, 'upload_event_image'));
+        add_action('wp_ajax_vh360_upload_event_gallery_images', array($this, 'upload_event_gallery_images'));
         
         // RSVP actions
         add_action('wp_ajax_vh360_event_rsvp', array($this, 'handle_rsvp'));
@@ -340,6 +341,33 @@ class VH360_Event_Ajax {
         $tags = wp_get_object_terms($event->ID, 'vh360_event_tag', array('fields' => 'names'));
         $event_data['tags'] = is_array($tags) ? $tags : array();
 
+        // Get gallery images
+        $gallery_ids = get_post_meta($event->ID, '_vh360_event_gallery_image_ids', true);
+
+        if (!is_array($gallery_ids)) {
+            $gallery_ids = array();
+        }
+
+        $gallery_images = array();
+
+        foreach ($gallery_ids as $image_id) {
+            $image_id = absint($image_id);
+
+            if (!$image_id) {
+                continue;
+            }
+
+            $gallery_images[] = array(
+                'id'        => $image_id,
+                'thumb_url' => wp_get_attachment_image_url($image_id, 'thumbnail'),
+                'full_url'  => wp_get_attachment_image_url($image_id, 'full'),
+                'alt'       => get_post_meta($image_id, '_wp_attachment_image_alt', true),
+            );
+        }
+
+        $event_data['gallery_image_ids'] = $gallery_ids;
+        $event_data['gallery_images']    = $gallery_images;
+
         wp_send_json_success($event_data);
     }
 
@@ -498,6 +526,17 @@ class VH360_Event_Ajax {
         // Handle checkbox
         $registration_required = isset($data['registration_required']) && $data['registration_required'] ? '1' : '0';
         update_post_meta($event_id, '_vh360_event_registration_required', $registration_required);
+
+        // Save gallery image IDs
+        if (isset($data['gallery_image_ids'])) {
+            $gallery_ids = vh360_sanitize_event_gallery_image_ids($data['gallery_image_ids']);
+
+            if (!empty($gallery_ids)) {
+                update_post_meta($event_id, '_vh360_event_gallery_image_ids', $gallery_ids);
+            } else {
+                delete_post_meta($event_id, '_vh360_event_gallery_image_ids');
+            }
+        }
     }
 
     /**
@@ -745,6 +784,94 @@ class VH360_Event_Ajax {
             'message'        => __('Image uploaded successfully', 'videohub360-theme'),
             'attachment_id'  => $attachment_id,
             'attachment_url' => $attachment_url,
+        ));
+    }
+
+    /**
+     * Upload one or more event gallery images.
+     */
+    public function upload_event_gallery_images() {
+        // Verify nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'vh360_event_nonce')) {
+            wp_send_json_error(array('message' => __('Security check failed', 'videohub360-theme')));
+            return;
+        }
+
+        // Check if user is logged in
+        if (!is_user_logged_in()) {
+            wp_send_json_error(array('message' => __('You must be logged in to upload images', 'videohub360-theme')));
+            return;
+        }
+
+        // Check event-level permission
+        $event_id = isset($_POST['event_id']) ? absint($_POST['event_id']) : 0;
+
+        if ($event_id) {
+            if (!VH360_Event_Capabilities::can_edit_event($event_id)) {
+                wp_send_json_error(array('message' => __('You do not have permission to edit this event', 'videohub360-theme')));
+                return;
+            }
+        } else {
+            if (!vh360_user_can_create_events()) {
+                wp_send_json_error(array('message' => __('You do not have permission to create events', 'videohub360-theme')));
+                return;
+            }
+        }
+
+        // Check if file was uploaded
+        if (empty($_FILES['gallery_image'])) {
+            wp_send_json_error(array('message' => __('No image file provided', 'videohub360-theme')));
+            return;
+        }
+
+        // Check for upload errors
+        if ($_FILES['gallery_image']['error'] !== UPLOAD_ERR_OK) {
+            wp_send_json_error(array('message' => __('Image upload failed', 'videohub360-theme')));
+            return;
+        }
+
+        // Validate file type using WordPress function for security
+        $file_path    = $_FILES['gallery_image']['tmp_name'];
+        $wp_filetype  = wp_check_filetype_and_ext($file_path, $_FILES['gallery_image']['name']);
+        $allowed_types = array('image/jpeg', 'image/png', 'image/gif', 'image/webp');
+
+        if (!$wp_filetype['type'] || !in_array($wp_filetype['type'], $allowed_types, true)) {
+            wp_send_json_error(array('message' => __('Invalid file type. Only JPG, PNG, GIF, and WebP are allowed', 'videohub360-theme')));
+            return;
+        }
+
+        // Additional validation: verify it's actually an image
+        $image_info = getimagesize($file_path);
+        if ($image_info === false) {
+            wp_send_json_error(array('message' => __('File is not a valid image', 'videohub360-theme')));
+            return;
+        }
+
+        // Validate file size (5MB max)
+        $max_size = 5 * 1024 * 1024;
+        if ($_FILES['gallery_image']['size'] > $max_size) {
+            wp_send_json_error(array('message' => __('File size too large. Maximum 5MB allowed', 'videohub360-theme')));
+            return;
+        }
+
+        // Handle the upload
+        require_once ABSPATH . 'wp-admin/includes/image.php';
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        require_once ABSPATH . 'wp-admin/includes/media.php';
+
+        $attachment_id = media_handle_upload('gallery_image', $event_id ? $event_id : 0);
+
+        if (is_wp_error($attachment_id)) {
+            wp_send_json_error(array('message' => $attachment_id->get_error_message()));
+            return;
+        }
+
+        wp_send_json_success(array(
+            'message'   => __('Image uploaded successfully', 'videohub360-theme'),
+            'id'        => $attachment_id,
+            'thumb_url' => wp_get_attachment_image_url($attachment_id, 'thumbnail'),
+            'full_url'  => wp_get_attachment_image_url($attachment_id, 'full'),
+            'alt'       => get_post_meta($attachment_id, '_wp_attachment_image_alt', true),
         ));
     }
 }

@@ -266,7 +266,7 @@
         bindEvents: function() {
             var self = this;
 
-            $(document).on('click', '.vh360-event-featured-image-trigger', function() {
+            $(document).on('click', '.vh360-event-featured-image-trigger, .vh360-event-image-lightbox-trigger', function() {
                 self.trigger = this;
                 self.open($(this).data('full-image'), $(this).data('image-alt'));
             });

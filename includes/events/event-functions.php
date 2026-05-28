@@ -496,3 +496,50 @@ function vh360_get_event_status_badge($event_id) {
         esc_html($status_labels[$status])
     );
 }
+
+/**
+ * Sanitize an array (or comma-separated string) of event gallery image attachment IDs.
+ *
+ * Validates that each ID is a real image attachment, removes duplicates, and
+ * limits the result to a maximum of 5 IDs.
+ *
+ * @param array|string $raw_ids Raw array or comma-separated string of attachment IDs.
+ * @return int[] Sanitized array of attachment IDs (max 5).
+ */
+function vh360_sanitize_event_gallery_image_ids( $raw_ids ) {
+    if ( is_string( $raw_ids ) ) {
+    $raw_ids = explode( ',', $raw_ids );
+    }
+
+    if ( ! is_array( $raw_ids ) ) {
+    return array();
+    }
+
+    $ids = array();
+
+    foreach ( $raw_ids as $id ) {
+    $id = absint( $id );
+
+    if ( ! $id || in_array( $id, $ids, true ) ) {
+        continue;
+    }
+
+    if ( 'attachment' !== get_post_type( $id ) ) {
+        continue;
+    }
+
+    $mime_type = get_post_mime_type( $id );
+
+    if ( ! $mime_type || 0 !== strpos( (string) $mime_type, 'image/' ) ) {
+        continue;
+    }
+
+    $ids[] = $id;
+
+    if ( count( $ids ) >= 5 ) {
+        break;
+    }
+    }
+
+    return $ids;
+}
