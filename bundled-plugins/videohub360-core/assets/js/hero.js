@@ -386,19 +386,15 @@
      */
     function initHeroBanners() {
         const heroes = document.querySelectorAll('.vh360-hero-slider, .vh360-hero-single');
-        const processedHeroes = new Set();
-        
+
         heroes.forEach(element => {
-            // Avoid duplicate initialization
-            if (processedHeroes.has(element)) return;
-            
-            // Check if it's a hero container (has slides)
+            // Skip elements that already have an active instance
+            if (element._vh360HeroInstance && !element._vh360HeroInstance.isDestroyed) {
+                return;
+            }
+
             if (element.querySelector('.vh360-hero-slide')) {
-                const instance = new VH360Hero(element);
-                processedHeroes.add(element);
-                
-                // Store instance on element for potential cleanup
-                element._vh360HeroInstance = instance;
+                element._vh360HeroInstance = new VH360Hero(element);
             }
         });
     }
