@@ -639,12 +639,16 @@
                 ? vh360EventsDashboard.i18n.galleryRemoveImage
                 : 'Remove image';
 
-            var $item = $(
-                '<div class="vh360-event-gallery-preview-item" data-image-id="' + imageData.id + '">' +
-                    '<img src="' + imageData.thumb_url + '" alt="' + (imageData.alt || '') + '">' +
-                    '<button type="button" class="vh360-event-gallery-remove" data-image-id="' + imageData.id + '" aria-label="' + removeLabel + '">&times;</button>' +
-                '</div>'
-            );
+            var $img = $('<img>').attr('src', imageData.thumb_url).attr('alt', imageData.alt || '');
+            var $btn = $('<button>').attr('type', 'button')
+                .addClass('vh360-event-gallery-remove')
+                .attr('data-image-id', imageData.id)
+                .attr('aria-label', removeLabel)
+                .text('\u00d7');
+            var $item = $('<div>').addClass('vh360-event-gallery-preview-item')
+                .attr('data-image-id', imageData.id)
+                .append($img)
+                .append($btn);
 
             $('#vh360-event-gallery-preview').append($item);
             this.updateCounter();

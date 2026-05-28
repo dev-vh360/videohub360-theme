@@ -72,12 +72,15 @@
             ? vh360EventGalleryAdmin.i18n.removeImage
             : 'Remove image';
 
-        var $item = $(
-            '<div class="vh360-event-gallery-admin-item" data-id="' + id + '">' +
-                '<img src="' + thumbUrl + '" alt="' + (alt || '') + '">' +
-                '<button type="button" class="vh360-event-gallery-admin-remove" aria-label="' + removeLabel + '">&times;</button>' +
-            '</div>'
-        );
+        var $img = $('<img>').attr('src', thumbUrl).attr('alt', alt || '');
+        var $btn = $('<button>').attr('type', 'button')
+            .addClass('vh360-event-gallery-admin-remove')
+            .attr('aria-label', removeLabel)
+            .text('\u00d7');
+        var $item = $('<div>').addClass('vh360-event-gallery-admin-item')
+            .attr('data-id', id)
+            .append($img)
+            .append($btn);
 
         $('#vh360-event-gallery-admin-preview').append($item);
     }
