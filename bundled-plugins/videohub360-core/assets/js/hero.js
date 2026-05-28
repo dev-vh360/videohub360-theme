@@ -297,42 +297,130 @@
         }
     }
     
+    // Guard to ensure close/overlay/keydown handlers are only bound once
+    let heroLightboxGlobalEventsBound = false;
+
+    /**
+     * Initialize image lightbox for hero banners
+     */
+    function initHeroImageLightbox() {
+        const triggers = document.querySelectorAll('[data-vh360-hero-lightbox]');
+
+        if (!triggers.length) {
+            return;
+        }
+
+        let lightbox = document.querySelector('.vh360-hero-lightbox');
+
+        if (!lightbox) {
+            lightbox = document.createElement('div');
+            lightbox.className = 'vh360-hero-lightbox';
+            lightbox.setAttribute('role', 'dialog');
+            lightbox.setAttribute('aria-modal', 'true');
+            lightbox.innerHTML = '<img alt=""><button type="button" class="vh360-hero-lightbox-close" aria-label="Close">&times;</button>';
+            document.body.appendChild(lightbox);
+        }
+
+        const image = lightbox.querySelector('img');
+        const closeButton = lightbox.querySelector('.vh360-hero-lightbox-close');
+
+        const close = () => {
+            lightbox.classList.remove('is-open');
+            image.src = '';
+            document.body.classList.remove('vh360-hero-lightbox-open');
+        };
+
+        triggers.forEach((trigger) => {
+            if (trigger.dataset.vh360HeroLightboxBound === 'true') {
+                return;
+            }
+            trigger.dataset.vh360HeroLightboxBound = 'true';
+
+            trigger.addEventListener('click', () => {
+                const src = trigger.getAttribute('data-vh360-hero-lightbox');
+
+                if (!src) {
+                    return;
+                }
+
+                // Validate URL using URL constructor to prevent XSS via javascript: URIs
+                let safeUrl;
+                try {
+                    const parsed = new URL(src, window.location.href);
+                    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+                        return;
+                    }
+                    safeUrl = parsed.href;
+                } catch (e) {
+                    return;
+                }
+
+                image.src = safeUrl;
+                lightbox.classList.add('is-open');
+                document.body.classList.add('vh360-hero-lightbox-open');
+                closeButton.focus();
+            });
+        });
+
+        if (!heroLightboxGlobalEventsBound) {
+            heroLightboxGlobalEventsBound = true;
+
+            closeButton.addEventListener('click', close);
+
+            lightbox.addEventListener('click', (event) => {
+                if (event.target === lightbox) {
+                    close();
+                }
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && lightbox.classList.contains('is-open')) {
+                    close();
+                }
+            });
+        }
+    }
+
     /**
      * Initialize all hero banners on the page
      */
     function initHeroBanners() {
         const heroes = document.querySelectorAll('.vh360-hero-slider, .vh360-hero-single');
-        const processedHeroes = new Set();
-        
+
         heroes.forEach(element => {
-            // Avoid duplicate initialization
-            if (processedHeroes.has(element)) return;
-            
-            // Check if it's a hero container (has slides)
+            // Skip elements that already have an active instance
+            if (element._vh360HeroInstance && !element._vh360HeroInstance.isDestroyed) {
+                return;
+            }
+
             if (element.querySelector('.vh360-hero-slide')) {
-                const instance = new VH360Hero(element);
-                processedHeroes.add(element);
-                
-                // Store instance on element for potential cleanup
-                element._vh360HeroInstance = instance;
+                element._vh360HeroInstance = new VH360Hero(element);
             }
         });
     }
     
     // Initialize on DOM ready
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initHeroBanners);
+        document.addEventListener('DOMContentLoaded', function() {
+            initHeroBanners();
+            initHeroImageLightbox();
+        });
     } else {
         initHeroBanners();
+        initHeroImageLightbox();
     }
     
     // Re-initialize on dynamic content (Elementor preview, AJAX)
     if (window.elementorFrontend && window.elementorFrontend.hooks && typeof window.elementorFrontend.hooks.addAction === 'function') {
-        window.elementorFrontend.hooks.addAction('frontend/element_ready/widget', initHeroBanners);
+        window.elementorFrontend.hooks.addAction('frontend/element_ready/widget', function() {
+            initHeroBanners();
+            initHeroImageLightbox();
+        });
     }
     
     // Expose for manual initialization
     window.VH360Hero = VH360Hero;
     window.initVH360HeroBanners = initHeroBanners;
+    window.initVH360HeroImageLightbox = initHeroImageLightbox;
     
 })();

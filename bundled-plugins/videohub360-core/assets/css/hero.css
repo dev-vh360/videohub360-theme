@@ -43,6 +43,76 @@
     height: 100%;
 }
 
+/* Image / Banner */
+.vh360-hero-image-link,
+.vh360-hero-image-expand {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.vh360-hero-image-expand {
+    border: 0;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    cursor: zoom-in;
+    text-align: inherit;
+}
+
+.vh360-hero-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Prevent page scroll when lightbox is open */
+body.vh360-hero-lightbox-open {
+    overflow: hidden;
+}
+
+/* Lightbox */
+.vh360-hero-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.85);
+}
+
+.vh360-hero-lightbox.is-open {
+    display: flex;
+}
+
+.vh360-hero-lightbox img {
+    display: block;
+    max-width: min(1200px, 92vw);
+    max-height: 88vh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 12px;
+}
+
+.vh360-hero-lightbox-close {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #111111;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+}
+
 /* Focus styles for accessibility - removed from containers to prevent unwanted outlines */
 
 /* Focus styles for interactive elements */
@@ -104,7 +174,6 @@
         scroll-behavior: auto;
     }
     
-    .vh360-hero-play-overlay,
     .vh360-hero-arrow,
     .vh360-hero-cta,
     .vh360-hero-dot {
@@ -124,7 +193,7 @@
 @media print {
     .vh360-hero-arrows,
     .vh360-hero-dots,
-    .vh360-hero-play-overlay {
+    .vh360-hero-lightbox {
         display: none;
     }
     

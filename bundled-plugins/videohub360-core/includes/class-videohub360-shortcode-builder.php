@@ -166,22 +166,59 @@ class VideoHub360_Shortcode_Builder {
                 'description' => __('Video/image aspect ratio', 'videohub360')
             ),
             'video_type' => array(
-                'label' => __('Video Type', 'videohub360'),
+                'label' => __('Media Type', 'videohub360'),
                 'type' => 'select',
                 'options' => array(
-                    'thumbnail' => __('Thumbnail', 'videohub360'),
+                    'image' => __('Image / Banner', 'videohub360'),
                     'mp4' => __('MP4 Video', 'videohub360'),
-                    'embed' => __('Embed', 'videohub360'),
+                    'embed' => __('Embed Video', 'videohub360'),
                     'html' => __('HTML', 'videohub360')
                 ),
-                'default' => 'thumbnail',
+                'default' => 'image',
                 'description' => __('Type of media to display', 'videohub360')
             ),
             'poster' => array(
-                'label' => __('Poster URL', 'videohub360'),
+                'label' => __('Image / Poster URL', 'videohub360'),
                 'type' => 'text',
                 'default' => '',
-                'description' => __('Poster/thumbnail image URL', 'videohub360')
+                'description' => __('Image/banner URL or video poster URL', 'videohub360')
+            ),
+            'image_action' => array(
+                'label' => __('Image Click Action', 'videohub360'),
+                'type' => 'select',
+                'options' => array(
+                    'none' => __('No action', 'videohub360'),
+                    'link' => __('Open link', 'videohub360'),
+                    'lightbox' => __('Expand image', 'videohub360')
+                ),
+                'default' => 'none',
+                'description' => __('Image click behavior: none, link, or lightbox.', 'videohub360')
+            ),
+            'image_link_url' => array(
+                'label' => __('Image Link URL', 'videohub360'),
+                'type' => 'text',
+                'default' => '',
+                'description' => __('URL to open when image is clicked (requires image_action="link").', 'videohub360')
+            ),
+            'image_link_new_tab' => array(
+                'label' => __('Image Link New Tab', 'videohub360'),
+                'type' => 'select',
+                'options' => array(
+                    'no' => __('No', 'videohub360'),
+                    'yes' => __('Yes', 'videohub360')
+                ),
+                'default' => 'no',
+                'description' => __('Open image link in a new tab.', 'videohub360')
+            ),
+            'image_link_nofollow' => array(
+                'label' => __('Image Link Nofollow', 'videohub360'),
+                'type' => 'select',
+                'options' => array(
+                    'no' => __('No', 'videohub360'),
+                    'yes' => __('Yes', 'videohub360')
+                ),
+                'default' => 'no',
+                'description' => __('Add rel="nofollow" to the image link.', 'videohub360')
             ),
             'video_url' => array(
                 'label' => __('Video URL', 'videohub360'),

@@ -2682,21 +2682,21 @@ class VideoHub360_Admin {
             <div class="vh360-shortcode-category vh360-category-hero">
                 <h2><span class="vh360-section-icon">🎬</span><?php echo esc_html__('Hero Banner & Slider', 'videohub360'); ?></h2>
                 <p class="vh360-category-description">
-                    <?php echo esc_html__('Create stunning hero banners and sliders with video backgrounds, thumbnails, or custom content.', 'videohub360'); ?>
+                    <?php echo esc_html__('Create stunning hero banners and sliders with image banners, video backgrounds, embeds, or custom content.', 'videohub360'); ?>
                 </p>
                 
                 <!-- Basic Hero -->
                 <div class="vh360-shortcode-item">
                     <h3><?php echo esc_html__('Basic Hero Banner', 'videohub360'); ?></h3>
-                    <p><?php echo esc_html__('Simple hero banner with image thumbnail and content on the right.', 'videohub360'); ?></p>
+                    <p><?php echo esc_html__('Simple hero banner with image and content on the right.', 'videohub360'); ?></p>
                     <div class="vh360-shortcode-example">
-                        <code class="vh360-code-block">[videohub360_hero poster="https://videohub360.com/poster.jpg" headline="Welcome to Our Site" subhead="Discover amazing video content" cta1_label="Watch Now" cta1_url="/videos/"]</code>
-                        <button type="button" class="button vh360-copy-btn" data-shortcode='[videohub360_hero poster="https://videohub360.com/poster.jpg" headline="Welcome to Our Site" subhead="Discover amazing video content" cta1_label="Watch Now" cta1_url="/videos/"]'>
+                        <code class="vh360-code-block">[videohub360_hero video_type="image" poster="https://videohub360.com/poster.jpg" image_action="link" image_link_url="/videos/" headline="Welcome to Our Site" subhead="Discover amazing video content" cta1_label="Watch Now" cta1_url="/videos/"]</code>
+                        <button type="button" class="button vh360-copy-btn" data-shortcode='[videohub360_hero video_type="image" poster="https://videohub360.com/poster.jpg" image_action="link" image_link_url="/videos/" headline="Welcome to Our Site" subhead="Discover amazing video content" cta1_label="Watch Now" cta1_url="/videos/"]'>
                             <span class="dashicons dashicons-clipboard"></span> <?php echo esc_html__('Copy', 'videohub360'); ?>
                         </button>
                     </div>
                     <div style="margin-top: 10px;">
-                        <button type="button" class="button vh360-preview-btn" data-shortcode='[videohub360_hero poster="https://videohub360.com/poster.jpg" headline="Welcome to Our Site" subhead="Discover amazing video content" cta1_label="Watch Now" cta1_url="/videos/"]'>
+                        <button type="button" class="button vh360-preview-btn" data-shortcode='[videohub360_hero video_type="image" poster="https://videohub360.com/poster.jpg" image_action="link" image_link_url="/videos/" headline="Welcome to Our Site" subhead="Discover amazing video content" cta1_label="Watch Now" cta1_url="/videos/"]'>
                             <span class="dashicons dashicons-visibility"></span> <?php echo esc_html__('Preview', 'videohub360'); ?>
                         </button>
                     </div>
@@ -2722,6 +2722,18 @@ class VideoHub360_Admin {
                     <div class="vh360-shortcode-example">
                         <code class="vh360-code-block">[videohub360_hero mode="slider" autoplay="yes" autoplay_delay="5000" show_arrows="yes" show_dots="yes" transition_type="slide"]</code>
                         <button type="button" class="button vh360-copy-btn" data-shortcode='[videohub360_hero mode="slider" autoplay="yes" autoplay_delay="5000" show_arrows="yes" show_dots="yes" transition_type="slide"]'>
+                            <span class="dashicons dashicons-clipboard"></span> <?php echo esc_html__('Copy', 'videohub360'); ?>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Expandable Image Hero -->
+                <div class="vh360-shortcode-item">
+                    <h3><?php echo esc_html__('Expandable Image Banner (Lightbox)', 'videohub360'); ?></h3>
+                    <p><?php echo esc_html__('Hero banner with a click-to-expand image lightbox.', 'videohub360'); ?></p>
+                    <div class="vh360-shortcode-example">
+                        <code class="vh360-code-block">[videohub360_hero video_type="image" poster="https://videohub360.com/banner.jpg" image_action="lightbox" headline="Click to Expand" cta1_label="Learn More" cta1_url="/about/"]</code>
+                        <button type="button" class="button vh360-copy-btn" data-shortcode='[videohub360_hero video_type="image" poster="https://videohub360.com/banner.jpg" image_action="lightbox" headline="Click to Expand" cta1_label="Learn More" cta1_url="/about/"]'>
                             <span class="dashicons dashicons-clipboard"></span> <?php echo esc_html__('Copy', 'videohub360'); ?>
                         </button>
                     </div>
@@ -2766,15 +2778,39 @@ class VideoHub360_Admin {
                             </tr>
                             <tr>
                                 <td><code>video_type</code></td>
-                                <td>thumbnail</td>
-                                <td>thumbnail, mp4, embed, html</td>
+                                <td>image</td>
+                                <td>image, mp4, embed, html</td>
                                 <td><?php echo esc_html__('Type of media to display', 'videohub360'); ?></td>
                             </tr>
                             <tr>
                                 <td><code>poster</code></td>
                                 <td></td>
                                 <td>URL</td>
-                                <td><?php echo esc_html__('Poster/thumbnail image URL', 'videohub360'); ?></td>
+                                <td><?php echo esc_html__('Image/banner URL or video poster URL', 'videohub360'); ?></td>
+                            </tr>
+                            <tr>
+                                <td><code>image_action</code></td>
+                                <td>none</td>
+                                <td>none, link, lightbox</td>
+                                <td><?php echo esc_html__('Image click behavior: no action, open link, or expand in lightbox', 'videohub360'); ?></td>
+                            </tr>
+                            <tr>
+                                <td><code>image_link_url</code></td>
+                                <td></td>
+                                <td>URL</td>
+                                <td><?php echo esc_html__('URL to open when image is clicked (requires image_action="link")', 'videohub360'); ?></td>
+                            </tr>
+                            <tr>
+                                <td><code>image_link_new_tab</code></td>
+                                <td>no</td>
+                                <td>yes, no</td>
+                                <td><?php echo esc_html__('Open image link in a new tab', 'videohub360'); ?></td>
+                            </tr>
+                            <tr>
+                                <td><code>image_link_nofollow</code></td>
+                                <td>no</td>
+                                <td>yes, no</td>
+                                <td><?php echo esc_html__('Add rel="nofollow" to the image link', 'videohub360'); ?></td>
                             </tr>
                             <tr>
                                 <td><code>video_url</code></td>

@@ -221,7 +221,7 @@ class VideoHub360_Hero_Renderer {
      */
     private static function get_default_slide() {
         return array(
-            'video_type' => 'thumbnail',
+            'video_type' => 'image',
             'poster' => '',
             'video_url' => '',
             'embed_url' => '',
@@ -230,8 +230,10 @@ class VideoHub360_Hero_Renderer {
             'loop' => false,
             'controls' => true,
             'preload' => 'metadata',
-            'click_action' => 'open_single',
-            'link_url' => '',
+            'image_action' => 'none',
+            'image_link_url' => '',
+            'image_link_new_tab' => false,
+            'image_link_nofollow' => false,
             'eyebrow' => '',
             'headline' => __('Welcome to VideoHub360', 'videohub360'),
             'subhead' => __('Discover amazing video content', 'videohub360'),
@@ -255,13 +257,32 @@ class VideoHub360_Hero_Renderer {
         $defaults = self::get_default_slide();
         $slide = wp_parse_args($slide, $defaults);
         
+        // Normalize old thumbnail type to image
+        if ($slide['video_type'] === 'thumbnail') {
+            $slide['video_type'] = 'image';
+        }
+        
+        // Validate media type
+        $allowed_media_types = array('image', 'mp4', 'embed', 'html');
+        $slide['video_type'] = in_array($slide['video_type'], $allowed_media_types, true)
+            ? $slide['video_type']
+            : 'image';
+        
         // Sanitize all fields
-        $slide['video_type'] = sanitize_text_field($slide['video_type']);
         $slide['poster'] = esc_url_raw($slide['poster']);
         $slide['video_url'] = esc_url_raw($slide['video_url']);
         $slide['embed_url'] = self::sanitize_embed_url($slide['embed_url']);
         $slide['custom_html'] = wp_kses($slide['custom_html'], self::$allowed_html);
-        $slide['link_url'] = esc_url_raw($slide['link_url']);
+        
+        // Sanitize image action fields
+        $allowed_image_actions = array('none', 'link', 'lightbox');
+        $slide['image_action'] = isset($slide['image_action']) && in_array($slide['image_action'], $allowed_image_actions, true)
+            ? $slide['image_action']
+            : 'none';
+        $slide['image_link_url'] = esc_url_raw($slide['image_link_url']);
+        $slide['image_link_new_tab'] = !empty($slide['image_link_new_tab']);
+        $slide['image_link_nofollow'] = !empty($slide['image_link_nofollow']);
+        
         $slide['eyebrow'] = sanitize_text_field($slide['eyebrow']);
         $slide['headline'] = sanitize_text_field($slide['headline']);
         $slide['subhead'] = sanitize_text_field($slide['subhead']);
@@ -536,33 +557,6 @@ class VideoHub360_Hero_Renderer {
                 height: 100%;
                 object-fit: cover;
                 display: block;
-            }
-            
-            .<?php echo esc_attr($instance_id); ?> .vh360-hero-play-overlay {
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                width: 60px;
-                height: 60px;
-                background: rgba(255, 255, 255, 0.9);
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                cursor: pointer;
-                transition: transform 0.2s ease;
-            }
-            
-            .<?php echo esc_attr($instance_id); ?> .vh360-hero-play-overlay:hover {
-                transform: translate(-50%, -50%) scale(1.1);
-            }
-            
-            .<?php echo esc_attr($instance_id); ?> .vh360-hero-play-overlay svg {
-                width: 24px;
-                height: 24px;
-                fill: #e53935;
-                margin-left: 3px;
             }
             
             /* Slider specific styles */
@@ -936,36 +930,63 @@ class VideoHub360_Hero_Renderer {
                 self::render_custom_html($slide);
                 break;
             
-            case 'thumbnail':
+            case 'image':
             default:
-                self::render_thumbnail($slide);
+                self::render_image($slide);
                 break;
         }
     }
     
     /**
-     * Render thumbnail with play overlay
+     * Render image / banner (no play overlay)
      * 
      * @param array $slide Slide data
      */
-    private static function render_thumbnail($slide) {
-        // Use poster if provided, otherwise use a default placeholder
+    private static function render_image($slide) {
         $poster = !empty($slide['poster']) ? $slide['poster'] : '';
-        $link_url = !empty($slide['link_url']) ? $slide['link_url'] : '#';
-        ?>
-        <a href="<?php echo esc_url($link_url); ?>" class="vh360-hero-thumbnail-link">
-            <?php if ($poster): ?>
-                <img src="<?php echo esc_url($poster); ?>" alt="" class="vh360-hero-poster">
-            <?php else: ?>
-                <div class="vh360-hero-poster vh360-hero-poster-placeholder"></div>
-            <?php endif; ?>
-            <div class="vh360-hero-play-overlay">
-                <svg viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z"/>
-                </svg>
-            </div>
-        </a>
-        <?php
+        
+        ob_start();
+        
+        if ($poster) {
+            ?>
+            <img src="<?php echo esc_url($poster); ?>" alt="" class="vh360-hero-image">
+            <?php
+        } else {
+            ?>
+            <div class="vh360-hero-poster vh360-hero-poster-placeholder"></div>
+            <?php
+        }
+        
+        $image_html = ob_get_clean();
+        
+        if ($slide['image_action'] === 'link' && !empty($slide['image_link_url'])) {
+            $target = !empty($slide['image_link_new_tab']) ? ' target="_blank"' : '';
+            $rel_parts = array();
+            
+            if (!empty($slide['image_link_new_tab'])) {
+                $rel_parts[] = 'noopener';
+            }
+            
+            if (!empty($slide['image_link_nofollow'])) {
+                $rel_parts[] = 'nofollow';
+            }
+            
+            $rel = !empty($rel_parts) ? ' rel="' . esc_attr(implode(' ', $rel_parts)) . '"' : '';
+            
+            echo '<a href="' . esc_url($slide['image_link_url']) . '" class="vh360-hero-image-link"' . $target . $rel . '>';
+            echo $image_html;
+            echo '</a>';
+            return;
+        }
+        
+        if ($slide['image_action'] === 'lightbox' && !empty($poster)) {
+            echo '<button type="button" class="vh360-hero-image-expand" data-vh360-hero-lightbox="' . esc_attr($poster) . '" aria-label="' . esc_attr__('Expand image', 'videohub360') . '">';
+            echo $image_html;
+            echo '</button>';
+            return;
+        }
+        
+        echo $image_html;
     }
     
     /**
@@ -975,7 +996,7 @@ class VideoHub360_Hero_Renderer {
      */
     private static function render_mp4_video($slide) {
         if (empty($slide['video_url'])) {
-            self::render_thumbnail($slide);
+            self::render_image($slide);
             return;
         }
         ?>
@@ -1010,7 +1031,7 @@ class VideoHub360_Hero_Renderer {
         }
         
         if (empty($embed_url)) {
-            self::render_thumbnail($slide);
+            self::render_image($slide);
             return;
         }
         ?>
@@ -1031,7 +1052,7 @@ class VideoHub360_Hero_Renderer {
      */
     private static function render_custom_html($slide) {
         if (empty($slide['custom_html'])) {
-            self::render_thumbnail($slide);
+            self::render_image($slide);
             return;
         }
         

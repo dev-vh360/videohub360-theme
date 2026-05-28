@@ -71,21 +71,21 @@ class Elementor_VideoHub360_Hero_Widget extends \Elementor\Widget_Base {
         
         $repeater = new \Elementor\Repeater();
         
-        // Video Settings
+        // Media Settings
         $repeater->add_control('video_type', [
-            'label' => __('Video Type', 'videohub360'),
+            'label' => __('Media Type', 'videohub360'),
             'type' => \Elementor\Controls_Manager::SELECT,
-            'default' => 'thumbnail',
+            'default' => 'image',
             'options' => [
-                'thumbnail' => __('Thumbnail (Click to Play)', 'videohub360'),
+                'image' => __('Image / Banner', 'videohub360'),
                 'mp4' => __('MP4 Video', 'videohub360'),
-                'embed' => __('Embed (YouTube/Vimeo/Twitch)', 'videohub360'),
+                'embed' => __('Embed Video', 'videohub360'),
                 'html' => __('Custom HTML', 'videohub360'),
             ],
         ]);
         
         $repeater->add_control('poster', [
-            'label' => __('Poster Image', 'videohub360'),
+            'label' => __('Image / Poster', 'videohub360'),
             'type' => \Elementor\Controls_Manager::MEDIA,
             'default' => [
                 'url' => '',
@@ -146,12 +146,27 @@ class Elementor_VideoHub360_Hero_Widget extends \Elementor\Widget_Base {
             ],
         ]);
         
-        $repeater->add_control('link_url', [
-            'label' => __('Link URL (for thumbnail)', 'videohub360'),
+        $repeater->add_control('image_action', [
+            'label' => __('Image Click Action', 'videohub360'),
+            'type' => \Elementor\Controls_Manager::SELECT,
+            'default' => 'none',
+            'options' => [
+                'none'     => __('No action', 'videohub360'),
+                'link'     => __('Open link', 'videohub360'),
+                'lightbox' => __('Expand image', 'videohub360'),
+            ],
+            'condition' => [
+                'video_type' => 'image',
+            ],
+        ]);
+        
+        $repeater->add_control('image_link_url', [
+            'label' => __('Image Link URL', 'videohub360'),
             'type' => \Elementor\Controls_Manager::URL,
             'placeholder' => 'https://videohub360.com',
             'condition' => [
-                'video_type' => 'thumbnail',
+                'video_type' => 'image',
+                'image_action' => 'link',
             ],
         ]);
         
@@ -697,7 +712,10 @@ class Elementor_VideoHub360_Hero_Widget extends \Elementor\Widget_Base {
                     'loop' => isset($slide['video_loop']) && $slide['video_loop'] === 'yes',
                     'controls' => isset($slide['video_controls']) && $slide['video_controls'] === 'yes',
                     'preload' => 'metadata',
-                    'link_url' => isset($slide['link_url']['url']) ? $slide['link_url']['url'] : '',
+                    'image_action' => isset($slide['image_action']) ? $slide['image_action'] : 'none',
+                    'image_link_url' => isset($slide['image_link_url']['url']) ? $slide['image_link_url']['url'] : '',
+                    'image_link_new_tab' => !empty($slide['image_link_url']['is_external']),
+                    'image_link_nofollow' => !empty($slide['image_link_url']['nofollow']),
                     'icon_url' => isset($slide['icon_url']['url']) ? $slide['icon_url']['url'] : '',
                     'eyebrow' => isset($slide['eyebrow']) ? $slide['eyebrow'] : '',
                     'headline' => isset($slide['headline']) ? $slide['headline'] : '',

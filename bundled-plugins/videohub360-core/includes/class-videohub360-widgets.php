@@ -515,7 +515,7 @@ class VideoHub360_Widgets {
             'pause_on_hover' => 'yes',             // yes|no
             
             // Single slide content (for mode=single)
-            'video_type' => 'thumbnail',           // thumbnail|mp4|embed|html
+            'video_type' => 'image',               // image|mp4|embed|html
             'poster' => '',                        // poster image URL
             'video_url' => '',                     // MP4 URL
             'embed_url' => '',                     // YouTube/Vimeo/Twitch URL
@@ -524,8 +524,10 @@ class VideoHub360_Widgets {
             'video_loop' => 'no',                  // yes|no
             'video_controls' => 'yes',             // yes|no
             'video_preload' => 'metadata',         // none|metadata|auto
-            'click_action' => 'open_single',       // open_single|open_modal|swap_to_video
-            'link_url' => '',                      // Link URL for thumbnail click
+            'image_action' => 'none',              // none|link|lightbox
+            'image_link_url' => '',                // Link URL for image click
+            'image_link_new_tab' => 'no',          // yes|no
+            'image_link_nofollow' => 'no',         // yes|no
             
             // Content
             'eyebrow' => '',                       // Badge/eyebrow text
@@ -542,6 +544,11 @@ class VideoHub360_Widgets {
             // Multi-slide support
             'include' => '',                       // Post IDs for slide content (future)
         ), $atts, 'videohub360_hero');
+        
+        // Normalize old thumbnail type to image
+        if ($atts['video_type'] === 'thumbnail') {
+            $atts['video_type'] = 'image';
+        }
         
         // Build configuration array
         $config = array(
@@ -571,8 +578,10 @@ class VideoHub360_Widgets {
                     'loop' => $atts['video_loop'] === 'yes',
                     'controls' => $atts['video_controls'] === 'yes',
                     'preload' => sanitize_text_field($atts['video_preload']),
-                    'click_action' => sanitize_text_field($atts['click_action']),
-                    'link_url' => esc_url_raw($atts['link_url']),
+                    'image_action' => $atts['image_action'],
+                    'image_link_url' => $atts['image_link_url'],
+                    'image_link_new_tab' => $atts['image_link_new_tab'] === 'yes',
+                    'image_link_nofollow' => $atts['image_link_nofollow'] === 'yes',
                     'eyebrow' => sanitize_text_field($atts['eyebrow']),
                     'headline' => sanitize_text_field($atts['headline']),
                     'subhead' => sanitize_text_field($atts['subhead']),
