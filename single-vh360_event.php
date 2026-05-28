@@ -137,10 +137,36 @@ while (have_posts()) :
                     </div>
                     
                     <!-- Right: featured image -->
-                    <?php if (has_post_thumbnail()) : ?>
+                    <?php if (has_post_thumbnail($event_id)) : ?>
+                    <?php
+                    $thumbnail_id = get_post_thumbnail_id($event_id);
+                    $full_image   = wp_get_attachment_image_src($thumbnail_id, 'full');
+                    $image_alt    = get_post_meta($thumbnail_id, '_wp_attachment_image_alt', true);
+
+                    if (empty($image_alt)) {
+                        $image_alt = get_the_title($event_id);
+                    }
+                    ?>
+                    <?php if (!empty($full_image[0])) : ?>
+                    <button type="button" class="vh360-event-featured-image vh360-event-featured-image-trigger" data-full-image="<?php echo esc_url($full_image[0]); ?>" data-image-alt="<?php echo esc_attr($image_alt); ?>" aria-label="<?php echo esc_attr__('View full event image', 'videohub360-theme'); ?>">
+                        <?php
+                        echo get_the_post_thumbnail(
+                            $event_id,
+                            'medium_large',
+                            array(
+                                'alt' => esc_attr($image_alt),
+                            )
+                        );
+                        ?>
+                        <span class="vh360-event-image-expand-label" aria-hidden="true">
+                            <?php esc_html_e('View full image', 'videohub360-theme'); ?>
+                        </span>
+                    </button>
+                    <?php else : ?>
                     <div class="vh360-event-featured-image">
-                        <?php echo get_the_post_thumbnail($event_id, 'medium_large'); ?>
+                        <?php echo get_the_post_thumbnail($event_id, 'medium_large', array('alt' => esc_attr($image_alt))); ?>
                     </div>
+                    <?php endif; ?>
                     <?php endif; ?>
                     
                 </div>
