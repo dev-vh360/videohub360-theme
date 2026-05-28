@@ -290,11 +290,23 @@
                 return;
             }
 
+            var imagePreviewLabel = (
+                typeof vh360Events !== 'undefined' &&
+                vh360Events.i18n &&
+                vh360Events.i18n.imagePreview
+            ) ? vh360Events.i18n.imagePreview : 'Event image preview';
+
+            var closeImageLabel = (
+                typeof vh360Events !== 'undefined' &&
+                vh360Events.i18n &&
+                vh360Events.i18n.closeImage
+            ) ? vh360Events.i18n.closeImage : 'Close image preview';
+
             $('body').append(
-                '<div class="vh360-event-image-lightbox" role="dialog" aria-modal="true" aria-label="' + (vh360Events && vh360Events.i18n && vh360Events.i18n.imagePreview ? vh360Events.i18n.imagePreview : 'Event image preview') + '">' +
+                '<div class="vh360-event-image-lightbox" role="dialog" aria-modal="true" aria-label="' + imagePreviewLabel + '">' +
                     '<div class="vh360-event-image-lightbox-backdrop"></div>' +
                     '<div class="vh360-event-image-lightbox-content">' +
-                        '<button type="button" class="vh360-event-image-lightbox-close" aria-label="' + (vh360Events && vh360Events.i18n && vh360Events.i18n.closeImage ? vh360Events.i18n.closeImage : 'Close image preview') + '">&times;</button>' +
+                        '<button type="button" class="vh360-event-image-lightbox-close" aria-label="' + closeImageLabel + '">&times;</button>' +
                         '<img src="" alt="">' +
                     '</div>' +
                 '</div>'

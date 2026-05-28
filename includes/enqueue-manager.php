@@ -596,10 +596,12 @@ function vh360_enqueue_events_assets() {
                 'ajaxUrl' => admin_url('admin-ajax.php'),
                 'nonce'   => wp_create_nonce('vh360_event_nonce'),
                 'i18n'    => array(
-                    'loading' => __('Loading events...', 'videohub360-theme'),
-                    'error'   => __('An error occurred. Please try again.', 'videohub360-theme'),
-                    'rsvp'    => __('RSVP', 'videohub360-theme'),
-                    'rsvpd'   => __('RSVP\'d', 'videohub360-theme'),
+                    'loading'      => __('Loading events...', 'videohub360-theme'),
+                    'error'        => __('An error occurred. Please try again.', 'videohub360-theme'),
+                    'rsvp'         => __('RSVP', 'videohub360-theme'),
+                    'rsvpd'        => __('RSVP\'d', 'videohub360-theme'),
+                    'imagePreview' => __('Event image preview', 'videohub360-theme'),
+                    'closeImage'   => __('Close image preview', 'videohub360-theme'),
                 ),
             ));
         }
