@@ -297,6 +297,9 @@
         }
     }
     
+    // Guard to ensure close/overlay/keydown handlers are only bound once
+    let heroLightboxGlobalEventsBound = false;
+
     /**
      * Initialize image lightbox for hero banners
      */
@@ -314,7 +317,7 @@
             lightbox.className = 'vh360-hero-lightbox';
             lightbox.setAttribute('role', 'dialog');
             lightbox.setAttribute('aria-modal', 'true');
-            lightbox.innerHTML = '<img alt=""><button class="vh360-hero-lightbox-close" aria-label="Close">&times;</button>';
+            lightbox.innerHTML = '<img alt=""><button type="button" class="vh360-hero-lightbox-close" aria-label="Close">&times;</button>';
             document.body.appendChild(lightbox);
         }
 
@@ -328,6 +331,11 @@
         };
 
         triggers.forEach((trigger) => {
+            if (trigger.dataset.vh360HeroLightboxBound === 'true') {
+                return;
+            }
+            trigger.dataset.vh360HeroLightboxBound = 'true';
+
             trigger.addEventListener('click', () => {
                 const src = trigger.getAttribute('data-vh360-hero-lightbox');
 
@@ -354,19 +362,23 @@
             });
         });
 
-        closeButton.addEventListener('click', close);
+        if (!heroLightboxGlobalEventsBound) {
+            heroLightboxGlobalEventsBound = true;
 
-        lightbox.addEventListener('click', (event) => {
-            if (event.target === lightbox) {
-                close();
-            }
-        });
+            closeButton.addEventListener('click', close);
 
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape' && lightbox.classList.contains('is-open')) {
-                close();
-            }
-        });
+            lightbox.addEventListener('click', (event) => {
+                if (event.target === lightbox) {
+                    close();
+                }
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && lightbox.classList.contains('is-open')) {
+                    close();
+                }
+            });
+        }
     }
 
     /**

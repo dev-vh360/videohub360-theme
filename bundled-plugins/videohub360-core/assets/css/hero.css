@@ -67,6 +67,11 @@
     display: block;
 }
 
+/* Prevent page scroll when lightbox is open */
+body.vh360-hero-lightbox-open {
+    overflow: hidden;
+}
+
 /* Lightbox */
 .vh360-hero-lightbox {
     position: fixed;

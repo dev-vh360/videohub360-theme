@@ -2807,6 +2807,12 @@ class VideoHub360_Admin {
                                 <td><?php echo esc_html__('Open image link in a new tab', 'videohub360'); ?></td>
                             </tr>
                             <tr>
+                                <td><code>image_link_nofollow</code></td>
+                                <td>no</td>
+                                <td>yes, no</td>
+                                <td><?php echo esc_html__('Add rel="nofollow" to the image link', 'videohub360'); ?></td>
+                            </tr>
+                            <tr>
                                 <td><code>video_url</code></td>
                                 <td></td>
                                 <td>URL</td>
