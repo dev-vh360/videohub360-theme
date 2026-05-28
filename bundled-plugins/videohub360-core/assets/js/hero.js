@@ -335,7 +335,19 @@
                     return;
                 }
 
-                image.src = src;
+                // Validate URL using URL constructor to prevent XSS via javascript: URIs
+                let safeUrl;
+                try {
+                    const parsed = new URL(src, window.location.href);
+                    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+                        return;
+                    }
+                    safeUrl = parsed.href;
+                } catch (e) {
+                    return;
+                }
+
+                image.src = safeUrl;
                 lightbox.classList.add('is-open');
                 document.body.classList.add('vh360-hero-lightbox-open');
                 closeButton.focus();
