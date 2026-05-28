@@ -65,47 +65,85 @@ while (have_posts()) :
                     </a>
                 </div>
                 
-                <!-- Event Title & Meta -->
-                <div class="vh360-event-title-section">
-                    <h1 class="vh360-event-title"><?php the_title(); ?></h1>
+                <!-- Hero: two-column layout -->
+                <div class="vh360-event-hero">
                     
-                    <div class="vh360-event-meta">
-                        <?php echo vh360_get_event_status_badge($event_id); ?>
+                    <!-- Left: title, badges, author, quick facts -->
+                    <div class="vh360-event-hero-content">
                         
-                        <?php if ($is_upcoming) : ?>
-                            <span class="vh360-event-badge vh360-event-badge-upcoming">
-                                <?php esc_html_e('Upcoming', 'videohub360-theme'); ?>
-                            </span>
-                        <?php elseif ($is_past) : ?>
-                            <span class="vh360-event-badge vh360-event-badge-past">
-                                <?php esc_html_e('Past Event', 'videohub360-theme'); ?>
-                            </span>
+                        <div class="vh360-event-title-section">
+                            <h1 class="vh360-event-title"><?php the_title(); ?></h1>
+                            
+                            <div class="vh360-event-meta">
+                                <?php echo vh360_get_event_status_badge($event_id); ?>
+                                
+                                <?php if ($is_upcoming) : ?>
+                                    <span class="vh360-event-badge vh360-event-badge-upcoming">
+                                        <?php esc_html_e('Upcoming', 'videohub360-theme'); ?>
+                                    </span>
+                                <?php elseif ($is_past) : ?>
+                                    <span class="vh360-event-badge vh360-event-badge-past">
+                                        <?php esc_html_e('Past Event', 'videohub360-theme'); ?>
+                                    </span>
+                                <?php endif; ?>
+                                
+                                <!-- Categories -->
+                                <?php
+                                $categories = get_the_terms($event_id, 'vh360_event_category');
+                                if ($categories && !is_wp_error($categories)) :
+                                    foreach ($categories as $category) :
+                                ?>
+                                    <span class="vh360-event-category">
+                                        <?php echo esc_html($category->name); ?>
+                                    </span>
+                                <?php
+                                    endforeach;
+                                endif;
+                                ?>
+                            </div>
+                            
+                            <?php get_template_part('template-parts/events/event-author', null, array('event_id' => $event_id)); ?>
+                        </div>
+                        
+                        <!-- Quick Facts -->
+                        <?php
+                        $quick_date     = vh360_get_event_date_range($event_id);
+                        $quick_location = vh360_get_event_location($event_id);
+                        $quick_cost     = vh360_get_event_cost_display($event_id);
+                        if ($quick_date || $quick_location || $quick_cost) :
+                        ?>
+                        <div class="vh360-event-quick-facts">
+                            <?php if ($quick_date) : ?>
+                            <div class="vh360-event-quick-fact">
+                                <span class="vh360-event-quick-fact-label"><?php esc_html_e('Date & Time', 'videohub360-theme'); ?></span>
+                                <span class="vh360-event-quick-fact-value"><?php echo esc_html($quick_date); ?></span>
+                            </div>
+                            <?php endif; ?>
+                            <?php if ($quick_location) : ?>
+                            <div class="vh360-event-quick-fact">
+                                <span class="vh360-event-quick-fact-label"><?php esc_html_e('Location', 'videohub360-theme'); ?></span>
+                                <span class="vh360-event-quick-fact-value"><?php echo esc_html($quick_location); ?></span>
+                            </div>
+                            <?php endif; ?>
+                            <?php if ($quick_cost) : ?>
+                            <div class="vh360-event-quick-fact">
+                                <span class="vh360-event-quick-fact-label"><?php esc_html_e('Cost', 'videohub360-theme'); ?></span>
+                                <span class="vh360-event-quick-fact-value"><?php echo esc_html($quick_cost); ?></span>
+                            </div>
+                            <?php endif; ?>
+                        </div>
                         <?php endif; ?>
                         
-                        <!-- Categories -->
-                        <?php
-                        $categories = get_the_terms($event_id, 'vh360_event_category');
-                        if ($categories && !is_wp_error($categories)) :
-                            foreach ($categories as $category) :
-                        ?>
-                            <span class="vh360-event-category">
-                                <?php echo esc_html($category->name); ?>
-                            </span>
-                        <?php
-                            endforeach;
-                        endif;
-                        ?>
                     </div>
                     
-                    <?php get_template_part('template-parts/events/event-author', null, array('event_id' => $event_id)); ?>
+                    <!-- Right: featured image -->
+                    <?php if (has_post_thumbnail()) : ?>
+                    <div class="vh360-event-featured-image">
+                        <?php echo get_the_post_thumbnail($event_id, 'medium_large'); ?>
+                    </div>
+                    <?php endif; ?>
+                    
                 </div>
-                
-                <!-- Featured Image -->
-                <?php if (has_post_thumbnail()) : ?>
-                <div class="vh360-event-featured-image">
-                    <?php the_post_thumbnail('large'); ?>
-                </div>
-                <?php endif; ?>
                 
             </div>
             
