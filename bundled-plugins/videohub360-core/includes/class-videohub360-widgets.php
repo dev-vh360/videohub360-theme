@@ -1281,7 +1281,7 @@ class VideoHub360_Widgets {
             foreach ( $terms as $term ) {
                 $url = esc_url( add_query_arg( 'videohub360_cat', $term->term_id, $archive ) );
                 echo '<a href="' . $url . '" class="vh360-category-pill">';
-                echo esc_html( $term->name );
+                echo '<span class="vh360-category-pill-title">' . esc_html( $term->name ) . '</span>';
                 if ( $atts['show_count'] === 'yes' ) {
                     echo ' <span class="vh360-category-pill-count">(' . absint( $term->count ) . ')</span>';
                 }
@@ -1294,7 +1294,7 @@ class VideoHub360_Widgets {
                 $url = esc_url( add_query_arg( 'videohub360_cat', $term->term_id, $archive ) );
                 echo '<li class="vh360-category-compact-item">';
                 echo '<a href="' . $url . '" class="vh360-category-compact-link">';
-                echo '<span class="vh360-category-compact-name">' . esc_html( $term->name ) . '</span>';
+                echo '<span class="vh360-category-compact-name vh360-category-compact-title">' . esc_html( $term->name ) . '</span>';
                 if ( $atts['show_count'] === 'yes' ) {
                     echo '<span class="vh360-category-compact-count">' . absint( $term->count ) . '</span>';
                 }
@@ -1340,9 +1340,9 @@ class VideoHub360_Widgets {
 
                 // Body
                 echo '<div class="vh360-category-card-body">';
-                echo '<h3 class="vh360-category-card-name">' . esc_html( $term->name ) . '</h3>';
+                echo '<h3 class="vh360-category-card-name vh360-category-card-title">' . esc_html( $term->name ) . '</h3>';
                 if ( $atts['show_description'] === 'yes' && $term->description ) {
-                    echo '<p class="vh360-category-card-desc">' . wp_kses_post( $term->description ) . '</p>';
+                    echo '<p class="vh360-category-card-desc vh360-category-card-description">' . wp_kses_post( $term->description ) . '</p>';
                 }
                 echo '</div>';
 
