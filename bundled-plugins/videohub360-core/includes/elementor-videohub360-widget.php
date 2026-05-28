@@ -166,7 +166,7 @@ class Elementor_VideoHub360_Videos_Widget extends \Elementor\Widget_Base {
                 'date' => __('Date', 'videohub360'),
                 'title' => __('Title', 'videohub360'),
                 'views' => __('Views', 'videohub360'),
-                'random' => __('Random', 'videohub360'),
+                'rand' => __('Random', 'videohub360'),
             ],
         ]);
         

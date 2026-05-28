@@ -167,6 +167,26 @@ class VideoHub360_Post_Types {
             'query_var'         => true,
         ));
 
+        register_taxonomy('videohub360_tag', 'videohub360', array(
+            'labels' => array(
+                'name'          => esc_html__('Video Tags', 'videohub360'),
+                'singular_name' => esc_html__('Video Tag', 'videohub360'),
+                'search_items'  => esc_html__('Search Video Tags', 'videohub360'),
+                'all_items'     => esc_html__('All Video Tags', 'videohub360'),
+                'edit_item'     => esc_html__('Edit Video Tag', 'videohub360'),
+                'update_item'   => esc_html__('Update Video Tag', 'videohub360'),
+                'add_new_item'  => esc_html__('Add New Video Tag', 'videohub360'),
+                'new_item_name' => esc_html__('New Video Tag Name', 'videohub360'),
+                'menu_name'     => esc_html__('Video Tags', 'videohub360'),
+            ),
+            'hierarchical'      => false,
+            'show_ui'           => true,
+            'show_admin_column' => true,
+            'query_var'         => true,
+            'show_in_rest'      => true,
+            'rewrite'           => array('slug' => 'video-tag'),
+        ));
+
         register_taxonomy('videohub360_series', 'videohub360', array(
             'labels' => array(
                 'name'              => esc_html__('Series', 'videohub360'),
