@@ -298,6 +298,66 @@
     }
     
     /**
+     * Initialize image lightbox for hero banners
+     */
+    function initHeroImageLightbox() {
+        const triggers = document.querySelectorAll('[data-vh360-hero-lightbox]');
+
+        if (!triggers.length) {
+            return;
+        }
+
+        let lightbox = document.querySelector('.vh360-hero-lightbox');
+
+        if (!lightbox) {
+            lightbox = document.createElement('div');
+            lightbox.className = 'vh360-hero-lightbox';
+            lightbox.setAttribute('role', 'dialog');
+            lightbox.setAttribute('aria-modal', 'true');
+            lightbox.innerHTML = '<img alt=""><button class="vh360-hero-lightbox-close" aria-label="Close">&times;</button>';
+            document.body.appendChild(lightbox);
+        }
+
+        const image = lightbox.querySelector('img');
+        const closeButton = lightbox.querySelector('.vh360-hero-lightbox-close');
+
+        const close = () => {
+            lightbox.classList.remove('is-open');
+            image.src = '';
+            document.body.classList.remove('vh360-hero-lightbox-open');
+        };
+
+        triggers.forEach((trigger) => {
+            trigger.addEventListener('click', () => {
+                const src = trigger.getAttribute('data-vh360-hero-lightbox');
+
+                if (!src) {
+                    return;
+                }
+
+                image.src = src;
+                lightbox.classList.add('is-open');
+                document.body.classList.add('vh360-hero-lightbox-open');
+                closeButton.focus();
+            });
+        });
+
+        closeButton.addEventListener('click', close);
+
+        lightbox.addEventListener('click', (event) => {
+            if (event.target === lightbox) {
+                close();
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && lightbox.classList.contains('is-open')) {
+                close();
+            }
+        });
+    }
+
+    /**
      * Initialize all hero banners on the page
      */
     function initHeroBanners() {
@@ -321,18 +381,26 @@
     
     // Initialize on DOM ready
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initHeroBanners);
+        document.addEventListener('DOMContentLoaded', function() {
+            initHeroBanners();
+            initHeroImageLightbox();
+        });
     } else {
         initHeroBanners();
+        initHeroImageLightbox();
     }
     
     // Re-initialize on dynamic content (Elementor preview, AJAX)
     if (window.elementorFrontend && window.elementorFrontend.hooks && typeof window.elementorFrontend.hooks.addAction === 'function') {
-        window.elementorFrontend.hooks.addAction('frontend/element_ready/widget', initHeroBanners);
+        window.elementorFrontend.hooks.addAction('frontend/element_ready/widget', function() {
+            initHeroBanners();
+            initHeroImageLightbox();
+        });
     }
     
     // Expose for manual initialization
     window.VH360Hero = VH360Hero;
     window.initVH360HeroBanners = initHeroBanners;
+    window.initVH360HeroImageLightbox = initHeroImageLightbox;
     
 })();
