@@ -6,7 +6,7 @@
  * subscription management (update payment method, view invoices, etc.).
  *
  * @package VideoHub360_Memberships
- * @since 2.0.0
+ * @since 1.0.0
  */
 
 if (!defined('ABSPATH')) exit;

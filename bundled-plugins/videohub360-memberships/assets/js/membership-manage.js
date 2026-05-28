@@ -5,7 +5,7 @@
  * reactivation, and billing portal access from the frontend.
  *
  * @package VideoHub360_Memberships
- * @since 2.0.0
+ * @since 1.0.0
  */
 (function($) {
     'use strict';

@@ -6,7 +6,7 @@
  * manages customer creation, and handles return/cancel URLs.
  *
  * @package VideoHub360_Memberships
- * @since 2.0.0
+ * @since 1.0.0
  */
 
 if (!defined('ABSPATH')) exit;

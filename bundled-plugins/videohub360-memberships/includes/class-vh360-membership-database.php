@@ -24,7 +24,7 @@ class VH360_Membership_Database {
      *
      * @var string
      */
-    private $db_version = '2.0.0';
+    private $db_version = '1.0.0';
     
     /**
      * Get singleton instance
@@ -55,9 +55,9 @@ class VH360_Membership_Database {
         if (version_compare($current_version, $this->db_version, '<')) {
             self::create_tables();
             
-            // Run migration from 1.x to 2.0 if upgrading
-            if (version_compare($current_version, '2.0.0', '<') && version_compare($current_version, '0', '>')) {
-                self::migrate_to_v2();
+            // Run legacy membership billing migration if upgrading from an older stored database version.
+            if (version_compare($current_version, '1.0.0', '<') && version_compare($current_version, '0', '>')) {
+                self::migrate_legacy_billing_data();
             }
         }
     }
@@ -130,16 +130,16 @@ class VH360_Membership_Database {
         dbDelta($events_sql);
         
         // Update database version
-        update_option('vh360_memberships_db_version', '2.0.0');
+        update_option('vh360_memberships_db_version', '1.0.0');
     }
     
     /**
-     * Migrate existing data from v1 to v2
+     * Migrate legacy membership billing data.
      *
      * Sets billing_mode to 'one_time' for all existing records that predate
      * the recurring subscription columns.
      */
-    private static function migrate_to_v2() {
+    private static function migrate_legacy_billing_data() {
         global $wpdb;
         $table = $wpdb->prefix . 'vh360_memberships';
         
