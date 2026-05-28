@@ -45,6 +45,7 @@ class VideoHub360_Widgets {
         add_shortcode('videohub360_videos', array($this, 'enhanced_videos_shortcode'));
         add_shortcode('videohub360_hero', array($this, 'hero_banner_shortcode'));
         add_shortcode('vh360_course_catalog', array($this, 'course_catalog_shortcode'));
+        add_shortcode('videohub360_categories', array($this, 'video_categories_shortcode'));
     }
     
     /**
@@ -87,6 +88,12 @@ class VideoHub360_Widgets {
         if (class_exists('Elementor_VideoHub360_Course_Catalog_Widget')) {
             $widgets_manager->register(new Elementor_VideoHub360_Course_Catalog_Widget());
         }
+
+        // Load browse categories widget
+        require_once __DIR__ . '/elementor-videohub360-categories-widget.php';
+        if (class_exists('Elementor_VideoHub360_Categories_Widget')) {
+            $widgets_manager->register(new Elementor_VideoHub360_Categories_Widget());
+        }
     }
     
     /**
@@ -122,6 +129,9 @@ class VideoHub360_Widgets {
         
         // Register course-mode.css so the shortcode and widget can enqueue it on demand
         $this->maybe_register_course_mode_style();
+
+        // Register videohub360-categories.css so the categories widget can enqueue it on demand
+        $this->maybe_register_categories_style();
     }
     
     /**
@@ -137,6 +147,21 @@ class VideoHub360_Widgets {
         $css_ver  = file_exists($css_path) ? filemtime($css_path) : VIDEOHUB360_VERSION;
 
         wp_register_style( 'vh360-course-mode', $css_url, array(), $css_ver );
+    }
+
+    /**
+     * Register videohub360-categories.css if not already registered.
+     * Shared by register_elementor_styles() and register_global_styles().
+     */
+    private function maybe_register_categories_style() {
+        if ( wp_style_is( 'vh360-categories', 'registered' ) ) {
+            return;
+        }
+        $css_path = VIDEOHUB360_PLUGIN_DIR . 'assets/css/videohub360-categories.css';
+        $css_url  = VIDEOHUB360_ASSETS_URL . 'css/videohub360-categories.css';
+        $css_ver  = file_exists( $css_path ) ? filemtime( $css_path ) : VIDEOHUB360_VERSION;
+
+        wp_register_style( 'vh360-categories', $css_url, array( 'vh360-variables' ), $css_ver );
     }
     
     /**
@@ -202,11 +227,12 @@ class VideoHub360_Widgets {
     /**
      * Register global styles (non-Elementor pages)
      *
-     * Registers course-mode.css so the shortcode can call wp_enqueue_style()
-     * on any page type.
+     * Registers course-mode.css and categories.css so shortcodes can call
+     * wp_enqueue_style() on any page type.
      */
     public function register_global_styles() {
         $this->maybe_register_course_mode_style();
+        $this->maybe_register_categories_style();
     }
     
     /**
@@ -1188,5 +1214,205 @@ class VideoHub360_Widgets {
         <?php endif; ?>
         <?php
         return ob_get_clean();
+    }
+
+    /**
+     * Video Categories shortcode handler
+     *
+     * Renders videohub360_category terms as visual cards, pills, or compact list.
+     *
+     * @param array $atts Shortcode attributes.
+     * @return string HTML output.
+     */
+    public function video_categories_shortcode( $atts ) {
+        $atts = shortcode_atts(
+            array(
+                'layout'                => 'cards',
+                'columns'               => '4',
+                'limit'                 => '8',
+                'hide_empty'            => 'yes',
+                'orderby'               => 'name',
+                'order'                 => 'ASC',
+                'show_count'            => 'yes',
+                'show_description'      => 'yes',
+                'show_latest_thumbnail' => 'yes',
+                'include'               => '',
+                'exclude'               => '',
+            ),
+            $atts,
+            'videohub360_categories'
+        );
+
+        // Enqueue CSS
+        $this->ensure_categories_styles();
+
+        $query_args = array(
+            'taxonomy'   => 'videohub360_category',
+            'hide_empty' => ( $atts['hide_empty'] === 'yes' ),
+            'orderby'    => sanitize_key( $atts['orderby'] ),
+            'order'      => strtoupper( $atts['order'] ) === 'DESC' ? 'DESC' : 'ASC',
+            'number'     => absint( $atts['limit'] ),
+        );
+
+        if ( $atts['include'] !== '' ) {
+            $query_args['include'] = array_map( 'absint', explode( ',', $atts['include'] ) );
+        }
+        if ( $atts['exclude'] !== '' ) {
+            $query_args['exclude'] = array_map( 'absint', explode( ',', $atts['exclude'] ) );
+        }
+
+        $terms = get_terms( $query_args );
+
+        if ( is_wp_error( $terms ) || empty( $terms ) ) {
+            if ( current_user_can( 'manage_options' ) ) {
+                return '<p class="vh360-categories-admin-notice">' . esc_html__( 'No video categories found. Add categories under VideoHub360 > Video Categories.', 'videohub360' ) . '</p>';
+            }
+            return '';
+        }
+
+        $layout  = in_array( $atts['layout'], array( 'cards', 'pills', 'compact' ), true ) ? $atts['layout'] : 'cards';
+        $columns = max( 2, min( 6, absint( $atts['columns'] ) ) );
+        $archive = get_post_type_archive_link( 'videohub360' );
+
+        ob_start();
+
+        if ( $layout === 'pills' ) {
+            echo '<div class="vh360-category-pills">';
+            foreach ( $terms as $term ) {
+                $url = esc_url( add_query_arg( 'videohub360_cat', $term->term_id, $archive ) );
+                echo '<a href="' . $url . '" class="vh360-category-pill">';
+                echo '<span class="vh360-category-pill-title">' . esc_html( $term->name ) . '</span>';
+                if ( $atts['show_count'] === 'yes' ) {
+                    echo ' <span class="vh360-category-pill-count">(' . absint( $term->count ) . ')</span>';
+                }
+                echo '</a>';
+            }
+            echo '</div>';
+        } elseif ( $layout === 'compact' ) {
+            echo '<ul class="vh360-category-compact vh360-category-grid--columns-' . esc_attr( $columns ) . '">';
+            foreach ( $terms as $term ) {
+                $url = esc_url( add_query_arg( 'videohub360_cat', $term->term_id, $archive ) );
+                echo '<li class="vh360-category-compact-item">';
+                echo '<a href="' . $url . '" class="vh360-category-compact-link">';
+                echo '<span class="vh360-category-compact-name vh360-category-compact-title">' . esc_html( $term->name ) . '</span>';
+                if ( $atts['show_count'] === 'yes' ) {
+                    echo '<span class="vh360-category-compact-count">' . absint( $term->count ) . '</span>';
+                }
+                echo '</a>';
+                echo '</li>';
+            }
+            echo '</ul>';
+        } else {
+            // Default: cards
+            echo '<div class="vh360-category-grid vh360-category-grid--columns-' . esc_attr( $columns ) . '">';
+            foreach ( $terms as $term ) {
+                $url         = esc_url( add_query_arg( 'videohub360_cat', $term->term_id, $archive ) );
+                $thumbnail   = '';
+                if ( $atts['show_latest_thumbnail'] === 'yes' ) {
+                    $thumbnail = $this->get_latest_video_thumbnail_for_category( $term->term_id );
+                }
+
+                echo '<div class="vh360-category-card">';
+                echo '<a href="' . $url . '" class="vh360-category-card-link" aria-label="' . esc_attr( $term->name ) . '">';
+
+                // Thumbnail area
+                echo '<div class="vh360-category-card-thumb">';
+                if ( $thumbnail ) {
+                    echo '<img src="' . esc_url( $thumbnail ) . '" alt="' . esc_attr( $term->name ) . '" loading="lazy" class="vh360-category-card-img">';
+                } else {
+                    echo '<div class="vh360-category-card-placeholder" aria-hidden="true">';
+                    echo '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>';
+                    echo '</div>';
+                }
+
+                if ( $atts['show_count'] === 'yes' ) {
+                    echo '<span class="vh360-category-card-count">';
+                    echo esc_html(
+                        sprintf(
+                            /* translators: %d: number of videos */
+                            _n( '%d video', '%d videos', absint( $term->count ), 'videohub360' ),
+                            absint( $term->count )
+                        )
+                    );
+                    echo '</span>';
+                }
+                echo '</div>';
+
+                // Body
+                echo '<div class="vh360-category-card-body">';
+                echo '<h3 class="vh360-category-card-name vh360-category-card-title">' . esc_html( $term->name ) . '</h3>';
+                if ( $atts['show_description'] === 'yes' && $term->description ) {
+                    echo '<p class="vh360-category-card-desc vh360-category-card-description">' . wp_kses_post( $term->description ) . '</p>';
+                }
+                echo '</div>';
+
+                echo '</a>';
+                echo '</div>';
+            }
+            echo '</div>';
+        }
+
+        return ob_get_clean();
+    }
+
+    /**
+     * Get the thumbnail URL of the latest video in a category.
+     *
+     * @param int    $term_id Term ID.
+     * @param string $size    Image size slug.
+     * @return string Escaped URL or empty string.
+     */
+    private function get_latest_video_thumbnail_for_category( $term_id, $size = 'medium_large' ) {
+        $query = new WP_Query(
+            array(
+                'post_type'      => 'videohub360',
+                'post_status'    => 'publish',
+                'posts_per_page' => 1,
+                'tax_query'      => array(
+                    array(
+                        'taxonomy' => 'videohub360_category',
+                        'field'    => 'term_id',
+                        'terms'    => absint( $term_id ),
+                    ),
+                ),
+                'meta_query'     => array(),
+                'orderby'        => 'date',
+                'order'          => 'DESC',
+                'no_found_rows'  => true,
+            )
+        );
+
+        if ( $query->have_posts() ) {
+            $query->the_post();
+            $thumbnail = get_the_post_thumbnail_url( get_the_ID(), $size );
+            wp_reset_postdata();
+
+            return $thumbnail ? esc_url( $thumbnail ) : '';
+        }
+
+        wp_reset_postdata();
+
+        return '';
+    }
+
+    /**
+     * Ensure category widget CSS is loaded.
+     */
+    private function ensure_categories_styles() {
+        if ( ! wp_style_is( 'vh360-variables' ) ) {
+            $variables_css_path = VIDEOHUB360_PLUGIN_DIR . 'assets/css/variables.css';
+            $variables_css_url  = VIDEOHUB360_ASSETS_URL . 'css/variables.css';
+            $variables_ver      = file_exists( $variables_css_path ) ? filemtime( $variables_css_path ) : VIDEOHUB360_VERSION;
+
+            wp_enqueue_style( 'vh360-variables', $variables_css_url, array(), $variables_ver );
+        }
+
+        if ( ! wp_style_is( 'vh360-categories' ) ) {
+            $css_path = VIDEOHUB360_PLUGIN_DIR . 'assets/css/videohub360-categories.css';
+            $css_url  = VIDEOHUB360_ASSETS_URL . 'css/videohub360-categories.css';
+            $css_ver  = file_exists( $css_path ) ? filemtime( $css_path ) : VIDEOHUB360_VERSION;
+
+            wp_enqueue_style( 'vh360-categories', $css_url, array( 'vh360-variables' ), $css_ver );
+        }
     }
 }
