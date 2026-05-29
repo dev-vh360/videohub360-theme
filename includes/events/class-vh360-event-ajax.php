@@ -537,6 +537,8 @@ class VH360_Event_Ajax {
 
             if (!empty($gallery_ids)) {
                 update_post_meta($event_id, '_vh360_event_gallery_image_ids', $gallery_ids);
+
+                vh360_attach_event_gallery_images_to_event($event_id, $gallery_ids);
             } else {
                 delete_post_meta($event_id, '_vh360_event_gallery_image_ids');
             }
