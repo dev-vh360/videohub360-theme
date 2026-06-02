@@ -314,7 +314,17 @@ class VH360_Theme_Admin {
                 'avatar_min_width' => 300,
                 'avatar_min_height' => 300,
                 'avatar_quality' => 90,
-                'avatar_allowed_types' => array('image/jpeg', 'image/png', 'image/gif'),
+                'avatar_allowed_types' => array(
+                    'image/jpeg',
+                    'image/pjpeg',
+                    'image/png',
+                    'image/gif',
+                    'image/webp',
+                    'image/heic',
+                    'image/heif',
+                    'image/heic-sequence',
+                    'image/heif-sequence',
+                ),
             ),
         ));
         
@@ -652,10 +662,27 @@ class VH360_Theme_Admin {
             isset($input['social_platforms']) ? $input['social_platforms'] : null
         );
         
-        // Array field for avatar allowed types
-        $sanitized['avatar_allowed_types'] = $this->sanitize_array_input(
-            isset($input['avatar_allowed_types']) ? $input['avatar_allowed_types'] : null
+        // Array field for avatar allowed types.
+        // Always merge with the full default list so saving the settings page
+        // (which has no visible field for this) never blanks out the allowed types.
+        $default_avatar_allowed_types = array(
+            'image/jpeg',
+            'image/pjpeg',
+            'image/png',
+            'image/gif',
+            'image/webp',
+            'image/heic',
+            'image/heif',
+            'image/heic-sequence',
+            'image/heif-sequence',
         );
+
+        $sanitized['avatar_allowed_types'] = isset($input['avatar_allowed_types']) && is_array($input['avatar_allowed_types'])
+            ? array_values(array_unique(array_merge(
+                $default_avatar_allowed_types,
+                $this->sanitize_array_input($input['avatar_allowed_types'])
+            )))
+            : $default_avatar_allowed_types;
         
         // Numeric fields with defaults
         $sanitized['avatar_max_size'] = isset($input['avatar_max_size']) ? absint($input['avatar_max_size']) : 2;

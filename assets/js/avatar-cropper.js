@@ -39,10 +39,29 @@
                 return;
             }
 
-            // Validate file type
-            // Note: File MIME types use 'image/jpeg' not 'image/jpg'
-            if (!file.type.match(/^image\/(jpeg|png|gif)$/i)) {
-                alert(vh360AvatarCropper.i18n.invalidFileType || 'Invalid file type. Please upload a JPG, PNG, or GIF image.');
+            // Validate file type using both MIME type and file extension
+            // Some browsers (especially on iOS/Android) may report non-standard MIME types
+            // for valid images (e.g. image/jpg instead of image/jpeg), so we check both.
+            const fileName = file.name || '';
+            const fileType = (file.type || '').toLowerCase();
+
+            const allowedMimeTypes = [
+                'image/jpeg',
+                'image/jpg',
+                'image/pjpeg',
+                'image/png',
+                'image/gif',
+                'image/webp',
+                'image/heic',
+                'image/heif',
+                'image/heic-sequence',
+                'image/heif-sequence'
+            ];
+
+            const allowedExtensions = /\.(jpe?g|png|gif|webp|heic|heif)$/i;
+
+            if (!allowedMimeTypes.includes(fileType) && !allowedExtensions.test(fileName)) {
+                alert(vh360AvatarCropper.i18n.invalidFileType || 'Invalid file type. Please upload a JPG, PNG, GIF, WebP, HEIC, or HEIF image.');
                 e.target.value = '';
                 return;
             }
@@ -52,6 +71,30 @@
             if (file.size > maxSize) {
                 alert(vh360AvatarCropper.i18n.fileTooLarge || 'File size exceeds maximum allowed size.');
                 e.target.value = '';
+                return;
+            }
+
+            // HEIC/HEIF files cannot be previewed by most browsers inside an <img> tag.
+            // Skip the cropper and submit directly to the backend, which will convert
+            // the image to JPEG and apply a server-side center crop as the fallback.
+            const heicExtensions = /\.(heic|heif)$/i;
+            const heicMimeTypes = [
+                'image/heic',
+                'image/heif',
+                'image/heic-sequence',
+                'image/heif-sequence'
+            ];
+
+            if (heicMimeTypes.includes(fileType) || heicExtensions.test(fileName)) {
+                ensureCropFields();
+
+                $('input[name="avatar_crop_x"]').val('');
+                $('input[name="avatar_crop_y"]').val('');
+                $('input[name="avatar_crop_width"]').val('');
+                $('input[name="avatar_crop_height"]').val('');
+                $('input[name="avatar_source_width"]').val('');
+                $('input[name="avatar_source_height"]').val('');
+
                 return;
             }
 

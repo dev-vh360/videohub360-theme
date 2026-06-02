@@ -735,7 +735,7 @@ function vh360_enqueue_avatar_cropper_assets() {
             'close'           => __('Close', 'videohub360-theme'),
             'cropImageAlt'    => __('Image to crop', 'videohub360-theme'),
             'previewAlt'      => __('Avatar preview', 'videohub360-theme'),
-            'invalidFileType' => __('Invalid file type. Please upload a JPG, PNG, or GIF image.', 'videohub360-theme'),
+            'invalidFileType' => __('Invalid file type. Please upload a JPG, PNG, GIF, WebP, HEIC, or HEIF image.', 'videohub360-theme'),
             'fileTooLarge'    => sprintf(
                 /* translators: %s: maximum file size */
                 __('File size exceeds maximum allowed size of %s MB.', 'videohub360-theme'),
