@@ -496,3 +496,133 @@ function vh360_get_event_status_badge($event_id) {
         esc_html($status_labels[$status])
     );
 }
+
+/**
+ * Sanitize an array (or comma-separated string) of event gallery image attachment IDs.
+ *
+ * Validates that each ID is a real image attachment, removes duplicates, and
+ * limits the result to a maximum of 5 IDs.
+ *
+ * @param array|string $raw_ids Raw array or comma-separated string of attachment IDs.
+ * @return int[] Sanitized array of attachment IDs (max 5).
+ */
+function vh360_sanitize_event_gallery_image_ids( $raw_ids ) {
+    if ( is_string( $raw_ids ) ) {
+    $raw_ids = explode( ',', $raw_ids );
+    }
+
+    if ( ! is_array( $raw_ids ) ) {
+    return array();
+    }
+
+    $ids = array();
+
+    foreach ( $raw_ids as $id ) {
+    $id = absint( $id );
+
+    if ( ! $id || in_array( $id, $ids, true ) ) {
+        continue;
+    }
+
+    if ( 'attachment' !== get_post_type( $id ) ) {
+        continue;
+    }
+
+    $mime_type = get_post_mime_type( $id );
+
+    if ( ! $mime_type || 0 !== strpos( (string) $mime_type, 'image/' ) ) {
+        continue;
+    }
+
+    $ids[] = $id;
+
+    if ( count( $ids ) >= 5 ) {
+        break;
+    }
+    }
+
+    return $ids;
+}
+
+/**
+ * Check whether the current user can use an image attachment in a frontend event gallery.
+ *
+ * Returns true if the user has edit_post capability on the attachment (e.g. admins/editors)
+ * or is the attachment author.
+ *
+ * @param int $attachment_id Attachment ID.
+ * @param int $user_id       Optional. Defaults to the current user.
+ * @return bool
+ */
+function vh360_user_can_use_event_gallery_image( $attachment_id, $user_id = 0 ) {
+    $attachment_id = absint( $attachment_id );
+    $user_id       = $user_id ? absint( $user_id ) : get_current_user_id();
+
+    if ( ! $attachment_id || ! $user_id ) {
+        return false;
+    }
+
+    if ( 'attachment' !== get_post_type( $attachment_id ) ) {
+        return false;
+    }
+
+    $mime_type = get_post_mime_type( $attachment_id );
+
+    if ( ! $mime_type || 0 !== strpos( (string) $mime_type, 'image/' ) ) {
+        return false;
+    }
+
+    if ( user_can( $user_id, 'edit_post', $attachment_id ) ) {
+        return true;
+    }
+
+    $attachment_author = (int) get_post_field( 'post_author', $attachment_id );
+
+    return $attachment_author === (int) $user_id;
+}
+
+/**
+ * Assign event gallery image attachments to an event as their parent post.
+ *
+ * Useful for frontend-created events where gallery images may be uploaded
+ * before the event post exists, leaving post_parent as 0.
+ *
+ * @param int   $event_id         Event post ID.
+ * @param array $gallery_ids      Gallery attachment IDs.
+ * @param bool  $only_unattached  When true, skip attachments already assigned to another post.
+ * @return void
+ */
+function vh360_attach_event_gallery_images_to_event( $event_id, $gallery_ids, $only_unattached = false ) {
+    $event_id = absint( $event_id );
+
+    if ( ! $event_id || 'vh360_event' !== get_post_type( $event_id ) ) {
+        return;
+    }
+
+    if ( ! is_array( $gallery_ids ) || empty( $gallery_ids ) ) {
+        return;
+    }
+
+    foreach ( $gallery_ids as $attachment_id ) {
+        $attachment_id = absint( $attachment_id );
+
+        if ( ! $attachment_id || 'attachment' !== get_post_type( $attachment_id ) ) {
+            continue;
+        }
+
+        $mime_type = get_post_mime_type( $attachment_id );
+
+        if ( ! $mime_type || 0 !== strpos( (string) $mime_type, 'image/' ) ) {
+            continue;
+        }
+
+        if ( $only_unattached && 0 !== (int) wp_get_post_parent_id( $attachment_id ) ) {
+            continue;
+        }
+
+        wp_update_post( array(
+            'ID'          => $attachment_id,
+            'post_parent' => $event_id,
+        ) );
+    }
+}

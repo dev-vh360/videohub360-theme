@@ -70,6 +70,7 @@ class VH360_Event_Post_Type {
         add_filter('manage_' . self::POST_TYPE . '_posts_columns', array($this, 'add_admin_columns'));
         add_action('manage_' . self::POST_TYPE . '_posts_custom_column', array($this, 'render_admin_columns'), 10, 2);
         add_action('template_redirect', array($this, 'handle_ics_download'));
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_gallery_assets'));
     }
 
     /**
@@ -250,6 +251,15 @@ class VH360_Event_Post_Type {
             array($this, 'render_event_organizer_meta_box'),
             self::POST_TYPE,
             'side',
+            'default'
+        );
+
+        add_meta_box(
+            'vh360_event_gallery',
+            __('Event Gallery', 'videohub360-theme'),
+            array($this, 'render_gallery_meta_box'),
+            self::POST_TYPE,
+            'normal',
             'default'
         );
     }
@@ -599,6 +609,128 @@ class VH360_Event_Post_Type {
         // Handle checkbox
         $registration_required = isset($_POST['vh360_event_registration_required']) ? '1' : '0';
         update_post_meta($post_id, '_vh360_event_registration_required', $registration_required);
+
+        // Save gallery image IDs
+        if (isset($_POST['vh360_event_gallery_image_ids']) && isset($_POST['vh360_event_gallery_nonce'])
+            && wp_verify_nonce($_POST['vh360_event_gallery_nonce'], 'vh360_event_gallery')) {
+            $gallery_ids = vh360_sanitize_event_gallery_image_ids(
+                wp_unslash($_POST['vh360_event_gallery_image_ids'])
+            );
+
+            if (!empty($gallery_ids)) {
+                update_post_meta($post_id, '_vh360_event_gallery_image_ids', $gallery_ids);
+            } else {
+                delete_post_meta($post_id, '_vh360_event_gallery_image_ids');
+            }
+        }
+    }
+
+    /**
+     * Render Event Gallery meta box.
+     *
+     * @param WP_Post $post Post object.
+     */
+    public function render_gallery_meta_box($post) {
+        wp_nonce_field('vh360_event_gallery', 'vh360_event_gallery_nonce');
+
+        $gallery_ids = get_post_meta($post->ID, '_vh360_event_gallery_image_ids', true);
+
+        if (!is_array($gallery_ids)) {
+            $gallery_ids = array();
+        }
+
+        $ids_string = implode(',', array_map('absint', $gallery_ids));
+        ?>
+        <p class="description">
+            <?php esc_html_e('Add up to 5 additional images for this event. These images appear near the event description on the single event page.', 'videohub360-theme'); ?>
+        </p>
+
+        <div id="vh360-event-gallery-admin-wrap" style="margin-top: 12px;">
+            <input type="hidden" id="vh360_event_gallery_image_ids" name="vh360_event_gallery_image_ids"
+                   value="<?php echo esc_attr($ids_string); ?>">
+
+            <div id="vh360-event-gallery-admin-preview" class="vh360-event-gallery-admin-preview">
+                <?php foreach ($gallery_ids as $image_id) :
+                    $image_id  = absint($image_id);
+                    $thumb_url = wp_get_attachment_image_url($image_id, 'thumbnail');
+                    $full_url  = wp_get_attachment_image_url($image_id, 'full');
+                    $alt       = get_post_meta($image_id, '_wp_attachment_image_alt', true);
+
+                    if (!$thumb_url) {
+                        continue;
+                    }
+                    ?>
+                    <div class="vh360-event-gallery-admin-item" data-id="<?php echo esc_attr($image_id); ?>">
+                        <img src="<?php echo esc_url($thumb_url); ?>" alt="<?php echo esc_attr($alt); ?>">
+                        <button type="button" class="vh360-event-gallery-admin-remove"
+                                aria-label="<?php esc_attr_e('Remove image', 'videohub360-theme'); ?>">
+                            &times;
+                        </button>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+
+            <p>
+                <button type="button" id="vh360-event-gallery-admin-add" class="button">
+                    <?php esc_html_e('Add Gallery Images', 'videohub360-theme'); ?>
+                </button>
+                <span id="vh360-event-gallery-admin-count" style="margin-left: 8px; color: #666;">
+                    <?php
+                    /* translators: %d: number of images */
+                    printf(esc_html__('%d / 5 images selected', 'videohub360-theme'), count($gallery_ids));
+                    ?>
+                </span>
+            </p>
+        </div>
+        <?php
+    }
+
+    /**
+     * Enqueue admin scripts and styles for the event gallery meta box.
+     *
+     * @param string $hook_suffix Current admin page hook suffix.
+     */
+    public function enqueue_admin_gallery_assets($hook_suffix) {
+        global $post;
+
+        if (!in_array($hook_suffix, array('post.php', 'post-new.php'), true)) {
+            return;
+        }
+
+        if (!$post || self::POST_TYPE !== $post->post_type) {
+            return;
+        }
+
+        wp_enqueue_media();
+
+        wp_enqueue_style(
+            'vh360-event-gallery-admin',
+            get_template_directory_uri() . '/assets/css/admin/event-gallery-admin.css',
+            array(),
+            VH360_THEME_VERSION
+        );
+
+        wp_enqueue_script(
+            'vh360-event-gallery-admin',
+            get_template_directory_uri() . '/assets/js/admin/event-gallery-admin.js',
+            array('jquery', 'media-upload', 'media-views'),
+            VH360_THEME_VERSION,
+            true
+        );
+
+        wp_localize_script(
+            'vh360-event-gallery-admin',
+            'vh360EventGalleryAdmin',
+            array(
+                'maxImages' => 5,
+                'i18n'      => array(
+                    'selectImages' => __('Select Event Gallery Images', 'videohub360-theme'),
+                    'useImages'    => __('Use Selected Images', 'videohub360-theme'),
+                    'maxImages'    => __('You can add up to 5 gallery images.', 'videohub360-theme'),
+                    'removeImage'  => __('Remove image', 'videohub360-theme'),
+                ),
+            )
+        );
     }
 
     /**

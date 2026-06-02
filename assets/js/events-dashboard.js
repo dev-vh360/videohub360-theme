@@ -89,6 +89,9 @@
             // Reset image
             this.removeImage();
             
+            // Reset gallery
+            VH360EventGallery.clear();
+            
             // Update modal title
             $('#vh360-event-modal-title').text(vh360EventsDashboard.i18n.createEvent);
             $('#vh360-event-submit-btn .vh360-btn-text').text(vh360EventsDashboard.i18n.createEvent);
@@ -179,6 +182,13 @@
                 $('#vh360-event-image-preview').show();
             } else {
                 this.removeImage();
+            }
+
+            // Gallery images
+            if (data.gallery_images && data.gallery_images.length) {
+                VH360EventGallery.load(data.gallery_images);
+            } else {
+                VH360EventGallery.clear();
             }
         },
 
@@ -470,11 +480,249 @@
     };
 
     /**
+     * Event Gallery upload handler for the dashboard form.
+     */
+    const VH360EventGallery = {
+
+        MAX_IMAGES: 5,
+
+        images: [],
+
+        /**
+         * Initialize gallery bindings.
+         */
+        init: function() {
+            var self = this;
+
+            // Trigger hidden file input when upload button is clicked
+            $(document).on('click.vh360gallery', '#vh360-event-gallery-upload-trigger', function(e) {
+                e.preventDefault();
+                if (self.images.length >= self.MAX_IMAGES) {
+                    var msg = (typeof vh360EventsDashboard !== 'undefined' && vh360EventsDashboard.i18n && vh360EventsDashboard.i18n.galleryMaxImages)
+                        ? vh360EventsDashboard.i18n.galleryMaxImages
+                        : 'You can add up to 5 gallery images.';
+                    VH360EventsDashboard.showNotice('error', msg);
+                    return;
+                }
+                $('#vh360-event-gallery-file-input').val('').click();
+            });
+
+            // Handle file selection
+            $(document).on('change.vh360gallery', '#vh360-event-gallery-file-input', function() {
+                var files = this.files;
+                if (!files || !files.length) {
+                    return;
+                }
+
+                var remaining = self.MAX_IMAGES - self.images.length;
+                var toUpload  = Array.prototype.slice.call(files, 0, remaining);
+
+                $.each(toUpload, function(i, file) {
+                    self.uploadFile(file);
+                });
+
+                // Reset file input so the same file can be selected again later
+                $(this).val('');
+            });
+
+            // Remove gallery image
+            $(document).on('click.vh360gallery', '.vh360-event-gallery-remove', function() {
+                var id  = parseInt($(this).data('image-id'), 10);
+                self.removeById(id);
+            });
+        },
+
+        /**
+         * Upload a single file and add it to the gallery.
+         *
+         * @param {File} file
+         */
+        uploadFile: function(file) {
+            var self = this;
+
+            // Client-side type check
+            var validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            if (!validTypes.includes(file.type)) {
+                var typeMsg = (typeof vh360EventsDashboard !== 'undefined' && vh360EventsDashboard.i18n && vh360EventsDashboard.i18n.invalidFileType)
+                    ? vh360EventsDashboard.i18n.invalidFileType
+                    : 'Invalid file type. Please upload JPG, PNG, GIF, or WebP.';
+                VH360EventsDashboard.showNotice('error', typeMsg);
+                return;
+            }
+
+            // Client-side size check (5 MB)
+            var maxSize = 5 * 1024 * 1024;
+            if (file.size > maxSize) {
+                var sizeMsg = (typeof vh360EventsDashboard !== 'undefined' && vh360EventsDashboard.i18n && vh360EventsDashboard.i18n.fileTooLarge)
+                    ? vh360EventsDashboard.i18n.fileTooLarge
+                    : 'File size too large. Maximum 5MB allowed.';
+                VH360EventsDashboard.showNotice('error', sizeMsg);
+                return;
+            }
+
+            var formData = new FormData();
+            formData.append('action', 'vh360_upload_event_gallery_images');
+            formData.append('nonce', vh360EventsDashboard.nonce);
+            formData.append('gallery_image', file);
+
+            if (VH360EventsDashboard.currentEventId) {
+                formData.append('event_id', VH360EventsDashboard.currentEventId);
+            }
+
+            $.ajax({
+                url: vh360EventsDashboard.ajaxUrl,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        self.addImage(response.data);
+                    } else {
+                        var failMsg = (typeof vh360EventsDashboard !== 'undefined' && vh360EventsDashboard.i18n && vh360EventsDashboard.i18n.galleryUploadFailed)
+                            ? vh360EventsDashboard.i18n.galleryUploadFailed
+                            : 'One or more gallery images could not be uploaded.';
+                        VH360EventsDashboard.showNotice('error', response.data && response.data.message ? response.data.message : failMsg);
+                    }
+                },
+                error: function() {
+                    var errMsg = (typeof vh360EventsDashboard !== 'undefined' && vh360EventsDashboard.i18n && vh360EventsDashboard.i18n.galleryUploadFailed)
+                        ? vh360EventsDashboard.i18n.galleryUploadFailed
+                        : 'One or more gallery images could not be uploaded.';
+                    VH360EventsDashboard.showNotice('error', errMsg);
+                }
+            });
+        },
+
+        /**
+         * Add an image object to the gallery and render its preview card.
+         *
+         * @param {{ id: number, thumb_url: string, full_url: string, alt: string }} imageData
+         */
+        addImage: function(imageData) {
+            if (this.images.length >= this.MAX_IMAGES) {
+                return;
+            }
+
+            // Avoid duplicates
+            for (var i = 0; i < this.images.length; i++) {
+                if (this.images[i].id === imageData.id) {
+                    return;
+                }
+            }
+
+            this.images.push(imageData);
+            this.renderPreviewItem(imageData);
+            this.syncHiddenInput();
+        },
+
+        /**
+         * Remove an image by attachment ID.
+         *
+         * @param {number} id
+         */
+        removeById: function(id) {
+            this.images = this.images.filter(function(img) {
+                return img.id !== id;
+            });
+            $('#vh360-event-gallery-preview .vh360-event-gallery-preview-item[data-image-id="' + id + '"]').remove();
+            this.syncHiddenInput();
+        },
+
+        /**
+         * Render a single preview card in the gallery grid.
+         *
+         * @param {{ id: number, thumb_url: string, full_url: string, alt: string }} imageData
+         */
+        renderPreviewItem: function(imageData) {
+            var removeLabel = (typeof vh360EventsDashboard !== 'undefined' && vh360EventsDashboard.i18n && vh360EventsDashboard.i18n.galleryRemoveImage)
+                ? vh360EventsDashboard.i18n.galleryRemoveImage
+                : 'Remove image';
+
+            var $img = $('<img>').attr('src', imageData.thumb_url).attr('alt', imageData.alt || '');
+            var $btn = $('<button>').attr('type', 'button')
+                .addClass('vh360-event-gallery-remove')
+                .attr('data-image-id', imageData.id)
+                .attr('aria-label', removeLabel)
+                .text('\u00d7');
+            var $item = $('<div>').addClass('vh360-event-gallery-preview-item')
+                .attr('data-image-id', imageData.id)
+                .append($img)
+                .append($btn);
+
+            $('#vh360-event-gallery-preview').append($item);
+            this.updateCounter();
+        },
+
+        /**
+         * Update the hidden input and counter label.
+         */
+        syncHiddenInput: function() {
+            var ids = this.images.map(function(img) {
+                return img.id;
+            });
+            $('#vh360-event-gallery-image-ids').val(ids.join(','));
+            this.updateCounter();
+        },
+
+        /**
+         * Update the visible counter text and disable button if at max.
+         */
+        updateCounter: function() {
+            var count = this.images.length;
+            var label;
+
+            if (typeof vh360EventsDashboard !== 'undefined' && vh360EventsDashboard.i18n && vh360EventsDashboard.i18n.galleryImagesSelected) {
+                label = vh360EventsDashboard.i18n.galleryImagesSelected.replace('%d', count);
+            } else {
+                label = count + ' / 5 images selected';
+            }
+
+            $('#vh360-event-gallery-counter').text(label);
+
+            var $btn = $('#vh360-event-gallery-upload-trigger');
+            if (count >= this.MAX_IMAGES) {
+                $btn.prop('disabled', true).css('opacity', '0.5');
+            } else {
+                $btn.prop('disabled', false).css('opacity', '');
+            }
+        },
+
+        /**
+         * Load existing gallery images into the UI (used when editing an event).
+         *
+         * @param {Array} galleryImages
+         */
+        load: function(galleryImages) {
+            this.clear();
+            var self = this;
+
+            $.each(galleryImages, function(i, imageData) {
+                if (i >= self.MAX_IMAGES) {
+                    return false;
+                }
+                self.addImage(imageData);
+            });
+        },
+
+        /**
+         * Clear the gallery state and UI.
+         */
+        clear: function() {
+            this.images = [];
+            $('#vh360-event-gallery-preview').empty();
+            $('#vh360-event-gallery-image-ids').val('');
+            this.updateCounter();
+        }
+    };
+
+    /**
      * Initialize when document is ready
      */
     $(document).ready(function() {
         if (typeof vh360EventsDashboard !== 'undefined') {
             VH360EventsDashboard.init();
+            VH360EventGallery.init();
         }
     });
 

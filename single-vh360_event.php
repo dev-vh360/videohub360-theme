@@ -148,7 +148,7 @@ while (have_posts()) :
                     }
                     ?>
                     <?php if (!empty($full_image[0])) : ?>
-                    <button type="button" class="vh360-event-featured-image vh360-event-featured-image-trigger" data-full-image="<?php echo esc_url($full_image[0]); ?>" data-image-alt="<?php echo esc_attr($image_alt); ?>" aria-label="<?php echo esc_attr__('View full event image', 'videohub360-theme'); ?>">
+                    <button type="button" class="vh360-event-featured-image vh360-event-featured-image-trigger vh360-event-image-lightbox-trigger" data-full-image="<?php echo esc_url($full_image[0]); ?>" data-image-alt="<?php echo esc_attr($image_alt); ?>" aria-label="<?php echo esc_attr__('View full event image', 'videohub360-theme'); ?>">
                         <?php
                         echo get_the_post_thumbnail(
                             $event_id,
@@ -336,6 +336,44 @@ while (have_posts()) :
                     <div class="vh360-event-description">
                         <?php the_content(); ?>
                     </div>
+
+                    <?php
+                    // Event Gallery
+                    $gallery_image_ids = get_post_meta($event_id, '_vh360_event_gallery_image_ids', true);
+
+                    if (is_array($gallery_image_ids) && !empty($gallery_image_ids)) :
+                    ?>
+                    <div class="vh360-event-gallery-section">
+                        <h3 class="vh360-event-gallery-heading"><?php esc_html_e('Event Gallery', 'videohub360-theme'); ?></h3>
+                        <div class="vh360-event-gallery-grid">
+                            <?php foreach ($gallery_image_ids as $gallery_image_id) :
+                                $gallery_image_id = absint($gallery_image_id);
+
+                                if (!$gallery_image_id) {
+                                    continue;
+                                }
+
+                                $gallery_full  = wp_get_attachment_image_src($gallery_image_id, 'full');
+                                $gallery_thumb = wp_get_attachment_image_src($gallery_image_id, 'medium');
+                                $gallery_alt   = get_post_meta($gallery_image_id, '_wp_attachment_image_alt', true);
+
+                                if (empty($gallery_full[0]) || empty($gallery_thumb[0])) {
+                                    continue;
+                                }
+                            ?>
+                            <button type="button"
+                                    class="vh360-event-gallery-item vh360-event-image-lightbox-trigger"
+                                    data-full-image="<?php echo esc_url($gallery_full[0]); ?>"
+                                    data-image-alt="<?php echo esc_attr($gallery_alt); ?>"
+                                    aria-label="<?php esc_attr_e('View full image', 'videohub360-theme'); ?>">
+                                <img src="<?php echo esc_url($gallery_thumb[0]); ?>"
+                                     alt="<?php echo esc_attr($gallery_alt); ?>"
+                                     loading="lazy">
+                            </button>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
                     
                     <!-- Tags -->
                     <?php

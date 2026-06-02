@@ -353,6 +353,31 @@ $user_events = new WP_Query($args);
                             <?php esc_html_e('Upload a featured image for your event. Supported formats: JPG, PNG, GIF, WebP (Max 5MB)', 'videohub360-theme'); ?>
                         </small>
                     </div>
+
+                    <div class="vh360-form-group">
+                        <label class="vh360-form-label">
+                            <?php esc_html_e('Event Gallery', 'videohub360-theme'); ?>
+                        </label>
+                        <input type="hidden" id="vh360-event-gallery-image-ids" name="gallery_image_ids" value="">
+                        <input type="file" id="vh360-event-gallery-file-input" class="vh360-file-input" accept="image/jpeg,image/png,image/gif,image/webp" style="display: none;" multiple>
+                        <div class="vh360-event-gallery-upload-group">
+                            <button type="button" class="vh360-upload-button" id="vh360-event-gallery-upload-trigger">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                                <?php esc_html_e('Add Gallery Images', 'videohub360-theme'); ?>
+                            </button>
+                            <span id="vh360-event-gallery-counter" class="vh360-event-gallery-counter">
+                                <?php esc_html_e('0 / 5 images selected', 'videohub360-theme'); ?>
+                            </span>
+                        </div>
+                        <div id="vh360-event-gallery-preview" class="vh360-event-gallery-preview"></div>
+                        <small class="vh360-form-help">
+                            <?php esc_html_e('Add up to 5 additional images for this event. These images appear near the event description.', 'videohub360-theme'); ?>
+                        </small>
+                    </div>
                 </div>
                 
                 <!-- Event Type/Kind -->
