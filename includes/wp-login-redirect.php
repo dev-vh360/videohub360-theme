@@ -135,23 +135,54 @@ function vh360_block_admin_for_non_admins() {
     if (!is_user_logged_in()) {
         return;
     }
-    
+
     // Allow admins to access wp-admin
     if (current_user_can('manage_options')) {
         return;
     }
-    
+
     // Skip AJAX and REST
     if (wp_doing_ajax() || (defined('REST_REQUEST') && REST_REQUEST)) {
         return;
     }
-    
+
+    // Allow approved front-end admin-post.php handlers.
+    // These are form-processing endpoints used by the theme, not wp-admin screens.
+    global $pagenow;
+
+    if ('admin-post.php' === $pagenow) {
+        $action = isset($_REQUEST['action'])
+            ? sanitize_key(wp_unslash($_REQUEST['action']))
+            : '';
+
+        $allowed_frontend_admin_post_actions = array(
+            'vh360_create_post',
+        );
+
+        /**
+         * Filters front-end admin-post.php actions that non-admin users may access.
+         *
+         * This prevents the wp-admin blocker from breaking legitimate front-end forms
+         * while still keeping non-admin users out of wp-admin screens.
+         *
+         * @param array $allowed_frontend_admin_post_actions Allowed action names.
+         */
+        $allowed_frontend_admin_post_actions = apply_filters(
+            'vh360_allowed_frontend_admin_post_actions',
+            $allowed_frontend_admin_post_actions
+        );
+
+        if (in_array($action, $allowed_frontend_admin_post_actions, true)) {
+            return;
+        }
+    }
+
     // Redirect to front-end dashboard
     $dashboard_url = home_url('/dashboard/');
     if (!get_page_by_path('dashboard')) {
         $dashboard_url = home_url('/');
     }
-    
+
     wp_safe_redirect($dashboard_url, 302);
     exit;
 }

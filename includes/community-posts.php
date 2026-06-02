@@ -212,7 +212,16 @@ function vh360_handle_post_creation() {
 
     // Do not allow posts without content or media
     if (empty($post_content) && !$has_media) {
-        wp_redirect(wp_get_referer());
+        $redirect_url = wp_get_referer();
+
+        if (!$redirect_url) {
+            $redirect_url = get_permalink(get_option('page_on_front'));
+            if (!$redirect_url) {
+                $redirect_url = home_url('/');
+            }
+        }
+
+        wp_safe_redirect($redirect_url);
         exit;
     }
 
@@ -286,7 +295,16 @@ function vh360_handle_post_creation() {
     }
 
     // Redirect back to where the user came from
-    wp_safe_redirect(wp_get_referer());
+    $redirect_url = wp_get_referer();
+
+    if (!$redirect_url) {
+        $redirect_url = get_permalink(get_option('page_on_front'));
+        if (!$redirect_url) {
+            $redirect_url = home_url('/');
+        }
+    }
+
+    wp_safe_redirect($redirect_url);
     exit;
 }
 add_action('admin_post_vh360_create_post', 'vh360_handle_post_creation');
