@@ -314,7 +314,17 @@ class VH360_Theme_Admin {
                 'avatar_min_width' => 300,
                 'avatar_min_height' => 300,
                 'avatar_quality' => 90,
-                'avatar_allowed_types' => array('image/jpeg', 'image/png', 'image/gif'),
+                'avatar_allowed_types' => array(
+                    'image/jpeg',
+                    'image/pjpeg',
+                    'image/png',
+                    'image/gif',
+                    'image/webp',
+                    'image/heic',
+                    'image/heif',
+                    'image/heic-sequence',
+                    'image/heif-sequence',
+                ),
             ),
         ));
         

@@ -39,10 +39,29 @@
                 return;
             }
 
-            // Validate file type
-            // Note: File MIME types use 'image/jpeg' not 'image/jpg'
-            if (!file.type.match(/^image\/(jpeg|png|gif)$/i)) {
-                alert(vh360AvatarCropper.i18n.invalidFileType || 'Invalid file type. Please upload a JPG, PNG, or GIF image.');
+            // Validate file type using both MIME type and file extension
+            // Some browsers (especially on iOS/Android) may report non-standard MIME types
+            // for valid images (e.g. image/jpg instead of image/jpeg), so we check both.
+            const fileName = file.name || '';
+            const fileType = (file.type || '').toLowerCase();
+
+            const allowedMimeTypes = [
+                'image/jpeg',
+                'image/jpg',
+                'image/pjpeg',
+                'image/png',
+                'image/gif',
+                'image/webp',
+                'image/heic',
+                'image/heif',
+                'image/heic-sequence',
+                'image/heif-sequence'
+            ];
+
+            const allowedExtensions = /\.(jpe?g|png|gif|webp|heic|heif)$/i;
+
+            if (!allowedMimeTypes.includes(fileType) && !allowedExtensions.test(fileName)) {
+                alert(vh360AvatarCropper.i18n.invalidFileType || 'Invalid file type. Please upload a JPG, PNG, GIF, WebP, HEIC, or HEIF image.');
                 e.target.value = '';
                 return;
             }

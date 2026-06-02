@@ -56,7 +56,17 @@ function vh360_process_profile_avatar_upload($file, $user_id, $crop_data = array
     // The admin UI displays static text, but the option is available for advanced customization
     $avatar_allowed_types = isset($options['avatar_allowed_types']) && is_array($options['avatar_allowed_types']) 
         ? $options['avatar_allowed_types'] 
-        : array('image/jpeg', 'image/png', 'image/gif');
+        : array(
+            'image/jpeg',
+            'image/pjpeg',
+            'image/png',
+            'image/gif',
+            'image/webp',
+            'image/heic',
+            'image/heif',
+            'image/heic-sequence',
+            'image/heif-sequence',
+        );
 
     // Validate file exists
     if (empty($file['name']) || empty($file['tmp_name'])) {
@@ -97,6 +107,9 @@ function vh360_process_profile_avatar_upload($file, $user_id, $crop_data = array
             'jpg|jpeg|jpe' => 'image/jpeg',
             'png'          => 'image/png',
             'gif'          => 'image/gif',
+            'webp'         => 'image/webp',
+            'heic'         => 'image/heic',
+            'heif'         => 'image/heif',
         ),
     );
 
@@ -119,8 +132,63 @@ function vh360_process_profile_avatar_upload($file, $user_id, $crop_data = array
         @unlink($image_path);
         return array(
             'success' => false,
-            'error'   => __('Invalid file type. Please upload a JPG, PNG, or GIF image.', 'videohub360-theme')
+            'error'   => __('Invalid file type. Please upload a JPG, PNG, GIF, WebP, HEIC, or HEIF image.', 'videohub360-theme')
         );
+    }
+
+    // Handle HEIC/HEIF: convert to JPEG before further processing
+    // WordPress 6.7+ with Imagick support can process HEIC, but we always convert
+    // to JPEG so the public avatar is stored in a universally supported format.
+    $heic_mime_types = array(
+        'image/heic',
+        'image/heif',
+        'image/heic-sequence',
+        'image/heif-sequence',
+    );
+
+    if (in_array($file_check['type'], $heic_mime_types, true)) {
+        $editor = wp_get_image_editor($image_path);
+
+        if (is_wp_error($editor)) {
+            @unlink($image_path);
+
+            return array(
+                'success' => false,
+                'error'   => __('This HEIC/HEIF image could not be processed on this server. Please convert it to JPG, PNG, GIF, or WebP and try again.', 'videohub360-theme')
+            );
+        }
+
+        $converted_path = preg_replace('/\.(heic|heif)$/i', '.jpg', $image_path);
+
+        if (!$converted_path || $converted_path === $image_path) {
+            $converted_path = trailingslashit(dirname($image_path)) . wp_unique_filename(dirname($image_path), pathinfo($image_path, PATHINFO_FILENAME) . '.jpg');
+        }
+
+        $saved = $editor->save($converted_path, 'image/jpeg');
+
+        if (is_wp_error($saved) || empty($saved['path'])) {
+            @unlink($image_path);
+
+            return array(
+                'success' => false,
+                'error'   => __('This HEIC/HEIF image could not be converted on this server. Please upload a JPG, PNG, GIF, or WebP image instead.', 'videohub360-theme')
+            );
+        }
+
+        @unlink($image_path);
+
+        $image_path = $saved['path'];
+        $file['name'] = basename($saved['path']);
+        $file_check = wp_check_filetype_and_ext($image_path, $file['name']);
+
+        if (!$file_check['type'] || !in_array($file_check['type'], array('image/jpeg', 'image/pjpeg'), true)) {
+            @unlink($image_path);
+
+            return array(
+                'success' => false,
+                'error'   => __('This HEIC/HEIF image could not be converted into a valid JPG image.', 'videohub360-theme')
+            );
+        }
     }
 
     // Initialize image editor
@@ -273,7 +341,17 @@ function vh360_get_avatar_settings() {
         'avatar_min_height'     => 300,
         'avatar_quality'        => 90,
         'avatar_max_size'       => 2,
-        'avatar_allowed_types'  => array('image/jpeg', 'image/png', 'image/gif'),
+        'avatar_allowed_types'  => array(
+            'image/jpeg',
+            'image/pjpeg',
+            'image/png',
+            'image/gif',
+            'image/webp',
+            'image/heic',
+            'image/heif',
+            'image/heic-sequence',
+            'image/heif-sequence',
+        ),
     );
 
     return wp_parse_args($options, $defaults);
