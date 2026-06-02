@@ -74,6 +74,30 @@
                 return;
             }
 
+            // HEIC/HEIF files cannot be previewed by most browsers inside an <img> tag.
+            // Skip the cropper and submit directly to the backend, which will convert
+            // the image to JPEG and apply a server-side center crop as the fallback.
+            const heicExtensions = /\.(heic|heif)$/i;
+            const heicMimeTypes = [
+                'image/heic',
+                'image/heif',
+                'image/heic-sequence',
+                'image/heif-sequence'
+            ];
+
+            if (heicMimeTypes.includes(fileType) || heicExtensions.test(fileName)) {
+                ensureCropFields();
+
+                $('input[name="avatar_crop_x"]').val('');
+                $('input[name="avatar_crop_y"]').val('');
+                $('input[name="avatar_crop_width"]').val('');
+                $('input[name="avatar_crop_height"]').val('');
+                $('input[name="avatar_source_width"]').val('');
+                $('input[name="avatar_source_height"]').val('');
+
+                return;
+            }
+
             // Show crop modal and initialize cropper
             showCropModal(file);
         });

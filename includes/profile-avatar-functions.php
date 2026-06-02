@@ -52,21 +52,26 @@ function vh360_process_profile_avatar_upload($file, $user_id, $crop_data = array
     $avatar_min_width = isset($options['avatar_min_width']) ? absint($options['avatar_min_width']) : 300;
     $avatar_min_height = isset($options['avatar_min_height']) ? absint($options['avatar_min_height']) : 300;
     $avatar_quality = isset($options['avatar_quality']) ? absint($options['avatar_quality']) : 90;
-    // Note: avatar_allowed_types can be customized programmatically via options or filters
-    // The admin UI displays static text, but the option is available for advanced customization
-    $avatar_allowed_types = isset($options['avatar_allowed_types']) && is_array($options['avatar_allowed_types']) 
-        ? $options['avatar_allowed_types'] 
-        : array(
-            'image/jpeg',
-            'image/pjpeg',
-            'image/png',
-            'image/gif',
-            'image/webp',
-            'image/heic',
-            'image/heif',
-            'image/heic-sequence',
-            'image/heif-sequence',
-        );
+    // Note: avatar_allowed_types can be customized programmatically via options or filters.
+    // We always merge saved options with the full default list so that existing installs
+    // with an older (narrower) saved value automatically gain support for new types,
+    // and saving the Profile Settings page (which has no visible field for this) can
+    // never blank out the list.
+    $default_avatar_allowed_types = array(
+        'image/jpeg',
+        'image/pjpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'image/heic',
+        'image/heif',
+        'image/heic-sequence',
+        'image/heif-sequence',
+    );
+
+    $avatar_allowed_types = isset($options['avatar_allowed_types']) && is_array($options['avatar_allowed_types'])
+        ? array_values(array_unique(array_merge($default_avatar_allowed_types, $options['avatar_allowed_types'])))
+        : $default_avatar_allowed_types;
 
     // Validate file exists
     if (empty($file['name']) || empty($file['tmp_name'])) {
