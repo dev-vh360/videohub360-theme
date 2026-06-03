@@ -2016,22 +2016,24 @@ add_action('wp_update_nav_menu_item', function($menu_id, $menu_item_db_id, $args
         delete_post_meta($menu_item_db_id, '_vh360_menu_visibility_roles');
     }
 
-    // Icon field
-    $icon = '';
-    if (isset($_POST['vh360_menu_icon'][$menu_item_db_id])) {
-        $icon = sanitize_key($_POST['vh360_menu_icon'][$menu_item_db_id]);
+    // Icon field.
+    // Only process the normal menu icon dropdown when that field was actually submitted.
+    // This prevents predefined Mobile Bottom Nav icons saved from $args['menu-item-vh360-icon']
+    // from being deleted by this generic save handler.
+    if (
+        isset( $_POST['vh360_menu_icon'] )
+        && is_array( $_POST['vh360_menu_icon'] )
+        && array_key_exists( $menu_item_db_id, $_POST['vh360_menu_icon'] )
+    ) {
+        $icon = sanitize_key( wp_unslash( $_POST['vh360_menu_icon'][ $menu_item_db_id ] ) );
 
-        // Validate against whitelist
-        $allowed_icons = array_keys(vh360_menu_icon_choices());
-        if (!empty($icon) && !in_array($icon, $allowed_icons, true)) {
-            $icon = ''; // Invalid icon, clear it
+        $allowed_icons = array_keys( vh360_menu_icon_choices() );
+
+        if ( ! empty( $icon ) && in_array( $icon, $allowed_icons, true ) ) {
+            update_post_meta( $menu_item_db_id, '_vh360_menu_icon', $icon );
+        } else {
+            delete_post_meta( $menu_item_db_id, '_vh360_menu_icon' );
         }
-    }
-
-    if (!empty($icon)) {
-        update_post_meta($menu_item_db_id, '_vh360_menu_icon', $icon);
-    } else {
-        delete_post_meta($menu_item_db_id, '_vh360_menu_icon');
     }
 }, 10, 3);
 
