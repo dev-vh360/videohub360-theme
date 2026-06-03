@@ -659,6 +659,169 @@ class Elementor_VideoHub360_Hero_Widget extends \Elementor\Widget_Base {
         ]);
         
         $this->end_controls_section();
+
+        // ========================================
+        // STYLE TAB - CTA Buttons Section
+        // ========================================
+
+        $this->start_controls_section('vh360_hero_cta_buttons', [
+            'label' => __('CTA Buttons', 'videohub360'),
+            'tab' => \Elementor\Controls_Manager::TAB_STYLE,
+        ]);
+
+        // Shared CTA styles
+        $this->add_control('cta_shared_heading', [
+            'label' => __('Shared Button Styles', 'videohub360'),
+            'type' => \Elementor\Controls_Manager::HEADING,
+        ]);
+
+        $this->add_control('cta_gap', [
+            'label' => __('Gap Between Buttons', 'videohub360'),
+            'type' => \Elementor\Controls_Manager::SLIDER,
+            'size_units' => ['px'],
+            'range' => [
+                'px' => ['min' => 0, 'max' => 60, 'step' => 1],
+            ],
+            'selectors' => [
+                '{{WRAPPER}}' => '--vh360-hero-cta-gap: {{SIZE}}{{UNIT}};',
+            ],
+        ]);
+
+        $this->add_control('cta_padding', [
+            'label' => __('Padding', 'videohub360'),
+            'type' => \Elementor\Controls_Manager::DIMENSIONS,
+            'size_units' => ['px', 'em', '%'],
+            'selectors' => [
+                '{{WRAPPER}}' => '--vh360-hero-cta-padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
+            ],
+        ]);
+
+        $this->add_control('cta_border_radius', [
+            'label' => __('Border Radius', 'videohub360'),
+            'type' => \Elementor\Controls_Manager::SLIDER,
+            'size_units' => ['px', '%'],
+            'range' => [
+                'px' => ['min' => 0, 'max' => 100, 'step' => 1],
+            ],
+            'selectors' => [
+                '{{WRAPPER}}' => '--vh360-hero-cta-border-radius: {{SIZE}}{{UNIT}};',
+            ],
+        ]);
+
+        $this->add_control('cta_font_weight', [
+            'label' => __('Font Weight', 'videohub360'),
+            'type' => \Elementor\Controls_Manager::SELECT,
+            'options' => [
+                ''    => __('Default', 'videohub360'),
+                '300' => __('Light (300)', 'videohub360'),
+                '400' => __('Normal (400)', 'videohub360'),
+                '500' => __('Medium (500)', 'videohub360'),
+                '600' => __('Semi-Bold (600)', 'videohub360'),
+                '700' => __('Bold (700)', 'videohub360'),
+                '800' => __('Extra Bold (800)', 'videohub360'),
+                '900' => __('Black (900)', 'videohub360'),
+            ],
+            'default' => '',
+            'selectors' => [
+                '{{WRAPPER}}' => '--vh360-hero-cta-font-weight: {{VALUE}};',
+            ],
+        ]);
+
+        // Primary CTA styles
+        $this->add_control('cta_primary_heading', [
+            'label' => __('Primary Button', 'videohub360'),
+            'type' => \Elementor\Controls_Manager::HEADING,
+            'separator' => 'before',
+        ]);
+
+        $this->add_control('cta_primary_bg', [
+            'label' => __('Background Color', 'videohub360'),
+            'type' => \Elementor\Controls_Manager::COLOR,
+            'selectors' => [
+                '{{WRAPPER}}' => '--vh360-hero-cta-primary-bg: {{VALUE}};',
+            ],
+        ]);
+
+        $this->add_control('cta_primary_color', [
+            'label' => __('Text Color', 'videohub360'),
+            'type' => \Elementor\Controls_Manager::COLOR,
+            'selectors' => [
+                '{{WRAPPER}}' => '--vh360-hero-cta-primary-color: {{VALUE}};',
+            ],
+        ]);
+
+        $this->add_control('cta_primary_hover_bg', [
+            'label' => __('Hover Background Color', 'videohub360'),
+            'type' => \Elementor\Controls_Manager::COLOR,
+            'selectors' => [
+                '{{WRAPPER}}' => '--vh360-hero-cta-primary-hover-bg: {{VALUE}};',
+            ],
+        ]);
+
+        $this->add_control('cta_primary_hover_color', [
+            'label' => __('Hover Text Color', 'videohub360'),
+            'type' => \Elementor\Controls_Manager::COLOR,
+            'selectors' => [
+                '{{WRAPPER}}' => '--vh360-hero-cta-primary-hover-color: {{VALUE}};',
+            ],
+        ]);
+
+        // Secondary CTA styles
+        $this->add_control('cta_secondary_heading', [
+            'label' => __('Secondary Button', 'videohub360'),
+            'type' => \Elementor\Controls_Manager::HEADING,
+            'separator' => 'before',
+        ]);
+
+        $this->add_control('cta_secondary_bg', [
+            'label' => __('Background Color', 'videohub360'),
+            'type' => \Elementor\Controls_Manager::COLOR,
+            'selectors' => [
+                '{{WRAPPER}}' => '--vh360-hero-cta-secondary-bg: {{VALUE}};',
+            ],
+        ]);
+
+        $this->add_control('cta_secondary_color', [
+            'label' => __('Text Color', 'videohub360'),
+            'type' => \Elementor\Controls_Manager::COLOR,
+            'selectors' => [
+                '{{WRAPPER}}' => '--vh360-hero-cta-secondary-color: {{VALUE}};',
+            ],
+        ]);
+
+        $this->add_control('cta_secondary_border_color', [
+            'label' => __('Border Color', 'videohub360'),
+            'type' => \Elementor\Controls_Manager::COLOR,
+            'selectors' => [
+                '{{WRAPPER}}' => '--vh360-hero-cta-secondary-border-color: {{VALUE}};',
+            ],
+        ]);
+
+        $this->add_control('cta_secondary_hover_bg', [
+            'label' => __('Hover Background Color', 'videohub360'),
+            'type' => \Elementor\Controls_Manager::COLOR,
+            'selectors' => [
+                '{{WRAPPER}}' => '--vh360-hero-cta-secondary-hover-bg: {{VALUE}};',
+            ],
+        ]);
+
+        $this->add_control('cta_secondary_hover_color', [
+            'label' => __('Hover Text Color', 'videohub360'),
+            'type' => \Elementor\Controls_Manager::COLOR,
+            'selectors' => [
+                '{{WRAPPER}}' => '--vh360-hero-cta-secondary-hover-color: {{VALUE}};',
+            ],
+        ]);
+
+        $this->add_control('cta_secondary_hover_border_color', [
+            'label' => __('Hover Border Color', 'videohub360'),
+            'type' => \Elementor\Controls_Manager::COLOR,
+            'selectors' => [
+                '{{WRAPPER}}' => '--vh360-hero-cta-secondary-hover-border-color: {{VALUE}};',
+            ],
+        ]);
+
+        $this->end_controls_section();
     }
 
     protected function render() {
