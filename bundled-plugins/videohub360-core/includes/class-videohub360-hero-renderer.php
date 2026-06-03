@@ -517,37 +517,41 @@ class VideoHub360_Hero_Renderer {
             
             .<?php echo esc_attr($instance_id); ?> .vh360-hero-ctas {
                 display: flex;
-                gap: 12px;
+                gap: var(--vh360-hero-cta-gap, 12px);
                 flex-wrap: wrap;
             }
             
             .<?php echo esc_attr($instance_id); ?> .vh360-hero-cta {
                 display: inline-flex;
                 align-items: center;
-                padding: 12px 24px;
-                border-radius: 6px;
-                font-weight: 600;
+                padding: var(--vh360-hero-cta-padding, 12px 24px);
+                border-radius: var(--vh360-hero-cta-border-radius, 6px);
+                font-weight: var(--vh360-hero-cta-font-weight, 600);
                 text-decoration: none;
                 transition: all 0.2s ease;
                 cursor: pointer;
             }
             
             .<?php echo esc_attr($instance_id); ?> .vh360-hero-cta.primary {
-                background: #e53935;
-                color: #fff;
+                background: var(--vh360-hero-cta-primary-bg, #e53935);
+                color: var(--vh360-hero-cta-primary-color, #ffffff);
             }
             
             .<?php echo esc_attr($instance_id); ?> .vh360-hero-cta.primary:hover {
-                background: #c62828;
+                background: var(--vh360-hero-cta-primary-hover-bg, #c62828);
+                color: var(--vh360-hero-cta-primary-hover-color, var(--vh360-hero-cta-primary-color, #ffffff));
             }
             
             .<?php echo esc_attr($instance_id); ?> .vh360-hero-cta.secondary {
-                background: transparent;
-                border: 2px solid currentColor;
+                background: var(--vh360-hero-cta-secondary-bg, transparent);
+                color: var(--vh360-hero-cta-secondary-color, currentColor);
+                border: 2px solid var(--vh360-hero-cta-secondary-border-color, currentColor);
             }
             
             .<?php echo esc_attr($instance_id); ?> .vh360-hero-cta.secondary:hover {
-                opacity: 0.8;
+                background: var(--vh360-hero-cta-secondary-hover-bg, var(--vh360-hero-cta-secondary-bg, transparent));
+                color: var(--vh360-hero-cta-secondary-hover-color, var(--vh360-hero-cta-secondary-color, currentColor));
+                border-color: var(--vh360-hero-cta-secondary-hover-border-color, var(--vh360-hero-cta-secondary-border-color, currentColor));
             }
             
             .<?php echo esc_attr($instance_id); ?> .vh360-hero-video,
