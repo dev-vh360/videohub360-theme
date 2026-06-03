@@ -1170,7 +1170,7 @@ add_action('pre_get_posts', 'vh360_exclude_appointment_events_from_archives');
 require_once VH360_THEME_DIR . '/includes/user-menu-functions.php';
 
 /**
- * Community Menu icon registry
+ * Shared Videohub360 menu icon registry
  */
 require_once VH360_THEME_DIR . '/includes/community-menu-icons.php';
 
@@ -1812,9 +1812,9 @@ function vh360_mobile_bottom_nav_item_output( $item_output, $item, $depth, $args
     $icon_svg  = '';
     
     if ( ! empty( $icon_slug ) ) {
-        $allowed_icons = array_keys( vh360_cm_icon_choices() );
+        $allowed_icons = array_keys( vh360_menu_icon_choices() );
         if ( in_array( $icon_slug, $allowed_icons, true ) ) {
-            $icon_svg = vh360_cm_get_icon_svg( $icon_slug );
+            $icon_svg = vh360_get_menu_icon_svg( $icon_slug );
         }
     }
 
@@ -1957,9 +1957,9 @@ add_action('wp_nav_menu_item_custom_fields', function($item_id, $item, $depth, $
 
     <p class="description description-wide vh360-menu-icon-field">
         <label for="vh360-menu-icon-<?php echo esc_attr($item_id); ?>">
-            <strong><?php echo esc_html__('Community Menu Icon', 'videohub360-theme'); ?></strong><br />
+            <strong><?php echo esc_html__('Menu Icon', 'videohub360-theme'); ?></strong><br />
             <span style="color:#666; font-size:12px;">
-                <?php echo esc_html__('Optional icon for Community Menu. Only displays when this item is used in the Community Menu location.', 'videohub360-theme'); ?>
+                <?php echo esc_html__('Optional icon for Videohub360 menu locations that support icons. Currently used by the Community Menu and Mobile Bottom Nav.', 'videohub360-theme'); ?>
             </span>
         </label>
         <select
@@ -1969,7 +1969,7 @@ add_action('wp_nav_menu_item_custom_fields', function($item_id, $item, $depth, $
             <option value=""><?php echo esc_html__('— No Icon —', 'videohub360-theme'); ?></option>
             <?php
             $current_icon = get_post_meta($item_id, '_vh360_menu_icon', true);
-            $icon_choices = vh360_cm_icon_choices();
+            $icon_choices = vh360_menu_icon_choices();
             foreach ($icon_choices as $slug => $label) :
             ?>
                 <option value="<?php echo esc_attr($slug); ?>" <?php selected($current_icon, $slug); ?>>
@@ -2022,7 +2022,7 @@ add_action('wp_update_nav_menu_item', function($menu_id, $menu_item_db_id, $args
         $icon = sanitize_key($_POST['vh360_menu_icon'][$menu_item_db_id]);
 
         // Validate against whitelist
-        $allowed_icons = array_keys(vh360_cm_icon_choices());
+        $allowed_icons = array_keys(vh360_menu_icon_choices());
         if (!empty($icon) && !in_array($icon, $allowed_icons, true)) {
             $icon = ''; // Invalid icon, clear it
         }

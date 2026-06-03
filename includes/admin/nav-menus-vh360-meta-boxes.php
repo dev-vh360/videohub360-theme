@@ -263,7 +263,7 @@ function vh360_save_mobile_nav_menu_item_icon( $menu_id, $menu_item_db_id, $args
         
         // Validate icon against allowed icons
         if ( ! empty( $icon_slug ) ) {
-            $allowed_icons = array_keys( vh360_cm_icon_choices() );
+            $allowed_icons = array_keys( vh360_menu_icon_choices() );
             if ( in_array( $icon_slug, $allowed_icons, true ) ) {
                 update_post_meta( $menu_item_db_id, '_vh360_menu_icon', $icon_slug );
             }
