@@ -675,33 +675,36 @@ class Elementor_VideoHub360_Hero_Widget extends \Elementor\Widget_Base {
             'type' => \Elementor\Controls_Manager::HEADING,
         ]);
 
-        $this->add_control('cta_gap', [
-            'label' => __('Gap Between Buttons', 'videohub360'),
+        $this->add_responsive_control('cta_gap', [
+            'label' => __('Button Gap', 'videohub360'),
             'type' => \Elementor\Controls_Manager::SLIDER,
-            'size_units' => ['px'],
+            'size_units' => ['px', 'em', 'rem'],
             'range' => [
-                'px' => ['min' => 0, 'max' => 60, 'step' => 1],
+                'px' => ['min' => 0, 'max' => 80],
+                'em' => ['min' => 0, 'max' => 5],
+                'rem' => ['min' => 0, 'max' => 5],
             ],
             'selectors' => [
                 '{{WRAPPER}}' => '--vh360-hero-cta-gap: {{SIZE}}{{UNIT}};',
             ],
         ]);
 
-        $this->add_control('cta_padding', [
-            'label' => __('Padding', 'videohub360'),
+        $this->add_responsive_control('cta_padding', [
+            'label' => __('Button Padding', 'videohub360'),
             'type' => \Elementor\Controls_Manager::DIMENSIONS,
-            'size_units' => ['px', 'em', '%'],
+            'size_units' => ['px', 'em', 'rem'],
             'selectors' => [
                 '{{WRAPPER}}' => '--vh360-hero-cta-padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
             ],
         ]);
 
-        $this->add_control('cta_border_radius', [
-            'label' => __('Border Radius', 'videohub360'),
+        $this->add_responsive_control('cta_border_radius', [
+            'label' => __('Button Border Radius', 'videohub360'),
             'type' => \Elementor\Controls_Manager::SLIDER,
-            'size_units' => ['px', '%'],
+            'size_units' => ['px', 'em', 'rem', '%'],
             'range' => [
-                'px' => ['min' => 0, 'max' => 100, 'step' => 1],
+                'px' => ['min' => 0, 'max' => 100],
+                '%' => ['min' => 0, 'max' => 50],
             ],
             'selectors' => [
                 '{{WRAPPER}}' => '--vh360-hero-cta-border-radius: {{SIZE}}{{UNIT}};',
