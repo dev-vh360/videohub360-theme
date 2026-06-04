@@ -119,7 +119,7 @@ function vh360_output_dynamic_css() {
     // Header height = logo width * 0.6, with 80px minimum for usability
     $header_height = max(80, round($logo_max_width * 0.6));
     
-    // Auth Pages Colors (Consolidated - shared by Login, Register, Lost Password, Reset Password)
+    // Auth Pages Colors (Consolidated - shared by all authentication pages)
     $auth_page_bg_color             = get_theme_mod('vh360_auth_page_bg_color', '#f3f4f6');
     $auth_form_bg_color             = get_theme_mod('vh360_auth_form_bg_color', '#ffffff');
     $auth_welcome_bg_start          = get_theme_mod('vh360_auth_welcome_bg_start', '#667eea');
@@ -266,7 +266,7 @@ function vh360_output_dynamic_css() {
             --logo-max-width: <?php echo esc_attr($logo_max_width); ?>px;
             --header-height: <?php echo esc_attr($header_height); ?>px;
             
-            /* Auth Pages Variables (Shared by Login, Register, Lost Password, Reset Password) */
+            /* Auth Pages Variables (Shared by all authentication pages) */
             --auth-page-bg: <?php echo esc_attr($auth_page_bg_color); ?>;
             --auth-form-bg: <?php echo esc_attr($auth_form_bg_color); ?>;
             --auth-welcome-bg-start: <?php echo esc_attr($auth_welcome_bg_start); ?>;

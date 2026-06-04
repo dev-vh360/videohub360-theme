@@ -1,6 +1,6 @@
 <?php
 /**
- * Template Name: Register Professional
+ * Template Name: Professional Registration
  *
  * Custom registration page for Professional accounts
  *

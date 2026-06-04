@@ -1,6 +1,6 @@
 <?php
 /**
- * Template Name: Register Client
+ * Template Name: Client Registration
  *
  * Custom registration page for Client accounts
  *

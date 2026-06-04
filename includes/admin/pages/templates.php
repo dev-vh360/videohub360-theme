@@ -30,7 +30,7 @@ $templates = array(
         'icon' => 'dashicons-admin-users',
     ),
     array(
-        'name' => __('Login Template', 'videohub360-theme'),
+        'name' => __('Login Page', 'videohub360-theme'),
         'file' => 'template-login.php',
         'slug' => 'login',
         'description' => __('Custom login page with theme styling. Redirects logged-in users to the dashboard.', 'videohub360-theme'),
@@ -65,11 +65,25 @@ $templates = array(
         'icon' => 'dashicons-groups',
     ),
     array(
-        'name' => __('Register Template', 'videohub360-theme'),
+        'name' => __('Standard Register Page', 'videohub360-theme'),
         'file' => 'template-register.php',
         'slug' => 'standard-register',
         'description' => __('General user registration page with custom fields and validation. Integrates with WordPress user system.', 'videohub360-theme'),
         'icon' => 'dashicons-admin-users',
+    ),
+    array(
+        'name' => __('Lost Password Page', 'videohub360-theme'),
+        'file' => 'template-lost-password.php',
+        'slug' => 'lost-password',
+        'description' => __('Custom lost password page where users can request a password reset link.', 'videohub360-theme'),
+        'icon' => 'dashicons-sos',
+    ),
+    array(
+        'name' => __('Reset Password Page', 'videohub360-theme'),
+        'file' => 'template-reset-password.php',
+        'slug' => 'reset-password',
+        'description' => __('Custom reset password page where users can set a new password from a reset link.', 'videohub360-theme'),
+        'icon' => 'dashicons-update',
     ),
     array(
         'name' => __('Members Directory Template', 'videohub360-theme'),
@@ -223,7 +237,7 @@ foreach ($templates as $template) {
         <h3><?php esc_html_e('Full Featured Setup', 'videohub360-theme'); ?></h3>
         <p><?php esc_html_e('For maximum functionality, create all available templates:', 'videohub360-theme'); ?></p>
         <ul>
-            <li><?php esc_html_e('Dashboard, Profile Edit, Login, Register (for user management)', 'videohub360-theme'); ?></li>
+            <li><?php esc_html_e('Dashboard, Profile Edit, Login, Registration Landing, Standard Register, Lost Password, Reset Password (for user management)', 'videohub360-theme'); ?></li>
             <li><?php esc_html_e('Members Directory, Activity Feed (for community features)', 'videohub360-theme'); ?></li>
             <li><?php esc_html_e('Bulletins (for announcements)', 'videohub360-theme'); ?></li>
         </ul>

@@ -1,6 +1,6 @@
 <?php
 /**
- * Template Name: Register Instructor
+ * Template Name: Instructor Registration
  *
  * Custom registration page for Instructor/Educator accounts
  *
