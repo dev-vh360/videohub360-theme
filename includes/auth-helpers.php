@@ -222,16 +222,16 @@ function vh360_handle_registration() {
 add_action('template_redirect', 'vh360_handle_registration');
 
 /**
- * Handle Business registration form submission (Professional/Client)
+ * Handle account-type registration form submission (Professional/Client)
  */
-function vh360_handle_business_registration() {
+function vh360_handle_account_type_registration() {
     // Only process POST requests
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         return;
     }
     
-    // Only process if this is a business registration form submission
-    if (!isset($_POST['vh360_business_register_submit']) || !isset($_POST['vh360_business_register_nonce'])) {
+    // Only process if this is an account-type registration form submission
+    if (!isset($_POST['vh360_account_type_register_submit']) || !isset($_POST['vh360_account_type_register_nonce'])) {
         return;
     }
     
@@ -242,7 +242,7 @@ function vh360_handle_business_registration() {
     }
     
     // Verify nonce
-    if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['vh360_business_register_nonce'])), 'vh360_business_register')) {
+    if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['vh360_account_type_register_nonce'])), 'vh360_account_type_register')) {
         $error_code = 'nonce_failed';
         wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
         exit;
@@ -416,7 +416,7 @@ function vh360_handle_business_registration() {
     wp_safe_redirect($redirect_to);
     exit;
 }
-add_action('template_redirect', 'vh360_handle_business_registration');
+add_action('template_redirect', 'vh360_handle_account_type_registration');
 
 /**
  * Handle Instructor registration form submission.

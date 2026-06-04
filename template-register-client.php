@@ -127,7 +127,7 @@ get_header();
                     ?>
                     
                     <form method="post" action="" id="vh360-registerform" class="vh360-auth-form">
-                        <?php wp_nonce_field('vh360_business_register', 'vh360_business_register_nonce'); ?>
+                        <?php wp_nonce_field('vh360_account_type_register', 'vh360_account_type_register_nonce'); ?>
                         
                         <!-- Hidden field to set account type -->
                         <input type="hidden" name="vh360_account_type" value="client">
@@ -227,7 +227,7 @@ get_header();
                             </label>
                         </div>
 
-                        <button type="submit" name="vh360_business_register_submit" class="vh360-auth-submit">
+                        <button type="submit" name="vh360_account_type_register_submit" class="vh360-auth-submit">
                             <?php echo esc_html(get_theme_mod('vh360_client_register_button', __('Create Client Account', 'videohub360-theme'))); ?>
                         </button>
                         
