@@ -104,6 +104,7 @@ get_header();
                             'username_exists' => __('Username already exists. Please choose another.', 'videohub360-theme'),
                             'email_exists' => __('Email address is already registered.', 'videohub360-theme'),
                             'nonce_failed' => __('Security check failed. Please try again.', 'videohub360-theme'),
+                            'invalid_account_type' => __('Invalid registration type. Please try again.', 'videohub360-theme'),
                             'password_too_short' => __('Password must be at least 8 characters long.', 'videohub360-theme'),
                             'terms_not_accepted' => __('You must accept the Terms of Service and Privacy Policy.', 'videohub360-theme'),
                             'unknown' => __('Registration failed. Please try again.', 'videohub360-theme'),

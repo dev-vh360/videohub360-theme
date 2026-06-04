@@ -643,13 +643,14 @@ add_action('wp_enqueue_scripts', 'vh360_enqueue_user_menu_assets', 20);
  * Conditionally enqueue authentication page assets
  */
 function vh360_enqueue_auth_assets() {
-    // Load on login, register, lost password, reset password, and business registration template pages
+    // Load on login, register, lost password, reset password, business registration, professional, instructor, and client registration template pages
     if (is_page_template('template-login.php') || 
         is_page_template('template-register.php') || 
         is_page_template('template-lost-password.php') || 
         is_page_template('template-reset-password.php') ||
         is_page_template('template-register-business.php') ||
         is_page_template('template-register-professional.php') ||
+        is_page_template('template-register-instructor.php') ||
         is_page_template('template-register-client.php')) {
         wp_enqueue_style(
             'vh360-auth-pages',
