@@ -102,23 +102,6 @@
         }
     }
 
-    /**
-     * Helper function to get the client card element
-     * 
-     * Finds the client card by its secondary button class, with a fallback
-     * to the last card if the secondary button is not found (single-card mode).
-     * 
-     * @return {jQuery} jQuery object containing the client card
-     */
-    function getClientCard() {
-        var $clientCard = $('.vh360-business-choice-card:has(.vh360-button-secondary)');
-        if ($clientCard.length === 0) {
-            // Fallback: if no secondary button found, use last card
-            $clientCard = $('.vh360-business-choice-card').last();
-        }
-        return $clientCard;
-    }
-
     // =============================================================================
     // COLOR CONTROLS
     // =============================================================================
@@ -1428,127 +1411,55 @@
     });
 
     // =============================================================================
-    // BUSINESS LANDING PAGE BINDINGS (template-register-business.php)
+    // REGISTRATION LANDING PAGE BINDINGS (template-register-landing.php)
     // =============================================================================
 
-    // Business Landing - Headline
-    wp.customize('vh360_business_landing_headline', function(value) {
+    wp.customize('vh360_registration_landing_headline', function(value) {
         value.bind(function(newval) {
-            $('.vh360-business-choice-title').text(newval);
+            $('.vh360-registration-landing-page .vh360-registration-choice-header h1').text(newval);
         });
     });
 
-    // Business Landing - Description
-    wp.customize('vh360_business_landing_description', function(value) {
+    wp.customize('vh360_registration_landing_description', function(value) {
         value.bind(function(newval) {
-            $('.vh360-business-choice-description').text(newval);
+            $('.vh360-registration-landing-page .vh360-registration-choice-description').text(newval);
         });
     });
 
-    // Business Landing - Professional Card Title
-    wp.customize('vh360_business_professional_title', function(value) {
-        value.bind(function(newval) {
-            $('.vh360-business-choice-card:eq(0) .vh360-business-choice-card-title').text(newval);
+    function bindRegistrationCardText(settingId, selector) {
+        wp.customize(settingId, function(value) {
+            value.bind(function(newval) {
+                $(selector).text(newval);
+            });
         });
-    });
+    }
 
-    // Business Landing - Professional Card Description
-    wp.customize('vh360_business_professional_description', function(value) {
-        value.bind(function(newval) {
-            $('.vh360-business-choice-card:eq(0) .vh360-business-choice-card-description').text(newval);
-        });
-    });
+    var registrationCards = ['professional', 'instructor', 'client'];
 
-    // Business Landing - Professional Features (1-4)
-    wp.customize('vh360_business_professional_feature_1', function(value) {
-        value.bind(function(newval) {
-            $('.vh360-business-choice-card:eq(0) .vh360-business-choice-features li:eq(0)').text(newval);
-        });
-    });
+    registrationCards.forEach(function(card) {
+        var cardSelector = '.vh360-registration-card-' + card;
 
-    wp.customize('vh360_business_professional_feature_2', function(value) {
-        value.bind(function(newval) {
-            $('.vh360-business-choice-card:eq(0) .vh360-business-choice-features li:eq(1)').text(newval);
-        });
-    });
+        bindRegistrationCardText(
+            'vh360_registration_' + card + '_title',
+            cardSelector + ' .vh360-registration-card-title'
+        );
 
-    wp.customize('vh360_business_professional_feature_3', function(value) {
-        value.bind(function(newval) {
-            $('.vh360-business-choice-card:eq(0) .vh360-business-choice-features li:eq(2)').text(newval);
-        });
-    });
+        bindRegistrationCardText(
+            'vh360_registration_' + card + '_description',
+            cardSelector + ' .vh360-registration-card-description'
+        );
 
-    wp.customize('vh360_business_professional_feature_4', function(value) {
-        value.bind(function(newval) {
-            $('.vh360-business-choice-card:eq(0) .vh360-business-choice-features li:eq(3)').text(newval);
-        });
-    });
+        for (var i = 1; i <= 4; i++) {
+            bindRegistrationCardText(
+                'vh360_registration_' + card + '_feature_' + i,
+                cardSelector + ' .vh360-registration-card-features li:eq(' + (i - 1) + ')'
+            );
+        }
 
-    // Business Landing - Professional Button
-    wp.customize('vh360_business_professional_button', function(value) {
-        value.bind(function(newval) {
-            $('.vh360-business-choice-card:eq(0) .vh360-business-choice-button').text(newval);
-        });
-    });
-
-    // Business Landing - Client Card Title
-    wp.customize('vh360_business_client_title', function(value) {
-        value.bind(function(newval) {
-            getClientCard().find('.vh360-business-choice-card-title').text(newval);
-        });
-    });
-
-    // Business Landing - Client Card Description
-    wp.customize('vh360_business_client_description', function(value) {
-        value.bind(function(newval) {
-            getClientCard().find('.vh360-business-choice-card-description').text(newval);
-        });
-    });
-
-    // Business Landing - Client Features (1-4)
-    wp.customize('vh360_business_client_feature_1', function(value) {
-        value.bind(function(newval) {
-            getClientCard().find('.vh360-business-choice-features li:eq(0)').text(newval);
-        });
-    });
-
-    wp.customize('vh360_business_client_feature_2', function(value) {
-        value.bind(function(newval) {
-            getClientCard().find('.vh360-business-choice-features li:eq(1)').text(newval);
-        });
-    });
-
-    wp.customize('vh360_business_client_feature_3', function(value) {
-        value.bind(function(newval) {
-            getClientCard().find('.vh360-business-choice-features li:eq(2)').text(newval);
-        });
-    });
-
-    wp.customize('vh360_business_client_feature_4', function(value) {
-        value.bind(function(newval) {
-            getClientCard().find('.vh360-business-choice-features li:eq(3)').text(newval);
-        });
-    });
-
-    // Business Landing - Client Button
-    wp.customize('vh360_business_client_button', function(value) {
-        value.bind(function(newval) {
-            getClientCard().find('.vh360-business-choice-button').text(newval);
-        });
-    });
-
-    // Business Landing - Footer Text
-    wp.customize('vh360_business_landing_footer_text', function(value) {
-        value.bind(function(newval) {
-            $('.vh360-business-choice-footer span').text(newval);
-        });
-    });
-
-    // Business Landing - Footer Link
-    wp.customize('vh360_business_landing_footer_link', function(value) {
-        value.bind(function(newval) {
-            $('.vh360-business-choice-footer .vh360-auth-link').text(newval);
-        });
+        bindRegistrationCardText(
+            'vh360_registration_' + card + '_button',
+            cardSelector + ' .vh360-registration-card-button'
+        );
     });
 
     // =============================================================================

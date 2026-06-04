@@ -238,7 +238,7 @@ function vh360_handle_business_registration() {
     // Get the current page URL safely
     $current_url = get_permalink();
     if (!$current_url) {
-        $current_url = home_url('/register-business/');
+        $current_url = home_url('/register/');
     }
     
     // Verify nonce
@@ -713,24 +713,24 @@ function vh360_handle_business_profile_save() {
 add_action('template_redirect', 'vh360_handle_business_profile_save');
 
 /**
- * Get the URL for the business registration landing page
+ * Get the URL for the registration landing page.
  *
- * @return string The business registration landing page URL
+ * @return string The registration landing page URL.
  */
-function vh360_get_business_register_url() {
-    // Try to find a page with the business register template
+function vh360_get_registration_landing_url() {
+    // Try to find a page with the registration landing template.
     $pages = get_pages(array(
         'meta_key' => '_wp_page_template',
-        'meta_value' => 'template-register-business.php',
+        'meta_value' => 'template-register-landing.php',
         'number' => 1,
     ));
-    
+
     if (!empty($pages)) {
         return get_permalink($pages[0]->ID);
     }
-    
-    // Fallback to slug-based URL
-    return home_url('/register-business/');
+
+    // Fallback to slug-based URL.
+    return home_url('/register/');
 }
 
 /**

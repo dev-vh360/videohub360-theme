@@ -477,13 +477,13 @@ function vh360_customize_assign_panels($wp_customize) {
             // Reset Password
             'vh360_reset_password_content'         => 90,
             'vh360_reset_password_design'          => 100,
-            // Business Landing (missing panel assignment)
-            'vh360_business_landing_content'       => 110,
-            // Professional Register (missing panel assignment)
+            // Registration Landing
+            'vh360_registration_landing_content'   => 110,
+            // Professional Register
             'vh360_professional_register_content'  => 120,
-            // Instructor Register (missing panel assignment)
+            // Instructor Register
             'vh360_instructor_register_content'    => 125,
-            // Client Register (missing panel assignment)
+            // Client Register
             'vh360_client_register_content'        => 130,
             // Auth Pages Design (moved from Components panel)
             'vh360_auth_pages_design'              => 140,

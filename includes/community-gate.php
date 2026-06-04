@@ -112,8 +112,9 @@ function vh360_is_auth_page() {
     $auth_templates = array(
         'template-login.php',
         'template-register.php',
-        'template-register-business.php',
+        'template-register-landing.php',
         'template-register-professional.php',
+        'template-register-instructor.php',
         'template-register-client.php',
         'template-lost-password.php',
         'template-reset-password.php'

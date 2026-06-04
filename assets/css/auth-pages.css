@@ -407,24 +407,24 @@
 }
 
 /* ===============================================
-   Business Registration Landing Page Styles
+   Registration Landing Page Styles
    =============================================== */
 
-/* Business Choice Container - Override grid for single column layout */
-.vh360-business-choice-container {
+/* Registration Choice Container - Override grid for single column layout */
+.vh360-registration-choice-container {
     display: flex;
     flex-direction: column;
-    max-width: 1000px;
+    max-width: 1200px;
     padding: 3rem;
 }
 
 /* Header Section */
-.vh360-business-choice-header {
+.vh360-registration-choice-header {
     text-align: center;
     margin-bottom: 3rem;
 }
 
-.vh360-business-choice-title {
+.vh360-registration-choice-title {
     font-size: 2.5rem;
     font-weight: 700;
     margin: 1.5rem 0 1rem;
@@ -432,30 +432,22 @@
     line-height: 1.2;
 }
 
-.vh360-business-choice-description {
+.vh360-registration-choice-description {
     font-size: 1.125rem;
     color: var(--text-light);
     margin-bottom: 0;
 }
 
 /* Choice Cards Grid */
-.vh360-business-choice-cards {
+.vh360-registration-choice-cards {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 2rem;
     margin-bottom: 2rem;
 }
 
-/* Single Card Mode - Center and widen single card */
-.vh360-business-choice-cards--single {
-    grid-template-columns: 1fr;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-/* Individual Choice Card */
-.vh360-business-choice-card {
+/* Individual Registration Card */
+.vh360-registration-card {
     background: var(--bg-color);
     border: 2px solid var(--auth-input-border);
     border-radius: 12px;
@@ -467,14 +459,14 @@
     transition: all 0.3s ease;
 }
 
-.vh360-business-choice-card:hover {
+.vh360-registration-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
     border-color: var(--auth-input-focus-border);
 }
 
 /* Icon */
-.vh360-business-choice-icon {
+.vh360-registration-card-icon {
     width: 80px;
     height: 80px;
     background: linear-gradient(135deg, var(--auth-welcome-bg-start) 0%, var(--auth-welcome-bg-end) 100%);
@@ -485,12 +477,12 @@
     margin-bottom: 1.5rem;
 }
 
-.vh360-business-choice-icon svg {
+.vh360-registration-card-icon svg {
     color: white;
 }
 
 /* Card Title */
-.vh360-business-choice-card-title {
+.vh360-registration-card-title {
     font-size: 1.75rem;
     font-weight: 700;
     margin: 0 0 1rem;
@@ -498,7 +490,7 @@
 }
 
 /* Card Description */
-.vh360-business-choice-card-description {
+.vh360-registration-card-description {
     font-size: 1rem;
     color: var(--text-light);
     margin-bottom: 1.5rem;
@@ -506,14 +498,14 @@
 }
 
 /* Features List */
-.vh360-business-choice-features {
+.vh360-registration-card-features {
     list-style: none;
     padding: 0;
     margin: 0 0 2rem;
     width: 100%;
 }
 
-.vh360-business-choice-features li {
+.vh360-registration-card-features li {
     padding: 0.5rem 0;
     text-align: left;
     color: var(--text-color);
@@ -521,7 +513,7 @@
     padding-left: 1.5rem;
 }
 
-.vh360-business-choice-features li:before {
+.vh360-registration-card-features li:before {
     content: '✓';
     position: absolute;
     left: 0;
@@ -530,7 +522,7 @@
 }
 
 /* Choice Button */
-.vh360-business-choice-button {
+.vh360-registration-card-button {
     display: inline-block;
     padding: 0.875rem 2rem;
     border-radius: 8px;
@@ -543,6 +535,7 @@
     cursor: pointer;
     width: 100%;
     max-width: 280px;
+    margin-top: auto;
 }
 
 .vh360-button-primary {
@@ -570,37 +563,31 @@
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
-/* Footer Links */
-.vh360-business-choice-footer {
-    text-align: center;
-    margin-bottom: 1rem;
-}
-
-/* Responsive Design for Business Landing */
+/* Responsive Design for Registration Landing */
 @media (max-width: 768px) {
-    .vh360-business-choice-container {
+    .vh360-registration-choice-container {
         padding: 2rem 1.5rem;
     }
-    
-    .vh360-business-choice-title {
+
+    .vh360-registration-choice-title {
         font-size: 1.75rem;
     }
-    
-    .vh360-business-choice-cards {
+
+    .vh360-registration-choice-cards {
         grid-template-columns: 1fr;
         gap: 1.5rem;
     }
-    
-    .vh360-business-choice-card {
+
+    .vh360-registration-card {
         padding: 1.5rem;
     }
-    
-    .vh360-business-choice-icon {
+
+    .vh360-registration-card-icon {
         width: 64px;
         height: 64px;
     }
-    
-    .vh360-business-choice-icon svg {
+
+    .vh360-registration-card-icon svg {
         width: 48px;
         height: 48px;
     }
