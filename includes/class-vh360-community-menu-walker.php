@@ -129,9 +129,9 @@ class VH360_Community_Menu_Walker extends Walker_Nav_Menu {
         
         // Validate icon slug before getting SVG
         if (!empty($icon_slug)) {
-            $allowed_icons = array_keys(vh360_cm_icon_choices());
+            $allowed_icons = array_keys(vh360_menu_icon_choices());
             if (in_array($icon_slug, $allowed_icons, true)) {
-                $icon_svg = vh360_cm_get_icon_svg($icon_slug);
+                $icon_svg = vh360_get_menu_icon_svg($icon_slug);
             }
         }
 

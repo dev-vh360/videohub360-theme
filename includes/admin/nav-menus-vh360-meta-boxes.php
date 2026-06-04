@@ -245,29 +245,26 @@ function vh360_render_mobile_bottom_menu_items_meta_box() {
  * @return void
  */
 function vh360_save_mobile_nav_menu_item_icon( $menu_id, $menu_item_db_id, $args ) {
-    // Check user capabilities first (more restrictive than nonce)
-    // Capability check ensures only authorized users proceed, even if nonce is valid
     if ( ! current_user_can( 'edit_theme_options' ) ) {
         return;
     }
-    
-    // Verify nonce for CSRF protection (WordPress menu save nonce)
-    // Note: Do not sanitize nonce before verification - pass raw value
+
+    // Verify nonce for CSRF protection (WordPress menu save nonce).
+    // Note: Do not sanitize nonce before verification - pass raw value.
     if ( ! isset( $_POST['update-nav-menu-nonce'] ) || ! wp_verify_nonce( wp_unslash( $_POST['update-nav-menu-nonce'] ), 'update-nav-menu' ) ) {
         return;
     }
-    
-    // Check if icon data is present in the request
-    if ( isset( $_POST['menu-item-vh360-icon'][ $menu_item_db_id ] ) ) {
-        $icon_slug = sanitize_key( wp_unslash( $_POST['menu-item-vh360-icon'][ $menu_item_db_id ] ) );
-        
-        // Validate icon against allowed icons
-        if ( ! empty( $icon_slug ) ) {
-            $allowed_icons = array_keys( vh360_cm_icon_choices() );
-            if ( in_array( $icon_slug, $allowed_icons, true ) ) {
-                update_post_meta( $menu_item_db_id, '_vh360_menu_icon', $icon_slug );
-            }
-        }
+
+    if ( empty( $args['menu-item-vh360-icon'] ) ) {
+        return;
+    }
+
+    $icon_slug = sanitize_key( $args['menu-item-vh360-icon'] );
+
+    $allowed_icons = array_keys( vh360_menu_icon_choices() );
+
+    if ( in_array( $icon_slug, $allowed_icons, true ) ) {
+        update_post_meta( $menu_item_db_id, '_vh360_menu_icon', $icon_slug );
     }
 }
 add_action( 'wp_update_nav_menu_item', 'vh360_save_mobile_nav_menu_item_icon', 10, 3 );
