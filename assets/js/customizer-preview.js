@@ -767,7 +767,7 @@
     });
 
     // =============================================================================
-    // AUTH PAGES BINDINGS (Consolidated for Login, Register, Lost Password, Reset)
+    // AUTH PAGES BINDINGS (Global Design)
     // =============================================================================
 
     // Auth Pages - Page Background Color
@@ -833,6 +833,34 @@
         });
     });
 
+    // Auth Pages - Input Background Color
+    wp.customize('vh360_auth_input_bg_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-input-bg', newval);
+        });
+    });
+
+    // Auth Pages - Input Text Color
+    wp.customize('vh360_auth_input_text_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-input-text', newval);
+        });
+    });
+
+    // Auth Pages - Muted / Helper Text Color
+    wp.customize('vh360_auth_muted_text_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-muted-text', newval);
+        });
+    });
+
+    // Auth Pages - Input Focus Shadow Color
+    wp.customize('vh360_auth_input_focus_shadow_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-input-focus-shadow', newval);
+        });
+    });
+
     // Auth Pages - Button Background Gradient Start
     wp.customize('vh360_auth_button_bg_start', function(value) {
         value.bind(function(newval) {
@@ -851,6 +879,13 @@
     wp.customize('vh360_auth_button_text_color', function(value) {
         value.bind(function(newval) {
             updateCSSVariable('auth-button-text', newval);
+        });
+    });
+
+    // Auth Pages - Button Hover Shadow Color
+    wp.customize('vh360_auth_button_hover_shadow_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-button-hover-shadow', newval);
         });
     });
 
@@ -879,6 +914,13 @@
     wp.customize('vh360_auth_success_bg_color', function(value) {
         value.bind(function(newval) {
             updateCSSVariable('auth-success-bg', newval);
+        });
+    });
+
+    // Auth Pages - Success Text Color
+    wp.customize('vh360_auth_success_text_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-success-text', newval);
         });
     });
 

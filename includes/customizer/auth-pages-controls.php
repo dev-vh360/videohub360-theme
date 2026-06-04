@@ -130,6 +130,46 @@ function vh360_register_auth_pages_controls($wp_customize) {
         'section' => 'vh360_auth_pages_design',
     )));
 
+    $wp_customize->add_setting('vh360_auth_input_bg_color', array(
+        'default'           => '#ffffff',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_auth_input_bg_color', array(
+        'label'   => __('Input Background Color', 'videohub360-theme'),
+        'section' => 'vh360_auth_pages_design',
+    )));
+
+    $wp_customize->add_setting('vh360_auth_input_text_color', array(
+        'default'           => '#1a202c',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_auth_input_text_color', array(
+        'label'   => __('Input Text Color', 'videohub360-theme'),
+        'section' => 'vh360_auth_pages_design',
+    )));
+
+    $wp_customize->add_setting('vh360_auth_muted_text_color', array(
+        'default'           => '#718096',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_auth_muted_text_color', array(
+        'label'   => __('Muted / Helper Text Color', 'videohub360-theme'),
+        'section' => 'vh360_auth_pages_design',
+    )));
+
+    $wp_customize->add_setting('vh360_auth_input_focus_shadow_color', array(
+        'default'           => '#667eea',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_auth_input_focus_shadow_color', array(
+        'label'   => __('Input Focus Shadow Color', 'videohub360-theme'),
+        'section' => 'vh360_auth_pages_design',
+    )));
+
     // ==========================================
     // BUTTON COLORS
     // ==========================================
@@ -140,7 +180,7 @@ function vh360_register_auth_pages_controls($wp_customize) {
         'transport'         => 'postMessage',
     ));
     $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_auth_button_bg_start', array(
-        'label'   => __('Button Background Gradient Start', 'videohub360-theme'),
+        'label'   => __('Submit Button Background Gradient Start', 'videohub360-theme'),
         'section' => 'vh360_auth_pages_design',
     )));
 
@@ -150,7 +190,7 @@ function vh360_register_auth_pages_controls($wp_customize) {
         'transport'         => 'postMessage',
     ));
     $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_auth_button_bg_end', array(
-        'label'   => __('Button Background Gradient End', 'videohub360-theme'),
+        'label'   => __('Submit Button Background Gradient End', 'videohub360-theme'),
         'section' => 'vh360_auth_pages_design',
     )));
 
@@ -160,7 +200,17 @@ function vh360_register_auth_pages_controls($wp_customize) {
         'transport'         => 'postMessage',
     ));
     $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_auth_button_text_color', array(
-        'label'   => __('Button Text Color', 'videohub360-theme'),
+        'label'   => __('Submit Button Text Color', 'videohub360-theme'),
+        'section' => 'vh360_auth_pages_design',
+    )));
+
+    $wp_customize->add_setting('vh360_auth_button_hover_shadow_color', array(
+        'default'           => '#667eea',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_auth_button_hover_shadow_color', array(
+        'label'   => __('Button Hover Shadow Color', 'videohub360-theme'),
         'section' => 'vh360_auth_pages_design',
     )));
 
@@ -209,6 +259,16 @@ function vh360_register_auth_pages_controls($wp_customize) {
     ));
     $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_auth_success_bg_color', array(
         'label'   => __('Success Message Background', 'videohub360-theme'),
+        'section' => 'vh360_auth_pages_design',
+    )));
+
+    $wp_customize->add_setting('vh360_auth_success_text_color', array(
+        'default'           => '#22543d',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_auth_success_text_color', array(
+        'label'   => __('Success Message Text Color', 'videohub360-theme'),
         'section' => 'vh360_auth_pages_design',
     )));
 
