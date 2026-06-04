@@ -39,7 +39,7 @@ get_header();
 ?>
 
 <div id="primary" class="content-area">
-    <main id="main" class="site-main vh360-auth-page register-page business-register-page">
+    <main id="main" class="site-main vh360-auth-page register-page account-type-register-page client-register-page">
         
         <div class="vh360-auth-container">
             
