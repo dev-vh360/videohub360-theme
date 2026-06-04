@@ -419,6 +419,169 @@ function vh360_handle_business_registration() {
 add_action('template_redirect', 'vh360_handle_business_registration');
 
 /**
+ * Handle Instructor registration form submission.
+ */
+function vh360_handle_instructor_registration() {
+    // Only process POST requests
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        return;
+    }
+
+    // Only process if this is an instructor registration form submission
+    if (!isset($_POST['vh360_instructor_register_submit']) || !isset($_POST['vh360_instructor_register_nonce'])) {
+        return;
+    }
+
+    // Get the current page URL safely
+    $current_url = get_permalink();
+    if (!$current_url) {
+        $current_url = home_url('/register-instructor/');
+    }
+
+    // Verify nonce
+    if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['vh360_instructor_register_nonce'])), 'vh360_instructor_register')) {
+        $error_code = 'nonce_failed';
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        exit;
+    }
+
+    // Validate the explicit creator/instructor form markers.
+    $account_type = isset($_POST['vh360_account_type']) ? sanitize_text_field(wp_unslash($_POST['vh360_account_type'])) : '';
+    $registration_intent = isset($_POST['vh360_registration_intent']) ? sanitize_text_field(wp_unslash($_POST['vh360_registration_intent'])) : '';
+
+    if ('creator' !== $account_type || 'instructor' !== $registration_intent) {
+        $error_code = 'invalid_account_type';
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        exit;
+    }
+
+    // Get form data
+    $first_name = isset($_POST['vh360_first_name']) ? sanitize_text_field(wp_unslash($_POST['vh360_first_name'])) : '';
+    $last_name  = isset($_POST['vh360_last_name']) ? sanitize_text_field(wp_unslash($_POST['vh360_last_name'])) : '';
+    $username   = isset($_POST['vh360_username']) ? sanitize_user(wp_unslash($_POST['vh360_username'])) : '';
+    $email      = isset($_POST['vh360_email']) ? sanitize_email(wp_unslash($_POST['vh360_email'])) : '';
+    $password   = isset($_POST['vh360_password']) ? $_POST['vh360_password'] : ''; // Don't trim passwords
+    $terms_accepted = isset($_POST['vh360_terms']) && $_POST['vh360_terms'] === 'on';
+
+    // Validate required fields
+    if (empty($first_name) || empty($last_name) || empty($username) || empty($email) || empty($password)) {
+        $error_code = 'empty_fields';
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        exit;
+    }
+
+    // Validate terms acceptance
+    if (!$terms_accepted) {
+        $error_code = 'terms_not_accepted';
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        exit;
+    }
+
+    // Validate password length
+    if (strlen($password) < 8) {
+        $error_code = 'password_too_short';
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        exit;
+    }
+
+    // Validate email
+    if (!is_email($email)) {
+        $error_code = 'invalid_email';
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        exit;
+    }
+
+    // Check if username exists
+    if (username_exists($username)) {
+        $error_code = 'username_exists';
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        exit;
+    }
+
+    // Check if email exists
+    if (email_exists($email)) {
+        $error_code = 'email_exists';
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        exit;
+    }
+
+    // Create the user as an instructor-capable creator.
+    $display_name = trim($first_name . ' ' . $last_name);
+    if ('' === $display_name) {
+        $display_name = $username;
+    }
+
+    $role = get_role('vh360_instructor') ? 'vh360_instructor' : 'subscriber';
+
+    $user_id = wp_insert_user(array(
+        'user_login'   => $username,
+        'user_email'   => $email,
+        'user_pass'    => $password,
+        'first_name'   => $first_name,
+        'last_name'    => $last_name,
+        'display_name' => $display_name,
+        'role'         => $role,
+    ));
+
+    // Check for errors
+    if (is_wp_error($user_id)) {
+        $error_code = $user_id->get_error_code();
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        exit;
+    }
+
+    // If the role is unavailable, grant the minimum instructor capabilities directly.
+    if (!get_role('vh360_instructor')) {
+        $user = new WP_User($user_id);
+        $user->add_cap('upload_files');
+        $user->add_cap('vh360_create_videos');
+    }
+
+    update_user_meta($user_id, '_vh360_account_type', 'creator');
+    update_user_meta($user_id, '_vh360_registration_intent', 'instructor');
+    update_user_meta($user_id, '_vh360_profile_visibility', 'public');
+
+    // Log the user in
+    wp_set_current_user($user_id);
+    wp_set_auth_cookie($user_id);
+
+    // Send registration notification if enabled
+    if (get_theme_mod('vh360_registration_notify', false)) {
+        $notification_email = get_theme_mod('vh360_registration_notify_email', get_option('admin_email'));
+        $notification_email = sanitize_email($notification_email);
+        if (!empty($notification_email)) {
+            /* translators: %s: Site name */
+            $subject = sprintf(__('[%s] New instructor registration', 'videohub360-theme'), get_bloginfo('name'));
+            $message  = "";
+            $message .= sprintf(__('A new instructor has registered on %s.', 'videohub360-theme'), get_bloginfo('name')) . "\n\n";
+            $message .= __('Username:', 'videohub360-theme') . ' ' . $username . "\n";
+            $message .= __('Email:', 'videohub360-theme') . ' ' . $email . "\n";
+            $message .= __('Account Type:', 'videohub360-theme') . ' ' . __('Creator', 'videohub360-theme') . "\n";
+            $message .= __('Registration Intent:', 'videohub360-theme') . ' ' . __('Instructor', 'videohub360-theme') . "\n";
+            wp_mail($notification_email, $subject, $message);
+        }
+    }
+
+    if (function_exists('videohub360_course_features_enabled') && videohub360_course_features_enabled()) {
+        $redirect_to = function_exists('vh360_get_dashboard_tab_url')
+            ? vh360_get_dashboard_tab_url('courses')
+            : add_query_arg('tab', 'courses', home_url('/dashboard/'));
+    } else {
+        $redirect_to = function_exists('vh360_get_dashboard_tab_url')
+            ? vh360_get_dashboard_tab_url('create-video')
+            : add_query_arg('tab', 'create-video', home_url('/dashboard/'));
+    }
+
+    if (!get_page_by_path('dashboard')) {
+        $redirect_to = home_url('/');
+    }
+
+    wp_safe_redirect($redirect_to);
+    exit;
+}
+add_action('template_redirect', 'vh360_handle_instructor_registration');
+
+/**
  * Get the URL for the professional registration page
  *
  * @return string The professional registration page URL
@@ -430,13 +593,34 @@ function vh360_get_professional_register_url() {
         'meta_value' => 'template-register-professional.php',
         'number' => 1,
     ));
-    
+
     if (!empty($pages)) {
         return get_permalink($pages[0]->ID);
     }
-    
+
     // Fallback to slug-based URL
     return home_url('/register-professional/');
+}
+
+/**
+ * Get the URL for the instructor registration page
+ *
+ * @return string The instructor registration page URL
+ */
+function vh360_get_instructor_register_url() {
+    // Try to find a page with the instructor register template
+    $pages = get_pages(array(
+        'meta_key' => '_wp_page_template',
+        'meta_value' => 'template-register-instructor.php',
+        'number' => 1,
+    ));
+
+    if (!empty($pages)) {
+        return get_permalink($pages[0]->ID);
+    }
+
+    // Fallback to slug-based URL
+    return home_url('/register-instructor/');
 }
 
 /**

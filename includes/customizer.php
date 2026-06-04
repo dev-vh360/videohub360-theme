@@ -481,6 +481,8 @@ function vh360_customize_assign_panels($wp_customize) {
             'vh360_business_landing_content'       => 110,
             // Professional Register (missing panel assignment)
             'vh360_professional_register_content'  => 120,
+            // Instructor Register (missing panel assignment)
+            'vh360_instructor_register_content'    => 125,
             // Client Register (missing panel assignment)
             'vh360_client_register_content'        => 130,
             // Auth Pages Design (moved from Components panel)

@@ -90,10 +90,10 @@ $single_card_mode = ($landing_mode !== 'both');
                         </svg>
                     </div>
                     <h2 class="vh360-business-choice-card-title">
-                        <?php echo esc_html(get_theme_mod('vh360_business_professional_title', __('Professional', 'videohub360-theme'))); ?>
+                        <?php echo esc_html(get_theme_mod('vh360_business_professional_title', __('Service Professional', 'videohub360-theme'))); ?>
                     </h2>
                     <p class="vh360-business-choice-card-description">
-                        <?php echo esc_html(get_theme_mod('vh360_business_professional_description', __('For therapists, consultants, coaches, and service providers looking to showcase their business and connect with clients.', 'videohub360-theme'))); ?>
+                        <?php echo esc_html(get_theme_mod('vh360_business_professional_description', __('For therapists, consultants, coaches, healthcare providers, and service professionals who need a business profile, services, availability, and client booking.', 'videohub360-theme'))); ?>
                     </p>
                     <ul class="vh360-business-choice-features">
                         <li><?php echo esc_html(get_theme_mod('vh360_business_professional_feature_1', __('Business profile with services', 'videohub360-theme'))); ?></li>
@@ -102,7 +102,7 @@ $single_card_mode = ($landing_mode !== 'both');
                         <li><?php echo esc_html(get_theme_mod('vh360_business_professional_feature_4', __('Share content & resources', 'videohub360-theme'))); ?></li>
                     </ul>
                     <a href="<?php echo esc_url($professional_url); ?>" class="vh360-business-choice-button vh360-button-primary">
-                        <?php echo esc_html(get_theme_mod('vh360_business_professional_button', __('Sign Up as Professional', 'videohub360-theme'))); ?>
+                        <?php echo esc_html(get_theme_mod('vh360_business_professional_button', __('Sign Up as Service Professional', 'videohub360-theme'))); ?>
                     </a>
                 </div>
                 <?php endif; ?>

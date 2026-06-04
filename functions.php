@@ -162,6 +162,35 @@ function vh360_register_professional_role() {
 add_action('init', 'vh360_register_professional_role');
 
 /**
+ * Register Instructor Role
+ *
+ * Creates a custom role for course instructors with media/video creation capabilities.
+ * This role is assigned to users who register through the instructor registration path.
+ */
+function vh360_register_instructor_role() {
+    // Check if role already exists
+    if (get_role('vh360_instructor')) {
+        return;
+    }
+
+    // Get subscriber capabilities as a base
+    $subscriber = get_role('subscriber');
+    $capabilities = $subscriber ? $subscriber->capabilities : array('read' => true);
+
+    // Add instructor content creation capabilities
+    $capabilities['upload_files'] = true;
+    $capabilities['vh360_create_videos'] = true;
+
+    // Register the instructor role
+    add_role(
+        'vh360_instructor',
+        __('Instructor', 'videohub360-theme'),
+        $capabilities
+    );
+}
+add_action('init', 'vh360_register_instructor_role');
+
+/**
  * Set default comment options on theme activation
  *
  * Automatically enables login-only commenting for a community-focused platform.
@@ -174,8 +203,9 @@ add_action('after_switch_theme', function () {
     // Keep WP's guest-comment requirements consistent if it's ever enabled later
     update_option('require_name_email', 1);
 
-    // Register professional role on theme activation
+    // Register custom account roles on theme activation
     vh360_register_professional_role();
+    vh360_register_instructor_role();
 });
 
 /**

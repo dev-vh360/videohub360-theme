@@ -1610,6 +1610,58 @@
     });
 
     // =============================================================================
+    // INSTRUCTOR REGISTRATION PAGE BINDINGS (template-register-instructor.php)
+    // =============================================================================
+
+    wp.customize('vh360_instructor_register_headline', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-auth-wrapper.register-instructor .vh360-auth-heading, .instructor-register-page .vh360-auth-heading').text(newval);
+        });
+    });
+
+    wp.customize('vh360_instructor_register_description', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-auth-wrapper.register-instructor .vh360-auth-description, .instructor-register-page .vh360-auth-description').text(newval);
+        });
+    });
+
+    wp.customize('vh360_instructor_register_benefits_heading', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-auth-wrapper.register-instructor .vh360-auth-benefits-title, .instructor-register-page .vh360-auth-benefits-title').text(newval);
+        });
+    });
+
+    wp.customize('vh360_instructor_register_benefit_1', function(value) {
+        value.bind(function(newval) {
+            updateBenefitText('.vh360-auth-wrapper.register-instructor .vh360-auth-benefits-list li:eq(0), .instructor-register-page .vh360-auth-benefits-list li:eq(0)', newval);
+        });
+    });
+
+    wp.customize('vh360_instructor_register_benefit_2', function(value) {
+        value.bind(function(newval) {
+            updateBenefitText('.vh360-auth-wrapper.register-instructor .vh360-auth-benefits-list li:eq(1), .instructor-register-page .vh360-auth-benefits-list li:eq(1)', newval);
+        });
+    });
+
+    wp.customize('vh360_instructor_register_benefit_3', function(value) {
+        value.bind(function(newval) {
+            updateBenefitText('.vh360-auth-wrapper.register-instructor .vh360-auth-benefits-list li:eq(2), .instructor-register-page .vh360-auth-benefits-list li:eq(2)', newval);
+        });
+    });
+
+    wp.customize('vh360_instructor_register_benefit_4', function(value) {
+        value.bind(function(newval) {
+            updateBenefitText('.vh360-auth-wrapper.register-instructor .vh360-auth-benefits-list li:eq(3), .instructor-register-page .vh360-auth-benefits-list li:eq(3)', newval);
+        });
+    });
+
+    wp.customize('vh360_instructor_register_button', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-auth-wrapper.register-instructor .vh360-auth-form-title, .instructor-register-page .vh360-auth-form-title, .instructor-register-page .vh360-auth-submit').text(newval);
+        });
+    });
+
+    // =============================================================================
     // CLIENT REGISTRATION PAGE BINDINGS (template-register-client.php)
     // =============================================================================
 

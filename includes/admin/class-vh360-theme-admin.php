@@ -441,7 +441,7 @@ class VH360_Theme_Admin {
             'sanitize_callback' => array($this, 'sanitize_permissions_settings'),
             'default' => array(
                 'create_posts_roles' => array('administrator'),
-                'create_videos_roles' => array('administrator'),
+                'create_videos_roles' => array('administrator', 'vh360_instructor'),
                 'host_live_roles' => array('administrator'),
             ),
         ));
@@ -1822,7 +1822,7 @@ class VH360_Theme_Admin {
         // Get current saved permissions
         $current_permissions = get_option('vh360_permissions_options', array(
             'create_posts_roles' => array('administrator'),
-            'create_videos_roles' => array('administrator'),
+            'create_videos_roles' => array('administrator', 'vh360_instructor'),
             'host_live_roles' => array('administrator'),
             'create_events_roles' => array('administrator', 'editor', 'author', 'vh360_professional'),
             'create_bulletins_roles' => array('administrator', 'editor', 'author', 'contributor'),

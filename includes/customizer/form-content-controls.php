@@ -1821,7 +1821,7 @@ function vh360_register_form_content_controls($wp_customize) {
     
     // Professional Card Title
     $wp_customize->add_setting('vh360_business_professional_title', array(
-        'default'           => __('Professional', 'videohub360-theme'),
+        'default'           => __('Service Professional', 'videohub360-theme'),
         'sanitize_callback' => 'sanitize_text_field',
         'transport'         => 'postMessage',
     ));
@@ -1833,7 +1833,7 @@ function vh360_register_form_content_controls($wp_customize) {
     
     // Professional Card Description
     $wp_customize->add_setting('vh360_business_professional_description', array(
-        'default'           => __('For therapists, consultants, coaches, and service providers looking to showcase their business and connect with clients.', 'videohub360-theme'),
+        'default'           => __('For therapists, consultants, coaches, healthcare providers, and service professionals who need a business profile, services, availability, and client booking.', 'videohub360-theme'),
         'sanitize_callback' => 'sanitize_textarea_field',
         'transport'         => 'postMessage',
     ));
@@ -1866,7 +1866,7 @@ function vh360_register_form_content_controls($wp_customize) {
     
     // Professional Button Text
     $wp_customize->add_setting('vh360_business_professional_button', array(
-        'default'           => __('Sign Up as Professional', 'videohub360-theme'),
+        'default'           => __('Sign Up as Service Professional', 'videohub360-theme'),
         'sanitize_callback' => 'sanitize_text_field',
         'transport'         => 'postMessage',
     ));
@@ -2035,8 +2035,86 @@ function vh360_register_form_content_controls($wp_customize) {
         'section' => 'vh360_professional_register_content',
         'type'    => 'text',
     ));
-    
-    
+
+    /**
+     * Instructor Registration Form Content
+     */
+    $wp_customize->add_section('vh360_instructor_register_content', array(
+        'title'       => __('Instructor Registration Form', 'videohub360-theme'),
+        'priority'    => 17,
+        'description' => __('Customize content for the Instructor registration form.', 'videohub360-theme'),
+    ));
+
+    // Form Headline
+    $wp_customize->add_setting('vh360_instructor_register_headline', array(
+        'default'           => __('Instructor Registration', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_instructor_register_headline', array(
+        'label'   => __('Form Headline', 'videohub360-theme'),
+        'section' => 'vh360_instructor_register_content',
+        'type'    => 'text',
+    ));
+
+    // Form Description
+    $wp_customize->add_setting('vh360_instructor_register_description', array(
+        'default'           => __('Create your instructor account and start building courses, lessons, and learning experiences.', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_textarea_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_instructor_register_description', array(
+        'label'   => __('Form Description', 'videohub360-theme'),
+        'section' => 'vh360_instructor_register_content',
+        'type'    => 'textarea',
+    ));
+
+    // Benefits Heading
+    $wp_customize->add_setting('vh360_instructor_register_benefits_heading', array(
+        'default'           => __('Instructor Benefits:', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_instructor_register_benefits_heading', array(
+        'label'   => __('Benefits Heading', 'videohub360-theme'),
+        'section' => 'vh360_instructor_register_content',
+        'type'    => 'text',
+    ));
+
+    // Benefits (4 items)
+    for ($i = 1; $i <= 4; $i++) {
+        $defaults = array(
+            1 => __('Create and manage courses', 'videohub360-theme'),
+            2 => __('Publish lessons and learning content', 'videohub360-theme'),
+            3 => __('Build an instructor profile', 'videohub360-theme'),
+            4 => __('Share educational videos and resources', 'videohub360-theme'),
+        );
+
+        $wp_customize->add_setting("vh360_instructor_register_benefit_{$i}", array(
+            'default'           => $defaults[$i],
+            'sanitize_callback' => 'sanitize_text_field',
+            'transport'         => 'postMessage',
+        ));
+        $wp_customize->add_control("vh360_instructor_register_benefit_{$i}", array(
+            'label'   => sprintf(__('Benefit %d', 'videohub360-theme'), $i),
+            'section' => 'vh360_instructor_register_content',
+            'type'    => 'text',
+        ));
+    }
+
+    // Button Text
+    $wp_customize->add_setting('vh360_instructor_register_button', array(
+        'default'           => __('Create Instructor Account', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_instructor_register_button', array(
+        'label'   => __('Submit Button Text', 'videohub360-theme'),
+        'section' => 'vh360_instructor_register_content',
+        'type'    => 'text',
+    ));
+
+
     /**
      * Client Registration Form Content
      */
