@@ -463,28 +463,22 @@ function vh360_customize_assign_panels($wp_customize) {
     if ($auth_panel) {
         // All authentication-related sections
         $auth_sections = array(
-            // Login
-            'vh360_login_content'                  => 10,
-            'vh360_login_design'                   => 20,
-            // Register
+            // Global shared design
+            'vh360_auth_pages_design'              => 10,
+            // Page/form content
+            'vh360_login_content'                  => 20,
             'vh360_register_content'               => 30,
-            'vh360_register_design'                => 40,
-            'vh360_registration_fields'            => 50,
-            'vh360_registration_notifications'     => 60,
-            // Lost Password
-            'vh360_lost_password_content'          => 70,
-            'vh360_lost_password_design'           => 80,
-            // Reset Password
+            'vh360_registration_landing_content'   => 40,
+            'vh360_professional_register_content'  => 50,
+            'vh360_instructor_register_content'    => 60,
+            'vh360_client_register_content'        => 70,
+            'vh360_lost_password_content'          => 80,
             'vh360_reset_password_content'         => 90,
-            'vh360_reset_password_design'          => 100,
-            // Business Landing (missing panel assignment)
-            'vh360_business_landing_content'       => 110,
-            // Professional Register (missing panel assignment)
-            'vh360_professional_register_content'  => 120,
-            // Client Register (missing panel assignment)
-            'vh360_client_register_content'        => 130,
-            // Auth Pages Design (moved from Components panel)
-            'vh360_auth_pages_design'              => 140,
+            // Registration settings
+            'vh360_registration_fields'            => 100,
+            'vh360_registration_notifications'     => 110,
+            // Login redirect settings
+            'vh360_login_redirects'                => 120,
         );
 
         foreach ($auth_sections as $section_id => $priority) {

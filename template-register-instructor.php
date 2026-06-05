@@ -1,8 +1,8 @@
 <?php
 /**
- * Template Name: Client Registration
+ * Template Name: Instructor Registration
  *
- * Custom registration page for Client accounts
+ * Custom registration page for Instructor/Educator accounts
  *
  * @package Videohub360_Theme
  * @since 1.0.0
@@ -39,7 +39,7 @@ get_header();
 ?>
 
 <div id="primary" class="content-area">
-    <main id="main" class="site-main vh360-auth-page register-page account-type-register-page client-register-page">
+    <main id="main" class="site-main vh360-auth-page register-page account-type-register-page instructor-register-page">
         
         <div class="vh360-auth-container">
             
@@ -55,33 +55,33 @@ get_header();
                     <?php endif; ?>
                     
                     <h1 class="vh360-auth-heading">
-                        <?php echo esc_html(get_theme_mod('vh360_client_register_headline', __('Client Registration', 'videohub360-theme'))); ?>
+                        <?php echo esc_html(get_theme_mod('vh360_instructor_register_headline', __('Instructor Registration', 'videohub360-theme'))); ?>
                     </h1>
                     
                     <p class="vh360-auth-description">
-                        <?php echo esc_html(get_theme_mod('vh360_client_register_description', __('Create your client account to connect with professionals and engage with content.', 'videohub360-theme'))); ?>
+                        <?php echo esc_html(get_theme_mod('vh360_instructor_register_description', __('Create your instructor account and start building courses, lessons, and learning experiences.', 'videohub360-theme'))); ?>
                     </p>
                     
                     <div class="vh360-auth-benefits">
                         <h3 class="vh360-auth-benefits-title">
-                            <?php echo esc_html(get_theme_mod('vh360_client_register_benefits_heading', __('Client Benefits:', 'videohub360-theme'))); ?>
+                            <?php echo esc_html(get_theme_mod('vh360_instructor_register_benefits_heading', __('Instructor Benefits:', 'videohub360-theme'))); ?>
                         </h3>
                         <ul class="vh360-auth-benefits-list">
                             <li>
                                 <span class="vh360-auth-benefit-icon">✓</span>
-                                <?php echo esc_html(get_theme_mod('vh360_client_register_benefit_1', __('Simple and private profile', 'videohub360-theme'))); ?>
+                                <?php echo esc_html(get_theme_mod('vh360_instructor_register_benefit_1', __('Create and manage courses', 'videohub360-theme'))); ?>
                             </li>
                             <li>
                                 <span class="vh360-auth-benefit-icon">✓</span>
-                                <?php echo esc_html(get_theme_mod('vh360_client_register_benefit_2', __('Connect with professionals', 'videohub360-theme'))); ?>
+                                <?php echo esc_html(get_theme_mod('vh360_instructor_register_benefit_2', __('Publish lessons and learning content', 'videohub360-theme'))); ?>
                             </li>
                             <li>
                                 <span class="vh360-auth-benefit-icon">✓</span>
-                                <?php echo esc_html(get_theme_mod('vh360_client_register_benefit_3', __('Access content and resources', 'videohub360-theme'))); ?>
+                                <?php echo esc_html(get_theme_mod('vh360_instructor_register_benefit_3', __('Build an instructor profile', 'videohub360-theme'))); ?>
                             </li>
                             <li>
                                 <span class="vh360-auth-benefit-icon">✓</span>
-                                <?php echo esc_html(get_theme_mod('vh360_client_register_benefit_4', __('Privacy-focused member experience', 'videohub360-theme'))); ?>
+                                <?php echo esc_html(get_theme_mod('vh360_instructor_register_benefit_4', __('Share educational videos and resources', 'videohub360-theme'))); ?>
                             </li>
                         </ul>
                     </div>
@@ -92,7 +92,7 @@ get_header();
             <div class="vh360-auth-form-wrapper register-page">
                 <div class="vh360-auth-form-content">
                     <h2 class="vh360-auth-form-title">
-                        <?php echo esc_html(get_theme_mod('vh360_client_register_button', __('Create Client Account', 'videohub360-theme'))); ?>
+                        <?php echo esc_html(get_theme_mod('vh360_instructor_register_button', __('Create Instructor Account', 'videohub360-theme'))); ?>
                     </h2>
                     
                     <?php
@@ -104,6 +104,7 @@ get_header();
                             'username_exists' => __('Username already exists. Please choose another.', 'videohub360-theme'),
                             'email_exists' => __('Email address is already registered.', 'videohub360-theme'),
                             'nonce_failed' => __('Security check failed. Please try again.', 'videohub360-theme'),
+                            'invalid_account_type' => __('Invalid registration type. Please try again.', 'videohub360-theme'),
                             'password_too_short' => __('Password must be at least 8 characters long.', 'videohub360-theme'),
                             'terms_not_accepted' => __('You must accept the Terms of Service and Privacy Policy.', 'videohub360-theme'),
                             'unknown' => __('Registration failed. Please try again.', 'videohub360-theme'),
@@ -127,10 +128,11 @@ get_header();
                     ?>
                     
                     <form method="post" action="" id="vh360-registerform" class="vh360-auth-form">
-                        <?php wp_nonce_field('vh360_account_type_register', 'vh360_account_type_register_nonce'); ?>
+                        <?php wp_nonce_field('vh360_instructor_register', 'vh360_instructor_register_nonce'); ?>
                         
-                        <!-- Hidden field to set account type -->
-                        <input type="hidden" name="vh360_account_type" value="client">
+                        <!-- Hidden fields to set creator account type with instructor intent -->
+                        <input type="hidden" name="vh360_account_type" value="creator">
+                        <input type="hidden" name="vh360_registration_intent" value="instructor">
                         
                         <div class="vh360-auth-field">
                             <label for="vh360-first-name">
@@ -227,8 +229,8 @@ get_header();
                             </label>
                         </div>
 
-                        <button type="submit" name="vh360_account_type_register_submit" class="vh360-auth-submit">
-                            <?php echo esc_html(get_theme_mod('vh360_client_register_button', __('Create Client Account', 'videohub360-theme'))); ?>
+                        <button type="submit" name="vh360_instructor_register_submit" class="vh360-auth-submit">
+                            <?php echo esc_html(get_theme_mod('vh360_instructor_register_button', __('Create Instructor Account', 'videohub360-theme'))); ?>
                         </button>
                         
                         <div class="vh360-auth-links">

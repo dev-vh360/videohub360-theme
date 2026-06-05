@@ -102,23 +102,6 @@
         }
     }
 
-    /**
-     * Helper function to get the client card element
-     * 
-     * Finds the client card by its secondary button class, with a fallback
-     * to the last card if the secondary button is not found (single-card mode).
-     * 
-     * @return {jQuery} jQuery object containing the client card
-     */
-    function getClientCard() {
-        var $clientCard = $('.vh360-business-choice-card:has(.vh360-button-secondary)');
-        if ($clientCard.length === 0) {
-            // Fallback: if no secondary button found, use last card
-            $clientCard = $('.vh360-business-choice-card').last();
-        }
-        return $clientCard;
-    }
-
     // =============================================================================
     // COLOR CONTROLS
     // =============================================================================
@@ -543,163 +526,6 @@
         });
     });
 
-    // Lost Password Page Design Controls (CSS Variables)
-    wp.customize('vh360_lost_password_page_bg_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-page-bg', newval);
-        });
-    });
-
-    wp.customize('vh360_lost_password_form_bg_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-form-bg', newval);
-        });
-    });
-
-    wp.customize('vh360_lost_password_welcome_bg_start', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-welcome-bg-start', newval);
-        });
-    });
-
-    wp.customize('vh360_lost_password_welcome_bg_end', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-welcome-bg-end', newval);
-        });
-    });
-
-    wp.customize('vh360_lost_password_welcome_text_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-welcome-text', newval);
-        });
-    });
-
-    wp.customize('vh360_lost_password_welcome_heading_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-welcome-heading', newval);
-        });
-    });
-
-    wp.customize('vh360_lost_password_welcome_description_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-welcome-description', newval);
-        });
-    });
-
-    wp.customize('vh360_lost_password_form_title_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-form-title', newval);
-        });
-    });
-
-    wp.customize('vh360_lost_password_label_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-label', newval);
-        });
-    });
-
-    wp.customize('vh360_lost_password_input_border_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-input-border', newval);
-        });
-    });
-
-    wp.customize('vh360_lost_password_input_focus_border_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-input-focus-border', newval);
-        });
-    });
-
-    wp.customize('vh360_lost_password_input_text_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-input-text', newval);
-        });
-    });
-
-    wp.customize('vh360_lost_password_input_bg_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-input-bg', newval);
-        });
-    });
-
-    wp.customize('vh360_lost_password_button_bg_start', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-button-bg-start', newval);
-        });
-    });
-
-    wp.customize('vh360_lost_password_button_bg_end', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-button-bg-end', newval);
-        });
-    });
-
-    wp.customize('vh360_lost_password_button_text_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-button-text', newval);
-        });
-    });
-
-    wp.customize('vh360_lost_password_link_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-link', newval);
-        });
-    });
-
-    wp.customize('vh360_lost_password_link_hover_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-link-hover', newval);
-        });
-    });
-
-    wp.customize('vh360_lost_password_error_bg_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-error-bg', newval);
-        });
-    });
-
-    wp.customize('vh360_lost_password_error_text_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-error-text', newval);
-        });
-    });
-
-    wp.customize('vh360_lost_password_error_border_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-error-border', newval);
-        });
-    });
-
-    wp.customize('vh360_lost_password_success_bg_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-success-bg', newval);
-        });
-    });
-
-    wp.customize('vh360_lost_password_success_text_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-success-text', newval);
-        });
-    });
-
-    wp.customize('vh360_lost_password_success_border_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-success-border', newval);
-        });
-    });
-
-    wp.customize('vh360_lost_password_secondary_text_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-secondary-text', newval);
-        });
-    });
-
-    wp.customize('vh360_lost_password_required_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('lost-password-required', newval);
-        });
-    });
-
     // Reset Password Page Content Controls
     wp.customize('vh360_reset_password_headline', function(value) {
         value.bind(function(newval) {
@@ -746,163 +572,6 @@
     wp.customize('vh360_reset_password_icon_3', function(value) {
         value.bind(function(newval) {
             $('.vh360-auth-feature:eq(2) .vh360-auth-feature-icon').text(newval);
-        });
-    });
-
-    // Reset Password Page Design Controls (CSS Variables)
-    wp.customize('vh360_reset_password_page_bg_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-page-bg', newval);
-        });
-    });
-
-    wp.customize('vh360_reset_password_form_bg_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-form-bg', newval);
-        });
-    });
-
-    wp.customize('vh360_reset_password_welcome_bg_start', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-welcome-bg-start', newval);
-        });
-    });
-
-    wp.customize('vh360_reset_password_welcome_bg_end', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-welcome-bg-end', newval);
-        });
-    });
-
-    wp.customize('vh360_reset_password_welcome_text_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-welcome-text', newval);
-        });
-    });
-
-    wp.customize('vh360_reset_password_welcome_heading_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-welcome-heading', newval);
-        });
-    });
-
-    wp.customize('vh360_reset_password_welcome_description_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-welcome-description', newval);
-        });
-    });
-
-    wp.customize('vh360_reset_password_form_title_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-form-title', newval);
-        });
-    });
-
-    wp.customize('vh360_reset_password_label_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-label', newval);
-        });
-    });
-
-    wp.customize('vh360_reset_password_input_border_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-input-border', newval);
-        });
-    });
-
-    wp.customize('vh360_reset_password_input_focus_border_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-input-focus-border', newval);
-        });
-    });
-
-    wp.customize('vh360_reset_password_input_text_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-input-text', newval);
-        });
-    });
-
-    wp.customize('vh360_reset_password_input_bg_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-input-bg', newval);
-        });
-    });
-
-    wp.customize('vh360_reset_password_button_bg_start', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-button-bg-start', newval);
-        });
-    });
-
-    wp.customize('vh360_reset_password_button_bg_end', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-button-bg-end', newval);
-        });
-    });
-
-    wp.customize('vh360_reset_password_button_text_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-button-text', newval);
-        });
-    });
-
-    wp.customize('vh360_reset_password_link_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-link', newval);
-        });
-    });
-
-    wp.customize('vh360_reset_password_link_hover_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-link-hover', newval);
-        });
-    });
-
-    wp.customize('vh360_reset_password_error_bg_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-error-bg', newval);
-        });
-    });
-
-    wp.customize('vh360_reset_password_error_text_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-error-text', newval);
-        });
-    });
-
-    wp.customize('vh360_reset_password_error_border_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-error-border', newval);
-        });
-    });
-
-    wp.customize('vh360_reset_password_success_bg_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-success-bg', newval);
-        });
-    });
-
-    wp.customize('vh360_reset_password_success_text_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-success-text', newval);
-        });
-    });
-
-    wp.customize('vh360_reset_password_success_border_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-success-border', newval);
-        });
-    });
-
-    wp.customize('vh360_reset_password_secondary_text_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-secondary-text', newval);
-        });
-    });
-
-    wp.customize('vh360_reset_password_required_color', function(value) {
-        value.bind(function(newval) {
-            updateCSSVariable('reset-password-required', newval);
         });
     });
 
@@ -1098,7 +767,7 @@
     });
 
     // =============================================================================
-    // AUTH PAGES BINDINGS (Consolidated for Login, Register, Lost Password, Reset)
+    // AUTH PAGES BINDINGS (Global Design)
     // =============================================================================
 
     // Auth Pages - Page Background Color
@@ -1164,6 +833,34 @@
         });
     });
 
+    // Auth Pages - Input Background Color
+    wp.customize('vh360_auth_input_bg_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-input-bg', newval);
+        });
+    });
+
+    // Auth Pages - Input Text Color
+    wp.customize('vh360_auth_input_text_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-input-text', newval);
+        });
+    });
+
+    // Auth Pages - Muted / Helper Text Color
+    wp.customize('vh360_auth_muted_text_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-muted-text', newval);
+        });
+    });
+
+    // Auth Pages - Input Focus Shadow Color
+    wp.customize('vh360_auth_input_focus_shadow_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-input-focus-shadow', newval);
+        });
+    });
+
     // Auth Pages - Button Background Gradient Start
     wp.customize('vh360_auth_button_bg_start', function(value) {
         value.bind(function(newval) {
@@ -1182,6 +879,13 @@
     wp.customize('vh360_auth_button_text_color', function(value) {
         value.bind(function(newval) {
             updateCSSVariable('auth-button-text', newval);
+        });
+    });
+
+    // Auth Pages - Button Hover Shadow Color
+    wp.customize('vh360_auth_button_hover_shadow_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-button-hover-shadow', newval);
         });
     });
 
@@ -1210,6 +914,13 @@
     wp.customize('vh360_auth_success_bg_color', function(value) {
         value.bind(function(newval) {
             updateCSSVariable('auth-success-bg', newval);
+        });
+    });
+
+    // Auth Pages - Success Text Color
+    wp.customize('vh360_auth_success_text_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('auth-success-text', newval);
         });
     });
 
@@ -1428,127 +1139,55 @@
     });
 
     // =============================================================================
-    // BUSINESS LANDING PAGE BINDINGS (template-register-business.php)
+    // REGISTRATION LANDING PAGE BINDINGS (template-register-landing.php)
     // =============================================================================
 
-    // Business Landing - Headline
-    wp.customize('vh360_business_landing_headline', function(value) {
+    wp.customize('vh360_registration_landing_headline', function(value) {
         value.bind(function(newval) {
-            $('.vh360-business-choice-title').text(newval);
+            $('.vh360-registration-landing-page .vh360-registration-choice-header h1').text(newval);
         });
     });
 
-    // Business Landing - Description
-    wp.customize('vh360_business_landing_description', function(value) {
+    wp.customize('vh360_registration_landing_description', function(value) {
         value.bind(function(newval) {
-            $('.vh360-business-choice-description').text(newval);
+            $('.vh360-registration-landing-page .vh360-registration-choice-description').text(newval);
         });
     });
 
-    // Business Landing - Professional Card Title
-    wp.customize('vh360_business_professional_title', function(value) {
-        value.bind(function(newval) {
-            $('.vh360-business-choice-card:eq(0) .vh360-business-choice-card-title').text(newval);
+    function bindRegistrationCardText(settingId, selector) {
+        wp.customize(settingId, function(value) {
+            value.bind(function(newval) {
+                $(selector).text(newval);
+            });
         });
-    });
+    }
 
-    // Business Landing - Professional Card Description
-    wp.customize('vh360_business_professional_description', function(value) {
-        value.bind(function(newval) {
-            $('.vh360-business-choice-card:eq(0) .vh360-business-choice-card-description').text(newval);
-        });
-    });
+    var registrationCards = ['professional', 'instructor', 'client'];
 
-    // Business Landing - Professional Features (1-4)
-    wp.customize('vh360_business_professional_feature_1', function(value) {
-        value.bind(function(newval) {
-            $('.vh360-business-choice-card:eq(0) .vh360-business-choice-features li:eq(0)').text(newval);
-        });
-    });
+    registrationCards.forEach(function(card) {
+        var cardSelector = '.vh360-registration-card-' + card;
 
-    wp.customize('vh360_business_professional_feature_2', function(value) {
-        value.bind(function(newval) {
-            $('.vh360-business-choice-card:eq(0) .vh360-business-choice-features li:eq(1)').text(newval);
-        });
-    });
+        bindRegistrationCardText(
+            'vh360_registration_' + card + '_title',
+            cardSelector + ' .vh360-registration-card-title'
+        );
 
-    wp.customize('vh360_business_professional_feature_3', function(value) {
-        value.bind(function(newval) {
-            $('.vh360-business-choice-card:eq(0) .vh360-business-choice-features li:eq(2)').text(newval);
-        });
-    });
+        bindRegistrationCardText(
+            'vh360_registration_' + card + '_description',
+            cardSelector + ' .vh360-registration-card-description'
+        );
 
-    wp.customize('vh360_business_professional_feature_4', function(value) {
-        value.bind(function(newval) {
-            $('.vh360-business-choice-card:eq(0) .vh360-business-choice-features li:eq(3)').text(newval);
-        });
-    });
+        for (var i = 1; i <= 4; i++) {
+            bindRegistrationCardText(
+                'vh360_registration_' + card + '_feature_' + i,
+                cardSelector + ' .vh360-registration-card-features li:eq(' + (i - 1) + ')'
+            );
+        }
 
-    // Business Landing - Professional Button
-    wp.customize('vh360_business_professional_button', function(value) {
-        value.bind(function(newval) {
-            $('.vh360-business-choice-card:eq(0) .vh360-business-choice-button').text(newval);
-        });
-    });
-
-    // Business Landing - Client Card Title
-    wp.customize('vh360_business_client_title', function(value) {
-        value.bind(function(newval) {
-            getClientCard().find('.vh360-business-choice-card-title').text(newval);
-        });
-    });
-
-    // Business Landing - Client Card Description
-    wp.customize('vh360_business_client_description', function(value) {
-        value.bind(function(newval) {
-            getClientCard().find('.vh360-business-choice-card-description').text(newval);
-        });
-    });
-
-    // Business Landing - Client Features (1-4)
-    wp.customize('vh360_business_client_feature_1', function(value) {
-        value.bind(function(newval) {
-            getClientCard().find('.vh360-business-choice-features li:eq(0)').text(newval);
-        });
-    });
-
-    wp.customize('vh360_business_client_feature_2', function(value) {
-        value.bind(function(newval) {
-            getClientCard().find('.vh360-business-choice-features li:eq(1)').text(newval);
-        });
-    });
-
-    wp.customize('vh360_business_client_feature_3', function(value) {
-        value.bind(function(newval) {
-            getClientCard().find('.vh360-business-choice-features li:eq(2)').text(newval);
-        });
-    });
-
-    wp.customize('vh360_business_client_feature_4', function(value) {
-        value.bind(function(newval) {
-            getClientCard().find('.vh360-business-choice-features li:eq(3)').text(newval);
-        });
-    });
-
-    // Business Landing - Client Button
-    wp.customize('vh360_business_client_button', function(value) {
-        value.bind(function(newval) {
-            getClientCard().find('.vh360-business-choice-button').text(newval);
-        });
-    });
-
-    // Business Landing - Footer Text
-    wp.customize('vh360_business_landing_footer_text', function(value) {
-        value.bind(function(newval) {
-            $('.vh360-business-choice-footer span').text(newval);
-        });
-    });
-
-    // Business Landing - Footer Link
-    wp.customize('vh360_business_landing_footer_link', function(value) {
-        value.bind(function(newval) {
-            $('.vh360-business-choice-footer .vh360-auth-link').text(newval);
-        });
+        bindRegistrationCardText(
+            'vh360_registration_' + card + '_button',
+            cardSelector + ' .vh360-registration-card-button'
+        );
     });
 
     // =============================================================================
@@ -1559,53 +1198,105 @@
     wp.customize('vh360_professional_register_headline', function(value) {
         value.bind(function(newval) {
             // Target the professional registration page specifically
-            $('.vh360-auth-wrapper.register-professional .vh360-auth-heading').text(newval);
+            $('.professional-register-page .vh360-auth-heading').text(newval);
         });
     });
 
     // Professional Registration - Description
     wp.customize('vh360_professional_register_description', function(value) {
         value.bind(function(newval) {
-            $('.vh360-auth-wrapper.register-professional .vh360-auth-description').text(newval);
+            $('.professional-register-page .vh360-auth-description').text(newval);
         });
     });
 
     // Professional Registration - Benefits Heading
     wp.customize('vh360_professional_register_benefits_heading', function(value) {
         value.bind(function(newval) {
-            $('.vh360-auth-wrapper.register-professional .vh360-auth-benefits-title').text(newval);
+            $('.professional-register-page .vh360-auth-benefits-title').text(newval);
         });
     });
 
     // Professional Registration - Benefits 1-4
     wp.customize('vh360_professional_register_benefit_1', function(value) {
         value.bind(function(newval) {
-            updateBenefitText('.vh360-auth-wrapper.register-professional .vh360-auth-benefits-list li:eq(0)', newval);
+            updateBenefitText('.professional-register-page .vh360-auth-benefits-list li:eq(0)', newval);
         });
     });
 
     wp.customize('vh360_professional_register_benefit_2', function(value) {
         value.bind(function(newval) {
-            updateBenefitText('.vh360-auth-wrapper.register-professional .vh360-auth-benefits-list li:eq(1)', newval);
+            updateBenefitText('.professional-register-page .vh360-auth-benefits-list li:eq(1)', newval);
         });
     });
 
     wp.customize('vh360_professional_register_benefit_3', function(value) {
         value.bind(function(newval) {
-            updateBenefitText('.vh360-auth-wrapper.register-professional .vh360-auth-benefits-list li:eq(2)', newval);
+            updateBenefitText('.professional-register-page .vh360-auth-benefits-list li:eq(2)', newval);
         });
     });
 
     wp.customize('vh360_professional_register_benefit_4', function(value) {
         value.bind(function(newval) {
-            updateBenefitText('.vh360-auth-wrapper.register-professional .vh360-auth-benefits-list li:eq(3)', newval);
+            updateBenefitText('.professional-register-page .vh360-auth-benefits-list li:eq(3)', newval);
         });
     });
 
     // Professional Registration - Button/Form Title
     wp.customize('vh360_professional_register_button', function(value) {
         value.bind(function(newval) {
-            $('.vh360-auth-wrapper.register-professional .vh360-auth-form-title').text(newval);
+            $('.professional-register-page .vh360-auth-form-title, .professional-register-page .vh360-auth-submit').text(newval);
+        });
+    });
+
+    // =============================================================================
+    // INSTRUCTOR REGISTRATION PAGE BINDINGS (template-register-instructor.php)
+    // =============================================================================
+
+    wp.customize('vh360_instructor_register_headline', function(value) {
+        value.bind(function(newval) {
+            $('.instructor-register-page .vh360-auth-heading').text(newval);
+        });
+    });
+
+    wp.customize('vh360_instructor_register_description', function(value) {
+        value.bind(function(newval) {
+            $('.instructor-register-page .vh360-auth-description').text(newval);
+        });
+    });
+
+    wp.customize('vh360_instructor_register_benefits_heading', function(value) {
+        value.bind(function(newval) {
+            $('.instructor-register-page .vh360-auth-benefits-title').text(newval);
+        });
+    });
+
+    wp.customize('vh360_instructor_register_benefit_1', function(value) {
+        value.bind(function(newval) {
+            updateBenefitText('.instructor-register-page .vh360-auth-benefits-list li:eq(0)', newval);
+        });
+    });
+
+    wp.customize('vh360_instructor_register_benefit_2', function(value) {
+        value.bind(function(newval) {
+            updateBenefitText('.instructor-register-page .vh360-auth-benefits-list li:eq(1)', newval);
+        });
+    });
+
+    wp.customize('vh360_instructor_register_benefit_3', function(value) {
+        value.bind(function(newval) {
+            updateBenefitText('.instructor-register-page .vh360-auth-benefits-list li:eq(2)', newval);
+        });
+    });
+
+    wp.customize('vh360_instructor_register_benefit_4', function(value) {
+        value.bind(function(newval) {
+            updateBenefitText('.instructor-register-page .vh360-auth-benefits-list li:eq(3)', newval);
+        });
+    });
+
+    wp.customize('vh360_instructor_register_button', function(value) {
+        value.bind(function(newval) {
+            $('.instructor-register-page .vh360-auth-form-title, .instructor-register-page .vh360-auth-submit').text(newval);
         });
     });
 
@@ -1616,53 +1307,53 @@
     // Client Registration - Headline
     wp.customize('vh360_client_register_headline', function(value) {
         value.bind(function(newval) {
-            $('.vh360-auth-wrapper.register-client .vh360-auth-heading').text(newval);
+            $('.client-register-page .vh360-auth-heading').text(newval);
         });
     });
 
     // Client Registration - Description
     wp.customize('vh360_client_register_description', function(value) {
         value.bind(function(newval) {
-            $('.vh360-auth-wrapper.register-client .vh360-auth-description').text(newval);
+            $('.client-register-page .vh360-auth-description').text(newval);
         });
     });
 
     // Client Registration - Benefits Heading
     wp.customize('vh360_client_register_benefits_heading', function(value) {
         value.bind(function(newval) {
-            $('.vh360-auth-wrapper.register-client .vh360-auth-benefits-title').text(newval);
+            $('.client-register-page .vh360-auth-benefits-title').text(newval);
         });
     });
 
     // Client Registration - Benefits 1-4
     wp.customize('vh360_client_register_benefit_1', function(value) {
         value.bind(function(newval) {
-            updateBenefitText('.vh360-auth-wrapper.register-client .vh360-auth-benefits-list li:eq(0)', newval);
+            updateBenefitText('.client-register-page .vh360-auth-benefits-list li:eq(0)', newval);
         });
     });
 
     wp.customize('vh360_client_register_benefit_2', function(value) {
         value.bind(function(newval) {
-            updateBenefitText('.vh360-auth-wrapper.register-client .vh360-auth-benefits-list li:eq(1)', newval);
+            updateBenefitText('.client-register-page .vh360-auth-benefits-list li:eq(1)', newval);
         });
     });
 
     wp.customize('vh360_client_register_benefit_3', function(value) {
         value.bind(function(newval) {
-            updateBenefitText('.vh360-auth-wrapper.register-client .vh360-auth-benefits-list li:eq(2)', newval);
+            updateBenefitText('.client-register-page .vh360-auth-benefits-list li:eq(2)', newval);
         });
     });
 
     wp.customize('vh360_client_register_benefit_4', function(value) {
         value.bind(function(newval) {
-            updateBenefitText('.vh360-auth-wrapper.register-client .vh360-auth-benefits-list li:eq(3)', newval);
+            updateBenefitText('.client-register-page .vh360-auth-benefits-list li:eq(3)', newval);
         });
     });
 
     // Client Registration - Button/Form Title
     wp.customize('vh360_client_register_button', function(value) {
         value.bind(function(newval) {
-            $('.vh360-auth-wrapper.register-client .vh360-auth-form-title').text(newval);
+            $('.client-register-page .vh360-auth-form-title, .client-register-page .vh360-auth-submit').text(newval);
         });
     });
 

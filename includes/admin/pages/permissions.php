@@ -16,7 +16,7 @@ include VH360_THEME_DIR . '/includes/admin/partials/header.php';
 $options = get_option('vh360_permissions_options', array());
 $defaults = array(
     'create_posts_roles' => array('administrator'),
-    'create_videos_roles' => array('administrator'),
+    'create_videos_roles' => array('administrator', 'vh360_instructor'),
     'host_live_roles' => array('administrator'),
     'create_events_roles' => array('administrator', 'editor', 'author'),
     'create_bulletins_roles' => array('administrator', 'editor', 'author', 'contributor'),

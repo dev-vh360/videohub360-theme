@@ -119,7 +119,7 @@ function vh360_output_dynamic_css() {
     // Header height = logo width * 0.6, with 80px minimum for usability
     $header_height = max(80, round($logo_max_width * 0.6));
     
-    // Auth Pages Colors (Consolidated - shared by Login, Register, Lost Password, Reset Password)
+    // Auth Pages Colors (Consolidated - shared by all authentication pages)
     $auth_page_bg_color             = get_theme_mod('vh360_auth_page_bg_color', '#f3f4f6');
     $auth_form_bg_color             = get_theme_mod('vh360_auth_form_bg_color', '#ffffff');
     $auth_welcome_bg_start          = get_theme_mod('vh360_auth_welcome_bg_start', '#667eea');
@@ -129,13 +129,19 @@ function vh360_output_dynamic_css() {
     $auth_label_color               = get_theme_mod('vh360_auth_label_color', '#374151');
     $auth_input_border_color        = get_theme_mod('vh360_auth_input_border_color', '#e5e7eb');
     $auth_input_focus_border_color  = get_theme_mod('vh360_auth_input_focus_border_color', '#667eea');
+    $auth_input_bg_color            = get_theme_mod('vh360_auth_input_bg_color', '#ffffff');
+    $auth_input_text_color          = get_theme_mod('vh360_auth_input_text_color', '#1a202c');
+    $auth_muted_text_color          = get_theme_mod('vh360_auth_muted_text_color', '#718096');
+    $auth_input_focus_shadow_color  = get_theme_mod('vh360_auth_input_focus_shadow_color', '#667eea');
     $auth_button_bg_start           = get_theme_mod('vh360_auth_button_bg_start', '#667eea');
     $auth_button_bg_end             = get_theme_mod('vh360_auth_button_bg_end', '#764ba2');
     $auth_button_text_color         = get_theme_mod('vh360_auth_button_text_color', '#ffffff');
+    $auth_button_hover_shadow_color = get_theme_mod('vh360_auth_button_hover_shadow_color', '#667eea');
     $auth_link_color                = get_theme_mod('vh360_auth_link_color', '#667eea');
     $auth_error_bg_color            = get_theme_mod('vh360_auth_error_bg_color', '#fee');
     $auth_error_text_color          = get_theme_mod('vh360_auth_error_text_color', '#c00');
     $auth_success_bg_color          = get_theme_mod('vh360_auth_success_bg_color', '#efe');
+    $auth_success_text_color        = get_theme_mod('vh360_auth_success_text_color', '#22543d');
     
     // Site title styling
     $site_title_font_size       = absint(get_theme_mod('vh360_site_title_font_size', 24));
@@ -266,7 +272,7 @@ function vh360_output_dynamic_css() {
             --logo-max-width: <?php echo esc_attr($logo_max_width); ?>px;
             --header-height: <?php echo esc_attr($header_height); ?>px;
             
-            /* Auth Pages Variables (Shared by Login, Register, Lost Password, Reset Password) */
+            /* Auth Pages Variables (Shared by all authentication pages) */
             --auth-page-bg: <?php echo esc_attr($auth_page_bg_color); ?>;
             --auth-form-bg: <?php echo esc_attr($auth_form_bg_color); ?>;
             --auth-welcome-bg-start: <?php echo esc_attr($auth_welcome_bg_start); ?>;
@@ -276,13 +282,19 @@ function vh360_output_dynamic_css() {
             --auth-label: <?php echo esc_attr($auth_label_color); ?>;
             --auth-input-border: <?php echo esc_attr($auth_input_border_color); ?>;
             --auth-input-focus-border: <?php echo esc_attr($auth_input_focus_border_color); ?>;
+            --auth-input-bg: <?php echo esc_attr($auth_input_bg_color); ?>;
+            --auth-input-text: <?php echo esc_attr($auth_input_text_color); ?>;
+            --auth-muted-text: <?php echo esc_attr($auth_muted_text_color); ?>;
+            --auth-input-focus-shadow: <?php echo esc_attr($auth_input_focus_shadow_color); ?>;
             --auth-button-bg-start: <?php echo esc_attr($auth_button_bg_start); ?>;
             --auth-button-bg-end: <?php echo esc_attr($auth_button_bg_end); ?>;
             --auth-button-text: <?php echo esc_attr($auth_button_text_color); ?>;
+            --auth-button-hover-shadow: <?php echo esc_attr($auth_button_hover_shadow_color); ?>;
             --auth-link: <?php echo esc_attr($auth_link_color); ?>;
             --auth-error-bg: <?php echo esc_attr($auth_error_bg_color); ?>;
             --auth-error-text: <?php echo esc_attr($auth_error_text_color); ?>;
             --auth-success-bg: <?php echo esc_attr($auth_success_bg_color); ?>;
+            --auth-success-text: <?php echo esc_attr($auth_success_text_color); ?>;
                 
             /* Site Title Styling Variables */
                 --site-title-font-size: <?php echo $site_title_font_size; ?>px;

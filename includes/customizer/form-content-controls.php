@@ -27,17 +27,6 @@ if (!function_exists('vh360_sanitize_checkbox')) {
 }
 
 /**
- * Sanitize business landing mode setting
- *
- * @param string $value The landing mode value.
- * @return string Sanitized value (one of: both, professional_only, client_only).
- */
-function vh360_sanitize_business_landing_mode($value) {
-    $valid_modes = array('both', 'professional_only', 'client_only');
-    return in_array($value, $valid_modes, true) ? $value : 'both';
-}
-
-/**
  * Register form content customizer controls
  *
  * @param WP_Customize_Manager $wp_customize Theme Customizer object.
@@ -157,7 +146,7 @@ function vh360_register_form_content_controls($wp_customize) {
 
     // Add Register Page Section
     $wp_customize->add_section('vh360_register_content', array(
-        'title'       => __('Register Page Content', 'videohub360-theme'),
+        'title'       => __('Standard Register Page Content', 'videohub360-theme'),
         'priority'    => 20,
         'description' => __('Customize text and benefits shown on the registration page. Use {site_name} as a placeholder for your site name.', 'videohub360-theme'),
     ));
@@ -288,625 +277,6 @@ function vh360_register_form_content_controls($wp_customize) {
         'type'        => 'text',
         'description' => __('Enter an emoji or text to display as the icon for Benefit 4.', 'videohub360-theme'),
     ));
-
-    /*
-     * Login Design Section
-     * Provides color and visibility options for the login form and page.
-     */
-    $wp_customize->add_section('vh360_login_design', array(
-        'title'       => __('Login Page Design', 'videohub360-theme'),
-        'priority'    => 30,
-        'description' => __('Customize the appearance of the login form and page.', 'videohub360-theme'),
-    ));
-    // Login page background color
-    $wp_customize->add_setting('vh360_login_page_bg_color', array(
-        'default'           => '#f3f4f6',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_page_bg_color', array(
-        'label'    => __('Login Page Background Color', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_page_bg_color',
-    )));
-    // Login form background color
-    $wp_customize->add_setting('vh360_login_form_bg_color', array(
-        'default'           => '#ffffff',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_form_bg_color', array(
-        'label'    => __('Login Form Background Color', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_form_bg_color',
-    )));
-    
-    // Welcome background gradient start color
-    $wp_customize->add_setting('vh360_login_welcome_bg_start', array(
-        'default'           => '#667eea',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_welcome_bg_start', array(
-        'label'    => __('Welcome Background Gradient Start', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_welcome_bg_start',
-    )));
-    
-    // Welcome background gradient end color
-    $wp_customize->add_setting('vh360_login_welcome_bg_end', array(
-        'default'           => '#764ba2',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_welcome_bg_end', array(
-        'label'    => __('Welcome Background Gradient End', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_welcome_bg_end',
-    )));
-    
-    // Welcome text color
-    $wp_customize->add_setting('vh360_login_welcome_text_color', array(
-        'default'           => '#ffffff',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_welcome_text_color', array(
-        'label'    => __('Welcome Text Color', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_welcome_text_color',
-    )));
-    
-    // Welcome heading color
-    $wp_customize->add_setting('vh360_login_welcome_heading_color', array(
-        'default'           => '#ffffff',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_welcome_heading_color', array(
-        'label'    => __('Welcome Heading Color', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_welcome_heading_color',
-    )));
-    
-    // Welcome description color
-    $wp_customize->add_setting('vh360_login_welcome_description_color', array(
-        'default'           => '#ffffff',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_welcome_description_color', array(
-        'label'    => __('Welcome Description Color', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_welcome_description_color',
-    )));
-    
-    // Form title color
-    $wp_customize->add_setting('vh360_login_form_title_color', array(
-        'default'           => '#1f2937',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_form_title_color', array(
-        'label'    => __('Form Title Color', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_form_title_color',
-    )));
-    
-    // Label color
-    $wp_customize->add_setting('vh360_login_label_color', array(
-        'default'           => '#374151',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_label_color', array(
-        'label'    => __('Label Color', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_label_color',
-    )));
-    
-    // Input border color
-    $wp_customize->add_setting('vh360_login_input_border_color', array(
-        'default'           => '#e5e7eb',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_input_border_color', array(
-        'label'    => __('Input Border Color', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_input_border_color',
-    )));
-    
-    // Input focus border color
-    $wp_customize->add_setting('vh360_login_input_focus_border_color', array(
-        'default'           => '#667eea',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_input_focus_border_color', array(
-        'label'    => __('Input Focus Border Color', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_input_focus_border_color',
-    )));
-    
-    // Input text color
-    $wp_customize->add_setting('vh360_login_input_text_color', array(
-        'default'           => '#1f2937',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_input_text_color', array(
-        'label'    => __('Input Text Color', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_input_text_color',
-    )));
-    
-    // Input background color
-    $wp_customize->add_setting('vh360_login_input_bg_color', array(
-        'default'           => '#ffffff',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_input_bg_color', array(
-        'label'    => __('Input Background Color', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_input_bg_color',
-    )));
-    
-    // Button background gradient start
-    $wp_customize->add_setting('vh360_login_button_bg_start', array(
-        'default'           => '#667eea',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_button_bg_start', array(
-        'label'    => __('Button Background Gradient Start', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_button_bg_start',
-    )));
-    
-    // Button background gradient end
-    $wp_customize->add_setting('vh360_login_button_bg_end', array(
-        'default'           => '#764ba2',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_button_bg_end', array(
-        'label'    => __('Button Background Gradient End', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_button_bg_end',
-    )));
-    
-    // Button text color
-    $wp_customize->add_setting('vh360_login_button_text_color', array(
-        'default'           => '#ffffff',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_button_text_color', array(
-        'label'    => __('Button Text Color', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_button_text_color',
-    )));
-    
-    // Link color
-    $wp_customize->add_setting('vh360_login_link_color', array(
-        'default'           => '#667eea',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_link_color', array(
-        'label'    => __('Link Color', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_link_color',
-    )));
-    
-    // Link hover color
-    $wp_customize->add_setting('vh360_login_link_hover_color', array(
-        'default'           => '#764ba2',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_link_hover_color', array(
-        'label'    => __('Link Hover Color', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_link_hover_color',
-    )));
-    
-    // Error message background
-    $wp_customize->add_setting('vh360_login_error_bg_color', array(
-        'default'           => '#fee',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_error_bg_color', array(
-        'label'    => __('Error Message Background', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_error_bg_color',
-    )));
-    
-    // Error message text
-    $wp_customize->add_setting('vh360_login_error_text_color', array(
-        'default'           => '#c00',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_error_text_color', array(
-        'label'    => __('Error Message Text', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_error_text_color',
-    )));
-    
-    // Error message border
-    $wp_customize->add_setting('vh360_login_error_border_color', array(
-        'default'           => '#c00',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_error_border_color', array(
-        'label'    => __('Error Message Border', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_error_border_color',
-    )));
-    
-    // Success message background
-    $wp_customize->add_setting('vh360_login_success_bg_color', array(
-        'default'           => '#efe',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_success_bg_color', array(
-        'label'    => __('Success Message Background', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_success_bg_color',
-    )));
-    
-    // Success message text
-    $wp_customize->add_setting('vh360_login_success_text_color', array(
-        'default'           => '#070',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_success_text_color', array(
-        'label'    => __('Success Message Text', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_success_text_color',
-    )));
-    
-    // Success message border
-    $wp_customize->add_setting('vh360_login_success_border_color', array(
-        'default'           => '#070',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_success_border_color', array(
-        'label'    => __('Success Message Border', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_success_border_color',
-    )));
-    
-    // Secondary text color
-    $wp_customize->add_setting('vh360_login_secondary_text_color', array(
-        'default'           => '#6b7280',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_secondary_text_color', array(
-        'label'    => __('Secondary Text Color', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_secondary_text_color',
-    )));
-    
-    // Required asterisk color
-    $wp_customize->add_setting('vh360_login_required_color', array(
-        'default'           => '#dc2626',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_login_required_color', array(
-        'label'    => __('Required Asterisk Color', 'videohub360-theme'),
-        'section'  => 'vh360_login_design',
-        'settings' => 'vh360_login_required_color',
-    )));
-    
-    // Show Remember Me
-    $wp_customize->add_setting('vh360_login_show_remember', array(
-        'default'           => 1,
-        'sanitize_callback' => 'vh360_sanitize_checkbox',
-    ));
-    $wp_customize->add_control('vh360_login_show_remember', array(
-        'label'   => __('Show "Remember Me" checkbox', 'videohub360-theme'),
-        'section' => 'vh360_login_design',
-        'type'    => 'checkbox',
-    ));
-    // Show Forgot Password link
-    $wp_customize->add_setting('vh360_login_show_forgot_password', array(
-        'default'           => 1,
-        'sanitize_callback' => 'vh360_sanitize_checkbox',
-    ));
-    $wp_customize->add_control('vh360_login_show_forgot_password', array(
-        'label'   => __('Show "Forgot Password?" link', 'videohub360-theme'),
-        'section' => 'vh360_login_design',
-        'type'    => 'checkbox',
-    ));
-    // Show Create Account link
-    $wp_customize->add_setting('vh360_login_show_create_account', array(
-        'default'           => 1,
-        'sanitize_callback' => 'vh360_sanitize_checkbox',
-    ));
-    $wp_customize->add_control('vh360_login_show_create_account', array(
-        'label'   => __('Show "Create Account" link', 'videohub360-theme'),
-        'section' => 'vh360_login_design',
-        'type'    => 'checkbox',
-    ));
-
-    /*
-     * Register Design Section
-     * Provides color options for the registration form and page.
-     */
-    $wp_customize->add_section('vh360_register_design', array(
-        'title'       => __('Register Page Design', 'videohub360-theme'),
-        'priority'    => 40,
-        'description' => __('Customize the appearance of the registration form and page.', 'videohub360-theme'),
-    ));
-    // Register page background color
-    $wp_customize->add_setting('vh360_register_page_bg_color', array(
-        'default'           => '#f3f4f6',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_page_bg_color', array(
-        'label'    => __('Register Page Background Color', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_page_bg_color',
-    )));
-    // Register form background color
-    $wp_customize->add_setting('vh360_register_form_bg_color', array(
-        'default'           => '#ffffff',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_form_bg_color', array(
-        'label'    => __('Register Form Background Color', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_form_bg_color',
-    )));
-    
-    // Welcome background gradient start color
-    $wp_customize->add_setting('vh360_register_welcome_bg_start', array(
-        'default'           => '#667eea',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_welcome_bg_start', array(
-        'label'    => __('Welcome Background Gradient Start', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_welcome_bg_start',
-    )));
-    
-    // Welcome background gradient end color
-    $wp_customize->add_setting('vh360_register_welcome_bg_end', array(
-        'default'           => '#764ba2',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_welcome_bg_end', array(
-        'label'    => __('Welcome Background Gradient End', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_welcome_bg_end',
-    )));
-    
-    // Welcome text color
-    $wp_customize->add_setting('vh360_register_welcome_text_color', array(
-        'default'           => '#ffffff',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_welcome_text_color', array(
-        'label'    => __('Welcome Text Color', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_welcome_text_color',
-    )));
-    
-    // Welcome heading color
-    $wp_customize->add_setting('vh360_register_welcome_heading_color', array(
-        'default'           => '#ffffff',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_welcome_heading_color', array(
-        'label'    => __('Welcome Heading Color', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_welcome_heading_color',
-    )));
-    
-    // Welcome description color
-    $wp_customize->add_setting('vh360_register_welcome_description_color', array(
-        'default'           => '#ffffff',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_welcome_description_color', array(
-        'label'    => __('Welcome Description Color', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_welcome_description_color',
-    )));
-    
-    // Form title color
-    $wp_customize->add_setting('vh360_register_form_title_color', array(
-        'default'           => '#1f2937',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_form_title_color', array(
-        'label'    => __('Form Title Color', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_form_title_color',
-    )));
-    
-    // Label color
-    $wp_customize->add_setting('vh360_register_label_color', array(
-        'default'           => '#374151',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_label_color', array(
-        'label'    => __('Label Color', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_label_color',
-    )));
-    
-    // Input border color
-    $wp_customize->add_setting('vh360_register_input_border_color', array(
-        'default'           => '#e5e7eb',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_input_border_color', array(
-        'label'    => __('Input Border Color', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_input_border_color',
-    )));
-    
-    // Input focus border color
-    $wp_customize->add_setting('vh360_register_input_focus_border_color', array(
-        'default'           => '#667eea',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_input_focus_border_color', array(
-        'label'    => __('Input Focus Border Color', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_input_focus_border_color',
-    )));
-    
-    // Input text color
-    $wp_customize->add_setting('vh360_register_input_text_color', array(
-        'default'           => '#1f2937',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_input_text_color', array(
-        'label'    => __('Input Text Color', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_input_text_color',
-    )));
-    
-    // Input background color
-    $wp_customize->add_setting('vh360_register_input_bg_color', array(
-        'default'           => '#ffffff',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_input_bg_color', array(
-        'label'    => __('Input Background Color', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_input_bg_color',
-    )));
-    
-    // Button background gradient start
-    $wp_customize->add_setting('vh360_register_button_bg_start', array(
-        'default'           => '#667eea',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_button_bg_start', array(
-        'label'    => __('Button Background Gradient Start', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_button_bg_start',
-    )));
-    
-    // Button background gradient end
-    $wp_customize->add_setting('vh360_register_button_bg_end', array(
-        'default'           => '#764ba2',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_button_bg_end', array(
-        'label'    => __('Button Background Gradient End', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_button_bg_end',
-    )));
-    
-    // Button text color
-    $wp_customize->add_setting('vh360_register_button_text_color', array(
-        'default'           => '#ffffff',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_button_text_color', array(
-        'label'    => __('Button Text Color', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_button_text_color',
-    )));
-    
-    // Link color
-    $wp_customize->add_setting('vh360_register_link_color', array(
-        'default'           => '#667eea',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_link_color', array(
-        'label'    => __('Link Color', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_link_color',
-    )));
-    
-    // Link hover color
-    $wp_customize->add_setting('vh360_register_link_hover_color', array(
-        'default'           => '#764ba2',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_link_hover_color', array(
-        'label'    => __('Link Hover Color', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_link_hover_color',
-    )));
-    
-    // Error message background
-    $wp_customize->add_setting('vh360_register_error_bg_color', array(
-        'default'           => '#fee',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_error_bg_color', array(
-        'label'    => __('Error Message Background', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_error_bg_color',
-    )));
-    
-    // Error message text
-    $wp_customize->add_setting('vh360_register_error_text_color', array(
-        'default'           => '#c00',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_error_text_color', array(
-        'label'    => __('Error Message Text', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_error_text_color',
-    )));
-    
-    // Error message border
-    $wp_customize->add_setting('vh360_register_error_border_color', array(
-        'default'           => '#c00',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_error_border_color', array(
-        'label'    => __('Error Message Border', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_error_border_color',
-    )));
-    
-    // Success message background
-    $wp_customize->add_setting('vh360_register_success_bg_color', array(
-        'default'           => '#efe',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_success_bg_color', array(
-        'label'    => __('Success Message Background', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_success_bg_color',
-    )));
-    
-    // Success message text
-    $wp_customize->add_setting('vh360_register_success_text_color', array(
-        'default'           => '#070',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_success_text_color', array(
-        'label'    => __('Success Message Text', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_success_text_color',
-    )));
-    
-    // Success message border
-    $wp_customize->add_setting('vh360_register_success_border_color', array(
-        'default'           => '#070',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_success_border_color', array(
-        'label'    => __('Success Message Border', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_success_border_color',
-    )));
-    
-    // Secondary text color
-    $wp_customize->add_setting('vh360_register_secondary_text_color', array(
-        'default'           => '#6b7280',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_secondary_text_color', array(
-        'label'    => __('Secondary Text Color', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_secondary_text_color',
-    )));
-    
-    // Required asterisk color
-    $wp_customize->add_setting('vh360_register_required_color', array(
-        'default'           => '#dc2626',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_register_required_color', array(
-        'label'    => __('Required Asterisk Color', 'videohub360-theme'),
-        'section'  => 'vh360_register_design',
-        'settings' => 'vh360_register_required_color',
-    )));
 
     /*
      * Custom Registration Fields Section
@@ -1198,766 +568,152 @@ function vh360_register_form_content_controls($wp_customize) {
         'description' => __('Enter an emoji or text to display as the icon for Feature 3.', 'videohub360-theme'),
     ));
 
-    /*
-     * Lost Password Design Section
-     * Provides color and visibility options for the lost password form and page.
-     */
-    $wp_customize->add_section('vh360_lost_password_design', array(
-        'title'       => __('Lost Password Page Design', 'videohub360-theme'),
-        'priority'    => 70,
-        'description' => __('Customize the appearance of the lost password form and page.', 'videohub360-theme'),
-    ));
-
-    // Add color controls for lost password page (matching login/register structure)
-    // Page background color
-    $wp_customize->add_setting('vh360_lost_password_page_bg_color', array(
-        'default'           => '#f3f4f6',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_page_bg_color', array(
-        'label'    => __('Page Background Color', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_page_bg_color',
-    )));
-
-    // Form background color
-    $wp_customize->add_setting('vh360_lost_password_form_bg_color', array(
-        'default'           => '#ffffff',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_form_bg_color', array(
-        'label'    => __('Form Background Color', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_form_bg_color',
-    )));
-
-    // Welcome gradient colors
-    $wp_customize->add_setting('vh360_lost_password_welcome_bg_start', array(
-        'default'           => '#667eea',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_welcome_bg_start', array(
-        'label'    => __('Welcome Background Gradient Start', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_welcome_bg_start',
-    )));
-
-    $wp_customize->add_setting('vh360_lost_password_welcome_bg_end', array(
-        'default'           => '#764ba2',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_welcome_bg_end', array(
-        'label'    => __('Welcome Background Gradient End', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_welcome_bg_end',
-    )));
-
-    // Welcome text colors
-    $wp_customize->add_setting('vh360_lost_password_welcome_text_color', array(
-        'default'           => '#ffffff',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_welcome_text_color', array(
-        'label'    => __('Welcome Text Color', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_welcome_text_color',
-    )));
-
-    $wp_customize->add_setting('vh360_lost_password_welcome_heading_color', array(
-        'default'           => '#ffffff',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_welcome_heading_color', array(
-        'label'    => __('Welcome Heading Color', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_welcome_heading_color',
-    )));
-
-    $wp_customize->add_setting('vh360_lost_password_welcome_description_color', array(
-        'default'           => '#ffffff',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_welcome_description_color', array(
-        'label'    => __('Welcome Description Color', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_welcome_description_color',
-    )));
-
-    // Form colors
-    $wp_customize->add_setting('vh360_lost_password_form_title_color', array(
-        'default'           => '#1f2937',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_form_title_color', array(
-        'label'    => __('Form Title Color', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_form_title_color',
-    )));
-
-    $wp_customize->add_setting('vh360_lost_password_label_color', array(
-        'default'           => '#374151',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_label_color', array(
-        'label'    => __('Label Color', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_label_color',
-    )));
-
-    // Input colors
-    $wp_customize->add_setting('vh360_lost_password_input_border_color', array(
-        'default'           => '#e5e7eb',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_input_border_color', array(
-        'label'    => __('Input Border Color', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_input_border_color',
-    )));
-
-    $wp_customize->add_setting('vh360_lost_password_input_focus_border_color', array(
-        'default'           => '#667eea',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_input_focus_border_color', array(
-        'label'    => __('Input Focus Border Color', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_input_focus_border_color',
-    )));
-
-    $wp_customize->add_setting('vh360_lost_password_input_text_color', array(
-        'default'           => '#1f2937',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_input_text_color', array(
-        'label'    => __('Input Text Color', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_input_text_color',
-    )));
-
-    $wp_customize->add_setting('vh360_lost_password_input_bg_color', array(
-        'default'           => '#ffffff',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_input_bg_color', array(
-        'label'    => __('Input Background Color', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_input_bg_color',
-    )));
-
-    // Button colors
-    $wp_customize->add_setting('vh360_lost_password_button_bg_start', array(
-        'default'           => '#667eea',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_button_bg_start', array(
-        'label'    => __('Button Background Gradient Start', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_button_bg_start',
-    )));
-
-    $wp_customize->add_setting('vh360_lost_password_button_bg_end', array(
-        'default'           => '#764ba2',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_button_bg_end', array(
-        'label'    => __('Button Background Gradient End', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_button_bg_end',
-    )));
-
-    $wp_customize->add_setting('vh360_lost_password_button_text_color', array(
-        'default'           => '#ffffff',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_button_text_color', array(
-        'label'    => __('Button Text Color', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_button_text_color',
-    )));
-
-    // Link colors
-    $wp_customize->add_setting('vh360_lost_password_link_color', array(
-        'default'           => '#667eea',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_link_color', array(
-        'label'    => __('Link Color', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_link_color',
-    )));
-
-    $wp_customize->add_setting('vh360_lost_password_link_hover_color', array(
-        'default'           => '#764ba2',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_link_hover_color', array(
-        'label'    => __('Link Hover Color', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_link_hover_color',
-    )));
-
-    // Error message colors
-    $wp_customize->add_setting('vh360_lost_password_error_bg_color', array(
-        'default'           => '#fee',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_error_bg_color', array(
-        'label'    => __('Error Message Background', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_error_bg_color',
-    )));
-
-    $wp_customize->add_setting('vh360_lost_password_error_text_color', array(
-        'default'           => '#c00',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_error_text_color', array(
-        'label'    => __('Error Message Text', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_error_text_color',
-    )));
-
-    $wp_customize->add_setting('vh360_lost_password_error_border_color', array(
-        'default'           => '#c00',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_error_border_color', array(
-        'label'    => __('Error Message Border', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_error_border_color',
-    )));
-
-    // Success message colors
-    $wp_customize->add_setting('vh360_lost_password_success_bg_color', array(
-        'default'           => '#efe',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_success_bg_color', array(
-        'label'    => __('Success Message Background', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_success_bg_color',
-    )));
-
-    $wp_customize->add_setting('vh360_lost_password_success_text_color', array(
-        'default'           => '#070',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_success_text_color', array(
-        'label'    => __('Success Message Text', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_success_text_color',
-    )));
-
-    $wp_customize->add_setting('vh360_lost_password_success_border_color', array(
-        'default'           => '#070',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_success_border_color', array(
-        'label'    => __('Success Message Border', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_success_border_color',
-    )));
-
-    // Secondary text and required colors
-    $wp_customize->add_setting('vh360_lost_password_secondary_text_color', array(
-        'default'           => '#6b7280',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_secondary_text_color', array(
-        'label'    => __('Secondary Text Color', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_secondary_text_color',
-    )));
-
-    $wp_customize->add_setting('vh360_lost_password_required_color', array(
-        'default'           => '#dc2626',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_lost_password_required_color', array(
-        'label'    => __('Required Asterisk Color', 'videohub360-theme'),
-        'section'  => 'vh360_lost_password_design',
-        'settings' => 'vh360_lost_password_required_color',
-    )));
-
-    /*
-     * Reset Password Design Section
-     * Provides color and visibility options for the reset password form and page.
-     */
-    $wp_customize->add_section('vh360_reset_password_design', array(
-        'title'       => __('Reset Password Page Design', 'videohub360-theme'),
-        'priority'    => 80,
-        'description' => __('Customize the appearance of the reset password form and page.', 'videohub360-theme'),
-    ));
-
-    // Add color controls for reset password page (matching lost password structure)
-    // Page background color
-    $wp_customize->add_setting('vh360_reset_password_page_bg_color', array(
-        'default'           => '#f3f4f6',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_page_bg_color', array(
-        'label'    => __('Page Background Color', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_page_bg_color',
-    )));
-
-    // Form background color
-    $wp_customize->add_setting('vh360_reset_password_form_bg_color', array(
-        'default'           => '#ffffff',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_form_bg_color', array(
-        'label'    => __('Form Background Color', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_form_bg_color',
-    )));
-
-    // Welcome gradient colors
-    $wp_customize->add_setting('vh360_reset_password_welcome_bg_start', array(
-        'default'           => '#667eea',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_welcome_bg_start', array(
-        'label'    => __('Welcome Background Gradient Start', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_welcome_bg_start',
-    )));
-
-    $wp_customize->add_setting('vh360_reset_password_welcome_bg_end', array(
-        'default'           => '#764ba2',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_welcome_bg_end', array(
-        'label'    => __('Welcome Background Gradient End', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_welcome_bg_end',
-    )));
-
-    // Welcome text colors
-    $wp_customize->add_setting('vh360_reset_password_welcome_text_color', array(
-        'default'           => '#ffffff',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_welcome_text_color', array(
-        'label'    => __('Welcome Text Color', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_welcome_text_color',
-    )));
-
-    $wp_customize->add_setting('vh360_reset_password_welcome_heading_color', array(
-        'default'           => '#ffffff',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_welcome_heading_color', array(
-        'label'    => __('Welcome Heading Color', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_welcome_heading_color',
-    )));
-
-    $wp_customize->add_setting('vh360_reset_password_welcome_description_color', array(
-        'default'           => '#ffffff',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_welcome_description_color', array(
-        'label'    => __('Welcome Description Color', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_welcome_description_color',
-    )));
-
-    // Form colors
-    $wp_customize->add_setting('vh360_reset_password_form_title_color', array(
-        'default'           => '#1f2937',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_form_title_color', array(
-        'label'    => __('Form Title Color', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_form_title_color',
-    )));
-
-    $wp_customize->add_setting('vh360_reset_password_label_color', array(
-        'default'           => '#374151',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_label_color', array(
-        'label'    => __('Label Color', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_label_color',
-    )));
-
-    // Input colors
-    $wp_customize->add_setting('vh360_reset_password_input_border_color', array(
-        'default'           => '#e5e7eb',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_input_border_color', array(
-        'label'    => __('Input Border Color', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_input_border_color',
-    )));
-
-    $wp_customize->add_setting('vh360_reset_password_input_focus_border_color', array(
-        'default'           => '#667eea',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_input_focus_border_color', array(
-        'label'    => __('Input Focus Border Color', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_input_focus_border_color',
-    )));
-
-    $wp_customize->add_setting('vh360_reset_password_input_text_color', array(
-        'default'           => '#1f2937',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_input_text_color', array(
-        'label'    => __('Input Text Color', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_input_text_color',
-    )));
-
-    $wp_customize->add_setting('vh360_reset_password_input_bg_color', array(
-        'default'           => '#ffffff',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_input_bg_color', array(
-        'label'    => __('Input Background Color', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_input_bg_color',
-    )));
-
-    // Button colors
-    $wp_customize->add_setting('vh360_reset_password_button_bg_start', array(
-        'default'           => '#667eea',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_button_bg_start', array(
-        'label'    => __('Button Background Gradient Start', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_button_bg_start',
-    )));
-
-    $wp_customize->add_setting('vh360_reset_password_button_bg_end', array(
-        'default'           => '#764ba2',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_button_bg_end', array(
-        'label'    => __('Button Background Gradient End', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_button_bg_end',
-    )));
-
-    $wp_customize->add_setting('vh360_reset_password_button_text_color', array(
-        'default'           => '#ffffff',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_button_text_color', array(
-        'label'    => __('Button Text Color', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_button_text_color',
-    )));
-
-    // Link colors
-    $wp_customize->add_setting('vh360_reset_password_link_color', array(
-        'default'           => '#667eea',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_link_color', array(
-        'label'    => __('Link Color', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_link_color',
-    )));
-
-    $wp_customize->add_setting('vh360_reset_password_link_hover_color', array(
-        'default'           => '#764ba2',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_link_hover_color', array(
-        'label'    => __('Link Hover Color', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_link_hover_color',
-    )));
-
-    // Error message colors
-    $wp_customize->add_setting('vh360_reset_password_error_bg_color', array(
-        'default'           => '#fee',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_error_bg_color', array(
-        'label'    => __('Error Message Background', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_error_bg_color',
-    )));
-
-    $wp_customize->add_setting('vh360_reset_password_error_text_color', array(
-        'default'           => '#c00',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_error_text_color', array(
-        'label'    => __('Error Message Text', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_error_text_color',
-    )));
-
-    $wp_customize->add_setting('vh360_reset_password_error_border_color', array(
-        'default'           => '#c00',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_error_border_color', array(
-        'label'    => __('Error Message Border', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_error_border_color',
-    )));
-
-    // Success message colors
-    $wp_customize->add_setting('vh360_reset_password_success_bg_color', array(
-        'default'           => '#efe',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_success_bg_color', array(
-        'label'    => __('Success Message Background', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_success_bg_color',
-    )));
-
-    $wp_customize->add_setting('vh360_reset_password_success_text_color', array(
-        'default'           => '#070',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_success_text_color', array(
-        'label'    => __('Success Message Text', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_success_text_color',
-    )));
-
-    $wp_customize->add_setting('vh360_reset_password_success_border_color', array(
-        'default'           => '#070',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_success_border_color', array(
-        'label'    => __('Success Message Border', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_success_border_color',
-    )));
-
-    // Secondary text and required colors
-    $wp_customize->add_setting('vh360_reset_password_secondary_text_color', array(
-        'default'           => '#6b7280',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_secondary_text_color', array(
-        'label'    => __('Secondary Text Color', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_secondary_text_color',
-    )));
-
-    $wp_customize->add_setting('vh360_reset_password_required_color', array(
-        'default'           => '#dc2626',
-        'sanitize_callback' => 'sanitize_hex_color',
-    ));
-    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_reset_password_required_color', array(
-        'label'    => __('Required Asterisk Color', 'videohub360-theme'),
-        'section'  => 'vh360_reset_password_design',
-        'settings' => 'vh360_reset_password_required_color',
-    )));
-    
-    
     // ========================================
-    // Business Registration Sections
+    // Registration Landing Section
     // ========================================
-    
+
     /**
-     * Business Registration Landing Page Content
+     * Registration Landing Page Content
      */
-    $wp_customize->add_section('vh360_business_landing_content', array(
-        'title'       => __('Business Registration Landing', 'videohub360-theme'),
+    $wp_customize->add_section('vh360_registration_landing_content', array(
+        'title'       => __('Registration Landing Page', 'videohub360-theme'),
         'priority'    => 15,
-        'description' => __('Customize content for the Business registration landing page (choice between Professional and Client).', 'videohub360-theme'),
+        'description' => __('Customize the account-type selection page shown before users choose a registration form.', 'videohub360-theme'),
     ));
-    
-    // Landing Mode (which registration paths to show)
-    $wp_customize->add_setting('vh360_business_landing_mode', array(
-        'default'           => 'both',
-        'sanitize_callback' => 'vh360_sanitize_business_landing_mode',
-        'transport'         => 'refresh',
-    ));
-    $wp_customize->add_control('vh360_business_landing_mode', array(
-        'label'       => __('Registration Paths to Display', 'videohub360-theme'),
-        'description' => __('Control which registration options are shown on the landing page.', 'videohub360-theme'),
-        'section'     => 'vh360_business_landing_content',
-        'type'        => 'select',
-        'choices'     => array(
-            'both'              => __('Both Professional and Client', 'videohub360-theme'),
-            'professional_only' => __('Professional Only', 'videohub360-theme'),
-            'client_only'       => __('Client Only', 'videohub360-theme'),
-        ),
-        'priority'    => 5,
-    ));
-    
+
     // Landing Headline
-    $wp_customize->add_setting('vh360_business_landing_headline', array(
-        'default'           => __('Join as a Business Professional or Client', 'videohub360-theme'),
+    $wp_customize->add_setting('vh360_registration_landing_headline', array(
+        'default'           => __('Choose Your Account Type', 'videohub360-theme'),
         'sanitize_callback' => 'sanitize_text_field',
         'transport'         => 'postMessage',
     ));
-    $wp_customize->add_control('vh360_business_landing_headline', array(
+    $wp_customize->add_control('vh360_registration_landing_headline', array(
         'label'   => __('Landing Headline', 'videohub360-theme'),
-        'section' => 'vh360_business_landing_content',
+        'section' => 'vh360_registration_landing_content',
         'type'    => 'text',
     ));
-    
+
     // Landing Description
-    $wp_customize->add_setting('vh360_business_landing_description', array(
-        'default'           => __('Choose the account type that best fits your needs', 'videohub360-theme'),
+    $wp_customize->add_setting('vh360_registration_landing_description', array(
+        'default'           => __('Select the registration path that best fits how you plan to use this platform.', 'videohub360-theme'),
         'sanitize_callback' => 'sanitize_textarea_field',
         'transport'         => 'postMessage',
     ));
-    $wp_customize->add_control('vh360_business_landing_description', array(
+    $wp_customize->add_control('vh360_registration_landing_description', array(
         'label'   => __('Landing Description', 'videohub360-theme'),
-        'section' => 'vh360_business_landing_content',
+        'section' => 'vh360_registration_landing_content',
         'type'    => 'textarea',
     ));
-    
-    // Professional Card Title
-    $wp_customize->add_setting('vh360_business_professional_title', array(
-        'default'           => __('Professional', 'videohub360-theme'),
-        'sanitize_callback' => 'sanitize_text_field',
-        'transport'         => 'postMessage',
-    ));
-    $wp_customize->add_control('vh360_business_professional_title', array(
-        'label'   => __('Professional Card Title', 'videohub360-theme'),
-        'section' => 'vh360_business_landing_content',
-        'type'    => 'text',
-    ));
-    
-    // Professional Card Description
-    $wp_customize->add_setting('vh360_business_professional_description', array(
-        'default'           => __('For therapists, consultants, coaches, and service providers looking to showcase their business and connect with clients.', 'videohub360-theme'),
-        'sanitize_callback' => 'sanitize_textarea_field',
-        'transport'         => 'postMessage',
-    ));
-    $wp_customize->add_control('vh360_business_professional_description', array(
-        'label'   => __('Professional Card Description', 'videohub360-theme'),
-        'section' => 'vh360_business_landing_content',
-        'type'    => 'textarea',
-    ));
-    
-    // Professional Features (4 items)
-    for ($i = 1; $i <= 4; $i++) {
-        $defaults = array(
-            1 => __('Business profile with services', 'videohub360-theme'),
-            2 => __('Display credentials & specialties', 'videohub360-theme'),
-            3 => __('Contact information & booking', 'videohub360-theme'),
-            4 => __('Share content & resources', 'videohub360-theme'),
-        );
-        
-        $wp_customize->add_setting("vh360_business_professional_feature_{$i}", array(
-            'default'           => $defaults[$i],
+
+    // Registration path toggles
+    $registration_landing_toggles = array(
+        'professional' => __('Show Service Professional option', 'videohub360-theme'),
+        'instructor'   => __('Show Instructor / Educator option', 'videohub360-theme'),
+        'client'       => __('Show Client option', 'videohub360-theme'),
+    );
+
+    foreach ($registration_landing_toggles as $toggle_key => $toggle_label) {
+        $setting_id = "vh360_registration_landing_show_{$toggle_key}";
+        $wp_customize->add_setting($setting_id, array(
+            'default'           => true,
+            'sanitize_callback' => 'vh360_sanitize_checkbox',
+            'transport'         => 'refresh',
+        ));
+        $wp_customize->add_control($setting_id, array(
+            'label'   => $toggle_label,
+            'section' => 'vh360_registration_landing_content',
+            'type'    => 'checkbox',
+        ));
+    }
+
+    // Registration landing card content
+    $registration_landing_cards = array(
+        'professional' => array(
+            'title'       => __('Service Professional', 'videohub360-theme'),
+            'description' => __('For healthcare providers, consultants, coaches, organizations, and service professionals who need a business profile, services, availability, and client booking.', 'videohub360-theme'),
+            'features'    => array(
+                1 => __('Business profile', 'videohub360-theme'),
+                2 => __('Services and specialties', 'videohub360-theme'),
+                3 => __('Availability and appointments', 'videohub360-theme'),
+                4 => __('Client-focused tools', 'videohub360-theme'),
+            ),
+            'button'      => __('Sign Up as Service Professional', 'videohub360-theme'),
+            'label'       => __('Service Professional', 'videohub360-theme'),
+        ),
+        'instructor' => array(
+            'title'       => __('Instructor / Educator', 'videohub360-theme'),
+            'description' => __('For course creators, teachers, coaches, and educators who want to build courses, publish lessons, and share learning content.', 'videohub360-theme'),
+            'features'    => array(
+                1 => __('Create and manage courses', 'videohub360-theme'),
+                2 => __('Publish lessons and videos', 'videohub360-theme'),
+                3 => __('Build an instructor profile', 'videohub360-theme'),
+                4 => __('Share educational resources', 'videohub360-theme'),
+            ),
+            'button'      => __('Sign Up as Instructor', 'videohub360-theme'),
+            'label'       => __('Instructor / Educator', 'videohub360-theme'),
+        ),
+        'client' => array(
+            'title'       => __('Client', 'videohub360-theme'),
+            'description' => __('For members, learners, customers, and clients who want to follow creators, book services, access content, and participate in the community.', 'videohub360-theme'),
+            'features'    => array(
+                1 => __('Follow profiles', 'videohub360-theme'),
+                2 => __('Access member content', 'videohub360-theme'),
+                3 => __('Book services when available', 'videohub360-theme'),
+                4 => __('Join the community', 'videohub360-theme'),
+            ),
+            'button'      => __('Sign Up as Client', 'videohub360-theme'),
+            'label'       => __('Client', 'videohub360-theme'),
+        ),
+    );
+
+    foreach ($registration_landing_cards as $card_key => $card_defaults) {
+        $wp_customize->add_setting("vh360_registration_{$card_key}_title", array(
+            'default'           => $card_defaults['title'],
             'sanitize_callback' => 'sanitize_text_field',
             'transport'         => 'postMessage',
         ));
-        $wp_customize->add_control("vh360_business_professional_feature_{$i}", array(
-            'label'   => sprintf(__('Professional Feature %d', 'videohub360-theme'), $i),
-            'section' => 'vh360_business_landing_content',
+        $wp_customize->add_control("vh360_registration_{$card_key}_title", array(
+            'label'   => sprintf(__('%s Card Title', 'videohub360-theme'), $card_defaults['label']),
+            'section' => 'vh360_registration_landing_content',
             'type'    => 'text',
         ));
-    }
-    
-    // Professional Button Text
-    $wp_customize->add_setting('vh360_business_professional_button', array(
-        'default'           => __('Sign Up as Professional', 'videohub360-theme'),
-        'sanitize_callback' => 'sanitize_text_field',
-        'transport'         => 'postMessage',
-    ));
-    $wp_customize->add_control('vh360_business_professional_button', array(
-        'label'   => __('Professional Button Text', 'videohub360-theme'),
-        'section' => 'vh360_business_landing_content',
-        'type'    => 'text',
-    ));
-    
-    // Client Card Title
-    $wp_customize->add_setting('vh360_business_client_title', array(
-        'default'           => __('Client', 'videohub360-theme'),
-        'sanitize_callback' => 'sanitize_text_field',
-        'transport'         => 'postMessage',
-    ));
-    $wp_customize->add_control('vh360_business_client_title', array(
-        'label'   => __('Client Card Title', 'videohub360-theme'),
-        'section' => 'vh360_business_landing_content',
-        'type'    => 'text',
-    ));
-    
-    // Client Card Description
-    $wp_customize->add_setting('vh360_business_client_description', array(
-        'default'           => __('For individuals seeking services, engaging with content, and connecting with professionals.', 'videohub360-theme'),
-        'sanitize_callback' => 'sanitize_textarea_field',
-        'transport'         => 'postMessage',
-    ));
-    $wp_customize->add_control('vh360_business_client_description', array(
-        'label'   => __('Client Card Description', 'videohub360-theme'),
-        'section' => 'vh360_business_landing_content',
-        'type'    => 'textarea',
-    ));
-    
-    // Client Features (4 items)
-    for ($i = 1; $i <= 4; $i++) {
-        $defaults = array(
-            1 => __('Simple profile setup', 'videohub360-theme'),
-            2 => __('Connect with professionals', 'videohub360-theme'),
-            3 => __('Engage with content', 'videohub360-theme'),
-            4 => __('Privacy-focused experience', 'videohub360-theme'),
-        );
-        
-        $wp_customize->add_setting("vh360_business_client_feature_{$i}", array(
-            'default'           => $defaults[$i],
+
+        $wp_customize->add_setting("vh360_registration_{$card_key}_description", array(
+            'default'           => $card_defaults['description'],
+            'sanitize_callback' => 'sanitize_textarea_field',
+            'transport'         => 'postMessage',
+        ));
+        $wp_customize->add_control("vh360_registration_{$card_key}_description", array(
+            'label'   => sprintf(__('%s Card Description', 'videohub360-theme'), $card_defaults['label']),
+            'section' => 'vh360_registration_landing_content',
+            'type'    => 'textarea',
+        ));
+
+        for ($i = 1; $i <= 4; $i++) {
+            $wp_customize->add_setting("vh360_registration_{$card_key}_feature_{$i}", array(
+                'default'           => $card_defaults['features'][$i],
+                'sanitize_callback' => 'sanitize_text_field',
+                'transport'         => 'postMessage',
+            ));
+            $wp_customize->add_control("vh360_registration_{$card_key}_feature_{$i}", array(
+                'label'   => sprintf(__('%1$s Feature %2$d', 'videohub360-theme'), $card_defaults['label'], $i),
+                'section' => 'vh360_registration_landing_content',
+                'type'    => 'text',
+            ));
+        }
+
+        $wp_customize->add_setting("vh360_registration_{$card_key}_button", array(
+            'default'           => $card_defaults['button'],
             'sanitize_callback' => 'sanitize_text_field',
             'transport'         => 'postMessage',
         ));
-        $wp_customize->add_control("vh360_business_client_feature_{$i}", array(
-            'label'   => sprintf(__('Client Feature %d', 'videohub360-theme'), $i),
-            'section' => 'vh360_business_landing_content',
+        $wp_customize->add_control("vh360_registration_{$card_key}_button", array(
+            'label'   => sprintf(__('%s Button Text', 'videohub360-theme'), $card_defaults['label']),
+            'section' => 'vh360_registration_landing_content',
             'type'    => 'text',
         ));
     }
-    
-    // Client Button Text
-    $wp_customize->add_setting('vh360_business_client_button', array(
-        'default'           => __('Sign Up as Client', 'videohub360-theme'),
-        'sanitize_callback' => 'sanitize_text_field',
-        'transport'         => 'postMessage',
-    ));
-    $wp_customize->add_control('vh360_business_client_button', array(
-        'label'   => __('Client Button Text', 'videohub360-theme'),
-        'section' => 'vh360_business_landing_content',
-        'type'    => 'text',
-    ));
-    
-    // Footer Text
-    $wp_customize->add_setting('vh360_business_landing_footer_text', array(
-        'default'           => __('Looking for a different account type?', 'videohub360-theme'),
-        'sanitize_callback' => 'sanitize_text_field',
-        'transport'         => 'postMessage',
-    ));
-    $wp_customize->add_control('vh360_business_landing_footer_text', array(
-        'label'   => __('Footer Alternative Text', 'videohub360-theme'),
-        'section' => 'vh360_business_landing_content',
-        'type'    => 'text',
-    ));
-    
-    // Footer Link Text
-    $wp_customize->add_setting('vh360_business_landing_footer_link', array(
-        'default'           => __('Standard Registration', 'videohub360-theme'),
-        'sanitize_callback' => 'sanitize_text_field',
-        'transport'         => 'postMessage',
-    ));
-    $wp_customize->add_control('vh360_business_landing_footer_link', array(
-        'label'   => __('Footer Alternative Link Text', 'videohub360-theme'),
-        'section' => 'vh360_business_landing_content',
-        'type'    => 'text',
-    ));
-    
-    
+
     /**
      * Professional Registration Form Content
      */
@@ -2035,8 +791,86 @@ function vh360_register_form_content_controls($wp_customize) {
         'section' => 'vh360_professional_register_content',
         'type'    => 'text',
     ));
-    
-    
+
+    /**
+     * Instructor Registration Form Content
+     */
+    $wp_customize->add_section('vh360_instructor_register_content', array(
+        'title'       => __('Instructor Registration Form', 'videohub360-theme'),
+        'priority'    => 17,
+        'description' => __('Customize content for the Instructor registration form.', 'videohub360-theme'),
+    ));
+
+    // Form Headline
+    $wp_customize->add_setting('vh360_instructor_register_headline', array(
+        'default'           => __('Instructor Registration', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_instructor_register_headline', array(
+        'label'   => __('Form Headline', 'videohub360-theme'),
+        'section' => 'vh360_instructor_register_content',
+        'type'    => 'text',
+    ));
+
+    // Form Description
+    $wp_customize->add_setting('vh360_instructor_register_description', array(
+        'default'           => __('Create your instructor account and start building courses, lessons, and learning experiences.', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_textarea_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_instructor_register_description', array(
+        'label'   => __('Form Description', 'videohub360-theme'),
+        'section' => 'vh360_instructor_register_content',
+        'type'    => 'textarea',
+    ));
+
+    // Benefits Heading
+    $wp_customize->add_setting('vh360_instructor_register_benefits_heading', array(
+        'default'           => __('Instructor Benefits:', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_instructor_register_benefits_heading', array(
+        'label'   => __('Benefits Heading', 'videohub360-theme'),
+        'section' => 'vh360_instructor_register_content',
+        'type'    => 'text',
+    ));
+
+    // Benefits (4 items)
+    for ($i = 1; $i <= 4; $i++) {
+        $defaults = array(
+            1 => __('Create and manage courses', 'videohub360-theme'),
+            2 => __('Publish lessons and learning content', 'videohub360-theme'),
+            3 => __('Build an instructor profile', 'videohub360-theme'),
+            4 => __('Share educational videos and resources', 'videohub360-theme'),
+        );
+
+        $wp_customize->add_setting("vh360_instructor_register_benefit_{$i}", array(
+            'default'           => $defaults[$i],
+            'sanitize_callback' => 'sanitize_text_field',
+            'transport'         => 'postMessage',
+        ));
+        $wp_customize->add_control("vh360_instructor_register_benefit_{$i}", array(
+            'label'   => sprintf(__('Benefit %d', 'videohub360-theme'), $i),
+            'section' => 'vh360_instructor_register_content',
+            'type'    => 'text',
+        ));
+    }
+
+    // Button Text
+    $wp_customize->add_setting('vh360_instructor_register_button', array(
+        'default'           => __('Create Instructor Account', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_instructor_register_button', array(
+        'label'   => __('Submit Button Text', 'videohub360-theme'),
+        'section' => 'vh360_instructor_register_content',
+        'type'    => 'text',
+    ));
+
+
     /**
      * Client Registration Form Content
      */

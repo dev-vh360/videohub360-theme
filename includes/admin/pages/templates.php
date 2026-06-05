@@ -30,18 +30,60 @@ $templates = array(
         'icon' => 'dashicons-admin-users',
     ),
     array(
-        'name' => __('Login Template', 'videohub360-theme'),
+        'name' => __('Login Page', 'videohub360-theme'),
         'file' => 'template-login.php',
         'slug' => 'login',
         'description' => __('Custom login page with theme styling. Redirects logged-in users to the dashboard.', 'videohub360-theme'),
         'icon' => 'dashicons-lock',
     ),
     array(
-        'name' => __('Register Template', 'videohub360-theme'),
-        'file' => 'template-register.php',
+        'name' => __('Registration Landing Page', 'videohub360-theme'),
+        'file' => 'template-register-landing.php',
         'slug' => 'register',
-        'description' => __('User registration page with custom fields and validation. Integrates with WordPress user system.', 'videohub360-theme'),
+        'description' => __('Account-type selection page where users choose Service Professional, Instructor / Educator, or Client registration.', 'videohub360-theme'),
+        'icon' => 'dashicons-screenoptions',
+    ),
+    array(
+        'name' => __('Professional Registration', 'videohub360-theme'),
+        'file' => 'template-register-professional.php',
+        'slug' => 'register-professional',
+        'description' => __('Service Professional registration page for business/service-provider accounts that use professional profiles and booking-oriented tools.', 'videohub360-theme'),
+        'icon' => 'dashicons-businessperson',
+    ),
+    array(
+        'name' => __('Instructor Registration', 'videohub360-theme'),
+        'file' => 'template-register-instructor.php',
+        'slug' => 'register-instructor',
+        'description' => __('Instructor / Educator registration page for course creators who should be created as creator accounts with instructor intent.', 'videohub360-theme'),
+        'icon' => 'dashicons-welcome-learn-more',
+    ),
+    array(
+        'name' => __('Client Registration', 'videohub360-theme'),
+        'file' => 'template-register-client.php',
+        'slug' => 'register-client',
+        'description' => __('Client registration page for members, learners, customers, and clients.', 'videohub360-theme'),
+        'icon' => 'dashicons-groups',
+    ),
+    array(
+        'name' => __('Standard Register Page', 'videohub360-theme'),
+        'file' => 'template-register.php',
+        'slug' => 'standard-register',
+        'description' => __('General user registration page with custom fields and validation. Integrates with WordPress user system.', 'videohub360-theme'),
         'icon' => 'dashicons-admin-users',
+    ),
+    array(
+        'name' => __('Lost Password Page', 'videohub360-theme'),
+        'file' => 'template-lost-password.php',
+        'slug' => 'lost-password',
+        'description' => __('Custom lost password page where users can request a password reset link.', 'videohub360-theme'),
+        'icon' => 'dashicons-sos',
+    ),
+    array(
+        'name' => __('Reset Password Page', 'videohub360-theme'),
+        'file' => 'template-reset-password.php',
+        'slug' => 'reset-password',
+        'description' => __('Custom reset password page where users can set a new password from a reset link.', 'videohub360-theme'),
+        'icon' => 'dashicons-update',
     ),
     array(
         'name' => __('Members Directory Template', 'videohub360-theme'),
@@ -195,7 +237,7 @@ foreach ($templates as $template) {
         <h3><?php esc_html_e('Full Featured Setup', 'videohub360-theme'); ?></h3>
         <p><?php esc_html_e('For maximum functionality, create all available templates:', 'videohub360-theme'); ?></p>
         <ul>
-            <li><?php esc_html_e('Dashboard, Profile Edit, Login, Register (for user management)', 'videohub360-theme'); ?></li>
+            <li><?php esc_html_e('Dashboard, Profile Edit, Login, Registration Landing, Standard Register, Lost Password, Reset Password (for user management)', 'videohub360-theme'); ?></li>
             <li><?php esc_html_e('Members Directory, Activity Feed (for community features)', 'videohub360-theme'); ?></li>
             <li><?php esc_html_e('Bulletins (for announcements)', 'videohub360-theme'); ?></li>
         </ul>
