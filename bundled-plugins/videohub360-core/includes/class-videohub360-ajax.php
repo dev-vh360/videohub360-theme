@@ -732,6 +732,15 @@ class VideoHub360_Ajax {
 
             require_once $library_path;
 
+            $token_lifetime = (int) apply_filters(
+                'vh360_agora_token_lifetime',
+                12 * HOUR_IN_SECONDS
+            );
+
+            // Keep the value sane and avoid accidental invalid/unsafe values.
+            $token_lifetime     = max( HOUR_IN_SECONDS, min( $token_lifetime, DAY_IN_SECONDS ) );
+            $privilegeExpiredTs = time() + $token_lifetime;
+
             // Fail-closed when App Certificate is missing.
             // Tokenless mode is only allowed when the site admin has explicitly
             // disabled the token requirement (for local development only).
@@ -750,14 +759,13 @@ class VideoHub360_Ajax {
                     'uid'        => $uid,
                     'role'       => $approved_role,
                     'role_int'   => ($approved_role === 'host') ? 1 : 2,
-                    'expires_at' => time() + 3600,
+                    'expires_at' => $privilegeExpiredTs,
                     'message'    => 'Token not generated - App Certificate not configured (development mode only)',
                 ));
                 return;
             }
 
             // Generate a real Agora token using the approved (server-decided) role.
-            $privilegeExpiredTs = time() + 3600; // 1-hour expiry.
 
             if ($approved_role === 'host') {
                 if (!defined('RtcTokenBuilder::RolePublisher')) {

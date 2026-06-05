@@ -738,6 +738,10 @@ window.initializeAgoraPlayer = function(config) {
     // Set only after server returns role:'host' AND the token is applied via renewToken() or rejoin.
     let hasServerApprovedPublishToken = false;
     let currentUserUID = null; // Store the current user's Agora UID after joining
+    let latestAgoraTokenResponse = null;
+    let agoraTokenRenewalInProgress = false;
+    let agoraTokenRecoveryInProgress = false;
+    let agoraTokenRenewalTimer = null;
 
     // iOS immersive fullscreen state
     let isIOSImmersiveFullscreen = false;
@@ -2123,7 +2127,17 @@ window.initializeAgoraPlayer = function(config) {
             return;
         }
         
-        await client.subscribe(user, mediaType);
+        try {
+            await client.subscribe(user, mediaType);
+        } catch (subscribeError) {
+            window.vh360Warn('Agora: Failed to subscribe to remote user media:', {
+                uid: user && user.uid,
+                mediaType,
+                error: subscribeError
+            });
+            return;
+        }
+
         if (mediaType === "video") {
             const remoteVideoTrack = user.videoTrack;
             
@@ -2552,6 +2566,22 @@ window.initializeAgoraPlayer = function(config) {
         });
     }
 
+    function markRemoteVideosAsReconnecting() {
+        const remotePlayers = document.querySelectorAll('[id^="remote-player-"], [id^="player-"]');
+
+        remotePlayers.forEach((playerElement) => {
+            playerElement.classList.add('vh360-agora-reconnecting');
+        });
+    }
+
+    function clearRemoteVideosReconnectingState() {
+        const remotePlayers = document.querySelectorAll('.vh360-agora-reconnecting');
+
+        remotePlayers.forEach((playerElement) => {
+            playerElement.classList.remove('vh360-agora-reconnecting');
+        });
+    }
+
     // Page navigation detection for faster cleanup
     window.addEventListener('beforeunload', () => {
         window.vh360Log("Agora: Page navigation detected, cleaning up immediately");
@@ -2560,6 +2590,9 @@ window.initializeAgoraPlayer = function(config) {
         if (isIOSImmersiveFullscreen) {
             exitIOSImmersiveFullscreen();
         }
+
+        // Stop proactive token renewal when the page is leaving.
+        clearAgoraTokenRenewalTimer();
 
         // Clean up any frozen frames immediately when user navigates away
         cleanupFrozenVideoFrames();
@@ -2575,6 +2608,29 @@ window.initializeAgoraPlayer = function(config) {
         }
     });
 
+    client.on("token-privilege-will-expire", async () => {
+        window.vh360Log('VideoHub360: Agora token will expire soon; renewing now.');
+        const renewed = await renewAgoraToken('will-expire');
+
+        if (!renewed && config.requireAgoraTokens) {
+            window.vh360Warn('VideoHub360: Agora token renewal failed before expiry.');
+        }
+    });
+
+    client.on("token-privilege-did-expire", async () => {
+        window.vh360Warn('VideoHub360: Agora token expired; attempting recovery.');
+        agoraTokenRecoveryInProgress = true;
+
+        const renewed = await renewAgoraToken('did-expire');
+        agoraTokenRecoveryInProgress = false;
+
+        if (renewed) {
+            return;
+        }
+
+        showAgoraError('Livestream access expired. Please refresh the page to rejoin.');
+    });
+
     // -- Enhanced Network and Connection Event Handlers --
     client.on("connection-state-change", (curState, prevState, reason) => {
         window.vh360Log("Agora: Connection state changed", { prevState, curState, reason });
@@ -2582,6 +2638,11 @@ window.initializeAgoraPlayer = function(config) {
         if (curState === "DISCONNECTED") {
             // Clean up frozen video frames immediately on disconnect
             cleanupFrozenVideoFrames();
+
+            if (agoraTokenRecoveryInProgress) {
+                window.vh360Log("Agora: Disconnect occurred during token recovery; suppressing refresh prompt.");
+                return;
+            }
             
             let errorMessage = "Connection lost. ";
             if (reason === "NETWORK_ERROR") {
@@ -2598,10 +2659,10 @@ window.initializeAgoraPlayer = function(config) {
             showAgoraError(errorMessage);
         } else if (curState === "RECONNECTING") {
             window.vh360Log("Agora: Attempting to reconnect...");
-            // Clean up any stale video elements during reconnection
-            cleanupStaleVideoElements();
+            markRemoteVideosAsReconnecting();
         } else if (curState === "CONNECTED" && prevState === "RECONNECTING") {
             window.vh360Log("Agora: Successfully reconnected");
+            clearRemoteVideosReconnectingState();
             // Clear any error messages
             const localPlayer = document.getElementById("vh360-agora-local-player");
             if (localPlayer) {
@@ -3059,6 +3120,11 @@ window.initializeAgoraPlayer = function(config) {
                             showAgoraError('Unable to upgrade your livestream permissions. Please leave and rejoin, then try again.');
                             return;
                         }
+
+                        latestAgoraTokenResponse = tokenResponse;
+                        if (tokenResponse.expiresAt) {
+                            scheduleAgoraTokenRenewal(tokenResponse.expiresAt);
+                        }
                     }
 
                     // Server approved host role and token is applied — proceed to publish.
@@ -3143,6 +3209,8 @@ window.initializeAgoraPlayer = function(config) {
             Number(rejoinUid)
         );
 
+        latestAgoraTokenResponse = tokenResponse;
+        currentUserUID = Number(tokenResponse.uid || config.uid);
         currentRole = 'host';
         isPresenter = true;
     }
@@ -3400,6 +3468,10 @@ window.initializeAgoraPlayer = function(config) {
             
             // Stop user info broadcasting
             stopUserInfoBroadcasting();
+
+            clearAgoraTokenRenewalTimer();
+            latestAgoraTokenResponse = null;
+            agoraTokenRecoveryInProgress = false;
             
             // IMMEDIATE: Show disconnection overlay on top of everything
             const joinOverlay = document.getElementById('vh360-join-livestream-overlay');
@@ -3670,16 +3742,131 @@ window.initializeAgoraPlayer = function(config) {
 
             if (data.data.token) {
                 window.vh360Log('VideoHub360: Token generated with server-approved role:', approvedRole);
-                return { token: data.data.token, role: approvedRole, message: data.data.message || '' };
+                return {
+                    token: data.data.token,
+                    role: approvedRole,
+                    message: data.data.message || '',
+                    uid: data.data.uid,
+                    channel: data.data.channel,
+                    expiresAt: data.data.expires_at || null,
+                    roleInt: data.data.role_int || null
+                };
             } else {
                 // No token — development/tokenless mode (only when vh360_agora_require_tokens is disabled).
                 window.vh360Log('VideoHub360: No token in response (development/tokenless mode).');
-                return { token: null, role: approvedRole, message: data.data.message || '' };
+                return {
+                    token: null,
+                    role: approvedRole,
+                    message: data.data.message || '',
+                    uid: data.data.uid,
+                    channel: data.data.channel,
+                    expiresAt: data.data.expires_at || null,
+                    roleInt: data.data.role_int || null
+                };
             }
         } else {
             const errMsg = (typeof data.data === 'string' ? data.data : null) || 'Token request failed';
             window.vh360Error('VideoHub360: Token request failed:', errMsg);
             throw new Error(errMsg);
+        }
+    }
+
+    function clearAgoraTokenRenewalTimer() {
+        if (agoraTokenRenewalTimer) {
+            clearTimeout(agoraTokenRenewalTimer);
+            agoraTokenRenewalTimer = null;
+        }
+    }
+
+    function scheduleAgoraTokenRenewal(expiresAt) {
+        if (!expiresAt || !config.requireAgoraTokens) {
+            return;
+        }
+
+        clearAgoraTokenRenewalTimer();
+
+        const expiresAtMs = Number(expiresAt) * 1000;
+
+        if (!Number.isFinite(expiresAtMs) || expiresAtMs <= 0) {
+            window.vh360Warn('VideoHub360: Cannot schedule Agora token renewal because expiry metadata is invalid:', expiresAt);
+            return;
+        }
+
+        const renewAtMs = expiresAtMs - (10 * 60 * 1000);
+        const delay = Math.max(60 * 1000, renewAtMs - Date.now());
+
+        agoraTokenRenewalTimer = setTimeout(async () => {
+            const renewed = await renewAgoraToken('proactive-timer');
+
+            if (renewed && latestAgoraTokenResponse && latestAgoraTokenResponse.expiresAt) {
+                scheduleAgoraTokenRenewal(latestAgoraTokenResponse.expiresAt);
+            }
+        }, delay);
+    }
+
+    async function renewAgoraToken(reason = 'scheduled') {
+        if (!client || !config.requireAgoraTokens) {
+            return false;
+        }
+
+        if (agoraTokenRenewalInProgress) {
+            window.vh360Log('VideoHub360: Agora token renewal already in progress, skipping duplicate request.');
+            return false;
+        }
+
+        const renewalUid = Number(currentUserUID || config.uid);
+
+        if (!Number.isInteger(renewalUid) || renewalUid <= 0) {
+            window.vh360Warn('VideoHub360: Cannot renew Agora token because UID is invalid.');
+            return false;
+        }
+
+        agoraTokenRenewalInProgress = true;
+
+        try {
+            window.vh360Log('VideoHub360: Renewing Agora token:', reason);
+
+            const tokenResponse = await requestTokenFromServer(
+                config.channelName,
+                renewalUid,
+                currentRole || 'audience'
+            );
+
+            latestAgoraTokenResponse = tokenResponse;
+
+            if (!tokenResponse || !tokenResponse.token) {
+                if (config.requireAgoraTokens) {
+                    throw new Error('Token renewal failed because no token was issued.');
+                }
+
+                return false;
+            }
+
+            await client.renewToken(tokenResponse.token);
+
+            if (tokenResponse.role === 'host') {
+                hasServerApprovedPublishToken = true;
+            } else if (currentRole === 'host') {
+                window.vh360Warn('VideoHub360: Server did not renew host privileges; reverting to audience token state.');
+                hasServerApprovedPublishToken = false;
+                currentRole = tokenResponse.role || 'audience';
+
+                if (localTracks.audioTrack || localTracks.videoTrack) {
+                    await stopPublishing();
+                }
+            }
+
+            if (tokenResponse.expiresAt) {
+                scheduleAgoraTokenRenewal(tokenResponse.expiresAt);
+            }
+
+            window.vh360Log('VideoHub360: Agora token renewed successfully.');
+            return true;
+        } catch (error) {
+            window.vh360Error('VideoHub360: Agora token renewal failed:', error);
+            return false;
+        } finally {
+            agoraTokenRenewalInProgress = false;
         }
     }
 
@@ -3861,10 +4048,19 @@ window.initializeAgoraPlayer = function(config) {
                 }
                 // Development mode only: allow tokenless join when tokens are not required.
                 window.vh360Warn('VideoHub360: Token request failed, proceeding without token (dev mode):', tokenError);
-                tokenResponse = { token: null, role: currentRole, message: '' };
+                tokenResponse = {
+                    token: null,
+                    role: currentRole,
+                    message: '',
+                    uid: normalizedUid,
+                    channel: config.channelName,
+                    expiresAt: null,
+                    roleInt: null
+                };
             }
 
             const token = tokenResponse.token;
+            latestAgoraTokenResponse = tokenResponse;
 
             // Fail closed: if tokens are required and none was issued, stop the join.
             if (config.requireAgoraTokens && !token) {
@@ -3890,6 +4086,9 @@ window.initializeAgoraPlayer = function(config) {
             window.vh360Log('Agora: Successfully joined channel with UID:', uid);
             window.vh360Log('VideoHub360: Role after successful join:', currentRole);
             currentUserUID = uid; // Store the current user's UID for later use
+            if (tokenResponse.expiresAt) {
+                scheduleAgoraTokenRenewal(tokenResponse.expiresAt);
+            }
             
             // If we are the original host, set our UID as the original host UID
             if (isOriginalHost) {
@@ -3988,6 +4187,10 @@ window.initializeAgoraPlayer = function(config) {
             
             // Stop user info broadcasting
             stopUserInfoBroadcasting();
+
+            clearAgoraTokenRenewalTimer();
+            latestAgoraTokenResponse = null;
+            agoraTokenRecoveryInProgress = false;
             
             // Clean up voice-activated switching
             if (isVolumenIndicationEnabled) {
