@@ -2618,17 +2618,20 @@ window.initializeAgoraPlayer = function(config) {
     });
 
     client.on("token-privilege-did-expire", async () => {
-        window.vh360Warn('VideoHub360: Agora token expired; attempting recovery.');
+        window.vh360Warn('VideoHub360: Agora token expired; attempting rejoin recovery.');
         agoraTokenRecoveryInProgress = true;
 
-        const renewed = await renewAgoraToken('did-expire');
-        agoraTokenRecoveryInProgress = false;
+        try {
+            const recovered = await recoverExpiredAgoraToken();
 
-        if (renewed) {
-            return;
+            if (recovered) {
+                return;
+            }
+
+            showAgoraError('Livestream access expired. Please refresh the page to rejoin.');
+        } finally {
+            agoraTokenRecoveryInProgress = false;
         }
-
-        showAgoraError('Livestream access expired. Please refresh the page to rejoin.');
     });
 
     // -- Enhanced Network and Connection Event Handlers --
@@ -3864,6 +3867,96 @@ window.initializeAgoraPlayer = function(config) {
             return true;
         } catch (error) {
             window.vh360Error('VideoHub360: Agora token renewal failed:', error);
+            return false;
+        } finally {
+            agoraTokenRenewalInProgress = false;
+        }
+    }
+
+    async function recoverExpiredAgoraToken() {
+        if (!client || !config.requireAgoraTokens) {
+            return false;
+        }
+
+        if (agoraTokenRenewalInProgress) {
+            window.vh360Log('VideoHub360: Agora token request already in progress, skipping expired-token recovery duplicate.');
+            return false;
+        }
+
+        const renewalUid = Number(currentUserUID || config.uid);
+
+        if (!Number.isInteger(renewalUid) || renewalUid <= 0) {
+            window.vh360Warn('VideoHub360: Cannot recover expired Agora token because UID is invalid.');
+            return false;
+        }
+
+        const wasPublishing = currentRole === 'host' && (
+            localTracks.audioTrack || localTracks.videoTrack
+        );
+
+        agoraTokenRenewalInProgress = true;
+
+        try {
+            const tokenResponse = await requestTokenFromServer(
+                config.channelName,
+                renewalUid,
+                currentRole || 'audience'
+            );
+
+            latestAgoraTokenResponse = tokenResponse;
+
+            if (!tokenResponse || !tokenResponse.token) {
+                window.vh360Warn('VideoHub360: Expired token recovery failed because no token was issued.');
+                return false;
+            }
+
+            let joinedUid;
+            try {
+                joinedUid = await client.join(
+                    config.appId,
+                    tokenResponse.channel || config.channelName,
+                    tokenResponse.token,
+                    Number(tokenResponse.uid || renewalUid)
+                );
+            } catch (joinError) {
+                window.vh360Warn('VideoHub360: Expired token rejoin failed:', joinError);
+                return false;
+            }
+
+            currentUserUID = Number(joinedUid || tokenResponse.uid || renewalUid);
+
+            if (config.mode === 'live' && client && typeof client.setClientRole === 'function') {
+                try {
+                    await client.setClientRole(tokenResponse.role === 'host' ? 'host' : 'audience');
+                } catch (roleError) {
+                    window.vh360Warn('VideoHub360: Failed to restore client role after expired token rejoin:', roleError);
+                }
+            }
+
+            if (tokenResponse.role === 'host') {
+                hasServerApprovedPublishToken = true;
+                currentRole = 'host';
+
+                if (wasPublishing && !localTracks.audioTrack && !localTracks.videoTrack) {
+                    await startPublishing();
+                }
+            } else {
+                hasServerApprovedPublishToken = false;
+                currentRole = tokenResponse.role || 'audience';
+
+                if (localTracks.audioTrack || localTracks.videoTrack) {
+                    await stopPublishing();
+                }
+            }
+
+            if (tokenResponse.expiresAt) {
+                scheduleAgoraTokenRenewal(tokenResponse.expiresAt);
+            }
+
+            window.vh360Log('VideoHub360: Expired Agora token recovery completed successfully.');
+            return true;
+        } catch (error) {
+            window.vh360Error('VideoHub360: Expired Agora token recovery failed:', error);
             return false;
         } finally {
             agoraTokenRenewalInProgress = false;
