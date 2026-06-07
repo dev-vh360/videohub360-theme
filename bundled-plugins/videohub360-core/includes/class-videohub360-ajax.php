@@ -97,6 +97,32 @@ class VideoHub360_Ajax {
     }
     
     /**
+     * Get the bounded Agora token lifetime used for both issued tokens and related server-side grants.
+     *
+     * @return int Token lifetime in seconds.
+     */
+    private function get_agora_token_lifetime() {
+        $token_lifetime = (int) apply_filters(
+            'vh360_agora_token_lifetime',
+            12 * HOUR_IN_SECONDS
+        );
+
+        // Keep the value sane and avoid accidental invalid/unsafe values.
+        return max( HOUR_IN_SECONDS, min( $token_lifetime, DAY_IN_SECONDS ) );
+    }
+
+    /**
+     * Build a presenter authorization transient key for passcode-approved presenters.
+     *
+     * @param int $post_id Post ID of the live room.
+     * @param int $user_id WordPress user ID.
+     * @return string Transient key.
+     */
+    private function get_agora_presenter_transient_key($post_id, $user_id) {
+        return 'vh360_agora_presenter_' . absint($post_id) . '_' . absint($user_id);
+    }
+
+    /**
      * Resolve Agora token access: determine whether the current visitor
      * is allowed to join and/or publish in a live room.
      *
@@ -109,6 +135,7 @@ class VideoHub360_Ajax {
      *  2. Appointment professional → publisher; client → publisher only when session active.
      *  3. Everyone-is-host mode → publisher (subject to optional login requirement).
      *  4. Valid server-validated host passcode → publisher.
+     *  5. Existing short-lived server-side presenter grant → publisher.
      *  Everyone else → subscriber/audience token only.
      *
      * @param int    $post_id        Post ID of the videohub360 live room.
@@ -180,14 +207,14 @@ class VideoHub360_Ajax {
             if (!empty($stored_passcode)) {
                 // Do not manually inspect hash prefixes. WordPress may change hash formats.
                 // wp_check_password() is the compatibility layer for all wp_hash_password() values.
-                $passcode_valid              = false;
+                $passcode_valid                  = false;
                 $validated_with_legacy_plaintext = false;
 
                 if (wp_check_password((string) $passcode, (string) $stored_passcode)) {
                     $passcode_valid = true;
                 } elseif (hash_equals((string) $stored_passcode, (string) $passcode)) {
                     // Legacy fallback for passcodes stored as plain text before the hardening update.
-                    $passcode_valid              = true;
+                    $passcode_valid                  = true;
                     $validated_with_legacy_plaintext = true;
                 }
 
@@ -197,6 +224,14 @@ class VideoHub360_Ajax {
                 }
 
                 if ($passcode_valid) {
+                    if ($current_user_id > 0) {
+                        set_transient(
+                            $this->get_agora_presenter_transient_key($post_id, $current_user_id),
+                            true,
+                            $this->get_agora_token_lifetime()
+                        );
+                    }
+
                     $result['can_publish'] = true;
                     $result['role']        = 'host';
                     return $result;
@@ -204,6 +239,18 @@ class VideoHub360_Ajax {
 
                 // Wrong passcode – explicit denial (do not silently fall back to audience).
                 $result['message'] = __('Invalid passcode. Access denied.', 'videohub360');
+                return $result;
+            }
+        }
+
+        // Rule 5: A previous valid passcode can grant server-side presenter renewal
+        // without storing or resending the passcode in JavaScript.
+        if ($requested_role === 'host' && $current_user_id > 0) {
+            $presenter_grant = get_transient($this->get_agora_presenter_transient_key($post_id, $current_user_id));
+            if (!empty($presenter_grant)) {
+                $result['can_publish'] = true;
+                $result['role']        = 'host';
+                return $result;
             }
         }
 
@@ -732,6 +779,9 @@ class VideoHub360_Ajax {
 
             require_once $library_path;
 
+            $token_lifetime     = $this->get_agora_token_lifetime();
+            $privilegeExpiredTs = time() + $token_lifetime;
+
             // Fail-closed when App Certificate is missing.
             // Tokenless mode is only allowed when the site admin has explicitly
             // disabled the token requirement (for local development only).
@@ -750,14 +800,13 @@ class VideoHub360_Ajax {
                     'uid'        => $uid,
                     'role'       => $approved_role,
                     'role_int'   => ($approved_role === 'host') ? 1 : 2,
-                    'expires_at' => time() + 3600,
+                    'expires_at' => $privilegeExpiredTs,
                     'message'    => 'Token not generated - App Certificate not configured (development mode only)',
                 ));
                 return;
             }
 
             // Generate a real Agora token using the approved (server-decided) role.
-            $privilegeExpiredTs = time() + 3600; // 1-hour expiry.
 
             if ($approved_role === 'host') {
                 if (!defined('RtcTokenBuilder::RolePublisher')) {
