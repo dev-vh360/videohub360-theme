@@ -37,9 +37,10 @@ $track_types = $activity_options['track_types'];
 get_header();
 
 // Header visibility and content from customizer
-$vh360_show_header  = (bool) get_theme_mod('vh360_show_activity_header', 1);
-$vh360_header_title = get_theme_mod('vh360_activity_header_title', __('Community Activity', 'videohub360-theme'));
-$vh360_header_desc  = get_theme_mod('vh360_activity_header_description', __('Stay up to date with what’s happening in the community', 'videohub360-theme'));
+$vh360_show_header       = (bool) get_theme_mod('vh360_show_activity_header', 1);
+$vh360_show_header_stats = (bool) get_theme_mod('vh360_show_activity_header_stats', true);
+$vh360_header_title      = get_theme_mod('vh360_activity_header_title', __('Community Activity', 'videohub360-theme'));
+$vh360_header_desc       = get_theme_mod('vh360_activity_header_description', __('Stay up to date with what’s happening in the community', 'videohub360-theme'));
 ?>
 
 <div id="primary" class="content-area">
@@ -57,6 +58,7 @@ $vh360_header_desc  = get_theme_mod('vh360_activity_header_description', __('Sta
                 </p>
 
                 <!-- Activity Stats -->
+                <?php if ($vh360_show_header_stats) : ?>
                 <div class="vh360-activity-stats">
                     <div class="vh360-activity-stat">
                         <span class="vh360-stat-value"><?php echo esc_html(number_format_i18n(vh360_get_activity_count())); ?></span>
@@ -71,6 +73,7 @@ $vh360_header_desc  = get_theme_mod('vh360_activity_header_description', __('Sta
                         <span class="vh360-stat-label"><?php esc_html_e('New Members', 'videohub360-theme'); ?></span>
                     </div>
                 </div>
+                <?php endif; ?>
             </div>
         </header>
         <?php endif; ?>

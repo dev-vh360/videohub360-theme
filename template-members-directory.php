@@ -47,7 +47,8 @@ $default_sort = isset($sort_mapping[$members_options['default_sort']])
 get_header();
 
 // Header visibility and content from customizer - with dynamic defaults based on mode
-$vh360_show_header  = (bool) get_theme_mod('vh360_show_members_header', 1);
+$vh360_show_header       = (bool) get_theme_mod('vh360_show_members_header', 1);
+$vh360_show_header_count = (bool) get_theme_mod('vh360_show_members_header_count', true);
 
 // Dynamic defaults based on directory mode
 $default_title = ($mode['audience'] === 'professionals_only') 
@@ -57,13 +58,9 @@ $default_desc = ($mode['audience'] === 'professionals_only')
     ? __('Browse approved professionals', 'videohub360-theme')
     : __('Discover and connect with our community members', 'videohub360-theme');
 
-$vh360_header_title = get_theme_mod('vh360_members_header_title', $default_title);
-$vh360_header_desc  = get_theme_mod('vh360_members_header_description', $default_desc);
+$vh360_header_title      = get_theme_mod('vh360_members_header_title', $default_title);
+$vh360_header_desc       = get_theme_mod('vh360_members_header_description', $default_desc);
 
-// Dynamic count label based on mode
-$count_label = ($mode['audience'] === 'professionals_only')
-    ? __('Total Professionals', 'videohub360-theme')
-    : __('Total Members', 'videohub360-theme');
 ?>
 
 <div id="primary" class="content-area">
@@ -81,6 +78,7 @@ $count_label = ($mode['audience'] === 'professionals_only')
                 </p>
                 
                 <!-- Member Count -->
+                <?php if ($vh360_show_header_count) : ?>
                 <div class="vh360-member-count">
                     <?php
                     // Get count based on effective mode
@@ -90,10 +88,14 @@ $count_label = ($mode['audience'] === 'professionals_only')
                         'require_professional_approval' => $mode['professionals_require_approval'],
                     );
                     $total_count = vh360_get_member_count($count_args);
+                    $count_label = ($mode['audience'] === 'professionals_only')
+                        ? __('Total Professionals', 'videohub360-theme')
+                        : __('Total Members', 'videohub360-theme');
                     ?>
                     <span class="vh360-count-number"><?php echo esc_html(number_format_i18n($total_count)); ?></span>
                     <span class="vh360-count-label"><?php echo esc_html($count_label); ?></span>
                 </div>
+                <?php endif; ?>
             </div>
         </header>
         <?php endif; ?>

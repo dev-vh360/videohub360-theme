@@ -655,6 +655,18 @@ function vh360_register_header_controls($wp_customize) {
         'section'  => 'vh360_header_settings',
         'type'     => 'checkbox',
     ));
+    $wp_customize->add_setting('vh360_show_activity_header_stats', array(
+        'default'           => true,
+        'sanitize_callback' => 'wp_validate_boolean',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control('vh360_show_activity_header_stats', array(
+        'label'       => __('Show Activity Header Stats', 'videohub360-theme'),
+        'description' => __('Show the Activities, Videos, and New Members stats inside the Activity Feed header.', 'videohub360-theme'),
+        'section'     => 'vh360_header_settings',
+        'type'        => 'checkbox',
+        'priority'    => 15,
+    ));
     $wp_customize->add_setting('vh360_activity_header_title', array(
         'default'           => __('Community Activity', 'videohub360-theme'),
         'sanitize_callback' => 'sanitize_text_field',
@@ -685,6 +697,18 @@ function vh360_register_header_controls($wp_customize) {
         'label'    => __('Show Members Header', 'videohub360-theme'),
         'section'  => 'vh360_header_settings',
         'type'     => 'checkbox',
+    ));
+    $wp_customize->add_setting('vh360_show_members_header_count', array(
+        'default'           => true,
+        'sanitize_callback' => 'wp_validate_boolean',
+        'transport'         => 'refresh',
+    ));
+    $wp_customize->add_control('vh360_show_members_header_count', array(
+        'label'       => __('Show Members Header Count', 'videohub360-theme'),
+        'description' => __('Show the total member or professional count inside the Members Directory header.', 'videohub360-theme'),
+        'section'     => 'vh360_header_settings',
+        'type'        => 'checkbox',
+        'priority'    => 25,
     ));
     $wp_customize->add_setting('vh360_members_header_title', array(
         'default'           => __('Members Directory', 'videohub360-theme'),
