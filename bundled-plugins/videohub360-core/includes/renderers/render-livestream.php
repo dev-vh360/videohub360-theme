@@ -286,13 +286,17 @@ $player_html .= '</div>';
             }
         } else {
             if ($fields['type'] === 'agora' && empty($fields['agora_channel_name'])) {
-                if (!empty($fields['offline_message'])) {
+                if (current_user_can('manage_options')) {
+                    $player_html .= '<div class="vh360-error-message">';
+                    $player_html .= '<h3 class="vh360-error-title">' . esc_html__('🔴 Livestream Not Available', 'videohub360') . '</h3>';
+                    $player_html .= '<p class="vh360-error-text">' . esc_html__('This Agora livestream is not properly configured.', 'videohub360') . '</p>';
+                    $player_html .= '<p class="vh360-error-hint">' . esc_html__('Missing: Channel Name', 'videohub360') . '</p>';
+                    $player_html .= '</div>';
+                } elseif (!empty($fields['offline_message'])) {
                     $player_html .= '<div class="vh360-offline-message">' . wp_kses_post($fields['offline_message']) . '</div>';
                 } else {
-                    $player_html .= '<div class="vh360-error-message">';
-                    $player_html .= '<h3 class="vh360-error-title">🔴 Livestream Not Available</h3>';
-                    $player_html .= '<p class="vh360-error-text">This Agora livestream is not properly configured.</p>';
-                    $player_html .= '<p class="vh360-error-hint">Missing: Channel Name</p>';
+                    $player_html .= '<div class="vh360-offline-message">';
+                    $player_html .= '<p>' . esc_html__('This livestream is currently unavailable.', 'videohub360') . '</p>';
                     $player_html .= '</div>';
                 }
             } else {
