@@ -412,7 +412,7 @@ function vh360_output_dynamic_css() {
 
         /* Conditional Header Visibility */
         <?php if (!get_theme_mod('vh360_show_activity_header', 1)) : ?>
-        .vh360-activity-header { display: none; }
+        .vh360-activity-feed > .vh360-activity-header { display: none; }
         <?php endif; ?>
         <?php if (!get_theme_mod('vh360_show_members_header', 1)) : ?>
         .vh360-members-header { display: none; }
