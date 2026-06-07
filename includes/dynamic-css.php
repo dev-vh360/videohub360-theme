@@ -308,7 +308,8 @@ function vh360_output_dynamic_css() {
         }
 
         /* Page Header Styles - Unified across all templates */
-        .vh360-activity-header,
+        .vh360-activity-feed > .vh360-activity-header,
+        .vh360-live-room-main > .vh360-live-room-header,
         .vh360-members-header,
         .vh360-bulletins-header,
         .vh360-events-header,
@@ -322,8 +323,10 @@ function vh360_output_dynamic_css() {
             margin-bottom: 2rem;
         }
 
-        .vh360-activity-header,
-        .vh360-activity-header *,
+        .vh360-activity-feed > .vh360-activity-header,
+        .vh360-activity-feed > .vh360-activity-header *,
+        .vh360-live-room-main > .vh360-live-room-header,
+        .vh360-live-room-main > .vh360-live-room-header *,
         .vh360-members-header,
         .vh360-members-header *,
         .vh360-bulletins-header,
