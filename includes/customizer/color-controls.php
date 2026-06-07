@@ -103,6 +103,12 @@ function vh360_register_color_controls($wp_customize) {
             'description' => __('Template page headers - gradient end', 'videohub360-theme'),
             'priority'    => 100,
         ),
+        'vh360_page_header_text_color' => array(
+            'default'     => '#ffffff',
+            'label'       => __('Page Header Text Color', 'videohub360-theme'),
+            'description' => __('Text color for template page headers such as Activity Feed, Members Directory, Bulletins, Blog, Events, Course Catalog, and video archive headers.', 'videohub360-theme'),
+            'priority'    => 105,
+        ),
         
         // Navigation Colors
         'vh360_nav_link_color' => array(

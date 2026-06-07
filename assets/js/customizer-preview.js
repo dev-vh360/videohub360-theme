@@ -131,6 +131,12 @@
         });
     });
 
+    wp.customize('vh360_page_header_text_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('page-header-text-color', newval);
+        });
+    });
+
     wp.customize('vh360_text_color', function(value) {
         value.bind(function(newval) {
             updateCSSVariable('text-color', newval);
