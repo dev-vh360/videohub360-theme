@@ -742,6 +742,9 @@ window.initializeAgoraPlayer = function(config) {
     let agoraTokenRenewalInProgress = false;
     let agoraTokenRecoveryInProgress = false;
     let agoraTokenRenewalTimer = null;
+    let participantJoinAudioContext = null;
+    let participantJoinSoundUnlocked = false;
+    const participantJoinSoundThrottle = new Map();
 
     // iOS immersive fullscreen state
     let isIOSImmersiveFullscreen = false;
@@ -2119,7 +2122,112 @@ window.initializeAgoraPlayer = function(config) {
         }
     }
 
+    function unlockParticipantJoinSound() {
+        if (participantJoinSoundUnlocked) {
+            return;
+        }
+
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+
+            if (!AudioContextClass) {
+                return;
+            }
+
+            participantJoinAudioContext = participantJoinAudioContext || new AudioContextClass();
+
+            if (participantJoinAudioContext.state === 'suspended') {
+                participantJoinAudioContext.resume().catch(() => {});
+            }
+
+            participantJoinSoundUnlocked = true;
+        } catch (error) {
+            window.vh360Warn('VideoHub360: Unable to unlock participant join sound:', error);
+        }
+    }
+
+    function playParticipantJoinedSound(uid) {
+        if (config.agoraMode !== 'interactive') {
+            return;
+        }
+
+        if (isBeingModerated) {
+            return;
+        }
+
+        if (uid && currentUserUID && String(uid) === String(currentUserUID)) {
+            return;
+        }
+
+        const now = Date.now();
+        const lastPlayedAt = participantJoinSoundThrottle.get(uid) || 0;
+
+        // Prevent duplicate sounds for the same user during reconnect or event bursts.
+        if (now - lastPlayedAt < 5000) {
+            return;
+        }
+
+        participantJoinSoundThrottle.set(uid, now);
+
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+
+            if (!AudioContextClass) {
+                return;
+            }
+
+            participantJoinAudioContext = participantJoinAudioContext || new AudioContextClass();
+
+            if (participantJoinAudioContext.state === 'suspended') {
+                participantJoinAudioContext.resume().catch(() => {});
+                return;
+            }
+
+            const ctx = participantJoinAudioContext;
+            const startTime = ctx.currentTime;
+
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.0001, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.08, startTime + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.45);
+            gain.connect(ctx.destination);
+
+            const firstTone = ctx.createOscillator();
+            firstTone.type = 'sine';
+            firstTone.frequency.setValueAtTime(660, startTime);
+            firstTone.connect(gain);
+            firstTone.start(startTime);
+            firstTone.stop(startTime + 0.18);
+
+            const secondTone = ctx.createOscillator();
+            secondTone.type = 'sine';
+            secondTone.frequency.setValueAtTime(880, startTime + 0.16);
+            secondTone.connect(gain);
+            secondTone.start(startTime + 0.16);
+            secondTone.stop(startTime + 0.42);
+        } catch (error) {
+            window.vh360Warn('VideoHub360: Failed to play participant join sound:', error);
+        }
+    }
+
+    document.addEventListener('click', unlockParticipantJoinSound, { once: true });
+    document.addEventListener('touchstart', unlockParticipantJoinSound, { once: true });
+
     // -- Remote User Events --
+    client.on("user-joined", (user) => {
+        window.vh360Log('Agora: Remote user joined:', user && user.uid);
+
+        if (!user || !user.uid) {
+            return;
+        }
+
+        if (config.agoraMode !== 'interactive') {
+            return;
+        }
+
+        playParticipantJoinedSound(user.uid);
+    });
+
     client.on("user-published", async (user, mediaType) => {
         // Prevent any UI updates if user is being moderated
         if (isBeingModerated) {
@@ -2458,6 +2566,10 @@ window.initializeAgoraPlayer = function(config) {
             }
         }
         if (remoteUsers[user.uid]) delete remoteUsers[user.uid];
+
+        if (user && user.uid) {
+            participantJoinSoundThrottle.delete(user.uid);
+        }
         
         // Clean up active speaker if this user was the active speaker
         if (user.uid === activeSpeakerUid) {
