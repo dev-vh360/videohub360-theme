@@ -469,11 +469,14 @@ add_action('wp_enqueue_scripts', 'vh360_enqueue_gallery_assets', 20);
 function vh360_enqueue_members_directory_assets() {
     // Load on members directory template
     if (is_page_template('template-members-directory.php')) {
+        $members_directory_style_path = VH360_THEME_DIR . '/assets/css/members-directory.css';
+        $members_directory_style_version = file_exists($members_directory_style_path) ? filemtime($members_directory_style_path) : VH360_THEME_VERSION;
+
         wp_enqueue_style(
             'vh360-members-directory',
             VH360_THEME_URI . '/assets/css/members-directory.css',
             array('videohub360-theme-style'),
-            VH360_THEME_VERSION
+            $members_directory_style_version
         );
         
         wp_enqueue_script(
