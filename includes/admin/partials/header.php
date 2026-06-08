@@ -45,6 +45,27 @@ $page_title = isset($page_title) ? $page_title : get_admin_page_title();
         </div>
         <?php
     }
+
+    if (isset($_GET['course_ownership_repaired'])) {
+        $repaired_count      = isset($_GET['repaired']) ? absint($_GET['repaired']) : 0;
+        $already_valid_count = isset($_GET['already_valid']) ? absint($_GET['already_valid']) : 0;
+        $skipped_count       = isset($_GET['skipped']) ? absint($_GET['skipped']) : 0;
+        ?>
+        <div class="notice notice-success is-dismissible">
+            <p>
+                <?php
+                printf(
+                    /* translators: 1: repaired count, 2: already valid count, 3: skipped count */
+                    esc_html__('Course ownership repair complete. %1$d courses repaired, %2$d already valid, %3$d skipped.', 'videohub360-theme'),
+                    $repaired_count,
+                    $already_valid_count,
+                    $skipped_count
+                );
+                ?>
+            </p>
+        </div>
+        <?php
+    }
     
     if (isset($_GET['settings_reset'])) {
         ?>

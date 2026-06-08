@@ -547,6 +547,16 @@ class VH360_Theme_Admin {
                 $this->clear_old_activities();
                 wp_redirect(add_query_arg('activities_cleared', '1', wp_get_referer()));
                 exit;
+
+            case 'repair_course_ownership':
+                $repair_counts = $this->repair_course_ownership_metadata();
+                wp_redirect(add_query_arg(array(
+                    'course_ownership_repaired' => '1',
+                    'repaired'                  => $repair_counts['repaired'],
+                    'already_valid'             => $repair_counts['already_valid'],
+                    'skipped'                   => $repair_counts['skipped'],
+                ), wp_get_referer()));
+                exit;
                 
             case 'reset_settings':
                 $this->reset_all_settings();
@@ -611,6 +621,86 @@ class VH360_Theme_Admin {
         delete_option('vh360_builtin_field_settings');
     }
     
+    /**
+     * Repair missing explicit course owner metadata for legacy/imported courses.
+     *
+     * @return array Repair counts.
+     */
+    private function repair_course_ownership_metadata() {
+        $counts = array(
+            'repaired'      => 0,
+            'already_valid' => 0,
+            'skipped'       => 0,
+        );
+
+        if ( ! taxonomy_exists( 'videohub360_series' ) ) {
+            return $counts;
+        }
+
+        $courses = get_terms(array(
+            'taxonomy'   => 'videohub360_series',
+            'hide_empty' => false,
+        ));
+
+        if ( is_wp_error( $courses ) || empty( $courses ) ) {
+            return $counts;
+        }
+
+        foreach ( $courses as $course ) {
+            $term_id  = absint( $course->term_id );
+            $owner_id = (int) get_term_meta( $term_id, '_vh360_course_owner_user_id', true );
+
+            if ( $this->user_is_eligible_course_owner( $owner_id ) ) {
+                $counts['already_valid']++;
+                continue;
+            }
+
+            $fallback_owner_id = 0;
+            $instructor_id     = (int) get_term_meta( $term_id, '_vh360_course_instructor_user_id', true );
+
+            if ( $this->user_is_eligible_course_owner( $instructor_id ) ) {
+                $fallback_owner_id = $instructor_id;
+            } elseif ( function_exists( 'videohub360_get_first_course_lesson_author_id' ) ) {
+                $lesson_author_id = videohub360_get_first_course_lesson_author_id( $term_id );
+                if ( $this->user_is_eligible_course_owner( $lesson_author_id ) ) {
+                    $fallback_owner_id = $lesson_author_id;
+                }
+            }
+
+            if ( $fallback_owner_id ) {
+                update_term_meta( $term_id, '_vh360_course_owner_user_id', $fallback_owner_id );
+                $counts['repaired']++;
+                continue;
+            }
+
+            $counts['skipped']++;
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+                error_log( sprintf( 'VH360 course ownership repair skipped term #%d (%s): no eligible instructor or lesson author found.', $term_id, $course->name ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+            }
+        }
+
+        return $counts;
+    }
+
+    /**
+     * Check whether a user is eligible to be assigned as a course owner.
+     *
+     * @param int $user_id User ID.
+     * @return bool
+     */
+    private function user_is_eligible_course_owner( $user_id ) {
+        $user_id = absint( $user_id );
+        if ( ! $user_id ) {
+            return false;
+        }
+
+        if ( function_exists( 'vh360_user_is_eligible_course_owner' ) ) {
+            return vh360_user_is_eligible_course_owner( $user_id );
+        }
+
+        return (bool) get_userdata( $user_id );
+    }
+
     /**
      * Sanitize appearance settings
      */

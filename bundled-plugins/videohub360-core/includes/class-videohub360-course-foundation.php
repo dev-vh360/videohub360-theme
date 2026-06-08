@@ -69,6 +69,10 @@ class VideoHub360_Course_Foundation {
 
         // Admin notice on the series list when course features are active.
         add_action( 'videohub360_series_pre_add_form', array( $this, 'series_admin_notice' ) );
+        add_action( 'admin_notices', array( $this, 'course_transfer_admin_notice' ) );
+
+        // Searchable course owner / instructor selector.
+        add_action( 'wp_ajax_vh360_search_course_users', array( $this, 'ajax_search_course_users' ) );
     }
 
     /**
@@ -79,7 +83,7 @@ class VideoHub360_Course_Foundation {
     public function enqueue_course_admin_assets( $hook ) {
         $screen = get_current_screen();
 
-        if ( ! $screen || 'edit-videohub360_series' !== $screen->id ) {
+        if ( ! $screen || 'videohub360_series' !== $screen->taxonomy ) {
             return;
         }
 
@@ -92,6 +96,28 @@ class VideoHub360_Course_Foundation {
             VIDEOHUB360_VERSION,
             true
         );
+
+        wp_enqueue_style(
+            'vh360-course-admin',
+            VIDEOHUB360_ASSETS_URL . 'css/course-admin.css',
+            array(),
+            VIDEOHUB360_VERSION
+        );
+
+        wp_enqueue_script(
+            'vh360-course-admin',
+            VIDEOHUB360_ASSETS_URL . 'js/course-admin.js',
+            array( 'jquery' ),
+            VIDEOHUB360_VERSION,
+            true
+        );
+
+        wp_localize_script( 'vh360-course-admin', 'vh360CourseAdmin', array(
+            'ajaxUrl'       => admin_url( 'admin-ajax.php' ),
+            'nonce'         => wp_create_nonce( 'vh360_course_user_search' ),
+            'searchingText' => __( 'Searching…', 'videohub360' ),
+            'noResultsText' => __( 'No eligible users found.', 'videohub360' ),
+        ) );
     }
 
     /* ------------------------------------------------------------------ */
@@ -353,6 +379,7 @@ class VideoHub360_Course_Foundation {
         <div class="form-field">
             <h3><?php esc_html_e( 'Course / Learning Track Details', 'videohub360' ); ?></h3>
             <p style="color:#666;"><?php esc_html_e( 'When Course / Lesson Features are enabled, this series can be used as a Course or Learning Track.', 'videohub360' ); ?></p>
+            <p style="color:#666;"><?php esc_html_e( 'Course Owner controls frontend dashboard management. Public Course Instructor controls public instructor display. Lesson authorship only changes when you use the transfer lessons option on edit.', 'videohub360' ); ?></p>
         </div>
         <?php foreach ( $this->get_course_term_fields() as $field ) : ?>
         <div class="form-field">
@@ -376,10 +403,14 @@ class VideoHub360_Course_Foundation {
             <th scope="row" colspan="2">
                 <h3 style="margin:20px 0 5px 0;"><?php esc_html_e( 'Course / Learning Track Details', 'videohub360' ); ?></h3>
                 <p style="color:#666;font-weight:normal;"><?php esc_html_e( 'When Course / Lesson Features are enabled, this series can be used as a Course or Learning Track.', 'videohub360' ); ?></p>
+                <p style="color:#666;font-weight:normal;"><?php esc_html_e( 'Course Owner controls who can manage this course in the frontend dashboard. Public Course Instructor controls who is displayed publicly. Lesson authorship controls individual lesson/video ownership and only changes if you use the transfer lessons option.', 'videohub360' ); ?></p>
             </th>
         </tr>
         <?php foreach ( $this->get_course_term_fields() as $field ) :
             $value = get_term_meta( $term->term_id, $field['key'], true );
+            if ( '_vh360_course_owner_user_id' === $field['key'] && ! $value && function_exists( 'videohub360_get_course_owner_id' ) ) {
+                $value = videohub360_get_course_owner_id( $term->term_id );
+            }
             ?>
         <tr class="form-field">
             <th scope="row"><label for="<?php echo esc_attr( $field['id'] ); ?>"><?php echo esc_html( $field['label'] ); ?></label></th>
@@ -390,7 +421,18 @@ class VideoHub360_Course_Foundation {
                 <?php endif; ?>
             </td>
         </tr>
-        <?php endforeach;
+        <?php endforeach; ?>
+        <tr class="form-field">
+            <th scope="row"><label for="vh360_transfer_course_lessons_to_owner"><?php esc_html_e( 'Transfer Lessons', 'videohub360' ); ?></label></th>
+            <td>
+                <label>
+                    <input type="checkbox" id="vh360_transfer_course_lessons_to_owner" name="vh360_transfer_course_lessons_to_owner" value="1" />
+                    <?php esc_html_e( 'Also transfer all lessons in this course to the selected Course Owner', 'videohub360' ); ?>
+                </label>
+                <p class="description"><?php esc_html_e( 'Only check this when you also want individual lesson/video authorship to change.', 'videohub360' ); ?></p>
+            </td>
+        </tr>
+        <?php
     }
 
     /**
@@ -404,14 +446,24 @@ class VideoHub360_Course_Foundation {
             return;
         }
 
-        if ( ! current_user_can( 'manage_categories' ) ) {
+        if ( ! $this->current_user_can_manage_series_terms() ) {
             return;
         }
+
+        $is_create         = ( 'created_videohub360_series' === current_filter() );
+        $old_owner_user_id = (int) get_term_meta( $term_id, '_vh360_course_owner_user_id', true );
+        $new_owner_user_id = 0;
+        $lessons_moved     = 0;
+        $owner_saved       = false;
 
         foreach ( $this->get_course_term_fields() as $field ) {
             $raw = $_POST[ $field['key'] ] ?? '';
 
             switch ( $field['sanitize'] ) {
+                case 'user_id':
+                    $raw = $this->get_submitted_course_user_id( $field );
+                    $value = absint( $raw );
+                    break;
                 case 'absint':
                     $value = absint( $raw );
                     break;
@@ -428,7 +480,67 @@ class VideoHub360_Course_Foundation {
                     $value = sanitize_text_field( $raw );
             }
 
+            if ( 'user_id' === $field['sanitize'] ) {
+                $is_owner_field = ( '_vh360_course_owner_user_id' === $field['key'] );
+                $cleared        = ! empty( $_POST[ $field['id'] . '_cleared' ] );
+                $submitted      = isset( $_POST[ $field['key'] ] ) || isset( $_POST[ $field['id'] ] ) || isset( $_POST[ $field['id'] . '_manual' ] );
+
+                if ( $is_owner_field && $is_create && ! $value ) {
+                    $current_user_id = get_current_user_id();
+                    $value           = ( function_exists( 'vh360_user_is_eligible_course_owner' ) && vh360_user_is_eligible_course_owner( $current_user_id ) )
+                        ? $current_user_id
+                        : 0;
+                }
+
+                if ( $value && function_exists( 'vh360_user_is_eligible_course_owner' ) && vh360_user_is_eligible_course_owner( $value ) ) {
+                    update_term_meta( $term_id, $field['key'], $value );
+                    if ( $is_owner_field ) {
+                        $new_owner_user_id = $value;
+                        $owner_saved       = true;
+                    }
+                } elseif ( ! $is_create && $cleared ) {
+                    delete_term_meta( $term_id, $field['key'] );
+                    if ( $is_owner_field ) {
+                        $new_owner_user_id = 0;
+                    }
+                } elseif ( ! $is_create && $is_owner_field && ! $submitted ) {
+                    $new_owner_user_id = $old_owner_user_id;
+                }
+
+                continue;
+            }
+
             update_term_meta( $term_id, $field['key'], $value );
+        }
+
+        // Course Owner:
+        // Stored in _vh360_course_owner_user_id.
+        // Controls frontend dashboard ownership and course management permissions.
+        //
+        // Public Course Instructor:
+        // Stored in _vh360_course_instructor_user_id.
+        // Controls instructor attribution/display.
+        //
+        // Lesson Author:
+        // Stored as post_author on individual videohub360 lesson/video posts.
+        // Controls individual lesson/video authorship.
+        if (
+            $new_owner_user_id > 0
+            && ! empty( $_POST['vh360_transfer_course_lessons_to_owner'] )
+            && function_exists( 'vh360_transfer_course_lessons_to_user' )
+        ) {
+            $lessons_moved = vh360_transfer_course_lessons_to_user( $term_id, $new_owner_user_id );
+        }
+
+        if ( $owner_saved && ( $old_owner_user_id !== $new_owner_user_id || $lessons_moved > 0 ) ) {
+            set_transient(
+                'vh360_course_transfer_notice_' . get_current_user_id(),
+                array(
+                    'lessons_moved' => $lessons_moved,
+                    'owner_changed'  => ( $old_owner_user_id !== $new_owner_user_id ),
+                ),
+                MINUTE_IN_SECONDS
+            );
         }
     }
 
@@ -447,6 +559,44 @@ class VideoHub360_Course_Foundation {
             esc_url( admin_url( 'edit.php?post_type=videohub360&page=videohub360-settings' ) )
         ) );
         echo '</p></div>';
+    }
+
+    /**
+     * Display course ownership transfer results after saving a series term.
+     */
+    public function course_transfer_admin_notice() {
+        $screen = get_current_screen();
+        if ( ! $screen || 'edit-videohub360_series' !== $screen->id ) {
+            return;
+        }
+
+        $transient_key = 'vh360_course_transfer_notice_' . get_current_user_id();
+        $notice        = get_transient( $transient_key );
+
+        if ( ! is_array( $notice ) ) {
+            return;
+        }
+
+        delete_transient( $transient_key );
+
+        $lessons_moved = isset( $notice['lessons_moved'] ) ? absint( $notice['lessons_moved'] ) : 0;
+
+        if ( $lessons_moved > 0 ) {
+            $message = sprintf(
+                /* translators: %d: number of lessons transferred */
+                _n(
+                    'Course ownership updated. %d lesson was also transferred to the selected course owner.',
+                    'Course ownership updated. %d lessons were also transferred to the selected course owner.',
+                    $lessons_moved,
+                    'videohub360'
+                ),
+                $lessons_moved
+            );
+        } else {
+            $message = __( 'Course owner updated.', 'videohub360' );
+        }
+
+        echo '<div class="notice notice-success is-dismissible"><p>' . esc_html( $message ) . '</p></div>';
     }
 
     /* ------------------------------------------------------------------ */
@@ -500,12 +650,20 @@ class VideoHub360_Course_Foundation {
                 'desc'     => __( 'e.g. 6 modules / 18 lessons', 'videohub360' ),
             ),
             array(
+                'key'      => '_vh360_course_owner_user_id',
+                'id'       => 'vh360_course_owner_user_id',
+                'label'    => __( 'Course Owner', 'videohub360' ),
+                'type'     => 'user_select',
+                'sanitize' => 'user_id',
+                'desc'     => __( 'The user who owns and manages this course in the frontend dashboard.', 'videohub360' ),
+            ),
+            array(
                 'key'      => '_vh360_course_instructor_user_id',
                 'id'       => 'vh360_course_instructor_user_id',
-                'label'    => __( 'Instructor User ID', 'videohub360' ),
-                'type'     => 'number',
-                'sanitize' => 'absint',
-                'desc'     => __( 'Optional. If empty, the author of the first lesson is used.', 'videohub360' ),
+                'label'    => __( 'Public Course Instructor', 'videohub360' ),
+                'type'     => 'user_select',
+                'sanitize' => 'user_id',
+                'desc'     => __( 'The instructor displayed publicly for this course. This can be the same as the course owner or a different user.', 'videohub360' ),
             ),
             array(
                 'key'      => '_vh360_course_featured_image_id',
@@ -551,6 +709,68 @@ class VideoHub360_Course_Foundation {
     }
 
     /**
+     * Return a submitted course user ID from selector or no-JS fallback fields.
+     *
+     * @param array $field Field definition.
+     * @return int
+     */
+    private function get_submitted_course_user_id( $field ) {
+        if ( ! empty( $_POST[ $field['id'] . '_manual' ] ) ) {
+            return absint( $_POST[ $field['id'] . '_manual' ] );
+        }
+
+        if ( isset( $_POST[ $field['key'] ] ) ) {
+            return absint( $_POST[ $field['key'] ] );
+        }
+
+        if ( isset( $_POST[ $field['id'] ] ) ) {
+            return absint( $_POST[ $field['id'] ] );
+        }
+
+        return 0;
+    }
+
+    /**
+     * Format a course user selector label.
+     *
+     * @param WP_User $user User object.
+     * @return string
+     */
+    private function format_course_user_label( $user ) {
+        return sprintf(
+            /* translators: 1: display name, 2: user email */
+            __( '%1$s (%2$s)', 'videohub360' ),
+            $user->display_name,
+            $user->user_email ? $user->user_email : $user->user_login
+        );
+    }
+
+    /**
+     * Render a searchable user selector for course owner/instructor fields.
+     *
+     * @param string $id       Field ID.
+     * @param string $name     Field name.
+     * @param int    $selected Selected user ID.
+     */
+    private function render_user_select_field( $id, $name, $selected ) {
+        $selected_user  = $selected ? get_userdata( $selected ) : false;
+        $selected_label = ( $selected_user && function_exists( 'vh360_user_is_eligible_course_owner' ) && vh360_user_is_eligible_course_owner( $selected ) )
+            ? $this->format_course_user_label( $selected_user )
+            : '';
+
+        echo '<div class="vh360-course-user-selector" data-field-id="' . esc_attr( $id ) . '">';
+        echo '<input type="hidden" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" value="' . esc_attr( $selected_label ? $selected : '' ) . '" class="vh360-course-user-id">';
+        echo '<input type="hidden" name="' . esc_attr( $id ) . '_cleared" value="0" class="vh360-course-user-cleared">';
+        echo '<input type="search" class="vh360-course-user-search" value="' . esc_attr( $selected_label ) . '" placeholder="' . esc_attr__( 'Search eligible users by name, username, or email…', 'videohub360' ) . '" autocomplete="off">';
+        echo '<button type="button" class="button vh360-course-user-clear"' . ( $selected_label ? '' : ' style="display:none;"' ) . '>' . esc_html__( 'Clear', 'videohub360' ) . '</button>';
+        echo '<div class="vh360-course-user-results" role="listbox" aria-live="polite"></div>';
+        echo '<p class="description vh360-course-user-fallback">' . esc_html__( 'JavaScript is required for the searchable user selector. If needed, enter a valid eligible user ID manually:', 'videohub360' ) . ' ';
+        echo '<input type="number" name="' . esc_attr( $id ) . '_manual" min="0" class="small-text" value="">';
+        echo '</p>';
+        echo '</div>';
+    }
+
+    /**
      * Render a single term meta field input.
      *
      * @param array  $field  Field definition.
@@ -588,6 +808,10 @@ class VideoHub360_Course_Foundation {
                 echo '<input type="number" id="' . $id . '" name="' . $name . '" value="' . $val . '" min="0" style="width:100px;" />';
                 break;
 
+            case 'user_select':
+                $this->render_user_select_field( $id, $name, absint( $value ) );
+                break;
+
             case 'url':
                 echo '<input type="url" id="' . $id . '" name="' . $name . '" value="' . $val . '" style="width:100%;max-width:500px;" />';
                 break;
@@ -622,6 +846,46 @@ class VideoHub360_Course_Foundation {
         }
     }
 
+    /**
+     * AJAX search endpoint for eligible course owners/instructors.
+     */
+    public function ajax_search_course_users() {
+        check_ajax_referer( 'vh360_course_user_search', 'nonce' );
+
+        if ( ! $this->current_user_can_manage_series_terms() ) {
+            wp_send_json_error( array( 'message' => __( 'You do not have permission to search course users.', 'videohub360' ) ), 403 );
+        }
+
+        $search = isset( $_GET['q'] ) ? sanitize_text_field( wp_unslash( $_GET['q'] ) ) : '';
+        if ( '' === $search && isset( $_GET['term'] ) ) {
+            $search = sanitize_text_field( wp_unslash( $_GET['term'] ) );
+        }
+
+        $users = get_users( array(
+            'role__in'       => function_exists( 'vh360_get_course_eligible_user_roles' ) ? vh360_get_course_eligible_user_roles() : array( 'administrator', 'editor', 'author', 'vh360_instructor' ),
+            'search'         => '*' . $search . '*',
+            'search_columns' => array( 'user_login', 'user_email', 'display_name' ),
+            'number'         => 20,
+            'orderby'        => 'display_name',
+            'order'          => 'ASC',
+        ) );
+
+        $results = array();
+        foreach ( $users as $user ) {
+            $user_id = absint( $user->ID );
+            if ( function_exists( 'vh360_user_is_eligible_course_owner' ) && ! vh360_user_is_eligible_course_owner( $user_id ) ) {
+                continue;
+            }
+
+            $results[] = array(
+                'id'   => $user_id,
+                'text' => $this->format_course_user_label( $user ),
+            );
+        }
+
+        wp_send_json_success( $results );
+    }
+
     /* ------------------------------------------------------------------ */
     /*  Sanitisation callbacks                                               */
     /* ------------------------------------------------------------------ */
@@ -651,6 +915,20 @@ class VideoHub360_Course_Foundation {
     }
 
     /**
+     * Determine whether the current user can manage the videohub360_series taxonomy.
+     *
+     * @return bool
+     */
+    private function current_user_can_manage_series_terms() {
+        $taxonomy = get_taxonomy( 'videohub360_series' );
+        $cap      = ( $taxonomy && ! empty( $taxonomy->cap->manage_terms ) )
+            ? $taxonomy->cap->manage_terms
+            : 'manage_categories';
+
+        return current_user_can( $cap );
+    }
+
+    /**
      * Auth callback for registered post meta – requires edit_posts capability.
      *
      * @return bool
@@ -660,12 +938,12 @@ class VideoHub360_Course_Foundation {
     }
 
     /**
-     * Auth callback for registered term meta – requires manage_categories capability.
+     * Auth callback for registered term meta – requires the taxonomy manage_terms capability.
      *
      * @return bool
      */
     public function term_meta_auth_callback() {
-        return current_user_can( 'manage_categories' );
+        return $this->current_user_can_manage_series_terms();
     }
 }
 
@@ -684,15 +962,204 @@ if ( ! function_exists( 'videohub360_course_features_enabled' ) ) {
     }
 }
 
+if ( ! function_exists( 'vh360_get_course_eligible_user_roles' ) ) {
+    /**
+     * Return roles eligible to own/manage or publicly instruct a course.
+     *
+     * @return string[]
+     */
+    function vh360_get_course_eligible_user_roles() {
+        return apply_filters( 'vh360_course_eligible_user_roles', array(
+            'administrator',
+            'editor',
+            'author',
+            'vh360_instructor',
+        ) );
+    }
+}
+
+if ( ! function_exists( 'vh360_user_is_eligible_course_owner' ) ) {
+    /**
+     * Determine whether a user can be assigned as a course owner/instructor.
+     *
+     * @param int $user_id User ID.
+     * @return bool
+     */
+    function vh360_user_is_eligible_course_owner( $user_id ) {
+        $user = get_userdata( absint( $user_id ) );
+
+        if ( ! $user ) {
+            return false;
+        }
+
+        return (bool) array_intersect( vh360_get_course_eligible_user_roles(), (array) $user->roles );
+    }
+}
+
+if ( ! function_exists( 'videohub360_get_first_course_lesson_author_id' ) ) {
+    /**
+     * Return the author ID for the first lesson assigned to a course.
+     *
+     * @param int $term_id Course (series) term ID.
+     * @return int User ID, or 0 when no lesson author is available.
+     */
+    function videohub360_get_first_course_lesson_author_id( $term_id ) {
+        $lesson_ids = get_posts( array(
+            'post_type'      => 'videohub360',
+            'post_status'    => array( 'publish', 'draft', 'pending', 'private', 'future' ),
+            'posts_per_page' => 1,
+            'fields'         => 'ids',
+            'orderby'        => 'menu_order date',
+            'order'          => 'ASC',
+            'tax_query'      => array(
+                array(
+                    'taxonomy' => 'videohub360_series',
+                    'field'    => 'term_id',
+                    'terms'    => absint( $term_id ),
+                ),
+            ),
+        ) );
+
+        if ( empty( $lesson_ids ) ) {
+            return 0;
+        }
+
+        return (int) get_post_field( 'post_author', $lesson_ids[0] );
+    }
+}
+
 if ( ! function_exists( 'videohub360_get_course_owner_id' ) ) {
     /**
-     * Return the user ID of the course owner.
+     * Return the user ID of the course owner, with backwards-compatible fallbacks.
+     *
+     * Fallback ownership resolution is retained for legacy/imported courses.
+     * New saves and the repair tool should always populate _vh360_course_owner_user_id.
+     *
+     * Fallback order:
+     * 1. _vh360_course_owner_user_id term meta.
+     * 2. _vh360_course_instructor_user_id term meta.
+     * 3. Author of the first lesson in the course.
      *
      * @param  int $term_id Course (series) term ID.
      * @return int User ID, or 0 if not set.
      */
     function videohub360_get_course_owner_id( $term_id ) {
-        return (int) get_term_meta( $term_id, '_vh360_course_owner_user_id', true );
+        $term_id = absint( $term_id );
+        if ( ! $term_id ) {
+            return 0;
+        }
+
+        $owner_id = (int) get_term_meta( $term_id, '_vh360_course_owner_user_id', true );
+        if ( $owner_id > 0 && get_userdata( $owner_id ) ) {
+            return $owner_id;
+        }
+
+        $instructor_id = (int) get_term_meta( $term_id, '_vh360_course_instructor_user_id', true );
+        if ( $instructor_id > 0 && get_userdata( $instructor_id ) ) {
+            return $instructor_id;
+        }
+
+        $lesson_author_id = videohub360_get_first_course_lesson_author_id( $term_id );
+        if ( $lesson_author_id > 0 && get_userdata( $lesson_author_id ) ) {
+            return $lesson_author_id;
+        }
+
+        return 0;
+    }
+}
+
+if ( ! function_exists( 'vh360_get_course_owner_id' ) ) {
+    /**
+     * Return the effective course owner ID.
+     *
+     * @param int $term_id Course (series) term ID.
+     * @return int User ID, or 0 if not set.
+     */
+    function vh360_get_course_owner_id( $term_id ) {
+        return videohub360_get_course_owner_id( $term_id );
+    }
+}
+
+if ( ! function_exists( 'vh360_get_course_instructor_id' ) ) {
+    /**
+     * Return the explicit public course instructor ID.
+     *
+     * @param int $term_id Course (series) term ID.
+     * @return int User ID, or 0 if not set.
+     */
+    function vh360_get_course_instructor_id( $term_id ) {
+        $user_id = (int) get_term_meta( absint( $term_id ), '_vh360_course_instructor_user_id', true );
+        return ( $user_id > 0 && get_userdata( $user_id ) ) ? $user_id : 0;
+    }
+}
+
+if ( ! function_exists( 'vh360_user_can_manage_course' ) ) {
+    /**
+     * Determine whether a user can manage a course in the frontend course dashboard.
+     *
+     * @param int $user_id User ID.
+     * @param int $term_id Course (series) term ID.
+     * @return bool
+     */
+    function vh360_user_can_manage_course( $user_id, $term_id ) {
+        $user_id = absint( $user_id );
+        $term_id = absint( $term_id );
+
+        if ( ! $user_id || ! $term_id ) {
+            return false;
+        }
+
+        if ( user_can( $user_id, 'manage_options' ) ) {
+            return true;
+        }
+
+        return vh360_get_course_owner_id( $term_id ) === $user_id;
+    }
+}
+
+if ( ! function_exists( 'vh360_transfer_course_lessons_to_user' ) ) {
+    /**
+     * Transfer all videohub360 lessons assigned to a course term to a user.
+     *
+     * @param int $term_id Course (series) term ID.
+     * @param int $user_id New post_author user ID.
+     * @return int Number of lessons transferred.
+     */
+    function vh360_transfer_course_lessons_to_user( $term_id, $user_id ) {
+        $term_id = absint( $term_id );
+        $user_id = absint( $user_id );
+
+        if ( ! $term_id || ! $user_id || ! get_userdata( $user_id ) ) {
+            return 0;
+        }
+
+        $lesson_ids = get_posts( array(
+            'post_type'      => 'videohub360',
+            'post_status'    => array( 'publish', 'draft', 'pending', 'private', 'future' ),
+            'posts_per_page' => -1,
+            'fields'         => 'ids',
+            'tax_query'      => array(
+                array(
+                    'taxonomy' => 'videohub360_series',
+                    'field'    => 'term_id',
+                    'terms'    => $term_id,
+                ),
+            ),
+        ) );
+
+        $transferred = 0;
+        foreach ( $lesson_ids as $lesson_id ) {
+            $result = wp_update_post( array(
+                'ID'          => $lesson_id,
+                'post_author' => $user_id,
+            ), true );
+
+            if ( ! is_wp_error( $result ) ) {
+                $transferred++;
+            }
+        }
+
+        return $transferred;
     }
 }
 
@@ -915,7 +1382,9 @@ if ( ! function_exists( 'videohub360_get_course_instructor' ) ) {
      * @return WP_User|false
      */
     function videohub360_get_course_instructor( $term_id ) {
-        $user_id = (int) get_term_meta( $term_id, '_vh360_course_instructor_user_id', true );
+        $user_id = function_exists( 'vh360_get_course_instructor_id' )
+            ? vh360_get_course_instructor_id( $term_id )
+            : (int) get_term_meta( $term_id, '_vh360_course_instructor_user_id', true );
 
         if ( $user_id > 0 ) {
             $user = get_userdata( $user_id );
