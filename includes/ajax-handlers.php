@@ -1028,9 +1028,11 @@ class VH360_Ajax_Handlers {
                 && videohub360_course_features_enabled()
                 && !current_user_can('manage_options')
             ) {
-                $owner_id = (int) get_term_meta($series, '_vh360_course_owner_user_id', true);
+                $can_manage_course = function_exists('vh360_user_can_manage_course')
+                    ? vh360_user_can_manage_course(get_current_user_id(), $series)
+                    : ((int) get_term_meta($series, '_vh360_course_owner_user_id', true) === get_current_user_id());
 
-                if ($owner_id !== get_current_user_id()) {
+                if (!$can_manage_course) {
                     wp_send_json_error(array(
                         'message' => esc_html__('You do not have permission to assign this lesson to that course.', 'videohub360-theme'),
                     ));
@@ -1168,8 +1170,10 @@ class VH360_Ajax_Handlers {
             }
 
             // Ownership check for non-admins.
-            $owner_id = (int) get_term_meta($course_id, '_vh360_course_owner_user_id', true);
-            if (!current_user_can('manage_options') && $owner_id !== $current_user_id) {
+            $can_manage_course = function_exists('vh360_user_can_manage_course')
+                ? vh360_user_can_manage_course($current_user_id, $course_id)
+                : ((int) get_term_meta($course_id, '_vh360_course_owner_user_id', true) === $current_user_id);
+            if (!current_user_can('manage_options') && !$can_manage_course) {
                 wp_send_json_error(array('message' => esc_html__('You do not have permission to edit this course.', 'videohub360-theme')));
             }
 
@@ -1286,8 +1290,10 @@ class VH360_Ajax_Handlers {
         }
 
         // Ownership check for non-admins.
-        $owner_id = (int) get_term_meta($course_id, '_vh360_course_owner_user_id', true);
-        if (!current_user_can('manage_options') && $owner_id !== $current_user_id) {
+        $can_manage_course = function_exists('vh360_user_can_manage_course')
+            ? vh360_user_can_manage_course($current_user_id, $course_id)
+            : ((int) get_term_meta($course_id, '_vh360_course_owner_user_id', true) === $current_user_id);
+        if (!current_user_can('manage_options') && !$can_manage_course) {
             wp_send_json_error(array('message' => esc_html__('You do not have permission to delete this course.', 'videohub360-theme')));
         }
 

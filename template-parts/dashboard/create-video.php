@@ -96,8 +96,17 @@ $categories = get_terms(array(
     'hide_empty' => false,
 ));
 
-// When course features are enabled, non-admin users only see their own courses in the dropdown.
-if ( $vh360_course_features_enabled && ! current_user_can( 'manage_options' ) ) {
+// When course features are enabled, non-admin users only see courses they can manage in the dropdown.
+if ( $vh360_course_features_enabled && ! current_user_can( 'manage_options' ) && function_exists( 'vh360_user_can_manage_course' ) ) {
+    $all_series = get_terms(array(
+        'taxonomy'   => 'videohub360_series',
+        'hide_empty' => false,
+    ));
+
+    $series = is_wp_error( $all_series ) ? array() : array_filter( $all_series, function( $course ) use ( $current_user_id ) {
+        return vh360_user_can_manage_course( $current_user_id, $course->term_id );
+    } );
+} elseif ( $vh360_course_features_enabled && ! current_user_can( 'manage_options' ) ) {
     $series = get_terms(array(
         'taxonomy'   => 'videohub360_series',
         'hide_empty' => false,
@@ -115,6 +124,10 @@ if ( $vh360_course_features_enabled && ! current_user_can( 'manage_options' ) ) 
         'taxonomy' => 'videohub360_series',
         'hide_empty' => false,
     ));
+}
+
+if ( ! is_wp_error( $series ) ) {
+    $series = array_values( $series );
 }
 
 $locations = get_terms(array(

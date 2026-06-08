@@ -42,6 +42,15 @@ if ( $is_admin ) {
         'taxonomy'   => 'videohub360_series',
         'hide_empty' => false,
     ) );
+} elseif ( function_exists( 'vh360_user_can_manage_course' ) ) {
+    $all_courses = get_terms( array(
+        'taxonomy'   => 'videohub360_series',
+        'hide_empty' => false,
+    ) );
+
+    $courses = is_wp_error( $all_courses ) ? array() : array_filter( $all_courses, function( $course ) use ( $current_user_id ) {
+        return vh360_user_can_manage_course( $current_user_id, $course->term_id );
+    } );
 } else {
     $courses = get_terms( array(
         'taxonomy'   => 'videohub360_series',
@@ -60,6 +69,8 @@ if ( $is_admin ) {
 if ( is_wp_error( $courses ) ) {
     $courses = array();
 }
+
+$courses = array_values( $courses );
 
 $course_label          = function_exists( 'videohub360_get_course_label' ) ? videohub360_get_course_label() : __( 'Course', 'videohub360-theme' );
 $courses_label         = function_exists( 'videohub360_get_course_label' ) ? videohub360_get_course_label( true ) : __( 'Courses', 'videohub360-theme' );
