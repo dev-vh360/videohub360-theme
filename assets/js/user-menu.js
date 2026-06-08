@@ -52,6 +52,7 @@
          */
         function openDropdown() {
             isOpen = true;
+            highlightCurrentPage();
             dropdown.removeAttribute('hidden');
             dropdown.classList.add('active');
             toggleButton.setAttribute('aria-expanded', 'true');
