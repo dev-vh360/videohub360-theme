@@ -20,9 +20,10 @@ function vh360_output_dynamic_css() {
     $primary_color     = get_theme_mod('vh360_primary_color', '#2563eb');
     $secondary_color   = get_theme_mod('vh360_secondary_color', '#1e40af');
     $accent_color      = get_theme_mod('vh360_accent_color', '#f59e0b');
-    $header_bg_color   = get_theme_mod('vh360_header_bg_color', '#667eea');
-    $header_bg_end     = get_theme_mod('vh360_header_bg_color_end', '#764ba2');
-    $text_color        = get_theme_mod('vh360_text_color', '#1f2937');
+    $header_bg_color        = get_theme_mod('vh360_header_bg_color', '#667eea');
+    $header_bg_end          = get_theme_mod('vh360_header_bg_color_end', '#764ba2');
+    $page_header_text_color = get_theme_mod('vh360_page_header_text_color', '#ffffff');
+    $text_color             = get_theme_mod('vh360_text_color', '#1f2937');
     $text_light_color  = get_theme_mod('vh360_text_light_color', '#6b7280');
     $bg_color          = get_theme_mod('vh360_bg_color', '#ffffff');
     $site_header_bg    = get_theme_mod('vh360_site_header_bg_color', '#ffffff');
@@ -171,6 +172,7 @@ function vh360_output_dynamic_css() {
             /* Navigation & Header Colors */
             --header-bg-color: <?php echo esc_attr($header_bg_color); ?>;
             --header-bg-end: <?php echo esc_attr($header_bg_end); ?>;
+            --page-header-text-color: <?php echo esc_attr($page_header_text_color); ?>;
             --hamburger-bg-color: <?php echo esc_attr($hamburger_bg_color); ?>;
             --hamburger-text-color: <?php echo esc_attr($hamburger_text_color); ?>;
             --hamburger-hover-bg-color: <?php echo esc_attr($hamburger_hover_bg_color); ?>;
@@ -306,7 +308,8 @@ function vh360_output_dynamic_css() {
         }
 
         /* Page Header Styles - Unified across all templates */
-        .vh360-activity-header,
+        .vh360-activity-feed > .vh360-activity-header,
+        .vh360-live-room-main > .vh360-live-room-header,
         .vh360-members-header,
         .vh360-bulletins-header,
         .vh360-events-header,
@@ -314,10 +317,29 @@ function vh360_output_dynamic_css() {
         .vh360-course-catalog-template-header,
         .videohub360-archive-header {
             background: linear-gradient(135deg, var(--header-bg-color) 0%, var(--header-bg-end) 100%);
-            color: #ffffff;
+            color: var(--page-header-text-color);
             padding: 3rem 0 2rem;
             text-align: center;
             margin-bottom: 2rem;
+        }
+
+        .vh360-activity-feed > .vh360-activity-header,
+        .vh360-activity-feed > .vh360-activity-header *,
+        .vh360-live-room-main > .vh360-live-room-header,
+        .vh360-live-room-main > .vh360-live-room-header *,
+        .vh360-members-header,
+        .vh360-members-header *,
+        .vh360-bulletins-header,
+        .vh360-bulletins-header *,
+        .vh360-events-header,
+        .vh360-events-header *,
+        .vh360-blog-header,
+        .vh360-blog-header *,
+        .vh360-course-catalog-template-header,
+        .vh360-course-catalog-template-header *,
+        .videohub360-archive-header,
+        .videohub360-archive-header * {
+            color: var(--page-header-text-color);
         }
 
         /* Ensure spacing when template headers are disabled (Bulletins/Events/Blog/Course Catalog) */
@@ -390,7 +412,7 @@ function vh360_output_dynamic_css() {
 
         /* Conditional Header Visibility */
         <?php if (!get_theme_mod('vh360_show_activity_header', 1)) : ?>
-        .vh360-activity-header { display: none; }
+        .vh360-activity-feed > .vh360-activity-header { display: none; }
         <?php endif; ?>
         <?php if (!get_theme_mod('vh360_show_members_header', 1)) : ?>
         .vh360-members-header { display: none; }

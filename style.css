@@ -1278,13 +1278,14 @@ body.is-auth-page.vh360-auth-hide-header.vh360-auth-hide-footer .vh360-auth-page
     font-size: 2.25rem;
     font-weight: 800;
     line-height: 1.2;
-    color: #fff;
+    color: var(--page-header-text-color);
     margin: 0 0 0.75rem;
 }
 
 .vh360-course-catalog-page-description {
     font-size: 1.1rem;
-    color: rgba(255, 255, 255, 0.82);
+    color: var(--page-header-text-color);
+    opacity: 0.82;
     margin: 0 auto;
     max-width: 640px;
 }
