@@ -52,6 +52,7 @@
          */
         function openDropdown() {
             isOpen = true;
+            highlightCurrentPage();
             dropdown.removeAttribute('hidden');
             dropdown.classList.add('active');
             toggleButton.setAttribute('aria-expanded', 'true');
@@ -197,52 +198,87 @@
          * Helper function to normalize path by removing trailing slash
          */
         function normalizePath(path) {
-            return path.replace(/\/$/, '');
+            const normalizedPath = path || '';
+
+            if (normalizedPath === '/') {
+                return normalizedPath;
+            }
+
+            return normalizedPath.replace(/\/$/, '');
         }
-        
+
+        /**
+         * Helper function to normalize search strings
+         */
+        function normalizeSearch(search) {
+            return search || '';
+        }
+
+        /**
+         * Helper function to normalize hash fragments
+         */
+        function normalizeHash(hash) {
+            return hash || '';
+        }
+
+        /**
+         * Check whether a menu URL should be eligible for active highlighting
+         */
+        function isHighlightableMenuUrl(url) {
+            if (url.origin !== window.location.origin) {
+                return false;
+            }
+
+            if (url.searchParams.has('vh360_logout') || url.searchParams.get('action') === 'logout') {
+                return false;
+            }
+
+            return true;
+        }
+
         /**
          * Highlight current page in menu
          */
         function highlightCurrentPage() {
-            const currentUrl = window.location.href;
-            const currentPath = normalizePath(window.location.pathname);
-            const currentSearch = window.location.search;
+            const currentUrl = new URL(window.location.href);
+            const currentPath = normalizePath(currentUrl.pathname);
+            const currentSearch = normalizeSearch(currentUrl.search);
+            const currentHash = normalizeHash(currentUrl.hash);
             const allMenuItems = dropdown.querySelectorAll('.vh360-user-menu-item');
-            
+
             allMenuItems.forEach(function(item) {
-                const itemUrl = item.getAttribute('href');
-                if (!itemUrl) {
+                item.classList.remove('current-page');
+
+                const itemHref = item.getAttribute('href');
+                if (!itemHref) {
                     return;
                 }
-                
+
                 try {
-                    const itemUrlObj = new URL(itemUrl, window.location.origin);
-                    const itemPath = normalizePath(itemUrlObj.pathname);
-                    const itemSearch = itemUrlObj.search;
-                    
-                    // Check if paths match
-                    const pathsMatch = currentPath === itemPath;
-                    
-                    // Check if query parameters match (if item has query params)
-                    let queryMatch = true;
-                    if (itemSearch) {
-                        queryMatch = currentSearch.includes(itemSearch) || itemSearch.includes(currentSearch);
+                    const itemUrl = new URL(itemHref, window.location.origin);
+
+                    if (!isHighlightableMenuUrl(itemUrl)) {
+                        return;
                     }
-                    
-                    // Highlight if both path and query match
-                    if (pathsMatch && queryMatch) {
+
+                    const itemPath = normalizePath(itemUrl.pathname);
+                    const itemSearch = normalizeSearch(itemUrl.search);
+                    const itemHash = normalizeHash(itemUrl.hash);
+
+                    const pathsMatch = currentPath === itemPath;
+                    const searchesMatch = currentSearch === itemSearch;
+                    const hashesMatch = currentHash === itemHash;
+
+                    if (pathsMatch && searchesMatch && hashesMatch) {
                         item.classList.add('current-page');
                     }
                 } catch (e) {
-                    // Fallback for relative URLs - normalize both paths
-                    const normalizedItemUrl = normalizePath(itemUrl);
-                    if (normalizedItemUrl === currentPath) {
-                        item.classList.add('current-page');
-                    }
+                    // Ignore URLs that cannot be parsed.
                 }
             });
         }
-        
+
         highlightCurrentPage();
+        window.addEventListener('hashchange', highlightCurrentPage);
     }
 })();

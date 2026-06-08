@@ -469,11 +469,14 @@ add_action('wp_enqueue_scripts', 'vh360_enqueue_gallery_assets', 20);
 function vh360_enqueue_members_directory_assets() {
     // Load on members directory template
     if (is_page_template('template-members-directory.php')) {
+        $members_directory_style_path = VH360_THEME_DIR . '/assets/css/members-directory.css';
+        $members_directory_style_version = file_exists($members_directory_style_path) ? filemtime($members_directory_style_path) : VH360_THEME_VERSION;
+
         wp_enqueue_style(
             'vh360-members-directory',
             VH360_THEME_URI . '/assets/css/members-directory.css',
             array('videohub360-theme-style'),
-            VH360_THEME_VERSION
+            $members_directory_style_version
         );
         
         wp_enqueue_script(
@@ -628,11 +631,14 @@ function vh360_enqueue_user_menu_assets() {
     
     // User menu script (only if logged in for dropdown functionality)
     if (is_user_logged_in()) {
+        $user_menu_script_path = VH360_THEME_DIR . '/assets/js/user-menu.js';
+        $user_menu_script_version = file_exists($user_menu_script_path) ? filemtime($user_menu_script_path) : VH360_THEME_VERSION;
+
         wp_enqueue_script(
             'vh360-user-menu',
             VH360_THEME_URI . '/assets/js/user-menu.js',
             array(),
-            VH360_THEME_VERSION,
+            $user_menu_script_version,
             true
         );
     }
