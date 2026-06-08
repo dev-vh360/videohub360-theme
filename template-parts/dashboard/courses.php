@@ -42,15 +42,6 @@ if ( $is_admin ) {
         'taxonomy'   => 'videohub360_series',
         'hide_empty' => false,
     ) );
-} elseif ( function_exists( 'vh360_user_can_manage_course' ) ) {
-    $all_courses = get_terms( array(
-        'taxonomy'   => 'videohub360_series',
-        'hide_empty' => false,
-    ) );
-
-    $courses = is_wp_error( $all_courses ) ? array() : array_filter( $all_courses, function( $course ) use ( $current_user_id ) {
-        return vh360_user_can_manage_course( $current_user_id, $course->term_id );
-    } );
 } else {
     $courses = get_terms( array(
         'taxonomy'   => 'videohub360_series',
@@ -64,10 +55,28 @@ if ( $is_admin ) {
             ),
         ),
     ) );
+
+    // Prefer explicit owner meta for scalable queries. Fall back only for legacy/imported courses.
+    if ( ( is_wp_error( $courses ) || empty( $courses ) ) && function_exists( 'vh360_user_can_manage_course' ) ) {
+        $all_courses = get_terms( array(
+            'taxonomy'   => 'videohub360_series',
+            'hide_empty' => false,
+        ) );
+
+        $courses = is_wp_error( $all_courses ) ? array() : array_filter( $all_courses, function( $course ) use ( $current_user_id ) {
+            return vh360_user_can_manage_course( $current_user_id, $course->term_id );
+        } );
+    }
 }
 
 if ( is_wp_error( $courses ) ) {
     $courses = array();
+}
+
+if ( ! $is_admin && function_exists( 'vh360_user_can_manage_course' ) ) {
+    $courses = array_filter( $courses, function( $course ) use ( $current_user_id ) {
+        return vh360_user_can_manage_course( $current_user_id, $course->term_id );
+    } );
 }
 
 $courses = array_values( $courses );

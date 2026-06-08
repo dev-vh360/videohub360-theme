@@ -106,6 +106,21 @@ $options = wp_parse_args($options, $defaults);
         </form>
     </div>
     
+    <!-- Repair Course Ownership -->
+    <div class="vh360-admin-card">
+        <h2><?php esc_html_e('Repair Course Ownership Metadata', 'videohub360-theme'); ?></h2>
+        <p><?php esc_html_e('Finds courses missing an explicit Course Owner and assigns one using the public instructor or the first lesson author as a fallback.', 'videohub360-theme'); ?></p>
+
+        <form method="post" action="">
+            <?php wp_nonce_field('vh360_admin_action', 'vh360_admin_nonce'); ?>
+            <input type="hidden" name="vh360_admin_action" value="repair_course_ownership">
+            <button type="submit" class="button button-secondary vh360-confirm-action" data-confirm="<?php esc_attr_e('Repair missing course owner metadata now?', 'videohub360-theme'); ?>">
+                <span class="dashicons dashicons-admin-tools"></span>
+                <?php esc_html_e('Repair Course Ownership Metadata', 'videohub360-theme'); ?>
+            </button>
+        </form>
+    </div>
+
     <!-- Import/Export Theme Options -->
     <div class="vh360-admin-card">
         <h2><?php esc_html_e('Import/Export Theme Options', 'videohub360-theme'); ?></h2>
