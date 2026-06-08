@@ -628,11 +628,14 @@ function vh360_enqueue_user_menu_assets() {
     
     // User menu script (only if logged in for dropdown functionality)
     if (is_user_logged_in()) {
+        $user_menu_script_path = VH360_THEME_DIR . '/assets/js/user-menu.js';
+        $user_menu_script_version = file_exists($user_menu_script_path) ? filemtime($user_menu_script_path) : VH360_THEME_VERSION;
+
         wp_enqueue_script(
             'vh360-user-menu',
             VH360_THEME_URI . '/assets/js/user-menu.js',
             array(),
-            VH360_THEME_VERSION,
+            $user_menu_script_version,
             true
         );
     }
