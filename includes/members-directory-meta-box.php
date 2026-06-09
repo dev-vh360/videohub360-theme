@@ -71,15 +71,11 @@ function vh360_render_members_directory_meta_box($post) {
     }
     
     // Get global settings for reference
-    $global_options = get_option('vh360_members_options', array());
-    $global_defaults = array(
-        'directory_audience' => 'all_members',
-        'professionals_account_types' => array('professional', 'organization'),
-        'professionals_require_approval' => true,
-        'show_card_stats' => true,
-        'show_card_follow_button' => true,
+    $global_defaults = vh360_get_default_members_directory_options();
+    $global_options = wp_parse_args(
+        get_option('vh360_members_options', array()),
+        $global_defaults
     );
-    $global_options = wp_parse_args($global_options, $global_defaults);
     
     $global_audience_label = ($global_options['directory_audience'] === 'professionals_only') 
         ? __('Professionals Only', 'videohub360-theme') 
@@ -137,8 +133,12 @@ function vh360_render_members_directory_meta_box($post) {
                 <input type="checkbox" name="vh360_directory_account_types_override[]" value="organization" <?php checked(in_array('organization', $account_types_override)); ?>>
                 <?php esc_html_e('Organization', 'videohub360-theme'); ?>
             </label>
+            <label style="display: block; margin-bottom: 6px;">
+                <input type="checkbox" name="vh360_directory_account_types_override[]" value="creator" <?php checked(in_array('creator', $account_types_override)); ?>>
+                <?php esc_html_e('Instructor / Creator', 'videohub360-theme'); ?>
+            </label>
             <span class="description" style="display: block; margin-top: 4px; font-size: 11px;">
-                <?php esc_html_e('Leave empty to inherit global settings', 'videohub360-theme'); ?>
+                <?php esc_html_e('Leave empty to inherit global settings. Professionals Only displays Professional, Organization, and Instructor/Creator accounts.', 'videohub360-theme'); ?>
             </span>
         </p>
         
@@ -308,7 +308,7 @@ function vh360_save_members_directory_meta_box($post_id) {
     
     // Save account types override
     if (isset($_POST['vh360_directory_account_types_override']) && is_array($_POST['vh360_directory_account_types_override'])) {
-        $allowed_types = array('professional', 'organization');
+        $allowed_types = vh360_get_professionals_directory_account_types();
         $account_types = array_map('sanitize_text_field', $_POST['vh360_directory_account_types_override']);
         $account_types = array_intersect($account_types, $allowed_types);
         

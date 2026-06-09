@@ -25,8 +25,11 @@ echo "====================================\n\n";
 // Test 1: Check that new settings exist
 echo "TEST 1: New Settings Schema\n";
 echo "----------------------------\n";
-$options = get_option('vh360_members_options', array());
-$required_keys = array('directory_audience', 'professionals_account_types', 'professionals_require_approval', 'show_card_stats');
+$options = wp_parse_args(
+    get_option('vh360_members_options', array()),
+    vh360_get_default_members_directory_options()
+);
+$required_keys = array('per_page', 'directory_audience', 'professionals_account_types', 'professionals_require_approval', 'show_card_stats');
 foreach ($required_keys as $key) {
     $exists = array_key_exists($key, $options);
     $value = $exists ? var_export($options[$key], true) : 'NOT SET';
@@ -64,7 +67,7 @@ echo "TEST 4: Query Builder - Professionals Only Mode\n";
 echo "------------------------------------------------\n";
 $args = vh360_build_members_directory_query_args(array(
     'audience' => 'professionals_only',
-    'account_types' => array('professional', 'organization'),
+    'account_types' => vh360_get_professionals_directory_account_types(),
     'require_professional_approval' => true,
     'number' => 5,
 ));
@@ -82,7 +85,7 @@ echo "TEST 5: Get Members - Professionals Only\n";
 echo "-----------------------------------------\n";
 $members = vh360_get_members(array(
     'audience' => 'professionals_only',
-    'account_types' => array('professional', 'organization'),
+    'account_types' => vh360_get_professionals_directory_account_types(),
     'require_professional_approval' => true,
     'number' => 3,
 ));
@@ -107,7 +110,7 @@ echo "TEST 6: Get Member Count - Professionals Only\n";
 echo "----------------------------------------------\n";
 $count = vh360_get_member_count(array(
     'audience' => 'professionals_only',
-    'account_types' => array('professional', 'organization'),
+    'account_types' => vh360_get_professionals_directory_account_types(),
     'require_professional_approval' => true,
 ));
 echo "Total professionals count: " . $count . "\n\n";

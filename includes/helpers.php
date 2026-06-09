@@ -745,6 +745,227 @@ function vh360_get_user_social_links($user_id, $include_disabled = false) {
     return $social_links;
 }
 
+
+/**
+ * Get the default visible roles for the Members Directory.
+ *
+ * Includes standard WordPress roles plus first-party Videohub360 public roles,
+ * while omitting roles that are not registered on the current install.
+ *
+ * @return array Role slugs.
+ */
+function vh360_get_default_members_directory_visible_roles() {
+    $roles = array(
+        'subscriber',
+        'contributor',
+        'author',
+        'editor',
+        'administrator',
+        'vh360_professional',
+        'vh360_instructor',
+    );
+
+    return array_values( array_filter( $roles, function( $role ) {
+        return get_role( $role );
+    } ) );
+}
+
+/**
+ * Get account types that are eligible for Professionals Only directories.
+ *
+ * In Videohub360, instructor/creator accounts are public-facing professional
+ * accounts and should be discoverable alongside professional and organization
+ * accounts.
+ *
+ * @return array Account type slugs.
+ */
+function vh360_get_professionals_directory_account_types() {
+    return array(
+        'professional',
+        'organization',
+        'creator',
+    );
+}
+
+
+/**
+ * Get default options for the Members Directory settings.
+ *
+ * Centralizes the defaults used by settings registration, admin fallback logic,
+ * frontend queries, and AJAX loading so values like per_page stay consistent.
+ *
+ * @return array Members Directory option defaults.
+ */
+function vh360_get_default_members_directory_options() {
+    return array(
+        'enable_directory'               => true,
+        'per_page'                       => 24,
+        'default_sort'                   => 'newest',
+        'enable_search'                  => true,
+        'visible_roles'                  => vh360_get_default_members_directory_visible_roles(),
+        'directory_audience'             => 'all_members',
+        'professionals_account_types'    => vh360_get_professionals_directory_account_types(),
+        'professionals_require_approval' => true,
+        'show_card_stats'                => true,
+        'show_card_follow_button'        => true,
+        'enable_category_filter'         => false,
+        'member_categories'              => array(),
+    );
+}
+
+/**
+ * Migrate old Members Directory visible-role defaults to include VH360 roles.
+ *
+ * Existing sites with missing/invalid visible_roles receive current platform
+ * defaults. Existing sites whose saved roles match the legacy WordPress-only
+ * default are upgraded to include first-party VH360 roles. Customized role sets
+ * are preserved.
+ */
+function vh360_migrate_members_directory_visible_roles() {
+    $migration_flag = 'vh360_members_visible_roles_vh360_roles_migrated';
+
+    if ( get_option( $migration_flag ) ) {
+        return;
+    }
+
+    $options = get_option( 'vh360_members_options', array() );
+    if ( ! is_array( $options ) ) {
+        $options = array();
+    }
+
+    $default_visible_roles = vh360_get_default_members_directory_visible_roles();
+    $visible_roles = isset( $options['visible_roles'] ) && is_array( $options['visible_roles'] )
+        ? array_values( array_filter( array_map( 'sanitize_text_field', $options['visible_roles'] ) ) )
+        : array();
+
+    $valid_roles = function_exists( 'wp_roles' ) && wp_roles() ? array_keys( wp_roles()->roles ) : array();
+    if ( ! empty( $valid_roles ) && ! empty( $visible_roles ) ) {
+        $visible_roles = array_values( array_intersect( $visible_roles, $valid_roles ) );
+    }
+
+    $updated = false;
+
+    if ( empty( $visible_roles ) ) {
+        $options['visible_roles'] = $default_visible_roles;
+        $updated = true;
+    } else {
+        $old_core_roles = array(
+            'subscriber',
+            'contributor',
+            'author',
+            'editor',
+            'administrator',
+        );
+
+        $saved_roles_are_old_defaults = empty( array_diff( $visible_roles, $old_core_roles ) ) && empty( array_diff( $old_core_roles, $visible_roles ) );
+
+        if ( $saved_roles_are_old_defaults ) {
+            foreach ( array( 'vh360_professional', 'vh360_instructor' ) as $vh360_role ) {
+                if ( get_role( $vh360_role ) && ! in_array( $vh360_role, $visible_roles, true ) ) {
+                    $visible_roles[] = $vh360_role;
+                    $updated = true;
+                }
+            }
+
+            if ( $updated ) {
+                $options['visible_roles'] = array_values( $visible_roles );
+            }
+        }
+    }
+
+    if ( $updated ) {
+        update_option( 'vh360_members_options', $options );
+    }
+
+    update_option( $migration_flag, 1, false );
+}
+add_action( 'init', 'vh360_migrate_members_directory_visible_roles', 20 );
+
+
+/**
+ * Migrate old Professionals Only account-type defaults to include creators.
+ *
+ * Preserves admin-customized account-type lists, but upgrades the legacy
+ * Professional + Organization default so instructor/creator accounts appear in
+ * Professionals Only directories by default.
+ */
+function vh360_migrate_professionals_directory_account_types() {
+    $migration_flag = 'vh360_professionals_account_types_creator_migrated';
+
+    if ( get_option( $migration_flag ) ) {
+        return;
+    }
+
+    $options = get_option( 'vh360_members_options', array() );
+    if ( ! is_array( $options ) ) {
+        $options = array();
+    }
+
+    $default_account_types = vh360_get_professionals_directory_account_types();
+    $account_types = isset( $options['professionals_account_types'] ) && is_array( $options['professionals_account_types'] )
+        ? array_values( array_filter( array_map( 'sanitize_text_field', $options['professionals_account_types'] ) ) )
+        : array();
+
+    $allowed_account_types = vh360_get_professionals_directory_account_types();
+    if ( ! empty( $account_types ) ) {
+        $account_types = array_values( array_intersect( $account_types, $allowed_account_types ) );
+    }
+
+    $updated = false;
+
+    if ( empty( $account_types ) ) {
+        $options['professionals_account_types'] = $default_account_types;
+        $updated = true;
+    } else {
+        $old_account_types = array( 'professional', 'organization' );
+        $saved_types_are_old_defaults = empty( array_diff( $account_types, $old_account_types ) ) && empty( array_diff( $old_account_types, $account_types ) );
+
+        if ( $saved_types_are_old_defaults && ! in_array( 'creator', $account_types, true ) ) {
+            $account_types[] = 'creator';
+            $options['professionals_account_types'] = array_values( $account_types );
+            $updated = true;
+        }
+    }
+
+    if ( $updated ) {
+        update_option( 'vh360_members_options', $options );
+    }
+
+    update_option( $migration_flag, 1, false );
+}
+add_action( 'init', 'vh360_migrate_professionals_directory_account_types', 20 );
+
+/**
+ * Ensure legacy instructor users have creator account-type meta.
+ *
+ * Professionals Only directories include creator accounts, so repairing missing
+ * meta for existing instructors keeps those users discoverable without adding
+ * any backend capabilities.
+ */
+function vh360_migrate_instructor_account_type_meta() {
+    $migration_flag = 'vh360_instructor_account_type_meta_migrated';
+
+    if ( get_option( $migration_flag ) || ! get_role( 'vh360_instructor' ) ) {
+        return;
+    }
+
+    $instructors = get_users( array(
+        'role'   => 'vh360_instructor',
+        'fields' => 'ID',
+    ) );
+
+    foreach ( $instructors as $user_id ) {
+        $account_type = get_user_meta( $user_id, '_vh360_account_type', true );
+
+        if ( '' === $account_type ) {
+            update_user_meta( $user_id, '_vh360_account_type', 'creator' );
+        }
+    }
+
+    update_option( $migration_flag, 1, false );
+}
+add_action( 'init', 'vh360_migrate_instructor_account_type_meta', 20 );
+
 /**
  * Build WP_User_Query arguments for members directory
  * 
@@ -755,12 +976,26 @@ function vh360_get_user_social_links($user_id, $include_disabled = false) {
  * @return array WP_User_Query arguments
  */
 function vh360_build_members_directory_query_args($args = array()) {
-    // Get members options for default values
-    $members_options = get_option('vh360_members_options', array());
-    $default_per_page = isset($members_options['per_page']) ? absint($members_options['per_page']) : 12;
+    // Get normalized members options for default values
+    $default_members_options = vh360_get_default_members_directory_options();
+    $members_options = wp_parse_args(
+        get_option('vh360_members_options', array()),
+        $default_members_options
+    );
+    $default_per_page = absint($members_options['per_page']);
+    $default_visible_roles = $default_members_options['visible_roles'];
     $visible_roles = isset($members_options['visible_roles']) && is_array($members_options['visible_roles'])
-        ? $members_options['visible_roles']
-        : array();
+        ? array_filter( array_map( 'sanitize_text_field', $members_options['visible_roles'] ) )
+        : $default_visible_roles;
+
+    $valid_roles = function_exists( 'wp_roles' ) && wp_roles() ? array_keys( wp_roles()->roles ) : array();
+    if ( ! empty( $valid_roles ) && ! empty( $visible_roles ) ) {
+        $visible_roles = array_values( array_intersect( $visible_roles, $valid_roles ) );
+    }
+
+    if ( empty( $visible_roles ) ) {
+        $visible_roles = $default_visible_roles;
+    }
 
     $defaults = array(
         'audience' => 'all_members',                    // 'all_members' or 'professionals_only'
@@ -791,7 +1026,7 @@ function vh360_build_members_directory_query_args($args = array()) {
     if ($args['audience'] === 'professionals_only') {
         // Professionals-only mode: ignore role filters, use account type meta
         // SECURITY: Sanitize account_types to only allowed values
-        $allowed_account_types = array('professional', 'organization');
+        $allowed_account_types = vh360_get_professionals_directory_account_types();
         $sanitized_account_types = array();
         if (!empty($args['account_types']) && is_array($args['account_types'])) {
             $sanitized_account_types = array_intersect($args['account_types'], $allowed_account_types);
@@ -964,7 +1199,10 @@ function vh360_get_members_total($args = array()) {
  * @return array Array of category objects with slug, label, enabled, and sort_order.
  */
 function vh360_get_member_categories($enabled_only = true) {
-    $members_options = get_option('vh360_members_options', array());
+    $members_options = wp_parse_args(
+        get_option('vh360_members_options', array()),
+        vh360_get_default_members_directory_options()
+    );
     $categories = isset($members_options['member_categories']) && is_array($members_options['member_categories'])
         ? $members_options['member_categories']
         : array();

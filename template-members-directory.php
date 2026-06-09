@@ -16,15 +16,14 @@ if (!defined('ABSPATH')) {
 $mode = vh360_get_members_directory_effective_mode(get_queried_object_id());
 
 // Get members options from admin settings
-$members_options = get_option('vh360_members_options', array());
-$members_defaults = array(
-    'enable_directory' => true,
-    'per_page' => 12,
-    'default_sort' => 'newest',
-    'enable_search' => true,
-    'visible_roles' => array(),
+$members_defaults = vh360_get_default_members_directory_options();
+$members_options = wp_parse_args(
+    get_option('vh360_members_options', array()),
+    $members_defaults
 );
-$members_options = wp_parse_args($members_options, $members_defaults);
+$members_options['visible_roles'] = is_array($members_options['visible_roles'])
+    ? $members_options['visible_roles']
+    : $members_defaults['visible_roles'];
 
 // Check if directory is enabled
 if (!$members_options['enable_directory']) {
@@ -55,7 +54,7 @@ $default_title = ($mode['audience'] === 'professionals_only')
     ? __('Professionals Directory', 'videohub360-theme')
     : __('Members Directory', 'videohub360-theme');
 $default_desc = ($mode['audience'] === 'professionals_only')
-    ? __('Browse approved professionals', 'videohub360-theme')
+    ? __('Browse Professional, Organization, and Instructor/Creator accounts', 'videohub360-theme')
     : __('Discover and connect with our community members', 'videohub360-theme');
 
 $vh360_header_title      = get_theme_mod('vh360_members_header_title', $default_title);
