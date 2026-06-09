@@ -590,7 +590,7 @@ class VH360_Ajax_Handlers {
         if ($mode['audience'] === 'professionals_only' && !empty($members)) {
             $allowed_account_types = !empty($mode['professionals_account_types']) 
                 ? $mode['professionals_account_types'] 
-                : array('professional', 'organization');
+                : vh360_get_professionals_directory_account_types();
             $require_approval = $mode['professionals_require_approval'];
             
             $members = array_filter($members, function($member) use ($allowed_account_types, $require_approval) {

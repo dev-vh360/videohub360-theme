@@ -64,7 +64,7 @@ echo "TEST 4: Query Builder - Professionals Only Mode\n";
 echo "------------------------------------------------\n";
 $args = vh360_build_members_directory_query_args(array(
     'audience' => 'professionals_only',
-    'account_types' => array('professional', 'organization'),
+    'account_types' => vh360_get_professionals_directory_account_types(),
     'require_professional_approval' => true,
     'number' => 5,
 ));
@@ -82,7 +82,7 @@ echo "TEST 5: Get Members - Professionals Only\n";
 echo "-----------------------------------------\n";
 $members = vh360_get_members(array(
     'audience' => 'professionals_only',
-    'account_types' => array('professional', 'organization'),
+    'account_types' => vh360_get_professionals_directory_account_types(),
     'require_professional_approval' => true,
     'number' => 3,
 ));
@@ -107,7 +107,7 @@ echo "TEST 6: Get Member Count - Professionals Only\n";
 echo "----------------------------------------------\n";
 $count = vh360_get_member_count(array(
     'audience' => 'professionals_only',
-    'account_types' => array('professional', 'organization'),
+    'account_types' => vh360_get_professionals_directory_account_types(),
     'require_professional_approval' => true,
 ));
 echo "Total professionals count: " . $count . "\n\n";

@@ -362,9 +362,9 @@ class VH360_Theme_Admin {
                 'per_page' => 12,
                 'default_sort' => 'registered',
                 'enable_search' => true,
-                'visible_roles' => array(),
+                'visible_roles' => vh360_get_default_members_directory_visible_roles(),
                 'directory_audience' => 'all_members',
-                'professionals_account_types' => array('professional', 'organization'),
+                'professionals_account_types' => vh360_get_professionals_directory_account_types(),
                 'professionals_require_approval' => true,
                 'show_card_stats' => true,
                 'show_card_follow_button' => true,
@@ -883,27 +883,37 @@ class VH360_Theme_Admin {
             : 'all_members';
         
         // Professionals account types - validate against allowed values
-        $allowed_account_types = array('professional', 'organization');
+        $allowed_account_types = vh360_get_professionals_directory_account_types();
         $professionals_account_types = isset($input['professionals_account_types']) && is_array($input['professionals_account_types'])
             ? array_intersect($input['professionals_account_types'], $allowed_account_types)
-            : array('professional', 'organization');
+            : vh360_get_professionals_directory_account_types();
         
         // SECURITY: Enforce non-empty account types when professionals_only is selected
         // Empty account_types in professionals_only mode would cause a security vulnerability
         if ($sanitized['directory_audience'] === 'professionals_only' && empty($professionals_account_types)) {
             // Force defaults to prevent data leak
-            $sanitized['professionals_account_types'] = array('professional', 'organization');
+            $sanitized['professionals_account_types'] = vh360_get_professionals_directory_account_types();
         } else {
             // Ensure at least one type is selected, fallback to default
             $sanitized['professionals_account_types'] = !empty($professionals_account_types) 
                 ? array_values($professionals_account_types)
-                : array('professional', 'organization');
+                : vh360_get_professionals_directory_account_types();
         }
         
-        // Array field for visible roles - default to empty array if not set
-        $sanitized['visible_roles'] = $this->sanitize_array_input(
-            isset($input['visible_roles']) ? $input['visible_roles'] : null
-        );
+        // Array field for visible roles - sanitize and validate against registered roles
+        $valid_roles = function_exists('wp_roles') && wp_roles() ? array_keys(wp_roles()->roles) : array();
+        $visible_roles = isset($input['visible_roles']) && is_array($input['visible_roles'])
+            ? array_values(array_intersect(
+                array_map('sanitize_text_field', $input['visible_roles']),
+                $valid_roles
+            ))
+            : vh360_get_default_members_directory_visible_roles();
+
+        if (empty($visible_roles)) {
+            $visible_roles = vh360_get_default_members_directory_visible_roles();
+        }
+
+        $sanitized['visible_roles'] = $visible_roles;
         
         // Sanitize member categories
         $sanitized['member_categories'] = array();

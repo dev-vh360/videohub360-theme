@@ -19,14 +19,20 @@ $defaults = array(
     'per_page' => 24,
     'default_sort' => 'newest',
     'enable_search' => true,
-    'visible_roles' => array('subscriber', 'contributor', 'author', 'editor', 'administrator'),
+    'visible_roles' => vh360_get_default_members_directory_visible_roles(),
     'directory_audience' => 'all_members',
-    'professionals_account_types' => array('professional', 'organization'),
+    'professionals_account_types' => vh360_get_professionals_directory_account_types(),
     'professionals_require_approval' => true,
     'show_card_stats' => true,
     'show_card_follow_button' => true,
 );
 $options = wp_parse_args($options, $defaults);
+$options['visible_roles'] = is_array($options['visible_roles'])
+    ? $options['visible_roles']
+    : vh360_get_default_members_directory_visible_roles();
+$options['professionals_account_types'] = is_array($options['professionals_account_types'])
+    ? $options['professionals_account_types']
+    : vh360_get_professionals_directory_account_types();
 ?>
 
 <div class="vh360-admin-settings">
@@ -140,7 +146,7 @@ $options = wp_parse_args($options, $defaults);
                                 <input type="radio" name="vh360_members_options[directory_audience]" value="professionals_only" <?php checked($options['directory_audience'], 'professionals_only'); ?>>
                                 <?php esc_html_e('Professionals Only', 'videohub360-theme'); ?>
                             </label>
-                            <p class="description"><?php esc_html_e('Choose whether the directory shows all members or only approved professionals', 'videohub360-theme'); ?></p>
+                            <p class="description"><?php esc_html_e('Choose whether the directory shows all members or Professional, Organization, and Instructor/Creator accounts.', 'videohub360-theme'); ?></p>
                         </td>
                     </tr>
                     <tr>
@@ -154,7 +160,11 @@ $options = wp_parse_args($options, $defaults);
                                 <input type="checkbox" name="vh360_members_options[professionals_account_types][]" value="organization" <?php checked(in_array('organization', $options['professionals_account_types'])); ?>>
                                 <?php esc_html_e('Organization', 'videohub360-theme'); ?>
                             </label>
-                            <p class="description"><?php esc_html_e('When showing professionals only, include these account types', 'videohub360-theme'); ?></p>
+                            <label style="display: block; margin-bottom: 8px;">
+                                <input type="checkbox" name="vh360_members_options[professionals_account_types][]" value="creator" <?php checked(in_array('creator', $options['professionals_account_types'])); ?>>
+                                <?php esc_html_e('Instructor / Creator', 'videohub360-theme'); ?>
+                            </label>
+                            <p class="description"><?php esc_html_e('Professionals Only displays Professional, Organization, and Instructor/Creator accounts.', 'videohub360-theme'); ?></p>
                         </td>
                     </tr>
                     <tr>
@@ -174,7 +184,7 @@ $options = wp_parse_args($options, $defaults);
         <!-- Role Filter Options -->
         <div class="vh360-admin-card">
             <h2><?php esc_html_e('Role Filter Options', 'videohub360-theme'); ?></h2>
-            <p><?php esc_html_e('Select which user roles should be visible in the members directory.', 'videohub360-theme'); ?></p>
+            <p><?php esc_html_e('Select which user roles appear in All Members directories. Videohub360 roles such as Professional and Instructor should usually remain enabled if you want all platform users shown.', 'videohub360-theme'); ?></p>
             
             <table class="form-table">
                 <tbody>
@@ -193,7 +203,7 @@ $options = wp_parse_args($options, $defaults);
                                     <?php echo esc_html($role_data['name']); ?>
                                 </label>
                             <?php endforeach; ?>
-                            <p class="description"><?php esc_html_e('Select which user roles should appear in the members directory', 'videohub360-theme'); ?></p>
+                            <p class="description"><?php esc_html_e('Select which user roles appear in All Members directories. Videohub360 roles such as Professional and Instructor should usually remain enabled if you want all platform users shown.', 'videohub360-theme'); ?></p>
                         </td>
                     </tr>
                 </tbody>

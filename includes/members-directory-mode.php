@@ -39,12 +39,15 @@ function vh360_get_members_directory_effective_mode($page_id = 0) {
     $global_options = get_option('vh360_members_options', array());
     $defaults = array(
         'directory_audience' => 'all_members',
-        'professionals_account_types' => array('professional', 'organization'),
+        'professionals_account_types' => vh360_get_professionals_directory_account_types(),
         'professionals_require_approval' => true,
         'show_card_stats' => true,
         'show_card_follow_button' => true,
     );
     $global_options = wp_parse_args($global_options, $defaults);
+    if (!is_array($global_options['professionals_account_types'])) {
+        $global_options['professionals_account_types'] = vh360_get_professionals_directory_account_types();
+    }
     
     // Start with global settings
     $mode = array(
@@ -98,7 +101,7 @@ function vh360_get_members_directory_effective_mode($page_id = 0) {
             // Check account types override
             $account_types_override = get_post_meta($page_id, '_vh360_members_directory_account_types_override', true);
             if (is_array($account_types_override) && !empty($account_types_override)) {
-                $allowed_account_types = array('professional', 'organization');
+                $allowed_account_types = vh360_get_professionals_directory_account_types();
                 $filtered_types = array_intersect($account_types_override, $allowed_account_types);
                 if (!empty($filtered_types)) {
                     $mode['professionals_account_types'] = array_values($filtered_types);
@@ -112,7 +115,7 @@ function vh360_get_members_directory_effective_mode($page_id = 0) {
     // If professionals_only is set but account_types is empty, apply safe defaults
     // This prevents data leaks from misconfigured settings
     if ($mode['audience'] === 'professionals_only' && empty($mode['professionals_account_types'])) {
-        $mode['professionals_account_types'] = array('professional', 'organization');
+        $mode['professionals_account_types'] = vh360_get_professionals_directory_account_types();
     }
     
     return $mode;
