@@ -357,18 +357,7 @@ class VH360_Theme_Admin {
         register_setting('vh360_members_settings', 'vh360_members_options', array(
             'type' => 'array',
             'sanitize_callback' => array($this, 'sanitize_members_settings'),
-            'default' => array(
-                'enable_directory' => true,
-                'per_page' => 12,
-                'default_sort' => 'registered',
-                'enable_search' => true,
-                'visible_roles' => vh360_get_default_members_directory_visible_roles(),
-                'directory_audience' => 'all_members',
-                'professionals_account_types' => vh360_get_professionals_directory_account_types(),
-                'professionals_require_approval' => true,
-                'show_card_stats' => true,
-                'show_card_follow_button' => true,
-            ),
+            'default' => vh360_get_default_members_directory_options(),
         ));
         
         // Gallery settings
@@ -856,6 +845,7 @@ class VH360_Theme_Admin {
      */
     public function sanitize_members_settings($input) {
         $sanitized = array();
+        $defaults = vh360_get_default_members_directory_options();
         
         // Ensure input is an array
         if (!is_array($input)) {
@@ -870,34 +860,35 @@ class VH360_Theme_Admin {
         $sanitized['show_card_follow_button'] = isset($input['show_card_follow_button']) ? (bool) $input['show_card_follow_button'] : false;
         $sanitized['enable_category_filter'] = isset($input['enable_category_filter']) ? (bool) $input['enable_category_filter'] : false;
         
-        // Numeric field with default
-        $sanitized['per_page'] = isset($input['per_page']) ? absint($input['per_page']) : 12;
+        // Numeric field with centralized default and UI bounds
+        $per_page = isset($input['per_page']) ? absint($input['per_page']) : absint($defaults['per_page']);
+        $sanitized['per_page'] = min(100, max(6, $per_page));
         
         // Text field
-        $sanitized['default_sort'] = isset($input['default_sort']) ? sanitize_text_field($input['default_sort']) : 'registered';
+        $sanitized['default_sort'] = isset($input['default_sort']) ? sanitize_text_field($input['default_sort']) : $defaults['default_sort'];
         
         // Directory audience - validate against allowed values
         $allowed_audiences = array('all_members', 'professionals_only');
         $sanitized['directory_audience'] = isset($input['directory_audience']) && in_array($input['directory_audience'], $allowed_audiences, true) 
             ? $input['directory_audience'] 
-            : 'all_members';
+            : $defaults['directory_audience'];
         
         // Professionals account types - validate against allowed values
         $allowed_account_types = vh360_get_professionals_directory_account_types();
         $professionals_account_types = isset($input['professionals_account_types']) && is_array($input['professionals_account_types'])
             ? array_intersect($input['professionals_account_types'], $allowed_account_types)
-            : vh360_get_professionals_directory_account_types();
+            : $defaults['professionals_account_types'];
         
         // SECURITY: Enforce non-empty account types when professionals_only is selected
         // Empty account_types in professionals_only mode would cause a security vulnerability
         if ($sanitized['directory_audience'] === 'professionals_only' && empty($professionals_account_types)) {
             // Force defaults to prevent data leak
-            $sanitized['professionals_account_types'] = vh360_get_professionals_directory_account_types();
+            $sanitized['professionals_account_types'] = $defaults['professionals_account_types'];
         } else {
             // Ensure at least one type is selected, fallback to default
             $sanitized['professionals_account_types'] = !empty($professionals_account_types) 
                 ? array_values($professionals_account_types)
-                : vh360_get_professionals_directory_account_types();
+                : $defaults['professionals_account_types'];
         }
         
         // Array field for visible roles - sanitize and validate against registered roles
@@ -907,10 +898,10 @@ class VH360_Theme_Admin {
                 array_map('sanitize_text_field', $input['visible_roles']),
                 $valid_roles
             ))
-            : vh360_get_default_members_directory_visible_roles();
+            : $defaults['visible_roles'];
 
         if (empty($visible_roles)) {
-            $visible_roles = vh360_get_default_members_directory_visible_roles();
+            $visible_roles = $defaults['visible_roles'];
         }
 
         $sanitized['visible_roles'] = $visible_roles;

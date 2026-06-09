@@ -16,18 +16,14 @@ if (!defined('ABSPATH')) {
 $mode = vh360_get_members_directory_effective_mode(get_queried_object_id());
 
 // Get members options from admin settings
-$members_options = get_option('vh360_members_options', array());
-$members_defaults = array(
-    'enable_directory' => true,
-    'per_page' => 12,
-    'default_sort' => 'newest',
-    'enable_search' => true,
-    'visible_roles' => vh360_get_default_members_directory_visible_roles(),
+$members_defaults = vh360_get_default_members_directory_options();
+$members_options = wp_parse_args(
+    get_option('vh360_members_options', array()),
+    $members_defaults
 );
-$members_options = wp_parse_args($members_options, $members_defaults);
 $members_options['visible_roles'] = is_array($members_options['visible_roles'])
     ? $members_options['visible_roles']
-    : vh360_get_default_members_directory_visible_roles();
+    : $members_defaults['visible_roles'];
 
 // Check if directory is enabled
 if (!$members_options['enable_directory']) {

@@ -13,26 +13,17 @@ if (!defined('ABSPATH')) {
 $page_title = __('Members Directory Settings', 'videohub360-theme');
 include VH360_THEME_DIR . '/includes/admin/partials/header.php';
 
-$options = get_option('vh360_members_options', array());
-$defaults = array(
-    'enable_directory' => true,
-    'per_page' => 24,
-    'default_sort' => 'newest',
-    'enable_search' => true,
-    'visible_roles' => vh360_get_default_members_directory_visible_roles(),
-    'directory_audience' => 'all_members',
-    'professionals_account_types' => vh360_get_professionals_directory_account_types(),
-    'professionals_require_approval' => true,
-    'show_card_stats' => true,
-    'show_card_follow_button' => true,
+$defaults = vh360_get_default_members_directory_options();
+$options = wp_parse_args(
+    get_option('vh360_members_options', array()),
+    $defaults
 );
-$options = wp_parse_args($options, $defaults);
 $options['visible_roles'] = is_array($options['visible_roles'])
     ? $options['visible_roles']
-    : vh360_get_default_members_directory_visible_roles();
+    : $defaults['visible_roles'];
 $options['professionals_account_types'] = is_array($options['professionals_account_types'])
     ? $options['professionals_account_types']
-    : vh360_get_professionals_directory_account_types();
+    : $defaults['professionals_account_types'];
 ?>
 
 <div class="vh360-admin-settings">

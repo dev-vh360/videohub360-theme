@@ -491,9 +491,12 @@ function vh360_enqueue_members_directory_assets() {
         $page_id = get_queried_object_id();
         $mode = vh360_get_members_directory_effective_mode($page_id);
         
-        // Get per_page from settings
-        $members_options = get_option('vh360_members_options', array());
-        $per_page = isset($members_options['per_page']) ? absint($members_options['per_page']) : 12;
+        // Get per_page from normalized Members Directory settings
+        $members_options = wp_parse_args(
+            get_option('vh360_members_options', array()),
+            vh360_get_default_members_directory_options()
+        );
+        $per_page = absint($members_options['per_page']);
         
         // Localize script with AJAX data
         wp_localize_script('vh360-members-directory-js', 'vh360Members', array(

@@ -787,6 +787,32 @@ function vh360_get_professionals_directory_account_types() {
     );
 }
 
+
+/**
+ * Get default options for the Members Directory settings.
+ *
+ * Centralizes the defaults used by settings registration, admin fallback logic,
+ * frontend queries, and AJAX loading so values like per_page stay consistent.
+ *
+ * @return array Members Directory option defaults.
+ */
+function vh360_get_default_members_directory_options() {
+    return array(
+        'enable_directory'               => true,
+        'per_page'                       => 24,
+        'default_sort'                   => 'newest',
+        'enable_search'                  => true,
+        'visible_roles'                  => vh360_get_default_members_directory_visible_roles(),
+        'directory_audience'             => 'all_members',
+        'professionals_account_types'    => vh360_get_professionals_directory_account_types(),
+        'professionals_require_approval' => true,
+        'show_card_stats'                => true,
+        'show_card_follow_button'        => true,
+        'enable_category_filter'         => false,
+        'member_categories'              => array(),
+    );
+}
+
 /**
  * Migrate old Members Directory visible-role defaults to include VH360 roles.
  *
@@ -950,12 +976,14 @@ add_action( 'init', 'vh360_migrate_instructor_account_type_meta', 20 );
  * @return array WP_User_Query arguments
  */
 function vh360_build_members_directory_query_args($args = array()) {
-    // Get members options for default values
-    $members_options = get_option('vh360_members_options', array());
-    $default_per_page = isset($members_options['per_page']) ? absint($members_options['per_page']) : 12;
-    $default_visible_roles = function_exists( 'vh360_get_default_members_directory_visible_roles' )
-        ? vh360_get_default_members_directory_visible_roles()
-        : array( 'subscriber', 'contributor', 'author', 'editor', 'administrator' );
+    // Get normalized members options for default values
+    $default_members_options = vh360_get_default_members_directory_options();
+    $members_options = wp_parse_args(
+        get_option('vh360_members_options', array()),
+        $default_members_options
+    );
+    $default_per_page = absint($members_options['per_page']);
+    $default_visible_roles = $default_members_options['visible_roles'];
     $visible_roles = isset($members_options['visible_roles']) && is_array($members_options['visible_roles'])
         ? array_filter( array_map( 'sanitize_text_field', $members_options['visible_roles'] ) )
         : $default_visible_roles;
@@ -1171,7 +1199,10 @@ function vh360_get_members_total($args = array()) {
  * @return array Array of category objects with slug, label, enabled, and sort_order.
  */
 function vh360_get_member_categories($enabled_only = true) {
-    $members_options = get_option('vh360_members_options', array());
+    $members_options = wp_parse_args(
+        get_option('vh360_members_options', array()),
+        vh360_get_default_members_directory_options()
+    );
     $categories = isset($members_options['member_categories']) && is_array($members_options['member_categories'])
         ? $members_options['member_categories']
         : array();

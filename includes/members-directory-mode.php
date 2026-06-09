@@ -36,17 +36,13 @@ function vh360_get_members_directory_effective_mode($page_id = 0) {
     }
     
     // Get global settings
-    $global_options = get_option('vh360_members_options', array());
-    $defaults = array(
-        'directory_audience' => 'all_members',
-        'professionals_account_types' => vh360_get_professionals_directory_account_types(),
-        'professionals_require_approval' => true,
-        'show_card_stats' => true,
-        'show_card_follow_button' => true,
+    $defaults = vh360_get_default_members_directory_options();
+    $global_options = wp_parse_args(
+        get_option('vh360_members_options', array()),
+        $defaults
     );
-    $global_options = wp_parse_args($global_options, $defaults);
     if (!is_array($global_options['professionals_account_types'])) {
-        $global_options['professionals_account_types'] = vh360_get_professionals_directory_account_types();
+        $global_options['professionals_account_types'] = $defaults['professionals_account_types'];
     }
     
     // Start with global settings

@@ -515,8 +515,11 @@ class VH360_Ajax_Handlers {
         }
         
         // Get members options for per_page
-        $members_options = get_option('vh360_members_options', array());
-        $per_page = isset($members_options['per_page']) ? absint($members_options['per_page']) : 12;
+        $members_options = wp_parse_args(
+            get_option('vh360_members_options', array()),
+            vh360_get_default_members_directory_options()
+        );
+        $per_page = absint($members_options['per_page']);
         
         // Check membership access for directory
         $has_directory_access = true;

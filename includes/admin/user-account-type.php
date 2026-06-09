@@ -108,7 +108,10 @@ function vh360_display_account_type_fields($user) {
         $member_category = get_user_meta($user->ID, '_vh360_member_category', true);
         
         // Check if category filter is enabled
-        $members_options = get_option('vh360_members_options', array());
+        $members_options = wp_parse_args(
+            get_option('vh360_members_options', array()),
+            vh360_get_default_members_directory_options()
+        );
         $category_filter_enabled = !empty($members_options['enable_category_filter']);
         
         if ($category_filter_enabled) :

@@ -71,15 +71,11 @@ function vh360_render_members_directory_meta_box($post) {
     }
     
     // Get global settings for reference
-    $global_options = get_option('vh360_members_options', array());
-    $global_defaults = array(
-        'directory_audience' => 'all_members',
-        'professionals_account_types' => vh360_get_professionals_directory_account_types(),
-        'professionals_require_approval' => true,
-        'show_card_stats' => true,
-        'show_card_follow_button' => true,
+    $global_defaults = vh360_get_default_members_directory_options();
+    $global_options = wp_parse_args(
+        get_option('vh360_members_options', array()),
+        $global_defaults
     );
-    $global_options = wp_parse_args($global_options, $global_defaults);
     
     $global_audience_label = ($global_options['directory_audience'] === 'professionals_only') 
         ? __('Professionals Only', 'videohub360-theme') 

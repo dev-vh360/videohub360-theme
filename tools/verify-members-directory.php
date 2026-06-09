@@ -25,8 +25,11 @@ echo "====================================\n\n";
 // Test 1: Check that new settings exist
 echo "TEST 1: New Settings Schema\n";
 echo "----------------------------\n";
-$options = get_option('vh360_members_options', array());
-$required_keys = array('directory_audience', 'professionals_account_types', 'professionals_require_approval', 'show_card_stats');
+$options = wp_parse_args(
+    get_option('vh360_members_options', array()),
+    vh360_get_default_members_directory_options()
+);
+$required_keys = array('per_page', 'directory_audience', 'professionals_account_types', 'professionals_require_approval', 'show_card_stats');
 foreach ($required_keys as $key) {
     $exists = array_key_exists($key, $options);
     $value = $exists ? var_export($options[$key], true) : 'NOT SET';
