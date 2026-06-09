@@ -1231,6 +1231,63 @@ if (!function_exists('vh360_get_video_upload_settings')) {
     }
 }
 
+
+/**
+ * Create form section settings helper functions.
+ * Must be loaded before admin panel and frontend dashboard templates.
+ */
+if (!function_exists('vh360_get_create_form_options')) {
+    function vh360_get_create_form_options() {
+        $defaults = array(
+            'show_livestream_settings' => 1,
+            'show_ad_settings' => 1,
+            'show_advanced_settings' => 1,
+            'hide_livestream_in_course_mode' => 1,
+        );
+
+        $options = get_option('vh360_create_form_options', $defaults);
+        return wp_parse_args(is_array($options) ? $options : array(), $defaults);
+    }
+}
+
+if (!function_exists('vh360_create_form_section_enabled')) {
+    function vh360_create_form_section_enabled($section) {
+        $option_map = array(
+            'livestream_settings' => 'show_livestream_settings',
+            'ad_settings' => 'show_ad_settings',
+            'advanced_settings' => 'show_advanced_settings',
+            'hide_livestream_in_course_mode' => 'hide_livestream_in_course_mode',
+        );
+
+        if (!isset($option_map[$section])) {
+            return false;
+        }
+
+        $options = vh360_get_create_form_options();
+        return !empty($options[$option_map[$section]]);
+    }
+}
+
+if (!function_exists('vh360_is_create_form_lesson_context')) {
+    function vh360_is_create_form_lesson_context($user_id = 0) {
+        if (!function_exists('videohub360_course_features_enabled') || !videohub360_course_features_enabled()) {
+            return false;
+        }
+
+        $user_id = $user_id ? absint($user_id) : get_current_user_id();
+
+        if (function_exists('vh360_get_author_display_mode')) {
+            return vh360_get_author_display_mode($user_id) === 'course';
+        }
+
+        if (function_exists('vh360_get_author_template_mode')) {
+            return vh360_get_author_template_mode() === 'course';
+        }
+
+        return false;
+    }
+}
+
 /**
  * Admin panel
  */

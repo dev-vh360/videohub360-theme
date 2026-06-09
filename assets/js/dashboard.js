@@ -747,7 +747,7 @@
                 var title = $('#vh360_video_title').val().trim();
                 
                 if (!title) {
-                    self.showFormMessage('Please provide a video title.', 'error');
+                    self.showFormMessage((vh360Dashboard.createForm && vh360Dashboard.createForm.titleRequired) || 'Please provide a video title.', 'error');
                     $('#vh360_video_title').focus();
                     return false;
                 }
@@ -786,7 +786,8 @@
                                 self.activateTab('videos', true);
                                 
                                 // Show success notification
-                                self.showNotification(response.data.message + ' <a href="' + response.data.permalink + '" target="_blank">View Video</a>', 'success');
+                                var viewLabel = (vh360Dashboard.createForm && vh360Dashboard.createForm.viewItem) || 'View Video';
+                                self.showNotification(response.data.message + ' <a href="' + response.data.permalink + '" target="_blank">' + viewLabel + '</a>', 'success');
                             }, 2000);
                         } else {
                             self.showFormMessage(response.data.message || 'An error occurred. Please try again.', 'error');
