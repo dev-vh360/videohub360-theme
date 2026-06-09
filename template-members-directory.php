@@ -293,6 +293,7 @@ $vh360_header_desc       = get_theme_mod('vh360_members_header_description', $de
                                 'show_stats' => !empty($mode['show_card_stats']),
                                 'show_follow_button' => !empty($mode['show_card_follow_button']),
                                 'avatar_size' => 80,
+                                'stats_context' => 'course' === get_theme_mod('vh360_author_template_mode', 'profile') ? 'course' : 'default',
                             ));
                         endforeach;
                         

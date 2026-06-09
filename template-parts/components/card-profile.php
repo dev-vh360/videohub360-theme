@@ -21,6 +21,7 @@ $args = wp_parse_args($args, array(
     'show_stats' => true,
     'show_follow_button' => true,
     'avatar_size' => 80,
+    'stats_context' => 'default',
 ));
 
 $user_id = $args['user_id'];
@@ -39,6 +40,38 @@ $profile_url = vh360_get_profile_url($user_id);
 $user_name = $user->display_name;
 $user_bio = get_user_meta($user_id, 'description', true);
 $user_stats = vh360_get_user_stats($user_id);
+
+$stats_context = isset($args['stats_context']) ? sanitize_key($args['stats_context']) : 'default';
+$show_course_stats = (
+    'course' === $stats_context
+    && function_exists('vh360_user_is_course_instructor')
+    && vh360_user_is_course_instructor($user_id)
+);
+
+$course_card_stats = array(
+    'courses' => 0,
+    'lessons' => 0,
+    'followers' => isset($user_stats['followers']) ? (int) $user_stats['followers'] : 0,
+);
+
+if ($show_course_stats) {
+    $courses = function_exists('vh360_get_user_courses') ? vh360_get_user_courses($user_id) : array();
+
+    $course_card_stats['courses'] = is_array($courses) ? count($courses) : 0;
+
+    if (!empty($courses) && function_exists('vh360_get_course_lesson_count')) {
+        foreach ($courses as $course) {
+            if (isset($course->term_id)) {
+                $course_card_stats['lessons'] += (int) vh360_get_course_lesson_count($course->term_id);
+            }
+        }
+    }
+}
+
+$course_label_singular = function_exists('vh360_get_course_label') ? vh360_get_course_label(false) : __('Course', 'videohub360-theme');
+$course_label_plural = function_exists('vh360_get_course_label') ? vh360_get_course_label(true) : __('Courses', 'videohub360-theme');
+$lesson_label_singular = function_exists('vh360_get_lesson_label') ? vh360_get_lesson_label(false) : __('Lesson', 'videohub360-theme');
+$lesson_label_plural = function_exists('vh360_get_lesson_label') ? vh360_get_lesson_label(true) : __('Lessons', 'videohub360-theme');
 ?>
 
 <article class="vh360-profile-card" data-user-id="<?php echo esc_attr($user_id); ?>">
@@ -48,22 +81,22 @@ $user_stats = vh360_get_user_stats($user_id);
                 <?php echo get_avatar($user_id, $args['avatar_size'], '', $user_name, array('class' => 'vh360-avatar-image')); ?>
             </div>
         <?php endif; ?>
-        
+
         <div class="vh360-profile-card-body">
             <h3 class="vh360-profile-card-name"><?php echo esc_html($user_name); ?></h3>
-            
+
             <p class="vh360-profile-card-username">@<?php echo esc_html($user->user_login); ?></p>
-            
+
             <?php
             // Display member category if enabled and assigned
             $members_options = get_option('vh360_members_options', array());
             if (!empty($members_options['enable_category_filter'])) {
                 $member_category = get_user_meta($user_id, '_vh360_member_category', true);
                 if (!empty($member_category)) {
-                    $category_label = function_exists('vh360_get_member_category_label') 
+                    $category_label = function_exists('vh360_get_member_category_label')
                         ? vh360_get_member_category_label($member_category)
                         : '';
-                    
+
                     if (!empty($category_label)) :
             ?>
                 <p class="vh360-profile-card-category">
@@ -74,41 +107,64 @@ $user_stats = vh360_get_user_stats($user_id);
                 }
             }
             ?>
-            
+
             <?php if ($args['show_bio'] && $user_bio) : ?>
                 <p class="vh360-profile-card-bio"><?php echo esc_html(wp_trim_words($user_bio, 15, '...')); ?></p>
             <?php endif; ?>
-            
+
             <?php if ($args['show_stats']) : ?>
                 <div class="vh360-profile-card-stats">
-                    <div class="vh360-profile-card-stat">
-                        <span class="vh360-profile-card-stat-value"><?php echo esc_html(vh360_format_number($user_stats['videos'])); ?></span>
-                        <span class="vh360-profile-card-stat-label">
-                            <?php echo esc_html(_n('Video', 'Videos', $user_stats['videos'], 'videohub360-theme')); ?>
-                        </span>
-                    </div>
-                    
-                    <div class="vh360-profile-card-stat">
-                        <span class="vh360-profile-card-stat-value"><?php echo esc_html(vh360_format_number($user_stats['followers'])); ?></span>
-                        <span class="vh360-profile-card-stat-label">
-                            <?php echo esc_html(_n('Follower', 'Followers', $user_stats['followers'], 'videohub360-theme')); ?>
-                        </span>
-                    </div>
-                    
-                    <div class="vh360-profile-card-stat">
-                        <span class="vh360-profile-card-stat-value"><?php echo esc_html(vh360_format_number($user_stats['views'])); ?></span>
-                        <span class="vh360-profile-card-stat-label">
-                            <?php echo esc_html(_n('View', 'Views', $user_stats['views'], 'videohub360-theme')); ?>
-                        </span>
-                    </div>
+                    <?php if ($show_course_stats) : ?>
+                        <div class="vh360-profile-card-stat">
+                            <span class="vh360-profile-card-stat-value"><?php echo esc_html(vh360_format_number($course_card_stats['courses'])); ?></span>
+                            <span class="vh360-profile-card-stat-label">
+                                <?php echo esc_html(1 === $course_card_stats['courses'] ? $course_label_singular : $course_label_plural); ?>
+                            </span>
+                        </div>
+
+                        <div class="vh360-profile-card-stat">
+                            <span class="vh360-profile-card-stat-value"><?php echo esc_html(vh360_format_number($course_card_stats['lessons'])); ?></span>
+                            <span class="vh360-profile-card-stat-label">
+                                <?php echo esc_html(1 === $course_card_stats['lessons'] ? $lesson_label_singular : $lesson_label_plural); ?>
+                            </span>
+                        </div>
+
+                        <div class="vh360-profile-card-stat">
+                            <span class="vh360-profile-card-stat-value"><?php echo esc_html(vh360_format_number($course_card_stats['followers'])); ?></span>
+                            <span class="vh360-profile-card-stat-label">
+                                <?php echo esc_html(_n('Follower', 'Followers', $course_card_stats['followers'], 'videohub360-theme')); ?>
+                            </span>
+                        </div>
+                    <?php else : ?>
+                        <div class="vh360-profile-card-stat">
+                            <span class="vh360-profile-card-stat-value"><?php echo esc_html(vh360_format_number($user_stats['videos'])); ?></span>
+                            <span class="vh360-profile-card-stat-label">
+                                <?php echo esc_html(_n('Video', 'Videos', $user_stats['videos'], 'videohub360-theme')); ?>
+                            </span>
+                        </div>
+
+                        <div class="vh360-profile-card-stat">
+                            <span class="vh360-profile-card-stat-value"><?php echo esc_html(vh360_format_number($user_stats['followers'])); ?></span>
+                            <span class="vh360-profile-card-stat-label">
+                                <?php echo esc_html(_n('Follower', 'Followers', $user_stats['followers'], 'videohub360-theme')); ?>
+                            </span>
+                        </div>
+
+                        <div class="vh360-profile-card-stat">
+                            <span class="vh360-profile-card-stat-value"><?php echo esc_html(vh360_format_number($user_stats['views'])); ?></span>
+                            <span class="vh360-profile-card-stat-label">
+                                <?php echo esc_html(_n('View', 'Views', $user_stats['views'], 'videohub360-theme')); ?>
+                            </span>
+                        </div>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
         </div>
     </a>
-    
-    <?php 
+
+    <?php
     // Show follow button if enabled, user is logged in, and not viewing own card
-    if ($args['show_follow_button'] && is_user_logged_in() && get_current_user_id() !== $user_id && function_exists('vh360_follow_button')) : 
+    if ($args['show_follow_button'] && is_user_logged_in() && get_current_user_id() !== $user_id && function_exists('vh360_follow_button')) :
     ?>
         <div class="vh360-profile-card-footer">
             <?php vh360_follow_button($user_id, 'vh360-profile-card-follow-btn'); ?>
@@ -266,7 +322,7 @@ $user_stats = vh360_get_user_stats($user_id);
     .vh360-profile-card-stats {
         flex-direction: column;
     }
-    
+
     .vh360-profile-card-stat {
         flex-direction: row;
         justify-content: space-between;
