@@ -115,6 +115,15 @@ $vh360_create_labels = array(
     'chat_placement_help' => $vh360_create_context_is_lesson ? __('Override the global chat placement setting for this specific lesson.', 'videohub360-theme') : __('Override the global chat placement setting for this specific video.', 'videohub360-theme'),
     'quality_help' => $vh360_create_context_is_lesson ? __('Enable custom quality and mirror settings for this lesson video', 'videohub360-theme') : __('Enable custom quality and mirror settings for this video', 'videohub360-theme'),
     'poster_help' => $vh360_create_context_is_lesson ? __('Direct URL to a custom lesson video poster image (alternative to lesson thumbnail)', 'videohub360-theme') : __('Direct URL to a custom video poster image (alternative to featured image)', 'videohub360-theme'),
+    'lesson_details_help' => $vh360_create_context_is_lesson ? __('Use these fields when this lesson is part of a course or learning track.', 'videohub360-theme') : __('Use these fields when this video is part of a course or learning track.', 'videohub360-theme'),
+    'chat_enabled_label' => $vh360_create_context_is_lesson ? __('Enable live chat for this lesson', 'videohub360-theme') : __('Enable live chat for this video', 'videohub360-theme'),
+    'ad_preroll_help' => $vh360_create_context_is_lesson ? __('Ad to play before the lesson video starts', 'videohub360-theme') : __('Video to play before the main video starts', 'videohub360-theme'),
+    'ad_midroll_help' => $vh360_create_context_is_lesson ? __('Ad to play during the lesson video', 'videohub360-theme') : __('Video to play during the main video', 'videohub360-theme'),
+    'ad_postroll_help' => $vh360_create_context_is_lesson ? __('Ad to play after the lesson video ends', 'videohub360-theme') : __('Video to play after the main video ends', 'videohub360-theme'),
+    'override_quality_label' => $vh360_create_context_is_lesson ? __('Override Lesson Video Quality Settings', 'videohub360-theme') : __('Override Video Quality Settings', 'videohub360-theme'),
+    'video_quality_label' => $vh360_create_context_is_lesson ? __('Lesson Video Quality', 'videohub360-theme') : __('Video Quality', 'videohub360-theme'),
+    'video_mirror_label' => $vh360_create_context_is_lesson ? __('Lesson Video Mirror', 'videohub360-theme') : __('Video Mirror', 'videohub360-theme'),
+    'alternative_source_help' => $vh360_create_context_is_lesson ? __('Alternative lesson video source/CDN', 'videohub360-theme') : __('Alternative video source/CDN', 'videohub360-theme'),
 );
 
 $show_livestream_settings = function_exists('vh360_create_form_section_enabled') ? vh360_create_form_section_enabled('livestream_settings') : true;
@@ -715,7 +724,7 @@ $locations = get_terms(array(
                             name="vh360_chat_enabled" 
                             value="yes"
                         >
-                        <span><?php esc_html_e('Enable live chat for this video', 'videohub360-theme'); ?></span>
+                        <span><?php echo esc_html($vh360_create_labels['chat_enabled_label']); ?></span>
                     </label>
                     <p class="vh360-form-help">
                         <?php esc_html_e('When checked, live chat will be available for this livestream regardless of global settings.', 'videohub360-theme'); ?>
@@ -878,7 +887,7 @@ $locations = get_terms(array(
         <div class="vh360-form-section">
             <h3 class="vh360-form-section-title"><?php esc_html_e( 'Lesson Details', 'videohub360-theme' ); ?></h3>
             <p class="vh360-form-help" style="margin-bottom: 16px;">
-                <?php esc_html_e( 'Use these fields when this video is part of a course or learning track.', 'videohub360-theme' ); ?>
+                <?php echo esc_html($vh360_create_labels['lesson_details_help']); ?>
             </p>
 
             <div class="vh360-form-field">
@@ -1029,7 +1038,7 @@ $locations = get_terms(array(
                         value="<?php echo esc_attr($video_data['ad_video_url'] ?? ''); ?>"
                     >
                     <p class="vh360-form-help">
-                        <?php esc_html_e('Video to play before the main video starts', 'videohub360-theme'); ?>
+                        <?php echo esc_html($vh360_create_labels['ad_preroll_help']); ?>
                     </p>
                 </div>
 
@@ -1046,7 +1055,7 @@ $locations = get_terms(array(
                         value="<?php echo esc_attr($video_data['midroll_ad_url'] ?? ''); ?>"
                     >
                     <p class="vh360-form-help">
-                        <?php esc_html_e('Video to play during the main video', 'videohub360-theme'); ?>
+                        <?php echo esc_html($vh360_create_labels['ad_midroll_help']); ?>
                     </p>
                 </div>
 
@@ -1082,7 +1091,7 @@ $locations = get_terms(array(
                         value="<?php echo esc_attr($video_data['postroll_ad_url'] ?? ''); ?>"
                     >
                     <p class="vh360-form-help">
-                        <?php esc_html_e('Video to play after the main video ends', 'videohub360-theme'); ?>
+                        <?php echo esc_html($vh360_create_labels['ad_postroll_help']); ?>
                     </p>
                 </div>
 
@@ -1111,7 +1120,7 @@ $locations = get_terms(array(
                             value="yes"
                             <?php checked($video_data['quality_override'] ?? '', 'yes'); ?>
                         >
-                        <span><?php esc_html_e('Override Video Quality Settings', 'videohub360-theme'); ?></span>
+                        <span><?php echo esc_html($vh360_create_labels['override_quality_label']); ?></span>
                     </label>
                     <p class="vh360-form-help">
                         <?php echo esc_html($vh360_create_labels['quality_help']); ?>
@@ -1121,7 +1130,7 @@ $locations = get_terms(array(
                 <div id="vh360-quality-fields" style="<?php echo ($video_data['quality_override'] ?? '') === 'yes' ? '' : 'display: none;'; ?>">
                     <div class="vh360-form-field">
                         <label for="vh360_video_quality" class="vh360-form-label">
-                            <?php esc_html_e('Video Quality', 'videohub360-theme'); ?>
+                            <?php echo esc_html($vh360_create_labels['video_quality_label']); ?>
                         </label>
                         <select id="vh360_video_quality" name="vh360_video_quality" class="vh360-select">
                             <option value="auto" <?php selected($video_data['video_quality'] ?? 'auto', 'auto'); ?>><?php esc_html_e('Auto', 'videohub360-theme'); ?></option>
@@ -1134,7 +1143,7 @@ $locations = get_terms(array(
 
                     <div class="vh360-form-field">
                         <label for="vh360_video_mirror" class="vh360-form-label">
-                            <?php esc_html_e('Video Mirror', 'videohub360-theme'); ?>
+                            <?php echo esc_html($vh360_create_labels['video_mirror_label']); ?>
                         </label>
                         <select id="vh360_video_mirror" name="vh360_video_mirror" class="vh360-select">
                             <option value="" <?php selected($video_data['video_mirror'] ?? '', ''); ?>><?php esc_html_e('None', 'videohub360-theme'); ?></option>
@@ -1143,7 +1152,7 @@ $locations = get_terms(array(
                             <option value="mirror3" <?php selected($video_data['video_mirror'] ?? '', 'mirror3'); ?>><?php esc_html_e('Mirror 3', 'videohub360-theme'); ?></option>
                         </select>
                         <p class="vh360-form-help">
-                            <?php esc_html_e('Alternative video source/CDN', 'videohub360-theme'); ?>
+                            <?php echo esc_html($vh360_create_labels['alternative_source_help']); ?>
                         </p>
                     </div>
                 </div>

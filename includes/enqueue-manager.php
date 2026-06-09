@@ -324,6 +324,7 @@ function vh360_enqueue_dashboard_assets() {
                 'viewItem' => $vh360_create_context_is_lesson ? esc_html__('View Lesson', 'videohub360-theme') : esc_html__('View Video', 'videohub360-theme'),
                 'publishing' => $vh360_create_context_is_lesson ? esc_html__('Publishing Lesson...', 'videohub360-theme') : esc_html__('Publishing Video...', 'videohub360-theme'),
                 'updating' => $vh360_create_context_is_lesson ? esc_html__('Updating Lesson...', 'videohub360-theme') : esc_html__('Updating Video...', 'videohub360-theme'),
+                'uploadSuccess' => $vh360_create_context_is_lesson ? esc_html__('Lesson video uploaded successfully!', 'videohub360-theme') : esc_html__('Video uploaded successfully!', 'videohub360-theme'),
             ),
         ));
         

@@ -385,6 +385,10 @@ class VH360_Ajax_Handlers {
      * Upload video file
      */
     public function upload_video_file() {
+        $upload_context_is_lesson = function_exists('vh360_is_create_form_lesson_context')
+            ? vh360_is_create_form_lesson_context(get_current_user_id())
+            : (isset($_POST['vh360_create_context']) && sanitize_text_field(wp_unslash($_POST['vh360_create_context'])) === 'lesson');
+
         // Check if user is logged in
         if (!is_user_logged_in()) {
             wp_send_json_error(array(
@@ -403,7 +407,7 @@ class VH360_Ajax_Handlers {
         $settings = vh360_get_video_upload_settings();
         if (empty($settings['enable_video_upload'])) {
             wp_send_json_error(array(
-                'message' => esc_html__('Video upload is currently disabled.', 'videohub360-theme'),
+                'message' => $upload_context_is_lesson ? esc_html__('Lesson video upload is currently disabled.', 'videohub360-theme') : esc_html__('Video upload is currently disabled.', 'videohub360-theme'),
             ));
         }
         
@@ -455,7 +459,7 @@ class VH360_Ajax_Handlers {
         
         if (empty($filetype['type']) || strpos($filetype['type'], 'video/') !== 0) {
             wp_send_json_error(array(
-                'message' => __('Invalid file type. Only video files are allowed.', 'videohub360-theme'),
+                'message' => $upload_context_is_lesson ? esc_html__('Invalid file type. Only lesson video files are allowed.', 'videohub360-theme') : esc_html__('Invalid file type. Only video files are allowed.', 'videohub360-theme'),
             ));
         }
         
@@ -476,7 +480,7 @@ class VH360_Ajax_Handlers {
         $file_size_mb = round($file['size'] / 1024 / 1024, 2);
         
         wp_send_json_success(array(
-            'message' => esc_html__('Video uploaded successfully!', 'videohub360-theme'),
+            'message' => $upload_context_is_lesson ? esc_html__('Lesson video uploaded successfully!', 'videohub360-theme') : esc_html__('Video uploaded successfully!', 'videohub360-theme'),
             'attachment_id' => $attachment_id,
             'video_url' => $video_url,
             'file_name' => basename($file['name']),
@@ -874,7 +878,7 @@ class VH360_Ajax_Handlers {
             $existing_post = get_post($video_id);
             if (!$existing_post || $existing_post->post_type !== 'videohub360' || $existing_post->post_author != get_current_user_id()) {
                 wp_send_json_error(array(
-                    'message' => esc_html__('You do not have permission to edit this video.', 'videohub360-theme'),
+                    'message' => $create_context_is_lesson ? esc_html__('You do not have permission to edit this lesson.', 'videohub360-theme') : esc_html__('You do not have permission to edit this video.', 'videohub360-theme'),
                 ));
             }
         }

@@ -1068,8 +1068,10 @@
             
             var formData = new FormData();
             
+            var createFormLabels = (window.vh360Dashboard && vh360Dashboard.createForm) || {};
             formData.append('action', 'vh360_upload_video_file');
             formData.append('nonce', vh360Dashboard.videoUploadNonce);
+            formData.append('vh360_create_context', createFormLabels.isLessonContext ? 'lesson' : 'video');
             formData.append('vh360_video_file', file);
             
             // Show progress bar
@@ -1100,7 +1102,7 @@
                         // Auto-populate video URL field
                         $('#vh360_video_url').val(response.data.video_url);
                         
-                        self.showNotification(response.data.message || 'Video uploaded successfully!', 'success');
+                        self.showNotification(response.data.message || createFormLabels.uploadSuccess || 'Video uploaded successfully!', 'success');
                         
                         // Hide progress bar after a moment
                         setTimeout(function() {
