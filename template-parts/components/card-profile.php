@@ -277,45 +277,55 @@ $lesson_label_plural = function_exists('vh360_get_lesson_label') ? vh360_get_les
     background: var(--bg-light, #f9fafb);
 }
 
-.vh360-follow-btn {
-    display: block;
+.vh360-profile-card-follow-btn {
+    display: flex;
     width: 100%;
+    justify-content: center;
+    align-items: center;
     padding: 0.75rem 1.5rem;
-    background: var(--primary-color, #3b82f6);
-    color: #ffffff;
-    border: none;
     border-radius: var(--border-radius, 8px);
     font-size: 0.875rem;
     font-weight: 600;
     text-align: center;
+    line-height: 1.2;
     cursor: pointer;
     transition: var(--transition, all 0.3s ease);
 }
 
-.vh360-follow-btn:hover {
+.vh360-profile-card-follow-btn.vh360-follow-btn {
+    background: var(--primary-color, #3b82f6);
+    color: #ffffff;
+    border: none;
+}
+
+.vh360-profile-card-follow-btn.vh360-follow-btn:hover {
     background: #2563eb;
+    color: #ffffff;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
-.vh360-follow-btn:disabled {
+.vh360-profile-card-follow-btn.vh360-follow-btn:disabled,
+.vh360-profile-card-follow-btn.vh360-unfollow-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
     transform: none;
 }
 
-.vh360-follow-btn.vh360-follow-btn--following,
-.vh360-unfollow-btn {
+.vh360-profile-card-follow-btn.vh360-unfollow-btn,
+.vh360-profile-card-follow-btn.vh360-follow-btn--following {
     background: var(--bg-color, #ffffff);
     color: var(--text-color, #1f2937);
     border: 1px solid var(--border-color, #e5e7eb);
 }
 
-.vh360-follow-btn.vh360-follow-btn--following:hover,
-.vh360-unfollow-btn:hover {
+.vh360-profile-card-follow-btn.vh360-unfollow-btn:hover,
+.vh360-profile-card-follow-btn.vh360-follow-btn--following:hover {
     background: #fee2e2;
     color: #ef4444;
     border-color: #ef4444;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
 }
 
 @media (max-width: 480px) {
