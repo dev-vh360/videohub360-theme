@@ -1274,17 +1274,11 @@ if (!function_exists('vh360_is_create_form_lesson_context')) {
             return false;
         }
 
-        $user_id = $user_id ? absint($user_id) : get_current_user_id();
-
-        if (function_exists('vh360_get_author_display_mode')) {
-            return vh360_get_author_display_mode($user_id) === 'course';
-        }
-
         if (function_exists('vh360_get_author_template_mode')) {
             return vh360_get_author_template_mode() === 'course';
         }
 
-        return false;
+        return get_theme_mod('vh360_author_template_mode', 'profile') === 'course';
     }
 }
 

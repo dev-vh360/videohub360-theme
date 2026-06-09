@@ -825,8 +825,9 @@ class VH360_Ajax_Handlers {
     public function create_video_frontend() {
         // Check if user is logged in
         if (!is_user_logged_in()) {
+            $create_context_is_lesson = function_exists('vh360_is_create_form_lesson_context') && vh360_is_create_form_lesson_context();
             wp_send_json_error(array(
-                'message' => esc_html__('You must be logged in to create videos.', 'videohub360-theme'),
+                'message' => $create_context_is_lesson ? esc_html__('You must be logged in to create lessons.', 'videohub360-theme') : esc_html__('You must be logged in to create videos.', 'videohub360-theme'),
             ));
         }
         
@@ -837,6 +838,8 @@ class VH360_Ajax_Handlers {
             ));
         }
         
+        $create_context_is_lesson = function_exists('vh360_is_create_form_lesson_context') && vh360_is_create_form_lesson_context(get_current_user_id());
+
         // License soft-lock check
         $vh360_is_licensed = true;
         if (function_exists('vh360_theme_is_license_valid')) {
@@ -847,7 +850,7 @@ class VH360_Ajax_Handlers {
         
         if (!$vh360_is_licensed) {
             wp_send_json_error(array(
-                'message' => esc_html__('Your VideoHub360 license is inactive. Activate your license to create videos.', 'videohub360-theme'),
+                'message' => $create_context_is_lesson ? esc_html__('Your VideoHub360 license is inactive. Activate your license to create lessons.', 'videohub360-theme') : esc_html__('Your VideoHub360 license is inactive. Activate your license to create videos.', 'videohub360-theme'),
             ));
         }
         
@@ -858,7 +861,7 @@ class VH360_Ajax_Handlers {
             
         if (!$can_create_videos) {
             wp_send_json_error(array(
-                'message' => esc_html__('You do not have permission to create videos.', 'videohub360-theme'),
+                'message' => $create_context_is_lesson ? esc_html__('You do not have permission to create lessons.', 'videohub360-theme') : esc_html__('You do not have permission to create videos.', 'videohub360-theme'),
             ));
         }
         
@@ -876,8 +879,6 @@ class VH360_Ajax_Handlers {
             }
         }
         
-        $create_context_is_lesson = function_exists('vh360_is_create_form_lesson_context') && vh360_is_create_form_lesson_context(get_current_user_id());
-
         // Get and sanitize inputs
         $title = isset($_POST['vh360_video_title']) ? sanitize_text_field($_POST['vh360_video_title']) : '';
         $description = isset($_POST['vh360_video_description']) ? wp_kses_post($_POST['vh360_video_description']) : '';

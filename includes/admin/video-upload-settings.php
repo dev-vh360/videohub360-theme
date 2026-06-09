@@ -147,7 +147,7 @@ function vh360_create_form_show_livestream_render() {
     ?>
     <label>
         <input type="checkbox" name="vh360_create_form_options[show_livestream_settings]" value="1" <?php checked($options['show_livestream_settings'], 1); ?>>
-        <?php esc_html_e('Show Livestream Settings on the frontend create form', 'videohub360-theme'); ?>
+        <?php esc_html_e('Display the Livestream Settings section in the frontend Create form.', 'videohub360-theme'); ?>
     </label>
     <?php
 }
@@ -157,7 +157,7 @@ function vh360_create_form_show_ads_render() {
     ?>
     <label>
         <input type="checkbox" name="vh360_create_form_options[show_ad_settings]" value="1" <?php checked($options['show_ad_settings'], 1); ?>>
-        <?php esc_html_e('Show Ad Settings on the frontend create form', 'videohub360-theme'); ?>
+        <?php esc_html_e('Display the Ad Settings section in the frontend Create form.', 'videohub360-theme'); ?>
     </label>
     <?php
 }
@@ -167,7 +167,7 @@ function vh360_create_form_show_advanced_render() {
     ?>
     <label>
         <input type="checkbox" name="vh360_create_form_options[show_advanced_settings]" value="1" <?php checked($options['show_advanced_settings'], 1); ?>>
-        <?php esc_html_e('Show Advanced Settings on the frontend create form', 'videohub360-theme'); ?>
+        <?php esc_html_e('Display the Advanced Settings section in the frontend Create form.', 'videohub360-theme'); ?>
     </label>
     <?php
 }
@@ -177,7 +177,7 @@ function vh360_create_form_hide_livestream_course_render() {
     ?>
     <label>
         <input type="checkbox" name="vh360_create_form_options[hide_livestream_in_course_mode]" value="1" <?php checked($options['hide_livestream_in_course_mode'], 1); ?>>
-        <?php esc_html_e('Hide Livestream Settings automatically when the form is creating lessons in Course Mode', 'videohub360-theme'); ?>
+        <?php esc_html_e('When Course Mode is active, hide Livestream Settings from the frontend Create form so instructors see a cleaner lesson creation workflow.', 'videohub360-theme'); ?>
     </label>
     <?php
 }

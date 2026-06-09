@@ -742,12 +742,13 @@
                 // Get button clicked
                 var $submitBtn = $(document.activeElement);
                 var action = $submitBtn.val();
+                var createFormLabels = (window.vh360Dashboard && vh360Dashboard.createForm) || {};
                 
                 // Validate required fields
                 var title = $('#vh360_video_title').val().trim();
                 
                 if (!title) {
-                    self.showFormMessage((vh360Dashboard.createForm && vh360Dashboard.createForm.titleRequired) || 'Please provide a video title.', 'error');
+                    self.showFormMessage(createFormLabels.titleRequired || 'Please provide a video title.', 'error');
                     $('#vh360_video_title').focus();
                     return false;
                 }
@@ -756,7 +757,24 @@
                 // Backend allows creating videos without video URL/embed code
 
                 // Disable submit buttons
-                $('#vh360-publish-btn, #vh360-draft-btn').prop('disabled', true).addClass('loading');
+                var $submitButtons = $('#vh360-publish-btn, #vh360-draft-btn');
+                $submitButtons.each(function() {
+                    var $button = $(this);
+                    if (!$button.data('original-html')) {
+                        $button.data('original-html', $button.html());
+                    }
+                });
+
+                $submitButtons.prop('disabled', true).addClass('loading');
+
+                if ($submitBtn.is('#vh360-publish-btn')) {
+                    var isEditMode = $('input[name="video_id"]').length > 0;
+                    var loadingLabel = isEditMode ? createFormLabels.updating : createFormLabels.publishing;
+
+                    if (loadingLabel) {
+                        $submitBtn.text(loadingLabel);
+                    }
+                }
                 
                 // Prepare form data
                 var formData = new FormData(this);
@@ -786,7 +804,7 @@
                                 self.activateTab('videos', true);
                                 
                                 // Show success notification
-                                var viewLabel = (vh360Dashboard.createForm && vh360Dashboard.createForm.viewItem) || 'View Video';
+                                var viewLabel = createFormLabels.viewItem || 'View Video';
                                 self.showNotification(response.data.message + ' <a href="' + response.data.permalink + '" target="_blank">' + viewLabel + '</a>', 'success');
                             }, 2000);
                         } else {
@@ -799,7 +817,14 @@
                     },
                     complete: function() {
                         // Re-enable submit buttons
-                        $('#vh360-publish-btn, #vh360-draft-btn').prop('disabled', false).removeClass('loading');
+                        $('#vh360-publish-btn, #vh360-draft-btn').each(function() {
+                            var $button = $(this);
+                            $button.prop('disabled', false).removeClass('loading');
+
+                            if ($button.data('original-html')) {
+                                $button.html($button.data('original-html'));
+                            }
+                        });
                     }
                 });
 
