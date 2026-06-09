@@ -17,7 +17,8 @@ $author_id    = get_queried_object_id();
 $course_label = function_exists( 'vh360_get_course_label' ) ? vh360_get_course_label( true ) : __( 'Courses', 'videohub360-theme' );
 $lesson_label = function_exists( 'vh360_get_lesson_label' ) ? vh360_get_lesson_label( true ) : __( 'Lessons', 'videohub360-theme' );
 
-$courses = function_exists( 'vh360_get_user_courses' ) ? vh360_get_user_courses( $author_id ) : array();
+$courses      = function_exists( 'vh360_get_user_courses' ) ? vh360_get_user_courses( $author_id ) : array();
+$course_count = is_array( $courses ) ? count( $courses ) : 0;
 ?>
 
 <div class="vh360-course-author-courses" id="vh360-course-tab-courses">
@@ -27,8 +28,8 @@ $courses = function_exists( 'vh360_get_user_courses' ) ? vh360_get_user_courses(
             <span class="vh360-course-author-section-kicker"><?php esc_html_e( 'Learning Paths', 'videohub360-theme' ); ?></span>
             <h2 class="vh360-course-author-section-title">
                 <?php echo esc_html( $course_label ); ?>
-                <?php if ( ! empty( $courses ) ) : ?>
-                    <span class="vh360-course-author-section-count"><?php echo esc_html( number_format_i18n( count( $courses ) ) ); ?></span>
+                <?php if ( $course_count > 0 ) : ?>
+                    <span class="vh360-course-author-section-count"><?php echo esc_html( number_format_i18n( $course_count ) ); ?></span>
                 <?php endif; ?>
             </h2>
             <p class="vh360-course-author-section-description"><?php esc_html_e( 'Explore this instructor\'s available learning paths.', 'videohub360-theme' ); ?></p>
@@ -36,7 +37,7 @@ $courses = function_exists( 'vh360_get_user_courses' ) ? vh360_get_user_courses(
     </div>
 
     <?php if ( ! empty( $courses ) ) : ?>
-        <div class="vh360-course-author-courses-grid">
+        <div class="vh360-course-author-courses-grid <?php echo 1 === $course_count ? 'vh360-course-author-courses-grid--single' : ''; ?>">
             <?php foreach ( $courses as $course ) :
                 $term_id      = $course->term_id;
                 $course_url   = get_term_link( $course, 'videohub360_series' );

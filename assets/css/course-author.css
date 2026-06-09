@@ -401,6 +401,52 @@
     gap: 24px;
 }
 
+.vh360-course-author-page .vh360-course-author-courses-grid--single {
+    grid-template-columns: minmax(0, 780px);
+    justify-content: start;
+}
+
+.vh360-course-author-page .vh360-course-author-courses-grid--single .vh360-course-card {
+    max-width: 780px;
+}
+
+@media (min-width: 768px) {
+    .vh360-course-author-page .vh360-course-author-courses-grid--single .vh360-course-card {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        align-items: stretch;
+    }
+
+    .vh360-course-author-page .vh360-course-author-courses-grid--single .vh360-course-card-link {
+        display: contents;
+    }
+
+    .vh360-course-author-page .vh360-course-author-courses-grid--single .vh360-course-card-thumb {
+        height: 100%;
+        min-height: 230px;
+        aspect-ratio: auto;
+    }
+
+    .vh360-course-author-page .vh360-course-author-courses-grid--single .vh360-course-card-body {
+        padding: 24px;
+    }
+
+    .vh360-course-author-page .vh360-course-author-courses-grid--single .vh360-course-card-footer {
+        grid-column: 2;
+        padding: 0 24px 24px;
+    }
+}
+
+@media (max-width: 767px) {
+    .vh360-course-author-page .vh360-course-author-courses-grid--single {
+        grid-template-columns: 1fr;
+    }
+
+    .vh360-course-author-page .vh360-course-author-courses-grid--single .vh360-course-card {
+        max-width: none;
+    }
+}
+
 .vh360-course-author-page .vh360-course-card {
     display: flex;
     flex-direction: column;
