@@ -242,11 +242,13 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
     <div class="videohub360-main-wrapper <?php echo ($video_layout === 'full-width') ? 'videohub360-full-width' : 'videohub360-sidebar-layout'; ?>">
         <div class="videohub360-content-area">
             <?php
-            // Check membership requirement before rendering video
+            // Check membership/course purchase requirement before rendering video.
             $required_plan = function_exists('vh360_post_requires_membership') ? vh360_post_requires_membership(get_the_ID()) : false;
             $user_has_access = true;
-            
-            if ($required_plan) {
+
+            if (function_exists('videohub360_user_can_access_lesson') && function_exists('videohub360_course_features_enabled') && videohub360_course_features_enabled()) {
+                $user_has_access = videohub360_user_can_access_lesson(get_the_ID(), get_current_user_id());
+            } elseif ($required_plan) {
                 $current_user_id = get_current_user_id();
                 
                 if (!$current_user_id) {
@@ -264,8 +266,12 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
             }
             
             if (!$user_has_access) {
-                // Render membership gate instead of video
-                echo vh360_render_membership_gate(array('required_plan' => $required_plan));
+                // Render access gate instead of video
+                if (function_exists('vh360_render_membership_gate')) {
+                    echo vh360_render_membership_gate(array('required_plan' => $required_plan ?: 'course'));
+                } else {
+                    echo '<div class="vh360-membership-gate"><p>' . esc_html__('Please log in or purchase access to view this lesson.', 'videohub360') . '</p></div>';
+                }
             } else {
                 // User has access, render video
             ?>

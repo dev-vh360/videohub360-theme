@@ -1257,11 +1257,30 @@ class VH360_Ajax_Handlers {
         update_term_meta($term_id, '_vh360_course_cta_url', esc_url_raw(wp_unslash($_POST['_vh360_course_cta_url'] ?? '')));
         update_term_meta($term_id, '_vh360_course_order', absint($_POST['_vh360_course_order'] ?? 0));
 
+        // Course access settings.
+        $purchase_mode = isset($_POST['_vh360_course_purchase_mode'])
+            ? sanitize_key(wp_unslash($_POST['_vh360_course_purchase_mode']))
+            : '';
+        if (!in_array($purchase_mode, array('none', 'product', 'membership', 'both'), true)) {
+            $purchase_mode = '';
+        }
+        update_term_meta($term_id, '_vh360_course_purchase_mode', $purchase_mode);
+
         // Required membership — preserve special 'any' value.
         $required_membership = isset($_POST['_vh360_course_required_membership'])
             ? sanitize_key(wp_unslash($_POST['_vh360_course_required_membership']))
             : '';
         update_term_meta($term_id, '_vh360_course_required_membership', $required_membership);
+
+        $product_id = isset($_POST['_vh360_course_product_id']) ? absint($_POST['_vh360_course_product_id']) : 0;
+        if ($product_id > 0) {
+            $valid_product = function_exists('wc_get_product') ? (bool) wc_get_product($product_id) : false;
+
+            if (!$valid_product) {
+                wp_send_json_error(array('message' => esc_html__('Linked product ID must be an existing WooCommerce product.', 'videohub360-theme')));
+            }
+        }
+        update_term_meta($term_id, '_vh360_course_product_id', $product_id);
 
         // Remove course image flag.
         if (!empty($_POST['vh360_remove_course_image'])) {

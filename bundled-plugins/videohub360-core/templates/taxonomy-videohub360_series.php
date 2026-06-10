@@ -47,19 +47,32 @@ if ( empty( $subtitle ) ) {
     $subtitle = $term->description;
 }
 
-// CTA text.
-if ( empty( $cta_text ) ) {
-    $cta_text = __( 'Start Learning', 'videohub360' );
+$first_lesson_url = ! empty( $lessons ) ? get_permalink( $lessons[0]->ID ) : get_term_link( $term );
+$purchase_mode    = function_exists( 'videohub360_get_course_purchase_mode' ) ? videohub360_get_course_purchase_mode( $term_id ) : 'none';
+$product_id       = absint( get_term_meta( $term_id, '_vh360_course_product_id', true ) );
+$required_plan    = function_exists( 'videohub360_get_course_required_membership' ) ? videohub360_get_course_required_membership( $term_id ) : false;
+$user_has_access  = function_exists( 'vh360_user_can_access_course' )
+    ? vh360_user_can_access_course( get_current_user_id(), $term_id )
+    : ( 'none' === $purchase_mode && empty( $required_plan ) );
+$purchase_url     = function_exists( 'vh360_get_course_purchase_url' ) ? vh360_get_course_purchase_url( $term_id ) : '';
+$explicit_cta_url = $cta_url;
+
+if ( $user_has_access ) {
+    $cta_text = empty( $cta_text ) ? ( 'none' === $purchase_mode ? __( 'Start Learning', 'videohub360' ) : __( 'Continue Learning', 'videohub360' ) ) : $cta_text;
+    $cta_url  = $first_lesson_url;
+} elseif ( in_array( $purchase_mode, array( 'product', 'both' ), true ) && $product_id && ! empty( $purchase_url ) ) {
+    $cta_text = empty( $cta_text ) ? __( 'Buy Course', 'videohub360' ) : $cta_text;
+    $cta_url  = $purchase_url;
+} elseif ( 'membership' === $purchase_mode || ( 'both' === $purchase_mode && ! empty( $required_plan ) ) ) {
+    $cta_text = empty( $cta_text ) ? __( 'Join to Access', 'videohub360' ) : $cta_text;
+    $cta_url  = empty( $explicit_cta_url ) ? $first_lesson_url : $explicit_cta_url;
+} else {
+    $cta_text = empty( $cta_text ) ? __( 'Start Learning', 'videohub360' ) : $cta_text;
+    $cta_url  = empty( $explicit_cta_url ) ? $first_lesson_url : $explicit_cta_url;
 }
 
-// CTA URL: explicit meta → first lesson URL → current term URL.
-if ( empty( $cta_url ) ) {
-    if ( ! empty( $lessons ) ) {
-        $cta_url = get_permalink( $lessons[0]->ID );
-    } else {
-        $cta_url = get_term_link( $term );
-    }
-}
+$cta_url  = apply_filters( 'videohub360_course_cta_url', $cta_url, $term, $user_has_access );
+$cta_text = apply_filters( 'videohub360_course_cta_text', $cta_text, $term, $user_has_access );
 
 // ---- Page title (SEO / <title> tag) ------------------------------------
 

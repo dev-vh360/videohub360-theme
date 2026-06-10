@@ -216,6 +216,22 @@ class VideoHub360_Course_Foundation {
             'auth_callback'     => array( $this, 'term_meta_auth_callback' ),
         ) );
 
+        register_term_meta( 'videohub360_series', '_vh360_course_purchase_mode', array(
+            'type'              => 'string',
+            'single'            => true,
+            'show_in_rest'      => true,
+            'sanitize_callback' => array( $this, 'sanitize_purchase_mode' ),
+            'auth_callback'     => array( $this, 'term_meta_auth_callback' ),
+        ) );
+
+        register_term_meta( 'videohub360_series', '_vh360_course_product_id', array(
+            'type'              => 'integer',
+            'single'            => true,
+            'show_in_rest'      => true,
+            'sanitize_callback' => 'absint',
+            'auth_callback'     => array( $this, 'term_meta_auth_callback' ),
+        ) );
+
         $course_int_fields = array(
             '_vh360_course_instructor_user_id',
             '_vh360_course_featured_image_id',
@@ -476,6 +492,12 @@ class VideoHub360_Course_Foundation {
                 case 'membership':
                     $value = $this->sanitize_membership_key( $raw );
                     break;
+                case 'purchase_mode':
+                    $value = $this->sanitize_purchase_mode( $raw );
+                    break;
+                case 'product_id':
+                    $value = $this->sanitize_course_product_id( $raw );
+                    break;
                 default:
                     $value = sanitize_text_field( $raw );
             }
@@ -674,12 +696,34 @@ class VideoHub360_Course_Foundation {
                 'desc'     => __( 'Used on course landing pages, course catalog cards, and related course cards.', 'videohub360' ),
             ),
             array(
+                'key'      => '_vh360_course_purchase_mode',
+                'id'       => 'vh360_course_purchase_mode',
+                'label'    => __( 'Course Access Type', 'videohub360' ),
+                'type'     => 'select',
+                'options'  => array(
+                    'none'       => __( 'Public', 'videohub360' ),
+                    'membership' => __( 'Membership Required', 'videohub360' ),
+                    'product'    => __( 'Individual Product Purchase', 'videohub360' ),
+                    'both'       => __( 'Product Purchase or Membership', 'videohub360' ),
+                ),
+                'sanitize' => 'purchase_mode',
+                'desc'     => __( 'Choose whether access is public, membership-based, sold through a linked WooCommerce product, or either product purchase or membership.', 'videohub360' ),
+            ),
+            array(
                 'key'      => '_vh360_course_required_membership',
                 'id'       => 'vh360_course_required_membership',
                 'label'    => __( 'Required Membership', 'videohub360' ),
                 'type'     => 'text',
                 'sanitize' => 'membership',
-                'desc'     => __( 'Membership plan key required to access this course. Use "any" for any active plan, or leave empty for public access.', 'videohub360' ),
+                'desc'     => __( 'Membership plan key for membership-based access. Use "any" for any active plan, or leave empty when access is public or product-only.', 'videohub360' ),
+            ),
+            array(
+                'key'      => '_vh360_course_product_id',
+                'id'       => 'vh360_course_product_id',
+                'label'    => __( 'Linked WooCommerce Product ID', 'videohub360' ),
+                'type'     => 'number',
+                'sanitize' => 'product_id',
+                'desc'     => __( 'WooCommerce product ID that grants individual access to this course. Leave empty unless using product purchase access.', 'videohub360' ),
             ),
             array(
                 'key'      => '_vh360_course_cta_text',
@@ -902,6 +946,37 @@ class VideoHub360_Course_Foundation {
             return 'any';
         }
         return sanitize_key( $value );
+    }
+
+    /**
+     * Sanitise course purchase mode.
+     *
+     * @param string $value Raw value.
+     * @return string
+     */
+    public function sanitize_purchase_mode( $value ) {
+        $value = sanitize_key( $value );
+        return in_array( $value, array( 'none', 'product', 'membership', 'both' ), true ) ? $value : '';
+    }
+
+    /**
+     * Sanitise and validate a linked WooCommerce product ID.
+     *
+     * @param mixed $value Raw value.
+     * @return int
+     */
+    public function sanitize_course_product_id( $value ) {
+        $product_id = absint( $value );
+
+        if ( ! $product_id ) {
+            return 0;
+        }
+
+        if ( function_exists( 'wc_get_product' ) && wc_get_product( $product_id ) ) {
+            return $product_id;
+        }
+
+        return 0;
     }
 
     /**
@@ -1461,5 +1536,102 @@ if ( ! function_exists( 'videohub360_get_effective_lesson_required_membership' )
         }
 
         return false;
+    }
+}
+
+if ( ! function_exists( 'videohub360_get_course_purchase_mode' ) ) {
+    /**
+     * Return the course purchase mode with backward-compatible inference.
+     *
+     * @param int $term_id Course term ID.
+     * @return string none|product|membership|both
+     */
+    function videohub360_get_course_purchase_mode( $term_id ) {
+        if ( function_exists( 'vh360_get_course_purchase_mode' ) ) {
+            return vh360_get_course_purchase_mode( $term_id );
+        }
+
+        $term_id = absint( $term_id );
+        $mode    = sanitize_key( (string) get_term_meta( $term_id, '_vh360_course_purchase_mode', true ) );
+
+        if ( in_array( $mode, array( 'none', 'product', 'membership', 'both' ), true ) ) {
+            return $mode;
+        }
+
+        $product_id = absint( get_term_meta( $term_id, '_vh360_course_product_id', true ) );
+        if ( $product_id > 0 ) {
+            return 'product';
+        }
+
+        return videohub360_get_course_required_membership( $term_id ) ? 'membership' : 'none';
+    }
+}
+
+if ( ! function_exists( 'videohub360_user_can_access_lesson' ) ) {
+    /**
+     * Course-aware lesson access decision.
+     *
+     * Free previews remain public. Product-based course access is checked via
+     * course entitlements when available and otherwise fails closed.
+     *
+     * @param int $post_id Lesson post ID.
+     * @param int $user_id User ID. Defaults to current user.
+     * @return bool
+     */
+    function videohub360_user_can_access_lesson( $post_id, $user_id = 0 ) {
+        $post_id = absint( $post_id );
+        $user_id = absint( $user_id ?: get_current_user_id() );
+
+        if ( ! $post_id ) {
+            return false;
+        }
+
+        if ( $user_id && user_can( $user_id, 'manage_options' ) ) {
+            return true;
+        }
+
+        if ( 'yes' === get_post_meta( $post_id, '_vh360_lesson_is_preview', true ) ) {
+            return true;
+        }
+
+        $course = function_exists( 'videohub360_get_lesson_course' ) ? videohub360_get_lesson_course( $post_id ) : false;
+        $lesson_plan = get_post_meta( $post_id, '_vh360_membership_required', true );
+
+        if ( $course ) {
+            $mode = videohub360_get_course_purchase_mode( $course->term_id );
+
+            if ( in_array( $mode, array( 'product', 'both' ), true ) ) {
+                $has_course_access = ( $user_id && function_exists( 'vh360_user_has_course_entitlement' ) )
+                    ? vh360_user_has_course_entitlement( $user_id, $course->term_id )
+                    : false;
+
+                if ( 'product' === $mode ) {
+                    return $has_course_access;
+                }
+
+                if ( $has_course_access ) {
+                    return true;
+                }
+            }
+        }
+
+        $required_plan = $lesson_plan ? $lesson_plan : videohub360_get_effective_lesson_required_membership( $post_id );
+
+        if ( ! $required_plan ) {
+            if ( $course && 'both' === videohub360_get_course_purchase_mode( $course->term_id ) ) {
+                return false;
+            }
+            return true;
+        }
+
+        if ( ! $user_id ) {
+            return false;
+        }
+
+        if ( 'any' === $required_plan ) {
+            return function_exists( 'vh360_user_has_active_membership' ) ? vh360_user_has_active_membership( $user_id ) : false;
+        }
+
+        return function_exists( 'vh360_user_has_active_membership' ) ? vh360_user_has_active_membership( $user_id, $required_plan ) : false;
     }
 }

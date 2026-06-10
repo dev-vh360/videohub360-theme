@@ -19,6 +19,29 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 $badge_text  = '';
 $badge_class = 'vh360-course-access-badge';
 
+$resolve_course_badge = static function( $course_term_id ) use ( &$badge_class ) {
+    $mode = function_exists( 'videohub360_get_course_purchase_mode' ) ? videohub360_get_course_purchase_mode( $course_term_id ) : 'none';
+    $plan = function_exists( 'videohub360_get_course_required_membership' ) ? videohub360_get_course_required_membership( $course_term_id ) : false;
+
+    if ( function_exists( 'vh360_user_has_course_entitlement' ) && is_user_logged_in() && vh360_user_has_course_entitlement( get_current_user_id(), $course_term_id ) ) {
+        $badge_class .= ' vh360-badge-owned';
+        return __( 'Enrolled', 'videohub360' );
+    }
+
+    if ( in_array( $mode, array( 'product', 'both' ), true ) ) {
+        $badge_class .= ' vh360-badge-paid';
+        return __( 'Paid Course', 'videohub360' );
+    }
+
+    if ( ! $plan || 'none' === $mode ) {
+        $badge_class .= ' vh360-badge-free';
+        return __( 'Free Access', 'videohub360' );
+    }
+
+    $badge_class .= ' vh360-badge-member';
+    return __( 'Member Access', 'videohub360' );
+};
+
 if ( ! empty( $post_id ) ) {
 
     // Lesson-level badge.
@@ -28,38 +51,19 @@ if ( ! empty( $post_id ) ) {
         $badge_text   = __( 'Free Preview', 'videohub360' );
         $badge_class .= ' vh360-badge-preview';
     } else {
-        $plan = function_exists( 'videohub360_get_effective_lesson_required_membership' )
-            ? videohub360_get_effective_lesson_required_membership( $post_id )
-            : false;
-
-        if ( ! $plan ) {
-            $badge_text   = __( 'Free Access', 'videohub360' );
-            $badge_class .= ' vh360-badge-free';
-        } elseif ( 'any' === $plan ) {
-            $badge_text   = __( 'Member Access', 'videohub360' );
-            $badge_class .= ' vh360-badge-member';
+        $course = function_exists( 'videohub360_get_lesson_course' ) ? videohub360_get_lesson_course( $post_id ) : false;
+        if ( $course ) {
+            $badge_text = $resolve_course_badge( $course->term_id );
         } else {
-            $badge_text   = ucwords( str_replace( array( '-', '_' ), ' ', $plan ) );
-            $badge_class .= ' vh360-badge-plan';
+            $plan = function_exists( 'videohub360_get_effective_lesson_required_membership' )
+                ? videohub360_get_effective_lesson_required_membership( $post_id )
+                : false;
+            $badge_text   = $plan ? __( 'Member Access', 'videohub360' ) : __( 'Free Access', 'videohub360' );
+            $badge_class .= $plan ? ' vh360-badge-member' : ' vh360-badge-free';
         }
     }
 } elseif ( ! empty( $term_id ) ) {
-
-    // Course-level badge.
-    $plan = function_exists( 'videohub360_get_course_required_membership' )
-        ? videohub360_get_course_required_membership( $term_id )
-        : false;
-
-    if ( ! $plan ) {
-        $badge_text   = __( 'Free Access', 'videohub360' );
-        $badge_class .= ' vh360-badge-free';
-    } elseif ( 'any' === $plan ) {
-        $badge_text   = __( 'Member Access', 'videohub360' );
-        $badge_class .= ' vh360-badge-member';
-    } else {
-        $badge_text   = ucwords( str_replace( array( '-', '_' ), ' ', $plan ) );
-        $badge_class .= ' vh360-badge-plan';
-    }
+    $badge_text = $resolve_course_badge( $term_id );
 }
 
 if ( $badge_text ) : ?>

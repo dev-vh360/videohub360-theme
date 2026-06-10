@@ -142,6 +142,16 @@
     border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
+.vh360-course-access-badge.vh360-badge-paid {
+    background: #7c3aed;
+    color: #fff;
+}
+
+.vh360-course-access-badge.vh360-badge-owned {
+    background: #16a34a;
+    color: #fff;
+}
+
 /* ---- CTA button ---- */
 .vh360-course-cta .vh360-course-cta-btn,
 .vh360-course-cta-section .vh360-course-cta-btn {

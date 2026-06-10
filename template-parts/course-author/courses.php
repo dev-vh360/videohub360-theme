@@ -52,6 +52,15 @@ $course_count = is_array( $courses ) ? count( $courses ) : 0;
                 $level             = get_term_meta( $term_id, '_vh360_course_level', true );
                 $duration          = get_term_meta( $term_id, '_vh360_course_duration', true );
                 $membership        = get_term_meta( $term_id, '_vh360_course_required_membership', true );
+                $purchase_mode     = function_exists( 'videohub360_get_course_purchase_mode' ) ? videohub360_get_course_purchase_mode( $term_id ) : ( $membership ? 'membership' : 'none' );
+                $badge_label       = '';
+                if ( function_exists( 'vh360_user_has_course_entitlement' ) && is_user_logged_in() && vh360_user_has_course_entitlement( get_current_user_id(), $term_id ) ) {
+                    $badge_label = __( 'Enrolled', 'videohub360-theme' );
+                } elseif ( in_array( $purchase_mode, array( 'product', 'both' ), true ) ) {
+                    $badge_label = __( 'Paid Course', 'videohub360-theme' );
+                } elseif ( $membership ) {
+                    $badge_label = __( 'Member Access', 'videohub360-theme' );
+                }
                 $lesson_count      = function_exists( 'vh360_get_course_lesson_count' ) ? vh360_get_course_lesson_count( $term_id ) : 0;
 
                 // Thumbnail: prefer course featured image, fall back to first lesson thumbnail.
@@ -84,8 +93,8 @@ $course_count = is_array( $courses ) ? count( $courses ) : 0;
                                 <div class="vh360-course-card-thumb-placeholder"></div>
                             <?php endif; ?>
 
-                            <?php if ( $membership ) : ?>
-                                <span class="vh360-course-card-badge"><?php echo esc_html( ucfirst( $membership ) ); ?></span>
+                            <?php if ( $badge_label ) : ?>
+                                <span class="vh360-course-card-badge"><?php echo esc_html( $badge_label ); ?></span>
                             <?php endif; ?>
                         </div>
 

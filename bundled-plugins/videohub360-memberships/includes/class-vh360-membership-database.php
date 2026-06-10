@@ -11,21 +11,21 @@
 if (!defined('ABSPATH')) exit;
 
 class VH360_Membership_Database {
-    
+
     /**
      * Singleton instance
      *
      * @var VH360_Membership_Database
      */
     private static $instance = null;
-    
+
     /**
      * Database version
      *
      * @var string
      */
-    private $db_version = '1.0.0';
-    
+    private $db_version = '1.1.0';
+
     /**
      * Get singleton instance
      *
@@ -37,7 +37,7 @@ class VH360_Membership_Database {
         }
         return self::$instance;
     }
-    
+
     /**
      * Constructor
      */
@@ -45,23 +45,23 @@ class VH360_Membership_Database {
         // Hook to check database version
         add_action('plugins_loaded', array($this, 'check_database_version'));
     }
-    
+
     /**
      * Check database version and upgrade if needed
      */
     public function check_database_version() {
         $current_version = get_option('vh360_memberships_db_version', '0');
-        
+
         if (version_compare($current_version, $this->db_version, '<')) {
             self::create_tables();
-            
+
             // Run legacy membership billing migration if upgrading from an older stored database version.
             if (version_compare($current_version, '1.0.0', '<') && version_compare($current_version, '0', '>')) {
                 self::migrate_legacy_billing_data();
             }
         }
     }
-    
+
     /**
      * Create database tables
      *
@@ -69,9 +69,9 @@ class VH360_Membership_Database {
      */
     public static function create_tables() {
         global $wpdb;
-        
+
         $charset_collate = $wpdb->get_charset_collate();
-        
+
         // Main memberships table with recurring subscription columns
         $memberships_table = $wpdb->prefix . 'vh360_memberships';
         $memberships_sql = "CREATE TABLE {$memberships_table} (
@@ -107,7 +107,29 @@ class VH360_Membership_Database {
             KEY billing_mode (billing_mode),
             KEY subscription_status (subscription_status)
         ) $charset_collate;";
-        
+
+        // Course entitlements table for individual course purchases
+        $course_entitlements_table = $wpdb->prefix . 'vh360_course_entitlements';
+        $course_entitlements_sql = "CREATE TABLE {$course_entitlements_table} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) unsigned NOT NULL,
+            course_term_id bigint(20) unsigned NOT NULL,
+            product_id bigint(20) unsigned DEFAULT NULL,
+            source_order_id bigint(20) unsigned DEFAULT NULL,
+            status varchar(20) NOT NULL DEFAULT 'active',
+            starts_at datetime DEFAULT NULL,
+            expires_at datetime DEFAULT NULL,
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+            PRIMARY KEY  (id),
+            KEY user_id (user_id),
+            KEY course_term_id (course_term_id),
+            KEY product_id (product_id),
+            KEY source_order_id (source_order_id),
+            KEY status (status),
+            KEY user_course_status (user_id, course_term_id, status)
+        ) $charset_collate;";
+
         // Membership events table
         $events_table = $wpdb->prefix . 'vh360_membership_events';
         $events_sql = "CREATE TABLE {$events_table} (
@@ -124,15 +146,16 @@ class VH360_Membership_Database {
             KEY created_at (created_at),
             KEY stripe_event_id (stripe_event_id)
         ) $charset_collate;";
-        
+
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($memberships_sql);
         dbDelta($events_sql);
-        
+        dbDelta($course_entitlements_sql);
+
         // Update database version
-        update_option('vh360_memberships_db_version', '1.0.0');
+        update_option('vh360_memberships_db_version', '1.1.0');
     }
-    
+
     /**
      * Migrate legacy membership billing data.
      *
@@ -142,13 +165,13 @@ class VH360_Membership_Database {
     private static function migrate_legacy_billing_data() {
         global $wpdb;
         $table = $wpdb->prefix . 'vh360_memberships';
-        
+
         // Set all existing memberships to one_time billing mode
         $wpdb->query(
             "UPDATE {$table} SET billing_mode = 'one_time', billing_provider = 'woocommerce' WHERE billing_mode IS NULL OR billing_mode = ''"
         );
     }
-    
+
     /**
      * Get memberships table name
      *
@@ -158,7 +181,7 @@ class VH360_Membership_Database {
         global $wpdb;
         return $wpdb->prefix . 'vh360_memberships';
     }
-    
+
     /**
      * Get events table name
      *
@@ -168,7 +191,17 @@ class VH360_Membership_Database {
         global $wpdb;
         return $wpdb->prefix . 'vh360_membership_events';
     }
-    
+
+    /**
+     * Get course entitlements table name.
+     *
+     * @return string
+     */
+    public static function get_course_entitlements_table() {
+        global $wpdb;
+        return $wpdb->prefix . 'vh360_course_entitlements';
+    }
+
     /**
      * Check if a Stripe event has already been processed
      *
@@ -178,15 +211,15 @@ class VH360_Membership_Database {
     public static function is_stripe_event_processed($stripe_event_id) {
         global $wpdb;
         $table = self::get_events_table();
-        
+
         $count = (int) $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$table} WHERE stripe_event_id = %s",
             $stripe_event_id
         ));
-        
+
         return $count > 0;
     }
-    
+
     /**
      * Get membership by Stripe subscription ID
      *
@@ -196,13 +229,13 @@ class VH360_Membership_Database {
     public static function get_membership_by_subscription_id($subscription_id) {
         global $wpdb;
         $table = self::get_memberships_table();
-        
+
         return $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM {$table} WHERE stripe_subscription_id = %s ORDER BY created_at DESC LIMIT 1",
             $subscription_id
         ));
     }
-    
+
     /**
      * Get membership by Stripe customer ID and plan
      *
@@ -213,7 +246,7 @@ class VH360_Membership_Database {
     public static function get_membership_by_customer_and_plan($customer_id, $plan_key) {
         global $wpdb;
         $table = self::get_memberships_table();
-        
+
         return $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM {$table} WHERE stripe_customer_id = %s AND plan_key = %s ORDER BY created_at DESC LIMIT 1",
             $customer_id,

@@ -39,6 +39,8 @@ class VH360_Membership_Plans {
         // Add meta boxes to products
         add_action('add_meta_boxes', array($this, 'add_product_meta_box'));
         add_action('save_post', array($this, 'save_product_meta'), 10, 2);
+        add_action('admin_menu', array($this, 'add_repair_tool_page'));
+        add_action('admin_post_vh360_repair_course_entitlements', array($this, 'handle_repair_course_entitlements'));
     }
     
     /**
@@ -303,6 +305,15 @@ class VH360_Membership_Plans {
             'side',
             'default'
         );
+
+        add_meta_box(
+            'vh360_course_access_mapping',
+            __('VH360 Course Access', 'videohub360-memberships'),
+            array($this, 'render_course_access_meta_box'),
+            'product',
+            'side',
+            'default'
+        );
     }
     
     /**
@@ -374,6 +385,33 @@ class VH360_Membership_Plans {
         <?php
     }
     
+
+
+    /**
+     * Render read-only linked course access meta box.
+     *
+     * @param WP_Post $post Product post.
+     */
+    public function render_course_access_meta_box($post) {
+        $courses = function_exists('vh360_get_courses_for_product') ? vh360_get_courses_for_product($post->ID) : array();
+        ?>
+        <div class="vh360-course-access-mapping">
+            <p class="description">
+                <?php esc_html_e('Course links are managed from the course editor. This product currently grants access to:', 'videohub360-memberships'); ?>
+            </p>
+            <?php if (!empty($courses)) : ?>
+                <ul>
+                    <?php foreach ($courses as $course) : ?>
+                        <li><?php echo esc_html($course->name); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php else : ?>
+                <p><em><?php esc_html_e('No courses are linked to this product.', 'videohub360-memberships'); ?></em></p>
+            <?php endif; ?>
+        </div>
+        <?php
+    }
+
     /**
      * Save meta box data
      *
@@ -421,4 +459,122 @@ class VH360_Membership_Plans {
             update_post_meta($post_id, '_vh360_membership_grant_type', sanitize_text_field($_POST['vh360_membership_grant_type']));
         }
     }
+
+    /**
+     * Add repair utility page.
+     */
+    public function add_repair_tool_page() {
+        add_submenu_page(
+            'tools.php',
+            __('Repair Course Entitlements', 'videohub360-memberships'),
+            __('Repair Course Entitlements', 'videohub360-memberships'),
+            'manage_options',
+            'vh360-repair-course-entitlements',
+            array($this, 'render_repair_tool_page')
+        );
+    }
+
+    /**
+     * Render repair utility page.
+     */
+    public function render_repair_tool_page() {
+        $created = isset($_GET['vh360_created']) ? absint($_GET['vh360_created']) : null;
+        ?>
+        <div class="wrap">
+            <h1><?php esc_html_e('Repair Course Entitlements', 'videohub360-memberships'); ?></h1>
+            <?php if (null !== $created) : ?>
+                <div class="notice notice-success"><p>
+                    <?php printf(esc_html__('%d missing course entitlement(s) created.', 'videohub360-memberships'), $created); ?>
+                </p></div>
+            <?php endif; ?>
+            <p><?php esc_html_e('Scan completed and processing WooCommerce orders for products linked to courses and create any missing course entitlement rows.', 'videohub360-memberships'); ?></p>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <?php wp_nonce_field('vh360_repair_course_entitlements'); ?>
+                <input type="hidden" name="action" value="vh360_repair_course_entitlements">
+                <?php submit_button(__('Repair Course Entitlements', 'videohub360-memberships')); ?>
+            </form>
+        </div>
+        <?php
+    }
+
+    /**
+     * Handle repair utility submission.
+     */
+    public function handle_repair_course_entitlements() {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to repair course entitlements.', 'videohub360-memberships'));
+        }
+
+        check_admin_referer('vh360_repair_course_entitlements');
+
+        $created = $this->repair_course_entitlements();
+
+        wp_safe_redirect(add_query_arg(
+            array('page' => 'vh360-repair-course-entitlements', 'vh360_created' => $created),
+            admin_url('tools.php')
+        ));
+        exit;
+    }
+
+    /**
+     * Create missing course entitlements from historical paid orders.
+     *
+     * @return int Number of created rows.
+     */
+    private function repair_course_entitlements() {
+        if (!function_exists('wc_get_orders') || !function_exists('vh360_get_courses_for_product') || !function_exists('vh360_grant_course_entitlement')) {
+            return 0;
+        }
+
+        $orders = wc_get_orders(array(
+            'status' => array('completed', 'processing'),
+            'limit' => -1,
+            'return' => 'objects',
+        ));
+
+        $created = 0;
+
+        foreach ($orders as $order) {
+            $user_id = $order->get_user_id();
+            if (!$user_id) {
+                continue;
+            }
+
+            foreach ($order->get_items() as $item) {
+                $product_ids = array_filter(array_unique(array_map('absint', array(
+                    $item->get_product_id(),
+                    method_exists($item, 'get_variation_id') ? $item->get_variation_id() : 0,
+                ))));
+
+                foreach ($product_ids as $product_id) {
+                    foreach (vh360_get_courses_for_product($product_id) as $course) {
+                        if (!class_exists('VH360_Membership_Database')) {
+                            continue;
+                        }
+
+                        global $wpdb;
+                        $table = VH360_Membership_Database::get_course_entitlements_table();
+                        $exists = (int) $wpdb->get_var($wpdb->prepare(
+                            "SELECT COUNT(*) FROM {$table} WHERE user_id = %d AND course_term_id = %d AND source_order_id = %d",
+                            $user_id,
+                            $course->term_id,
+                            $order->get_id()
+                        ));
+
+                        if ($exists) {
+                            continue;
+                        }
+
+                        $result = vh360_grant_course_entitlement($user_id, $course->term_id, $product_id, $order->get_id());
+                        if ($result) {
+                            $created++;
+                        }
+                    }
+                }
+            }
+        }
+
+        return $created;
+    }
+
 }

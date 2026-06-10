@@ -1271,7 +1271,9 @@
                 $('#vh360_course_short_description').val(courseData.short_desc);
                 $('#vh360_course_level').val(courseData.level);
                 $('#vh360_course_duration').val(courseData.duration);
+                $('#vh360_course_purchase_mode').val(courseData.purchase_mode || 'none');
                 $('#vh360_course_required_membership').val(courseData.membership);
+                $('#vh360_course_product_id').val(courseData.product_id || '');
                 $('#vh360_course_cta_text').val(courseData.cta_text);
                 $('#vh360_course_cta_url').val(courseData.cta_url);
                 $('#vh360_course_order').val(courseData.order);
