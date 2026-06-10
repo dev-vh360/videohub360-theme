@@ -118,24 +118,26 @@ $lesson_count        = is_array( $lessons ) ? count( $lessons ) : 0;
                             <?php if ( 'yes' === $is_preview ) : ?>
                                 <span class="vh360-lesson-preview-badge"><?php esc_html_e( 'Free Preview', 'videohub360' ); ?></span>
                             <?php else :
-                                $badge_label = '';
+                                $lesson_plan = get_post_meta( $lesson->ID, '_vh360_membership_required', true );
                                 $course_mode = function_exists( 'videohub360_get_course_purchase_mode' ) ? videohub360_get_course_purchase_mode( $term_id ) : 'none';
-                                $plan        = function_exists( 'videohub360_get_effective_lesson_required_membership' )
-                                    ? videohub360_get_effective_lesson_required_membership( $lesson->ID )
-                                    : false;
+                                $course_plan = function_exists( 'videohub360_get_course_required_membership' )
+                                    ? videohub360_get_course_required_membership( $term_id )
+                                    : get_term_meta( $term_id, '_vh360_course_required_membership', true );
 
-                                if ( function_exists( 'vh360_user_has_course_entitlement' ) && is_user_logged_in() && vh360_user_has_course_entitlement( get_current_user_id(), $term_id ) ) {
+                                if ( ! empty( $lesson_plan ) ) {
+                                    $badge_label = __( 'Member Access', 'videohub360' );
+                                } elseif ( function_exists( 'vh360_user_has_course_entitlement' ) && is_user_logged_in() && vh360_user_has_course_entitlement( get_current_user_id(), $term_id ) ) {
                                     $badge_label = __( 'Enrolled', 'videohub360' );
                                 } elseif ( in_array( $course_mode, array( 'product', 'both' ), true ) ) {
                                     $badge_label = __( 'Paid Course', 'videohub360' );
-                                } elseif ( $plan ) {
+                                } elseif ( $course_plan ) {
                                     $badge_label = __( 'Member Access', 'videohub360' );
+                                } else {
+                                    $badge_label = __( 'Free Access', 'videohub360' );
                                 }
-
-                                if ( $badge_label ) : ?>
-                                    <span class="vh360-lesson-access-badge"><?php echo esc_html( $badge_label ); ?></span>
-                                <?php endif;
-                            endif; ?>
+                                ?>
+                                <span class="vh360-lesson-access-badge"><?php echo esc_html( $badge_label ); ?></span>
+                            <?php endif; ?>
                         </span>
                     </li>
                     <?php endforeach; ?>
