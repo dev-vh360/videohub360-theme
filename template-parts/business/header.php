@@ -37,9 +37,9 @@ $display_name = $business_name ? $business_name : $author->display_name;
 $current_user_id = get_current_user_id();
 $show_message_button = false;
 $show_follow_button = false;
-$is_owner = ($current_user_id === $author_id);
+$is_owner = $current_user_id && (int) $current_user_id === (int) $author_id;
 
-if (is_user_logged_in() && $current_user_id !== $author_id) {
+if (is_user_logged_in() && !$is_owner) {
     // Check message button availability
     if (function_exists('vh360_is_dm_enabled') && function_exists('vh360_can_send_message')) {
         if (vh360_is_dm_enabled() && vh360_can_send_message($current_user_id, $author_id)) {
@@ -78,15 +78,25 @@ if (is_user_logged_in() && $current_user_id !== $author_id) {
         </div>
 
         <div class="vh360-business-actions">
-            <a href="#vh360-business-booking-panel" class="vh360-business-book-cta">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                    <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-                <?php esc_html_e('Book Appointment', 'videohub360-theme'); ?>
-            </a>
+            <?php if ($is_owner) : ?>
+                <a href="<?php echo esc_url(add_query_arg('tab', 'availability', home_url('/dashboard/'))); ?>" class="vh360-business-book-cta">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <?php esc_html_e('Manage Availability', 'videohub360-theme'); ?>
+                </a>
+            <?php else : ?>
+                <a href="#vh360-business-booking-panel" class="vh360-business-book-cta">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    <?php esc_html_e('Book Appointment', 'videohub360-theme'); ?>
+                </a>
+            <?php endif; ?>
 
             <?php if ($show_message_button) : ?>
                 <a href="<?php echo esc_url(add_query_arg(array('tab' => 'messages', 'user' => $author_id), home_url('/dashboard/'))); ?>" class="vh360-business-message-btn">

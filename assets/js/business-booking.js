@@ -21,7 +21,6 @@
             }
             
             this.bindEvents();
-            this.initCollapsible();
             
             // Auto-load slots for today's date when the booking panel is present.
             const today = new Date().toISOString().split('T')[0];
@@ -30,57 +29,6 @@
             if ($datePicker.length) {
                 $datePicker.val(today);
                 this.loadSlots(today);
-            }
-        },
-        
-        /**
-         * Initialize collapsible booking section
-         */
-        initCollapsible: function() {
-            const $toggle = $('#vh360-booking-toggle');
-            const $content = $('#vh360-booking-content');
-            
-            if (!$toggle.length || !$content.length) {
-                return;
-            }
-
-            if ($toggle.length && $content.length) {
-                // Set initial state
-                $content.addClass('vh360-booking-collapsed').hide();
-                
-                // Toggle click handler
-                $toggle.on('click', function() {
-                    const isExpanded = $toggle.attr('aria-expanded') === 'true';
-                    
-                    if (isExpanded) {
-                        // Collapse
-                        $toggle.attr('aria-expanded', 'false');
-                        $content.slideUp(300, function() {
-                            $content.addClass('vh360-booking-collapsed').removeClass('vh360-booking-expanded');
-                        });
-                    } else {
-                        // Expand
-                        $toggle.attr('aria-expanded', 'true');
-                        $content.removeClass('vh360-booking-collapsed').addClass('vh360-booking-expanded').slideDown(300);
-                        
-                        // Load slots if not already loaded
-                        const $slotsContainer = $('#vh360-booking-slots-container');
-                        if ($slotsContainer.children().length === 0) {
-                            const selectedDate = $('#vh360-booking-date-picker').val();
-                            if (selectedDate) {
-                                VH360BusinessBooking.loadSlots(selectedDate);
-                            }
-                        }
-                    }
-                });
-                
-                // Keyboard accessibility
-                $toggle.on('keydown', function(e) {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        $(this).click();
-                    }
-                });
             }
         },
         
@@ -247,16 +195,15 @@
                         // Update button to show "Booked" state immediately
                         $btn.text(vh360BusinessBooking.i18n.booked || 'Booked').addClass('vh360-slot-booked');
                         
-                        // Remove the booked chip/card from UI after a moment
+                        // Remove the booked chip from UI after a moment
                         setTimeout(function() {
                             const $slotsContainer = $('#vh360-booking-slots-container');
-                            const $slotElement = $btn.closest('.vh360-booking-slot').length ? $btn.closest('.vh360-booking-slot') : $btn;
 
-                            $slotElement.fadeOut(function() {
+                            $btn.fadeOut(function() {
                                 $(this).remove();
 
                                 // Check if any slots remain
-                                if ($slotsContainer.find('.vh360-booking-time-chip, .vh360-booking-slot').length === 0) {
+                                if ($slotsContainer.find('.vh360-booking-time-chip').length === 0) {
                                     $slotsContainer.html('<p class="vh360-booking-no-slots">' + (vh360BusinessBooking.i18n.noSlots || 'No appointment slots available for this date.') + '</p>');
                                 }
                             });

@@ -20,7 +20,7 @@ if (!$author) {
 }
 
 $current_user_id = get_current_user_id();
-$is_owner = ($current_user_id === $author_id);
+$is_owner = $current_user_id && (int) $current_user_id === (int) $author_id;
 ?>
 
 <div class="vh360-business-booking-panel" id="vh360-business-booking-panel">
