@@ -1,6 +1,6 @@
 /**
  * Client Profile Styles
- * 
+ *
  * Styles for client author pages (minimal presentation)
  *
  * @package Videohub360_Theme
@@ -18,18 +18,30 @@
 
 /* Client Profile Header */
 .vh360-client-header {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    padding: 3rem 2.5rem 2.5rem;
-    border: 1px solid var(--vh360-border-color, #e5e7eb);
-    border-radius: 18px;
-    margin-bottom: 1.5rem;
-    overflow: hidden;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    margin-bottom: 2rem;
+    overflow: visible;
 }
 
-.vh360-client-header-content {
+.vh360-client-cover {
+    min-height: 150px;
+    border-radius: 24px;
+    background:
+        radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.14), transparent 34%),
+        radial-gradient(circle at 82% 18%, rgba(14, 165, 233, 0.1), transparent 28%),
+        linear-gradient(135deg, #eef4ff 0%, #f8fafc 100%);
+    border: 1px solid var(--vh360-border-color, #e5e7eb);
+}
+
+.vh360-client-profile-bar {
     display: flex;
-    align-items: flex-start;
-    gap: 1.75rem;
+    align-items: flex-end;
+    gap: 1.25rem;
+    padding: 0 2rem;
+    margin-top: -48px;
 }
 
 .vh360-client-avatar {
@@ -38,13 +50,14 @@
 
 .vh360-client-avatar img {
     border-radius: 50%;
-    border: 4px solid #ffffff;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border: 5px solid #ffffff;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.16);
 }
 
 .vh360-client-info {
     flex: 1;
     min-width: 0;
+    padding-bottom: 0.5rem;
 }
 
 .vh360-client-name {
@@ -57,14 +70,15 @@
 
 .vh360-client-type {
     color: #6b7280;
-    margin: 0 0 1rem 0;
+    margin: 0;
     font-size: 1rem;
     font-weight: 500;
 }
 
 /* Client Actions */
 .vh360-client-actions {
-    margin-top: 1rem;
+    margin-top: 0;
+    padding-bottom: 0.75rem;
     display: flex;
     gap: 0.75rem;
     flex-wrap: wrap;
@@ -81,11 +95,11 @@
     color: #ffffff;
     text-decoration: none;
     border: none;
-    border-radius: 0.5rem;
-    font-weight: 600;
+    border-radius: 999px;
+    font-weight: 700;
     font-size: 0.875rem;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
     cursor: pointer;
 }
 
@@ -93,14 +107,15 @@
 .vh360-client-actions .vh360-follow-btn:hover {
     background: var(--primary-hover, #1d4ed8);
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.24);
     color: #ffffff;
 }
 
 .vh360-client-actions .vh360-unfollow-btn {
-    background: #f3f4f6;
+    background: #ffffff;
     color: #4b5563;
-    border: 2px solid #e5e7eb;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
 }
 
 .vh360-client-actions .vh360-unfollow-btn:hover {
@@ -160,17 +175,24 @@
 }
 
 .vh360-client-info-section {
-    margin-bottom: 1.75rem;
-    padding: 1.75rem;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+
+.vh360-client-info-section,
+.vh360-client-bio,
+.vh360-activity-item {
+    padding: 1.25rem;
+    background: #ffffff;
+    border: 1px solid var(--vh360-border-color, #e5e7eb);
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
     transition: all 0.2s ease;
 }
 
-.vh360-client-info-section:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    border-color: #d1d5db;
+.vh360-client-info-section:hover,
+.vh360-activity-item:hover {
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+    border-color: #dbe3ef;
 }
 
 .vh360-client-info-section h3 {
@@ -183,10 +205,6 @@
 
 .vh360-client-bio {
     margin-top: 1.5rem;
-    padding: 1.5rem;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
     color: #4b5563;
     line-height: 1.6;
 }
@@ -200,19 +218,6 @@
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
-}
-
-.vh360-activity-item {
-    padding: 1.75rem;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-}
-
-.vh360-activity-item:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    border-color: #d1d5db;
 }
 
 .vh360-activity-meta {
@@ -276,41 +281,56 @@
 }
 
 /* Responsive Design */
-@media (max-width: 992px) {
-    .vh360-client-header {
-        padding: 2.5rem 2rem;
-    }
-    
-}
-
 @media (max-width: 768px) {
-    .vh360-client-header {
-        padding: 2rem 1.5rem;
+    .vh360-client-cover {
+        min-height: 130px;
+        border-radius: 20px;
     }
-    
-    .vh360-client-header-content {
+
+    .vh360-client-profile-bar {
         flex-direction: column;
         align-items: center;
+        gap: 1rem;
+        padding: 0 1rem;
+        margin-top: -44px;
         text-align: center;
     }
-    
+
+    .vh360-client-info {
+        padding-bottom: 0;
+    }
+
+    .vh360-client-actions {
+        justify-content: center;
+        padding-bottom: 0;
+    }
+
     .vh360-client-name {
         font-size: 1.5rem;
     }
-    
+
     .vh360-client-tabs {
         gap: 1.5rem;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
     }
-    
+
     .vh360-client-tabs li {
         flex-shrink: 0;
     }
-    
+}
+
+@media (max-width: 640px) {
+    .vh360-client-follow-btn,
+    .vh360-client-actions .vh360-follow-btn,
+    .vh360-client-actions .vh360-unfollow-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
     .vh360-activity-item,
     .vh360-client-info-section,
     .vh360-client-bio {
-        padding: 1.5rem;
+        padding: 1rem;
     }
 }
