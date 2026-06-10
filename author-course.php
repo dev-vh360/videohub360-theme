@@ -92,7 +92,16 @@ if ( $is_instructor ) {
 } else {
 
     $current_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'about'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-    $valid_tabs  = array( 'about', 'activity' );
+
+    // Determine whether the enrolled-courses tab is available.
+    $show_enrolled_tab = function_exists( 'videohub360_course_features_enabled' )
+        && videohub360_course_features_enabled()
+        && function_exists( 'vh360_get_user_enrolled_courses' );
+
+    $valid_tabs = array( 'about', 'activity' );
+    if ( $show_enrolled_tab ) {
+        $valid_tabs[] = 'enrolled';
+    }
     if ( ! in_array( $current_tab, $valid_tabs, true ) ) {
         $current_tab = 'about';
     }
@@ -106,11 +115,14 @@ if ( $is_instructor ) {
             <div class="container">
                 <div class="vh360-course-author-learner-nav">
                     <?php
-                    $author_url = get_author_posts_url( $author_id );
+                    $author_url   = get_author_posts_url( $author_id );
                     $learner_tabs = array(
                         'about'    => esc_html__( 'About', 'videohub360-theme' ),
                         'activity' => esc_html__( 'Activity', 'videohub360-theme' ),
                     );
+                    if ( $show_enrolled_tab ) {
+                        $learner_tabs['enrolled'] = esc_html__( 'Courses', 'videohub360-theme' );
+                    }
                     ?>
                     <ul class="vh360-course-author-learner-tabs" role="tablist">
                         <?php foreach ( $learner_tabs as $tab_key => $tab_label ) : ?>
@@ -131,6 +143,8 @@ if ( $is_instructor ) {
                         <?php get_template_part( 'template-parts/course-author/learner-about' ); ?>
                     <?php elseif ( 'activity' === $current_tab ) : ?>
                         <?php get_template_part( 'template-parts/course-author/learner-activity' ); ?>
+                    <?php elseif ( 'enrolled' === $current_tab && $show_enrolled_tab ) : ?>
+                        <?php get_template_part( 'template-parts/course-author/learner-enrolled' ); ?>
                     <?php endif; ?>
                 </div>
             </div>

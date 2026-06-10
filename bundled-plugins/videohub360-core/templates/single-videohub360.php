@@ -273,6 +273,28 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                     echo '<div class="vh360-membership-gate"><p>' . esc_html__('Please log in or purchase access to view this lesson.', 'videohub360') . '</p></div>';
                 }
             } else {
+                // User has access – record enrollment activity for logged-in learners.
+                if ( is_user_logged_in()
+                    && function_exists( 'videohub360_course_features_enabled' )
+                    && videohub360_course_features_enabled()
+                    && function_exists( 'vh360_update_course_enrollment_activity' )
+                    && function_exists( 'videohub360_get_lesson_course' )
+                ) {
+                    $vh360_activity_course = videohub360_get_lesson_course( get_the_ID() );
+                    if ( $vh360_activity_course ) {
+                        $vh360_activity_user = get_current_user_id();
+                        vh360_update_course_enrollment_activity(
+                            $vh360_activity_user,
+                            (int) $vh360_activity_course->term_id,
+                            get_the_ID()
+                        );
+                        if ( function_exists( 'vh360_mark_lesson_started' ) ) {
+                            vh360_mark_lesson_started( $vh360_activity_user, get_the_ID() );
+                        }
+                        unset( $vh360_activity_course, $vh360_activity_user );
+                    }
+                }
+
                 // User has access, render video
             ?>
             <?php if ($livestream_fields['is_live'] === 'yes' && $livestream_fields['stream_stopped'] !== 'yes'): ?>

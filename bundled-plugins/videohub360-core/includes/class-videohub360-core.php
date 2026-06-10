@@ -86,6 +86,8 @@ class VideoHub360_Core {
         require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-playlists.php';
         // Course / Lesson Foundation
         require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-course-foundation.php';
+        // Learner Enrollment Model
+        require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-course-enrollments.php';
         // Licensing / updates client
         require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-license.php';
         require_once VIDEOHUB360_INCLUDES_DIR . 'vh360-license-gate.php';
@@ -105,6 +107,7 @@ class VideoHub360_Core {
         $this->components['import_export'] = new VideoHub360_Import_Export();
         $this->components['license'] = new VideoHub360_License();
         $this->components['course_foundation'] = new VideoHub360_Course_Foundation();
+        $this->components['course_enrollments'] = VideoHub360_Course_Enrollments::get_instance();
     }
     
     /**
