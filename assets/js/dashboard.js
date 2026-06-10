@@ -742,12 +742,13 @@
                 // Get button clicked
                 var $submitBtn = $(document.activeElement);
                 var action = $submitBtn.val();
+                var createFormLabels = (window.vh360Dashboard && vh360Dashboard.createForm) || {};
                 
                 // Validate required fields
                 var title = $('#vh360_video_title').val().trim();
                 
                 if (!title) {
-                    self.showFormMessage('Please provide a video title.', 'error');
+                    self.showFormMessage(createFormLabels.titleRequired || 'Please provide a video title.', 'error');
                     $('#vh360_video_title').focus();
                     return false;
                 }
@@ -756,7 +757,24 @@
                 // Backend allows creating videos without video URL/embed code
 
                 // Disable submit buttons
-                $('#vh360-publish-btn, #vh360-draft-btn').prop('disabled', true).addClass('loading');
+                var $submitButtons = $('#vh360-publish-btn, #vh360-draft-btn');
+                $submitButtons.each(function() {
+                    var $button = $(this);
+                    if (!$button.data('original-html')) {
+                        $button.data('original-html', $button.html());
+                    }
+                });
+
+                $submitButtons.prop('disabled', true).addClass('loading');
+
+                if ($submitBtn.is('#vh360-publish-btn')) {
+                    var isEditMode = $('input[name="video_id"]').length > 0;
+                    var loadingLabel = isEditMode ? createFormLabels.updating : createFormLabels.publishing;
+
+                    if (loadingLabel) {
+                        $submitBtn.text(loadingLabel);
+                    }
+                }
                 
                 // Prepare form data
                 var formData = new FormData(this);
@@ -786,7 +804,8 @@
                                 self.activateTab('videos', true);
                                 
                                 // Show success notification
-                                self.showNotification(response.data.message + ' <a href="' + response.data.permalink + '" target="_blank">View Video</a>', 'success');
+                                var viewLabel = createFormLabels.viewItem || 'View Video';
+                                self.showNotification(response.data.message + ' <a href="' + response.data.permalink + '" target="_blank">' + viewLabel + '</a>', 'success');
                             }, 2000);
                         } else {
                             self.showFormMessage(response.data.message || 'An error occurred. Please try again.', 'error');
@@ -798,7 +817,14 @@
                     },
                     complete: function() {
                         // Re-enable submit buttons
-                        $('#vh360-publish-btn, #vh360-draft-btn').prop('disabled', false).removeClass('loading');
+                        $('#vh360-publish-btn, #vh360-draft-btn').each(function() {
+                            var $button = $(this);
+                            $button.prop('disabled', false).removeClass('loading');
+
+                            if ($button.data('original-html')) {
+                                $button.html($button.data('original-html'));
+                            }
+                        });
                     }
                 });
 
@@ -1042,8 +1068,10 @@
             
             var formData = new FormData();
             
+            var createFormLabels = (window.vh360Dashboard && vh360Dashboard.createForm) || {};
             formData.append('action', 'vh360_upload_video_file');
             formData.append('nonce', vh360Dashboard.videoUploadNonce);
+            formData.append('vh360_create_context', createFormLabels.isLessonContext ? 'lesson' : 'video');
             formData.append('vh360_video_file', file);
             
             // Show progress bar
@@ -1074,7 +1102,7 @@
                         // Auto-populate video URL field
                         $('#vh360_video_url').val(response.data.video_url);
                         
-                        self.showNotification(response.data.message || 'Video uploaded successfully!', 'success');
+                        self.showNotification(response.data.message || createFormLabels.uploadSuccess || 'Video uploaded successfully!', 'success');
                         
                         // Hide progress bar after a moment
                         setTimeout(function() {

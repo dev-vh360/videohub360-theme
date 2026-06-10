@@ -385,6 +385,10 @@ class VH360_Ajax_Handlers {
      * Upload video file
      */
     public function upload_video_file() {
+        $upload_context_is_lesson = function_exists('vh360_is_create_form_lesson_context')
+            ? vh360_is_create_form_lesson_context(get_current_user_id())
+            : (isset($_POST['vh360_create_context']) && sanitize_text_field(wp_unslash($_POST['vh360_create_context'])) === 'lesson');
+
         // Check if user is logged in
         if (!is_user_logged_in()) {
             wp_send_json_error(array(
@@ -403,7 +407,7 @@ class VH360_Ajax_Handlers {
         $settings = vh360_get_video_upload_settings();
         if (empty($settings['enable_video_upload'])) {
             wp_send_json_error(array(
-                'message' => esc_html__('Video upload is currently disabled.', 'videohub360-theme'),
+                'message' => $upload_context_is_lesson ? esc_html__('Lesson video upload is currently disabled.', 'videohub360-theme') : esc_html__('Video upload is currently disabled.', 'videohub360-theme'),
             ));
         }
         
@@ -455,7 +459,7 @@ class VH360_Ajax_Handlers {
         
         if (empty($filetype['type']) || strpos($filetype['type'], 'video/') !== 0) {
             wp_send_json_error(array(
-                'message' => __('Invalid file type. Only video files are allowed.', 'videohub360-theme'),
+                'message' => $upload_context_is_lesson ? esc_html__('Invalid file type. Only lesson video files are allowed.', 'videohub360-theme') : esc_html__('Invalid file type. Only video files are allowed.', 'videohub360-theme'),
             ));
         }
         
@@ -476,7 +480,7 @@ class VH360_Ajax_Handlers {
         $file_size_mb = round($file['size'] / 1024 / 1024, 2);
         
         wp_send_json_success(array(
-            'message' => esc_html__('Video uploaded successfully!', 'videohub360-theme'),
+            'message' => $upload_context_is_lesson ? esc_html__('Lesson video uploaded successfully!', 'videohub360-theme') : esc_html__('Video uploaded successfully!', 'videohub360-theme'),
             'attachment_id' => $attachment_id,
             'video_url' => $video_url,
             'file_name' => basename($file['name']),
@@ -825,8 +829,9 @@ class VH360_Ajax_Handlers {
     public function create_video_frontend() {
         // Check if user is logged in
         if (!is_user_logged_in()) {
+            $create_context_is_lesson = function_exists('vh360_is_create_form_lesson_context') && vh360_is_create_form_lesson_context();
             wp_send_json_error(array(
-                'message' => esc_html__('You must be logged in to create videos.', 'videohub360-theme'),
+                'message' => $create_context_is_lesson ? esc_html__('You must be logged in to create lessons.', 'videohub360-theme') : esc_html__('You must be logged in to create videos.', 'videohub360-theme'),
             ));
         }
         
@@ -837,6 +842,8 @@ class VH360_Ajax_Handlers {
             ));
         }
         
+        $create_context_is_lesson = function_exists('vh360_is_create_form_lesson_context') && vh360_is_create_form_lesson_context(get_current_user_id());
+
         // License soft-lock check
         $vh360_is_licensed = true;
         if (function_exists('vh360_theme_is_license_valid')) {
@@ -847,7 +854,7 @@ class VH360_Ajax_Handlers {
         
         if (!$vh360_is_licensed) {
             wp_send_json_error(array(
-                'message' => esc_html__('Your VideoHub360 license is inactive. Activate your license to create videos.', 'videohub360-theme'),
+                'message' => $create_context_is_lesson ? esc_html__('Your VideoHub360 license is inactive. Activate your license to create lessons.', 'videohub360-theme') : esc_html__('Your VideoHub360 license is inactive. Activate your license to create videos.', 'videohub360-theme'),
             ));
         }
         
@@ -858,7 +865,7 @@ class VH360_Ajax_Handlers {
             
         if (!$can_create_videos) {
             wp_send_json_error(array(
-                'message' => esc_html__('You do not have permission to create videos.', 'videohub360-theme'),
+                'message' => $create_context_is_lesson ? esc_html__('You do not have permission to create lessons.', 'videohub360-theme') : esc_html__('You do not have permission to create videos.', 'videohub360-theme'),
             ));
         }
         
@@ -871,7 +878,7 @@ class VH360_Ajax_Handlers {
             $existing_post = get_post($video_id);
             if (!$existing_post || $existing_post->post_type !== 'videohub360' || $existing_post->post_author != get_current_user_id()) {
                 wp_send_json_error(array(
-                    'message' => esc_html__('You do not have permission to edit this video.', 'videohub360-theme'),
+                    'message' => $create_context_is_lesson ? esc_html__('You do not have permission to edit this lesson.', 'videohub360-theme') : esc_html__('You do not have permission to edit this video.', 'videohub360-theme'),
                 ));
             }
         }
@@ -934,7 +941,7 @@ class VH360_Ajax_Handlers {
         // Validate required fields
         if (empty($title)) {
             wp_send_json_error(array(
-                'message' => esc_html__('Please provide a video title.', 'videohub360-theme'),
+                'message' => $create_context_is_lesson ? esc_html__('Please provide a lesson title.', 'videohub360-theme') : esc_html__('Please provide a video title.', 'videohub360-theme'),
             ));
         }
         
@@ -971,44 +978,60 @@ class VH360_Ajax_Handlers {
         // Save meta fields
         update_post_meta($post_id, 'video_url', $video_url);
         update_post_meta($post_id, 'videohub360_custom_html', $custom_html);
-        update_post_meta($post_id, 'ad_video_url', $ad_video_url);
-        update_post_meta($post_id, 'midroll_ad_video_url', $midroll_ad_video_url);
-        update_post_meta($post_id, 'midroll_ad_timing', $midroll_ad_timing);
-        update_post_meta($post_id, 'postroll_ad_video_url', $postroll_ad_video_url);
-        update_post_meta($post_id, '_vh360_video_quality', $video_quality);
-        update_post_meta($post_id, '_vh360_video_mirror', $video_mirror);
-        update_post_meta($post_id, '_vh360_override_quality_settings', $override_quality);
-        update_post_meta($post_id, '_videohub360_post_views_count', 0);
-        
-        if (!empty($poster_url)) {
-            update_post_meta($post_id, '_vh360_poster_url', $poster_url);
+
+        $ad_settings_submitted = isset($_POST['vh360_ad_video_url']) || isset($_POST['vh360_midroll_ad_video_url']) || isset($_POST['vh360_midroll_ad_timing']) || isset($_POST['vh360_postroll_ad_video_url']);
+        if (!$edit_mode || $ad_settings_submitted) {
+            update_post_meta($post_id, 'ad_video_url', $ad_video_url);
+            update_post_meta($post_id, 'midroll_ad_video_url', $midroll_ad_video_url);
+            update_post_meta($post_id, 'midroll_ad_timing', $midroll_ad_timing);
+            update_post_meta($post_id, 'postroll_ad_video_url', $postroll_ad_video_url);
         }
-        
-        // Save livestream meta fields
-        update_post_meta($post_id, '_vh360_is_live', $is_live);
-        update_post_meta($post_id, '_vh360_type', $stream_type);
-        update_post_meta($post_id, '_vh360_live_start_time', $live_start_time);
-        update_post_meta($post_id, '_vh360_offline_message', $offline_message);
-        update_post_meta($post_id, '_vh360_viewer_count', $viewer_count);
-        update_post_meta($post_id, '_vh360_chat_enabled', $chat_enabled);
-        update_post_meta($post_id, '_vh360_chat_placement', $chat_placement);
-        update_post_meta($post_id, '_vh360_live_badge', $live_badge);
-        update_post_meta($post_id, '_vh360_badge_text', $badge_text);
-        update_post_meta($post_id, '_vh360_badge_color', $badge_color);
-        update_post_meta($post_id, '_vh360_embed_code', $embed_code);
-        update_post_meta($post_id, '_vh360_stream_url', $stream_url);
-        update_post_meta($post_id, '_vh360_api_url', $api_url);
-        update_post_meta($post_id, '_vh360_agora_mode', $agora_mode);
-        update_post_meta($post_id, '_vh360_agora_channel_name', $agora_channel_name);
-        update_post_meta($post_id, '_vh360_agora_everyone_is_host', $agora_everyone_is_host);
-        // Hash passcode before storing; clear if requirement is disabled; keep existing if blank.
-        if ($require_passcode !== 'yes') {
-            update_post_meta($post_id, '_vh360_host_passcode', '');
-        } elseif ($new_passcode !== '') {
-            update_post_meta($post_id, '_vh360_host_passcode', wp_hash_password($new_passcode));
+
+        $advanced_settings_submitted = isset($_POST['vh360_override_quality']) || isset($_POST['vh360_video_quality']) || isset($_POST['vh360_video_mirror']) || isset($_POST['vh360_poster_url']);
+        if (!$edit_mode || $advanced_settings_submitted) {
+            update_post_meta($post_id, '_vh360_video_quality', $video_quality);
+            update_post_meta($post_id, '_vh360_video_mirror', $video_mirror);
+            update_post_meta($post_id, '_vh360_override_quality_settings', $override_quality);
+
+            if (!empty($poster_url)) {
+                update_post_meta($post_id, '_vh360_poster_url', $poster_url);
+            } elseif (isset($_POST['vh360_poster_url'])) {
+                delete_post_meta($post_id, '_vh360_poster_url');
+            }
         }
-        // If require_passcode is yes and the field is blank, keep the existing passcode.
-        update_post_meta($post_id, '_vh360_stream_stopped', 'no');
+
+        if (!$edit_mode) {
+            update_post_meta($post_id, '_videohub360_post_views_count', 0);
+        }
+
+        $livestream_settings_submitted = isset($_POST['vh360_is_live']) || isset($_POST['vh360_type']) || isset($_POST['vh360_live_start_time']) || isset($_POST['vh360_offline_message']) || isset($_POST['vh360_embed_code']) || isset($_POST['vh360_stream_url']) || isset($_POST['vh360_api_url']) || isset($_POST['vh360_agora_mode']) || isset($_POST['vh360_agora_channel_name']);
+        if (!$edit_mode || $livestream_settings_submitted) {
+            // Save livestream meta fields
+            update_post_meta($post_id, '_vh360_is_live', $is_live);
+            update_post_meta($post_id, '_vh360_type', $stream_type);
+            update_post_meta($post_id, '_vh360_live_start_time', $live_start_time);
+            update_post_meta($post_id, '_vh360_offline_message', $offline_message);
+            update_post_meta($post_id, '_vh360_viewer_count', $viewer_count);
+            update_post_meta($post_id, '_vh360_chat_enabled', $chat_enabled);
+            update_post_meta($post_id, '_vh360_chat_placement', $chat_placement);
+            update_post_meta($post_id, '_vh360_live_badge', $live_badge);
+            update_post_meta($post_id, '_vh360_badge_text', $badge_text);
+            update_post_meta($post_id, '_vh360_badge_color', $badge_color);
+            update_post_meta($post_id, '_vh360_embed_code', $embed_code);
+            update_post_meta($post_id, '_vh360_stream_url', $stream_url);
+            update_post_meta($post_id, '_vh360_api_url', $api_url);
+            update_post_meta($post_id, '_vh360_agora_mode', $agora_mode);
+            update_post_meta($post_id, '_vh360_agora_channel_name', $agora_channel_name);
+            update_post_meta($post_id, '_vh360_agora_everyone_is_host', $agora_everyone_is_host);
+            // Hash passcode before storing; clear if requirement is disabled; keep existing if blank.
+            if ($require_passcode !== 'yes') {
+                update_post_meta($post_id, '_vh360_host_passcode', '');
+            } elseif ($new_passcode !== '') {
+                update_post_meta($post_id, '_vh360_host_passcode', wp_hash_password($new_passcode));
+            }
+            // If require_passcode is yes and the field is blank, keep the existing passcode.
+            update_post_meta($post_id, '_vh360_stream_stopped', 'no');
+        }
         
         // Ensure context is always 'default' for frontend created videos (not live_room)
         update_post_meta($post_id, '_vh360_context', 'default');
@@ -1109,13 +1132,23 @@ class VH360_Ajax_Handlers {
             }
         }
         
-        $status_message = $edit_mode 
-            ? ($post_status === 'publish' 
-                ? esc_html__('Video updated successfully!', 'videohub360-theme')
-                : esc_html__('Video saved as draft successfully!', 'videohub360-theme'))
-            : ($post_status === 'publish' 
-                ? esc_html__('Video published successfully!', 'videohub360-theme')
-                : esc_html__('Video saved as draft successfully!', 'videohub360-theme'));
+        if ($create_context_is_lesson) {
+            $status_message = $edit_mode
+                ? ($post_status === 'publish'
+                    ? esc_html__('Lesson updated successfully!', 'videohub360-theme')
+                    : esc_html__('Lesson saved as draft successfully!', 'videohub360-theme'))
+                : ($post_status === 'publish'
+                    ? esc_html__('Lesson published successfully!', 'videohub360-theme')
+                    : esc_html__('Lesson saved as draft successfully!', 'videohub360-theme'));
+        } else {
+            $status_message = $edit_mode
+                ? ($post_status === 'publish'
+                    ? esc_html__('Video updated successfully!', 'videohub360-theme')
+                    : esc_html__('Video saved as draft successfully!', 'videohub360-theme'))
+                : ($post_status === 'publish'
+                    ? esc_html__('Video published successfully!', 'videohub360-theme')
+                    : esc_html__('Video saved as draft successfully!', 'videohub360-theme'));
+        }
         
         wp_send_json_success(array(
             'message' => $status_message,

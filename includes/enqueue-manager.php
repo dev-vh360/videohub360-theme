@@ -304,6 +304,8 @@ function vh360_enqueue_dashboard_assets() {
             true
         );
         
+        $vh360_create_context_is_lesson = function_exists('vh360_is_create_form_lesson_context') && vh360_is_create_form_lesson_context(get_current_user_id());
+
         // Localize script with AJAX data
         wp_localize_script('vh360-dashboard-script', 'vh360Dashboard', array(
             'ajaxurl' => admin_url('admin-ajax.php'),
@@ -315,6 +317,14 @@ function vh360_enqueue_dashboard_assets() {
                 'loading' => esc_html__('Loading...', 'videohub360-theme'),
                 'error' => esc_html__('An error occurred. Please try again.', 'videohub360-theme'),
                 'success' => esc_html__('Success!', 'videohub360-theme'),
+            ),
+            'createForm' => array(
+                'isLessonContext' => $vh360_create_context_is_lesson,
+                'titleRequired' => $vh360_create_context_is_lesson ? esc_html__('Please provide a lesson title.', 'videohub360-theme') : esc_html__('Please provide a video title.', 'videohub360-theme'),
+                'viewItem' => $vh360_create_context_is_lesson ? esc_html__('View Lesson', 'videohub360-theme') : esc_html__('View Video', 'videohub360-theme'),
+                'publishing' => $vh360_create_context_is_lesson ? esc_html__('Publishing Lesson...', 'videohub360-theme') : esc_html__('Publishing Video...', 'videohub360-theme'),
+                'updating' => $vh360_create_context_is_lesson ? esc_html__('Updating Lesson...', 'videohub360-theme') : esc_html__('Updating Video...', 'videohub360-theme'),
+                'uploadSuccess' => $vh360_create_context_is_lesson ? esc_html__('Lesson video uploaded successfully!', 'videohub360-theme') : esc_html__('Video uploaded successfully!', 'videohub360-theme'),
             ),
         ));
         

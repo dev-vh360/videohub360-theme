@@ -1,9 +1,9 @@
 <?php
 /**
- * Video Upload Settings Page
+ * Create Form Settings Page
  *
- * Admin settings page for controlling video file uploads in the frontend dashboard.
- * Located at VH360 Theme → Video Upload.
+ * Admin settings page for controlling frontend create form sections and video uploads.
+ * Located at VH360 Theme → Create Video / Lesson.
  *
  * @package Videohub360_Theme
  * @since 1.0.0
@@ -14,13 +14,13 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Add Video Upload Settings submenu under VH360 Theme
+ * Add Create Form Settings submenu under VH360 Theme
  */
 function vh360_video_upload_add_admin_menu() {
     add_submenu_page(
         'vh360-theme',
-        __('Video Upload Settings', 'videohub360-theme'),
-        __('Video Upload', 'videohub360-theme'),
+        __('Create Video / Lesson Settings', 'videohub360-theme'),
+        __('Create Form', 'videohub360-theme'),
         'manage_options',
         'vh360-video-upload-settings',
         'vh360_video_upload_settings_page'
@@ -40,9 +40,56 @@ function vh360_video_upload_settings_init() {
         )
     );
 
+    register_setting(
+        'vh360_video_upload',
+        'vh360_create_form_options',
+        array(
+            'sanitize_callback' => 'vh360_create_form_sanitize_options',
+        )
+    );
+
+    add_settings_section(
+        'vh360_create_form_sections',
+        __('Create Form Sections', 'videohub360-theme'),
+        'vh360_create_form_sections_callback',
+        'vh360_video_upload'
+    );
+
+    add_settings_field(
+        'show_livestream_settings',
+        __('Show Livestream Settings', 'videohub360-theme'),
+        'vh360_create_form_show_livestream_render',
+        'vh360_video_upload',
+        'vh360_create_form_sections'
+    );
+
+    add_settings_field(
+        'show_ad_settings',
+        __('Show Ad Settings', 'videohub360-theme'),
+        'vh360_create_form_show_ads_render',
+        'vh360_video_upload',
+        'vh360_create_form_sections'
+    );
+
+    add_settings_field(
+        'show_advanced_settings',
+        __('Show Advanced Settings', 'videohub360-theme'),
+        'vh360_create_form_show_advanced_render',
+        'vh360_video_upload',
+        'vh360_create_form_sections'
+    );
+
+    add_settings_field(
+        'hide_livestream_in_course_mode',
+        __('Automatically Hide Livestream Settings in Course Mode', 'videohub360-theme'),
+        'vh360_create_form_hide_livestream_course_render',
+        'vh360_video_upload',
+        'vh360_create_form_sections'
+    );
+
     add_settings_section(
         'vh360_video_upload_section',
-        __('Video Upload Configuration', 'videohub360-theme'),
+        __('Video Upload Settings', 'videohub360-theme'),
         'vh360_video_upload_section_callback',
         'vh360_video_upload'
     );
@@ -72,6 +119,68 @@ function vh360_video_upload_settings_init() {
     );
 }
 add_action('admin_init', 'vh360_video_upload_settings_init');
+
+
+/**
+ * Sanitize create form section settings
+ */
+function vh360_create_form_sanitize_options($input) {
+    return array(
+        'show_livestream_settings' => !empty($input['show_livestream_settings']) ? 1 : 0,
+        'show_ad_settings' => !empty($input['show_ad_settings']) ? 1 : 0,
+        'show_advanced_settings' => !empty($input['show_advanced_settings']) ? 1 : 0,
+        'hide_livestream_in_course_mode' => !empty($input['hide_livestream_in_course_mode']) ? 1 : 0,
+    );
+}
+
+/**
+ * Create form sections callback
+ */
+function vh360_create_form_sections_callback() {
+    ?>
+    <p><?php esc_html_e('Control which optional sections appear in the frontend Create Video / Lesson form.', 'videohub360-theme'); ?></p>
+    <?php
+}
+
+function vh360_create_form_show_livestream_render() {
+    $options = vh360_get_create_form_options();
+    ?>
+    <label>
+        <input type="checkbox" name="vh360_create_form_options[show_livestream_settings]" value="1" <?php checked($options['show_livestream_settings'], 1); ?>>
+        <?php esc_html_e('Display the Livestream Settings section in the frontend Create form.', 'videohub360-theme'); ?>
+    </label>
+    <?php
+}
+
+function vh360_create_form_show_ads_render() {
+    $options = vh360_get_create_form_options();
+    ?>
+    <label>
+        <input type="checkbox" name="vh360_create_form_options[show_ad_settings]" value="1" <?php checked($options['show_ad_settings'], 1); ?>>
+        <?php esc_html_e('Display the Ad Settings section in the frontend Create form.', 'videohub360-theme'); ?>
+    </label>
+    <?php
+}
+
+function vh360_create_form_show_advanced_render() {
+    $options = vh360_get_create_form_options();
+    ?>
+    <label>
+        <input type="checkbox" name="vh360_create_form_options[show_advanced_settings]" value="1" <?php checked($options['show_advanced_settings'], 1); ?>>
+        <?php esc_html_e('Display the Advanced Settings section in the frontend Create form.', 'videohub360-theme'); ?>
+    </label>
+    <?php
+}
+
+function vh360_create_form_hide_livestream_course_render() {
+    $options = vh360_get_create_form_options();
+    ?>
+    <label>
+        <input type="checkbox" name="vh360_create_form_options[hide_livestream_in_course_mode]" value="1" <?php checked($options['hide_livestream_in_course_mode'], 1); ?>>
+        <?php esc_html_e('When Course Mode is active, hide Livestream Settings from the frontend Create form so instructors see a cleaner lesson creation workflow.', 'videohub360-theme'); ?>
+    </label>
+    <?php
+}
 
 /**
  * Sanitize settings
@@ -129,7 +238,7 @@ function vh360_video_upload_sanitize_options($input) {
  */
 function vh360_video_upload_section_callback() {
     ?>
-    <p><?php esc_html_e('Configure video file upload settings for the frontend "Create Video" form. This controls MAIN video uploads (videohub360 post type), not Activity Feed videos.', 'videohub360-theme'); ?></p>
+    <p><?php esc_html_e('Configure video file upload settings for the frontend "Create Video / Lesson" form. This controls MAIN video uploads (videohub360 post type), not Activity Feed videos.', 'videohub360-theme'); ?></p>
     <div class="notice notice-info inline">
         <p>
             <strong><?php esc_html_e('Server Information:', 'videohub360-theme'); ?></strong><br>
@@ -161,10 +270,10 @@ function vh360_video_upload_enable_render() {
     ?>
     <label>
         <input type="checkbox" name="vh360_video_upload_options[enable_video_upload]" value="1" <?php checked($enabled, 1); ?>>
-        <?php esc_html_e('Allow users to upload video files directly from the Create Video form', 'videohub360-theme'); ?>
+        <?php esc_html_e('Allow users to upload video files directly from the Create Video / Lesson form', 'videohub360-theme'); ?>
     </label>
     <p class="description">
-        <?php esc_html_e('When enabled, users will see an "Upload Video File" option in the Video Source section.', 'videohub360-theme'); ?>
+        <?php esc_html_e('When enabled, users will see an upload option in the Video Source / Lesson Video section.', 'videohub360-theme'); ?>
     </p>
     <?php
 }
