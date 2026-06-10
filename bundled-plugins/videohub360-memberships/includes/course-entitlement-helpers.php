@@ -236,22 +236,41 @@ if (!function_exists('vh360_revoke_course_entitlements_for_order')) {
 
 if (!function_exists('vh360_get_course_purchase_url')) {
     function vh360_get_course_purchase_url($course_term_id) {
+        $course_term_id = absint($course_term_id);
         $product_id = vh360_get_course_product_id($course_term_id);
 
-        if (!$product_id) {
-            return '';
-        }
-
-        if (!function_exists('wc_get_product')) {
+        if (!$product_id || !function_exists('wc_get_product')) {
             return '';
         }
 
         $product = wc_get_product($product_id);
-        if (!$product) {
+        if (!$product || get_post_status($product_id) !== 'publish') {
             return '';
         }
 
-        return $product->add_to_cart_url() ? $product->add_to_cart_url() : get_permalink($product_id);
+        $options = get_option('vh360_membership_options', array());
+        $destination = isset($options['course_purchase_destination']) ? sanitize_key($options['course_purchase_destination']) : 'product_page';
+        if (!in_array($destination, array('product_page', 'add_to_cart'), true)) {
+            $destination = 'product_page';
+        }
+
+        $destination = apply_filters('vh360_course_purchase_destination', $destination, $course_term_id, $product_id, $product);
+        $destination = in_array($destination, array('product_page', 'add_to_cart'), true) ? $destination : 'product_page';
+
+        if ('add_to_cart' === $destination) {
+            $url = $product->add_to_cart_url();
+            if (empty($url)) {
+                $url = get_permalink($product_id);
+            }
+        } else {
+            $url = get_permalink($product_id);
+        }
+
+        if (is_wp_error($url) || empty($url)) {
+            $url = '';
+        }
+
+        return apply_filters('vh360_course_purchase_url', $url, $course_term_id, $product_id, $product, $destination);
     }
 }
 

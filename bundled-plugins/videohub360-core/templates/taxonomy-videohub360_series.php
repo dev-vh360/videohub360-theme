@@ -56,16 +56,25 @@ $user_has_access  = function_exists( 'vh360_user_can_access_course' )
     : ( 'none' === $purchase_mode && empty( $required_plan ) );
 $purchase_url     = function_exists( 'vh360_get_course_purchase_url' ) ? vh360_get_course_purchase_url( $term_id ) : '';
 $explicit_cta_url = $cta_url;
+$course_purchase_unavailable = false;
 
 if ( $user_has_access ) {
     $cta_text = empty( $cta_text ) ? ( 'none' === $purchase_mode ? __( 'Start Learning', 'videohub360' ) : __( 'Continue Learning', 'videohub360' ) ) : $cta_text;
     $cta_url  = $first_lesson_url;
-} elseif ( in_array( $purchase_mode, array( 'product', 'both' ), true ) && $product_id && ! empty( $purchase_url ) ) {
-    $cta_text = empty( $cta_text ) ? __( 'Buy Course', 'videohub360' ) : $cta_text;
+} elseif ( in_array( $purchase_mode, array( 'product', 'both' ), true ) && ! empty( $purchase_url ) ) {
+    $cta_text = __( 'Buy Course', 'videohub360' );
     $cta_url  = $purchase_url;
+} elseif ( 'product' === $purchase_mode ) {
+    $cta_text = __( 'Buy Course', 'videohub360' );
+    $cta_url  = '';
+    $course_purchase_unavailable = true;
 } elseif ( 'membership' === $purchase_mode || ( 'both' === $purchase_mode && ! empty( $required_plan ) ) ) {
     $cta_text = empty( $cta_text ) ? __( 'Join to Access', 'videohub360' ) : $cta_text;
     $cta_url  = empty( $explicit_cta_url ) ? $first_lesson_url : $explicit_cta_url;
+} elseif ( 'both' === $purchase_mode ) {
+    $cta_text = __( 'Buy Course', 'videohub360' );
+    $cta_url  = '';
+    $course_purchase_unavailable = true;
 } else {
     $cta_text = empty( $cta_text ) ? __( 'Start Learning', 'videohub360' ) : $cta_text;
     $cta_url  = empty( $explicit_cta_url ) ? $first_lesson_url : $explicit_cta_url;
@@ -107,6 +116,22 @@ get_header();
         // Related courses.
         include VIDEOHUB360_PLUGIN_DIR . 'templates/course/course-related.php';
         ?>
+
+        <?php if ( ! empty( $course_purchase_unavailable ) ) : ?>
+        <section class="vh360-course-cta-section vh360-course-purchase-unavailable">
+            <div class="vh360-course-cta-inner">
+                <p class="vh360-course-cta-prompt">
+                    <?php
+                    if ( current_user_can( 'manage_options' ) ) {
+                        esc_html_e( 'Course purchase product is not configured correctly. Check the linked WooCommerce product ID, product status, and WooCommerce activation.', 'videohub360' );
+                    } else {
+                        esc_html_e( 'Course purchase is not available yet.', 'videohub360' );
+                    }
+                    ?>
+                </p>
+            </div>
+        </section>
+        <?php endif; ?>
 
         <?php
         // CTA section.
