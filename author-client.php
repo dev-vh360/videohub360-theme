@@ -2,6 +2,9 @@
 /**
  * Author Client Template
  *
+ * Business/client profile template. In Course Mode, client accounts are
+ * routed to author-course.php and rendered through the learner profile layout.
+ *
  * Displays author pages in Client mode for client account types.
  * Shows minimal client profile with about and activity information.
  * 
