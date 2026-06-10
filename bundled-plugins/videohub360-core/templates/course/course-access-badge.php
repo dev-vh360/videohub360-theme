@@ -29,10 +29,11 @@ $resolve_course_badge = static function( $course_term_id ) use ( &$badge_class )
             $badge_class .= ' vh360-badge-owned';
             return __( 'Enrolled', 'videohub360' );
         }
-        // Legacy fallback: entitlement without enrollment row (e.g. pre-enrollment-model data).
+        // Legacy fallback: entitlement exists but no enrollment row yet (pre-enrollment-model data).
+        // Show "Access Owned" rather than "Enrolled" – run the backfill tool to create the row.
         if ( function_exists( 'vh360_user_has_course_entitlement' ) && vh360_user_has_course_entitlement( $uid, $course_term_id ) ) {
             $badge_class .= ' vh360-badge-owned';
-            return __( 'Enrolled', 'videohub360' );
+            return __( 'Access Owned', 'videohub360' );
         }
     }
 

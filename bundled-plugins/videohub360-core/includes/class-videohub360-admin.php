@@ -91,6 +91,18 @@ class VideoHub360_Admin {
             'videohub360-import-export',
             array($this, 'import_export_page')
         );
+
+        // Enrollment Backfill tool (admin-only).
+        if ( function_exists( 'videohub360_course_features_enabled' ) && videohub360_course_features_enabled() ) {
+            add_submenu_page(
+                'edit.php?post_type=videohub360',
+                'Enrollment Backfill',
+                'Enrollment Backfill',
+                'manage_options',
+                'videohub360-enrollment-backfill',
+                array( $this, 'enrollment_backfill_page' )
+            );
+        }
         
         // Reorder submenu to make Dashboard first (after default WordPress items)
         // Priority 999 ensures this runs after all menu items are added
@@ -3786,6 +3798,85 @@ class VideoHub360_Admin {
             . esc_html__( 'Activate License', 'videohub360' )
             . '</a>'
             . '</p></div>';
+    }
+
+    /**
+     * Enrollment Backfill admin page.
+     *
+     * Allows admins to scan active course entitlements and create missing
+     * enrollment rows in batches.
+     */
+    public function enrollment_backfill_page() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( esc_html__( 'You do not have permission to access this page.', 'videohub360' ) );
+        }
+        $nonce = wp_create_nonce( 'vh360_enrollment_backfill' );
+        ?>
+        <div class="wrap">
+            <h1><?php esc_html_e( 'Enrollment Backfill', 'videohub360' ); ?></h1>
+            <p><?php esc_html_e( 'Scan active course entitlements and create missing enrollment rows. Process runs in batches of 50 to avoid timeouts.', 'videohub360' ); ?></p>
+
+            <div id="vh360-backfill-status" style="margin: 1rem 0; padding: 0.75rem 1rem; background: #f0f0f1; border-left: 4px solid #2271b1; display: none;"></div>
+
+            <p>
+                <button id="vh360-backfill-start" class="button button-primary">
+                    <?php esc_html_e( 'Start Backfill', 'videohub360' ); ?>
+                </button>
+            </p>
+
+            <script>
+            (function() {
+                var btn    = document.getElementById('vh360-backfill-start');
+                var status = document.getElementById('vh360-backfill-status');
+                var nonce  = <?php echo wp_json_encode( $nonce ); ?>;
+                var ajaxUrl = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>;
+
+                var totals = { created: 0, skipped: 0 };
+
+                function setStatus(msg) {
+                    status.style.display = 'block';
+                    status.textContent = msg;
+                }
+
+                function runBatch(offset) {
+                    setStatus('Processing… (offset ' + offset + ')');
+                    var data = new FormData();
+                    data.append('action', 'vh360_enrollment_backfill');
+                    data.append('nonce', nonce);
+                    data.append('batch_offset', offset);
+
+                    fetch(ajaxUrl, { method: 'POST', body: data, credentials: 'same-origin' })
+                        .then(function(r) { return r.json(); })
+                        .then(function(res) {
+                            if (!res.success) {
+                                setStatus('Error: ' + (res.data && res.data.message ? res.data.message : 'Unknown error'));
+                                btn.disabled = false;
+                                return;
+                            }
+                            totals.created += res.data.created;
+                            totals.skipped += res.data.skipped;
+                            if (res.data.next_offset !== null) {
+                                runBatch(res.data.next_offset);
+                            } else {
+                                setStatus('Done. Created: ' + totals.created + ', Skipped: ' + totals.skipped + '.');
+                                btn.disabled = false;
+                            }
+                        })
+                        .catch(function(err) {
+                            setStatus('Request failed: ' + err);
+                            btn.disabled = false;
+                        });
+                }
+
+                btn.addEventListener('click', function() {
+                    btn.disabled = true;
+                    totals = { created: 0, skipped: 0 };
+                    runBatch(0);
+                });
+            }());
+            </script>
+        </div>
+        <?php
     }
 
 

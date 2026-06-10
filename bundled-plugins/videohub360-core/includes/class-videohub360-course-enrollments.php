@@ -76,6 +76,15 @@ class VideoHub360_Course_Enrollments {
 
         // Update enrollment status when entitlements are revoked.
         add_action( 'vh360_course_entitlements_revoked_for_order', array( $this, 'handle_entitlements_revoked' ), 10, 2 );
+
+        // Learner-facing lesson-completion form submission.
+        add_action( 'template_redirect', array( $this, 'handle_lesson_complete_form' ) );
+
+        // AJAX: Mark lesson complete (logged-in users only).
+        add_action( 'wp_ajax_vh360_mark_lesson_complete', array( $this, 'ajax_mark_lesson_complete' ) );
+
+        // Admin-only: enrollment backfill AJAX.
+        add_action( 'wp_ajax_vh360_enrollment_backfill', array( $this, 'ajax_enrollment_backfill' ) );
     }
 
     /* ------------------------------------------------------------------ */
@@ -252,6 +261,197 @@ class VideoHub360_Course_Enrollments {
                 array( '%d', '%d', '%s', '%s' )
             );
         }
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  Learner lesson-completion (form + AJAX)                              */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * Handle the "Mark Lesson Complete" form POST on a lesson page.
+     *
+     * Validates the nonce, verifies the user has full course access, then calls
+     * vh360_mark_lesson_complete() and redirects back to the same page.
+     */
+    public function handle_lesson_complete_form() {
+        if (
+            ! is_user_logged_in()
+            || empty( $_POST['vh360_mark_lesson_complete'] )
+            || empty( $_POST['vh360_lesson_complete_nonce'] )
+            || empty( $_POST['vh360_lesson_id'] )
+        ) {
+            return;
+        }
+
+        $lesson_id = absint( $_POST['vh360_lesson_id'] );
+
+        if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['vh360_lesson_complete_nonce'] ) ), 'vh360_lesson_complete_' . $lesson_id ) ) {
+            wp_die( esc_html__( 'Security check failed.', 'videohub360' ), 403 );
+        }
+
+        $user_id = get_current_user_id();
+
+        $course = function_exists( 'videohub360_get_lesson_course' ) ? videohub360_get_lesson_course( $lesson_id ) : false;
+        if ( ! $course ) {
+            wp_safe_redirect( get_permalink( $lesson_id ) ?: home_url() );
+            exit;
+        }
+
+        $course_term_id = (int) $course->term_id;
+
+        if (
+            ! function_exists( 'vh360_user_can_access_course' ) ||
+            ! vh360_user_can_access_course( $user_id, $course_term_id )
+        ) {
+            wp_safe_redirect( get_permalink( $lesson_id ) ?: home_url() );
+            exit;
+        }
+
+        if ( function_exists( 'vh360_mark_lesson_complete' ) ) {
+            vh360_mark_lesson_complete( $user_id, $lesson_id );
+        }
+
+        wp_safe_redirect( get_permalink( $lesson_id ) ?: home_url() );
+        exit;
+    }
+
+    /**
+     * AJAX handler: mark a lesson complete.
+     *
+     * Expected POST fields: lesson_id (int), nonce (string).
+     * Returns JSON { success: bool, data: { progress_percent: float } }.
+     */
+    public function ajax_mark_lesson_complete() {
+        if ( ! is_user_logged_in() ) {
+            wp_send_json_error( array( 'message' => __( 'Not logged in.', 'videohub360' ) ), 403 );
+        }
+
+        $lesson_id = absint( isset( $_POST['lesson_id'] ) ? $_POST['lesson_id'] : 0 );
+        $nonce     = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
+
+        if ( ! $lesson_id || ! wp_verify_nonce( $nonce, 'vh360_lesson_complete_' . $lesson_id ) ) {
+            wp_send_json_error( array( 'message' => __( 'Invalid request.', 'videohub360' ) ), 400 );
+        }
+
+        $user_id = get_current_user_id();
+        $course  = function_exists( 'videohub360_get_lesson_course' ) ? videohub360_get_lesson_course( $lesson_id ) : false;
+
+        if ( ! $course ) {
+            wp_send_json_error( array( 'message' => __( 'Lesson not assigned to a course.', 'videohub360' ) ), 400 );
+        }
+
+        $course_term_id = (int) $course->term_id;
+
+        if (
+            ! function_exists( 'vh360_user_can_access_course' ) ||
+            ! vh360_user_can_access_course( $user_id, $course_term_id )
+        ) {
+            wp_send_json_error( array( 'message' => __( 'Access denied.', 'videohub360' ) ), 403 );
+        }
+
+        if ( function_exists( 'vh360_mark_lesson_complete' ) ) {
+            vh360_mark_lesson_complete( $user_id, $lesson_id );
+        }
+
+        $progress = function_exists( 'vh360_get_course_progress' )
+            ? vh360_get_course_progress( $user_id, $course_term_id )
+            : 0.0;
+
+        wp_send_json_success( array( 'progress_percent' => $progress ) );
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  Enrollment backfill (admin AJAX)                                     */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * AJAX handler: backfill enrollment rows for all active entitlements.
+     *
+     * Admin-only. Processes entitlements in batches of 50 per request to
+     * avoid PHP timeouts on large sites. Skips users that already have an
+     * enrollment row.
+     *
+     * POST fields: nonce (string), batch_offset (int, default 0).
+     * Returns JSON {
+     *     success: bool,
+     *     data: { created: int, skipped: int, next_offset: int|null }
+     * }.
+     */
+    public function ajax_enrollment_backfill() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => __( 'Permission denied.', 'videohub360' ) ), 403 );
+        }
+
+        $nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
+        if ( ! wp_verify_nonce( $nonce, 'vh360_enrollment_backfill' ) ) {
+            wp_send_json_error( array( 'message' => __( 'Invalid nonce.', 'videohub360' ) ), 400 );
+        }
+
+        if ( ! class_exists( 'VH360_Membership_Database' ) ) {
+            wp_send_json_error( array( 'message' => __( 'Membership plugin not active.', 'videohub360' ) ), 400 );
+        }
+
+        global $wpdb;
+
+        $batch_size    = 50;
+        $batch_offset  = absint( isset( $_POST['batch_offset'] ) ? $_POST['batch_offset'] : 0 );
+        $ent_table     = VH360_Membership_Database::get_course_entitlements_table();
+        $enroll_table  = self::get_enrollments_table();
+
+        $rows = $wpdb->get_results( $wpdb->prepare(
+            "SELECT user_id, course_term_id, product_id, source_order_id
+             FROM {$ent_table}
+             WHERE status = 'active'
+             ORDER BY id ASC
+             LIMIT %d OFFSET %d",
+            $batch_size,
+            $batch_offset
+        ) );
+
+        $created = 0;
+        $skipped = 0;
+
+        foreach ( $rows as $row ) {
+            $uid  = absint( $row->user_id );
+            $ctid = absint( $row->course_term_id );
+
+            if ( ! $uid || ! $ctid ) {
+                $skipped++;
+                continue;
+            }
+
+            $exists = (int) $wpdb->get_var( $wpdb->prepare(
+                "SELECT COUNT(*) FROM {$enroll_table} WHERE user_id = %d AND course_term_id = %d",
+                $uid,
+                $ctid
+            ) );
+
+            if ( $exists ) {
+                $skipped++;
+                continue;
+            }
+
+            $result = vh360_enroll_user_in_course( $uid, $ctid, array(
+                'source'          => 'product_purchase',
+                'access_source'   => 'entitlement',
+                'product_id'      => absint( $row->product_id ),
+                'source_order_id' => absint( $row->source_order_id ),
+            ) );
+
+            if ( $result ) {
+                $created++;
+            } else {
+                $skipped++;
+            }
+        }
+
+        $next_offset = ( count( $rows ) === $batch_size ) ? $batch_offset + $batch_size : null;
+
+        wp_send_json_success( array(
+            'created'     => $created,
+            'skipped'     => $skipped,
+            'next_offset' => $next_offset,
+        ) );
     }
 
     /* ------------------------------------------------------------------ */
@@ -475,29 +675,52 @@ if ( ! function_exists( 'vh360_enroll_user_in_course' ) ) {
 
 if ( ! function_exists( 'vh360_user_is_enrolled_in_course' ) ) {
     /**
-     * Check whether a user has an enrollment record for a course.
+     * Check whether a user has an active enrollment record for a course.
+     *
+     * By default only 'active' and 'completed' rows are counted. Cancelled,
+     * access_lost, and archived rows are intentionally excluded so that
+     * "Enrolled" badges and progress gates are not shown to learners who no
+     * longer have a valid enrollment.
      *
      * This does NOT check access rights – use vh360_user_can_access_course() for that.
      *
-     * @param int $user_id       User ID.
-     * @param int $course_term_id Course (series) term ID.
+     * @param int      $user_id        User ID.
+     * @param int      $course_term_id Course (series) term ID.
+     * @param string[] $statuses       Optional. Limit to these statuses.
+     *                                 Defaults to ['active', 'completed'].
      * @return bool
      */
-    function vh360_user_is_enrolled_in_course( $user_id, $course_term_id ) {
-        $user_id       = absint( $user_id );
+    function vh360_user_is_enrolled_in_course( $user_id, $course_term_id, $statuses = array( 'active', 'completed' ) ) {
+        $user_id        = absint( $user_id );
         $course_term_id = absint( $course_term_id );
 
         if ( ! $user_id || ! $course_term_id ) {
             return false;
         }
 
+        // Validate statuses against the allowed set.
+        $valid_statuses = VideoHub360_Course_Enrollments::VALID_ENROLLMENT_STATUSES;
+        $statuses       = array_values( array_filter(
+            (array) $statuses,
+            static function( $s ) use ( $valid_statuses ) {
+                return in_array( $s, $valid_statuses, true );
+            }
+        ) );
+
+        if ( empty( $statuses ) ) {
+            $statuses = array( 'active', 'completed' );
+        }
+
         global $wpdb;
         $table = VideoHub360_Course_Enrollments::get_enrollments_table();
 
+        $placeholders = implode( ', ', array_fill( 0, count( $statuses ), '%s' ) );
+        $query_args   = array_merge( array( $user_id, $course_term_id ), $statuses );
+
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         $count = (int) $wpdb->get_var( $wpdb->prepare(
-            "SELECT COUNT(*) FROM {$table} WHERE user_id = %d AND course_term_id = %d",
-            $user_id,
-            $course_term_id
+            "SELECT COUNT(*) FROM {$table} WHERE user_id = %d AND course_term_id = %d AND status IN ({$placeholders})",
+            $query_args
         ) );
 
         return apply_filters( 'vh360_user_is_enrolled_in_course', $count > 0, $user_id, $course_term_id );
@@ -832,5 +1055,47 @@ if ( ! function_exists( 'vh360_get_course_progress' ) ) {
             return 0.0;
         }
         return (float) $enrollment->progress_percent;
+    }
+}
+
+if ( ! function_exists( 'vh360_get_course_catalog_url' ) ) {
+    /**
+     * Get the URL of the Course Catalog page.
+     *
+     * Resolves in the following order:
+     *  1. The page stored in the 'vh360_course_catalog_page_id' option.
+     *  2. Any published page using the 'template-course-catalog.php' page template.
+     *
+     * @return string|false URL string, or false if not found.
+     */
+    function vh360_get_course_catalog_url() {
+        // 1. Stored page option.
+        $page_id = (int) get_option( 'vh360_course_catalog_page_id', 0 );
+        if ( $page_id ) {
+            $url = get_permalink( $page_id );
+            if ( $url ) {
+                return $url;
+            }
+        }
+
+        // 2. Find the first published page using the course-catalog template.
+        $pages = get_posts( array(
+            'post_type'      => 'page',
+            'post_status'    => 'publish',
+            'posts_per_page' => 1,
+            'meta_key'       => '_wp_page_template',
+            'meta_value'     => 'template-course-catalog.php',
+            'fields'         => 'ids',
+            'no_found_rows'  => true,
+        ) );
+
+        if ( ! empty( $pages ) ) {
+            $url = get_permalink( $pages[0] );
+            if ( $url ) {
+                return $url;
+            }
+        }
+
+        return false;
     }
 }
