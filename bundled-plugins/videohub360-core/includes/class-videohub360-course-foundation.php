@@ -1586,52 +1586,68 @@ if ( ! function_exists( 'videohub360_user_can_access_lesson' ) ) {
             return false;
         }
 
+        // 1. Administrators always pass.
         if ( $user_id && user_can( $user_id, 'manage_options' ) ) {
             return true;
         }
 
+        // 2. Free preview lessons are public.
         if ( 'yes' === get_post_meta( $post_id, '_vh360_lesson_is_preview', true ) ) {
             return true;
         }
 
-        $course = function_exists( 'videohub360_get_lesson_course' ) ? videohub360_get_lesson_course( $post_id ) : false;
-        $lesson_plan = get_post_meta( $post_id, '_vh360_membership_required', true );
-
-        if ( $course ) {
-            $mode = videohub360_get_course_purchase_mode( $course->term_id );
-
-            if ( in_array( $mode, array( 'product', 'both' ), true ) ) {
-                $has_course_access = ( $user_id && function_exists( 'vh360_user_has_course_entitlement' ) )
-                    ? vh360_user_has_course_entitlement( $user_id, $course->term_id )
-                    : false;
-
-                if ( 'product' === $mode ) {
-                    return $has_course_access;
-                }
-
-                if ( $has_course_access ) {
-                    return true;
-                }
-            }
-        }
-
-        $required_plan = $lesson_plan ? $lesson_plan : videohub360_get_effective_lesson_required_membership( $post_id );
-
-        if ( ! $required_plan ) {
-            if ( $course && 'both' === videohub360_get_course_purchase_mode( $course->term_id ) ) {
+        $check_membership = static function( $required_plan ) use ( $user_id ) {
+            if ( empty( $required_plan ) || ! $user_id ) {
                 return false;
             }
+
+            if ( 'any' === $required_plan ) {
+                return function_exists( 'vh360_user_has_active_membership' )
+                    ? vh360_user_has_active_membership( $user_id )
+                    : false;
+            }
+
+            return function_exists( 'vh360_user_has_active_membership' )
+                ? vh360_user_has_active_membership( $user_id, $required_plan )
+                : false;
+        };
+
+        // 3. Lesson-level membership requirements override course product access.
+        $lesson_plan = get_post_meta( $post_id, '_vh360_membership_required', true );
+        if ( ! empty( $lesson_plan ) ) {
+            return $check_membership( $lesson_plan );
+        }
+
+        $course = function_exists( 'videohub360_get_lesson_course' ) ? videohub360_get_lesson_course( $post_id ) : false;
+        if ( ! $course ) {
             return true;
         }
 
-        if ( ! $user_id ) {
-            return false;
+        $mode = videohub360_get_course_purchase_mode( $course->term_id );
+        $course_plan = function_exists( 'videohub360_get_course_required_membership' )
+            ? videohub360_get_course_required_membership( $course->term_id )
+            : get_term_meta( $course->term_id, '_vh360_course_required_membership', true );
+
+        $has_course_entitlement = ( $user_id && function_exists( 'vh360_user_has_course_entitlement' ) )
+            ? vh360_user_has_course_entitlement( $user_id, $course->term_id )
+            : false;
+
+        // 4. Product-only course access requires the course entitlement.
+        if ( 'product' === $mode ) {
+            return $has_course_entitlement;
         }
 
-        if ( 'any' === $required_plan ) {
-            return function_exists( 'vh360_user_has_active_membership' ) ? vh360_user_has_active_membership( $user_id ) : false;
+        // 5. Membership course access requires the course membership rule.
+        if ( 'membership' === $mode ) {
+            return empty( $course_plan ) ? true : $check_membership( $course_plan );
         }
 
-        return function_exists( 'vh360_user_has_active_membership' ) ? vh360_user_has_active_membership( $user_id, $required_plan ) : false;
+        // 6. Both mode allows either path only because lesson overrides already returned above.
+        if ( 'both' === $mode ) {
+            return $has_course_entitlement || ( ! empty( $course_plan ) && $check_membership( $course_plan ) );
+        }
+
+        // 7. No course requirement means public.
+        return true;
     }
 }

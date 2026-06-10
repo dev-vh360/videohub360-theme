@@ -42,8 +42,9 @@ class VH360_Membership_Database {
      * Constructor
      */
     private function __construct() {
-        // Hook to check database version
-        add_action('plugins_loaded', array($this, 'check_database_version'));
+        // Run immediately because this singleton is initialized after plugins_loaded
+        // in the main memberships init flow on already-active installs.
+        $this->check_database_version();
     }
 
     /**
