@@ -9,10 +9,10 @@
 
 /* Business Profile Wrapper */
 .vh360-business-profile-wrapper {
-    background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    overflow: hidden;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
     margin-bottom: 3rem;
 }
 
@@ -20,7 +20,10 @@
 .vh360-business-header {
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     padding: 3rem 2.5rem 2.5rem;
-    border-bottom: 1px solid #e5e7eb;
+    border: 1px solid var(--vh360-border-color, #e5e7eb);
+    border-radius: 18px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
 }
 
 .vh360-business-header-content {
@@ -127,9 +130,10 @@
 
 /* Business Navigation */
 .vh360-business-navigation {
-    background: #ffffff;
-    border-bottom: 2px solid #f3f4f6;
-    padding: 0 2.5rem;
+    background: transparent;
+    border-bottom: 1px solid var(--vh360-border-color, #e5e7eb);
+    padding: 0;
+    margin-bottom: 1.5rem;
 }
 
 .vh360-business-tabs {
@@ -162,8 +166,8 @@
 
 /* Business Content */
 .vh360-business-content {
-    padding: 2.5rem;
-    background: #ffffff;
+    background: transparent;
+    padding: 0;
 }
 
 .vh360-business-services h2,
@@ -588,31 +592,13 @@
 
 /* Responsive Design */
 @media (max-width: 992px) {
-    .vh360-business-profile-wrapper {
-        border-radius: 8px;
-    }
-    
     .vh360-business-header {
         padding: 2.5rem 2rem;
     }
     
-    .vh360-business-navigation {
-        padding: 0 2rem;
-    }
-    
-    .vh360-business-content {
-        padding: 2rem;
-    }
 }
 
 @media (max-width: 768px) {
-    .vh360-business-profile-wrapper {
-        border-radius: 0;
-        box-shadow: none;
-        border-left: 1px solid #e5e7eb;
-        border-right: 1px solid #e5e7eb;
-    }
-    
     .vh360-business-header {
         padding: 2rem 1.5rem;
     }
@@ -627,10 +613,6 @@
         font-size: 1.75rem;
     }
     
-    .vh360-business-navigation {
-        padding: 0 1.5rem;
-    }
-    
     .vh360-business-tabs {
         gap: 1.5rem;
         overflow-x: auto;
@@ -639,10 +621,6 @@
     
     .vh360-business-tabs li {
         flex-shrink: 0;
-    }
-    
-    .vh360-business-content {
-        padding: 1.5rem;
     }
     
     .vh360-booking-slots-grid {
