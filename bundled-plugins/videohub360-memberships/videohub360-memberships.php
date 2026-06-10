@@ -93,6 +93,7 @@ class VH360_Memberships {
         
         // Load helper functions
         require_once VH360_MEMBERSHIPS_DIR . 'includes/membership-helpers.php';
+        require_once VH360_MEMBERSHIPS_DIR . 'includes/course-entitlement-helpers.php';
         
         // Load platform integrations
         require_once VH360_MEMBERSHIPS_DIR . 'includes/platform-integrations.php';

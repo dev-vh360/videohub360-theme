@@ -14,6 +14,7 @@ if (!defined('ABSPATH')) {
 $options = get_option('vh360_membership_options', array(
     'enable_memberships' => true,
     'pricing_page_url' => '',
+    'course_purchase_destination' => 'product_page',
     'login_required' => true,
     'locked_message' => '',
     'reminder_days' => 7,
@@ -38,6 +39,13 @@ $options = get_option('vh360_membership_options', array(
     'subscription_card_button_bg_color' => '',
     'subscription_card_button_text_color' => '',
 ));
+
+$options = wp_parse_args($options, array(
+    'course_purchase_destination' => 'product_page',
+));
+if (!in_array($options['course_purchase_destination'], array('product_page', 'add_to_cart'), true)) {
+    $options['course_purchase_destination'] = 'product_page';
+}
 
 // Get Stripe settings
 $stripe_settings = get_option('vh360_stripe_settings', array(
@@ -154,6 +162,27 @@ if (isset($_POST['vh360_save_plan_config']) && check_admin_referer('vh360_plan_c
                         </td>
                     </tr>
                     
+                    <tr>
+                        <th scope="row">
+                            <label for="course_purchase_destination">
+                                <?php esc_html_e('Course Purchase Button Destination', 'videohub360-theme'); ?>
+                            </label>
+                        </th>
+                        <td>
+                            <select name="vh360_membership_options[course_purchase_destination]" id="course_purchase_destination">
+                                <option value="product_page" <?php selected($options['course_purchase_destination'], 'product_page'); ?>>
+                                    <?php esc_html_e('Product Page', 'videohub360-theme'); ?>
+                                </option>
+                                <option value="add_to_cart" <?php selected($options['course_purchase_destination'], 'add_to_cart'); ?>>
+                                    <?php esc_html_e('Add to Cart', 'videohub360-theme'); ?>
+                                </option>
+                            </select>
+                            <p class="description">
+                                <?php esc_html_e('Choose where the Buy Course button sends visitors for individually sold courses. Product Page is recommended as the default. Add to Cart sends the product directly to the cart using WooCommerce’s add-to-cart URL.', 'videohub360-theme'); ?>
+                            </p>
+                        </td>
+                    </tr>
+
                     <tr>
                         <th scope="row">
                             <label for="login_required">

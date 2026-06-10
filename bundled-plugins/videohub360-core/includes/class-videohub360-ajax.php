@@ -677,14 +677,19 @@ class VideoHub360_Ajax {
             return;
         }
 
-        // === Membership gate ===
+        // === Membership / course purchase gate ===
         // Mirror the same access logic used by the single-video template so that
         // the token endpoint and the page template enforce the same rules.
         $required_plan = function_exists('vh360_post_requires_membership')
             ? vh360_post_requires_membership($post_id)
             : false;
 
-        if ($required_plan) {
+        if (function_exists('videohub360_user_can_access_lesson') && function_exists('videohub360_course_features_enabled') && videohub360_course_features_enabled()) {
+            if (!videohub360_user_can_access_lesson($post_id, get_current_user_id()) && !current_user_can('edit_post', $post_id) && !current_user_can('manage_options')) {
+                wp_send_json_error(__('Your course access does not allow access to this livestream.', 'videohub360'));
+                return;
+            }
+        } elseif ($required_plan) {
             $current_user_id = get_current_user_id();
 
             if (!$current_user_id) {

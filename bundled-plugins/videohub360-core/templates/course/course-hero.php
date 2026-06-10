@@ -90,11 +90,13 @@ $hero_desc = ! empty( $short_desc ) ? $short_desc : ( ! empty( $term->descriptio
             include VIDEOHUB360_PLUGIN_DIR . 'templates/course/course-access-badge.php';
             ?>
 
-            <div class="vh360-course-cta">
-                <a href="<?php echo esc_url( $cta_url ); ?>" class="vh360-course-cta-btn">
-                    <?php echo esc_html( $cta_text ); ?>
-                </a>
-            </div>
+            <?php if ( ! empty( $cta_url ) ) : ?>
+                <div class="vh360-course-cta">
+                    <a href="<?php echo esc_url( $cta_url ); ?>" class="vh360-course-cta-btn">
+                        <?php echo esc_html( $cta_text ); ?>
+                    </a>
+                </div>
+            <?php endif; ?>
 
         </div><!-- .vh360-course-hero-content -->
 

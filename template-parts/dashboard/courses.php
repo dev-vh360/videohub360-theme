@@ -203,13 +203,36 @@ $level_options = array(
                 </div>
             </div>
 
+            <!-- Course Access Type -->
+            <div class="vh360-form-field">
+                <label for="vh360_course_purchase_mode" class="vh360-form-label">
+                    <?php esc_html_e( 'Course Access Type', 'videohub360-theme' ); ?>
+                </label>
+                <select id="vh360_course_purchase_mode" name="_vh360_course_purchase_mode" class="vh360-input">
+                    <option value="none"><?php esc_html_e( 'Public', 'videohub360-theme' ); ?></option>
+                    <option value="membership"><?php esc_html_e( 'Membership Required', 'videohub360-theme' ); ?></option>
+                    <option value="product"><?php esc_html_e( 'Individual Product Purchase', 'videohub360-theme' ); ?></option>
+                    <option value="both"><?php esc_html_e( 'Product Purchase or Membership', 'videohub360-theme' ); ?></option>
+                </select>
+                <p class="vh360-form-help"><?php esc_html_e( 'Choose whether this course is public, membership-gated, sold as a WooCommerce product, or accessible either way.', 'videohub360-theme' ); ?></p>
+            </div>
+
             <!-- Required Membership -->
             <div class="vh360-form-field">
                 <label for="vh360_course_required_membership" class="vh360-form-label">
                     <?php esc_html_e( 'Required Membership', 'videohub360-theme' ); ?>
                 </label>
                 <input type="text" id="vh360_course_required_membership" name="_vh360_course_required_membership" class="vh360-input" placeholder="<?php esc_attr_e( 'e.g. any, or a membership plan key', 'videohub360-theme' ); ?>">
-                <p class="vh360-form-help"><?php esc_html_e( 'Use "any" for any active plan, or leave empty for public access.', 'videohub360-theme' ); ?></p>
+                <p class="vh360-form-help"><?php esc_html_e( 'Needed only for membership-based access. Use "any" for any active plan.', 'videohub360-theme' ); ?></p>
+            </div>
+
+            <!-- Linked Product ID -->
+            <div class="vh360-form-field">
+                <label for="vh360_course_product_id" class="vh360-form-label">
+                    <?php esc_html_e( 'Linked Product ID', 'videohub360-theme' ); ?>
+                </label>
+                <input type="number" id="vh360_course_product_id" name="_vh360_course_product_id" class="vh360-input" min="0" step="1" placeholder="<?php esc_attr_e( 'WooCommerce product ID', 'videohub360-theme' ); ?>">
+                <p class="vh360-form-help"><?php esc_html_e( 'Needed only for individual product purchase access.', 'videohub360-theme' ); ?></p>
             </div>
 
             <!-- CTA Button Text -->
@@ -264,6 +287,11 @@ $level_options = array(
                 $cta_url   = get_term_meta( $course->term_id, '_vh360_course_cta_url', true );
                 $order     = (int) get_term_meta( $course->term_id, '_vh360_course_order', true );
                 $membership = get_term_meta( $course->term_id, '_vh360_course_required_membership', true );
+                $purchase_mode = get_term_meta( $course->term_id, '_vh360_course_purchase_mode', true );
+                if ( '' === $purchase_mode && function_exists( 'videohub360_get_course_purchase_mode' ) ) {
+                    $purchase_mode = videohub360_get_course_purchase_mode( $course->term_id );
+                }
+                $product_id = (int) get_term_meta( $course->term_id, '_vh360_course_product_id', true );
                 $term_url  = get_term_link( $course );
 
                 // Build data attributes for edit prefill (JSON-encoded for JS consumption).
@@ -278,6 +306,8 @@ $level_options = array(
                     'image_id'     => $image_id,
                     'image_url'    => $image_url,
                     'membership'   => $membership,
+                    'purchase_mode'=> $purchase_mode,
+                    'product_id'   => $product_id,
                     'cta_text'     => $cta_text,
                     'cta_url'      => $cta_url,
                     'order'        => $order,

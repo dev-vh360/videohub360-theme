@@ -64,6 +64,22 @@ class VH360_Membership_Frontend {
         }
         
         $post_id = get_the_ID();
+
+        if (
+            get_post_type($post_id) === 'videohub360'
+            && function_exists('videohub360_course_features_enabled')
+            && videohub360_course_features_enabled()
+            && function_exists('videohub360_user_can_access_lesson')
+        ) {
+            if (videohub360_user_can_access_lesson($post_id, get_current_user_id())) {
+                return $content;
+            }
+
+            return vh360_render_membership_gate(array(
+                'required_plan' => vh360_post_requires_membership($post_id) ?: 'course',
+            ));
+        }
+
         $required_plan = vh360_post_requires_membership($post_id);
         
         if (!$required_plan) {

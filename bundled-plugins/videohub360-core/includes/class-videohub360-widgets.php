@@ -914,6 +914,12 @@ class VideoHub360_Widgets {
                         <button type="button" class="vh360-catalog-filter-pill" data-filter="access:member">
                             <?php esc_html_e( 'Member Access', 'videohub360' ); ?>
                         </button>
+                        <button type="button" class="vh360-catalog-filter-pill" data-filter="access:paid">
+                            <?php esc_html_e( 'Paid Course', 'videohub360' ); ?>
+                        </button>
+                        <button type="button" class="vh360-catalog-filter-pill" data-filter="access:owned">
+                            <?php esc_html_e( 'Enrolled', 'videohub360' ); ?>
+                        </button>
                     </div>
                     <?php endif; ?>
 
@@ -967,17 +973,30 @@ class VideoHub360_Widgets {
                     $level_key = strtolower( trim( $level ) );
 
                     // Determine access type for data attribute.
+                    $purchase_mode = function_exists('videohub360_get_course_purchase_mode')
+                        ? videohub360_get_course_purchase_mode( $term->term_id )
+                        : 'none';
                     $access_key = ( empty($required_plan) || $required_plan === false ) ? 'free' : 'member';
+
+                    if ( in_array( $purchase_mode, array( 'product', 'both' ), true ) ) {
+                        $access_key = 'paid';
+                    }
+
+                    if ( function_exists('vh360_user_has_course_entitlement') && is_user_logged_in() && vh360_user_has_course_entitlement( get_current_user_id(), $term->term_id ) ) {
+                        $access_key = 'owned';
+                    }
 
                     // Access badge label
                     $access_badge_label = '';
                     if ( $atts['show_access_badge'] === 'yes' ) {
-                        if ( $access_key === 'free' ) {
+                        if ( $access_key === 'owned' ) {
+                            $access_badge_label = esc_html__( 'Enrolled', 'videohub360' );
+                        } elseif ( $access_key === 'paid' ) {
+                            $access_badge_label = esc_html__( 'Paid Course', 'videohub360' );
+                        } elseif ( $access_key === 'free' ) {
                             $access_badge_label = esc_html__( 'Free Access', 'videohub360' );
-                        } elseif ( $required_plan === 'any' ) {
-                            $access_badge_label = esc_html__( 'Member Access', 'videohub360' );
                         } else {
-                            $access_badge_label = ucwords( str_replace( array('_', '-'), ' ', $required_plan ) );
+                            $access_badge_label = esc_html__( 'Member Access', 'videohub360' );
                         }
                     }
 

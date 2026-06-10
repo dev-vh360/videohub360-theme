@@ -464,6 +464,7 @@ class VH360_Theme_Admin {
             'default' => array(
                 'enable_memberships' => true,
                 'pricing_page_url' => '',
+                'course_purchase_destination' => 'product_page',
                 'login_required' => true,
                 'locked_message' => '',
                 'reminder_days' => 7,
@@ -1814,6 +1815,12 @@ class VH360_Theme_Admin {
         
         // Sanitize pricing_page_url
         $output['pricing_page_url'] = !empty($input['pricing_page_url']) ? esc_url_raw($input['pricing_page_url']) : '';
+
+        // Sanitize course purchase destination.
+        $course_purchase_destination = isset($input['course_purchase_destination']) ? sanitize_key($input['course_purchase_destination']) : 'product_page';
+        $output['course_purchase_destination'] = in_array($course_purchase_destination, array('product_page', 'add_to_cart'), true)
+            ? $course_purchase_destination
+            : 'product_page';
         
         // Sanitize login_required checkbox
         $output['login_required'] = !empty($input['login_required']) ? 1 : 0;
