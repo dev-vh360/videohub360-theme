@@ -44,7 +44,7 @@ function vh360_get_user_account_type($user_id) {
  * Get author display mode based on account type
  * 
  * Determines which author template should be displayed based on the user's account type:
- * - professional/organization → business
+ * - professional/organization → course when Course Mode is active, otherwise business
  * - client → course when Course Mode is active, otherwise client
  * - creator → respects existing site-wide Profile/Channel/Course customizer setting
  * 
@@ -62,6 +62,10 @@ function vh360_get_author_display_mode($author_id) {
     switch ($account_type) {
         case 'professional':
         case 'organization':
+            if (function_exists('vh360_get_author_template_mode') && 'course' === vh360_get_author_template_mode()) {
+                return 'course';
+            }
+
             return 'business';
             
         case 'client':
