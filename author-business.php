@@ -4,7 +4,7 @@
  *
  * Displays author pages in Business mode for professionals and organizations.
  * Shows business information, services, content, and contact details.
- * 
+ *
  * Note: This file is loaded for professional/organization account types
  * This is a partial template loaded by author.php - does not call header/footer
  *
@@ -39,40 +39,48 @@ if (!in_array($current_tab, $valid_tabs, true)) {
 
 <div id="primary" class="site-content">
     <div class="container">
-        <div class="vh360-business-profile-wrapper">
-            
+        <div class="vh360-business-profile-wrapper vh360-business-profile-wrapper--modern">
+
             <!-- Business Header Section -->
             <?php get_template_part('template-parts/business/header'); ?>
 
-            <!-- Business Navigation -->
-            <?php get_template_part('template-parts/business/navigation'); ?>
+            <div class="vh360-business-profile-body">
+                <main class="vh360-business-main">
+                    <!-- Business Navigation -->
+                    <?php get_template_part('template-parts/business/navigation'); ?>
 
-            <!-- Business Content -->
-            <div class="vh360-business-content">
-                
-                <?php
-                // Load the appropriate tab content
-                switch ($current_tab) {
-                    case 'services':
-                        get_template_part('template-parts/business/services');
-                        break;
-                        
-                    case 'about':
-                        get_template_part('template-parts/business/about');
-                        break;
-                        
-                    case 'content':
-                        get_template_part('template-parts/business/content');
-                        break;
-                        
-                    default:
-                        get_template_part('template-parts/business/services');
-                        break;
-                }
-                ?>
-                
-            </div><!-- .vh360-business-content -->
-            
+                    <!-- Business Content -->
+                    <div class="vh360-business-content">
+
+                        <?php
+                        // Load the appropriate tab content
+                        switch ($current_tab) {
+                            case 'services':
+                                get_template_part('template-parts/business/services');
+                                break;
+
+                            case 'about':
+                                get_template_part('template-parts/business/about');
+                                break;
+
+                            case 'content':
+                                get_template_part('template-parts/business/content');
+                                break;
+
+                            default:
+                                get_template_part('template-parts/business/services');
+                                break;
+                        }
+                        ?>
+
+                    </div><!-- .vh360-business-content -->
+                </main><!-- .vh360-business-main -->
+
+                <aside class="vh360-business-sidebar">
+                    <?php get_template_part('template-parts/business/booking-panel'); ?>
+                </aside><!-- .vh360-business-sidebar -->
+            </div><!-- .vh360-business-profile-body -->
+
         </div><!-- .vh360-business-profile-wrapper -->
     </div><!-- .container -->
 </div><!-- #primary -->

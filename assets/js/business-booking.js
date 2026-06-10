@@ -23,10 +23,14 @@
             this.bindEvents();
             this.initCollapsible();
             
-            // Auto-load slots for today's date on page load (but don't expand yet)
+            // Auto-load slots for today's date when the booking panel is present.
             const today = new Date().toISOString().split('T')[0];
-            $('#vh360-booking-date-picker').val(today);
-            // Note: loadSlots will be called when user expands the section
+            const $datePicker = $('#vh360-booking-date-picker');
+
+            if ($datePicker.length) {
+                $datePicker.val(today);
+                this.loadSlots(today);
+            }
         },
         
         /**
@@ -36,6 +40,10 @@
             const $toggle = $('#vh360-booking-toggle');
             const $content = $('#vh360-booking-content');
             
+            if (!$toggle.length || !$content.length) {
+                return;
+            }
+
             if ($toggle.length && $content.length) {
                 // Set initial state
                 $content.addClass('vh360-booking-collapsed').hide();
@@ -144,60 +152,67 @@
          */
         renderSlots: function(slots, selectedDate) {
             const $container = $('#vh360-booking-slots-container');
-            
+
             if (!slots || slots.length === 0) {
                 $container.html('<p class="vh360-booking-no-slots">' + (vh360BusinessBooking.i18n.noSlots || 'No slots available for this date.') + '</p>');
                 return;
             }
-            
-            // Group slots by date
-            const slotsByDate = {};
-            slots.forEach(function(slot) {
-                if (!slotsByDate[slot.date]) {
-                    slotsByDate[slot.date] = [];
-                }
-                slotsByDate[slot.date].push(slot);
+
+            const visibleSlots = slots.filter(function(slot) {
+                return slot.date === selectedDate;
             });
-            
+
+            if (visibleSlots.length === 0) {
+                $container.html('<p class="vh360-booking-no-slots">' + (vh360BusinessBooking.i18n.noSlots || 'No slots available for this date.') + '</p>');
+                return;
+            }
+
+            const dateObj = new Date(selectedDate + 'T00:00:00');
+            const formattedDate = dateObj.toLocaleDateString(undefined, {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric'
+            });
+
             let html = '';
-            
-            // Render slots for each date
-            Object.keys(slotsByDate).sort().forEach(function(date) {
-                const dateSlots = slotsByDate[date];
-                const dateObj = new Date(date + 'T00:00:00');
-                const formattedDate = dateObj.toLocaleDateString(undefined, { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                });
-                
-                html += '<div class="vh360-booking-date-group">';
-                html += '<h3 class="vh360-booking-date-header">' + formattedDate + '</h3>';
-                html += '<div class="vh360-booking-slots-grid">';
-                
-                dateSlots.forEach(function(slot) {
-                    html += '<div class="vh360-booking-slot">';
-                    html += '<div class="vh360-booking-slot-time">' + slot.start + ' - ' + slot.end + '</div>';
-                    
-                    if (vh360BusinessBooking.isLoggedIn) {
-                        html += '<button class="vh360-book-slot-btn" data-datetime="' + slot.datetime + '" data-date="' + slot.date + '" data-start="' + slot.start + '" data-end="' + slot.end + '">';
-                        html += (vh360BusinessBooking.i18n.bookButton || 'Book');
-                        html += '</button>';
-                    } else {
-                        html += '<a href="' + vh360BusinessBooking.loginUrl + '" class="vh360-book-slot-login">';
-                        html += (vh360BusinessBooking.i18n.loginToBook || 'Login to Book');
-                        html += '</a>';
-                    }
-                    
-                    html += '</div>';
-                });
-                
-                html += '</div>';
-                html += '</div>';
+
+            html += '<div class="vh360-booking-date-group">';
+            html += '<h3 class="vh360-booking-date-header">' + this.escapeHtml(formattedDate) + '</h3>';
+            html += '<div class="vh360-booking-time-chips">';
+
+            visibleSlots.forEach(function(slot) {
+                const slotStart = VH360BusinessBooking.escapeHtml(slot.start);
+                const slotEnd = VH360BusinessBooking.escapeHtml(slot.end);
+                const slotDatetime = VH360BusinessBooking.escapeHtml(slot.datetime);
+                const slotDate = VH360BusinessBooking.escapeHtml(slot.date);
+
+                if (vh360BusinessBooking.isLoggedIn) {
+                    html += '<button class="vh360-book-slot-btn vh360-booking-time-chip" data-datetime="' + slotDatetime + '" data-date="' + slotDate + '" data-start="' + slotStart + '" data-end="' + slotEnd + '">';
+                    html += slotStart;
+                    html += '</button>';
+                } else {
+                    html += '<a href="' + VH360BusinessBooking.escapeHtml(vh360BusinessBooking.loginUrl) + '" class="vh360-book-slot-login vh360-booking-time-chip">';
+                    html += slotStart;
+                    html += '</a>';
+                }
             });
-            
+
+            html += '</div>';
+            html += '</div>';
+
             $container.html(html);
+        },
+
+        /**
+         * Escape HTML before inserting dynamic slot values.
+         */
+        escapeHtml: function(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
         },
         
         /**
@@ -232,15 +247,17 @@
                         // Update button to show "Booked" state immediately
                         $btn.text(vh360BusinessBooking.i18n.booked || 'Booked').addClass('vh360-slot-booked');
                         
-                        // Remove the slot from UI after a moment
+                        // Remove the booked chip/card from UI after a moment
                         setTimeout(function() {
-                            $btn.closest('.vh360-booking-slot').fadeOut(function() {
+                            const $slotsContainer = $('#vh360-booking-slots-container');
+                            const $slotElement = $btn.closest('.vh360-booking-slot').length ? $btn.closest('.vh360-booking-slot') : $btn;
+
+                            $slotElement.fadeOut(function() {
                                 $(this).remove();
-                                
+
                                 // Check if any slots remain
-                                const $slotsContainer = $('#vh360-booking-slots');
-                                if ($slotsContainer.find('.vh360-booking-slot').length === 0) {
-                                    $slotsContainer.html('<p>' + (vh360BusinessBooking.i18n.noSlots || 'No appointment slots available for this date.') + '</p>');
+                                if ($slotsContainer.find('.vh360-booking-time-chip, .vh360-booking-slot').length === 0) {
+                                    $slotsContainer.html('<p class="vh360-booking-no-slots">' + (vh360BusinessBooking.i18n.noSlots || 'No appointment slots available for this date.') + '</p>');
                                 }
                             });
                         }, 1500);

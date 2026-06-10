@@ -37,23 +37,23 @@ if (is_user_logged_in() && $current_user_id !== $author_id) {
 }
 ?>
 
-<div class="vh360-client-header">
-    <div class="vh360-client-header-content">
-        
+<div class="vh360-client-header vh360-client-header--modern">
+    <div class="vh360-client-cover" aria-hidden="true"></div>
+
+    <div class="vh360-client-profile-bar">
         <div class="vh360-client-avatar">
             <?php echo get_avatar($author_id, 120); ?>
         </div>
-        
+
         <div class="vh360-client-info">
             <h1 class="vh360-client-name"><?php echo esc_html($author->display_name); ?></h1>
             <p class="vh360-client-type"><?php esc_html_e('Client', 'videohub360-theme'); ?></p>
-            
-            <?php if ($show_follow_button) : ?>
-                <div class="vh360-client-actions">
-                    <?php vh360_follow_button($author_id, 'vh360-client-follow-btn'); ?>
-                </div>
-            <?php endif; ?>
         </div>
-        
+
+        <?php if ($show_follow_button) : ?>
+            <div class="vh360-client-actions">
+                <?php vh360_follow_button($author_id, 'vh360-client-follow-btn'); ?>
+            </div>
+        <?php endif; ?>
     </div>
 </div>
