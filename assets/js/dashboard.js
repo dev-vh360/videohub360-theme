@@ -741,9 +741,18 @@
                 // Clear previous messages
                 $('#vh360-form-message').hide().removeClass('success error');
                 
-                // Get button clicked
-                var $submitBtn = $(document.activeElement);
+                // Get the button that submitted the form. Prefer the native submitter
+                // because document.activeElement can be unreliable after uploads or other UI interactions.
+                var submitter = e.originalEvent && e.originalEvent.submitter
+                    ? e.originalEvent.submitter
+                    : document.activeElement;
+                var $submitBtn = $(submitter);
                 var action = $submitBtn.val();
+
+                if (action !== 'publish' && action !== 'draft') {
+                    action = $('input[name="video_id"]').length > 0 ? 'publish' : 'draft';
+                }
+
                 var createFormLabels = (window.vh360Dashboard && vh360Dashboard.createForm) || {};
                 
                 // Validate required fields
