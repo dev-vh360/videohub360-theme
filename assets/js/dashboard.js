@@ -1313,6 +1313,48 @@
                 $('html, body').animate({ scrollTop: $formWrap.offset().top - 80 }, 300);
             });
 
+            function deleteCourse(courseId, courseName, deleteLessons) {
+                $.ajax({
+                    url: vh360Dashboard.ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'vh360_delete_course_frontend',
+                        nonce: vh360Dashboard.nonce,
+                        course_id: courseId,
+                        delete_lessons: deleteLessons ? 1 : 0
+                    },
+                    success: function(response) {
+                        var responseData = response.data || {};
+
+                        if (response.success) {
+                            self.showNotification(responseData.message || 'Course deleted successfully.', 'success');
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 1200);
+                            return;
+                        }
+
+                        if (responseData.requires_lesson_delete === true) {
+                            var lessonCount = parseInt(responseData.lesson_count, 10) || 0;
+                            self.confirmAction(
+                                'This course has ' + lessonCount + ' lessons assigned. Delete this course and move all assigned lessons to Trash? This action cannot be undone.',
+                                function(confirmed) {
+                                    if (!confirmed) return;
+
+                                    deleteCourse(courseId, courseName, true);
+                                }
+                            );
+                            return;
+                        }
+
+                        self.showNotification(responseData.message || 'Failed to delete course.', 'error');
+                    },
+                    error: function() {
+                        self.showNotification('An error occurred. Please try again.', 'error');
+                    }
+                });
+            }
+
             // Delete button.
             $(document).on('click', '.vh360-course-delete-btn', function() {
                 var courseId   = $(this).data('course-id');
@@ -1323,28 +1365,7 @@
                     function(confirmed) {
                         if (!confirmed) return;
 
-                        $.ajax({
-                            url: vh360Dashboard.ajaxurl,
-                            type: 'POST',
-                            data: {
-                                action: 'vh360_delete_course_frontend',
-                                nonce: vh360Dashboard.nonce,
-                                course_id: courseId
-                            },
-                            success: function(response) {
-                                if (response.success) {
-                                    self.showNotification(response.data.message, 'success');
-                                    setTimeout(function() {
-                                        window.location.reload();
-                                    }, 1200);
-                                } else {
-                                    self.showNotification(response.data.message || 'Failed to delete course.', 'error');
-                                }
-                            },
-                            error: function() {
-                                self.showNotification('An error occurred. Please try again.', 'error');
-                            }
-                        });
+                        deleteCourse(courseId, courseName, false);
                     }
                 );
             });
