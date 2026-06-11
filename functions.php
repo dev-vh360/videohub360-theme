@@ -1601,10 +1601,16 @@ add_filter('excerpt_more', 'videohub360_theme_excerpt_more');
  */
 function videohub360_theme_video_styles() {
     if (is_singular('videohub360') || is_post_type_archive('videohub360')) {
+        $deps = array('videohub360-theme-style');
+
+        if (wp_style_is('vh360-frontend', 'registered') || wp_style_is('vh360-frontend', 'enqueued')) {
+            $deps[] = 'vh360-frontend';
+        }
+
         wp_enqueue_style(
             'videohub360-theme-video',
             VH360_THEME_URI . '/assets/css/videohub360-integration.css',
-            array(),
+            $deps,
             VH360_THEME_VERSION
         );
     }

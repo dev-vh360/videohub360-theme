@@ -7,6 +7,20 @@
  * @since 1.0.0
  */
 
+
+/* ==========================================================================
+   Single Video Template Theme Surface
+   ========================================================================== */
+
+/*
+ * The core plugin uses --vh360-bg-white for the single video wrapper.
+ * Override it here so the single video page follows the theme Customizer
+ * Main Background color instead of forcing the plugin white surface.
+ */
+.single-videohub360 .videohub360-main-wrapper {
+    background: var(--bg-color, transparent);
+}
+
 /* ==========================================================================
    Video Player Container
    ========================================================================== */
