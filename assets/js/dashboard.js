@@ -482,7 +482,9 @@
                 return;
             }
 
-            this.confirmAction('Are you sure you want to delete this video? This action cannot be undone.', function(confirmed) {
+            var labels = (vh360Dashboard.contentLabels) || {};
+
+            this.confirmAction(labels.deleteConfirm || 'Are you sure you want to delete this video? This action cannot be undone.', function(confirmed) {
                 if (!confirmed) return;
                 
                 $button.prop('disabled', true).css('opacity', '0.5');
@@ -497,7 +499,7 @@
                     },
                     success: function(response) {
                         if (response.success) {
-                            self.showNotification('Video deleted successfully', 'success');
+                            self.showNotification(labels.deletedSuccess || 'Video deleted successfully', 'success');
                             
                             // Remove the video card with animation
                             $button.closest('.vh360-video-grid-item').fadeOut(300, function() {
@@ -508,14 +510,14 @@
                                     $('.vh360-videos-grid').html(
                                         '<div class="vh360-dashboard-empty">' +
                                         '<div class="vh360-dashboard-empty-icon">📹</div>' +
-                                        '<p class="vh360-dashboard-empty-title">No videos yet</p>' +
-                                        '<p class="vh360-dashboard-empty-text">Upload your first video to get started!</p>' +
+                                        '<p class="vh360-dashboard-empty-title">' + (labels.emptyTitle || 'No videos yet') + '</p>' +
+                                        '<p class="vh360-dashboard-empty-text">' + (labels.emptyText || 'Upload your first video to get started!') + '</p>' +
                                         '</div>'
                                     );
                                 }
                             });
                         } else {
-                            self.showNotification(response.data.message || 'Failed to delete video', 'error');
+                            self.showNotification(response.data.message || labels.deleteFailed || 'Failed to delete video', 'error');
                             $button.prop('disabled', false).css('opacity', '1');
                         }
                     },
@@ -940,6 +942,7 @@
             var self = this;
             var $videosGrid = $('.vh360-videos-grid');
             var $pagination = $('.vh360-dashboard-pagination');
+            var labels = (vh360Dashboard.contentLabels) || {};
             
             // Show loading state
             $videosGrid.css('opacity', '0.5');
@@ -960,11 +963,11 @@
                         $videosGrid.html(response.data.videos_html);
                         $pagination.html(response.data.pagination_html);
                     } else {
-                        self.showNotification(response.data.message || 'Failed to load videos', 'error');
+                        self.showNotification(response.data.message || labels.loadFailed || 'Failed to load videos', 'error');
                     }
                 },
                 error: function() {
-                    self.showNotification('An error occurred while loading videos', 'error');
+                    self.showNotification(labels.loadError || 'An error occurred while loading videos', 'error');
                 },
                 complete: function() {
                     $videosGrid.css('opacity', '1');

@@ -14,6 +14,23 @@ if (!defined('ABSPATH')) {
 
 $current_user_id = get_current_user_id();
 
+$vh360_is_lesson_context = function_exists( 'vh360_dashboard_uses_lesson_labels' )
+    && vh360_dashboard_uses_lesson_labels( $current_user_id );
+
+$vh360_item_label = $vh360_is_lesson_context
+    ? ( function_exists( 'vh360_get_lesson_label' ) ? vh360_get_lesson_label( false ) : __( 'Lesson', 'videohub360-theme' ) )
+    : __( 'Video', 'videohub360-theme' );
+
+$vh360_items_label = $vh360_is_lesson_context
+    ? ( function_exists( 'vh360_get_lesson_label' ) ? vh360_get_lesson_label( true ) : __( 'Lessons', 'videohub360-theme' ) )
+    : __( 'Videos', 'videohub360-theme' );
+
+$vh360_my_items_label = sprintf(
+    /* translators: %s = plural content label */
+    __( 'My %s', 'videohub360-theme' ),
+    $vh360_items_label
+);
+
 
 $vh360_is_licensed = ( function_exists('vh360_theme_is_license_valid') ? vh360_theme_is_license_valid() : ( function_exists('videohub360_license_is_valid') && videohub360_license_is_valid() ) );
 $vh360_license_url = function_exists('vh360_theme_get_license_admin_url') ? vh360_theme_get_license_admin_url() : admin_url('admin.php?page=videohub360-license');
@@ -70,7 +87,7 @@ $draft_count = $wpdb->get_var($wpdb->prepare(
     
     <!-- Header -->
     <div class="vh360-dashboard-header">
-        <h1 class="vh360-dashboard-title"><?php esc_html_e('My Videos', 'videohub360-theme'); ?></h1>
+        <h1 class="vh360-dashboard-title"><?php echo esc_html( $vh360_my_items_label ); ?></h1>
     </div>
 
     <?php if ( ! $vh360_is_licensed ) : ?>
@@ -187,9 +204,17 @@ $draft_count = $wpdb->get_var($wpdb->prepare(
             <p class="vh360-dashboard-empty-title">
                 <?php 
                 if (!empty($search)) {
-                    esc_html_e('No videos found matching your search.', 'videohub360-theme');
+                    echo esc_html(
+                        $vh360_is_lesson_context
+                            ? __( 'No lessons found matching your search.', 'videohub360-theme' )
+                            : __( 'No videos found matching your search.', 'videohub360-theme' )
+                    );
                 } else {
-                    esc_html_e('No videos yet', 'videohub360-theme');
+                    echo esc_html(
+                        $vh360_is_lesson_context
+                            ? __( 'No lessons yet', 'videohub360-theme' )
+                            : __( 'No videos yet', 'videohub360-theme' )
+                    );
                 }
                 ?>
             </p>
@@ -198,13 +223,21 @@ $draft_count = $wpdb->get_var($wpdb->prepare(
                 if (!empty($search)) {
                     esc_html_e('Try adjusting your search terms.', 'videohub360-theme');
                 } else {
-                    esc_html_e('Upload your first video to get started!', 'videohub360-theme');
+                    echo esc_html(
+                        $vh360_is_lesson_context
+                            ? __( 'Create your first lesson to get started!', 'videohub360-theme' )
+                            : __( 'Upload your first video to get started!', 'videohub360-theme' )
+                    );
                 }
                 ?>
             </p>
             <?php if (empty($search)) : ?>
                 <a href="#create-video" class="vh360-dashboard-btn vh360-dashboard-tab <?php echo !$vh360_is_licensed ? 'vh360-locked' : ''; ?>" data-tab="create-video" aria-disabled="<?php echo !$vh360_is_licensed ? 'true' : 'false'; ?>" title="<?php echo !$vh360_is_licensed ? esc_attr__('Activate your license to upload new videos.', 'videohub360-theme') : ''; ?>">
-                    <?php esc_html_e('Upload Video', 'videohub360-theme'); ?>
+                    <?php echo esc_html(
+                        $vh360_is_lesson_context
+                            ? __( 'Create Lesson', 'videohub360-theme' )
+                            : __( 'Upload Video', 'videohub360-theme' )
+                    ); ?>
                 </a>
             <?php endif; ?>
         </div>

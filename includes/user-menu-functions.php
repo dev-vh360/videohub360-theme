@@ -226,10 +226,26 @@ function vh360_get_custom_user_menu_items($current_user_id) {
             'class' => implode(' ', $classes),
             'target' => $menu_item->target,
         );
-        
+
+        // Runtime resolver: if a saved menu item points to the videos dashboard tab and
+        // still carries the default "My Videos" title, render the dynamic label instead.
+        $rendered_title = $menu_item->title;
+        if ( 'videos' === $menu_item_fragment && 'My Videos' === $menu_item->title ) {
+            if ( function_exists( 'vh360_dashboard_uses_lesson_labels' ) && vh360_dashboard_uses_lesson_labels( $current_user_id ) ) {
+                $lesson_label_plural = function_exists( 'vh360_get_lesson_label' )
+                    ? vh360_get_lesson_label( true )
+                    : __( 'Lessons', 'videohub360-theme' );
+                $rendered_title = sprintf(
+                    /* translators: %s = plural lesson label */
+                    __( 'My %s', 'videohub360-theme' ),
+                    $lesson_label_plural
+                );
+            }
+        }
+
         $output .= vh360_get_menu_item_html(
             $menu_item->url,
-            $menu_item->title,
+            $rendered_title,
             $icon,
             $args
         );
@@ -394,7 +410,13 @@ function vh360_render_user_menu_meta_box() {
             'icon' => 'edit',
         ),
         array(
-            'title' => __('My Videos', 'videohub360-theme'),
+            'title' => function_exists( 'vh360_dashboard_uses_lesson_labels' ) && vh360_dashboard_uses_lesson_labels( get_current_user_id() )
+                ? sprintf(
+                    /* translators: %s = plural lesson label */
+                    __( 'My %s', 'videohub360-theme' ),
+                    function_exists( 'vh360_get_lesson_label' ) ? vh360_get_lesson_label( true ) : __( 'Lessons', 'videohub360-theme' )
+                )
+                : __('My Videos', 'videohub360-theme'),
             'url' => home_url('/dashboard/#videos'),
             'icon' => 'videos',
         ),

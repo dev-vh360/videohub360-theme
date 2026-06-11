@@ -47,7 +47,21 @@ function vh360_get_dashboard_tabs_registry( $user_id = null ) {
         ),
         'videos' => array(
             'label' => __( 'My Videos', 'videohub360-theme' ),
-            'label_callback' => null,
+            'label_callback' => function( $user_id ) {
+                if ( function_exists( 'vh360_dashboard_uses_lesson_labels' ) && vh360_dashboard_uses_lesson_labels( $user_id ) ) {
+                    $lesson_label = function_exists( 'vh360_get_lesson_label' )
+                        ? vh360_get_lesson_label( true )
+                        : __( 'Lessons', 'videohub360-theme' );
+
+                    return sprintf(
+                        /* translators: %s = plural lesson label */
+                        __( 'My %s', 'videohub360-theme' ),
+                        $lesson_label
+                    );
+                }
+
+                return __( 'My Videos', 'videohub360-theme' );
+            },
             'show_callback' => '__return_true',
             'icon_svg' => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>',
         ),

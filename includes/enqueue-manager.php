@@ -304,7 +304,7 @@ function vh360_enqueue_dashboard_assets() {
             true
         );
         
-        $vh360_create_context_is_lesson = function_exists('vh360_is_create_form_lesson_context') && vh360_is_create_form_lesson_context(get_current_user_id());
+        $vh360_create_context_is_lesson = function_exists('vh360_dashboard_uses_lesson_labels') && vh360_dashboard_uses_lesson_labels(get_current_user_id());
 
         // Localize script with AJAX data
         wp_localize_script('vh360-dashboard-script', 'vh360Dashboard', array(
@@ -325,6 +325,30 @@ function vh360_enqueue_dashboard_assets() {
                 'publishing' => $vh360_create_context_is_lesson ? esc_html__('Publishing Lesson...', 'videohub360-theme') : esc_html__('Publishing Video...', 'videohub360-theme'),
                 'updating' => $vh360_create_context_is_lesson ? esc_html__('Updating Lesson...', 'videohub360-theme') : esc_html__('Updating Video...', 'videohub360-theme'),
                 'uploadSuccess' => $vh360_create_context_is_lesson ? esc_html__('Lesson video uploaded successfully!', 'videohub360-theme') : esc_html__('Video uploaded successfully!', 'videohub360-theme'),
+            ),
+            'contentLabels' => array(
+                'isLessonContext' => $vh360_create_context_is_lesson,
+                'deleteConfirm' => $vh360_create_context_is_lesson
+                    ? esc_html__( 'Are you sure you want to delete this lesson? This action cannot be undone.', 'videohub360-theme' )
+                    : esc_html__( 'Are you sure you want to delete this video? This action cannot be undone.', 'videohub360-theme' ),
+                'deletedSuccess' => $vh360_create_context_is_lesson
+                    ? esc_html__( 'Lesson deleted successfully.', 'videohub360-theme' )
+                    : esc_html__( 'Video deleted successfully.', 'videohub360-theme' ),
+                'deleteFailed' => $vh360_create_context_is_lesson
+                    ? esc_html__( 'Failed to delete lesson.', 'videohub360-theme' )
+                    : esc_html__( 'Failed to delete video.', 'videohub360-theme' ),
+                'emptyTitle' => $vh360_create_context_is_lesson
+                    ? esc_html__( 'No lessons yet', 'videohub360-theme' )
+                    : esc_html__( 'No videos yet', 'videohub360-theme' ),
+                'emptyText' => $vh360_create_context_is_lesson
+                    ? esc_html__( 'Create your first lesson to get started!', 'videohub360-theme' )
+                    : esc_html__( 'Upload your first video to get started!', 'videohub360-theme' ),
+                'loadFailed' => $vh360_create_context_is_lesson
+                    ? esc_html__( 'Failed to load lessons.', 'videohub360-theme' )
+                    : esc_html__( 'Failed to load videos.', 'videohub360-theme' ),
+                'loadError' => $vh360_create_context_is_lesson
+                    ? esc_html__( 'An error occurred while loading lessons.', 'videohub360-theme' )
+                    : esc_html__( 'An error occurred while loading videos.', 'videohub360-theme' ),
             ),
         ));
         
