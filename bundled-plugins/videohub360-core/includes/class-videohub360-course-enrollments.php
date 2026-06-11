@@ -303,10 +303,21 @@ class VideoHub360_Course_Enrollments {
 
         $user_id = get_current_user_id();
 
-        // Admins are not auto-enrolled.
+        // Admins are not auto-enrolled – redirect straight to the first lesson.
         if ( user_can( $user_id, 'manage_options' ) ) {
-            $course_term = get_term( $course_term_id, 'videohub360_series' );
-            wp_safe_redirect( ( $course_term && ! is_wp_error( $course_term ) ) ? get_term_link( $course_term ) : home_url() );
+            $admin_lessons          = function_exists( 'videohub360_get_course_lessons' )
+                ? videohub360_get_course_lessons( $course_term_id )
+                : array();
+            $admin_first_lesson_url = ! empty( $admin_lessons ) ? get_permalink( $admin_lessons[0]->ID ) : '';
+
+            if ( ! $admin_first_lesson_url ) {
+                $course_term            = get_term( $course_term_id, 'videohub360_series' );
+                $admin_first_lesson_url = ( $course_term && ! is_wp_error( $course_term ) )
+                    ? get_term_link( $course_term )
+                    : home_url();
+            }
+
+            wp_safe_redirect( $admin_first_lesson_url );
             exit;
         }
 
@@ -320,9 +331,12 @@ class VideoHub360_Course_Enrollments {
             exit;
         }
 
-        // Enroll the learner.
+        // Enroll the learner with the correct source for this course's purchase mode.
         if ( function_exists( 'vh360_enroll_user_in_course' ) ) {
-            vh360_enroll_user_in_course( $user_id, $course_term_id, array( 'source' => 'public_start' ) );
+            $enroll_source = function_exists( 'vh360_resolve_enrollment_source' )
+                ? vh360_resolve_enrollment_source( $user_id, $course_term_id )
+                : 'public_start';
+            vh360_enroll_user_in_course( $user_id, $course_term_id, array( 'source' => $enroll_source ) );
         }
 
         // Redirect to the first lesson, falling back to the course page.
@@ -914,6 +928,40 @@ if ( ! function_exists( 'vh360_get_user_enrolled_courses' ) ) {
     }
 }
 
+if ( ! function_exists( 'vh360_resolve_enrollment_source' ) ) {
+    /**
+     * Determine the correct enrollment source string for a course.
+     *
+     * Maps the course purchase mode to the appropriate source value:
+     *   - none         → public_start
+     *   - membership   → membership_access
+     *   - product      → product_purchase
+     *   - both         → product_purchase if the user has an entitlement,
+     *                    otherwise membership_access
+     *
+     * @param int $user_id        User ID.
+     * @param int $course_term_id Course (series) term ID.
+     * @return string Source key.
+     */
+    function vh360_resolve_enrollment_source( $user_id, $course_term_id ) {
+        $source = 'public_start';
+        if ( function_exists( 'videohub360_get_course_purchase_mode' ) ) {
+            $mode = videohub360_get_course_purchase_mode( absint( $course_term_id ) );
+            if ( 'product' === $mode ) {
+                $source = 'product_purchase';
+            } elseif ( 'membership' === $mode ) {
+                $source = 'membership_access';
+            } elseif ( 'both' === $mode ) {
+                $has_entitlement = function_exists( 'vh360_user_has_course_entitlement' )
+                    ? vh360_user_has_course_entitlement( absint( $user_id ), absint( $course_term_id ) )
+                    : false;
+                $source = $has_entitlement ? 'product_purchase' : 'membership_access';
+            }
+        }
+        return $source;
+    }
+}
+
 if ( ! function_exists( 'vh360_update_course_enrollment_activity' ) ) {
     /**
      * Record lesson activity against an enrollment.
@@ -936,21 +984,9 @@ if ( ! function_exists( 'vh360_update_course_enrollment_activity' ) ) {
         }
 
         // Determine source from course purchase mode.
-        $source = 'public_start';
-        if ( function_exists( 'videohub360_get_course_purchase_mode' ) ) {
-            $mode = videohub360_get_course_purchase_mode( $course_term_id );
-            if ( 'product' === $mode ) {
-                $source = 'product_purchase';
-            } elseif ( 'membership' === $mode ) {
-                $source = 'membership_access';
-            } elseif ( 'both' === $mode ) {
-                // Prefer entitlement source when both are allowed and user has entitlement.
-                $has_entitlement = function_exists( 'vh360_user_has_course_entitlement' )
-                    ? vh360_user_has_course_entitlement( $user_id, $course_term_id )
-                    : false;
-                $source = $has_entitlement ? 'product_purchase' : 'membership_access';
-            }
-        }
+        $source = function_exists( 'vh360_resolve_enrollment_source' )
+            ? vh360_resolve_enrollment_source( $user_id, $course_term_id )
+            : 'public_start';
 
         // Ensure enrollment row exists.
         vh360_enroll_user_in_course( $user_id, $course_term_id, array( 'source' => $source ) );

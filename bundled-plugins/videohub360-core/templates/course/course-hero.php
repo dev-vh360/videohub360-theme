@@ -93,9 +93,11 @@ $hero_desc = ! empty( $short_desc ) ? $short_desc : ( ! empty( $term->descriptio
             <?php if ( ! empty( $cta_url ) ) : ?>
                 <div class="vh360-course-cta">
                     <?php
-                    // For logged-in users who already have access, submit a POST
-                    // form so the enrollment handler fires before the first lesson.
+                    // For logged-in non-admin users who already have access, submit a
+                    // POST form so the enrollment handler fires before the first lesson.
+                    // Admins skip enrollment and use the direct CTA link instead.
                     $cta_via_form = is_user_logged_in()
+                        && ! current_user_can( 'manage_options' )
                         && isset( $user_has_access ) && $user_has_access
                         && isset( $term_id ) && $term_id;
                     if ( $cta_via_form ) :
