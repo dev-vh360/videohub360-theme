@@ -64,10 +64,12 @@ $vh360_status_filter_labels = array(
     ),
 );
 
+$vh360_videos_base_url = remove_query_arg( array( 'video_status', 'paged' ) );
+
 $vh360_status_filter_urls = array(
-    'publish' => add_query_arg( 'video_status', 'publish', remove_query_arg( array( 'video_status', 'paged' ) ) ),
-    'draft'   => add_query_arg( 'video_status', 'draft', remove_query_arg( array( 'video_status', 'paged' ) ) ),
-    'all'     => add_query_arg( 'video_status', 'all', remove_query_arg( array( 'video_status', 'paged' ) ) ),
+    'publish' => add_query_arg( 'video_status', 'publish', $vh360_videos_base_url ) . '#videos',
+    'draft'   => add_query_arg( 'video_status', 'draft', $vh360_videos_base_url ) . '#videos',
+    'all'     => add_query_arg( 'video_status', 'all', $vh360_videos_base_url ) . '#videos',
 );
 
 // Build query args
@@ -98,20 +100,6 @@ if (!empty($search)) {
 }
 
 $videos_query = new WP_Query($args);
-$total_videos = $videos_query->found_posts;
-
-// Get video counts by status
-$published_count = count_user_posts($current_user_id, 'videohub360', true);
-
-// Get draft count with direct query for accuracy
-global $wpdb;
-$draft_count = $wpdb->get_var($wpdb->prepare(
-    "SELECT COUNT(*) FROM {$wpdb->posts} 
-     WHERE post_author = %d 
-     AND post_type = 'videohub360' 
-     AND post_status = 'draft'",
-    $current_user_id
-));
 ?>
 
 <div class="vh360-dashboard-videos">
