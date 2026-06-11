@@ -1368,6 +1368,7 @@ class VH360_Ajax_Handlers {
 
         $current_user_id = get_current_user_id();
         $course_id       = isset($_POST['course_id']) ? absint($_POST['course_id']) : 0;
+        $delete_lessons  = isset($_POST['delete_lessons']) && '1' === sanitize_text_field(wp_unslash($_POST['delete_lessons']));
 
         if (!$course_id) {
             wp_send_json_error(array('message' => esc_html__('Invalid course ID.', 'videohub360-theme')));
@@ -1387,15 +1388,40 @@ class VH360_Ajax_Handlers {
             wp_send_json_error(array('message' => esc_html__('You do not have permission to delete this course.', 'videohub360-theme')));
         }
 
-        // Block deletion if the course has lessons assigned.
+        // Require explicit confirmation before moving assigned lessons to Trash.
+        $lesson_statuses = array('publish', 'draft', 'pending', 'private', 'future');
         $lessons = function_exists('videohub360_get_course_lessons')
-            ? videohub360_get_course_lessons($course_id, array('post_status' => array('publish', 'draft', 'pending', 'private')))
+            ? videohub360_get_course_lessons($course_id, array('post_status' => $lesson_statuses))
             : array();
 
-        if (!empty($lessons)) {
+        if (!empty($lessons) && !$delete_lessons) {
             wp_send_json_error(array(
-                'message' => esc_html__('This course has lessons assigned. Remove or reassign the lessons before deleting the course.', 'videohub360-theme'),
+                'message'                => esc_html__('This course has lessons assigned.', 'videohub360-theme'),
+                'requires_lesson_delete' => true,
+                'lesson_count'           => count($lessons),
             ));
+        }
+
+        $trashed_lessons = 0;
+
+        if (!empty($lessons) && $delete_lessons) {
+            foreach ($lessons as $lesson) {
+                $lesson_id = is_object($lesson) ? absint($lesson->ID) : absint($lesson);
+
+                if (!$lesson_id) {
+                    continue;
+                }
+
+                $trashed = wp_trash_post($lesson_id);
+
+                if (!$trashed) {
+                    wp_send_json_error(array(
+                        'message' => esc_html__('Unable to move one or more assigned lessons to Trash. The course was not deleted.', 'videohub360-theme'),
+                    ));
+                }
+
+                $trashed_lessons++;
+            }
         }
 
         $result = wp_delete_term($course_id, 'videohub360_series');
@@ -1404,8 +1430,21 @@ class VH360_Ajax_Handlers {
             wp_send_json_error(array('message' => $result->get_error_message()));
         }
 
+        $message = $trashed_lessons > 0
+            ? sprintf(
+                _n(
+                    'Course deleted successfully. %d assigned lesson was moved to Trash.',
+                    'Course deleted successfully. %d assigned lessons were moved to Trash.',
+                    $trashed_lessons,
+                    'videohub360-theme'
+                ),
+                $trashed_lessons
+            )
+            : esc_html__('Course deleted successfully.', 'videohub360-theme');
+
         wp_send_json_success(array(
-            'message' => esc_html__('Course deleted successfully.', 'videohub360-theme'),
+            'message'         => $message,
+            'trashed_lessons' => $trashed_lessons,
         ));
     }
 
