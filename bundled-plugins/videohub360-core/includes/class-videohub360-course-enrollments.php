@@ -967,11 +967,27 @@ if ( ! function_exists( 'vh360_resolve_enrollment_context' ) ) {
             'source_order_id' => 0,
         );
 
-        if ( ! function_exists( 'vh360_get_course_purchase_mode' ) ) {
-            return $context;
+        // Resolve purchase mode using the same priority chain as the core access helper:
+        // 1. Core plugin function (preferred).
+        // 2. Memberships plugin helper.
+        // 3. Direct term-meta read.
+        // 4. Infer from presence of related meta keys.
+        if ( function_exists( 'videohub360_get_course_purchase_mode' ) ) {
+            $mode = videohub360_get_course_purchase_mode( $course_term_id );
+        } elseif ( function_exists( 'vh360_get_course_purchase_mode' ) ) {
+            $mode = vh360_get_course_purchase_mode( $course_term_id );
+        } else {
+            $mode = get_term_meta( $course_term_id, '_vh360_course_purchase_mode', true );
+            if ( ! in_array( $mode, array( 'product', 'membership', 'both', 'none' ), true ) ) {
+                if ( get_term_meta( $course_term_id, '_vh360_course_product_id', true ) ) {
+                    $mode = 'product';
+                } elseif ( get_term_meta( $course_term_id, '_vh360_course_required_membership', true ) ) {
+                    $mode = 'membership';
+                } else {
+                    $mode = 'none';
+                }
+            }
         }
-
-        $mode = vh360_get_course_purchase_mode( $course_term_id );
 
         if ( 'membership' === $mode ) {
             $context['source']        = 'membership_access';
