@@ -331,12 +331,12 @@ class VideoHub360_Course_Enrollments {
             exit;
         }
 
-        // Enroll the learner with the correct source for this course's purchase mode.
+        // Enroll the learner with the correct source and access metadata.
         if ( function_exists( 'vh360_enroll_user_in_course' ) ) {
-            $enroll_source = function_exists( 'vh360_resolve_enrollment_source' )
-                ? vh360_resolve_enrollment_source( $user_id, $course_term_id )
-                : 'public_start';
-            vh360_enroll_user_in_course( $user_id, $course_term_id, array( 'source' => $enroll_source ) );
+            $enroll_context = function_exists( 'vh360_resolve_enrollment_context' )
+                ? vh360_resolve_enrollment_context( $user_id, $course_term_id )
+                : array( 'source' => 'public_start', 'access_source' => 'public' );
+            vh360_enroll_user_in_course( $user_id, $course_term_id, $enroll_context );
         }
 
         // Redirect to the first lesson, falling back to the course page.
@@ -928,37 +928,121 @@ if ( ! function_exists( 'vh360_get_user_enrolled_courses' ) ) {
     }
 }
 
+if ( ! function_exists( 'vh360_resolve_enrollment_context' ) ) {
+    /**
+     * Resolve the full enrollment context for a user/course pair.
+     *
+     * Returns an associative array with all fields needed to create an explicit
+     * enrollment row:
+     *
+     *   source          – how the enrollment began
+     *   access_source   – which access path allowed it
+     *   product_id      – WooCommerce product ID (0 when not applicable)
+     *   source_order_id – WooCommerce order ID  (0 when not applicable)
+     *
+     * Mode → context mappings:
+     *   none       → source = public_start,    access_source = public
+     *   membership → source = membership_access, access_source = membership
+     *   product    → source = product_purchase, access_source = entitlement
+     *   both (entitlement) → source = product_purchase, access_source = entitlement
+     *   both (membership)  → source = membership_access, access_source = membership
+     *
+     * @param int $user_id        User ID.
+     * @param int $course_term_id Course (series) term ID.
+     * @return array {
+     *     @type string $source          Enrollment source key.
+     *     @type string $access_source   Access path key.
+     *     @type int    $product_id      WooCommerce product ID, or 0.
+     *     @type int    $source_order_id WooCommerce order ID, or 0.
+     * }
+     */
+    function vh360_resolve_enrollment_context( $user_id, $course_term_id ) {
+        $user_id        = absint( $user_id );
+        $course_term_id = absint( $course_term_id );
+
+        $context = array(
+            'source'          => 'public_start',
+            'access_source'   => 'public',
+            'product_id'      => 0,
+            'source_order_id' => 0,
+        );
+
+        if ( ! function_exists( 'vh360_get_course_purchase_mode' ) ) {
+            return $context;
+        }
+
+        $mode = vh360_get_course_purchase_mode( $course_term_id );
+
+        if ( 'membership' === $mode ) {
+            $context['source']        = 'membership_access';
+            $context['access_source'] = 'membership';
+            return $context;
+        }
+
+        if ( 'product' === $mode || 'both' === $mode ) {
+            $has_entitlement = function_exists( 'vh360_user_has_course_entitlement' )
+                ? vh360_user_has_course_entitlement( $user_id, $course_term_id )
+                : false;
+
+            if ( 'product' === $mode || $has_entitlement ) {
+                // Resolve product ID.
+                $product_id = function_exists( 'vh360_get_course_product_id' )
+                    ? vh360_get_course_product_id( $course_term_id )
+                    : absint( get_term_meta( $course_term_id, '_vh360_course_product_id', true ) );
+
+                // Try to resolve source_order_id from the active entitlement row.
+                $source_order_id = 0;
+                if ( $user_id && $course_term_id && class_exists( 'VH360_Membership_Database' ) ) {
+                    global $wpdb;
+                    $ent_table       = VH360_Membership_Database::get_course_entitlements_table();
+                    $source_order_id = (int) $wpdb->get_var( $wpdb->prepare(
+                        "SELECT source_order_id FROM {$ent_table}
+                         WHERE user_id = %d
+                           AND course_term_id = %d
+                           AND status = 'active'
+                           AND (starts_at IS NULL OR starts_at <= NOW())
+                           AND (expires_at IS NULL OR expires_at > NOW())
+                         ORDER BY id DESC
+                         LIMIT 1",
+                        $user_id,
+                        $course_term_id
+                    ) );
+                }
+
+                $context['source']          = 'product_purchase';
+                $context['access_source']   = 'entitlement';
+                $context['product_id']      = $product_id;
+                $context['source_order_id'] = $source_order_id;
+                return $context;
+            }
+
+            // 'both' mode but no entitlement – falls through to membership path.
+            $context['source']        = 'membership_access';
+            $context['access_source'] = 'membership';
+            return $context;
+        }
+
+        // mode = 'none' (or unrecognised) → public_start / public (defaults already set).
+        return $context;
+    }
+}
+
 if ( ! function_exists( 'vh360_resolve_enrollment_source' ) ) {
     /**
      * Determine the correct enrollment source string for a course.
      *
-     * Maps the course purchase mode to the appropriate source value:
-     *   - none         → public_start
-     *   - membership   → membership_access
-     *   - product      → product_purchase
-     *   - both         → product_purchase if the user has an entitlement,
-     *                    otherwise membership_access
+     * Thin wrapper around vh360_resolve_enrollment_context() kept for
+     * backward compatibility with any callers that only need the source key.
      *
      * @param int $user_id        User ID.
      * @param int $course_term_id Course (series) term ID.
      * @return string Source key.
      */
     function vh360_resolve_enrollment_source( $user_id, $course_term_id ) {
-        $source = 'public_start';
-        if ( function_exists( 'videohub360_get_course_purchase_mode' ) ) {
-            $mode = videohub360_get_course_purchase_mode( absint( $course_term_id ) );
-            if ( 'product' === $mode ) {
-                $source = 'product_purchase';
-            } elseif ( 'membership' === $mode ) {
-                $source = 'membership_access';
-            } elseif ( 'both' === $mode ) {
-                $has_entitlement = function_exists( 'vh360_user_has_course_entitlement' )
-                    ? vh360_user_has_course_entitlement( absint( $user_id ), absint( $course_term_id ) )
-                    : false;
-                $source = $has_entitlement ? 'product_purchase' : 'membership_access';
-            }
-        }
-        return $source;
+        $context = function_exists( 'vh360_resolve_enrollment_context' )
+            ? vh360_resolve_enrollment_context( $user_id, $course_term_id )
+            : array( 'source' => 'public_start' );
+        return $context['source'];
     }
 }
 
@@ -983,13 +1067,13 @@ if ( ! function_exists( 'vh360_update_course_enrollment_activity' ) ) {
             return;
         }
 
-        // Determine source from course purchase mode.
-        $source = function_exists( 'vh360_resolve_enrollment_source' )
-            ? vh360_resolve_enrollment_source( $user_id, $course_term_id )
-            : 'public_start';
+        // Determine full enrollment context (source + access_source + product metadata).
+        $enroll_context = function_exists( 'vh360_resolve_enrollment_context' )
+            ? vh360_resolve_enrollment_context( $user_id, $course_term_id )
+            : array( 'source' => 'public_start', 'access_source' => 'public' );
 
         // Ensure enrollment row exists.
-        vh360_enroll_user_in_course( $user_id, $course_term_id, array( 'source' => $source ) );
+        vh360_enroll_user_in_course( $user_id, $course_term_id, $enroll_context );
 
         global $wpdb;
         $table = VideoHub360_Course_Enrollments::get_enrollments_table();
