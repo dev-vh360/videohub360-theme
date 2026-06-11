@@ -162,6 +162,7 @@ if (!function_exists('vh360_grant_course_entitlement')) {
                     array('%s', '%d', '%s'),
                     array('%d')
                 );
+                do_action('vh360_course_entitlement_granted', $user_id, $course_term_id, $product_id, $order_id);
                 return $existing_id;
             }
         }

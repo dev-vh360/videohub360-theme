@@ -603,17 +603,30 @@ if ( ! function_exists( 'vh360_enroll_user_in_course' ) ) {
         if ( $existing ) {
             // Only update if the current status is a terminal state and new enrollment is active.
             if ( 'active' === $status && in_array( $existing->status, array( 'access_lost', 'cancelled' ), true ) ) {
+                $update_data    = array(
+                    'status'        => 'active',
+                    'source'        => $source,
+                    'access_source' => $access_source,
+                    'enrolled_at'   => $now,
+                    'updated_at'    => $now,
+                );
+                $update_formats = array( '%s', '%s', '%s', '%s', '%s' );
+
+                // Carry over new product / order references when provided.
+                if ( $product_id ) {
+                    $update_data['product_id']      = $product_id;
+                    $update_formats[]               = '%d';
+                }
+                if ( $source_order_id ) {
+                    $update_data['source_order_id'] = $source_order_id;
+                    $update_formats[]               = '%d';
+                }
+
                 $wpdb->update(
                     $table,
-                    array(
-                        'status'        => 'active',
-                        'source'        => $source,
-                        'access_source' => $access_source,
-                        'enrolled_at'   => $now,
-                        'updated_at'    => $now,
-                    ),
+                    $update_data,
                     array( 'id' => (int) $existing->id ),
-                    array( '%s', '%s', '%s', '%s', '%s' ),
+                    $update_formats,
                     array( '%d' )
                 );
             }

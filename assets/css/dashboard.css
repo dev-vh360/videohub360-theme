@@ -2353,3 +2353,225 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* =========================================================
+   My Learning dashboard tab
+   ========================================================= */
+
+/* ---- Section header ---- */
+.vh360-my-learning .vh360-dashboard-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.vh360-my-learning .vh360-dashboard-section-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0;
+    color: var(--vh360-course-text, #1f2933);
+}
+
+/* ---- Empty state ---- */
+.vh360-my-learning .vh360-empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--vh360-course-muted, #6b7280);
+}
+
+.vh360-my-learning .vh360-empty-state-icon {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
+    color: var(--vh360-course-border, #e7dccb);
+}
+
+.vh360-my-learning .vh360-empty-state-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 1.25rem;
+    color: var(--vh360-course-text, #1f2933);
+}
+
+/* ---- Card grid ---- */
+.vh360-learning-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+/* ---- Individual card ---- */
+.vh360-learning-card {
+    background: var(--vh360-course-surface, #fffdf8);
+    border: 1px solid var(--vh360-course-border, #e7dccb);
+    border-radius: var(--vh360-course-radius, 10px);
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(70, 53, 31, 0.06);
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow var(--vh360-course-transition, 0.2s ease),
+                transform  var(--vh360-course-transition, 0.2s ease);
+}
+
+.vh360-learning-card:hover {
+    box-shadow: var(--vh360-course-shadow, 0 14px 34px rgba(70, 53, 31, 0.10));
+    transform: translateY(-2px);
+}
+
+/* Status modifiers */
+.vh360-learning-card--access_lost {
+    opacity: 0.82;
+}
+
+.vh360-learning-card--completed {
+    border-color: var(--vh360-course-primary, #14532d);
+}
+
+/* ---- Thumbnail ---- */
+.vh360-learning-card__thumb-link {
+    display: block;
+    position: relative;
+    text-decoration: none;
+}
+
+.vh360-learning-card__thumb {
+    position: relative;
+    padding-top: 56.25%; /* 16:9 */
+    background: var(--vh360-course-soft, #f3eadc);
+    overflow: hidden;
+}
+
+.vh360-learning-card__thumb img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--vh360-course-transition, 0.2s ease);
+}
+
+.vh360-learning-card:hover .vh360-learning-card__thumb img {
+    transform: scale(1.03);
+}
+
+.vh360-learning-card__status-badge {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    backdrop-filter: blur(2px);
+}
+
+.vh360-learning-card__status-badge--completed {
+    background: var(--vh360-course-primary, #14532d);
+}
+
+.vh360-learning-card__status-badge--access_lost {
+    background: #b91c1c;
+}
+
+/* ---- Body ---- */
+.vh360-learning-card__body {
+    padding: 1rem 1.1rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: 0.5rem;
+}
+
+.vh360-learning-card__title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1.35;
+}
+
+.vh360-learning-card__title a {
+    color: var(--vh360-course-text, #1f2933);
+    text-decoration: none;
+}
+
+.vh360-learning-card__title a:hover {
+    color: var(--vh360-course-primary, #14532d);
+}
+
+.vh360-learning-card__instructor {
+    font-size: 0.83rem;
+    color: var(--vh360-course-muted, #6b7280);
+    margin: 0;
+}
+
+.vh360-learning-card__activity {
+    font-size: 0.78rem;
+    color: var(--vh360-course-muted, #6b7280);
+    margin: 0;
+}
+
+/* ---- Progress bar (inside cards) ---- */
+.vh360-learning-card__progress-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-top: 0.25rem;
+}
+
+.vh360-learning-card__progress-wrap .vh360-progress-bar {
+    width: 100%;
+    height: 6px;
+    background: var(--vh360-course-soft, #f3eadc);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.vh360-learning-card__progress-wrap .vh360-progress-bar__fill {
+    height: 100%;
+    background: var(--vh360-course-primary, #14532d);
+    border-radius: 999px;
+    transition: width 0.4s ease;
+    min-width: 2px;
+}
+
+.vh360-progress-bar__label {
+    font-size: 0.76rem;
+    color: var(--vh360-course-muted, #6b7280);
+}
+
+/* ---- CTA button inside card ---- */
+.vh360-learning-card__cta {
+    align-self: flex-start;
+    margin-top: auto;
+}
+
+/* Owned badge on dashboard learning cards */
+.vh360-learning-card .vh360-badge-owned {
+    background-color: var(--vh360-course-primary, #14532d);
+    color: #fff;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.2rem 0.6rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 640px) {
+    .vh360-learning-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .vh360-my-learning .vh360-dashboard-section-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
