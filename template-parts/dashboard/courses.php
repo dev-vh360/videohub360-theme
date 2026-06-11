@@ -36,13 +36,20 @@ if ( ! $can_manage_courses ) {
 
 $is_admin = current_user_can( 'manage_options' );
 
-// Query courses owned by current user (admins see all).
-if ( $is_admin ) {
+// Admins may opt into a site-wide view via ?vh360_course_scope=all.
+// Non-admins can never trigger this path.
+$show_all = $is_admin
+    && isset( $_GET['vh360_course_scope'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+    && 'all' === sanitize_key( wp_unslash( $_GET['vh360_course_scope'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+if ( $show_all ) {
+    // Admin opted into the full site view – return every series term.
     $courses = get_terms( array(
         'taxonomy'   => 'videohub360_series',
         'hide_empty' => false,
     ) );
 } else {
+    // Default for everyone (admins included): only courses owned by the current user.
     $courses = get_terms( array(
         'taxonomy'   => 'videohub360_series',
         'hide_empty' => false,
@@ -56,8 +63,9 @@ if ( $is_admin ) {
         ),
     ) );
 
-    // Prefer explicit owner meta for scalable queries. Fall back only for legacy/imported courses.
-    if ( ( is_wp_error( $courses ) || empty( $courses ) ) && function_exists( 'vh360_user_can_manage_course' ) ) {
+    // Prefer explicit owner meta for scalable queries.
+    // Fall back to capability check only for non-admin users with legacy/imported courses.
+    if ( ! $is_admin && ( is_wp_error( $courses ) || empty( $courses ) ) && function_exists( 'vh360_user_can_manage_course' ) ) {
         $all_courses = get_terms( array(
             'taxonomy'   => 'videohub360_series',
             'hide_empty' => false,
@@ -73,6 +81,7 @@ if ( is_wp_error( $courses ) ) {
     $courses = array();
 }
 
+// Secondary security check: verify non-admin users can manage each returned course.
 if ( ! $is_admin && function_exists( 'vh360_user_can_manage_course' ) ) {
     $courses = array_filter( $courses, function( $course ) use ( $current_user_id ) {
         return vh360_user_can_manage_course( $current_user_id, $course->term_id );
@@ -110,6 +119,35 @@ $level_options = array(
             ?>
         </button>
     </div>
+
+    <!-- Tab description and optional admin scope toggle -->
+    <p class="vh360-dashboard-tab-description">
+        <?php esc_html_e( 'My Courses shows courses you own.', 'videohub360-theme' ); ?>
+        <?php if ( $is_admin ) : ?>
+        <?php esc_html_e( 'Admins can switch to All Courses to review every course on the site.', 'videohub360-theme' ); ?>
+        <?php endif; ?>
+    </p>
+
+    <?php if ( $is_admin ) :
+        $base_url = remove_query_arg( 'vh360_course_scope' );
+    ?>
+    <div class="vh360-dashboard-scope-toggle" role="group" aria-label="<?php esc_attr_e( 'Course scope', 'videohub360-theme' ); ?>">
+        <a href="<?php echo esc_url( $base_url ); ?>"
+           class="vh360-scope-pill<?php echo ! $show_all ? ' is-active' : ''; ?>">
+            <?php
+            /* translators: %s = plural course label */
+            printf( esc_html__( 'My %s', 'videohub360-theme' ), esc_html( $courses_label ) );
+            ?>
+        </a>
+        <a href="<?php echo esc_url( add_query_arg( 'vh360_course_scope', 'all', $base_url ) ); ?>"
+           class="vh360-scope-pill<?php echo $show_all ? ' is-active' : ''; ?>">
+            <?php
+            /* translators: %s = plural course label */
+            printf( esc_html__( 'All %s', 'videohub360-theme' ), esc_html( $courses_label ) );
+            ?>
+        </a>
+    </div>
+    <?php endif; ?>
 
     <!-- Notification area -->
     <div id="vh360-course-form-message" class="vh360-form-message" style="display:none;"></div>
