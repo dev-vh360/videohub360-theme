@@ -54,8 +54,11 @@ $course_count = is_array( $courses ) ? count( $courses ) : 0;
                 $membership        = get_term_meta( $term_id, '_vh360_course_required_membership', true );
                 $purchase_mode     = function_exists( 'videohub360_get_course_purchase_mode' ) ? videohub360_get_course_purchase_mode( $term_id ) : ( $membership ? 'membership' : 'none' );
                 $badge_label       = '';
-                if ( function_exists( 'vh360_user_has_course_entitlement' ) && is_user_logged_in() && vh360_user_has_course_entitlement( get_current_user_id(), $term_id ) ) {
+                $current_user_id   = get_current_user_id();
+                if ( is_user_logged_in() && function_exists( 'vh360_user_is_enrolled_in_course' ) && vh360_user_is_enrolled_in_course( $current_user_id, $term_id ) ) {
                     $badge_label = __( 'Enrolled', 'videohub360-theme' );
+                } elseif ( is_user_logged_in() && function_exists( 'vh360_user_has_course_entitlement' ) && ! current_user_can( 'manage_options' ) && vh360_user_has_course_entitlement( $current_user_id, $term_id ) ) {
+                    $badge_label = __( 'Access Owned', 'videohub360-theme' );
                 } elseif ( in_array( $purchase_mode, array( 'product', 'both' ), true ) ) {
                     $badge_label = __( 'Paid Course', 'videohub360-theme' );
                 } elseif ( $membership ) {

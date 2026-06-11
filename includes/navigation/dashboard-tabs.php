@@ -75,6 +75,16 @@ function vh360_get_dashboard_tabs_registry( $user_id = null ) {
             },
             'icon_svg' => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"></path></svg>',
         ),
+        'learning' => array(
+            'label' => __( 'My Learning', 'videohub360-theme' ),
+            'label_callback' => null,
+            'show_callback' => function( $user_id ) {
+                return is_user_logged_in()
+                    && function_exists( 'videohub360_course_features_enabled' )
+                    && videohub360_course_features_enabled();
+            },
+            'icon_svg' => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>',
+        ),
         'live-rooms' => array(
             'label' => __( 'Live Rooms', 'videohub360-theme' ),
             'label_callback' => null,

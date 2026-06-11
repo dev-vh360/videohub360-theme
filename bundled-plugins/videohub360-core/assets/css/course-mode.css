@@ -1100,3 +1100,47 @@ a.vh360-nav-item-inner:hover {
         width: 100%;
     }
 }
+
+/* ---- Lesson complete button ---- */
+.vh360-lesson-complete-wrap {
+    margin: 1.5rem 0;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.vh360-btn-complete {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.6rem 1.4rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    background: var(--vh360-course-primary, #14532d);
+    color: #fff;
+    border: none;
+    border-radius: var(--vh360-course-radius, 10px);
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color var(--vh360-course-transition, 0.2s ease);
+    line-height: 1.4;
+}
+
+.vh360-btn-complete:hover,
+.vh360-btn-complete:focus {
+    background: var(--vh360-course-primary-dark, #0f3f23);
+    color: #fff;
+    outline: 2px solid var(--vh360-course-accent, #c47f2c);
+    outline-offset: 2px;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 640px) {
+    .vh360-lesson-complete-wrap {
+        justify-content: stretch;
+    }
+
+    .vh360-btn-complete {
+        width: 100%;
+        justify-content: center;
+    }
+}

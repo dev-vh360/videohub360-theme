@@ -23,9 +23,18 @@ $resolve_course_badge = static function( $course_term_id ) use ( &$badge_class )
     $mode = function_exists( 'videohub360_get_course_purchase_mode' ) ? videohub360_get_course_purchase_mode( $course_term_id ) : 'none';
     $plan = function_exists( 'videohub360_get_course_required_membership' ) ? videohub360_get_course_required_membership( $course_term_id ) : false;
 
-    if ( function_exists( 'vh360_user_has_course_entitlement' ) && is_user_logged_in() && vh360_user_has_course_entitlement( get_current_user_id(), $course_term_id ) ) {
-        $badge_class .= ' vh360-badge-owned';
-        return __( 'Enrolled', 'videohub360' );
+    if ( is_user_logged_in() ) {
+        $uid = get_current_user_id();
+        if ( function_exists( 'vh360_user_is_enrolled_in_course' ) && vh360_user_is_enrolled_in_course( $uid, $course_term_id ) ) {
+            $badge_class .= ' vh360-badge-owned';
+            return __( 'Enrolled', 'videohub360' );
+        }
+        // Legacy fallback: entitlement exists but no enrollment row yet (pre-enrollment-model data).
+        // Show "Access Owned" rather than "Enrolled" – run the backfill tool to create the row.
+        if ( function_exists( 'vh360_user_has_course_entitlement' ) && vh360_user_has_course_entitlement( $uid, $course_term_id ) ) {
+            $badge_class .= ' vh360-badge-owned';
+            return __( 'Access Owned', 'videohub360' );
+        }
     }
 
     if ( in_array( $mode, array( 'product', 'both' ), true ) ) {

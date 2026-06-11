@@ -87,6 +87,13 @@ get_header();
                     <?php get_template_part('template-parts/dashboard/courses'); ?>
                 </div>
                 <?php endif; ?>
+
+                <!-- My Learning Tab -->
+                <?php if ( $vh360_course_features_enabled ) : ?>
+                <div id="learning" class="vh360-dashboard-tab-content">
+                    <?php get_template_part('template-parts/dashboard/learning'); ?>
+                </div>
+                <?php endif; ?>
                 
                 <!-- Live Rooms Tab -->
                 <div id="live-rooms" class="vh360-dashboard-tab-content">

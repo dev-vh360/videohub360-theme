@@ -273,6 +273,37 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                     echo '<div class="vh360-membership-gate"><p>' . esc_html__('Please log in or purchase access to view this lesson.', 'videohub360') . '</p></div>';
                 }
             } else {
+                // User has access – record enrollment activity for logged-in learners.
+                // Exclude free-preview lessons (they are public; viewing them must not
+                // create an enrollment row) and admins (manage_options capability).
+                if ( is_user_logged_in()
+                    && ! current_user_can( 'manage_options' )
+                    && 'yes' !== get_post_meta( get_the_ID(), '_vh360_lesson_is_preview', true )
+                    && function_exists( 'videohub360_course_features_enabled' )
+                    && videohub360_course_features_enabled()
+                    && function_exists( 'vh360_update_course_enrollment_activity' )
+                    && function_exists( 'videohub360_get_lesson_course' )
+                    && function_exists( 'vh360_user_can_access_course' )
+                ) {
+                    $vh360_activity_course = videohub360_get_lesson_course( get_the_ID() );
+                    if ( $vh360_activity_course ) {
+                        $vh360_activity_user = get_current_user_id();
+                        // Only create/update enrollment when the user has full course access
+                        // (not merely because the lesson is a free preview).
+                        if ( vh360_user_can_access_course( $vh360_activity_user, (int) $vh360_activity_course->term_id ) ) {
+                            vh360_update_course_enrollment_activity(
+                                $vh360_activity_user,
+                                (int) $vh360_activity_course->term_id,
+                                get_the_ID()
+                            );
+                            if ( function_exists( 'vh360_mark_lesson_started' ) ) {
+                                vh360_mark_lesson_started( $vh360_activity_user, get_the_ID() );
+                            }
+                        }
+                        unset( $vh360_activity_course, $vh360_activity_user );
+                    }
+                }
+
                 // User has access, render video
             ?>
             <?php if ($livestream_fields['is_live'] === 'yes' && $livestream_fields['stream_stopped'] !== 'yes'): ?>
@@ -599,6 +630,41 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                 }
             }
             // ---- End Course / Lesson Navigation --------------------------------------
+            ?>
+
+            <?php
+            // ---- Mark Lesson Complete button -------------------------------------
+            // Shown to logged-in users who have full course access (not just a free
+            // preview) on lessons that belong to a course.
+            if (
+                is_user_logged_in()
+                && ! current_user_can( 'manage_options' )
+                && 'yes' !== get_post_meta( get_the_ID(), '_vh360_lesson_is_preview', true )
+                && function_exists( 'videohub360_course_features_enabled' )
+                && videohub360_course_features_enabled()
+                && function_exists( 'videohub360_get_lesson_course' )
+                && function_exists( 'vh360_user_can_access_course' )
+            ) {
+                $vh360_complete_course = videohub360_get_lesson_course( get_the_ID() );
+                if (
+                    $vh360_complete_course &&
+                    vh360_user_can_access_course( get_current_user_id(), (int) $vh360_complete_course->term_id )
+                ) {
+                    ?>
+                    <div class="vh360-lesson-complete-wrap">
+                        <form method="post" class="vh360-lesson-complete-form">
+                            <?php wp_nonce_field( 'vh360_lesson_complete_' . get_the_ID(), 'vh360_lesson_complete_nonce' ); ?>
+                            <input type="hidden" name="vh360_lesson_id" value="<?php echo esc_attr( get_the_ID() ); ?>" />
+                            <button type="submit" name="vh360_mark_lesson_complete" class="vh360-btn vh360-btn-complete">
+                                <?php esc_html_e( 'Mark Lesson Complete', 'videohub360' ); ?>
+                            </button>
+                        </form>
+                    </div>
+                    <?php
+                }
+                unset( $vh360_complete_course );
+            }
+            // ---- End Mark Lesson Complete ----------------------------------------
             ?>
             
             <?php

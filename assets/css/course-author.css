@@ -1245,3 +1245,121 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* ===================================================================
+   Learner Enrolled Courses tab (public profile)
+   =================================================================== */
+
+/* Enrolled badge on course-author page cards */
+.vh360-course-author-card--enrolled .vh360-course-access-badge {
+    background-color: var(--vh360-course-author-primary, #14532d);
+    color: #fff;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.2rem 0.6rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.vh360-course-author-enrolled-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.25rem;
+}
+
+.vh360-course-author-enrolled-card {
+    background: var(--vh360-course-author-surface, #fffdf8);
+    border: 1px solid var(--vh360-course-author-border, #e7dccb);
+    border-radius: var(--vh360-course-author-radius, 10px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 2px 8px rgba(70, 53, 31, 0.06);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.vh360-course-author-enrolled-card:hover {
+    box-shadow: 0 8px 24px rgba(70, 53, 31, 0.10);
+    transform: translateY(-2px);
+}
+
+.vh360-course-author-enrolled-card__thumb-link {
+    display: block;
+    text-decoration: none;
+    overflow: hidden;
+}
+
+.vh360-course-author-enrolled-card__thumb {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.2s ease;
+}
+
+.vh360-course-author-enrolled-card:hover .vh360-course-author-enrolled-card__thumb {
+    transform: scale(1.03);
+}
+
+.vh360-course-author-enrolled-card__body {
+    padding: 0.85rem 1rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    flex: 1;
+}
+
+.vh360-course-author-enrolled-card__title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1.35;
+}
+
+.vh360-course-author-enrolled-card__title a {
+    color: var(--vh360-course-author-text, #1f2933);
+    text-decoration: none;
+}
+
+.vh360-course-author-enrolled-card__title a:hover {
+    color: var(--vh360-course-author-primary, #14532d);
+}
+
+.vh360-course-author-enrolled-card__instructor {
+    font-size: 0.8rem;
+    color: var(--vh360-course-author-muted, #6b7280);
+    margin: 0;
+}
+
+.vh360-badge-completed,
+.vh360-badge-enrolled {
+    display: inline-block;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.vh360-badge-completed {
+    background: var(--vh360-course-author-primary, #14532d);
+    color: #fff;
+}
+
+.vh360-badge-enrolled {
+    background: var(--vh360-course-author-soft, #f3eadc);
+    color: var(--vh360-course-author-text, #1f2933);
+}
+
+.vh360-progress-inline {
+    font-size: 0.8rem;
+    color: var(--vh360-course-author-muted, #6b7280);
+}
+
+@media (max-width: 640px) {
+    .vh360-course-author-enrolled-grid {
+        grid-template-columns: 1fr;
+    }
+}

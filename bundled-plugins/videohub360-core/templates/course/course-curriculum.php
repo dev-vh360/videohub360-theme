@@ -126,8 +126,19 @@ $lesson_count        = is_array( $lessons ) ? count( $lessons ) : 0;
 
                                 if ( ! empty( $lesson_plan ) ) {
                                     $badge_label = __( 'Member Access', 'videohub360' );
-                                } elseif ( function_exists( 'vh360_user_has_course_entitlement' ) && is_user_logged_in() && vh360_user_has_course_entitlement( get_current_user_id(), $term_id ) ) {
+                                } elseif (
+                                    is_user_logged_in() &&
+                                    function_exists( 'vh360_user_is_enrolled_in_course' ) &&
+                                    vh360_user_is_enrolled_in_course( get_current_user_id(), $term_id )
+                                ) {
                                     $badge_label = __( 'Enrolled', 'videohub360' );
+                                } elseif (
+                                    is_user_logged_in() &&
+                                    function_exists( 'vh360_user_has_course_entitlement' ) &&
+                                    vh360_user_has_course_entitlement( get_current_user_id(), $term_id )
+                                ) {
+                                    // Legacy: entitlement without enrollment row – show "Access Owned".
+                                    $badge_label = __( 'Access Owned', 'videohub360' );
                                 } elseif ( in_array( $course_mode, array( 'product', 'both' ), true ) ) {
                                     $badge_label = __( 'Paid Course', 'videohub360' );
                                 } elseif ( $course_plan ) {
