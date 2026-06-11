@@ -1436,10 +1436,28 @@ class VH360_Ajax_Handlers {
         }
         
         $videos_query = new WP_Query($args);
-        
+
+        $is_lesson_context = function_exists( 'vh360_dashboard_uses_lesson_labels' )
+            && vh360_dashboard_uses_lesson_labels( $current_user_id );
+
         // Generate videos HTML
         ob_start();
-        if ($videos_query->have_posts()) {
+        if ( ! $videos_query->have_posts() ) {
+            ?>
+            <div class="vh360-dashboard-empty">
+                <div class="vh360-dashboard-empty-icon">📹</div>
+                <p class="vh360-dashboard-empty-title">
+                    <?php
+                    echo esc_html(
+                        $is_lesson_context
+                            ? __( 'No lessons found matching your search.', 'videohub360-theme' )
+                            : __( 'No videos found matching your search.', 'videohub360-theme' )
+                    );
+                    ?>
+                </p>
+            </div>
+            <?php
+        } else {
             while ($videos_query->have_posts()) {
                 $videos_query->the_post();
                 ?>

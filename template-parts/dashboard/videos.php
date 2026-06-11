@@ -92,7 +92,13 @@ $draft_count = $wpdb->get_var($wpdb->prepare(
 
     <?php if ( ! $vh360_is_licensed ) : ?>
         <div class="vh360-dashboard-notice vh360-dashboard-notice-warning vh360-license-softlock-notice">
-            <?php echo esc_html__( 'Your VideoHub360 license is inactive. Activate your license to upload new videos.', 'videohub360-theme' ); ?>
+            <?php
+            echo esc_html(
+                $vh360_is_lesson_context
+                    ? __( 'Your VideoHub360 license is inactive. Activate your license to create new lessons.', 'videohub360-theme' )
+                    : __( 'Your VideoHub360 license is inactive. Activate your license to upload new videos.', 'videohub360-theme' )
+            );
+            ?>
             <a href="<?php echo esc_url( $vh360_license_url ); ?>" style="margin-left:8px;">
                 <?php esc_html_e( 'Activate License', 'videohub360-theme' ); ?>
             </a>
@@ -232,7 +238,7 @@ $draft_count = $wpdb->get_var($wpdb->prepare(
                 ?>
             </p>
             <?php if (empty($search)) : ?>
-                <a href="#create-video" class="vh360-dashboard-btn vh360-dashboard-tab <?php echo !$vh360_is_licensed ? 'vh360-locked' : ''; ?>" data-tab="create-video" aria-disabled="<?php echo !$vh360_is_licensed ? 'true' : 'false'; ?>" title="<?php echo !$vh360_is_licensed ? esc_attr__('Activate your license to upload new videos.', 'videohub360-theme') : ''; ?>">
+                <a href="#create-video" class="vh360-dashboard-btn vh360-dashboard-tab <?php echo !$vh360_is_licensed ? 'vh360-locked' : ''; ?>" data-tab="create-video" aria-disabled="<?php echo !$vh360_is_licensed ? 'true' : 'false'; ?>" title="<?php echo !$vh360_is_licensed ? esc_attr( $vh360_is_lesson_context ? __( 'Activate your license to create lessons.', 'videohub360-theme' ) : __( 'Activate your license to upload new videos.', 'videohub360-theme' ) ) : ''; ?>">
                     <?php echo esc_html(
                         $vh360_is_lesson_context
                             ? __( 'Create Lesson', 'videohub360-theme' )
