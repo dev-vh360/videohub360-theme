@@ -80,6 +80,9 @@ class VideoHub360_Course_Enrollments {
         // Learner-facing lesson-completion form submission.
         add_action( 'template_redirect', array( $this, 'handle_lesson_complete_form' ) );
 
+        // Learner-facing start-course form submission.
+        add_action( 'template_redirect', array( $this, 'handle_start_course_form' ) );
+
         // AJAX: Mark lesson complete (logged-in users only).
         add_action( 'wp_ajax_vh360_mark_lesson_complete', array( $this, 'ajax_mark_lesson_complete' ) );
 
@@ -241,26 +244,102 @@ class VideoHub360_Course_Enrollments {
             return;
         }
 
-        $now              = current_time( 'mysql' );
+        $now               = current_time( 'mysql' );
         $enrollments_table = self::get_enrollments_table();
 
         foreach ( $rows as $row ) {
-            $wpdb->update(
-                $enrollments_table,
-                array(
-                    'status'     => 'access_lost',
-                    'updated_at' => $now,
-                ),
-                array(
-                    'user_id'       => absint( $row->user_id ),
-                    'course_term_id' => absint( $row->course_term_id ),
-                    'source'        => 'product_purchase',
-                    'status'        => 'active',
-                ),
-                array( '%s', '%s' ),
-                array( '%d', '%d', '%s', '%s' )
-            );
+            // Use a raw query so we can match status IN ('active','completed')
+            // without touching archived or cancelled rows.
+            // completed_at, completed_lessons, and progress_percent are preserved.
+            $wpdb->query( $wpdb->prepare(
+                "UPDATE {$enrollments_table}
+                 SET status = 'access_lost', updated_at = %s
+                 WHERE user_id = %d
+                   AND course_term_id = %d
+                   AND source = 'product_purchase'
+                   AND status IN ('active','completed')",
+                $now,
+                absint( $row->user_id ),
+                absint( $row->course_term_id )
+            ) );
         }
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  Start-course enrollment form                                         */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * Handle the "Start Learning" form POST on the course landing page.
+     *
+     * Requires the user to be logged in, verifies the nonce, confirms access
+     * via vh360_user_can_access_course(), and enrolls the learner before
+     * redirecting to the first lesson (or course page as fallback).
+     *
+     * Admins (manage_options) are not auto-enrolled to keep test accounts clean.
+     */
+    public function handle_start_course_form() {
+        if (
+            ! is_user_logged_in()
+            || empty( $_POST['vh360_start_course'] )
+            || empty( $_POST['vh360_start_course_nonce'] )
+            || empty( $_POST['vh360_course_term_id'] )
+        ) {
+            return;
+        }
+
+        $course_term_id = absint( $_POST['vh360_course_term_id'] );
+
+        if ( ! wp_verify_nonce(
+            sanitize_text_field( wp_unslash( $_POST['vh360_start_course_nonce'] ) ),
+            'vh360_start_course_' . $course_term_id
+        ) ) {
+            wp_die( esc_html__( 'Security check failed.', 'videohub360' ), 403 );
+        }
+
+        if ( ! $course_term_id ) {
+            return;
+        }
+
+        $user_id = get_current_user_id();
+
+        // Admins are not auto-enrolled.
+        if ( user_can( $user_id, 'manage_options' ) ) {
+            $course_term = get_term( $course_term_id, 'videohub360_series' );
+            wp_safe_redirect( ( $course_term && ! is_wp_error( $course_term ) ) ? get_term_link( $course_term ) : home_url() );
+            exit;
+        }
+
+        // Verify the user has access before enrolling.
+        if (
+            ! function_exists( 'vh360_user_can_access_course' ) ||
+            ! vh360_user_can_access_course( $user_id, $course_term_id )
+        ) {
+            $course_term = get_term( $course_term_id, 'videohub360_series' );
+            wp_safe_redirect( ( $course_term && ! is_wp_error( $course_term ) ) ? get_term_link( $course_term ) : home_url() );
+            exit;
+        }
+
+        // Enroll the learner.
+        if ( function_exists( 'vh360_enroll_user_in_course' ) ) {
+            vh360_enroll_user_in_course( $user_id, $course_term_id, array( 'source' => 'public_start' ) );
+        }
+
+        // Redirect to the first lesson, falling back to the course page.
+        $lessons          = function_exists( 'videohub360_get_course_lessons' )
+            ? videohub360_get_course_lessons( $course_term_id )
+            : array();
+        $first_lesson_url = ! empty( $lessons ) ? get_permalink( $lessons[0]->ID ) : '';
+
+        if ( ! $first_lesson_url ) {
+            $course_term      = get_term( $course_term_id, 'videohub360_series' );
+            $first_lesson_url = ( $course_term && ! is_wp_error( $course_term ) )
+                ? get_term_link( $course_term )
+                : home_url();
+        }
+
+        wp_safe_redirect( $first_lesson_url );
+        exit;
     }
 
     /* ------------------------------------------------------------------ */

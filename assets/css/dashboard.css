@@ -1494,6 +1494,17 @@
     background: var(--border-color);
 }
 
+.vh360-btn-warning {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffc107;
+}
+
+.vh360-btn-warning:hover:not(:disabled) {
+    background: #ffc107;
+    color: #212529;
+}
+
 .vh360-btn-cancel {
     background: transparent;
     color: var(--text-light);

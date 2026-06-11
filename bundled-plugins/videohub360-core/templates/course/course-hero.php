@@ -92,9 +92,27 @@ $hero_desc = ! empty( $short_desc ) ? $short_desc : ( ! empty( $term->descriptio
 
             <?php if ( ! empty( $cta_url ) ) : ?>
                 <div class="vh360-course-cta">
+                    <?php
+                    // For logged-in users who already have access, submit a POST
+                    // form so the enrollment handler fires before the first lesson.
+                    $cta_via_form = is_user_logged_in()
+                        && isset( $user_has_access ) && $user_has_access
+                        && isset( $term_id ) && $term_id;
+                    if ( $cta_via_form ) :
+                    ?>
+                    <form method="post" action="">
+                        <?php wp_nonce_field( 'vh360_start_course_' . $term_id, 'vh360_start_course_nonce' ); ?>
+                        <input type="hidden" name="vh360_start_course" value="1" />
+                        <input type="hidden" name="vh360_course_term_id" value="<?php echo absint( $term_id ); ?>" />
+                        <button type="submit" class="vh360-course-cta-btn">
+                            <?php echo esc_html( $cta_text ); ?>
+                        </button>
+                    </form>
+                    <?php else : ?>
                     <a href="<?php echo esc_url( $cta_url ); ?>" class="vh360-course-cta-btn">
                         <?php echo esc_html( $cta_text ); ?>
                     </a>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
 
