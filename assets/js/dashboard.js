@@ -1336,8 +1336,9 @@
 
                         if (responseData.requires_lesson_delete === true) {
                             var lessonCount = parseInt(responseData.lesson_count, 10) || 0;
+                            var lessonLabel = lessonCount === 1 ? 'lesson' : 'lessons';
                             self.confirmAction(
-                                'This course has ' + lessonCount + ' lessons assigned. Delete this course and move all assigned lessons to Trash? This action cannot be undone.',
+                                'This course has ' + lessonCount + ' ' + lessonLabel + ' assigned. Delete this course and move all assigned lessons to Trash? This action cannot be undone.',
                                 function(confirmed) {
                                     if (!confirmed) return;
 
