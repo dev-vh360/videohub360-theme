@@ -54,6 +54,7 @@ if (isset($_GET['edit']) && !empty($_GET['edit'])) {
             'title' => $video_post->post_title,
             'content' => $video_post->post_content,
             'excerpt' => $video_post->post_excerpt,
+            'status' => $video_post->post_status,
             'video_url' => get_post_meta($edit_video_id, 'video_url', true),
             'custom_html' => get_post_meta($edit_video_id, 'videohub360_custom_html', true),
             'ad_video_url' => get_post_meta($edit_video_id, 'ad_video_url', true),
@@ -106,6 +107,8 @@ $vh360_create_labels = array(
     'choose_file' => $vh360_create_context_is_lesson ? __('Choose Lesson Video File', 'videohub360-theme') : __('Choose Video File', 'videohub360-theme'),
     'publish_button' => $vh360_create_context_is_lesson ? __('Publish Lesson', 'videohub360-theme') : __('Publish Video', 'videohub360-theme'),
     'update_button' => $vh360_create_context_is_lesson ? __('Update Lesson', 'videohub360-theme') : __('Update Video', 'videohub360-theme'),
+    'save_draft_button' => __('Save Draft', 'videohub360-theme'),
+    'move_to_draft_button' => __('Move to Draft', 'videohub360-theme'),
     'license_inactive_message' => $vh360_create_context_is_lesson ? __('Your VideoHub360 license is inactive. Activate your license to create lessons.', 'videohub360-theme') : __('Your VideoHub360 license is inactive. Activate your license to create videos.', 'videohub360-theme'),
     'permission_denied_message' => $vh360_create_context_is_lesson ? __('You do not have permission to create lessons.', 'videohub360-theme') : __('You do not have permission to create videos.', 'videohub360-theme'),
     'direct_url_help' => $vh360_create_context_is_lesson ? __('Direct link to your lesson video file (MP4, WebM, etc.)', 'videohub360-theme') : __('Direct link to your video file (MP4, WebM, etc.)', 'videohub360-theme'),
@@ -132,6 +135,8 @@ if ($vh360_create_context_is_lesson && function_exists('vh360_create_form_sectio
 }
 $show_ad_settings = function_exists('vh360_create_form_section_enabled') ? vh360_create_form_section_enabled('ad_settings') : true;
 $show_advanced_settings = function_exists('vh360_create_form_section_enabled') ? vh360_create_form_section_enabled('advanced_settings') : true;
+$vh360_edit_post_status = $edit_mode && isset($video_data['status']) ? $video_data['status'] : '';
+$vh360_is_published_edit = $edit_mode && 'publish' === $vh360_edit_post_status;
 
 // Load lesson meta in edit mode when course features are enabled
 if ( $edit_mode && $vh360_course_features_enabled ) {
@@ -1192,7 +1197,7 @@ $locations = get_terms(array(
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M5 12h14M12 5l7 7-7 7"></path>
                 </svg>
-                <?php echo esc_html($edit_mode ? $vh360_create_labels['update_button'] : $vh360_create_labels['publish_button']); ?>
+                <?php echo esc_html($vh360_is_published_edit ? $vh360_create_labels['update_button'] : $vh360_create_labels['publish_button']); ?>
             </button>
 
             <button 
@@ -1208,7 +1213,7 @@ $locations = get_terms(array(
                     <polyline points="17 21 17 13 7 13 7 21"></polyline>
                     <polyline points="7 3 7 8 15 8"></polyline>
                 </svg>
-                <?php esc_html_e('Save as Draft', 'videohub360-theme'); ?>
+                <?php echo esc_html($vh360_is_published_edit ? $vh360_create_labels['move_to_draft_button'] : $vh360_create_labels['save_draft_button']); ?>
             </button>
 
             <button 

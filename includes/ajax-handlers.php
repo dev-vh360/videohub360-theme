@@ -887,6 +887,7 @@ class VH360_Ajax_Handlers {
         // Check if this is an edit or new creation
         $video_id = isset($_POST['video_id']) ? absint($_POST['video_id']) : 0;
         $edit_mode = $video_id > 0;
+        $existing_post = null;
 
         if ($edit_mode) {
             // Verify user can edit this video
@@ -899,10 +900,14 @@ class VH360_Ajax_Handlers {
         }
         
         // Get and sanitize inputs
-        $title = isset($_POST['vh360_video_title']) ? sanitize_text_field($_POST['vh360_video_title']) : '';
-        $description = isset($_POST['vh360_video_description']) ? wp_kses_post($_POST['vh360_video_description']) : '';
-        $excerpt = isset($_POST['vh360_video_excerpt']) ? sanitize_textarea_field($_POST['vh360_video_excerpt']) : '';
-        $action = isset($_POST['vh360_action']) ? sanitize_text_field($_POST['vh360_action']) : 'draft';
+        $title = isset($_POST['vh360_video_title']) ? sanitize_text_field(wp_unslash($_POST['vh360_video_title'])) : '';
+        $description = isset($_POST['vh360_video_description']) ? wp_kses_post(wp_unslash($_POST['vh360_video_description'])) : '';
+        $excerpt = isset($_POST['vh360_video_excerpt']) ? sanitize_textarea_field(wp_unslash($_POST['vh360_video_excerpt'])) : '';
+        $requested_action = isset($_POST['vh360_action']) ? sanitize_key(wp_unslash($_POST['vh360_action'])) : '';
+
+        if (!in_array($requested_action, array('publish', 'draft'), true)) {
+            $requested_action = '';
+        }
         
         // Video source
         $video_url = isset($_POST['vh360_video_url']) ? esc_url_raw($_POST['vh360_video_url']) : '';
@@ -964,8 +969,21 @@ class VH360_Ajax_Handlers {
         // Backend save_meta_boxes() method does not validate video_url or custom_html
         // This allows flexibility for all content types including Agora livestreams
         
-        // Determine post status
-        $post_status = ($action === 'publish') ? 'publish' : 'draft';
+        // Determine post status. Preserve an existing post's verified status when
+        // frontend JavaScript fails to submit a valid action during edit mode.
+        if ($edit_mode) {
+            $existing_status = isset($existing_post->post_status) ? $existing_post->post_status : 'draft';
+
+            if ('publish' === $requested_action) {
+                $post_status = 'publish';
+            } elseif ('draft' === $requested_action) {
+                $post_status = 'draft';
+            } else {
+                $post_status = $existing_status;
+            }
+        } else {
+            $post_status = ('publish' === $requested_action) ? 'publish' : 'draft';
+        }
         
         // Create or update the video post
         $post_data = array(
@@ -973,13 +991,14 @@ class VH360_Ajax_Handlers {
             'post_content' => $description,
             'post_excerpt' => $excerpt,
             'post_type' => 'videohub360',
-            'post_status' => $post_status,
         );
         
         if ($edit_mode) {
             $post_data['ID'] = $video_id;
+            $post_data['post_status'] = $post_status;
             $post_id = wp_update_post($post_data, true);
         } else {
+            $post_data['post_status'] = $post_status;
             $post_data['post_author'] = get_current_user_id();
             $post_id = wp_insert_post($post_data, true);
         }
