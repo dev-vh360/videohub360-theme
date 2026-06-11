@@ -35,15 +35,46 @@ $vh360_my_items_label = sprintf(
 $vh360_is_licensed = ( function_exists('vh360_theme_is_license_valid') ? vh360_theme_is_license_valid() : ( function_exists('videohub360_license_is_valid') && videohub360_license_is_valid() ) );
 $vh360_license_url = function_exists('vh360_theme_get_license_admin_url') ? vh360_theme_get_license_admin_url() : admin_url('admin.php?page=videohub360-license');
 // Get filter parameters
-$status = isset($_GET['video_status']) ? sanitize_text_field($_GET['video_status']) : 'publish';
-$search = isset($_GET['video_search']) ? sanitize_text_field($_GET['video_search']) : '';
-$paged = isset($_GET['paged']) ? absint($_GET['paged']) : 1;
+$allowed_statuses = array( 'publish', 'draft', 'all' );
+$status = isset( $_GET['video_status'] ) ? sanitize_key( wp_unslash( $_GET['video_status'] ) ) : 'publish';
+
+if ( ! in_array( $status, $allowed_statuses, true ) ) {
+    $status = 'publish';
+}
+
+$query_post_status = 'all' === $status ? array( 'publish', 'draft' ) : $status;
+$search = isset( $_GET['video_search'] ) ? sanitize_text_field( wp_unslash( $_GET['video_search'] ) ) : '';
+$paged = isset( $_GET['paged'] ) ? absint( $_GET['paged'] ) : 1;
+
+$vh360_status_filter_labels = array(
+    'publish' => sprintf(
+        /* translators: %s = plural content label */
+        __( 'Published %s', 'videohub360-theme' ),
+        $vh360_items_label
+    ),
+    'draft'   => sprintf(
+        /* translators: %s = plural content label */
+        __( 'Draft %s', 'videohub360-theme' ),
+        $vh360_items_label
+    ),
+    'all'     => sprintf(
+        /* translators: %s = plural content label */
+        __( 'All %s', 'videohub360-theme' ),
+        $vh360_items_label
+    ),
+);
+
+$vh360_status_filter_urls = array(
+    'publish' => add_query_arg( 'video_status', 'publish', remove_query_arg( array( 'video_status', 'paged' ) ) ),
+    'draft'   => add_query_arg( 'video_status', 'draft', remove_query_arg( array( 'video_status', 'paged' ) ) ),
+    'all'     => add_query_arg( 'video_status', 'all', remove_query_arg( array( 'video_status', 'paged' ) ) ),
+);
 
 // Build query args
 $args = array(
     'post_type' => 'videohub360',
     'author' => $current_user_id,
-    'post_status' => $status,
+    'post_status' => $query_post_status,
     'posts_per_page' => 12,
     'paged' => $paged,
     'orderby' => 'date',
@@ -90,6 +121,22 @@ $draft_count = $wpdb->get_var($wpdb->prepare(
         <h1 class="vh360-dashboard-title"><?php echo esc_html( $vh360_my_items_label ); ?></h1>
     </div>
 
+    <div class="vh360-dashboard-filters">
+        <div class="vh360-dashboard-filter-tabs vh360-dashboard-status-filters" aria-label="<?php echo esc_attr( sprintf( __( '%s status filters', 'videohub360-theme' ), $vh360_items_label ) ); ?>">
+            <?php foreach ( $vh360_status_filter_labels as $filter_status => $filter_label ) : ?>
+                <a
+                    href="<?php echo esc_url( $vh360_status_filter_urls[ $filter_status ] ); ?>"
+                    class="vh360-dashboard-filter-tab <?php echo esc_attr( $filter_status === $status ? 'active' : '' ); ?>"
+                    <?php echo $filter_status === $status ? 'aria-current="page"' : ''; ?>
+                >
+                    <?php echo esc_html( $filter_label ); ?>
+                </a>
+            <?php endforeach; ?>
+        </div>
+        <input type="hidden" id="vh360-video-status" value="<?php echo esc_attr( $status ); ?>">
+        <input type="hidden" id="vh360-video-search" value="<?php echo esc_attr( $search ); ?>">
+    </div>
+
     <?php if ( ! $vh360_is_licensed ) : ?>
         <div class="vh360-dashboard-notice vh360-dashboard-notice-warning vh360-license-softlock-notice">
             <?php
@@ -127,6 +174,18 @@ $draft_count = $wpdb->get_var($wpdb->prepare(
                                         </div>
                                     <?php endif; ?>
                                     
+                                    <?php
+                                    $vh360_post_status = get_post_status();
+                                    if ( in_array( $vh360_post_status, array( 'publish', 'draft' ), true ) ) :
+                                        $vh360_status_label = 'publish' === $vh360_post_status
+                                            ? __( 'Published', 'videohub360-theme' )
+                                            : __( 'Draft', 'videohub360-theme' );
+                                    ?>
+                                        <span class="vh360-video-status-badge vh360-video-status-badge-<?php echo esc_attr( $vh360_post_status ); ?>">
+                                            <?php echo esc_html( $vh360_status_label ); ?>
+                                        </span>
+                                    <?php endif; ?>
+
                                     <?php
                                     $duration = vh360_get_video_duration(get_the_ID());
                                     if ($duration) :
@@ -216,11 +275,25 @@ $draft_count = $wpdb->get_var($wpdb->prepare(
                             : __( 'No videos found matching your search.', 'videohub360-theme' )
                     );
                 } else {
-                    echo esc_html(
-                        $vh360_is_lesson_context
-                            ? __( 'No lessons yet', 'videohub360-theme' )
-                            : __( 'No videos yet', 'videohub360-theme' )
-                    );
+                    if ( 'draft' === $status ) {
+                        echo esc_html(
+                            $vh360_is_lesson_context
+                                ? __( 'You do not have any draft lessons yet.', 'videohub360-theme' )
+                                : __( 'You do not have any draft videos yet.', 'videohub360-theme' )
+                        );
+                    } elseif ( 'all' === $status ) {
+                        echo esc_html(
+                            $vh360_is_lesson_context
+                                ? __( 'You have not created any lessons yet.', 'videohub360-theme' )
+                                : __( 'You have not created any videos yet.', 'videohub360-theme' )
+                        );
+                    } else {
+                        echo esc_html(
+                            $vh360_is_lesson_context
+                                ? __( 'You have not published any lessons yet.', 'videohub360-theme' )
+                                : __( 'You have not published any videos yet.', 'videohub360-theme' )
+                        );
+                    }
                 }
                 ?>
             </p>
