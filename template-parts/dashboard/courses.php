@@ -129,17 +129,19 @@ $level_options = array(
     </p>
 
     <?php if ( $is_admin ) :
-        $base_url = remove_query_arg( 'vh360_course_scope' );
+        $base_url    = remove_query_arg( array( 'vh360_course_scope', 'tab' ) );
+        $my_url      = add_query_arg( 'tab', 'courses', $base_url );
+        $all_url     = add_query_arg( array( 'tab' => 'courses', 'vh360_course_scope' => 'all' ), $base_url );
     ?>
     <div class="vh360-dashboard-scope-toggle" role="group" aria-label="<?php esc_attr_e( 'Course scope', 'videohub360-theme' ); ?>">
-        <a href="<?php echo esc_url( $base_url ); ?>"
+        <a href="<?php echo esc_url( $my_url ); ?>"
            class="vh360-scope-pill<?php echo ! $show_all ? ' is-active' : ''; ?>">
             <?php
             /* translators: %s = plural course label */
             printf( esc_html__( 'My %s', 'videohub360-theme' ), esc_html( $courses_label ) );
             ?>
         </a>
-        <a href="<?php echo esc_url( add_query_arg( 'vh360_course_scope', 'all', $base_url ) ); ?>"
+        <a href="<?php echo esc_url( $all_url ); ?>"
            class="vh360-scope-pill<?php echo $show_all ? ' is-active' : ''; ?>">
             <?php
             /* translators: %s = plural course label */
