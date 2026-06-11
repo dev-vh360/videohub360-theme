@@ -680,6 +680,7 @@
     background: var(--bg-light);
     color: var(--text-color);
     text-decoration: none;
+    border: 1px solid transparent;
     border-radius: var(--border-radius);
     font-size: 0.875rem;
     font-weight: 500;
@@ -694,6 +695,14 @@
 .vh360-dashboard-videos .vh360-dashboard-filter-tab.active {
     background: var(--primary-color);
     color: #ffffff;
+}
+
+.vh360-dashboard-videos .vh360-dashboard-status-filters {
+    flex-wrap: wrap;
+}
+
+.vh360-dashboard-videos .vh360-dashboard-filter-tab[aria-current="page"] {
+    border-color: var(--primary-color);
 }
 
 .vh360-dashboard-videos .vh360-dashboard-search {
@@ -807,6 +816,30 @@
     font-size: 0.75rem;
     font-weight: 600;
     z-index: 2;
+}
+
+.vh360-dashboard-videos .vh360-video-status-badge {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem 0.55rem;
+    border-radius: 999px;
+    background: rgba(17, 24, 39, 0.82);
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.vh360-dashboard-videos .vh360-video-status-badge-draft {
+    background: rgba(245, 158, 11, 0.95);
+    color: #111827;
 }
 
 /* Video Card Body */

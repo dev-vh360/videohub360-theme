@@ -1423,15 +1423,22 @@ class VH360_Ajax_Handlers {
         }
         
         $current_user_id = get_current_user_id();
-        $status = isset($_POST['status']) ? sanitize_text_field($_POST['status']) : 'publish';
-        $search = isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '';
-        $paged = isset($_POST['page']) ? absint($_POST['page']) : 1;
+        $allowed_statuses = array( 'publish', 'draft', 'all' );
+        $status = isset( $_POST['status'] ) ? sanitize_key( wp_unslash( $_POST['status'] ) ) : 'publish';
+
+        if ( ! in_array( $status, $allowed_statuses, true ) ) {
+            $status = 'publish';
+        }
+
+        $query_post_status = 'all' === $status ? array( 'publish', 'draft' ) : $status;
+        $search = isset( $_POST['search'] ) ? sanitize_text_field( wp_unslash( $_POST['search'] ) ) : '';
+        $paged = isset( $_POST['page'] ) ? absint( $_POST['page'] ) : 1;
         
         // Build query - exclude Live Rooms
         $args = array(
             'post_type' => 'videohub360',
             'author' => $current_user_id,
-            'post_status' => $status,
+            'post_status' => $query_post_status,
             'posts_per_page' => 12,
             'paged' => $paged,
             'orderby' => 'date',
@@ -1467,11 +1474,31 @@ class VH360_Ajax_Handlers {
                 <div class="vh360-dashboard-empty-icon">📹</div>
                 <p class="vh360-dashboard-empty-title">
                     <?php
-                    echo esc_html(
-                        $is_lesson_context
-                            ? __( 'No lessons found matching your search.', 'videohub360-theme' )
-                            : __( 'No videos found matching your search.', 'videohub360-theme' )
-                    );
+                    if ( ! empty( $search ) ) {
+                        echo esc_html(
+                            $is_lesson_context
+                                ? __( 'No lessons found matching your search.', 'videohub360-theme' )
+                                : __( 'No videos found matching your search.', 'videohub360-theme' )
+                        );
+                    } elseif ( 'draft' === $status ) {
+                        echo esc_html(
+                            $is_lesson_context
+                                ? __( 'You do not have any draft lessons yet.', 'videohub360-theme' )
+                                : __( 'You do not have any draft videos yet.', 'videohub360-theme' )
+                        );
+                    } elseif ( 'all' === $status ) {
+                        echo esc_html(
+                            $is_lesson_context
+                                ? __( 'You have not created any lessons yet.', 'videohub360-theme' )
+                                : __( 'You have not created any videos yet.', 'videohub360-theme' )
+                        );
+                    } else {
+                        echo esc_html(
+                            $is_lesson_context
+                                ? __( 'You have not published any lessons yet.', 'videohub360-theme' )
+                                : __( 'You have not published any videos yet.', 'videohub360-theme' )
+                        );
+                    }
                     ?>
                 </p>
             </div>
@@ -1498,6 +1525,18 @@ class VH360_Ajax_Handlers {
                                         </div>
                                     <?php endif; ?>
                                     
+                                    <?php
+                                    $vh360_post_status = get_post_status();
+                                    if ( in_array( $vh360_post_status, array( 'publish', 'draft' ), true ) ) :
+                                        $vh360_status_label = 'publish' === $vh360_post_status
+                                            ? __( 'Published', 'videohub360-theme' )
+                                            : __( 'Draft', 'videohub360-theme' );
+                                    ?>
+                                        <span class="vh360-video-status-badge vh360-video-status-badge-<?php echo esc_attr( $vh360_post_status ); ?>">
+                                            <?php echo esc_html( $vh360_status_label ); ?>
+                                        </span>
+                                    <?php endif; ?>
+
                                     <?php
                                     $duration = vh360_get_video_duration(get_the_ID());
                                     if ($duration) :
