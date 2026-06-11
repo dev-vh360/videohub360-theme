@@ -681,17 +681,26 @@ class VH360_Ajax_Handlers {
     public function delete_video() {
         // Check if user is logged in
         if (!is_user_logged_in()) {
+            $is_lesson_context = function_exists( 'vh360_dashboard_uses_lesson_labels' )
+                && vh360_dashboard_uses_lesson_labels( get_current_user_id() );
             wp_send_json_error(array(
-                'message' => esc_html__('You must be logged in to delete videos.', 'videohub360-theme'),
+                'message' => $is_lesson_context
+                    ? esc_html__( 'You must be logged in to delete lessons.', 'videohub360-theme' )
+                    : esc_html__('You must be logged in to delete videos.', 'videohub360-theme'),
             ));
         }
+
+        $is_lesson_context = function_exists( 'vh360_dashboard_uses_lesson_labels' )
+            && vh360_dashboard_uses_lesson_labels( get_current_user_id() );
         
         // Get video ID
         $video_id = isset($_POST['video_id']) ? absint($_POST['video_id']) : 0;
         
         if (!$video_id) {
             wp_send_json_error(array(
-                'message' => esc_html__('Invalid video ID.', 'videohub360-theme'),
+                'message' => $is_lesson_context
+                    ? esc_html__( 'Invalid lesson ID.', 'videohub360-theme' )
+                    : esc_html__('Invalid video ID.', 'videohub360-theme'),
             ));
         }
         
@@ -705,7 +714,9 @@ class VH360_Ajax_Handlers {
         // Check if user can delete this video
         if (!vh360_user_can_delete_video($video_id)) {
             wp_send_json_error(array(
-                'message' => esc_html__('You do not have permission to delete this video.', 'videohub360-theme'),
+                'message' => $is_lesson_context
+                    ? esc_html__( 'You do not have permission to delete this lesson.', 'videohub360-theme' )
+                    : esc_html__('You do not have permission to delete this video.', 'videohub360-theme'),
             ));
         }
         
@@ -714,12 +725,16 @@ class VH360_Ajax_Handlers {
         
         if (!$deleted) {
             wp_send_json_error(array(
-                'message' => esc_html__('Failed to delete the video.', 'videohub360-theme'),
+                'message' => $is_lesson_context
+                    ? esc_html__( 'Failed to delete the lesson.', 'videohub360-theme' )
+                    : esc_html__('Failed to delete the video.', 'videohub360-theme'),
             ));
         }
         
         wp_send_json_success(array(
-            'message' => esc_html__('Video deleted successfully.', 'videohub360-theme'),
+            'message' => $is_lesson_context
+                ? esc_html__( 'Lesson deleted successfully.', 'videohub360-theme' )
+                : esc_html__('Video deleted successfully.', 'videohub360-theme'),
         ));
     }
     
@@ -1421,10 +1436,28 @@ class VH360_Ajax_Handlers {
         }
         
         $videos_query = new WP_Query($args);
-        
+
+        $is_lesson_context = function_exists( 'vh360_dashboard_uses_lesson_labels' )
+            && vh360_dashboard_uses_lesson_labels( $current_user_id );
+
         // Generate videos HTML
         ob_start();
-        if ($videos_query->have_posts()) {
+        if ( ! $videos_query->have_posts() ) {
+            ?>
+            <div class="vh360-dashboard-empty">
+                <div class="vh360-dashboard-empty-icon">📹</div>
+                <p class="vh360-dashboard-empty-title">
+                    <?php
+                    echo esc_html(
+                        $is_lesson_context
+                            ? __( 'No lessons found matching your search.', 'videohub360-theme' )
+                            : __( 'No videos found matching your search.', 'videohub360-theme' )
+                    );
+                    ?>
+                </p>
+            </div>
+            <?php
+        } else {
             while ($videos_query->have_posts()) {
                 $videos_query->the_post();
                 ?>

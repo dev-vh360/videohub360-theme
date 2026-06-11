@@ -1268,17 +1268,25 @@ if (!function_exists('vh360_create_form_section_enabled')) {
     }
 }
 
-if (!function_exists('vh360_is_create_form_lesson_context')) {
-    function vh360_is_create_form_lesson_context($user_id = 0) {
-        if (!function_exists('videohub360_course_features_enabled') || !videohub360_course_features_enabled()) {
+if ( ! function_exists( 'vh360_dashboard_uses_lesson_labels' ) ) {
+    function vh360_dashboard_uses_lesson_labels( $user_id = 0 ) {
+        if ( ! function_exists( 'videohub360_course_features_enabled' ) || ! videohub360_course_features_enabled() ) {
             return false;
         }
 
-        if (function_exists('vh360_get_author_template_mode')) {
+        if ( function_exists( 'vh360_get_author_template_mode' ) ) {
             return vh360_get_author_template_mode() === 'course';
         }
 
-        return get_theme_mod('vh360_author_template_mode', 'profile') === 'course';
+        return get_theme_mod( 'vh360_author_template_mode', 'profile' ) === 'course';
+    }
+}
+
+if (!function_exists('vh360_is_create_form_lesson_context')) {
+    function vh360_is_create_form_lesson_context($user_id = 0) {
+        return function_exists( 'vh360_dashboard_uses_lesson_labels' )
+            ? vh360_dashboard_uses_lesson_labels( $user_id )
+            : false;
     }
 }
 
