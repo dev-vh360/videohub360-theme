@@ -750,7 +750,7 @@
                 var action = $submitBtn.val();
 
                 if (action !== 'publish' && action !== 'draft') {
-                    action = $('input[name="video_id"]').length > 0 ? 'publish' : 'draft';
+                    action = $('input[name="video_id"]').length > 0 ? '' : 'draft';
                 }
 
                 var createFormLabels = (window.vh360Dashboard && vh360Dashboard.createForm) || {};
