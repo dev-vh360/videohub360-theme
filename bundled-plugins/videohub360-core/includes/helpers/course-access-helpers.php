@@ -46,10 +46,25 @@ if ( ! function_exists( 'vh360_user_can_access_course' ) ) {
             return true;
         }
 
-        // Resolve the purchase mode; fall back to 'none' if the helper is absent.
-        $mode = function_exists( 'vh360_get_course_purchase_mode' )
-            ? vh360_get_course_purchase_mode( $course_term_id )
-            : 'none';
+        // Resolve the purchase mode from core first, then memberships plugin, then
+        // directly from term meta so restricted courses never fall back to 'none'
+        // simply because the memberships plugin is inactive.
+        if ( function_exists( 'videohub360_get_course_purchase_mode' ) ) {
+            $mode = videohub360_get_course_purchase_mode( $course_term_id );
+        } elseif ( function_exists( 'vh360_get_course_purchase_mode' ) ) {
+            $mode = vh360_get_course_purchase_mode( $course_term_id );
+        } else {
+            $raw = sanitize_key( (string) get_term_meta( $course_term_id, '_vh360_course_purchase_mode', true ) );
+            if ( in_array( $raw, array( 'none', 'product', 'membership', 'both' ), true ) ) {
+                $mode = $raw;
+            } elseif ( absint( get_term_meta( $course_term_id, '_vh360_course_product_id', true ) ) > 0 ) {
+                $mode = 'product';
+            } elseif ( get_term_meta( $course_term_id, '_vh360_course_required_membership', true ) ) {
+                $mode = 'membership';
+            } else {
+                $mode = 'none';
+            }
+        }
 
         if ( 'none' === $mode ) {
             return true;
