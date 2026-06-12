@@ -1619,24 +1619,25 @@ if ( ! function_exists( 'videohub360_user_can_access_lesson' ) ) {
                 : false;
         };
 
-        // Lesson-level membership requirements override course product access.
-        $lesson_plan = get_post_meta( $post_id, '_vh360_membership_required', true );
-        if ( ! empty( $lesson_plan ) ) {
-            return $check_membership( $lesson_plan );
-        }
-
         $course = function_exists( 'videohub360_get_lesson_course' ) ? videohub360_get_lesson_course( $post_id ) : false;
         if ( ! $course ) {
             return true;
         }
 
-        // Course owners/managers should always be able to access lessons in their own course.
+        // Course owners/managers should always be able to access lessons in their own course,
+        // including lessons with their own membership requirements.
         if (
             $user_id
             && function_exists( 'vh360_user_can_manage_course' )
             && vh360_user_can_manage_course( $user_id, (int) $course->term_id )
         ) {
             return true;
+        }
+
+        // Lesson-level membership requirements override course product access for regular learners.
+        $lesson_plan = get_post_meta( $post_id, '_vh360_membership_required', true );
+        if ( ! empty( $lesson_plan ) ) {
+            return $check_membership( $lesson_plan );
         }
 
         $mode = videohub360_get_course_purchase_mode( $course->term_id );
