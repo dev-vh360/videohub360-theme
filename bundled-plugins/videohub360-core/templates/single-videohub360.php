@@ -651,15 +651,27 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                     vh360_user_can_access_course( get_current_user_id(), (int) $vh360_complete_course->term_id )
                 ) {
                     ?>
-                    <div class="vh360-lesson-complete-wrap">
-                        <form method="post" class="vh360-lesson-complete-form">
-                            <?php wp_nonce_field( 'vh360_lesson_complete_' . get_the_ID(), 'vh360_lesson_complete_nonce' ); ?>
-                            <input type="hidden" name="vh360_lesson_id" value="<?php echo esc_attr( get_the_ID() ); ?>" />
-                            <button type="submit" name="vh360_mark_lesson_complete" class="vh360-btn vh360-btn-complete">
-                                <?php esc_html_e( 'Mark Lesson Complete', 'videohub360' ); ?>
-                            </button>
-                        </form>
-                    </div>
+                    <?php
+                    $vh360_lesson_completed = function_exists( 'vh360_user_has_completed_lesson' )
+                        && vh360_user_has_completed_lesson( get_current_user_id(), get_the_ID() );
+                    ?>
+                    <?php if ( $vh360_lesson_completed ) : ?>
+                        <div class="vh360-lesson-complete-wrap">
+                            <span class="vh360-btn vh360-btn-complete is-completed">
+                                <?php esc_html_e( 'Completed', 'videohub360' ); ?>
+                            </span>
+                        </div>
+                    <?php else : ?>
+                        <div class="vh360-lesson-complete-wrap">
+                            <form method="post" class="vh360-lesson-complete-form">
+                                <?php wp_nonce_field( 'vh360_lesson_complete_' . get_the_ID(), 'vh360_lesson_complete_nonce' ); ?>
+                                <input type="hidden" name="vh360_lesson_id" value="<?php echo esc_attr( get_the_ID() ); ?>" />
+                                <button type="submit" name="vh360_mark_lesson_complete" value="1" class="vh360-btn vh360-btn-complete">
+                                    <?php esc_html_e( 'Mark Lesson Complete', 'videohub360' ); ?>
+                                </button>
+                            </form>
+                        </div>
+                    <?php endif; ?>
                     <?php
                 }
                 unset( $vh360_complete_course );

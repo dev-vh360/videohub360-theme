@@ -369,7 +369,7 @@ class VideoHub360_Course_Enrollments {
     public function handle_lesson_complete_form() {
         if (
             ! is_user_logged_in()
-            || empty( $_POST['vh360_mark_lesson_complete'] )
+            || ! isset( $_POST['vh360_mark_lesson_complete'] )
             || empty( $_POST['vh360_lesson_complete_nonce'] )
             || empty( $_POST['vh360_lesson_id'] )
         ) {
@@ -1266,6 +1266,38 @@ if ( ! function_exists( 'vh360_mark_lesson_complete' ) ) {
          * @param int $course_term_id Course term ID.
          */
         do_action( 'vh360_lesson_completed', $user_id, $lesson_id, $course_term_id );
+    }
+}
+
+if ( ! function_exists( 'vh360_user_has_completed_lesson' ) ) {
+    /**
+     * Determine whether a user has completed a lesson.
+     *
+     * @param int $user_id   User ID.
+     * @param int $lesson_id Lesson post ID.
+     * @return bool
+     */
+    function vh360_user_has_completed_lesson( $user_id, $lesson_id ) {
+        $user_id   = absint( $user_id );
+        $lesson_id = absint( $lesson_id );
+
+        if ( ! $user_id || ! $lesson_id ) {
+            return false;
+        }
+
+        global $wpdb;
+
+        $table = VideoHub360_Course_Enrollments::get_lesson_progress_table();
+
+        $status = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT status FROM {$table} WHERE user_id = %d AND lesson_id = %d LIMIT 1",
+                $user_id,
+                $lesson_id
+            )
+        );
+
+        return 'completed' === $status;
     }
 }
 

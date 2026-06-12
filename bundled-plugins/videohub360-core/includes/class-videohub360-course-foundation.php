@@ -1571,8 +1571,10 @@ if ( ! function_exists( 'videohub360_user_can_access_lesson' ) ) {
     /**
      * Course-aware lesson access decision.
      *
-     * Free previews remain public. Product-based course access is checked via
-     * course entitlements when available and otherwise fails closed.
+     * Free previews remain public. Administrators, lesson editors, and course
+     * managers bypass learner-facing product and membership gates. Product-based
+     * course access is checked via course entitlements when available and
+     * otherwise fails closed.
      *
      * @param int $post_id Lesson post ID.
      * @param int $user_id User ID. Defaults to current user.
@@ -1586,12 +1588,17 @@ if ( ! function_exists( 'videohub360_user_can_access_lesson' ) ) {
             return false;
         }
 
-        // 1. Administrators always pass.
+        // Administrators always pass.
         if ( $user_id && user_can( $user_id, 'manage_options' ) ) {
             return true;
         }
 
-        // 2. Free preview lessons are public.
+        // Lesson authors/editors should always be able to access lessons they can edit.
+        if ( $user_id && user_can( $user_id, 'edit_post', $post_id ) ) {
+            return true;
+        }
+
+        // Free preview lessons are public.
         if ( 'yes' === get_post_meta( $post_id, '_vh360_lesson_is_preview', true ) ) {
             return true;
         }
@@ -1612,15 +1619,25 @@ if ( ! function_exists( 'videohub360_user_can_access_lesson' ) ) {
                 : false;
         };
 
-        // 3. Lesson-level membership requirements override course product access.
-        $lesson_plan = get_post_meta( $post_id, '_vh360_membership_required', true );
-        if ( ! empty( $lesson_plan ) ) {
-            return $check_membership( $lesson_plan );
-        }
-
         $course = function_exists( 'videohub360_get_lesson_course' ) ? videohub360_get_lesson_course( $post_id ) : false;
         if ( ! $course ) {
             return true;
+        }
+
+        // Course owners/managers should always be able to access lessons in their own course,
+        // including lessons with their own membership requirements.
+        if (
+            $user_id
+            && function_exists( 'vh360_user_can_manage_course' )
+            && vh360_user_can_manage_course( $user_id, (int) $course->term_id )
+        ) {
+            return true;
+        }
+
+        // Lesson-level membership requirements override course product access for regular learners.
+        $lesson_plan = get_post_meta( $post_id, '_vh360_membership_required', true );
+        if ( ! empty( $lesson_plan ) ) {
+            return $check_membership( $lesson_plan );
         }
 
         $mode = videohub360_get_course_purchase_mode( $course->term_id );
@@ -1632,22 +1649,22 @@ if ( ! function_exists( 'videohub360_user_can_access_lesson' ) ) {
             ? vh360_user_has_course_entitlement( $user_id, $course->term_id )
             : false;
 
-        // 4. Product-only course access requires the course entitlement.
+        // Product-only course access requires the course entitlement.
         if ( 'product' === $mode ) {
             return $has_course_entitlement;
         }
 
-        // 5. Membership course access requires the course membership rule.
+        // Membership course access requires the course membership rule.
         if ( 'membership' === $mode ) {
             return empty( $course_plan ) ? true : $check_membership( $course_plan );
         }
 
-        // 6. Both mode allows either path only because lesson overrides already returned above.
+        // Both mode allows either path only because lesson overrides already returned above.
         if ( 'both' === $mode ) {
             return $has_course_entitlement || ( ! empty( $course_plan ) && $check_membership( $course_plan ) );
         }
 
-        // 7. No course requirement means public.
+        // No course requirement means public.
         return true;
     }
 }
