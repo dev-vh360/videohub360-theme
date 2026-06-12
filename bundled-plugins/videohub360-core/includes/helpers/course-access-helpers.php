@@ -116,3 +116,119 @@ if ( ! function_exists( 'vh360_user_can_access_course' ) ) {
         return false;
     }
 }
+
+
+if ( ! function_exists( 'videohub360_render_course_lesson_access_gate' ) ) {
+    /**
+     * Render a course-aware access gate for locked lessons.
+     *
+     * @param int $lesson_id Lesson post ID.
+     * @return string
+     */
+    function videohub360_render_course_lesson_access_gate( $lesson_id ) {
+        $lesson_id = absint( $lesson_id );
+
+        if ( ! $lesson_id ) {
+            return '';
+        }
+
+        $course = function_exists( 'videohub360_get_lesson_course' )
+            ? videohub360_get_lesson_course( $lesson_id )
+            : false;
+
+        if ( ! $course || empty( $course->term_id ) ) {
+            if ( function_exists( 'vh360_render_membership_gate' ) ) {
+                return vh360_render_membership_gate();
+            }
+
+            return '<div class="vh360-membership-gate"><p>' . esc_html__( 'Please log in or purchase access to view this lesson.', 'videohub360' ) . '</p></div>';
+        }
+
+        $course_id = (int) $course->term_id;
+
+        if ( function_exists( 'videohub360_get_course_purchase_mode' ) ) {
+            $purchase_mode = videohub360_get_course_purchase_mode( $course_id );
+        } elseif ( function_exists( 'vh360_get_course_purchase_mode' ) ) {
+            $purchase_mode = vh360_get_course_purchase_mode( $course_id );
+        } else {
+            $purchase_mode = 'none';
+        }
+
+        $purchase_url = function_exists( 'vh360_get_course_purchase_url' )
+            ? vh360_get_course_purchase_url( $course_id )
+            : '';
+
+        $membership_options = get_option( 'vh360_membership_options', array() );
+        $pricing_url        = ! empty( $membership_options['pricing_page_url'] ) ? $membership_options['pricing_page_url'] : '';
+
+        $title   = esc_html__( 'Course Access Required', 'videohub360' );
+        $message = esc_html__( 'Please purchase this course or join with an active membership to continue.', 'videohub360' );
+        $buttons = array();
+
+        if ( 'product' === $purchase_mode ) {
+            $title   = esc_html__( 'Course Purchase Required', 'videohub360' );
+            $message = $purchase_url
+                ? esc_html__( 'This lesson is part of a paid course. Purchase the course to continue.', 'videohub360' )
+                : esc_html__( 'Purchase access is required for this course, but no purchase link is currently configured.', 'videohub360' );
+
+            if ( $purchase_url ) {
+                $buttons[] = array(
+                    'url'   => $purchase_url,
+                    'label' => esc_html__( 'Buy Course', 'videohub360' ),
+                    'class' => 'vh360-membership-gate-button vh360-btn vh360-btn-primary',
+                );
+            }
+        } elseif ( 'membership' === $purchase_mode ) {
+            $title   = esc_html__( 'Membership Required', 'videohub360' );
+            $message = esc_html__( 'This lesson requires an active membership to access.', 'videohub360' );
+
+            if ( $pricing_url ) {
+                $buttons[] = array(
+                    'url'   => $pricing_url,
+                    'label' => esc_html__( 'View Plans', 'videohub360' ),
+                    'class' => 'vh360-membership-gate-button vh360-btn vh360-btn-primary',
+                );
+            }
+        } elseif ( 'both' === $purchase_mode ) {
+            $title   = esc_html__( 'Course Access Required', 'videohub360' );
+            $message = esc_html__( 'Purchase this course or join with an active membership to continue.', 'videohub360' );
+
+            if ( $purchase_url ) {
+                $buttons[] = array(
+                    'url'   => $purchase_url,
+                    'label' => esc_html__( 'Buy Course', 'videohub360' ),
+                    'class' => 'vh360-membership-gate-button vh360-btn vh360-btn-primary',
+                );
+            }
+
+            if ( $pricing_url ) {
+                $buttons[] = array(
+                    'url'   => $pricing_url,
+                    'label' => esc_html__( 'View Plans', 'videohub360' ),
+                    'class' => 'vh360-membership-gate-button vh360-btn vh360-btn-secondary',
+                );
+            }
+        }
+
+        ob_start();
+        ?>
+        <div class="vh360-course-access-gate vh360-membership-gate">
+            <div class="vh360-course-access-gate-inner vh360-membership-gate-content">
+                <h3><?php echo esc_html( $title ); ?></h3>
+                <p><?php echo esc_html( $message ); ?></p>
+
+                <?php if ( ! empty( $buttons ) ) : ?>
+                    <div class="vh360-course-access-gate-actions">
+                        <?php foreach ( $buttons as $button ) : ?>
+                            <a class="<?php echo esc_attr( $button['class'] ); ?>" href="<?php echo esc_url( $button['url'] ); ?>">
+                                <?php echo esc_html( $button['label'] ); ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+}

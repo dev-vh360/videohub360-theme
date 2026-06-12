@@ -4526,3 +4526,11 @@ body.vh360-ios-immersive-active
         font-size: 26px !important;
     }
 }
+
+.vh360-course-access-gate-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: center;
+    margin-top: 1rem;
+}

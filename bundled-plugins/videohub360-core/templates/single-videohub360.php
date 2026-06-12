@@ -266,8 +266,10 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
             }
             
             if (!$user_has_access) {
-                // Render access gate instead of video
-                if (function_exists('vh360_render_membership_gate')) {
+                // Render access gate instead of video.
+                if (function_exists('videohub360_render_course_lesson_access_gate')) {
+                    echo videohub360_render_course_lesson_access_gate(get_the_ID());
+                } elseif (function_exists('vh360_render_membership_gate')) {
                     echo vh360_render_membership_gate(array('required_plan' => $required_plan ?: 'course'));
                 } else {
                     echo '<div class="vh360-membership-gate"><p>' . esc_html__('Please log in or purchase access to view this lesson.', 'videohub360') . '</p></div>';
