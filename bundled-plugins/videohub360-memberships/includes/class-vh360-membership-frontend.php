@@ -75,6 +75,10 @@ class VH360_Membership_Frontend {
                 return $content;
             }
 
+            if (function_exists('videohub360_render_course_lesson_access_gate')) {
+                return videohub360_render_course_lesson_access_gate($post_id);
+            }
+
             return vh360_render_membership_gate(array(
                 'required_plan' => vh360_post_requires_membership($post_id) ?: 'course',
             ));
