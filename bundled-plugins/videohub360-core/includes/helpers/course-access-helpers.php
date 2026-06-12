@@ -28,7 +28,7 @@ if ( ! function_exists( 'vh360_user_can_access_course' ) ) {
      *  - 'membership' → user must hold the required active membership.
      *  - 'both'       → entitlement OR active membership satisfies access.
      *
-     * Admins (manage_options) always have access regardless of mode.
+     * Admins (manage_options) and course managers always have access regardless of mode.
      *
      * @param int $user_id        WordPress user ID (0 = current user).
      * @param int $course_term_id videohub360_series term ID.
@@ -43,6 +43,16 @@ if ( ! function_exists( 'vh360_user_can_access_course' ) ) {
         }
 
         if ( $user_id && user_can( $user_id, 'manage_options' ) ) {
+            return true;
+        }
+
+        // Course owners/managers should always be able to access their own course,
+        // regardless of product or membership requirements.
+        if (
+            $user_id
+            && function_exists( 'vh360_user_can_manage_course' )
+            && vh360_user_can_manage_course( $user_id, $course_term_id )
+        ) {
             return true;
         }
 
