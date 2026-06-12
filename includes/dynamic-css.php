@@ -82,6 +82,10 @@ function vh360_output_dynamic_css() {
     $header_notification_badge_text_color   = get_theme_mod('vh360_header_notification_badge_text_color', '#ffffff');
     $header_notification_badge_border_color = get_theme_mod('vh360_header_notification_badge_border_color', '#ffffff');
 
+    $header_cart_badge_bg_color             = get_theme_mod('vh360_header_cart_badge_bg_color', '#ef4444');
+    $header_cart_badge_text_color           = get_theme_mod('vh360_header_cart_badge_text_color', '#ffffff');
+    $header_cart_badge_border_color         = get_theme_mod('vh360_header_cart_badge_border_color', '#ffffff');
+
     $header_message_badge_bg_color          = get_theme_mod('vh360_header_message_badge_bg_color', '#3b82f6');
     $header_message_badge_text_color        = get_theme_mod('vh360_header_message_badge_text_color', '#ffffff');
     $header_message_badge_border_color      = get_theme_mod('vh360_header_message_badge_border_color', '#ffffff');
@@ -229,6 +233,10 @@ function vh360_output_dynamic_css() {
             --vh360-header-notification-badge-bg-color: <?php echo esc_attr($header_notification_badge_bg_color); ?>;
             --vh360-header-notification-badge-text-color: <?php echo esc_attr($header_notification_badge_text_color); ?>;
             --vh360-header-notification-badge-border-color: <?php echo esc_attr($header_notification_badge_border_color); ?>;
+
+            --vh360-header-cart-badge-bg-color: <?php echo esc_attr($header_cart_badge_bg_color); ?>;
+            --vh360-header-cart-badge-text-color: <?php echo esc_attr($header_cart_badge_text_color); ?>;
+            --vh360-header-cart-badge-border-color: <?php echo esc_attr($header_cart_badge_border_color); ?>;
 
             --vh360-header-message-badge-bg-color: <?php echo esc_attr($header_message_badge_bg_color); ?>;
             --vh360-header-message-badge-text-color: <?php echo esc_attr($header_message_badge_text_color); ?>;

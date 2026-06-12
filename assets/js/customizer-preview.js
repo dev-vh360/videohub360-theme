@@ -351,6 +351,24 @@
         });
     });
 
+    wp.customize('vh360_header_cart_badge_bg_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('vh360-header-cart-badge-bg-color', newval);
+        });
+    });
+
+    wp.customize('vh360_header_cart_badge_text_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('vh360-header-cart-badge-text-color', newval);
+        });
+    });
+
+    wp.customize('vh360_header_cart_badge_border_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('vh360-header-cart-badge-border-color', newval);
+        });
+    });
+
     wp.customize('vh360_header_message_badge_bg_color', function(value) {
         value.bind(function(newval) {
             updateCSSVariable('vh360-header-message-badge-bg-color', newval);

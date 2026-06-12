@@ -392,7 +392,7 @@ function vh360_register_header_controls($wp_customize) {
         'title'       => __('Header Action Colors', 'videohub360-theme'),
         'panel'       => 'vh360_header_navigation',
         'priority'    => 31,
-        'description' => __('Customize colors for the Sign In/Register buttons, notification bell, and message icon in the site header.', 'videohub360-theme'),
+        'description' => __('Customize colors for the Sign In/Register buttons, header icons, shopping cart, notification bell, and message icon in the site header.', 'videohub360-theme'),
     ));
 
     /* --- Sign In Button --- */
@@ -509,7 +509,7 @@ function vh360_register_header_controls($wp_customize) {
         )
     ));
 
-    /* --- Header Icons (bell & message) --- */
+    /* --- Header Icons (search, cart, bell & message) --- */
     $wp_customize->add_setting('vh360_header_icon_color', array(
         'default'           => '#1f2937',
         'sanitize_callback' => 'sanitize_hex_color',
@@ -591,6 +591,49 @@ function vh360_register_header_controls($wp_customize) {
         'vh360_header_notification_badge_border_color',
         array(
             'label'   => __('Notification Badge: Border', 'videohub360-theme'),
+            'section' => 'vh360_header_action_colors',
+        )
+    ));
+
+    /* --- Cart Badge --- */
+    $wp_customize->add_setting('vh360_header_cart_badge_bg_color', array(
+        'default'           => '#ef4444',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control(
+        $wp_customize,
+        'vh360_header_cart_badge_bg_color',
+        array(
+            'label'   => __('Cart Badge Background Color', 'videohub360-theme'),
+            'section' => 'vh360_header_action_colors',
+        )
+    ));
+
+    $wp_customize->add_setting('vh360_header_cart_badge_text_color', array(
+        'default'           => '#ffffff',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control(
+        $wp_customize,
+        'vh360_header_cart_badge_text_color',
+        array(
+            'label'   => __('Cart Badge Text Color', 'videohub360-theme'),
+            'section' => 'vh360_header_action_colors',
+        )
+    ));
+
+    $wp_customize->add_setting('vh360_header_cart_badge_border_color', array(
+        'default'           => '#ffffff',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control(
+        $wp_customize,
+        'vh360_header_cart_badge_border_color',
+        array(
+            'label'   => __('Cart Badge Border Color', 'videohub360-theme'),
             'section' => 'vh360_header_action_colors',
         )
     ));
