@@ -150,15 +150,8 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
     $title = get_the_title();
     $published_date = get_the_date();
 
-    // Get sidebar configuration to determine layout
-    $sidebar_config = get_post_meta(get_the_ID(), '_vh360_sidebar_config', true);
-    if (empty($sidebar_config)) {
-        $sidebar_config = array();
-    }
-    $sidebar_config = wp_parse_args($sidebar_config, array(
-        'video_layout' => 'sidebar'
-    ));
-    $video_layout = $sidebar_config['video_layout'];
+    // Resolve the internal VideoHub360 sidebar/full-width layout.
+    $video_layout = videohub360_get_single_video_layout(get_the_ID());
 
     // Livestream fields
     $livestream_fields = [
