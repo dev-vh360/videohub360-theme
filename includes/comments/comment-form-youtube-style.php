@@ -32,7 +32,7 @@ function vh360_youtube_style_comment_form($args = array(), $post_id = null) {
     $html5 = 'html5';
     
     // Login URL for the current page
-    $login_url = wp_login_url(get_permalink($post_id));
+    $login_url = vh360_get_login_page_url_with_redirect(get_permalink($post_id));
     
     // Login prompt for logged-out visitors
     $vh360_login_prompt = '';
@@ -93,7 +93,7 @@ function vh360_youtube_style_comment_form($args = array(), $post_id = null) {
             sprintf(
                 /* translators: %s: login URL */
                 __('You must be <a href="%s">logged in</a> to post a comment.', 'videohub360-theme'),
-                wp_login_url(apply_filters('the_permalink', get_permalink($post_id)))
+                vh360_get_login_page_url_with_redirect(apply_filters('the_permalink', get_permalink($post_id)))
             ) . '</p>',
         'logged_in_as' => '',
         'comment_notes_before' => $vh360_login_prompt,

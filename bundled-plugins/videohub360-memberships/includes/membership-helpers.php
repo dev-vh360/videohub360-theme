@@ -463,8 +463,8 @@ function vh360_render_login_gate($custom_message = '', $pricing_url = '') {
         }
     }
     
-    $login_url = function_exists('vh360_get_login_page_url') 
-        ? vh360_get_login_page_url() 
+    $login_url = function_exists('vh360_get_login_page_url_with_redirect') 
+        ? vh360_get_login_page_url_with_redirect(get_permalink()) 
         : wp_login_url(get_permalink());
         
     ob_start();

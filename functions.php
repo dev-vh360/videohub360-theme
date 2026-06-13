@@ -1927,8 +1927,17 @@ function vh360_mobile_bottom_nav_item_output( $item_output, $item, $depth, $args
     }
 
     $href = ! empty( $item->url ) ? $item->url : '#';
+    $login_link_attrs = '';
+    if ( ! is_user_logged_in() && function_exists( 'vh360_get_login_page_url_with_redirect' ) && function_exists( 'vh360_get_login_page_url' ) ) {
+        $login_path = wp_parse_url( vh360_get_login_page_url(), PHP_URL_PATH );
+        $item_path  = wp_parse_url( $href, PHP_URL_PATH );
+        if ( $login_path && $item_path && untrailingslashit( $login_path ) === untrailingslashit( $item_path ) ) {
+            $href = vh360_get_login_page_url_with_redirect();
+            $login_link_attrs = ' data-vh360-login-link="1"';
+        }
+    }
 
-    $out  = '<a class="vh360-mobile-bottom-nav__item" href="' . esc_url( $href ) . '" aria-label="' . esc_attr( $label ) . '">';
+    $out  = '<a class="vh360-mobile-bottom-nav__item"' . $login_link_attrs . ' href="' . esc_url( $href ) . '" aria-label="' . esc_attr( $label ) . '">';
     $out .= $icon_html;
     $out .= '<span class="vh360-mobile-bottom-nav__label">' . esc_html( $label ) . '</span>';
 

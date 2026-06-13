@@ -14,8 +14,11 @@ if (!defined('ABSPATH')) {
 
 // Redirect if already logged in
 if (is_user_logged_in()) {
-    $redirect_to = vh360_get_login_redirect_url(get_current_user_id());
-    wp_safe_redirect($redirect_to);
+    $redirect_to = isset($_GET['redirect_to']) ? esc_url_raw(wp_unslash($_GET['redirect_to'])) : '';
+    if (empty($redirect_to) || (function_exists('vh360_is_invalid_login_redirect_target') && vh360_is_invalid_login_redirect_target($redirect_to))) {
+        $redirect_to = vh360_get_login_redirect_url(get_current_user_id());
+    }
+    wp_safe_redirect(wp_validate_redirect($redirect_to, home_url('/')));
     exit;
 }
 
@@ -118,7 +121,11 @@ $vh360_login_show_create_account  = (bool) get_theme_mod('vh360_login_show_creat
                     }
                     
                     // Get redirect URL (preserve from query string if present for gated pages)
-                    $redirect_to = isset($_GET['redirect_to']) ? esc_url_raw($_GET['redirect_to']) : '';
+                    $redirect_to = isset($_GET['redirect_to']) ? esc_url_raw(wp_unslash($_GET['redirect_to'])) : '';
+                    if (function_exists('vh360_is_invalid_login_redirect_target') && vh360_is_invalid_login_redirect_target($redirect_to)) {
+                        $redirect_to = '';
+                    }
+                    $redirect_to = $redirect_to ? wp_validate_redirect($redirect_to, '') : '';
                     // Don't set a default here - redirect_to parameter takes priority over
                     // Customizer settings to ensure gated page functionality works correctly
                     ?>

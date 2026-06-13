@@ -34,7 +34,7 @@ if (!defined('ABSPATH')) {
                     <!-- Authentication Links Section (Mobile Only) -->
                     <div class="hamburger-menu__auth-section">
                         <?php if (get_theme_mod('header_show_signin_button', true)) : ?>
-                            <a href="<?php echo esc_url(vh360_get_login_page_url()); ?>" class="hamburger-auth-link hamburger-auth-link--signin" aria-label="<?php esc_attr_e('Sign in to your account', 'videohub360-theme'); ?>">
+                            <a href="<?php echo esc_url(vh360_get_login_page_url_with_redirect()); ?>" class="hamburger-auth-link hamburger-auth-link--signin" aria-label="<?php esc_attr_e('Sign in to your account', 'videohub360-theme'); ?>">
                                 <?php echo vh360_get_signin_icon(20); ?>
                                 <span><?php esc_html_e('Sign In', 'videohub360-theme'); ?></span>
                             </a>
