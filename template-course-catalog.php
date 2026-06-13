@@ -40,6 +40,12 @@ while ( have_posts() ) :
             </header>
             <?php endif; ?>
 
+            <?php if (function_exists('vh360_render_inline_lead_capture')) : ?>
+                <div class="vh360-container">
+                    <?php vh360_render_inline_lead_capture('course_catalog'); ?>
+                </div>
+            <?php endif; ?>
+
             <!-- Optional page content (editor text above the catalog) -->
             <?php if ( $page_description ) : ?>
             <div class="vh360-container vh360-course-catalog-intro">

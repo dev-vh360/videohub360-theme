@@ -1019,6 +1019,16 @@ require_once VH360_THEME_DIR . '/includes/customizer/media-controls.php';
 require_once VH360_THEME_DIR . '/includes/customizer/woocommerce-shop-controls.php';
 
 /**
+ * Customizer marketing / lead capture controls
+ */
+require_once VH360_THEME_DIR . '/includes/customizer/marketing-controls.php';
+
+/**
+ * Lead capture / newsletter CTA integration
+ */
+require_once VH360_THEME_DIR . '/includes/marketing/lead-capture.php';
+
+/**
  * Sidebar resolver - centralized sidebar logic
  */
 require_once VH360_THEME_DIR . '/includes/sidebar-resolver.php';

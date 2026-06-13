@@ -78,6 +78,12 @@ $vh360_header_desc       = get_theme_mod('vh360_activity_header_description', __
         </header>
         <?php endif; ?>
 
+        <?php if (function_exists('vh360_render_inline_lead_capture')) : ?>
+            <div class="vh360-container">
+                <?php vh360_render_inline_lead_capture('activity_feed'); ?>
+            </div>
+        <?php endif; ?>
+
         <!-- Membership Check -->
         <?php
         // Check if activity feed requires membership

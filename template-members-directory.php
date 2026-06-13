@@ -98,6 +98,12 @@ $vh360_header_desc       = get_theme_mod('vh360_members_header_description', $de
             </div>
         </header>
         <?php endif; ?>
+
+        <?php if (function_exists('vh360_render_inline_lead_capture')) : ?>
+            <div class="vh360-container">
+                <?php vh360_render_inline_lead_capture('members_directory'); ?>
+            </div>
+        <?php endif; ?>
         
         <!-- Membership Check -->
         <?php

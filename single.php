@@ -49,6 +49,10 @@ if ($has_sidebar) {
                     get_template_part('template-parts/content', 'single');
                 }
 
+                if (function_exists('vh360_render_inline_lead_capture')) {
+                    vh360_render_inline_lead_capture(get_post_type() === 'videohub360' ? 'single_video' : 'single_post');
+                }
+
                 // Post navigation
                 the_post_navigation(array(
                     'prev_text' => '<span class="nav-subtitle">' . esc_html__('Previous:', 'videohub360-theme') . '</span> <span class="nav-title">%title</span>',
