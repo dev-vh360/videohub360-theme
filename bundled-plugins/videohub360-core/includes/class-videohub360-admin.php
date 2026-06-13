@@ -340,6 +340,20 @@ class VideoHub360_Admin {
             // Archive header options
             update_option('videohub360_show_archive_header', isset($_POST['videohub360_show_archive_header']) ? 1 : 0);
             update_option('videohub360_archive_title', sanitize_text_field($_POST['videohub360_archive_title'] ?? ''));
+
+            // Update internal single video layout settings
+            update_option(
+                'videohub360_single_video_layout_default',
+                videohub360_sanitize_single_video_layout_value($_POST['videohub360_single_video_layout_default'] ?? 'sidebar', array('sidebar', 'full-width'), 'sidebar')
+            );
+            update_option(
+                'videohub360_course_lesson_layout_default',
+                videohub360_sanitize_single_video_layout_value($_POST['videohub360_course_lesson_layout_default'] ?? 'full-width', array('inherit', 'sidebar', 'full-width'), 'full-width')
+            );
+            update_option(
+                'videohub360_livestream_video_layout_default',
+                videohub360_sanitize_single_video_layout_value($_POST['videohub360_livestream_video_layout_default'] ?? 'full-width', array('inherit', 'sidebar', 'full-width'), 'full-width')
+            );
     
             
             // Update chat settings
@@ -437,6 +451,10 @@ class VideoHub360_Admin {
         
         $show_archive_header = get_option('videohub360_show_archive_header', 1);
         $archive_title       = get_option('videohub360_archive_title', 'Archive');
+
+        $single_video_layout_default = videohub360_sanitize_single_video_layout_value(get_option('videohub360_single_video_layout_default', 'sidebar'), array('sidebar', 'full-width'), 'sidebar');
+        $course_lesson_layout_default = videohub360_sanitize_single_video_layout_value(get_option('videohub360_course_lesson_layout_default', 'full-width'), array('inherit', 'sidebar', 'full-width'), 'full-width');
+        $livestream_video_layout_default = videohub360_sanitize_single_video_layout_value(get_option('videohub360_livestream_video_layout_default', 'full-width'), array('inherit', 'sidebar', 'full-width'), 'full-width');
     
         
         $chat_enabled = get_option('videohub360_chat_enabled', 1);
@@ -634,6 +652,47 @@ class VideoHub360_Admin {
                             <p class="description">Label displayed for the location filter dropdown</p>
                         </td>
                     </tr>
+                    <tr>
+                        <th scope="row" colspan="2"><h3 style="margin: 20px 0 10px 0;">VideoHub360 Single Video Layout</h3></th>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <p class="description">Controls the default layout for VideoHub360 single video pages. Individual videos can override this setting from the Sidebar Configuration panel. Course lessons and livestream videos can use separate defaults for a more focused viewing or teaching experience.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Single Video Layout Default</th>
+                        <td>
+                            <select name="videohub360_single_video_layout_default">
+                                <option value="sidebar" <?php selected($single_video_layout_default, 'sidebar'); ?>>Sidebar Layout</option>
+                                <option value="full-width" <?php selected($single_video_layout_default, 'full-width'); ?>>Full Width Layout</option>
+                            </select>
+                            <p class="description">Default layout for normal VideoHub360 single videos.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Course Lesson Layout Default</th>
+                        <td>
+                            <select name="videohub360_course_lesson_layout_default">
+                                <option value="inherit" <?php selected($course_lesson_layout_default, 'inherit'); ?>>Inherit Single Video Layout</option>
+                                <option value="sidebar" <?php selected($course_lesson_layout_default, 'sidebar'); ?>>Sidebar Layout</option>
+                                <option value="full-width" <?php selected($course_lesson_layout_default, 'full-width'); ?>>Full Width Layout</option>
+                            </select>
+                            <p class="description">Default layout for videos assigned to a course or series.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Livestream Video Layout Default</th>
+                        <td>
+                            <select name="videohub360_livestream_video_layout_default">
+                                <option value="inherit" <?php selected($livestream_video_layout_default, 'inherit'); ?>>Inherit Single Video Layout</option>
+                                <option value="sidebar" <?php selected($livestream_video_layout_default, 'sidebar'); ?>>Sidebar Layout</option>
+                                <option value="full-width" <?php selected($livestream_video_layout_default, 'full-width'); ?>>Full Width Layout</option>
+                            </select>
+                            <p class="description">Default layout for livestream and live-course videos.</p>
+                        </td>
+                    </tr>
+
                     <tr>
                         <th scope="row" colspan="2">
                             <h3 style="margin: 20px 0 10px 0;">Agora.io Settings</h3>
@@ -1534,7 +1593,7 @@ class VideoHub360_Admin {
         $sidebar_config = get_post_meta($post->ID, '_vh360_sidebar_config', true);
         $sidebar_config = wp_parse_args($sidebar_config, array(
             'enable_custom' => 'no',
-            'video_layout' => 'sidebar',
+            'video_layout' => 'inherit',
             'custom_title' => '',
             'category_filter' => '',
             'series_filter' => '',
@@ -1548,6 +1607,7 @@ class VideoHub360_Admin {
             'include_posts' => '',
             'exclude_posts' => ''
         ));
+        $sidebar_config['video_layout'] = videohub360_sanitize_single_video_layout_value($sidebar_config['video_layout'], array('inherit', 'sidebar', 'full-width'), 'inherit');
 
         ?>
         <style>
@@ -1596,10 +1656,11 @@ class VideoHub360_Admin {
         <div class="vh360-sidebar-field">
             <label for="vh360_video_layout">Video Layout:</label>
             <select name="vh360_video_layout" id="vh360_video_layout">
+                <option value="inherit" <?php selected($sidebar_config['video_layout'], 'inherit'); ?>>Inherit Global Default</option>
                 <option value="sidebar" <?php selected($sidebar_config['video_layout'], 'sidebar'); ?>>Sidebar Layout</option>
                 <option value="full-width" <?php selected($sidebar_config['video_layout'], 'full-width'); ?>>Full Width Layout</option>
             </select>
-            <small>Choose between sidebar layout or full-width layout for this video</small>
+            <small>Choose whether this video inherits global layout defaults or overrides them.</small>
         </div>
 
         <div class="vh360-sidebar-field">
@@ -1920,7 +1981,7 @@ class VideoHub360_Admin {
             
             $sidebar_config = array(
                 'enable_custom' => isset($_POST['vh360_sidebar_enable_custom']) ? 'yes' : 'no',
-                'video_layout' => sanitize_text_field($_POST['vh360_video_layout'] ?? 'sidebar'),
+                'video_layout' => videohub360_sanitize_single_video_layout_value($_POST['vh360_video_layout'] ?? 'inherit', array('inherit', 'sidebar', 'full-width'), 'inherit'),
                 'custom_title' => sanitize_text_field($_POST['vh360_sidebar_custom_title'] ?? ''),
                 'category_filter' => sanitize_text_field($_POST['vh360_sidebar_category'] ?? ''),
                 'series_filter' => sanitize_text_field($_POST['vh360_sidebar_series'] ?? ''),

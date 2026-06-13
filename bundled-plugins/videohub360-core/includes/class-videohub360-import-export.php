@@ -962,10 +962,20 @@ class VideoHub360_Import_Export {
         
         // Array/JSON fields
         if ($meta_key === '_vh360_sidebar_config') {
-            if (is_array($meta_value)) {
-                return $meta_value;
+            $sidebar_config = is_array($meta_value) ? $meta_value : maybe_unserialize($meta_value);
+
+            if (!is_array($sidebar_config)) {
+                return array();
             }
-            return maybe_unserialize($meta_value);
+
+            if (function_exists('videohub360_sanitize_single_video_layout_value')) {
+                $sidebar_config['video_layout'] = videohub360_sanitize_single_video_layout_value($sidebar_config['video_layout'] ?? 'inherit', array('inherit', 'sidebar', 'full-width'), 'inherit');
+            } else {
+                $video_layout = sanitize_key((string) ($sidebar_config['video_layout'] ?? 'inherit'));
+                $sidebar_config['video_layout'] = in_array($video_layout, array('inherit', 'sidebar', 'full-width'), true) ? $video_layout : 'inherit';
+            }
+
+            return $sidebar_config;
         }
 
         // Lesson boolean flag: normalize to 'yes' or 'no'.

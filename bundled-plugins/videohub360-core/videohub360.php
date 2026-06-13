@@ -144,6 +144,104 @@ if (!function_exists('videohub360_get_sidebar_title')) {
     }
 }
 
+
+/**
+ * Sanitize VideoHub360 single video layout option values.
+ *
+ * @param string $value   Raw value.
+ * @param array  $allowed Allowed values.
+ * @param string $default Default fallback.
+ * @return string
+ */
+if (!function_exists('videohub360_sanitize_single_video_layout_value')) {
+    function videohub360_sanitize_single_video_layout_value($value, $allowed = array('sidebar', 'full-width'), $default = 'sidebar') {
+        $value = sanitize_key((string) $value);
+
+        if (in_array($value, $allowed, true)) {
+            return $value;
+        }
+
+        return in_array($default, $allowed, true) ? $default : 'sidebar';
+    }
+}
+
+/**
+ * Resolve the internal VideoHub360 single video layout.
+ *
+ * Priority order:
+ * 1. Per-video override.
+ * 2. Course lesson default.
+ * 3. Livestream default.
+ * 4. Global single video default.
+ * 5. Safety fallback.
+ *
+ * @param int $post_id Optional videohub360 post ID. Defaults to current post.
+ * @return string Either 'sidebar' or 'full-width'.
+ */
+if (!function_exists('videohub360_get_single_video_layout')) {
+    function videohub360_get_single_video_layout($post_id = 0) {
+        $post_id = absint($post_id ?: get_the_ID());
+
+        if (!$post_id || get_post_type($post_id) !== 'videohub360') {
+            return 'sidebar';
+        }
+
+        $sidebar_config = get_post_meta($post_id, '_vh360_sidebar_config', true);
+        $per_video_layout = '';
+
+        if (is_array($sidebar_config) && isset($sidebar_config['video_layout'])) {
+            $per_video_layout = sanitize_key((string) $sidebar_config['video_layout']);
+        }
+
+        if (in_array($per_video_layout, array('sidebar', 'full-width'), true)) {
+            return $per_video_layout;
+        }
+
+        $belongs_to_course = false;
+        if (taxonomy_exists('videohub360_series')) {
+            $terms = get_the_terms($post_id, 'videohub360_series');
+            $belongs_to_course = !empty($terms) && !is_wp_error($terms);
+        }
+
+        if (!$belongs_to_course && function_exists('videohub360_get_lesson_course')) {
+            $belongs_to_course = (bool) videohub360_get_lesson_course($post_id);
+        }
+
+        if ($belongs_to_course) {
+            $course_layout = videohub360_sanitize_single_video_layout_value(
+                get_option('videohub360_course_lesson_layout_default', 'full-width'),
+                array('inherit', 'sidebar', 'full-width'),
+                'full-width'
+            );
+
+            if (in_array($course_layout, array('sidebar', 'full-width'), true)) {
+                return $course_layout;
+            }
+        }
+
+        $is_livestream = get_post_meta($post_id, '_vh360_is_live', true) === 'yes'
+            || get_post_meta($post_id, '_vh360_context', true) === 'live_room';
+
+        if ($is_livestream) {
+            $livestream_layout = videohub360_sanitize_single_video_layout_value(
+                get_option('videohub360_livestream_video_layout_default', 'full-width'),
+                array('inherit', 'sidebar', 'full-width'),
+                'full-width'
+            );
+
+            if (in_array($livestream_layout, array('sidebar', 'full-width'), true)) {
+                return $livestream_layout;
+            }
+        }
+
+        return videohub360_sanitize_single_video_layout_value(
+            get_option('videohub360_single_video_layout_default', 'sidebar'),
+            array('sidebar', 'full-width'),
+            'sidebar'
+        );
+    }
+}
+
 /**
  * Get profile URL for a user
  * Checks for custom profile post type, otherwise uses author posts URL
