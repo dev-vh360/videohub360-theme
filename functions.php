@@ -1004,6 +1004,11 @@ require_once VH360_THEME_DIR . '/includes/customizer/activity-feed-controls.php'
 require_once VH360_THEME_DIR . '/includes/customizer/sidebar-controls.php';
 
 /**
+ * Customizer VideoHub360 single video layout controls
+ */
+require_once VH360_THEME_DIR . '/includes/customizer/video-layout-controls.php';
+
+/**
  * Customizer author template controls
  */
 require_once VH360_THEME_DIR . '/includes/customizer/author-template-controls.php';
