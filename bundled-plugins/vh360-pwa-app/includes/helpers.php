@@ -202,6 +202,132 @@ function vh360_pwa_add_manifest_icon( array &$icons, array &$seen, $src, string 
 	$icons[]      = $icon;
 }
 
+
+/**
+ * Convert a URL in the WordPress uploads directory to a safe local path.
+ *
+ * @param string $url URL to resolve.
+ * @return string Local path, or empty string when the URL is not in uploads.
+ */
+function vh360_pwa_url_to_upload_path( $url ) : string {
+	$url = esc_url_raw( (string) $url );
+	if ( '' === $url || ! wp_http_validate_url( $url ) ) {
+		return '';
+	}
+
+	$uploads = wp_upload_dir();
+	if ( empty( $uploads['baseurl'] ) || empty( $uploads['basedir'] ) ) {
+		return '';
+	}
+
+	$url_parts  = wp_parse_url( $url );
+	$base_parts = wp_parse_url( $uploads['baseurl'] );
+	if ( ! is_array( $url_parts ) || ! is_array( $base_parts ) ) {
+		return '';
+	}
+
+	$url_host  = strtolower( (string) ( $url_parts['host'] ?? '' ) );
+	$base_host = strtolower( (string) ( $base_parts['host'] ?? '' ) );
+	if ( '' === $url_host || '' === $base_host || $url_host !== $base_host ) {
+		return '';
+	}
+
+	$url_path  = '/' . ltrim( rawurldecode( (string) ( $url_parts['path'] ?? '' ) ), '/' );
+	$base_path = '/' . trim( rawurldecode( (string) ( $base_parts['path'] ?? '' ) ), '/' );
+	if ( '/' !== $base_path ) {
+		$base_path = trailingslashit( $base_path );
+	}
+
+	if ( 0 !== strpos( trailingslashit( $url_path ), $base_path ) && 0 !== strpos( $url_path, $base_path ) ) {
+		return '';
+	}
+
+	$relative = ltrim( substr( $url_path, strlen( rtrim( $base_path, '/' ) ) ), '/' );
+	if ( '' === $relative || false !== strpos( $relative, "\0" ) || preg_match( '#(^|/)\.\.(/|$)#', $relative ) ) {
+		return '';
+	}
+
+	$base_dir = wp_normalize_path( trailingslashit( $uploads['basedir'] ) );
+	$path     = wp_normalize_path( $base_dir . $relative );
+	if ( 0 !== strpos( $path, $base_dir ) ) {
+		return '';
+	}
+
+	return $path;
+}
+
+/**
+ * Determine whether a generated icon URL maps to an existing local uploads file.
+ *
+ * Generated icon records must point at actual local upload files; this intentionally
+ * does not perform remote HTTP checks and does not inspect arbitrary external URLs.
+ *
+ * @param string $url Generated icon URL.
+ */
+function vh360_pwa_generated_icon_file_exists( $url ) : bool {
+	$path = vh360_pwa_url_to_upload_path( $url );
+	return '' !== $path && file_exists( $path );
+}
+
+
+/**
+ * Build a generated icon URL from an option record value.
+ *
+ * The generator normally stores filenames, but this also safely handles URL-shaped
+ * records so stale/unsafe migrated data can be detected instead of silently turned
+ * into a local basename.
+ */
+function vh360_pwa_get_generated_icon_url_from_record( $record, string $base_url ) : string {
+	$record = trim( (string) $record );
+	if ( '' === $record ) {
+		return '';
+	}
+	if ( wp_http_validate_url( $record ) ) {
+		return esc_url_raw( $record );
+	}
+	if ( false !== strpos( $record, '/' ) || false !== strpos( $record, '\\' ) ) {
+		$record = basename( $record );
+	}
+	return esc_url_raw( trailingslashit( $base_url ) . ltrim( $record, '/' ) );
+}
+
+/**
+ * Return true when generated icon option records point at invalid or missing files.
+ */
+function vh360_pwa_has_stale_generated_icons() : bool {
+	$generated = get_option( 'vh360_pwa_generated_icons', array() );
+	if ( ! is_array( $generated ) || empty( $generated ) ) {
+		return false;
+	}
+
+	$upload_dir = wp_upload_dir();
+	$base_url   = trailingslashit( $upload_dir['baseurl'] . '/vh360-pwa/icons' );
+	if ( class_exists( 'VH360_PWA_Icon_Generator' ) ) {
+		$generator = new VH360_PWA_Icon_Generator();
+		$base_url  = trailingslashit( $generator->get_upload_url() );
+	}
+
+	$has_records = false;
+	foreach ( array( 'ios', 'android', 'maskable' ) as $group ) {
+		if ( empty( $generated[ $group ] ) || ! is_array( $generated[ $group ] ) ) {
+			continue;
+		}
+		foreach ( $generated[ $group ] as $size => $filename ) {
+			$has_records = true;
+			$size = absint( $size );
+			if ( $size < 1 || empty( $filename ) ) {
+				return true;
+			}
+			$url = vh360_pwa_get_generated_icon_url_from_record( $filename, $base_url );
+			if ( ! wp_http_validate_url( $url ) || ! vh360_pwa_generated_icon_file_exists( $url ) ) {
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
 /**
  * Resolve all PWA manifest icons from the shared source of truth.
  *
@@ -231,7 +357,11 @@ function vh360_pwa_get_manifest_icons() : array {
 				if ( $size < 1 || empty( $filename ) ) {
 					continue;
 				}
-				vh360_pwa_add_manifest_icon( $icons, $seen, $upload_url . ltrim( basename( (string) $filename ), '/' ), "{$size}x{$size}", 'any' );
+				$url = vh360_pwa_get_generated_icon_url_from_record( $filename, $upload_url );
+				if ( ! vh360_pwa_generated_icon_file_exists( $url ) ) {
+					continue;
+				}
+				vh360_pwa_add_manifest_icon( $icons, $seen, $url, "{$size}x{$size}", 'any' );
 			}
 		}
 
@@ -241,7 +371,11 @@ function vh360_pwa_get_manifest_icons() : array {
 				if ( $size < 1 || empty( $filename ) ) {
 					continue;
 				}
-				vh360_pwa_add_manifest_icon( $icons, $seen, $upload_url . ltrim( basename( (string) $filename ), '/' ), "{$size}x{$size}", 'maskable' );
+				$url = vh360_pwa_get_generated_icon_url_from_record( $filename, $upload_url );
+				if ( ! vh360_pwa_generated_icon_file_exists( $url ) ) {
+					continue;
+				}
+				vh360_pwa_add_manifest_icon( $icons, $seen, $url, "{$size}x{$size}", 'maskable' );
 			}
 		}
 	}
@@ -286,8 +420,8 @@ function vh360_pwa_get_apple_touch_icon_url() : string {
 	}
 	foreach ( array( array( 'ios', 180 ), array( 'android', 192 ), array( 'ios', 192 ) ) as $candidate ) {
 		if ( $upload_url && ! empty( $generated[ $candidate[0] ][ $candidate[1] ] ) ) {
-			$url = esc_url_raw( $upload_url . basename( (string) $generated[ $candidate[0] ][ $candidate[1] ] ) );
-			if ( wp_http_validate_url( $url ) ) {
+			$url = vh360_pwa_get_generated_icon_url_from_record( $generated[ $candidate[0] ][ $candidate[1] ], $upload_url );
+			if ( wp_http_validate_url( $url ) && vh360_pwa_generated_icon_file_exists( $url ) ) {
 				return $url;
 			}
 		}
@@ -323,7 +457,7 @@ function vh360_pwa_backfill_legacy_icons_from_generated() : void {
 		if ( empty( $generated[ $source[0] ][ $source[1] ] ) ) {
 			continue;
 		}
-		$url = esc_url_raw( $base_url . basename( (string) $generated[ $source[0] ][ $source[1] ] ) );
+		$url = vh360_pwa_get_generated_icon_url_from_record( $generated[ $source[0] ][ $source[1] ], $base_url );
 		if ( $url && wp_http_validate_url( $url ) ) {
 			$updates[ $option_key ] = $url;
 		}

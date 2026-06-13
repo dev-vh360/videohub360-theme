@@ -65,8 +65,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 			$has_maskable = true;
 		}
 	}
-	$root_manifest = trailingslashit( ABSPATH ) . 'vh360-manifest.json';
-	$generated_found = ! empty( $generated_icons['android'] ) || ! empty( $generated_icons['ios'] ) || ! empty( $generated_icons['maskable'] );
+	$root_manifest   = trailingslashit( ABSPATH ) . 'vh360-manifest.json';
+	$stale_generated = function_exists( 'vh360_pwa_has_stale_generated_icons' ) ? vh360_pwa_has_stale_generated_icons() : false;
+	$generated_found = ( ! empty( $generated_icons['android'] ) || ! empty( $generated_icons['ios'] ) || ! empty( $generated_icons['maskable'] ) ) && ! $stale_generated;
 	?>
 	<div class="notice <?php echo ( $has_192 && $has_512 ) ? 'notice-success' : 'notice-warning'; ?> inline">
 		<p><strong><?php esc_html_e( 'PWA Manifest Icon Status', 'vh360-pwa-app' ); ?></strong></p>
@@ -79,6 +80,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<li><?php echo esc_html( sprintf( __( 'Apple touch icon: %s', 'vh360-pwa-app' ), $apple_icon ? __( 'Ready', 'vh360-pwa-app' ) : __( 'Missing', 'vh360-pwa-app' ) ) ); ?></li>
 			<li><?php echo esc_html( sprintf( __( 'Root manifest file updated: %s', 'vh360-pwa-app' ), file_exists( $root_manifest ) ? __( 'Yes', 'vh360-pwa-app' ) : __( 'No', 'vh360-pwa-app' ) ) ); ?></li>
 		</ul>
+		<?php if ( $stale_generated ) : ?>
+			<p><strong><?php esc_html_e( 'Generated icon records exist, but one or more icon files are missing from the uploads directory. Please regenerate icons.', 'vh360-pwa-app' ); ?></strong></p>
+		<?php endif; ?>
 		<?php if ( ! $has_192 || ! $has_512 ) : ?>
 			<p><?php esc_html_e( 'Your PWA manifest does not currently include app icons. Upload a master icon and click Generate All Icons, then save settings.', 'vh360-pwa-app' ); ?></p>
 		<?php endif; ?>
