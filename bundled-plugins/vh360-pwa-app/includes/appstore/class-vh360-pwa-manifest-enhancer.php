@@ -70,81 +70,9 @@ class VH360_PWA_Manifest_Enhancer {
 	 * @return array Array of icon objects.
 	 */
 	private function get_icons( array $opts ) : array {
-		$icons = array();
-		
-		// Try to use generated icons first
-		$icon_generator = new VH360_PWA_Icon_Generator();
-		$generated = $icon_generator->get_generated_icons();
-		
-		if ( ! empty( $generated ) ) {
-			$upload_url = $icon_generator->get_upload_url();
-			
-			// Add Android icons (most comprehensive set)
-			if ( ! empty( $generated['android'] ) ) {
-				foreach ( $generated['android'] as $size => $filename ) {
-					$icons[] = array(
-						'src'     => esc_url_raw( $upload_url . '/' . $filename ),
-						'sizes'   => "{$size}x{$size}",
-						'type'    => 'image/png',
-						'purpose' => 'any',
-					);
-				}
-			}
-			
-			// Add iOS-specific icons not in Android set
-			if ( ! empty( $generated['ios'] ) ) {
-				$android_sizes = ! empty( $generated['android'] ) ? array_keys( $generated['android'] ) : array();
-				foreach ( $generated['ios'] as $size => $filename ) {
-					if ( ! in_array( $size, $android_sizes, true ) ) {
-						$icons[] = array(
-							'src'     => esc_url_raw( $upload_url . '/' . $filename ),
-							'sizes'   => "{$size}x{$size}",
-							'type'    => 'image/png',
-							'purpose' => 'any',
-						);
-					}
-				}
-			}
-			
-			// Add maskable icons
-			if ( ! empty( $generated['maskable'] ) ) {
-				foreach ( $generated['maskable'] as $size => $filename ) {
-					$icons[] = array(
-						'src'     => esc_url_raw( $upload_url . '/' . $filename ),
-						'sizes'   => "{$size}x{$size}",
-						'type'    => 'image/png',
-						'purpose' => 'maskable',
-					);
-				}
-			}
-			
-			return $icons;
-		}
-		
-		// Fallback to legacy manual icons
-		$icon_configs = array(
-			array( 'key' => 'icon_192', 'size' => '192x192', 'purpose' => 'any' ),
-			array( 'key' => 'icon_512', 'size' => '512x512', 'purpose' => 'any' ),
-			array( 'key' => 'icon_maskable_192', 'size' => '192x192', 'purpose' => 'maskable' ),
-			array( 'key' => 'icon_maskable_512', 'size' => '512x512', 'purpose' => 'maskable' ),
-		);
-		
-		foreach ( $icon_configs as $config ) {
-			$src = isset( $opts[ $config['key'] ] ) ? (string) $opts[ $config['key'] ] : '';
-			
-			if ( ! empty( $src ) ) {
-				$icons[] = array(
-					'src'     => esc_url_raw( $src ),
-					'sizes'   => $config['size'],
-					'type'    => 'image/png',
-					'purpose' => $config['purpose'],
-				);
-			}
-		}
-		
-		return $icons;
+		return function_exists( 'vh360_pwa_get_manifest_icons' ) ? vh360_pwa_get_manifest_icons() : array();
 	}
-	
+
 	/**
 	 * Get screenshots for app stores.
 	 * Currently returns empty array - screenshots can be added via admin UI in future.

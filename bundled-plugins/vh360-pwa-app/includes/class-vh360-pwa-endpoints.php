@@ -93,25 +93,7 @@ class VH360_PWA_Endpoints {
 		}
 
 		$opts = vh360_pwa_get_options();
-
-		$icons = array();
-		$add_icon = function( $src, $size, $purpose = 'any' ) use ( &$icons ) {
-			$src = (string) $src;
-			if ( ! $src ) {
-				return;
-			}
-			$icons[] = array(
-				'src'     => esc_url_raw( $src ),
-				'sizes'   => $size,
-				'type'    => 'image/png',
-				'purpose' => $purpose,
-			);
-		};
-		$add_icon( $opts['icon_192'], '192x192', 'any' );
-		$add_icon( $opts['icon_512'], '512x512', 'any' );
-		$add_icon( $opts['icon_maskable_192'], '192x192', 'maskable' );
-		$add_icon( $opts['icon_maskable_512'], '512x512', 'maskable' );
-
+		$icons = function_exists( 'vh360_pwa_get_manifest_icons' ) ? vh360_pwa_get_manifest_icons() : array();
 		$manifest = array(
 			'name'             => (string) $opts['app_name'],
 			'short_name'       => (string) $opts['short_name'],

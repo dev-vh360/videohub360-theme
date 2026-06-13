@@ -29,8 +29,7 @@ class VH360_PWA_Frontend {
 		// Prefer a root-level manifest for maximum compatibility across hosts/CDNs.
 		$manifest = esc_url( home_url( '/' . VH360_PWA_MANIFEST_SLUG ) );
 		$theme_color = esc_attr( (string) $opts['theme_color'] );
-		$icon_192 = ! empty( $opts['icon_192'] ) ? esc_url( $opts['icon_192'] ) : '';
-		$apple_icon = $icon_192 ? $icon_192 : '';
+		$apple_icon = function_exists( 'vh360_pwa_get_apple_touch_icon_url' ) ? esc_url( vh360_pwa_get_apple_touch_icon_url() ) : '';
 		
 		// Get app title for iOS - use short_name from PWA options or fallback to site name
 		$app_title = ! empty( $opts['short_name'] ) && is_string( $opts['short_name'] ) ? $opts['short_name'] : get_bloginfo( 'name' );

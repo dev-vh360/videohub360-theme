@@ -47,6 +47,42 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</p>
 		</div>
 	<?php endif; ?>
+
+	<?php
+	$manifest_icons = function_exists( 'vh360_pwa_get_manifest_icons' ) ? vh360_pwa_get_manifest_icons() : array();
+	$apple_icon     = function_exists( 'vh360_pwa_get_apple_touch_icon_url' ) ? vh360_pwa_get_apple_touch_icon_url() : '';
+	$has_192        = false;
+	$has_512        = false;
+	$has_maskable   = false;
+	foreach ( $manifest_icons as $manifest_icon ) {
+		if ( '192x192' === ( $manifest_icon['sizes'] ?? '' ) && 'any' === ( $manifest_icon['purpose'] ?? '' ) ) {
+			$has_192 = true;
+		}
+		if ( '512x512' === ( $manifest_icon['sizes'] ?? '' ) && 'any' === ( $manifest_icon['purpose'] ?? '' ) ) {
+			$has_512 = true;
+		}
+		if ( '512x512' === ( $manifest_icon['sizes'] ?? '' ) && false !== strpos( (string) ( $manifest_icon['purpose'] ?? '' ), 'maskable' ) ) {
+			$has_maskable = true;
+		}
+	}
+	$root_manifest = trailingslashit( ABSPATH ) . 'vh360-manifest.json';
+	$generated_found = ! empty( $generated_icons['android'] ) || ! empty( $generated_icons['ios'] ) || ! empty( $generated_icons['maskable'] );
+	?>
+	<div class="notice <?php echo ( $has_192 && $has_512 ) ? 'notice-success' : 'notice-warning'; ?> inline">
+		<p><strong><?php esc_html_e( 'PWA Manifest Icon Status', 'vh360-pwa-app' ); ?></strong></p>
+		<ul style="list-style:disc;padding-left:20px;">
+			<li><?php echo esc_html( sprintf( __( 'Master icon uploaded: %s', 'vh360-pwa-app' ), ( $master_icon && file_exists( $master_icon ) ) ? __( 'Yes', 'vh360-pwa-app' ) : __( 'No', 'vh360-pwa-app' ) ) ); ?></li>
+			<li><?php echo esc_html( sprintf( __( 'Generated icons found: %s', 'vh360-pwa-app' ), $generated_found ? __( 'Yes', 'vh360-pwa-app' ) : __( 'No', 'vh360-pwa-app' ) ) ); ?></li>
+			<li><?php echo esc_html( sprintf( __( 'Manifest 192×192 icon: %s', 'vh360-pwa-app' ), $has_192 ? __( 'Ready', 'vh360-pwa-app' ) : __( 'Missing', 'vh360-pwa-app' ) ) ); ?></li>
+			<li><?php echo esc_html( sprintf( __( 'Manifest 512×512 icon: %s', 'vh360-pwa-app' ), $has_512 ? __( 'Ready', 'vh360-pwa-app' ) : __( 'Missing', 'vh360-pwa-app' ) ) ); ?></li>
+			<li><?php echo esc_html( sprintf( __( 'Maskable 512×512 icon: %s', 'vh360-pwa-app' ), $has_maskable ? __( 'Ready', 'vh360-pwa-app' ) : __( 'Missing', 'vh360-pwa-app' ) ) ); ?></li>
+			<li><?php echo esc_html( sprintf( __( 'Apple touch icon: %s', 'vh360-pwa-app' ), $apple_icon ? __( 'Ready', 'vh360-pwa-app' ) : __( 'Missing', 'vh360-pwa-app' ) ) ); ?></li>
+			<li><?php echo esc_html( sprintf( __( 'Root manifest file updated: %s', 'vh360-pwa-app' ), file_exists( $root_manifest ) ? __( 'Yes', 'vh360-pwa-app' ) : __( 'No', 'vh360-pwa-app' ) ) ); ?></li>
+		</ul>
+		<?php if ( ! $has_192 || ! $has_512 ) : ?>
+			<p><?php esc_html_e( 'Your PWA manifest does not currently include app icons. Upload a master icon and click Generate All Icons, then save settings.', 'vh360-pwa-app' ); ?></p>
+		<?php endif; ?>
+	</div>
 	
 	<!-- Master Icon Upload -->
 	<div class="vh360-icon-upload-section" style="margin: 30px 0;">
