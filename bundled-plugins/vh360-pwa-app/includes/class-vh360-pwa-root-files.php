@@ -75,18 +75,22 @@ final class VH360_PWA_Root_Files {
 		$manifest = array(
 			'name'             => $app_name,
 			'short_name'       => $short_name,
-			'start_url'        => '/',
-			'scope'            => '/',
-			'display'          => 'standalone',
-			'background_color' => '#000000',
-			'theme_color'      => '#000000',
-			// Keep icons empty here to avoid introducing new 404s on icon paths.
-			'icons'            => array(),
+			'start_url'        => isset( $opts['start_url'] ) ? (string) $opts['start_url'] : '/',
+			'scope'            => isset( $opts['scope'] ) ? (string) $opts['scope'] : '/',
+			'display'          => isset( $opts['display'] ) ? (string) $opts['display'] : 'standalone',
+			'background_color' => isset( $opts['background_color'] ) ? (string) $opts['background_color'] : '#000000',
+			'theme_color'      => isset( $opts['theme_color'] ) ? (string) $opts['theme_color'] : '#000000',
+			'icons'            => function_exists( 'vh360_pwa_get_manifest_icons' ) ? vh360_pwa_get_manifest_icons() : array(),
 			'generated_by'     => 'VH360 PWA & App plugin',
 			'generated_at'     => gmdate( 'c' ),
 		);
 
-		self::write_file( $path, wp_json_encode( $manifest, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT ) . "\n" );
+		$written = self::write_file( $path, wp_json_encode( $manifest, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT ) . "\n" );
+		update_option( 'vh360_pwa_root_manifest_write_status', array(
+			'success'      => $written,
+			'path'         => $path,
+			'generated_at' => time(),
+		) );
 	}
 
 	private static function maybe_write_offline_page( string $root ) : void {
@@ -176,17 +180,16 @@ final class VH360_PWA_Root_Files {
 		}
 	}
 
-	private static function write_file( string $path, string $contents ) : void {
+	private static function write_file( string $path, string $contents ) : bool {
 		global $wp_filesystem;
 
 		// Prefer WP_Filesystem when available.
 		if ( $wp_filesystem && is_object( $wp_filesystem ) && method_exists( $wp_filesystem, 'put_contents' ) ) {
-			$wp_filesystem->put_contents( $path, $contents, FS_CHMOD_FILE );
-			return;
+			return (bool) $wp_filesystem->put_contents( $path, $contents, FS_CHMOD_FILE );
 		}
 
 		// Fallback.
 		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.file_ops_file_put_contents
-		@file_put_contents( $path, $contents );
+		return false !== @file_put_contents( $path, $contents );
 	}
 }

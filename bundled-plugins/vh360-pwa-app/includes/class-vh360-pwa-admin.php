@@ -217,6 +217,11 @@ $out['scope']     = $normalize_to_path( $scope );
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
+		$status = get_option( 'vh360_pwa_root_manifest_write_status', array() );
+		if ( is_array( $status ) && isset( $status['success'] ) && ! $status['success'] ) {
+			$path = isset( $status['path'] ) ? (string) $status['path'] : 'vh360-manifest.json';
+			echo '<div class="notice notice-error"><p><strong>VH360 PWA &amp; App:</strong> ' . esc_html( sprintf( __( 'The root manifest file could not be written at %s. WordPress will continue serving the dynamic manifest endpoint when rewrites are available, but please check file permissions so /vh360-manifest.json can be refreshed.', 'vh360-pwa-app' ), $path ) ) . '</p></div>';
+		}
 		if ( vh360_pwa_is_allowed_theme_active() ) {
 			return;
 		}
@@ -340,6 +345,14 @@ $out['scope']     = $normalize_to_path( $scope );
 		$result = $icon_generator->generate_all_icons( $master_icon );
 		
 		if ( $result['success'] ) {
+			if ( function_exists( 'vh360_pwa_backfill_legacy_icons_from_generated' ) ) {
+				vh360_pwa_backfill_legacy_icons_from_generated();
+			}
+			if ( class_exists( 'VH360_PWA_Root_Files' ) ) {
+				VH360_PWA_Root_Files::ensure_root_files();
+			}
+			update_option( 'vh360_pwa_icons_generated_at', time() );
+
 			// Clear readiness check cache
 			$readiness_checker = new VH360_PWA_Readiness_Checker();
 			$readiness_checker->clear_cache();
@@ -378,6 +391,10 @@ $out['scope']     = $normalize_to_path( $scope );
 			VH360_PWA_Endpoints::add_rewrite_rules();
 			flush_rewrite_rules();
 		}
+		if ( class_exists( 'VH360_PWA_Root_Files' ) ) {
+			VH360_PWA_Root_Files::ensure_root_files();
+		}
+		update_option( 'vh360_pwa_manifest_generated_at', time() );
 	}
 
 	public function render_page() : void {
