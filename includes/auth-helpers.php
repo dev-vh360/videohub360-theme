@@ -760,9 +760,15 @@ function vh360_handle_custom_login() {
         $current_url = $login_page ? $login_page : home_url('/login/');
     }
     
+    $submitted_redirect_to = vh360_get_submitted_login_redirect_target();
+
     // Verify nonce for security
     if (!wp_verify_nonce($_POST['vh360_login_nonce'], 'vh360_custom_login')) {
-        $error_url = add_query_arg('login', 'nonce_failed', $current_url);
+        $error_args = array('login' => 'nonce_failed');
+        if (!vh360_is_invalid_login_redirect_target($submitted_redirect_to, 'preserve')) {
+            $error_args['redirect_to'] = $submitted_redirect_to;
+        }
+        $error_url = add_query_arg($error_args, $current_url);
         wp_safe_redirect($error_url);
         exit;
     }
@@ -774,10 +780,14 @@ function vh360_handle_custom_login() {
     
     // Validate required fields
     if (empty($username) || empty($password)) {
-        $error_url = add_query_arg('login', 'empty_fields', $current_url);
+        $error_args = array('login' => 'empty_fields');
         if (!empty($username)) {
-            $error_url = add_query_arg('username', urlencode($username), $error_url);
+            $error_args['username'] = $username;
         }
+        if (!vh360_is_invalid_login_redirect_target($submitted_redirect_to, 'preserve')) {
+            $error_args['redirect_to'] = $submitted_redirect_to;
+        }
+        $error_url = add_query_arg($error_args, $current_url);
         wp_safe_redirect($error_url);
         exit;
     }
@@ -802,28 +812,24 @@ function vh360_handle_custom_login() {
     
     // Check for authentication errors
     if (is_wp_error($user)) {
-        // Login failed - redirect back with error and preserve username
-        $error_url = add_query_arg(array(
+        // Login failed - redirect back with error, username, and any safe original target.
+        $error_args = array(
             'login' => 'failed',
-            'username' => urlencode($username),
-        ), $current_url);
+            'username' => $username,
+        );
+        if (!vh360_is_invalid_login_redirect_target($submitted_redirect_to, 'preserve')) {
+            $error_args['redirect_to'] = $submitted_redirect_to;
+        }
+        $error_url = add_query_arg($error_args, $current_url);
         wp_safe_redirect($error_url);
         exit;
     }
     
     // Login successful - determine redirect destination
-    $redirect_to = isset($_POST['vh360_redirect_to']) ? esc_url_raw(wp_unslash($_POST['vh360_redirect_to'])) : '';
+    $redirect_to = $submitted_redirect_to;
 
-    if (vh360_is_invalid_login_redirect_target($redirect_to)) {
+    if (vh360_is_invalid_login_redirect_target($redirect_to, 'post_login', $user)) {
         $redirect_to = '';
-    }
-    
-    // Check for redirect_to in URL (from gated pages or deep links)
-    if (empty($redirect_to) && isset($_GET['redirect_to'])) {
-        $redirect_to = esc_url_raw(wp_unslash($_GET['redirect_to']));
-        if (vh360_is_invalid_login_redirect_target($redirect_to)) {
-            $redirect_to = '';
-        }
     }
     
     // Default redirect if none specified - use Customizer setting
@@ -1237,16 +1243,46 @@ function vh360_get_register_icon($size = 20) {
 }
 
 /**
- * Get login page URL with redirect parameter
- * 
- * @param string $redirect_to URL to redirect to after login
- * @return string Login page URL with redirect parameter
+ * Read the submitted login redirect target without applying context-specific policy.
+ *
+ * Final allow/deny decisions happen in vh360_is_invalid_login_redirect_target().
+ *
+ * @return string Valid same-site redirect candidate, or an empty string.
  */
-function vh360_is_invalid_login_redirect_target($url) {
+function vh360_get_submitted_login_redirect_target() {
+    $redirect_to = '';
+
+    if (isset($_POST['vh360_redirect_to'])) {
+        $redirect_to = esc_url_raw(wp_unslash($_POST['vh360_redirect_to']));
+    } elseif (isset($_REQUEST['redirect_to'])) {
+        $redirect_to = esc_url_raw(wp_unslash($_REQUEST['redirect_to']));
+    }
+
+    if (empty($redirect_to) || !wp_validate_redirect($redirect_to, '')) {
+        return '';
+    }
+
+    return $redirect_to;
+}
+
+function vh360_user_can_follow_admin_login_redirect($user) {
+    if (is_numeric($user)) {
+        $user = get_user_by('id', absint($user));
+    }
+
+    if (!$user instanceof WP_User) {
+        return false;
+    }
+
+    return user_can($user, 'manage_options');
+}
+
+function vh360_is_invalid_login_redirect_target($url, $context = 'frontend', $user = null) {
     if (empty($url)) {
         return true;
     }
 
+    $context = in_array($context, array('frontend', 'preserve', 'post_login'), true) ? $context : 'frontend';
     $url = esc_url_raw($url);
     $validated = wp_validate_redirect($url, '');
     if (empty($validated)) {
@@ -1255,9 +1291,11 @@ function vh360_is_invalid_login_redirect_target($url) {
 
     $path = wp_parse_url($validated, PHP_URL_PATH);
     $path = is_string($path) ? '/' . ltrim($path, '/') : '/';
+    $normalized_path = untrailingslashit($path);
     $query = wp_parse_url($validated, PHP_URL_QUERY);
+    $is_wp_admin = false !== stripos($path, '/wp-admin');
 
-    if (false !== stripos($path, '/wp-admin') || false !== stripos($path, 'wp-login.php')) {
+    if (false !== stripos($path, 'wp-login.php')) {
         return true;
     }
 
@@ -1279,13 +1317,24 @@ function vh360_is_invalid_login_redirect_target($url) {
         vh360_get_reset_password_page_url(),
     );
 
-    $target_path = untrailingslashit($path);
     foreach ($auth_urls as $auth_url) {
         $auth_path = wp_parse_url($auth_url, PHP_URL_PATH);
         $auth_path = untrailingslashit(is_string($auth_path) ? '/' . ltrim($auth_path, '/') : '/');
-        if ($auth_path && $target_path === $auth_path) {
+        if ($auth_path && $normalized_path === $auth_path) {
             return true;
         }
+    }
+
+    if ($is_wp_admin) {
+        if ('preserve' === $context) {
+            return false;
+        }
+
+        if ('post_login' === $context && vh360_user_can_follow_admin_login_redirect($user)) {
+            return false;
+        }
+
+        return true;
     }
 
     return false;
@@ -1321,6 +1370,12 @@ function vh360_get_current_frontend_url_for_login_redirect() {
     return wp_validate_redirect($current_url, '');
 }
 
+/**
+ * Get login page URL with redirect parameter.
+ *
+ * @param string $redirect_to URL to redirect to after login.
+ * @return string Login page URL with redirect parameter.
+ */
 function vh360_get_login_page_url_with_redirect($redirect_to = '') {
     $login_url = vh360_get_login_page_url();
     if (empty($login_url)) {
@@ -1441,11 +1496,23 @@ function vh360_print_cached_login_redirect_enhancement() {
     if (empty($current_url)) {
         return;
     }
+
+    $blocked_paths = array_filter(array_map(static function ($url) {
+        $path = wp_parse_url($url, PHP_URL_PATH);
+        return is_string($path) ? untrailingslashit('/' . ltrim($path, '/')) : '';
+    }, array(
+        vh360_get_login_page_url(),
+        vh360_get_register_page_url(),
+        vh360_get_lost_password_page_url(),
+        vh360_get_reset_password_page_url(),
+    )));
     ?>
     <script>
     (function () {
         var currentUrl = window.location.href.split('#')[0];
-        if (!currentUrl || /\/wp-admin\b|wp-login\.php|action=logout/i.test(currentUrl)) {
+        var blockedPaths = <?php echo wp_json_encode(array_values($blocked_paths)); ?>;
+        var currentPath = window.location.pathname.replace(/\/$/, '');
+        if (!currentUrl || /\/wp-admin\b|wp-login\.php|action=logout/i.test(currentUrl) || blockedPaths.indexOf(currentPath) !== -1) {
             return;
         }
 
