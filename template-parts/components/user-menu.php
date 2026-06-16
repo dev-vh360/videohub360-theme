@@ -56,7 +56,7 @@ if ($is_logged_in) {
         <!-- Sign In Button with Smart Detection -->
         <?php if (get_theme_mod('header_show_signin_button', true)) : ?>
             <a 
-                href="<?php echo esc_url(vh360_get_login_page_url()); ?>" 
+                href="<?php echo esc_url(vh360_get_login_page_url_with_redirect()); ?>" 
                 class="vh360-sign-in-btn"
             >
                 <?php esc_html_e('Sign In', 'videohub360-theme'); ?>

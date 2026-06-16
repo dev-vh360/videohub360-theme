@@ -17,11 +17,7 @@ if (!defined('ABSPATH')) {
  */
 add_filter('login_url', 'vh360_custom_login_url', 10, 3);
 function vh360_custom_login_url($login_url, $redirect, $force_reauth) {
-    $custom_login = vh360_get_login_page_url();
-    
-    if (!empty($redirect)) {
-        $custom_login = add_query_arg('redirect_to', urlencode($redirect), $custom_login);
-    }
+    $custom_login = vh360_get_login_page_url_with_redirect($redirect);
     
     if ($force_reauth) {
         $custom_login = add_query_arg('reauth', '1', $custom_login);

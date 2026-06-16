@@ -64,7 +64,7 @@ function vh360_enqueue_profile_assets() {
                     'professionalId' => $author_id,
                     'slotDuration' => isset($availability_settings['slot_minutes']) ? $availability_settings['slot_minutes'] : 30,
                     'isLoggedIn' => is_user_logged_in(),
-                    'loginUrl' => wp_login_url(get_permalink()),
+                    'loginUrl' => vh360_get_login_page_url_with_redirect(get_permalink()),
                     'i18n' => array(
                         'noSlots' => __('No appointment slots available for this date.', 'videohub360-theme'),
                         'loadError' => __('Error loading available times. Please try again.', 'videohub360-theme'),

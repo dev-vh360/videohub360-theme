@@ -117,8 +117,8 @@ class VH360_Membership_Frontend {
      * @return string
      */
     private function render_login_required_notice() {
-        $login_url = function_exists('vh360_get_login_page_url') 
-            ? vh360_get_login_page_url() 
+        $login_url = function_exists('vh360_get_login_page_url_with_redirect') 
+            ? vh360_get_login_page_url_with_redirect(get_permalink()) 
             : wp_login_url(get_permalink());
             
         ob_start();

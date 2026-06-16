@@ -87,7 +87,7 @@ function vh360_redirect_wp_login() {
             // Preserve redirect_to parameter with proper sanitization
             if (isset($_REQUEST['redirect_to'])) {
                 $redirect_to_safe = esc_url_raw(wp_unslash($_REQUEST['redirect_to']));
-                $redirect_url = add_query_arg('redirect_to', urlencode($redirect_to_safe), $redirect_url);
+                $redirect_url = add_query_arg('redirect_to', $redirect_to_safe, $redirect_url);
             }
             
             // Preserve reauth parameter
@@ -118,7 +118,7 @@ function vh360_redirect_admin_to_custom_login() {
     
     // Redirect to custom login with wp-admin as redirect target
     $login_url = vh360_get_login_page_url();
-    $redirect_url = add_query_arg('redirect_to', urlencode(admin_url()), $login_url);
+    $redirect_url = add_query_arg('redirect_to', admin_url(), $login_url);
     
     wp_safe_redirect($redirect_url, 302);
     exit;

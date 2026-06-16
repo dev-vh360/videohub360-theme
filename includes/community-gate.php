@@ -50,8 +50,7 @@ function vh360_community_access_gate() {
             }
         }
         
-        $login_url = vh360_get_login_page_url();
-        $redirect_url = add_query_arg('redirect_to', urlencode($current_url), $login_url);
+        $redirect_url = vh360_get_login_page_url_with_redirect($current_url);
         
         wp_safe_redirect($redirect_url, 302);
         exit;
