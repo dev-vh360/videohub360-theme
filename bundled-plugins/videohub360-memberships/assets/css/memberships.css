@@ -484,3 +484,98 @@
     border-color: #1d7f43;
     box-shadow: 0 8px 22px rgba(29, 127, 67, .16);
 }
+
+/* Dynamic pricing toggle shortcode. */
+.vh360-pricing-toggle {
+    margin: 2rem 0;
+}
+.vh360-pricing-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+}
+.vh360-pricing-tab {
+    border: 1px solid #d0d7de;
+    border-radius: 999px;
+    background: #fff;
+    color: #1f2937;
+    cursor: pointer;
+    padding: 0.65rem 1.1rem;
+    font-weight: 700;
+}
+.vh360-pricing-tab.is-active,
+.vh360-pricing-tab:focus {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+    outline: none;
+}
+.vh360-pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.25rem;
+}
+.vh360-pricing-card {
+    position: relative;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+    padding: 1.5rem;
+}
+.vh360-pricing-card.is-featured {
+    border-color: #2563eb;
+    box-shadow: 0 18px 40px rgba(37, 99, 235, 0.16);
+}
+.vh360-pricing-badge {
+    display: inline-flex;
+    border-radius: 999px;
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 0.78rem;
+    font-weight: 800;
+    margin-bottom: 0.75rem;
+    padding: 0.3rem 0.65rem;
+    text-transform: uppercase;
+}
+.vh360-pricing-price {
+    color: #111827;
+    font-size: 2rem;
+    font-weight: 800;
+    margin: 1rem 0 0.35rem;
+}
+.vh360-pricing-compare {
+    color: #6b7280;
+    text-decoration: line-through;
+}
+.vh360-pricing-savings {
+    color: #047857;
+    font-weight: 700;
+}
+.vh360-pricing-features {
+    margin: 1.25rem 0;
+    padding-left: 1.2rem;
+}
+.vh360-pricing-button {
+    align-items: center;
+    border-radius: 10px;
+    display: inline-flex;
+    font-weight: 800;
+    justify-content: center;
+    padding: 0.8rem 1rem;
+    text-decoration: none;
+    width: 100%;
+}
+.vh360-button-primary,
+.vh360-pricing-card.is-featured .vh360-pricing-button {
+    background: #2563eb;
+    color: #fff;
+}
+.vh360-plan-warning,
+.vh360-pricing-empty {
+    border: 1px dashed #d0d7de;
+    border-radius: 10px;
+    padding: 1rem;
+}

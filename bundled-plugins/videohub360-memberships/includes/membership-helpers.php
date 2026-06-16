@@ -892,3 +892,40 @@ function vh360_get_upgrade_products_for_user($user_id) {
 
     return vh360_sort_membership_plan_items(array_values($products));
 }
+
+if (!function_exists('vh360_memberships_get_plans')) {
+    function vh360_memberships_get_plans() { return class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan_registry() : array(); }
+}
+if (!function_exists('vh360_memberships_get_enabled_plans')) {
+    function vh360_memberships_get_enabled_plans() { return class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_enabled_plans() : array(); }
+}
+if (!function_exists('vh360_memberships_get_plan')) {
+    function vh360_memberships_get_plan($plan_key) { return class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan($plan_key) : false; }
+}
+if (!function_exists('vh360_memberships_save_plan')) {
+    function vh360_memberships_save_plan($plan_data) { return class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::save_plan($plan_data) : false; }
+}
+if (!function_exists('vh360_memberships_delete_plan')) {
+    function vh360_memberships_delete_plan($plan_key) { return class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::delete_plan($plan_key) : false; }
+}
+if (!function_exists('vh360_memberships_get_plans_by_interval')) {
+    function vh360_memberships_get_plans_by_interval($interval) { return class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plans_by_interval($interval) : array(); }
+}
+if (!function_exists('vh360_memberships_get_plans_by_group')) {
+    function vh360_memberships_get_plans_by_group() { return class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plans_by_group() : array(); }
+}
+if (!function_exists('vh360_memberships_get_featured_plan')) {
+    function vh360_memberships_get_featured_plan() { return class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_featured_plan() : false; }
+}
+if (!function_exists('vh360_memberships_user_has_plan_access')) {
+    function vh360_memberships_user_has_plan_access($user_id, $plan_key) { return vh360_user_has_membership_plan($user_id, $plan_key); }
+}
+if (!function_exists('vh360_memberships_user_has_tier_access')) {
+    function vh360_memberships_user_has_tier_access($user_id, $required_tier) {
+        $membership = function_exists('vh360_get_active_membership') ? vh360_get_active_membership($user_id) : false;
+        if (!$membership || empty($membership->plan_key) || !class_exists('VH360_Membership_Plans')) {
+            return false;
+        }
+        return VH360_Membership_Plans::get_plan_tier($membership->plan_key) >= absint($required_tier);
+    }
+}

@@ -690,15 +690,6 @@ class VH360_Membership_API {
             }
         }
 
-        if (empty($hierarchy)) {
-            $hierarchy = array(
-                'basic_monthly' => 10,
-                'basic_yearly'  => 10,
-                'pro_monthly'   => 20,
-                'pro_yearly'    => 20,
-                'lifetime'      => 30,
-            );
-        }
         
         return apply_filters('vh360_plan_tier_hierarchy', $hierarchy);
     }
