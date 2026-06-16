@@ -469,12 +469,13 @@ class VH360_Membership_Plans {
                     <?php foreach ($plans as $key => $plan) : ?>
                         <?php
                         $is_recurring_plan = isset($plan['billing_mode']) && $plan['billing_mode'] === 'recurring';
-                        if ($is_recurring_plan && $plan_key !== $key) {
+                        $allow_recurring_mapping = $is_recurring_plan ? (bool) apply_filters('vh360_allow_recurring_plan_woocommerce_mapping', false, $key, $post->ID) : true;
+                        if ($is_recurring_plan && !$allow_recurring_mapping) {
                             continue;
                         }
                         ?>
                         <option value="<?php echo esc_attr($key); ?>" <?php selected($plan_key, $key); ?>>
-                            <?php echo esc_html($plan['label']); ?><?php echo $is_recurring_plan ? esc_html__(' (Recurring - Stripe recommended)', 'videohub360-memberships') : ''; ?>
+                            <?php echo esc_html($plan['label']); ?><?php echo $is_recurring_plan ? esc_html__(' (Recurring - override enabled)', 'videohub360-memberships') : ''; ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
@@ -504,10 +505,13 @@ class VH360_Membership_Plans {
             </p>
             
             <?php if ($plan_key && isset($plans[$plan_key]['billing_mode']) && $plans[$plan_key]['billing_mode'] === 'recurring') : ?>
-                <p class="description" style="color:#b32d2e;"><strong><?php esc_html_e('Warning:', 'videohub360-memberships'); ?></strong> <?php esc_html_e('This plan is configured as recurring and should usually be sold through Stripe, not WooCommerce.', 'videohub360-memberships'); ?></p>
+                <p class="description" style="color:#b32d2e;"><strong><?php esc_html_e('Warning:', 'videohub360-memberships'); ?></strong> <?php esc_html_e('This product is currently mapped to a recurring Stripe plan from older data. Recurring plans cannot be selected here by default. Choose a fixed-term/lifetime plan or clear the mapping before saving.', 'videohub360-memberships'); ?></p>
             <?php endif; ?>
             <p class="description">
                 <?php esc_html_e('When this product is purchased, grant or extend the selected fixed-term or lifetime membership plan.', 'videohub360-memberships'); ?>
+            </p>
+            <p class="description">
+                <?php esc_html_e('Recurring membership plans are configured in Paid Memberships with Stripe Price IDs and should not be mapped to WooCommerce products.', 'videohub360-memberships'); ?>
             </p>
         </div>
         <?php
