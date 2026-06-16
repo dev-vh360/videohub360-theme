@@ -19,8 +19,22 @@
         e.preventDefault();
         var $btn = $(this);
         var planKey = $btn.data('plan-key');
+        var originalText = $btn.text();
+        var wasDisabled = $btn.prop('disabled');
+
+        function restoreButton() {
+            $btn.prop('disabled', wasDisabled).text(originalText);
+        }
 
         if (!planKey) {
+            alert(config.i18n ? config.i18n.error : 'Error');
+            restoreButton();
+            return;
+        }
+
+        if (!config.ajaxUrl || !config.nonces || !config.nonces.checkout) {
+            alert(config.i18n ? config.i18n.error : 'Error');
+            restoreButton();
             return;
         }
 
@@ -28,19 +42,20 @@
 
         $.post(config.ajaxUrl, {
             action: 'vh360_stripe_create_checkout',
-            nonce: config.nonces ? config.nonces.checkout : '',
+            nonce: config.nonces.checkout,
             plan_key: planKey
         }, function(response) {
-            if (response.success && response.data && response.data.checkout_url) {
+            if (response && response.success && response.data && response.data.checkout_url) {
                 window.location.href = response.data.checkout_url;
-            } else {
-                var msg = (response.data && response.data.message) ? response.data.message : (config.i18n ? config.i18n.error : 'Error');
-                alert(msg);
-                $btn.prop('disabled', false).text('Subscribe');
+                return;
             }
+
+            var msg = (response && response.data && response.data.message) ? response.data.message : (config.i18n ? config.i18n.error : 'Error');
+            alert(msg);
+            restoreButton();
         }).fail(function() {
             alert(config.i18n ? config.i18n.error : 'Error');
-            $btn.prop('disabled', false).text('Subscribe');
+            restoreButton();
         });
     });
 

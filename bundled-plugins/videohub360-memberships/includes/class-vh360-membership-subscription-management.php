@@ -154,7 +154,7 @@ class VH360_Membership_Subscription_Management {
         ?>
         <div class="vh360-membership-management vh360-membership-account-center" id="vh360-membership-management">
             <section class="vh360-membership-section vh360-current-membership-section">
-                <h3><?php esc_html_e('Current Membership', 'videohub360-memberships'); ?></h3>
+                <h3><?php echo ($membership && isset($membership->billing_mode) && $membership->billing_mode === 'recurring') ? esc_html__('Current Subscription', 'videohub360-memberships') : esc_html__('Current Membership', 'videohub360-memberships'); ?></h3>
                 <?php if ($membership) :
                     $plan_label = $this->resolve_plan_display_label($plans, $membership->plan_key);
                     $is_recurring = isset($membership->billing_mode) && $membership->billing_mode === 'recurring';
@@ -192,18 +192,22 @@ class VH360_Membership_Subscription_Management {
             </section>
 
             <section class="vh360-membership-section vh360-upgrade-section">
-                <h3><?php echo $membership ? esc_html__('Upgrade or Change Membership', 'videohub360-memberships') : esc_html__('Available Plans', 'videohub360-memberships'); ?></h3>
+                <h3><?php echo $membership ? esc_html__('Upgrade Your Membership', 'videohub360-memberships') : esc_html__('Available Plans', 'videohub360-memberships'); ?></h3>
                 <?php if (!empty($woo_products)) : ?>
                     <h4 class="vh360-plan-group-title"><?php esc_html_e('One-Time / Fixed-Term Plans', 'videohub360-memberships'); ?></h4>
                     <div class="vh360-plan-card-grid">
                         <?php foreach ($woo_products as $product) : ?>
+                            <?php
+                                $woo_same_tier = $membership && isset($product['tier_level']) && (int) $product['tier_level'] === VH360_Membership_Plans::get_plan_tier($membership->plan_key);
+                                $woo_button_label = !empty($product['action_label']) ? $product['action_label'] : (!$membership ? __('Join Now', 'videohub360-memberships') : ($woo_same_tier ? __('Change Plan', 'videohub360-memberships') : __('Upgrade', 'videohub360-memberships')));
+                            ?>
                             <article class="vh360-subscription-plan-card vh360-woocommerce-plan-card <?php echo !empty($product['featured']) ? 'is-featured' : ''; ?>">
                                 <?php if (!empty($product['featured'])) : ?><span class="vh360-plan-pill"><?php esc_html_e('Recommended', 'videohub360-memberships'); ?></span><?php endif; ?>
                                 <h4><?php echo esc_html($product['title']); ?></h4>
                                 <div class="vh360-plan-type"><?php echo $product['duration_unit'] === 'lifetime' ? esc_html__('Lifetime Access', 'videohub360-memberships') : esc_html__('Fixed-Term Access', 'videohub360-memberships'); ?></div>
                                 <?php if (!empty($product['price_html'])) : ?><div class="vh360-plan-price"><?php echo wp_kses_post($product['price_html']); ?></div><?php endif; ?>
                                 <?php if (!empty($product['short_description'])) : ?><div class="vh360-plan-description"><?php echo wp_kses_post(wpautop($product['short_description'])); ?></div><?php endif; ?>
-                                <a class="vh360-btn vh360-btn-primary" href="<?php echo esc_url($product['checkout_url']); ?>"><?php echo $membership ? esc_html__('Upgrade', 'videohub360-memberships') : esc_html__('Join Now', 'videohub360-memberships'); ?></a>
+                                <a class="vh360-btn vh360-btn-primary" href="<?php echo esc_url($product['checkout_url']); ?>"><?php echo esc_html($woo_button_label); ?></a>
                             </article>
                         <?php endforeach; ?>
                     </div>
@@ -213,6 +217,10 @@ class VH360_Membership_Subscription_Management {
                     <h4 class="vh360-plan-group-title"><?php esc_html_e('Recurring Stripe Plans', 'videohub360-memberships'); ?></h4>
                     <div class="vh360-plan-card-grid vh360-subscription-plans">
                         <?php foreach ($recurring_plans as $key => $plan) : ?>
+                            <?php
+                                $stripe_same_tier = $membership && VH360_Membership_Plans::get_plan_tier($key) === VH360_Membership_Plans::get_plan_tier($membership->plan_key);
+                                $stripe_button_label = !$membership ? $button_label : ($stripe_same_tier ? __('Switch Billing Term', 'videohub360-memberships') : __('Switch to recurring billing', 'videohub360-memberships'));
+                            ?>
                             <article class="vh360-subscription-plan-card <?php echo !empty($plan['featured']) ? 'is-featured' : ''; ?>">
                                 <?php if (!empty($plan['featured'])) : ?><span class="vh360-plan-pill"><?php esc_html_e('Recommended', 'videohub360-memberships'); ?></span><?php endif; ?>
                                 <h4><?php echo esc_html($this->resolve_plan_display_label($plans, $key)); ?></h4>
@@ -224,7 +232,7 @@ class VH360_Membership_Subscription_Management {
                                 <?php if ($membership && isset($membership->billing_mode) && $membership->billing_mode === 'recurring') : ?>
                                     <?php if ($stripe->is_portal_enabled()) : ?><button type="button" class="vh360-btn vh360-btn-secondary vh360-open-portal"><?php esc_html_e('Change in Billing Portal', 'videohub360-memberships'); ?></button><?php else : ?><p class="vh360-membership-muted"><?php esc_html_e('Contact support to change recurring plans.', 'videohub360-memberships'); ?></p><?php endif; ?>
                                 <?php else : ?>
-                                    <button type="button" class="vh360-btn vh360-btn-primary vh360-start-subscription" data-plan-key="<?php echo esc_attr($key); ?>"><?php echo $membership ? esc_html__('Switch to recurring billing', 'videohub360-memberships') : esc_html($button_label); ?></button>
+                                    <button type="button" class="vh360-btn vh360-btn-primary vh360-start-subscription" data-plan-key="<?php echo esc_attr($key); ?>"><?php echo esc_html($stripe_button_label); ?></button>
                                 <?php endif; ?>
                             </article>
                         <?php endforeach; ?>
@@ -232,7 +240,9 @@ class VH360_Membership_Subscription_Management {
                 <?php endif; ?>
 
                 <?php if (empty($woo_products) && (empty($recurring_plans) || !$stripe->is_configured())) : ?>
-                    <div class="vh360-membership-notice vh360-membership-notice-warning"><?php esc_html_e('No eligible membership upgrades are available right now. Please check the pricing page or contact support.', 'videohub360-memberships'); ?></div>
+                    <div class="vh360-membership-notice vh360-membership-notice-warning">
+                        <?php echo $membership ? esc_html__('No upgrade options are available for your current membership right now.', 'videohub360-memberships') : esc_html__('No membership plans are available right now.', 'videohub360-memberships'); ?>
+                    </div>
                 <?php endif; ?>
             </section>
 
@@ -259,26 +269,38 @@ class VH360_Membership_Subscription_Management {
      * @return array
      */
     private function get_dashboard_recurring_plans($plans, $membership) {
-        $current_tier = $membership ? VH360_Membership_Plans::get_plan_tier($membership->plan_key) : 0;
-        $current_plan = $membership ? $membership->plan_key : '';
         $eligible = array();
         foreach ($plans as $key => $plan) {
-            if (!empty($plan['enabled']) || !isset($plan['enabled'])) {
-                $is_recurring = isset($plan['billing_mode']) && $plan['billing_mode'] === 'recurring';
-                if (!$is_recurring || empty($plan['stripe_price_id']) || $key === $current_plan || (isset($plan['upgrade_eligible']) && !$plan['upgrade_eligible'])) {
-                    continue;
+            if (!function_exists('vh360_membership_plan_is_eligible_change')) {
+                continue;
+            }
+
+            $is_recurring = isset($plan['billing_mode']) && $plan['billing_mode'] === 'recurring';
+            if (!$is_recurring || empty($plan['stripe_price_id'])) {
+                continue;
+            }
+
+            if (!vh360_membership_plan_is_eligible_change($key, $plan, $membership)) {
+                continue;
+            }
+
+            $plan['plan_key'] = $key;
+            $plan['tier_level'] = VH360_Membership_Plans::get_plan_tier($key);
+            $plan['display_order'] = isset($plan['display_order']) ? (int) $plan['display_order'] : 999;
+            $plan['label'] = $this->resolve_plan_display_label($plans, $key);
+            $eligible[$key] = $plan;
+        }
+
+        if (function_exists('vh360_sort_membership_plan_items')) {
+            $sorted = vh360_sort_membership_plan_items(array_values($eligible));
+            $eligible = array();
+            foreach ($sorted as $plan) {
+                if (!empty($plan['plan_key'])) {
+                    $eligible[$plan['plan_key']] = $plan;
                 }
-                if ($membership && VH360_Membership_Plans::get_plan_tier($key) < $current_tier) {
-                    continue;
-                }
-                $eligible[$key] = $plan;
             }
         }
-        uasort($eligible, function($a, $b) {
-            $order_a = isset($a['display_order']) ? (int) $a['display_order'] : 999;
-            $order_b = isset($b['display_order']) ? (int) $b['display_order'] : 999;
-            return $order_a <=> $order_b;
-        });
+
         return $eligible;
     }
 

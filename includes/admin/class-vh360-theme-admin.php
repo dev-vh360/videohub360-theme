@@ -464,6 +464,8 @@ class VH360_Theme_Admin {
             'default' => array(
                 'enable_memberships' => true,
                 'pricing_page_url' => '',
+                'support_url' => '',
+                'contact_url' => '',
                 'course_purchase_destination' => 'product_page',
                 'login_required' => true,
                 'locked_message' => '',
@@ -1815,6 +1817,8 @@ class VH360_Theme_Admin {
         
         // Sanitize pricing_page_url
         $output['pricing_page_url'] = !empty($input['pricing_page_url']) ? esc_url_raw($input['pricing_page_url']) : '';
+        $output['support_url'] = !empty($input['support_url']) ? esc_url_raw($input['support_url']) : '';
+        $output['contact_url'] = !empty($input['contact_url']) ? esc_url_raw($input['contact_url']) : '';
 
         // Sanitize course purchase destination.
         $course_purchase_destination = isset($input['course_purchase_destination']) ? sanitize_key($input['course_purchase_destination']) : 'product_page';

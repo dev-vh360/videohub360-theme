@@ -542,6 +542,68 @@ function vh360_render_upgrade_gate($required_plan = '', $custom_message = '', $p
 }
 
 /**
+ * Sort plan cards consistently by display order, tier, then label/title.
+ *
+ * @param array $items Items with display_order, tier_level and title/label keys.
+ * @return array
+ */
+function vh360_sort_membership_plan_items($items) {
+    usort($items, function($a, $b) {
+        $order_a = isset($a['display_order']) ? (int) $a['display_order'] : 999;
+        $order_b = isset($b['display_order']) ? (int) $b['display_order'] : 999;
+        if ($order_a !== $order_b) {
+            return $order_a <=> $order_b;
+        }
+
+        $tier_a = isset($a['tier_level']) ? (int) $a['tier_level'] : 10;
+        $tier_b = isset($b['tier_level']) ? (int) $b['tier_level'] : 10;
+        if ($tier_a !== $tier_b) {
+            return $tier_a <=> $tier_b;
+        }
+
+        $label_a = isset($a['label']) ? $a['label'] : (isset($a['title']) ? $a['title'] : '');
+        $label_b = isset($b['label']) ? $b['label'] : (isset($b['title']) ? $b['title'] : '');
+        return strcasecmp($label_a, $label_b);
+    });
+
+    return $items;
+}
+
+/**
+ * Decide whether a target plan is eligible from a user's current plan.
+ *
+ * Same-tier changes are allowed when the target plan is upgrade eligible.
+ * Lower-tier changes require downgrade_eligible to be explicitly enabled.
+ *
+ * @param string       $target_plan_key Target plan key.
+ * @param array        $target_plan     Target plan config.
+ * @param object|false $current         Current membership.
+ * @return bool
+ */
+function vh360_membership_plan_is_eligible_change($target_plan_key, $target_plan, $current = false) {
+    if (isset($target_plan['enabled']) && !$target_plan['enabled']) {
+        return false;
+    }
+
+    if ($current && isset($current->plan_key) && $current->plan_key === $target_plan_key) {
+        return false;
+    }
+
+    if (!$current) {
+        return true;
+    }
+
+    $current_tier = class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan_tier($current->plan_key) : 10;
+    $target_tier = class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan_tier($target_plan_key) : 10;
+
+    if ($target_tier < $current_tier) {
+        return !empty($target_plan['downgrade_eligible']);
+    }
+
+    return !isset($target_plan['upgrade_eligible']) || (bool) $target_plan['upgrade_eligible'];
+}
+
+/**
  * Get WooCommerce products mapped to VideoHub360 membership plans.
  *
  * @return array
@@ -571,45 +633,49 @@ function vh360_get_membership_products() {
 
     foreach ($products as $post) {
         $product = wc_get_product($post->ID);
-        if (!$product || !$product->is_purchasable()) {
+        if (!$product || $product->get_status() !== 'publish' || !$product->is_purchasable() || !$product->is_in_stock()) {
             continue;
         }
 
         $mapping = class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_product_membership_mapping($post->ID) : false;
-        if (!$mapping || empty($plans[$mapping['plan_key']])) {
+        if (!$mapping || empty($mapping['plan_key']) || empty($plans[$mapping['plan_key']])) {
             continue;
         }
 
         $plan = $plans[$mapping['plan_key']];
-        if ((isset($plan['enabled']) && !$plan['enabled']) || (isset($plan['upgrade_eligible']) && !$plan['upgrade_eligible']) || !VH360_Membership_Plans::is_woocommerce_eligible_plan($plan)) {
+        if ((isset($plan['enabled']) && !$plan['enabled']) || !VH360_Membership_Plans::is_woocommerce_eligible_plan($plan)) {
             continue;
         }
 
+        $requires_product_page = !$product->is_type('simple') || $product->has_options();
+        $action_url = $requires_product_page
+            ? get_permalink($post->ID)
+            : add_query_arg('add-to-cart', $post->ID, function_exists('wc_get_checkout_url') ? wc_get_checkout_url() : get_permalink($post->ID));
+
         $mapped[] = array(
-            'product_id'        => $post->ID,
-            'title'             => $product->get_name(),
-            'price_html'        => $product->get_price_html(),
-            'short_description' => $product->get_short_description(),
-            'plan_key'          => $mapping['plan_key'],
-            'duration'          => $mapping['duration'],
-            'duration_unit'     => $mapping['duration_unit'],
-            'grant_type'        => $mapping['grant_type'],
-            'add_to_cart_url'   => $product->add_to_cart_url(),
-            'checkout_url'      => add_query_arg('add-to-cart', $post->ID, function_exists('wc_get_checkout_url') ? wc_get_checkout_url() : get_permalink($post->ID)),
-            'permalink'         => get_permalink($post->ID),
-            'tier_level'        => VH360_Membership_Plans::get_plan_tier($mapping['plan_key']),
-            'featured'          => !empty($plan['featured']),
+            'product_id'            => $post->ID,
+            'title'                 => $product->get_name(),
+            'label'                 => !empty($plan['display_label']) ? $plan['display_label'] : $product->get_name(),
+            'price_html'            => $product->get_price_html(),
+            'short_description'     => $product->get_short_description(),
+            'plan_key'              => $mapping['plan_key'],
+            'duration'              => $mapping['duration'],
+            'duration_unit'         => $mapping['duration_unit'],
+            'grant_type'            => $mapping['grant_type'],
+            'add_to_cart_url'       => $product->add_to_cart_url(),
+            'checkout_url'          => $action_url,
+            'permalink'             => get_permalink($post->ID),
+            'requires_product_page' => $requires_product_page,
+            'action_label'          => $requires_product_page ? __('View Options', 'videohub360-memberships') : '',
+            'tier_level'            => VH360_Membership_Plans::get_plan_tier($mapping['plan_key']),
+            'display_order'         => isset($plan['display_order']) ? (int) $plan['display_order'] : 999,
+            'upgrade_eligible'      => !isset($plan['upgrade_eligible']) || (bool) $plan['upgrade_eligible'],
+            'downgrade_eligible'    => !empty($plan['downgrade_eligible']),
+            'featured'              => !empty($plan['featured']),
         );
     }
 
-    usort($mapped, function($a, $b) {
-        if ($a['tier_level'] === $b['tier_level']) {
-            return strcasecmp($a['title'], $b['title']);
-        }
-        return $a['tier_level'] <=> $b['tier_level'];
-    });
-
-    return apply_filters('vh360_get_membership_products', $mapped);
+    return apply_filters('vh360_get_membership_products', vh360_sort_membership_plan_items($mapped));
 }
 
 /**
@@ -635,13 +701,14 @@ function vh360_get_product_for_membership_plan($plan_key) {
  */
 function vh360_get_upgrade_products_for_user($user_id) {
     $current = vh360_get_active_membership($user_id);
-    $current_tier = $current && class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan_tier($current->plan_key) : 0;
-    $current_plan = $current ? $current->plan_key : '';
+    $plans = class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan_registry() : array();
 
-    return array_values(array_filter(vh360_get_membership_products(), function($product) use ($current_tier, $current_plan) {
-        if ($current_plan && $product['plan_key'] === $current_plan) {
+    $products = array_filter(vh360_get_membership_products(), function($product) use ($plans, $current) {
+        if (empty($plans[$product['plan_key']])) {
             return false;
         }
-        return !$current_plan || (int) $product['tier_level'] > $current_tier;
-    }));
+        return vh360_membership_plan_is_eligible_change($product['plan_key'], $plans[$product['plan_key']], $current);
+    });
+
+    return vh360_sort_membership_plan_items(array_values($products));
 }
