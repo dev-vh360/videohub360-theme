@@ -276,8 +276,8 @@ class VH360_Membership_Plans {
 
         if (!$id) {
             $errors->add('plan_key_required', sprintf(__('Plan key is required for %s.', 'videohub360-memberships'), $plan_label));
-        } elseif ($raw_id !== $id || !preg_match('/^[a-z0-9_\-]+$/', $id)) {
-            $errors->add('plan_key_format', sprintf(__('Plan key "%s" must be a lowercase slug using letters, numbers, hyphens, or underscores.', 'videohub360-memberships'), $raw_id));
+        } elseif ($raw_id !== $id || !preg_match('/^[a-z0-9_]+$/', $id)) {
+            $errors->add('plan_key_format', sprintf(__('Plan key "%s" must be a lowercase slug using letters, numbers, and underscores.', 'videohub360-memberships'), $raw_id));
         } elseif ($id !== $current_key && isset($existing_plans[$id])) {
             $errors->add('plan_key_unique', sprintf(__('Plan key "%s" is already in use.', 'videohub360-memberships'), $id));
         }
@@ -347,7 +347,7 @@ class VH360_Membership_Plans {
         return apply_filters('vh360_membership_plans', $plans);
     }
 
-    /** Seed editable starter plans only when no central plans exist. */
+    /** Seed editable starter plan samples only when no central plans exist. Paid samples start disabled until checkout settings are configured. */
     public static function maybe_seed_default_plans() {
         $existing = get_option(self::PLANS_OPTION, null);
         if (is_array($existing) && !empty($existing)) {
@@ -360,11 +360,11 @@ class VH360_Membership_Plans {
         $now = current_time('mysql');
         $defaults = array(
             'free_fan' => array('name'=>'Free Fan','label'=>'Free Fan','description'=>'Start watching free member content.','plan_group'=>'fan','billing_type'=>'free','billing_interval'=>'free','price'=>'0','currency'=>'USD','features'=>array('Free community access','Public videos','Basic profile'),'tier_level'=>0,'is_featured'=>false,'is_enabled'=>true,'display_order'=>10,'button_text'=>'Join Free','checkout_behavior'=>'free'),
-            'creator_monthly' => array('name'=>'Creator Monthly','label'=>'Creator','description'=>'Monthly access for creators.','plan_group'=>'creator','billing_type'=>'recurring','billing_interval'=>'monthly','price'=>'19','currency'=>'USD','features'=>array('Creator tools','Member content','Community access'),'tier_level'=>10,'is_featured'=>false,'is_enabled'=>true,'display_order'=>20,'button_text'=>'Start Monthly','checkout_behavior'=>'stripe'),
-            'creator_yearly' => array('name'=>'Creator Yearly','label'=>'Creator','description'=>'Annual creator access.','plan_group'=>'creator','billing_type'=>'recurring','billing_interval'=>'yearly','price'=>'190','currency'=>'USD','savings_text'=>'Save 17%','features'=>array('Creator tools','Member content','Community access'),'tier_level'=>10,'is_featured'=>false,'is_enabled'=>true,'display_order'=>30,'button_text'=>'Start Yearly','checkout_behavior'=>'stripe'),
-            'pro_monthly' => array('name'=>'Pro Monthly','label'=>'Pro','description'=>'Monthly access for professionals.','plan_group'=>'pro','billing_type'=>'recurring','billing_interval'=>'monthly','price'=>'39','currency'=>'USD','features'=>array('All creator features','Advanced tools','Priority support'),'tier_level'=>20,'is_featured'=>true,'is_enabled'=>true,'display_order'=>40,'button_text'=>'Go Pro','checkout_behavior'=>'stripe'),
-            'pro_yearly' => array('name'=>'Pro Yearly','label'=>'Pro','description'=>'Annual pro access.','plan_group'=>'pro','billing_type'=>'recurring','billing_interval'=>'yearly','price'=>'390','currency'=>'USD','savings_text'=>'Save 17%','features'=>array('All creator features','Advanced tools','Priority support'),'tier_level'=>20,'is_featured'=>true,'is_enabled'=>true,'display_order'=>50,'button_text'=>'Go Pro Yearly','checkout_behavior'=>'stripe'),
-            'lifetime' => array('name'=>'Lifetime','label'=>'Lifetime','description'=>'One payment for lifetime access.','plan_group'=>'lifetime','billing_type'=>'lifetime','billing_interval'=>'lifetime','price'=>'499','currency'=>'USD','features'=>array('Lifetime membership','All pro features','No renewal'),'tier_level'=>30,'is_featured'=>false,'is_enabled'=>true,'display_order'=>60,'button_text'=>'Get Lifetime','checkout_behavior'=>'woocommerce'),
+            'creator_monthly' => array('name'=>'Creator Monthly','label'=>'Creator','description'=>'Monthly access for creators.','plan_group'=>'creator','billing_type'=>'recurring','billing_interval'=>'monthly','price'=>'19','currency'=>'USD','features'=>array('Creator tools','Member content','Community access'),'tier_level'=>10,'is_featured'=>false,'is_enabled'=>false,'display_order'=>20,'button_text'=>'Start Monthly','checkout_behavior'=>'stripe'),
+            'creator_yearly' => array('name'=>'Creator Yearly','label'=>'Creator','description'=>'Annual creator access.','plan_group'=>'creator','billing_type'=>'recurring','billing_interval'=>'yearly','price'=>'190','currency'=>'USD','savings_text'=>'Save 17%','features'=>array('Creator tools','Member content','Community access'),'tier_level'=>10,'is_featured'=>false,'is_enabled'=>false,'display_order'=>30,'button_text'=>'Start Yearly','checkout_behavior'=>'stripe'),
+            'pro_monthly' => array('name'=>'Pro Monthly','label'=>'Pro','description'=>'Monthly access for professionals.','plan_group'=>'pro','billing_type'=>'recurring','billing_interval'=>'monthly','price'=>'39','currency'=>'USD','features'=>array('All creator features','Advanced tools','Priority support'),'tier_level'=>20,'is_featured'=>true,'is_enabled'=>false,'display_order'=>40,'button_text'=>'Go Pro','checkout_behavior'=>'stripe'),
+            'pro_yearly' => array('name'=>'Pro Yearly','label'=>'Pro','description'=>'Annual pro access.','plan_group'=>'pro','billing_type'=>'recurring','billing_interval'=>'yearly','price'=>'390','currency'=>'USD','savings_text'=>'Save 17%','features'=>array('All creator features','Advanced tools','Priority support'),'tier_level'=>20,'is_featured'=>true,'is_enabled'=>false,'display_order'=>50,'button_text'=>'Go Pro Yearly','checkout_behavior'=>'stripe'),
+            'lifetime' => array('name'=>'Lifetime','label'=>'Lifetime','description'=>'One payment for lifetime access.','plan_group'=>'lifetime','billing_type'=>'lifetime','billing_interval'=>'lifetime','price'=>'499','currency'=>'USD','features'=>array('Lifetime membership','All pro features','No renewal'),'tier_level'=>30,'is_featured'=>false,'is_enabled'=>false,'display_order'=>60,'button_text'=>'Get Lifetime','checkout_behavior'=>'woocommerce'),
         );
         foreach ($defaults as $key => $plan) {
             $defaults[$key]['id'] = $key;
@@ -624,7 +624,7 @@ class VH360_Membership_Plans {
                 <p class="description" style="color:#b32d2e;"><strong><?php esc_html_e('Warning:', 'videohub360-memberships'); ?></strong> <?php esc_html_e('This product is mapped to a recurring Stripe plan. Recurring plans should use Stripe Checkout, so choose a one-time/lifetime plan or clear the mapping before saving.', 'videohub360-memberships'); ?></p>
             <?php endif; ?>
             <p class="description">
-                <?php esc_html_e('When this product is purchased, grant or extend the selected fixed-term or lifetime membership plan.', 'videohub360-memberships'); ?>
+                <?php esc_html_e('When this product is purchased, grant or extend the selected WooCommerce-based membership plan.', 'videohub360-memberships'); ?>
             </p>
             <p class="description">
                 <?php esc_html_e('Recurring membership plans are configured in Membership Plans with Stripe Price IDs and should not be mapped to WooCommerce products.', 'videohub360-memberships'); ?>

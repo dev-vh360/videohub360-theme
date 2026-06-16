@@ -875,7 +875,7 @@ function vh360_membership_is_recurring_stripe_membership($membership) {
 }
 
 /**
- * Get mapped WooCommerce fixed-term/lifetime upgrade products for a user.
+ * Get mapped WooCommerce membership upgrade products for a user.
  *
  * @param int $user_id User ID.
  * @return array

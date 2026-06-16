@@ -200,7 +200,7 @@ class VH360_Membership_Subscription_Management {
                         </div><?php endif; ?>
                     </div>
                 <?php else : ?>
-                    <div class="vh360-membership-empty-state"><h4><?php esc_html_e('No active membership', 'videohub360-memberships'); ?></h4><p><?php esc_html_e('Choose a fixed-term, lifetime, or recurring plan below to unlock member access.', 'videohub360-memberships'); ?></p></div>
+                    <div class="vh360-membership-empty-state"><h4><?php esc_html_e('No active membership', 'videohub360-memberships'); ?></h4><p><?php esc_html_e('Choose an available membership plan below to unlock member access.', 'videohub360-memberships'); ?></p></div>
                 <?php endif; ?>
             </section>
 

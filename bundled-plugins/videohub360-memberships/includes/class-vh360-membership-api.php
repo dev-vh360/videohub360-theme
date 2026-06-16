@@ -617,7 +617,7 @@ class VH360_Membership_API {
             return $recurring;
         }
         
-        // Second try: active one-time/fixed-term/lifetime membership.
+        // Second try: active one-time or lifetime membership.
         // Prefer the highest configured tier, then latest expiration, then latest creation date.
         $fixed_memberships = $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM {$table}

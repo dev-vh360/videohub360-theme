@@ -54,26 +54,51 @@ class VH360_Membership_Plans_Admin {
         $submitted = isset($_POST['plans']) && is_array($_POST['plans']) ? wp_unslash($_POST['plans']) : array();
         $delete = isset($_POST['delete_plan']) ? sanitize_key(wp_unslash($_POST['delete_plan'])) : '';
         $duplicate = isset($_POST['duplicate_plan']) ? sanitize_key(wp_unslash($_POST['duplicate_plan'])) : '';
-        $next = array();
-        $errors = array();
+
+        // Start from existing valid plans so failed identity validation cannot delete or overwrite records.
+        $next = $plans;
+        $messages = array();
+        $has_errors = false;
+        $submitted_key_counts = $this->get_submitted_key_counts($submitted, isset($_POST['new_plan']) && is_array($_POST['new_plan']) ? wp_unslash($_POST['new_plan']) : array());
+        $accepted_keys = array();
 
         foreach ($submitted as $row_key => $raw_plan) {
             $row_key = sanitize_key($row_key);
-            if ($delete && $delete === $row_key) {
+            $raw_plan = $this->prepare_raw_plan($raw_plan, $row_key);
+            $original_key = !empty($raw_plan['original_plan_key']) ? sanitize_key($raw_plan['original_plan_key']) : $row_key;
+
+            if ($delete && $delete === $original_key) {
+                unset($next[$original_key]);
+                $messages[] = sprintf(__('The plan `%s` was deleted.', 'videohub360-memberships'), $original_key);
                 continue;
             }
-            $raw_plan = $this->prepare_raw_plan($raw_plan, $row_key);
-            $validation = VH360_Membership_Plans::validate_plan($raw_plan, $next, $row_key);
-            if (is_wp_error($validation)) {
-                $errors = array_merge($errors, $validation->get_error_messages());
-                $raw_plan['is_enabled'] = false;
-            }
-            $plan = VH360_Membership_Plans::normalize_plan($raw_plan, $row_key);
-            if (!empty($plan['id'])) {
-                $next[$plan['id']] = $plan;
+
+            $identity_errors = $this->get_identity_errors($raw_plan, $plans, $next, $submitted_key_counts, $accepted_keys, $original_key, false);
+            if (!empty($identity_errors)) {
+                $has_errors = true;
+                $messages = array_merge($messages, $identity_errors);
+                if (isset($plans[$original_key])) {
+                    $next[$original_key] = $plans[$original_key];
+                }
+                continue;
             }
 
-            if ($duplicate && $duplicate === $row_key) {
+            $plan = VH360_Membership_Plans::normalize_plan($raw_plan, $original_key);
+            $soft_errors = $this->get_configuration_errors($raw_plan);
+            if (!empty($soft_errors)) {
+                $has_errors = true;
+                $plan['is_enabled'] = false;
+                $plan['enabled'] = false;
+                $messages = array_merge($messages, $soft_errors);
+            }
+
+            if ($original_key && $original_key !== $plan['id']) {
+                unset($next[$original_key]);
+            }
+            $next[$plan['id']] = $plan;
+            $accepted_keys[$plan['id']] = true;
+
+            if ($duplicate && $duplicate === $original_key) {
                 $copy = $plan;
                 $copy['id'] = $this->unique_copy_key($copy['id'], $next);
                 $copy['plan_key'] = $copy['id'];
@@ -84,35 +109,141 @@ class VH360_Membership_Plans_Admin {
                 $copy['created_at'] = current_time('mysql');
                 $copy['updated_at'] = current_time('mysql');
                 $next[$copy['id']] = $copy;
+                $messages[] = sprintf(__('A disabled duplicate was created with the unique plan key `%s`.', 'videohub360-memberships'), $copy['id']);
             }
         }
 
         if (!empty($_POST['new_plan']) && is_array($_POST['new_plan'])) {
             $raw = $this->prepare_raw_plan(wp_unslash($_POST['new_plan']));
             if (!empty($raw['id']) || !empty($raw['name']) || !empty($raw['label'])) {
-                $validation = VH360_Membership_Plans::validate_plan($raw, $next, '');
-                if (is_wp_error($validation)) {
-                    $errors = array_merge($errors, $validation->get_error_messages());
+                $identity_errors = $this->get_identity_errors($raw, $plans, $next, $submitted_key_counts, $accepted_keys, '', true);
+                if (!empty($identity_errors)) {
+                    $has_errors = true;
+                    $messages = array_merge($messages, $identity_errors);
                 } else {
                     $plan = VH360_Membership_Plans::normalize_plan($raw);
+                    $soft_errors = $this->get_configuration_errors($raw);
+                    if (!empty($soft_errors)) {
+                        $has_errors = true;
+                        $plan['is_enabled'] = false;
+                        $plan['enabled'] = false;
+                        $messages = array_merge($messages, $soft_errors);
+                    }
                     $next[$plan['id']] = $plan;
+                    $accepted_keys[$plan['id']] = true;
                 }
             }
         }
 
         VH360_Membership_Plans::save_plans($next);
+        if (empty($messages)) {
+            $messages[] = __('Membership plans saved.', 'videohub360-memberships');
+        }
         set_transient('vh360_membership_plans_admin_notice', array(
-            'type' => empty($errors) ? 'success' : 'warning',
-            'messages' => empty($errors) ? array(__('Membership plans saved.', 'videohub360-memberships')) : $errors,
+            'type' => $has_errors ? 'warning' : 'success',
+            'messages' => $messages,
         ), 60);
 
         wp_safe_redirect(add_query_arg('page', 'vh360-membership-plans', admin_url('tools.php')));
         exit;
     }
 
+    private function get_submitted_key_counts($submitted, $new_plan) {
+        $counts = array();
+        foreach ((array) $submitted as $raw_plan) {
+            if (!is_array($raw_plan) || empty($raw_plan['id'])) {
+                continue;
+            }
+            $key = sanitize_key($raw_plan['id']);
+            if ($key) {
+                $counts[$key] = isset($counts[$key]) ? $counts[$key] + 1 : 1;
+            }
+        }
+        if (is_array($new_plan) && !empty($new_plan['id'])) {
+            $key = sanitize_key($new_plan['id']);
+            if ($key) {
+                $counts[$key] = isset($counts[$key]) ? $counts[$key] + 1 : 1;
+            }
+        }
+        return $counts;
+    }
+
+    private function get_identity_errors($raw_plan, $existing_plans, $next_plans, $submitted_key_counts, $accepted_keys, $original_key = '', $is_new = false) {
+        $errors = array();
+        $raw_id = isset($raw_plan['id']) ? trim((string) $raw_plan['id']) : '';
+        $candidate_key = sanitize_key($raw_id);
+        $row_label = $this->get_row_label($raw_plan, $original_key, $is_new);
+
+        if ('' === $raw_id) {
+            $errors[] = $is_new
+                ? __('A new plan row was skipped because it did not include a plan key.', 'videohub360-memberships')
+                : sprintf(__('The row for `%s` was not saved because the plan key is missing. The existing plan was preserved.', 'videohub360-memberships'), $original_key);
+            return $errors;
+        }
+
+        if ($raw_id !== $candidate_key || !preg_match('/^[a-z0-9_]+$/', $candidate_key)) {
+            $errors[] = sprintf(__('The plan key `%s` is invalid. Use lowercase letters, numbers, and underscores only. That row was not saved.', 'videohub360-memberships'), $raw_id);
+            return $errors;
+        }
+
+        if (!empty($submitted_key_counts[$candidate_key]) && $submitted_key_counts[$candidate_key] > 1 && !empty($accepted_keys[$candidate_key])) {
+            $errors[] = sprintf(__('The plan key `%s` was submitted more than once. The duplicate row `%s` was not saved.', 'videohub360-memberships'), $candidate_key, $row_label);
+            return $errors;
+        }
+
+        if (isset($next_plans[$candidate_key]) && $candidate_key !== $original_key && !isset($accepted_keys[$candidate_key])) {
+            $errors[] = sprintf(__('The plan key `%s` is already used by another saved plan. The row `%s` was not saved.', 'videohub360-memberships'), $candidate_key, $row_label);
+            return $errors;
+        }
+
+        if (isset($accepted_keys[$candidate_key]) && $candidate_key !== $original_key) {
+            $errors[] = sprintf(__('The plan key `%s` was already accepted from another submitted row. The row `%s` was not saved.', 'videohub360-memberships'), $candidate_key, $row_label);
+            return $errors;
+        }
+
+        if (!$is_new && $original_key && !isset($existing_plans[$original_key])) {
+            $errors[] = sprintf(__('The original plan key `%s` could not be found. The row `%s` was not saved.', 'videohub360-memberships'), $original_key, $row_label);
+        }
+
+        return $errors;
+    }
+
+    private function get_configuration_errors($raw_plan) {
+        $messages = array();
+        $validation = VH360_Membership_Plans::validate_plan($raw_plan, array(), isset($raw_plan['id']) ? sanitize_key($raw_plan['id']) : '');
+        if (!is_wp_error($validation)) {
+            return $messages;
+        }
+
+        $identity_codes = array('plan_key_required', 'plan_key_format', 'plan_key_unique');
+        foreach ($validation->errors as $code => $errors) {
+            if (in_array($code, $identity_codes, true)) {
+                continue;
+            }
+            foreach ($errors as $message) {
+                $messages[] = sprintf(__('%s The plan was saved as disabled until this is fixed.', 'videohub360-memberships'), $message);
+            }
+        }
+        return $messages;
+    }
+
+    private function get_row_label($raw_plan, $original_key = '', $is_new = false) {
+        if (!empty($raw_plan['name'])) {
+            return sanitize_text_field($raw_plan['name']);
+        }
+        if (!empty($raw_plan['label'])) {
+            return sanitize_text_field($raw_plan['label']);
+        }
+        if ($original_key) {
+            return $original_key;
+        }
+        return $is_new ? __('new plan', 'videohub360-memberships') : __('submitted plan', 'videohub360-memberships');
+    }
+
     private function prepare_raw_plan($raw, $fallback_key = '') {
         $raw = is_array($raw) ? $raw : array();
-        $raw['id'] = !empty($raw['id']) ? sanitize_key($raw['id']) : $fallback_key;
+        $raw['id'] = isset($raw['id']) ? trim((string) $raw['id']) : $fallback_key;
+        $raw['original_plan_key'] = isset($raw['original_plan_key']) ? sanitize_key($raw['original_plan_key']) : $fallback_key;
         if (isset($raw['features']) && is_string($raw['features'])) {
             $raw['features'] = preg_split('/\r\n|\r|\n/', $raw['features']);
         }
@@ -166,6 +297,7 @@ class VH360_Membership_Plans_Admin {
         $features = !empty($plan['features']) && is_array($plan['features']) ? implode("\n", $plan['features']) : '';
         ?>
         <section class="vh360-plan-card">
+            <?php if (!$is_new) : ?><input type="hidden" name="<?php echo esc_attr($field); ?>[original_plan_key]" value="<?php echo esc_attr($key); ?>" /><?php endif; ?>
             <div class="vh360-plan-card__header">
                 <div><h2 style="margin:0;"><?php echo $is_new ? esc_html__('Add New Plan', 'videohub360-memberships') : esc_html($plan['name']); ?></h2><?php if (!$is_new) : ?><code><?php echo esc_html($key); ?></code><?php endif; ?></div>
                 <?php if (!$is_new) : ?><span class="vh360-plan-pill"><?php echo !empty($plan['is_enabled']) ? esc_html__('Enabled', 'videohub360-memberships') : esc_html__('Disabled', 'videohub360-memberships'); ?></span><?php endif; ?>
