@@ -187,12 +187,11 @@ get_header();
                                 <?php esc_html_e('Email Address', 'videohub360-theme'); ?>
                                 <span class="required">*</span>
                             </label>
-                            <input 
-                                type="email" 
-                                name="vh360_email" 
-                                id="vh360-email" 
-                                class="vh360-auth-input" 
-                                required 
+                            <input type="email"
+                                name="vh360_email"
+                                id="vh360-email"
+                                class="vh360-auth-input"
+                                required
                                 value="<?php echo esc_attr($submitted_email); ?>"
                             >
                         </div>
