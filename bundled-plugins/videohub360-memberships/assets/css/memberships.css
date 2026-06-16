@@ -350,3 +350,137 @@
 .vh360-subscription-plan-card .vh360-btn-primary:hover:not(:disabled) {
     opacity: 0.9;
 }
+
+/* Membership account center */
+.vh360-membership-account-center {
+    max-width: 1100px;
+}
+
+.vh360-membership-section {
+    margin: 0 0 32px;
+}
+
+.vh360-membership-section > h3 {
+    margin: 0 0 16px;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.vh360-current-plan-card {
+    border-color: #d8e9f5;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.vh360-plan-eyebrow,
+.vh360-plan-type,
+.vh360-plan-pill {
+    display: inline-block;
+    color: #0073aa;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+}
+
+.vh360-plan-pill {
+    background: #e7f5ff;
+    border-radius: 999px;
+    padding: 4px 10px;
+}
+
+.vh360-membership-empty-state {
+    background: #fff;
+    border: 1px dashed #cbd5df;
+    border-radius: 8px;
+    padding: 28px;
+    text-align: center;
+}
+
+.vh360-membership-empty-state h4 {
+    margin: 0 0 8px;
+}
+
+.vh360-plan-group-title {
+    margin: 20px 0 12px;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.vh360-plan-card-grid {
+    display: grid;
+    gap: 18px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    margin: 0 0 24px;
+}
+
+.vh360-plan-card-grid.vh360-subscription-plans {
+    justify-content: stretch;
+}
+
+.vh360-plan-card-grid .vh360-subscription-plan-card {
+    display: flex;
+    flex-direction: column;
+    max-width: none;
+    min-width: 0;
+    text-align: left;
+}
+
+.vh360-subscription-plan-card.is-featured {
+    border-color: #0073aa;
+    box-shadow: 0 8px 22px rgba(0, 115, 170, .14);
+}
+
+.vh360-plan-card-grid .vh360-plan-features {
+    text-align: left;
+}
+
+.vh360-plan-card-grid .vh360-btn {
+    margin-top: auto;
+}
+
+.vh360-membership-muted {
+    color: #666;
+    font-size: 14px;
+    margin: 10px 0 0;
+}
+
+.vh360-billing-help-section {
+    background: #fafafa;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.vh360-billing-help-section .vh360-membership-card-actions {
+    border-top: none;
+    padding: 0;
+}
+
+@media (max-width: 640px) {
+    .vh360-membership-card-header,
+    .vh360-membership-detail {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .vh360-plan-card-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.vh360-membership-notice-info {
+    background: #e7f5ff;
+    border: 1px solid #8ecae6;
+    color: #0b4f6c;
+}
+
+.vh360-membership-notice-info .vh360-btn {
+    margin-top: 10px;
+}
+
+.vh360-subscription-plan-card.is-selected {
+    border-color: #1d7f43;
+    box-shadow: 0 8px 22px rgba(29, 127, 67, .16);
+}

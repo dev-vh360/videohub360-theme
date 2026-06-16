@@ -159,6 +159,9 @@ for ($i = 1; $i <= 2; $i++) {
                     
                     <form method="post" action="" id="vh360-registerform" class="vh360-auth-form">
                         <?php wp_nonce_field('vh360_registration', 'vh360_register_nonce'); ?>
+                        <?php $vh360_bridge_args = function_exists('vh360_get_recurring_membership_bridge_args') ? vh360_get_recurring_membership_bridge_args() : array(); ?>
+                        <?php if (!empty($vh360_bridge_args['vh360_plan'])) : ?><input type="hidden" name="vh360_plan" value="<?php echo esc_attr($vh360_bridge_args['vh360_plan']); ?>" /><?php endif; ?>
+                        <?php if (!empty($vh360_bridge_args['redirect_to'])) : ?><input type="hidden" name="vh360_redirect_to" value="<?php echo esc_attr($vh360_bridge_args['redirect_to']); ?>" /><?php endif; ?>
                         
                         <div class="vh360-auth-field">
                             <label for="vh360-first-name">
@@ -285,7 +288,7 @@ for ($i = 1; $i <= 2; $i++) {
                         
                         <div class="vh360-auth-links">
                             <span><?php esc_html_e('Already have an account?', 'videohub360-theme'); ?></span>
-                            <a href="<?php echo esc_url(vh360_get_login_page_url()); ?>" class="vh360-auth-link">
+                            <a href="<?php echo esc_url((function_exists('vh360_append_recurring_membership_bridge_args') ? vh360_append_recurring_membership_bridge_args(vh360_get_login_page_url(), $vh360_bridge_args) : vh360_get_login_page_url())); ?>" class="vh360-auth-link">
                                 <?php esc_html_e('Sign In', 'videohub360-theme'); ?>
                             </a>
                         </div>

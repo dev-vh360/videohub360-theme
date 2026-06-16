@@ -76,6 +76,18 @@ class VH360_Stripe_Checkout {
         if (!$stripe->is_configured()) {
             wp_send_json_error(array('message' => __('Stripe is not configured.', 'videohub360-memberships')));
         }
+
+        $active_membership = function_exists('vh360_get_active_membership') ? vh360_get_active_membership($user_id) : false;
+        if ($active_membership && isset($active_membership->billing_mode) && $active_membership->billing_mode === 'recurring') {
+            if (isset($active_membership->plan_key) && $active_membership->plan_key === $plan_key) {
+                wp_send_json_error(array('message' => __('You already have this recurring membership plan active.', 'videohub360-memberships')));
+            }
+
+            $message = $stripe->is_portal_enabled()
+                ? __('You already have an active recurring subscription. Use Manage Billing to make changes.', 'videohub360-memberships')
+                : __('You already have an active recurring subscription. Please contact support to change your plan.', 'videohub360-memberships');
+            wp_send_json_error(array('message' => $message));
+        }
         
         // Get or create Stripe customer
         $customer_id = $this->get_or_create_stripe_customer($user_id);
