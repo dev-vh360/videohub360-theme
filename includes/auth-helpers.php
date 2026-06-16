@@ -528,6 +528,8 @@ function vh360_handle_instructor_registration() {
     if (!$current_url) {
         $current_url = home_url('/register-instructor/');
     }
+    $vh360_bridge_args = function_exists('vh360_get_recurring_membership_bridge_args') ? vh360_get_recurring_membership_bridge_args() : array();
+    $current_url = function_exists('vh360_append_recurring_membership_bridge_args') ? vh360_append_recurring_membership_bridge_args($current_url, $vh360_bridge_args) : $current_url;
 
     // Verify nonce
     if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['vh360_instructor_register_nonce'])), 'vh360_instructor_register')) {
@@ -665,6 +667,13 @@ function vh360_handle_instructor_registration() {
 
     if (!get_page_by_path('dashboard')) {
         $redirect_to = home_url('/');
+    }
+
+    if (function_exists('vh360_get_registration_bridge_redirect')) {
+        $bridge_redirect_to = vh360_get_registration_bridge_redirect($vh360_bridge_args);
+        if ($bridge_redirect_to) {
+            $redirect_to = $bridge_redirect_to;
+        }
     }
 
     wp_safe_redirect($redirect_to);
