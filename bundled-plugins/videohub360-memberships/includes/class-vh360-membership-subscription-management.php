@@ -199,12 +199,14 @@ class VH360_Membership_Subscription_Management {
                         <?php foreach ($woo_products as $product) : ?>
                             <?php
                                 $woo_same_tier = $membership && isset($product['tier_level']) && (int) $product['tier_level'] === VH360_Membership_Plans::get_plan_tier($membership->plan_key);
-                                $woo_button_label = !empty($product['action_label']) ? $product['action_label'] : (!$membership ? __('Join Now', 'videohub360-memberships') : ($woo_same_tier ? __('Change Plan', 'videohub360-memberships') : __('Upgrade', 'videohub360-memberships')));
+                                $current_is_recurring = $membership && isset($membership->billing_mode) && $membership->billing_mode === 'recurring';
+                                $product_is_lifetime = isset($product['duration_unit']) && $product['duration_unit'] === 'lifetime';
+                                $woo_button_label = ($current_is_recurring && $product_is_lifetime) ? __('Switch to Lifetime Access', 'videohub360-memberships') : (!empty($product['action_label']) ? $product['action_label'] : (!$membership ? __('Join Now', 'videohub360-memberships') : ($woo_same_tier ? __('Change Plan', 'videohub360-memberships') : __('Upgrade', 'videohub360-memberships'))));
                             ?>
                             <article class="vh360-subscription-plan-card vh360-woocommerce-plan-card <?php echo !empty($product['featured']) ? 'is-featured' : ''; ?>">
                                 <?php if (!empty($product['featured'])) : ?><span class="vh360-plan-pill"><?php esc_html_e('Recommended', 'videohub360-memberships'); ?></span><?php endif; ?>
                                 <h4><?php echo esc_html($product['title']); ?></h4>
-                                <div class="vh360-plan-type"><?php echo $product['duration_unit'] === 'lifetime' ? esc_html__('Lifetime Access', 'videohub360-memberships') : esc_html__('Fixed-Term Access', 'videohub360-memberships'); ?></div>
+                                <div class="vh360-plan-type"><?php echo ($current_is_recurring && $product_is_lifetime) ? esc_html__('One-time lifetime upgrade', 'videohub360-memberships') : ($product['duration_unit'] === 'lifetime' ? esc_html__('Lifetime Access', 'videohub360-memberships') : esc_html__('Fixed-Term Access', 'videohub360-memberships')); ?></div>
                                 <?php if (!empty($product['price_html'])) : ?><div class="vh360-plan-price"><?php echo wp_kses_post($product['price_html']); ?></div><?php endif; ?>
                                 <?php if (!empty($product['short_description'])) : ?><div class="vh360-plan-description"><?php echo wp_kses_post(wpautop($product['short_description'])); ?></div><?php endif; ?>
                                 <a class="vh360-btn vh360-btn-primary" href="<?php echo esc_url($product['checkout_url']); ?>"><?php echo esc_html($woo_button_label); ?></a>

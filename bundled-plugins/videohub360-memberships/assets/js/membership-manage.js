@@ -12,6 +12,19 @@
 
     var config = window.vh360MembershipManage || {};
 
+    function getErrorMessage(response) {
+        return (response && response.data && response.data.message) ? response.data.message : (config.i18n ? config.i18n.error : 'Error');
+    }
+
+    function captureButtonState($btn) {
+        var originalText = $btn.text();
+        var wasDisabled = $btn.prop('disabled');
+
+        return function restoreButton() {
+            $btn.prop('disabled', wasDisabled).text(originalText);
+        };
+    }
+
     /**
      * Start a new Stripe subscription checkout
      */
@@ -19,21 +32,16 @@
         e.preventDefault();
         var $btn = $(this);
         var planKey = $btn.data('plan-key');
-        var originalText = $btn.text();
-        var wasDisabled = $btn.prop('disabled');
-
-        function restoreButton() {
-            $btn.prop('disabled', wasDisabled).text(originalText);
-        }
+        var restoreButton = captureButtonState($btn);
 
         if (!planKey) {
-            alert(config.i18n ? config.i18n.error : 'Error');
+            alert(getErrorMessage());
             restoreButton();
             return;
         }
 
         if (!config.ajaxUrl || !config.nonces || !config.nonces.checkout) {
-            alert(config.i18n ? config.i18n.error : 'Error');
+            alert(getErrorMessage());
             restoreButton();
             return;
         }
@@ -50,11 +58,11 @@
                 return;
             }
 
-            var msg = (response && response.data && response.data.message) ? response.data.message : (config.i18n ? config.i18n.error : 'Error');
+            var msg = getErrorMessage(response);
             alert(msg);
             restoreButton();
         }).fail(function() {
-            alert(config.i18n ? config.i18n.error : 'Error');
+            alert(getErrorMessage());
             restoreButton();
         });
     });
@@ -66,6 +74,7 @@
         e.preventDefault();
         var $btn = $(this);
         var membershipId = $btn.data('membership-id');
+        var restoreButton = captureButtonState($btn);
 
         var confirmMsg = config.i18n ? config.i18n.confirmCancel : 'Are you sure you want to cancel?';
         if (!confirm(confirmMsg)) {
@@ -79,16 +88,16 @@
             nonce: config.nonces ? config.nonces.manage : '',
             membership_id: membershipId
         }, function(response) {
-            if (response.success) {
+            if (response && response.success) {
                 window.location.reload();
             } else {
-                var msg = (response.data && response.data.message) ? response.data.message : (config.i18n ? config.i18n.error : 'Error');
+                var msg = getErrorMessage(response);
                 alert(msg);
-                $btn.prop('disabled', false).text('Cancel Subscription');
+                restoreButton();
             }
         }).fail(function() {
-            alert(config.i18n ? config.i18n.error : 'Error');
-            $btn.prop('disabled', false).text('Cancel Subscription');
+            alert(getErrorMessage());
+            restoreButton();
         });
     });
 
@@ -99,6 +108,7 @@
         e.preventDefault();
         var $btn = $(this);
         var membershipId = $btn.data('membership-id');
+        var restoreButton = captureButtonState($btn);
 
         $btn.prop('disabled', true).text(config.i18n ? config.i18n.loading : 'Loading...');
 
@@ -107,25 +117,26 @@
             nonce: config.nonces ? config.nonces.manage : '',
             membership_id: membershipId
         }, function(response) {
-            if (response.success) {
+            if (response && response.success) {
                 window.location.reload();
             } else {
-                var msg = (response.data && response.data.message) ? response.data.message : (config.i18n ? config.i18n.error : 'Error');
+                var msg = getErrorMessage(response);
                 alert(msg);
-                $btn.prop('disabled', false).text('Reactivate Subscription');
+                restoreButton();
             }
         }).fail(function() {
-            alert(config.i18n ? config.i18n.error : 'Error');
-            $btn.prop('disabled', false).text('Reactivate Subscription');
+            alert(getErrorMessage());
+            restoreButton();
         });
     });
 
     /**
      * Open Stripe billing portal
      */
-    $(document).on('click', '.vh360-open-portal', function(e) {
+    $(document).on('click', '.vh360-open-portal, .vh360-manage-billing', function(e) {
         e.preventDefault();
         var $btn = $(this);
+        var restoreButton = captureButtonState($btn);
 
         $btn.prop('disabled', true).text(config.i18n ? config.i18n.loading : 'Loading...');
 
@@ -133,16 +144,16 @@
             action: 'vh360_stripe_portal',
             nonce: config.nonces ? config.nonces.portal : ''
         }, function(response) {
-            if (response.success && response.data && response.data.portal_url) {
+            if (response && response.success && response.data && response.data.portal_url) {
                 window.location.href = response.data.portal_url;
             } else {
-                var msg = (response.data && response.data.message) ? response.data.message : (config.i18n ? config.i18n.error : 'Error');
+                var msg = getErrorMessage(response);
                 alert(msg);
-                $btn.prop('disabled', false).text('Manage Billing');
+                restoreButton();
             }
         }).fail(function() {
-            alert(config.i18n ? config.i18n.error : 'Error');
-            $btn.prop('disabled', false).text('Manage Billing');
+            alert(getErrorMessage());
+            restoreButton();
         });
     });
 

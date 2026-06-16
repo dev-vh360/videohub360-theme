@@ -702,11 +702,24 @@ function vh360_get_product_for_membership_plan($plan_key) {
 function vh360_get_upgrade_products_for_user($user_id) {
     $current = vh360_get_active_membership($user_id);
     $plans = class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan_registry() : array();
+    $current_is_recurring = $current && isset($current->billing_mode) && $current->billing_mode === 'recurring';
 
-    $products = array_filter(vh360_get_membership_products(), function($product) use ($plans, $current) {
+    $products = array_filter(vh360_get_membership_products(), function($product) use ($plans, $current, $current_is_recurring) {
         if (empty($plans[$product['plan_key']])) {
             return false;
         }
+
+        if ($current_is_recurring) {
+            $show_woocommerce_upgrades = (bool) apply_filters('vh360_show_woocommerce_upgrades_for_recurring_members', false, $product, $current);
+            $is_lifetime = (isset($product['duration_unit']) && $product['duration_unit'] === 'lifetime')
+                || (isset($plans[$product['plan_key']]['duration_unit']) && $plans[$product['plan_key']]['duration_unit'] === 'lifetime');
+            $allow_lifetime = (bool) apply_filters('vh360_allow_lifetime_upgrade_for_recurring_members', true, $product, $current);
+
+            if (!$show_woocommerce_upgrades && (!$is_lifetime || !$allow_lifetime)) {
+                return false;
+            }
+        }
+
         return vh360_membership_plan_is_eligible_change($product['plan_key'], $plans[$product['plan_key']], $current);
     });
 

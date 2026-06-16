@@ -787,6 +787,9 @@ if (isset($_POST['vh360_save_plan_config']) && check_admin_referer('vh360_plan_c
             <p class="description" style="margin-bottom: 20px;">
                 <?php esc_html_e('Configure billing mode and Stripe price IDs for each membership plan. Plans set to "Recurring" will use Stripe for subscription billing. Plans set to "One-Time" will continue using WooCommerce orders.', 'videohub360-theme'); ?>
             </p>
+            <div class="notice notice-info inline" style="margin: 0 0 20px;">
+                <p><?php esc_html_e('WooCommerce products should be used for fixed-term, one-time, and lifetime memberships. Stripe plans should be used for recurring subscriptions, and recurring subscribers should normally change plans through Stripe Customer Portal. Lifetime WooCommerce upgrades may be shown to recurring subscribers when enabled by the membership upgrade rules.', 'videohub360-theme'); ?></p>
+            </div>
             
             <?php foreach ($plans as $key => $plan) : 
                 $config = isset($plan_config[$key]) ? $plan_config[$key] : array();
