@@ -631,7 +631,21 @@ function vh360_get_membership_products() {
     $plans = class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan_registry() : array();
     $mapped = array();
 
+    $registry_product_ids = class_exists('VH360_Membership_Plans') ? array_keys(VH360_Membership_Plans::get_woocommerce_product_plan_map()) : array();
+    $product_posts = array();
     foreach ($products as $post) {
+        $product_posts[$post->ID] = $post;
+    }
+    foreach ($registry_product_ids as $product_id) {
+        if (!isset($product_posts[$product_id])) {
+            $post = get_post($product_id);
+            if ($post && 'product' === $post->post_type && 'publish' === $post->post_status) {
+                $product_posts[$product_id] = $post;
+            }
+        }
+    }
+
+    foreach ($product_posts as $post) {
         $product = wc_get_product($post->ID);
         if (!$product || $product->get_status() !== 'publish' || !$product->is_purchasable() || !$product->is_in_stock()) {
             continue;
@@ -927,5 +941,28 @@ if (!function_exists('vh360_memberships_user_has_tier_access')) {
             return false;
         }
         return VH360_Membership_Plans::get_plan_tier($membership->plan_key) >= absint($required_tier);
+    }
+}
+
+if (!function_exists('vh360_memberships_get_plan_label')) {
+    function vh360_memberships_get_plan_label($plan_key) {
+        $plan = vh360_memberships_get_plan($plan_key);
+        return $plan && !empty($plan['label']) ? $plan['label'] : '';
+    }
+}
+if (!function_exists('vh360_memberships_get_plan_price')) {
+    function vh360_memberships_get_plan_price($plan_key) {
+        $plan = vh360_memberships_get_plan($plan_key);
+        return $plan && isset($plan['display_price']) ? $plan['display_price'] : '';
+    }
+}
+if (!function_exists('vh360_memberships_get_plan_button_url')) {
+    function vh360_memberships_get_plan_button_url($plan_key) {
+        return class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan_button_url($plan_key) : '';
+    }
+}
+if (!function_exists('vh360_memberships_get_plan_by_product_id')) {
+    function vh360_memberships_get_plan_by_product_id($product_id) {
+        return class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan_by_product_id($product_id) : false;
     }
 }

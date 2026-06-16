@@ -48,75 +48,164 @@ class VH360_Membership_Plans {
     
 
 
-    /** Render dynamic pricing toggle from central plans. */
+    /** Render dynamic, plan-group-aware pricing toggle from central plans. */
     public function render_pricing_toggle_shortcode($atts = array()) {
-        $atts = shortcode_atts(array('interval'=>'','groups'=>'','show_lifetime'=>'true','show_free'=>'true','featured'=>'','columns'=>'3','button_style'=>'primary'), $atts, 'vh360_pricing_toggle');
+        wp_enqueue_style('vh360-pricing-toggle', VH360_MEMBERSHIPS_URL . 'assets/frontend/pricing-toggle.css', array(), VH360_MEMBERSHIPS_VERSION);
+        wp_enqueue_script('vh360-pricing-toggle', VH360_MEMBERSHIPS_URL . 'assets/frontend/pricing-toggle.js', array(), VH360_MEMBERSHIPS_VERSION, true);
+
+        $atts = shortcode_atts(array(
+            'interval'      => '',
+            'groups'        => '',
+            'show_lifetime' => 'true',
+            'show_free'     => 'true',
+            'featured'      => '',
+            'columns'       => '3',
+            'button_style'  => 'primary',
+        ), $atts, 'vh360_pricing_toggle');
+
         $plans = self::get_enabled_plans();
+        $admin_view = current_user_can('manage_options');
+
         if ($atts['groups']) {
             $allowed = array_map('sanitize_key', array_map('trim', explode(',', $atts['groups'])));
-            $plans = array_filter($plans, function($p) use ($allowed){ return in_array($p['plan_group'], $allowed, true); });
+            $plans = array_filter($plans, function($plan) use ($allowed) { return in_array($plan['plan_group'], $allowed, true); });
         }
         if ($atts['interval']) {
             $interval = sanitize_key($atts['interval']);
-            $plans = array_filter($plans, function($p) use ($interval){ return $p['billing_interval'] === $interval; });
+            $plans = array_filter($plans, function($plan) use ($interval) { return $plan['billing_interval'] === $interval; });
         }
         if ('true' !== $atts['show_lifetime']) {
-            $plans = array_filter($plans, function($p){ return !in_array($p['billing_interval'], array('lifetime','one_time'), true); });
+            $plans = array_filter($plans, function($plan) { return !in_array($plan['billing_interval'], array('lifetime', 'one_time'), true); });
         }
         if ('true' !== $atts['show_free']) {
-            $plans = array_filter($plans, function($p){ return 'free' !== $p['billing_type'] && 'free' !== $p['billing_interval']; });
+            $plans = array_filter($plans, function($plan) { return 'free' !== $plan['billing_type'] && 'free' !== $plan['billing_interval']; });
         }
         if ('true' === $atts['featured']) {
-            $plans = array_filter($plans, function($p){ return !empty($p['is_featured']); });
+            $plans = array_filter($plans, function($plan) { return !empty($plan['is_featured']); });
         }
+
+        $plans = array_filter($plans, function($plan) use ($admin_view) {
+            return $admin_view || self::plan_is_frontend_ready($plan);
+        });
+
         if (empty($plans)) {
-            return current_user_can('manage_options') ? '<div class="vh360-pricing-empty">' . esc_html__('No enabled membership plans are configured. Add plans in Paid Memberships → Plan Manager.', 'videohub360-memberships') . '</div>' : '<div class="vh360-pricing-empty">' . esc_html__('Membership plans are currently unavailable.', 'videohub360-memberships') . '</div>';
+            return $admin_view
+                ? '<div class="vh360-pricing-empty">' . esc_html__('No enabled, checkout-ready membership plans are configured.', 'videohub360-memberships') . '</div>'
+                : '<div class="vh360-pricing-empty">' . esc_html__('Membership plans are currently unavailable.', 'videohub360-memberships') . '</div>';
         }
-        $intervals = array('free'=>__('Free','videohub360-memberships'),'monthly'=>__('Monthly','videohub360-memberships'),'yearly'=>__('Yearly','videohub360-memberships'),'lifetime'=>__('Lifetime','videohub360-memberships'),'one_time'=>__('One-Time','videohub360-memberships'));
-        $by_interval = array();
-        foreach ($plans as $key => $plan) { $by_interval[$plan['billing_interval']][$key] = $plan; }
+
+        $interval_labels = array(
+            'free'     => __('Free', 'videohub360-memberships'),
+            'monthly'  => __('Monthly', 'videohub360-memberships'),
+            'yearly'   => __('Yearly', 'videohub360-memberships'),
+            'lifetime' => __('Lifetime', 'videohub360-memberships'),
+            'one_time' => __('One-Time', 'videohub360-memberships'),
+        );
+        $groups = array();
+        foreach ($plans as $key => $plan) {
+            $group = $plan['plan_group'] ? $plan['plan_group'] : $key;
+            if (!isset($groups[$group])) {
+                $groups[$group] = array('order' => (int) $plan['display_order'], 'plans' => array());
+            }
+            $groups[$group]['order'] = min($groups[$group]['order'], (int) $plan['display_order']);
+            $groups[$group]['plans'][$plan['billing_interval']][$key] = $plan;
+        }
+        uasort($groups, function($a, $b) { return $a['order'] <=> $b['order']; });
+
+        $available_intervals = array();
+        foreach ($interval_labels as $interval => $label) {
+            foreach ($groups as $group) {
+                if (!empty($group['plans'][$interval])) {
+                    $available_intervals[$interval] = $label;
+                    break;
+                }
+            }
+        }
+
         ob_start(); ?>
-        <section class="vh360-pricing-toggle" data-columns="<?php echo esc_attr(absint($atts['columns'])); ?>">
-            <div class="vh360-pricing-tabs" role="tablist" aria-label="<?php esc_attr_e('Membership billing intervals','videohub360-memberships'); ?>">
-                <?php $first=true; foreach ($intervals as $interval=>$label) : if (empty($by_interval[$interval])) continue; ?>
-                    <button type="button" class="vh360-pricing-tab <?php echo $first ? 'is-active' : ''; ?>" role="tab" aria-selected="<?php echo $first ? 'true' : 'false'; ?>" aria-controls="vh360-pricing-<?php echo esc_attr($interval); ?>" data-vh360-pricing-tab="<?php echo esc_attr($interval); ?>"><?php echo esc_html($label); ?></button>
-                <?php $first=false; endforeach; ?>
+        <section class="vh360-pricing-toggle" data-columns="<?php echo esc_attr(max(1, absint($atts['columns']))); ?>">
+            <div class="vh360-pricing-tabs" role="tablist" aria-label="<?php esc_attr_e('Membership billing intervals', 'videohub360-memberships'); ?>">
+                <?php $first = true; foreach ($available_intervals as $interval => $label) : ?>
+                    <button type="button" class="vh360-pricing-tab <?php echo $first ? 'is-active' : ''; ?>" role="tab" tabindex="<?php echo $first ? '0' : '-1'; ?>" aria-selected="<?php echo $first ? 'true' : 'false'; ?>" aria-controls="vh360-pricing-<?php echo esc_attr($interval); ?>" data-vh360-pricing-tab><?php echo esc_html($label); ?></button>
+                <?php $first = false; endforeach; ?>
             </div>
-            <?php $first=true; foreach ($intervals as $interval=>$label) : if (empty($by_interval[$interval])) continue; ?>
+            <?php $first = true; foreach ($available_intervals as $interval => $label) : ?>
                 <div id="vh360-pricing-<?php echo esc_attr($interval); ?>" class="vh360-pricing-panel <?php echo $first ? 'is-active' : ''; ?>" role="tabpanel" <?php echo $first ? '' : 'hidden'; ?>>
                     <div class="vh360-pricing-grid">
-                        <?php foreach ($by_interval[$interval] as $key=>$plan) : $url = $this->get_plan_checkout_url($plan); if (!$url && !current_user_can('manage_options')) continue; ?>
-                            <article class="vh360-pricing-card <?php echo !empty($plan['is_featured']) ? 'is-featured' : ''; ?>">
-                                <?php if (!empty($plan['is_featured'])) : ?><div class="vh360-pricing-badge"><?php esc_html_e('Recommended','videohub360-memberships'); ?></div><?php endif; ?>
-                                <h3><?php echo esc_html($plan['label']); ?></h3>
-                                <?php if ($plan['description']) : ?><p class="vh360-pricing-description"><?php echo esc_html($plan['description']); ?></p><?php endif; ?>
-                                <div class="vh360-pricing-price"><?php echo esc_html($plan['display_price']); ?></div>
-                                <?php if ($plan['compare_at_price']) : ?><div class="vh360-pricing-compare"><?php echo esc_html($plan['compare_at_price']); ?></div><?php endif; ?>
-                                <?php if ($plan['savings_text']) : ?><div class="vh360-pricing-savings"><?php echo esc_html($plan['savings_text']); ?></div><?php endif; ?>
-                                <?php if ($plan['features']) : ?><ul class="vh360-pricing-features"><?php foreach ($plan['features'] as $feature) : ?><li><?php echo esc_html($feature); ?></li><?php endforeach; ?></ul><?php endif; ?>
-                                <?php if ($url) : ?><a class="vh360-pricing-button vh360-button-<?php echo esc_attr($atts['button_style']); ?>" href="<?php echo esc_url($url); ?>"><?php echo esc_html($plan['button_text']); ?></a><?php elseif (current_user_can('manage_options')) : ?><p class="vh360-plan-warning"><?php esc_html_e('Configure Stripe Price ID or WooCommerce product for this plan.', 'videohub360-memberships'); ?></p><?php endif; ?>
-                            </article>
-                        <?php endforeach; ?>
+                        <?php foreach ($groups as $group_key => $group) : if (empty($group['plans'][$interval])) continue; foreach ($group['plans'][$interval] as $key => $plan) : echo $this->render_pricing_card($plan, $atts['button_style'], $admin_view); endforeach; endforeach; ?>
                     </div>
                 </div>
-            <?php $first=false; endforeach; ?>
+            <?php $first = false; endforeach; ?>
         </section>
-        <script>(function(){document.querySelectorAll('.vh360-pricing-toggle').forEach(function(w){w.querySelectorAll('[data-vh360-pricing-tab]').forEach(function(b){b.addEventListener('click',function(){var t=b.getAttribute('data-vh360-pricing-tab');w.querySelectorAll('[data-vh360-pricing-tab]').forEach(function(x){x.classList.toggle('is-active',x===b);x.setAttribute('aria-selected',x===b?'true':'false')});w.querySelectorAll('.vh360-pricing-panel').forEach(function(p){var on=p.id==='vh360-pricing-'+t;p.classList.toggle('is-active',on);p.hidden=!on;});});});});})();</script>
         <?php return ob_get_clean();
     }
 
-    private function get_plan_checkout_url($plan) {
+    private function render_pricing_card($plan, $button_style, $admin_view = false) {
+        $url = self::get_plan_button_url($plan['id']);
+        if (!$url && !$admin_view) {
+            return '';
+        }
+        ob_start(); ?>
+        <article class="vh360-pricing-card <?php echo !empty($plan['is_featured']) ? 'is-featured' : ''; ?>">
+            <?php if (!empty($plan['is_featured'])) : ?><div class="vh360-pricing-badge"><?php esc_html_e('Recommended', 'videohub360-memberships'); ?></div><?php endif; ?>
+            <h3><?php echo esc_html($plan['label']); ?></h3>
+            <?php if ($plan['description']) : ?><p class="vh360-pricing-description"><?php echo esc_html($plan['description']); ?></p><?php endif; ?>
+            <div class="vh360-pricing-price"><?php echo esc_html($plan['display_price']); ?></div>
+            <?php if ($plan['compare_at_price']) : ?><div class="vh360-pricing-compare"><?php echo esc_html($plan['compare_at_price']); ?></div><?php endif; ?>
+            <?php if ($plan['savings_text']) : ?><div class="vh360-pricing-savings"><?php echo esc_html($plan['savings_text']); ?></div><?php endif; ?>
+            <?php if ($plan['features']) : ?><ul class="vh360-pricing-features"><?php foreach ($plan['features'] as $feature) : ?><li><?php echo esc_html($feature); ?></li><?php endforeach; ?></ul><?php endif; ?>
+            <?php if ($url) : ?><a class="vh360-pricing-button vh360-button-<?php echo esc_attr(sanitize_html_class($button_style)); ?>" href="<?php echo esc_url($url); ?>"><?php echo esc_html($plan['button_text']); ?></a><?php elseif ($admin_view) : ?><p class="vh360-plan-warning"><?php esc_html_e('This plan is enabled but needs checkout settings before visitors can select it.', 'videohub360-memberships'); ?></p><?php endif; ?>
+        </article>
+        <?php return ob_get_clean();
+    }
+
+    public static function get_plan_button_url($plan_key) {
+        $plan = self::get_plan($plan_key);
+        if (!$plan || empty($plan['is_enabled']) || !self::plan_is_frontend_ready($plan)) {
+            return '';
+        }
         if ('free' === $plan['billing_type']) {
-            $url = is_user_logged_in() ? wp_nonce_url(admin_url('admin-post.php?action=vh360_activate_free_plan&plan=' . rawurlencode($plan['id'])), 'vh360_activate_free_plan_' . $plan['id']) : wp_registration_url();
+            $url = is_user_logged_in() ? wp_nonce_url(admin_url('admin-post.php?action=vh360_activate_free_plan&plan=' . rawurlencode($plan['id'])), 'vh360_activate_free_plan_' . $plan['id']) : (function_exists('vh360_get_register_page_url') ? vh360_get_register_page_url() : wp_registration_url());
             return add_query_arg('vh360_plan', $plan['id'], $url);
         }
-        if (!empty($plan['woocommerce_product_id'])) {
-            return 'add_to_cart' === $plan['checkout_behavior'] && function_exists('wc_get_cart_url') ? add_query_arg('add-to-cart', absint($plan['woocommerce_product_id']), wc_get_cart_url()) : get_permalink(absint($plan['woocommerce_product_id']));
+        if (in_array($plan['checkout_behavior'], array('woocommerce', 'product_page', 'add_to_cart'), true)) {
+            $product_id = self::get_product_id_for_plan($plan['id']);
+            if (!$product_id) {
+                return '';
+            }
+            if ('add_to_cart' === $plan['checkout_behavior'] && function_exists('wc_get_cart_url')) {
+                return add_query_arg('add-to-cart', $product_id, wc_get_cart_url());
+            }
+            return get_permalink($product_id);
         }
-        if ('recurring' === $plan['billing_type'] && !empty($plan['stripe_price_id'])) {
-            return is_user_logged_in() && function_exists('vh360_membership_get_dashboard_plan_url') ? vh360_membership_get_dashboard_plan_url($plan['id'], true) : add_query_arg('vh360_plan', $plan['id'], wp_registration_url());
+        if ('recurring' === $plan['billing_type'] && 'stripe' === $plan['checkout_behavior']) {
+            if (is_user_logged_in() && function_exists('vh360_membership_get_dashboard_plan_url')) {
+                return vh360_membership_get_dashboard_plan_url($plan['id'], true);
+            }
+            if (function_exists('vh360_membership_get_recurring_register_url')) {
+                return vh360_membership_get_recurring_register_url($plan['id']);
+            }
+            return add_query_arg('vh360_plan', $plan['id'], function_exists('vh360_get_register_page_url') ? vh360_get_register_page_url() : wp_registration_url());
         }
         return '';
+    }
+
+    public static function plan_is_frontend_ready($plan) {
+        $plan = self::normalize_plan($plan);
+        if (empty($plan['is_enabled'])) {
+            return false;
+        }
+        if ('free' === $plan['billing_type']) {
+            return true;
+        }
+        if ('recurring' === $plan['billing_type'] || 'stripe' === $plan['checkout_behavior']) {
+            return 'stripe' === $plan['checkout_behavior'] && !empty($plan['stripe_price_id']);
+        }
+        if (in_array($plan['checkout_behavior'], array('woocommerce', 'product_page', 'add_to_cart'), true)) {
+            $product_id = self::get_product_id_for_plan($plan['id']);
+            return $product_id && self::is_valid_woocommerce_product($product_id);
+        }
+        return false;
     }
 
     public function handle_activate_free_plan() {
@@ -151,6 +240,88 @@ class VH360_Membership_Plans {
      * Option name for custom membership plans.
      */
     const PLANS_OPTION = 'vh360_membership_plans';
+
+    public static function get_allowed_billing_types() {
+        return array('recurring', 'one_time', 'lifetime', 'free');
+    }
+
+    public static function get_allowed_billing_intervals() {
+        return array('monthly', 'yearly', 'lifetime', 'one_time', 'free');
+    }
+
+    public static function get_allowed_checkout_behaviors() {
+        return array('stripe', 'woocommerce', 'product_page', 'add_to_cart', 'free');
+    }
+
+    public static function is_valid_woocommerce_product($product_id) {
+        $product_id = absint($product_id);
+        if (!$product_id || 'product' !== get_post_type($product_id) || 'publish' !== get_post_status($product_id)) {
+            return false;
+        }
+        return !function_exists('wc_get_product') || (bool) wc_get_product($product_id);
+    }
+
+    public static function validate_plan($plan, $existing_plans = array(), $current_key = '') {
+        $errors = new WP_Error();
+        $raw_id = isset($plan['id']) ? (string) $plan['id'] : '';
+        $id = sanitize_key($raw_id);
+        $name = isset($plan['name']) ? trim((string) $plan['name']) : '';
+        $label = isset($plan['label']) ? trim((string) $plan['label']) : '';
+        $billing_type = isset($plan['billing_type']) ? sanitize_key($plan['billing_type']) : '';
+        $billing_interval = isset($plan['billing_interval']) ? sanitize_key($plan['billing_interval']) : '';
+        $checkout_behavior = isset($plan['checkout_behavior']) ? sanitize_key($plan['checkout_behavior']) : '';
+        $is_enabled = !empty($plan['is_enabled']);
+        $price = isset($plan['price']) ? trim((string) $plan['price']) : '';
+        $plan_label = $name ?: ($label ?: ($id ?: __('New plan', 'videohub360-memberships')));
+
+        if (!$id) {
+            $errors->add('plan_key_required', sprintf(__('Plan key is required for %s.', 'videohub360-memberships'), $plan_label));
+        } elseif ($raw_id !== $id || !preg_match('/^[a-z0-9_\-]+$/', $id)) {
+            $errors->add('plan_key_format', sprintf(__('Plan key "%s" must be a lowercase slug using letters, numbers, hyphens, or underscores.', 'videohub360-memberships'), $raw_id));
+        } elseif ($id !== $current_key && isset($existing_plans[$id])) {
+            $errors->add('plan_key_unique', sprintf(__('Plan key "%s" is already in use.', 'videohub360-memberships'), $id));
+        }
+
+        if (!$name && !$label) {
+            $errors->add('plan_name_required', sprintf(__('Plan name or display label is required for %s.', 'videohub360-memberships'), $plan_label));
+        }
+        if (!in_array($billing_type, self::get_allowed_billing_types(), true)) {
+            $errors->add('billing_type_invalid', sprintf(__('Billing type is invalid for %s.', 'videohub360-memberships'), $plan_label));
+        }
+        if (!in_array($billing_interval, self::get_allowed_billing_intervals(), true)) {
+            $errors->add('billing_interval_invalid', sprintf(__('Billing interval is invalid for %s.', 'videohub360-memberships'), $plan_label));
+        }
+        if (!in_array($checkout_behavior, self::get_allowed_checkout_behaviors(), true)) {
+            $errors->add('checkout_behavior_invalid', sprintf(__('Checkout behavior is invalid for %s.', 'videohub360-memberships'), $plan_label));
+        }
+        if ('free' === $billing_type) {
+            if ($price !== '' && (float) $price > 0) {
+                $errors->add('free_price_invalid', sprintf(__('Free plan %s must have an empty or zero price.', 'videohub360-memberships'), $plan_label));
+            }
+        } elseif ($price === '' || !is_numeric($price)) {
+            $errors->add('paid_price_invalid', sprintf(__('Paid plan %s requires a numeric price.', 'videohub360-memberships'), $plan_label));
+        }
+        if (isset($plan['tier_level']) && $plan['tier_level'] !== '' && !is_numeric($plan['tier_level'])) {
+            $errors->add('tier_invalid', sprintf(__('Access tier must be numeric for %s.', 'videohub360-memberships'), $plan_label));
+        }
+        if (isset($plan['display_order']) && $plan['display_order'] !== '' && !is_numeric($plan['display_order'])) {
+            $errors->add('order_invalid', sprintf(__('Display order must be numeric for %s.', 'videohub360-memberships'), $plan_label));
+        }
+        if ($is_enabled && 'recurring' === $billing_type && 'stripe' === $checkout_behavior && empty($plan['stripe_price_id'])) {
+            $errors->add('stripe_required', sprintf(__('Enabled recurring Stripe plan %s requires a Stripe Price ID.', 'videohub360-memberships'), $plan_label));
+        }
+        if ($is_enabled && in_array($checkout_behavior, array('woocommerce', 'product_page', 'add_to_cart'), true)) {
+            $product_id = isset($plan['woocommerce_product_id']) ? absint($plan['woocommerce_product_id']) : 0;
+            if (!self::is_valid_woocommerce_product($product_id)) {
+                $errors->add('product_invalid', sprintf(__('Enabled WooCommerce plan %s requires a valid published product ID.', 'videohub360-memberships'), $plan_label));
+            }
+        }
+        if ($is_enabled && 'recurring' === $billing_type && in_array($billing_interval, array('monthly', 'yearly'), true) && empty($plan['plan_group'])) {
+            $errors->add('plan_group_required', sprintf(__('Recurring monthly/yearly plan %s requires a Plan Group.', 'videohub360-memberships'), $plan_label));
+        }
+
+        return $errors->has_errors() ? $errors : true;
+    }
 
     /**
      * Get the central custom plan registry.
@@ -248,10 +419,10 @@ class VH360_Membership_Plans {
             'is_featured'=>$featured,'is_enabled'=>$enabled,
             'display_order'=>isset($plan['display_order']) ? absint($plan['display_order']) : 999,
             'button_text'=>isset($plan['button_text']) ? sanitize_text_field($plan['button_text']) : __('Choose Plan','videohub360-memberships'),
-            'checkout_behavior'=>isset($plan['checkout_behavior']) ? sanitize_key($plan['checkout_behavior']) : ($billing_type === 'recurring' ? 'stripe' : ($billing_type === 'free' ? 'free' : 'woocommerce')),
+            'checkout_behavior'=>self::normalize_checkout_behavior(isset($plan['checkout_behavior']) ? sanitize_key($plan['checkout_behavior']) : '', $billing_type),
             'created_at'=>isset($plan['created_at']) ? sanitize_text_field($plan['created_at']) : current_time('mysql'),
             'updated_at'=>isset($plan['updated_at']) ? sanitize_text_field($plan['updated_at']) : current_time('mysql'),
-            // Legacy aliases.
+            // Compatibility aliases for existing membership queries.
             'enabled'=>$enabled,'featured'=>$featured,'billing_mode'=>$billing_type === 'recurring' ? 'recurring' : 'one_time',
             'display_label'=>sanitize_text_field($label),'display_price'=>self::format_price_text($plan),'display_description'=>isset($plan['description']) ? sanitize_textarea_field($plan['description']) : '',
             'display_features'=>array_values(array_filter(array_map('sanitize_text_field',$features))),
@@ -260,6 +431,13 @@ class VH360_Membership_Plans {
             'upgrade_eligible'=>array_key_exists('upgrade_eligible',$plan)?(bool)$plan['upgrade_eligible']:true,
             'downgrade_eligible'=>!empty($plan['downgrade_eligible']),
         );
+    }
+
+    private static function normalize_checkout_behavior($behavior, $billing_type) {
+        if (in_array($behavior, self::get_allowed_checkout_behaviors(), true)) {
+            return $behavior;
+        }
+        return $billing_type === 'recurring' ? 'stripe' : ($billing_type === 'free' ? 'free' : 'woocommerce');
     }
 
     private static function format_price_text($plan) {
@@ -282,11 +460,14 @@ class VH360_Membership_Plans {
     public static function get_plan_key_by_stripe_price($stripe_price_id) { foreach (self::get_plan_registry() as $key=>$plan) { if (!empty($plan['stripe_price_id']) && $plan['stripe_price_id'] === $stripe_price_id) return $key; } return false; }
     public static function save_plan_config($config) { return self::save_plans($config); }
     public static function save_plans($plans) { $sanitized = array(); foreach ((array)$plans as $key=>$plan) { $plan['id'] = !empty($plan['id']) ? $plan['id'] : $key; $p = self::normalize_plan($plan, $key); if ($p['id']) $sanitized[$p['id']] = $p; } return update_option(self::PLANS_OPTION, $sanitized, false); }
-    public static function save_plan($plan_data) { $plans = self::get_plan_registry(); $plan = self::normalize_plan($plan_data); if (!$plan['id']) return false; $plans[$plan['id']] = $plan; return self::save_plans($plans); }
+    public static function save_plan($plan_data) { $plans = self::get_plan_registry(); $plan = self::normalize_plan($plan_data); if (!$plan['id']) return false; $validation = self::validate_plan($plan, $plans, isset($plan_data['id']) ? sanitize_key($plan_data['id']) : ''); if (is_wp_error($validation)) return $validation; $plans[$plan['id']] = $plan; return self::save_plans($plans); }
     public static function delete_plan($plan_key) { $plans = self::get_plan_registry(); $plan_key = sanitize_key($plan_key); unset($plans[$plan_key]); return self::save_plans($plans); }
     public static function get_plans_by_interval($interval) { $interval=sanitize_key($interval); return array_filter(self::get_plan_registry(), function($p) use ($interval){ return $p['billing_interval']===$interval; }); }
     public static function get_plans_by_group() { $groups=array(); foreach(self::get_plan_registry() as $key=>$plan){ $groups[$plan['plan_group']][$key]=$plan; } return $groups; }
     public static function get_featured_plan() { foreach(self::get_enabled_plans() as $p){ if(!empty($p['is_featured'])) return $p; } return false; }
+    public static function get_plan_by_product_id($product_id) { $product_id = absint($product_id); foreach (self::get_plan_registry() as $plan) { if (!empty($plan['woocommerce_product_id']) && absint($plan['woocommerce_product_id']) === $product_id) return $plan; } return false; }
+    public static function get_product_id_for_plan($plan_key) { $plan = self::get_plan($plan_key); return $plan && !empty($plan['woocommerce_product_id']) ? absint($plan['woocommerce_product_id']) : 0; }
+    public static function get_woocommerce_product_plan_map() { $map = array(); foreach (self::get_plan_registry() as $key => $plan) { if (!empty($plan['woocommerce_product_id'])) $map[absint($plan['woocommerce_product_id'])] = $key; } return $map; }
 
     /**
      * Get membership mapping for a product
@@ -388,9 +569,13 @@ class VH360_Membership_Plans {
         }
         
         $plans = self::get_plan_registry();
+        $registry_plan_for_product = self::get_plan_by_product_id($post->ID);
         
         ?>
         <div class="vh360-membership-mapping">
+            <?php if ($registry_plan_for_product) : ?>
+                <p class="description"><strong><?php esc_html_e('Plan Manager:', 'videohub360-memberships'); ?></strong> <?php printf(esc_html__('This product is assigned to %s in the central Membership Plans manager.', 'videohub360-memberships'), esc_html($registry_plan_for_product['label'])); ?></p>
+            <?php endif; ?>
             <p>
                 <label for="vh360_membership_plan">
                     <strong><?php esc_html_e('Membership Plan:', 'videohub360-memberships'); ?></strong>
@@ -436,13 +621,13 @@ class VH360_Membership_Plans {
             </p>
             
             <?php if ($plan_key && isset($plans[$plan_key]['billing_mode']) && $plans[$plan_key]['billing_mode'] === 'recurring') : ?>
-                <p class="description" style="color:#b32d2e;"><strong><?php esc_html_e('Warning:', 'videohub360-memberships'); ?></strong> <?php esc_html_e('This product is currently mapped to a recurring Stripe plan from older data. Recurring plans cannot be selected here by default. Choose a fixed-term/lifetime plan or clear the mapping before saving.', 'videohub360-memberships'); ?></p>
+                <p class="description" style="color:#b32d2e;"><strong><?php esc_html_e('Warning:', 'videohub360-memberships'); ?></strong> <?php esc_html_e('This product is mapped to a recurring Stripe plan. Recurring plans should use Stripe Checkout, so choose a one-time/lifetime plan or clear the mapping before saving.', 'videohub360-memberships'); ?></p>
             <?php endif; ?>
             <p class="description">
                 <?php esc_html_e('When this product is purchased, grant or extend the selected fixed-term or lifetime membership plan.', 'videohub360-memberships'); ?>
             </p>
             <p class="description">
-                <?php esc_html_e('Recurring membership plans are configured in Paid Memberships with Stripe Price IDs and should not be mapped to WooCommerce products.', 'videohub360-memberships'); ?>
+                <?php esc_html_e('Recurring membership plans are configured in Membership Plans with Stripe Price IDs and should not be mapped to WooCommerce products.', 'videohub360-memberships'); ?>
             </p>
         </div>
         <?php
