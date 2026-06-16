@@ -469,3 +469,13 @@
         grid-template-columns: 1fr;
     }
 }
+
+.vh360-membership-notice-info {
+    background: #e7f5ff;
+    border: 1px solid #8ecae6;
+    color: #0b4f6c;
+}
+
+.vh360-membership-notice-info .vh360-btn {
+    margin-top: 10px;
+}

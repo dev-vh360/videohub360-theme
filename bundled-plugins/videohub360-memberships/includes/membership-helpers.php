@@ -693,6 +693,29 @@ function vh360_get_product_for_membership_plan($plan_key) {
     return false;
 }
 
+
+/**
+ * Determine whether a membership is a Stripe-backed recurring subscription.
+ *
+ * @param object|false $membership Membership record.
+ * @return bool
+ */
+function vh360_membership_is_recurring_stripe_membership($membership) {
+    if (!$membership || !isset($membership->billing_mode) || $membership->billing_mode !== 'recurring') {
+        return false;
+    }
+
+    if (!empty($membership->stripe_subscription_id)) {
+        return true;
+    }
+
+    if (!empty($membership->billing_provider) && strtolower((string) $membership->billing_provider) === 'stripe') {
+        return true;
+    }
+
+    return !empty($membership->subscription_status);
+}
+
 /**
  * Get mapped WooCommerce fixed-term/lifetime upgrade products for a user.
  *
