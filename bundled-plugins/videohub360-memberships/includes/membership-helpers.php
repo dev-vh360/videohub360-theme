@@ -540,3 +540,108 @@ function vh360_render_upgrade_gate($required_plan = '', $custom_message = '', $p
     <?php
     return ob_get_clean();
 }
+
+/**
+ * Get WooCommerce products mapped to VideoHub360 membership plans.
+ *
+ * @return array
+ */
+function vh360_get_membership_products() {
+    if (!function_exists('wc_get_product')) {
+        return array();
+    }
+
+    $products = get_posts(array(
+        'post_type'      => 'product',
+        'post_status'    => 'publish',
+        'posts_per_page' => -1,
+        'meta_query'     => array(
+            array(
+                'key'     => '_vh360_membership_plan',
+                'value'   => '',
+                'compare' => '!=',
+            ),
+        ),
+        'orderby'        => 'menu_order title',
+        'order'          => 'ASC',
+    ));
+
+    $plans = class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan_registry() : array();
+    $mapped = array();
+
+    foreach ($products as $post) {
+        $product = wc_get_product($post->ID);
+        if (!$product || !$product->is_purchasable()) {
+            continue;
+        }
+
+        $mapping = class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_product_membership_mapping($post->ID) : false;
+        if (!$mapping || empty($plans[$mapping['plan_key']])) {
+            continue;
+        }
+
+        $plan = $plans[$mapping['plan_key']];
+        if ((isset($plan['enabled']) && !$plan['enabled']) || (isset($plan['upgrade_eligible']) && !$plan['upgrade_eligible']) || !VH360_Membership_Plans::is_woocommerce_eligible_plan($plan)) {
+            continue;
+        }
+
+        $mapped[] = array(
+            'product_id'        => $post->ID,
+            'title'             => $product->get_name(),
+            'price_html'        => $product->get_price_html(),
+            'short_description' => $product->get_short_description(),
+            'plan_key'          => $mapping['plan_key'],
+            'duration'          => $mapping['duration'],
+            'duration_unit'     => $mapping['duration_unit'],
+            'grant_type'        => $mapping['grant_type'],
+            'add_to_cart_url'   => $product->add_to_cart_url(),
+            'checkout_url'      => add_query_arg('add-to-cart', $post->ID, function_exists('wc_get_checkout_url') ? wc_get_checkout_url() : get_permalink($post->ID)),
+            'permalink'         => get_permalink($post->ID),
+            'tier_level'        => VH360_Membership_Plans::get_plan_tier($mapping['plan_key']),
+            'featured'          => !empty($plan['featured']),
+        );
+    }
+
+    usort($mapped, function($a, $b) {
+        if ($a['tier_level'] === $b['tier_level']) {
+            return strcasecmp($a['title'], $b['title']);
+        }
+        return $a['tier_level'] <=> $b['tier_level'];
+    });
+
+    return apply_filters('vh360_get_membership_products', $mapped);
+}
+
+/**
+ * Get the first mapped WooCommerce product for a plan key.
+ *
+ * @param string $plan_key Plan key.
+ * @return array|false
+ */
+function vh360_get_product_for_membership_plan($plan_key) {
+    foreach (vh360_get_membership_products() as $product) {
+        if ($product['plan_key'] === $plan_key) {
+            return $product;
+        }
+    }
+    return false;
+}
+
+/**
+ * Get mapped WooCommerce fixed-term/lifetime upgrade products for a user.
+ *
+ * @param int $user_id User ID.
+ * @return array
+ */
+function vh360_get_upgrade_products_for_user($user_id) {
+    $current = vh360_get_active_membership($user_id);
+    $current_tier = $current && class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan_tier($current->plan_key) : 0;
+    $current_plan = $current ? $current->plan_key : '';
+
+    return array_values(array_filter(vh360_get_membership_products(), function($product) use ($current_tier, $current_plan) {
+        if ($current_plan && $product['plan_key'] === $current_plan) {
+            return false;
+        }
+        return !$current_plan || (int) $product['tier_level'] > $current_tier;
+    }));
+}

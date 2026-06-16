@@ -66,6 +66,12 @@ class VH360_Membership_Plans {
                 'display_price' => '',
                 'display_description' => '',
                 'display_features' => array(),
+                'enabled' => true,
+                'tier_level' => 10,
+                'display_order' => 10,
+                'upgrade_eligible' => true,
+                'downgrade_eligible' => false,
+                'featured' => false,
             ),
             'basic_yearly' => array(
                 'label' => __('Basic (Yearly)', 'videohub360-memberships'),
@@ -80,6 +86,12 @@ class VH360_Membership_Plans {
                 'display_price' => '',
                 'display_description' => '',
                 'display_features' => array(),
+                'enabled' => true,
+                'tier_level' => 10,
+                'display_order' => 20,
+                'upgrade_eligible' => true,
+                'downgrade_eligible' => false,
+                'featured' => false,
             ),
             'pro_monthly' => array(
                 'label' => __('Pro (Monthly)', 'videohub360-memberships'),
@@ -94,6 +106,12 @@ class VH360_Membership_Plans {
                 'display_price' => '',
                 'display_description' => '',
                 'display_features' => array(),
+                'enabled' => true,
+                'tier_level' => 20,
+                'display_order' => 30,
+                'upgrade_eligible' => true,
+                'downgrade_eligible' => false,
+                'featured' => true,
             ),
             'pro_yearly' => array(
                 'label' => __('Pro (Yearly)', 'videohub360-memberships'),
@@ -108,6 +126,12 @@ class VH360_Membership_Plans {
                 'display_price' => '',
                 'display_description' => '',
                 'display_features' => array(),
+                'enabled' => true,
+                'tier_level' => 20,
+                'display_order' => 40,
+                'upgrade_eligible' => true,
+                'downgrade_eligible' => false,
+                'featured' => true,
             ),
             'lifetime' => array(
                 'label' => __('Lifetime', 'videohub360-memberships'),
@@ -122,6 +146,12 @@ class VH360_Membership_Plans {
                 'display_price' => '',
                 'display_description' => '',
                 'display_features' => array(),
+                'enabled' => true,
+                'tier_level' => 30,
+                'display_order' => 50,
+                'upgrade_eligible' => true,
+                'downgrade_eligible' => false,
+                'featured' => false,
             ),
         );
         
@@ -179,6 +209,45 @@ class VH360_Membership_Plans {
         return $recurring;
     }
     
+
+    /**
+     * Return plans enabled for front-end/member selection.
+     *
+     * @return array
+     */
+    public static function get_enabled_plans() {
+        $plans = self::get_plan_registry();
+        return array_filter($plans, function($plan) {
+            return !isset($plan['enabled']) || (bool) $plan['enabled'];
+        });
+    }
+
+    /**
+     * Get numeric tier for a plan.
+     *
+     * @param string $plan_key Plan key.
+     * @return int
+     */
+    public static function get_plan_tier($plan_key) {
+        $plans = self::get_plan_registry();
+        if (isset($plans[$plan_key]['tier_level'])) {
+            return (int) $plans[$plan_key]['tier_level'];
+        }
+        $fallback = array('basic_monthly' => 10, 'basic_yearly' => 10, 'pro_monthly' => 20, 'pro_yearly' => 20, 'lifetime' => 30);
+        return isset($fallback[$plan_key]) ? (int) $fallback[$plan_key] : 0;
+    }
+
+    /**
+     * Whether a plan should be fulfilled through WooCommerce fixed/lifetime products.
+     *
+     * @param array $plan Plan config.
+     * @return bool
+     */
+    public static function is_woocommerce_eligible_plan($plan) {
+        $mode = isset($plan['billing_mode']) ? $plan['billing_mode'] : 'one_time';
+        return $mode !== 'recurring';
+    }
+
     /**
      * Get plan key by Stripe price ID
      *
@@ -213,7 +282,7 @@ class VH360_Membership_Plans {
         }
         
         $sanitized = array();
-        $allowed_keys = array('billing_mode', 'stripe_price_id', 'auto_renew', 'trial_days', 'display_label', 'display_price', 'display_description', 'display_features');
+        $allowed_keys = array('billing_mode', 'stripe_price_id', 'auto_renew', 'trial_days', 'display_label', 'display_price', 'display_description', 'display_features', 'enabled', 'tier_level', 'display_order', 'upgrade_eligible', 'downgrade_eligible', 'featured');
         
         foreach ($config as $plan_key => $overrides) {
             $plan_key = sanitize_key($plan_key);
@@ -232,9 +301,15 @@ class VH360_Membership_Plans {
                         $sanitized[$plan_key][$key] = sanitize_text_field($value);
                         break;
                     case 'auto_renew':
+                    case 'enabled':
+                    case 'upgrade_eligible':
+                    case 'downgrade_eligible':
+                    case 'featured':
                         $sanitized[$plan_key][$key] = (bool) $value;
                         break;
                     case 'trial_days':
+                    case 'tier_level':
+                    case 'display_order':
                         $sanitized[$plan_key][$key] = absint($value);
                         break;
                     case 'display_label':
@@ -348,8 +423,14 @@ class VH360_Membership_Plans {
                 <select name="vh360_membership_plan" id="vh360_membership_plan" style="width: 100%;">
                     <option value=""><?php esc_html_e('None (Regular Product)', 'videohub360-memberships'); ?></option>
                     <?php foreach ($plans as $key => $plan) : ?>
+                        <?php
+                        $is_recurring_plan = isset($plan['billing_mode']) && $plan['billing_mode'] === 'recurring';
+                        if ($is_recurring_plan && $plan_key !== $key) {
+                            continue;
+                        }
+                        ?>
                         <option value="<?php echo esc_attr($key); ?>" <?php selected($plan_key, $key); ?>>
-                            <?php echo esc_html($plan['label']); ?>
+                            <?php echo esc_html($plan['label']); ?><?php echo $is_recurring_plan ? esc_html__(' (Recurring - Stripe recommended)', 'videohub360-memberships') : ''; ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
@@ -378,8 +459,11 @@ class VH360_Membership_Plans {
                 </select>
             </p>
             
+            <?php if ($plan_key && isset($plans[$plan_key]['billing_mode']) && $plans[$plan_key]['billing_mode'] === 'recurring') : ?>
+                <p class="description" style="color:#b32d2e;"><strong><?php esc_html_e('Warning:', 'videohub360-memberships'); ?></strong> <?php esc_html_e('This plan is configured as recurring and should usually be sold through Stripe, not WooCommerce.', 'videohub360-memberships'); ?></p>
+            <?php endif; ?>
             <p class="description">
-                <?php esc_html_e('When this product is purchased, grant or extend the selected membership plan.', 'videohub360-memberships'); ?>
+                <?php esc_html_e('When this product is purchased, grant or extend the selected fixed-term or lifetime membership plan.', 'videohub360-memberships'); ?>
             </p>
         </div>
         <?php

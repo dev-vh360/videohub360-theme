@@ -617,19 +617,37 @@ class VH360_Membership_API {
             return $recurring;
         }
         
-        // Second try: active one-time/fixed-term membership
-        $fixed = $wpdb->get_row($wpdb->prepare(
+        // Second try: active one-time/fixed-term/lifetime membership.
+        // Prefer the highest configured tier, then latest expiration, then latest creation date.
+        $fixed_memberships = $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM {$table}
             WHERE user_id = %d
             AND status = 'active'
             AND billing_mode != 'recurring'
             AND {$expiration_check}
-            ORDER BY created_at DESC
-            LIMIT 1",
+            ORDER BY created_at DESC",
             $user_id
         ));
-        
-        return $fixed ? $fixed : null;
+
+        if (empty($fixed_memberships)) {
+            return null;
+        }
+
+        usort($fixed_memberships, function($a, $b) {
+            $tier_a = class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan_tier($a->plan_key) : 0;
+            $tier_b = class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan_tier($b->plan_key) : 0;
+            if ($tier_a !== $tier_b) {
+                return $tier_b <=> $tier_a;
+            }
+            $expires_a = empty($a->expires_at) ? PHP_INT_MAX : strtotime($a->expires_at);
+            $expires_b = empty($b->expires_at) ? PHP_INT_MAX : strtotime($b->expires_at);
+            if ($expires_a !== $expires_b) {
+                return $expires_b <=> $expires_a;
+            }
+            return strtotime($b->created_at) <=> strtotime($a->created_at);
+        });
+
+        return reset($fixed_memberships);
     }
     
     /**
@@ -665,15 +683,24 @@ class VH360_Membership_API {
      * @return array plan_key => tier_level
      */
     private function get_plan_tier_hierarchy() {
-        $default_hierarchy = array(
-            'basic_monthly' => 10,
-            'basic_yearly'  => 10,
-            'pro_monthly'   => 20,
-            'pro_yearly'    => 20,
-            'lifetime'      => 30,
-        );
+        $hierarchy = array();
+        if (class_exists('VH360_Membership_Plans')) {
+            foreach (VH360_Membership_Plans::get_plan_registry() as $key => $plan) {
+                $hierarchy[$key] = isset($plan['tier_level']) ? (int) $plan['tier_level'] : VH360_Membership_Plans::get_plan_tier($key);
+            }
+        }
+
+        if (empty($hierarchy)) {
+            $hierarchy = array(
+                'basic_monthly' => 10,
+                'basic_yearly'  => 10,
+                'pro_monthly'   => 20,
+                'pro_yearly'    => 20,
+                'lifetime'      => 30,
+            );
+        }
         
-        return apply_filters('vh360_plan_tier_hierarchy', $default_hierarchy);
+        return apply_filters('vh360_plan_tier_hierarchy', $hierarchy);
     }
     
     /**
