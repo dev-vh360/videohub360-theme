@@ -694,6 +694,150 @@ function vh360_get_product_for_membership_plan($plan_key) {
 }
 
 
+
+/**
+ * Validate a recurring signup plan key.
+ *
+ * @param string $plan_key Plan key.
+ * @param bool   $require_stripe Whether Stripe must be configured.
+ * @return bool
+ */
+function vh360_membership_is_valid_recurring_signup_plan($plan_key, $require_stripe = false) {
+    $plan_key = sanitize_key($plan_key);
+    if (!$plan_key || !class_exists('VH360_Membership_Plans')) {
+        return false;
+    }
+
+    $plans = VH360_Membership_Plans::get_plan_registry();
+    if (empty($plans[$plan_key])) {
+        return false;
+    }
+
+    $plan = $plans[$plan_key];
+    if ((isset($plan['enabled']) && !$plan['enabled']) || !isset($plan['billing_mode']) || $plan['billing_mode'] !== 'recurring' || empty($plan['stripe_price_id'])) {
+        return false;
+    }
+
+    if ($require_stripe) {
+        if (!class_exists('VH360_Stripe_Bootstrap') || !VH360_Stripe_Bootstrap::get_instance()->is_configured()) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
+ * Read and validate a selected recurring plan from request data.
+ *
+ * @return string
+ */
+function vh360_membership_get_selected_plan_from_request() {
+    $plan_key = '';
+    if (isset($_REQUEST['vh360_plan'])) {
+        $plan_key = sanitize_key(wp_unslash($_REQUEST['vh360_plan']));
+    } elseif (isset($_REQUEST['vh360_membership_plan'])) {
+        $plan_key = sanitize_key(wp_unslash($_REQUEST['vh360_membership_plan']));
+    }
+
+    return vh360_membership_is_valid_recurring_signup_plan($plan_key, false) ? $plan_key : '';
+}
+
+/**
+ * Return dashboard membership tab URL with selected recurring plan preserved.
+ *
+ * @param string $plan_key Plan key.
+ * @param bool   $auto_checkout Whether checkout should auto-start.
+ * @return string
+ */
+function vh360_membership_get_dashboard_plan_url($plan_key, $auto_checkout = false) {
+    $plan_key = sanitize_key($plan_key);
+    $dashboard_url = function_exists('vh360_get_dashboard_page_url') ? vh360_get_dashboard_page_url() : home_url('/dashboard/');
+    $args = array(
+        'tab' => 'membership',
+        'vh360_plan' => $plan_key,
+    );
+    if ($auto_checkout) {
+        $args['vh360_start_checkout'] = '1';
+    }
+
+    $url = add_query_arg($args, $dashboard_url);
+    return apply_filters('vh360_recurring_membership_dashboard_plan_url', $url, $plan_key, $auto_checkout);
+}
+
+/**
+ * Return recurring membership registration bridge URL.
+ *
+ * @param string $plan_key Plan key.
+ * @return string
+ */
+function vh360_membership_get_recurring_register_url($plan_key) {
+    $plan_key = sanitize_key($plan_key);
+    $register_url = function_exists('vh360_get_register_page_url') ? vh360_get_register_page_url() : home_url('/register/');
+    $redirect_to = vh360_membership_get_dashboard_plan_url($plan_key, true);
+    $url = add_query_arg(array(
+        'vh360_plan' => $plan_key,
+        'redirect_to' => $redirect_to,
+    ), $register_url);
+
+    return apply_filters('vh360_recurring_membership_register_url', $url, $plan_key, $redirect_to);
+}
+
+/**
+ * Return recurring membership login bridge URL.
+ *
+ * @param string $plan_key Plan key.
+ * @return string
+ */
+function vh360_membership_get_recurring_login_url($plan_key) {
+    $plan_key = sanitize_key($plan_key);
+    $redirect_to = vh360_membership_get_dashboard_plan_url($plan_key, true);
+    $url = function_exists('vh360_get_login_page_url_with_redirect')
+        ? vh360_get_login_page_url_with_redirect($redirect_to)
+        : add_query_arg('redirect_to', $redirect_to, home_url('/login/'));
+    $url = add_query_arg('vh360_plan', $plan_key, $url);
+
+    return apply_filters('vh360_recurring_membership_login_url', $url, $plan_key, $redirect_to);
+}
+
+/**
+ * Render a public recurring plan signup button.
+ *
+ * @param string $plan_key Plan key.
+ * @param array  $args Button args.
+ * @return string
+ */
+function vh360_membership_get_recurring_plan_signup_button($plan_key, $args = array()) {
+    $plan_key = sanitize_key($plan_key);
+    if (!vh360_membership_is_valid_recurring_signup_plan($plan_key, false)) {
+        return current_user_can('manage_options') ? '<p class="vh360-membership-notice vh360-membership-notice-warning">' . esc_html__('Recurring plan is unavailable or invalid.', 'videohub360-memberships') . '</p>' : '';
+    }
+
+    $args = wp_parse_args($args, array(
+        'label' => __('Start Membership', 'videohub360-memberships'),
+        'class' => 'vh360-btn vh360-btn-primary',
+    ));
+    $url = is_user_logged_in() ? vh360_membership_get_dashboard_plan_url($plan_key, true) : vh360_membership_get_recurring_register_url($plan_key);
+
+    return '<a class="' . esc_attr($args['class']) . '" href="' . esc_url($url) . '">' . esc_html($args['label']) . '</a>';
+}
+
+/**
+ * Shortcode wrapper for recurring plan signup buttons.
+ *
+ * @param array $atts Shortcode attributes.
+ * @return string
+ */
+function vh360_recurring_plan_button_shortcode($atts) {
+    $atts = shortcode_atts(array(
+        'plan' => '',
+        'label' => __('Start Membership', 'videohub360-memberships'),
+    ), $atts, 'vh360_recurring_plan_button');
+
+    return vh360_membership_get_recurring_plan_signup_button($atts['plan'], array('label' => $atts['label']));
+}
+add_shortcode('vh360_recurring_plan_button', 'vh360_recurring_plan_button_shortcode');
+
 /**
  * Determine whether a membership is a Stripe-backed recurring subscription.
  *

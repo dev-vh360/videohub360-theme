@@ -34,6 +34,12 @@ get_header();
 $professional_url = function_exists('vh360_get_professional_register_url') ? vh360_get_professional_register_url() : home_url('/register-professional/');
 $instructor_url   = function_exists('vh360_get_instructor_register_url') ? vh360_get_instructor_register_url() : home_url('/register-instructor/');
 $client_url       = function_exists('vh360_get_client_register_url') ? vh360_get_client_register_url() : home_url('/register-client/');
+$vh360_bridge_args = function_exists('vh360_get_recurring_membership_bridge_args') ? vh360_get_recurring_membership_bridge_args() : array();
+if (function_exists('vh360_append_recurring_membership_bridge_args')) {
+    $professional_url = vh360_append_recurring_membership_bridge_args($professional_url, $vh360_bridge_args);
+    $instructor_url = vh360_append_recurring_membership_bridge_args($instructor_url, $vh360_bridge_args);
+    $client_url = vh360_append_recurring_membership_bridge_args($client_url, $vh360_bridge_args);
+}
 
 $show_professional = (bool) get_theme_mod('vh360_registration_landing_show_professional', true);
 $show_instructor   = (bool) get_theme_mod('vh360_registration_landing_show_instructor', true);
@@ -62,6 +68,11 @@ $show_client       = (bool) get_theme_mod('vh360_registration_landing_show_clien
                 <p class="vh360-registration-choice-description">
                     <?php echo esc_html(get_theme_mod('vh360_registration_landing_description', __('Select the registration path that best fits how you plan to use this platform.', 'videohub360-theme'))); ?>
                 </p>
+                <?php if (!empty($vh360_bridge_args['vh360_plan'])) : ?>
+                    <p class="vh360-registration-choice-description vh360-membership-notice vh360-membership-notice-info">
+                        <?php esc_html_e('Create an account to continue your membership signup.', 'videohub360-theme'); ?>
+                    </p>
+                <?php endif; ?>
             </div>
 
             <!-- Choice Cards -->
@@ -154,7 +165,7 @@ $show_client       = (bool) get_theme_mod('vh360_registration_landing_show_clien
 
             <div class="vh360-auth-links">
                 <span><?php esc_html_e('Already have an account?', 'videohub360-theme'); ?></span>
-                <a href="<?php echo esc_url(vh360_get_login_page_url()); ?>" class="vh360-auth-link">
+                <a href="<?php echo esc_url((function_exists('vh360_append_recurring_membership_bridge_args') ? vh360_append_recurring_membership_bridge_args(vh360_get_login_page_url(), $vh360_bridge_args) : vh360_get_login_page_url())); ?>" class="vh360-auth-link">
                     <?php esc_html_e('Sign In', 'videohub360-theme'); ?>
                 </a>
             </div>

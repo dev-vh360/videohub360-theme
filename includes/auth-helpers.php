@@ -58,6 +58,85 @@ function vh360_get_register_page_url() {
     return home_url('/register/');
 }
 
+
+/**
+ * Get safe recurring membership bridge values from request data.
+ *
+ * @return array
+ */
+function vh360_get_recurring_membership_bridge_args() {
+    $plan_key = function_exists('vh360_membership_get_selected_plan_from_request') ? vh360_membership_get_selected_plan_from_request() : '';
+    $redirect_to = '';
+
+    if (isset($_POST['vh360_redirect_to'])) {
+        $redirect_to = esc_url_raw(wp_unslash($_POST['vh360_redirect_to']));
+    } elseif (isset($_REQUEST['redirect_to'])) {
+        $redirect_to = esc_url_raw(wp_unslash($_REQUEST['redirect_to']));
+    }
+
+    if ($redirect_to && function_exists('vh360_is_invalid_login_redirect_target') && vh360_is_invalid_login_redirect_target($redirect_to, 'preserve')) {
+        $redirect_to = '';
+    }
+    $redirect_to = $redirect_to ? wp_validate_redirect($redirect_to, '') : '';
+
+    if ($plan_key && !$redirect_to && function_exists('vh360_membership_get_dashboard_plan_url')) {
+        $redirect_to = vh360_membership_get_dashboard_plan_url($plan_key, true);
+    }
+
+    return array(
+        'vh360_plan' => $plan_key,
+        'redirect_to' => $redirect_to,
+    );
+}
+
+/**
+ * Append recurring membership bridge query args to a URL.
+ *
+ * @param string $url URL.
+ * @param array  $bridge_args Bridge args.
+ * @return string
+ */
+function vh360_append_recurring_membership_bridge_args($url, $bridge_args = array()) {
+    if (empty($bridge_args)) {
+        $bridge_args = vh360_get_recurring_membership_bridge_args();
+    }
+
+    $args = array();
+    if (!empty($bridge_args['vh360_plan'])) {
+        $args['vh360_plan'] = sanitize_key($bridge_args['vh360_plan']);
+    }
+    if (!empty($bridge_args['redirect_to'])) {
+        $args['redirect_to'] = esc_url_raw($bridge_args['redirect_to']);
+    }
+
+    return $args ? add_query_arg($args, $url) : $url;
+}
+
+/**
+ * Get a safe post-registration redirect target.
+ *
+ * @param array $bridge_args Bridge args.
+ * @return string
+ */
+function vh360_get_registration_bridge_redirect($bridge_args = array()) {
+    if (empty($bridge_args)) {
+        $bridge_args = vh360_get_recurring_membership_bridge_args();
+    }
+
+    if (!empty($bridge_args['redirect_to'])) {
+        $redirect_to = wp_validate_redirect($bridge_args['redirect_to'], '');
+        if ($redirect_to && (!function_exists('vh360_is_invalid_login_redirect_target') || !vh360_is_invalid_login_redirect_target($redirect_to, 'post_login'))) {
+            return $redirect_to;
+        }
+    }
+
+    if (!empty($bridge_args['vh360_plan']) && function_exists('vh360_membership_get_dashboard_plan_url')) {
+        return vh360_membership_get_dashboard_plan_url($bridge_args['vh360_plan'], true);
+    }
+
+    return '';
+}
+
 /**
  * Handle custom registration form submission
  */
@@ -77,6 +156,8 @@ function vh360_handle_registration() {
     if (!$current_url) {
         $current_url = home_url('/register/');
     }
+    $vh360_bridge_args = vh360_get_recurring_membership_bridge_args();
+    $current_url = vh360_append_recurring_membership_bridge_args($current_url, $vh360_bridge_args);
     
     // Verify nonce
     if (!wp_verify_nonce($_POST['vh360_register_nonce'], 'vh360_registration')) {
@@ -210,10 +291,13 @@ function vh360_handle_registration() {
         }
     }
     
-    // Redirect to dashboard or home
-    $redirect_to = home_url('/dashboard/');
-    if (!get_page_by_path('dashboard')) {
-        $redirect_to = home_url('/');
+    // Redirect to selected recurring plan target, dashboard, or home.
+    $redirect_to = vh360_get_registration_bridge_redirect($vh360_bridge_args);
+    if (!$redirect_to) {
+        $redirect_to = home_url('/dashboard/');
+        if (!get_page_by_path('dashboard')) {
+            $redirect_to = home_url('/');
+        }
     }
     
     wp_safe_redirect($redirect_to);
@@ -240,6 +324,8 @@ function vh360_handle_account_type_registration() {
     if (!$current_url) {
         $current_url = home_url('/register/');
     }
+    $vh360_bridge_args = vh360_get_recurring_membership_bridge_args();
+    $current_url = vh360_append_recurring_membership_bridge_args($current_url, $vh360_bridge_args);
     
     // Verify nonce
     if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['vh360_account_type_register_nonce'])), 'vh360_account_type_register')) {
@@ -413,6 +499,11 @@ function vh360_handle_account_type_registration() {
         }
     }
     
+    $bridge_redirect_to = vh360_get_registration_bridge_redirect($vh360_bridge_args);
+    if ($bridge_redirect_to) {
+        $redirect_to = $bridge_redirect_to;
+    }
+
     wp_safe_redirect($redirect_to);
     exit;
 }

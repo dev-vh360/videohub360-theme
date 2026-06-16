@@ -479,3 +479,8 @@
 .vh360-membership-notice-info .vh360-btn {
     margin-top: 10px;
 }
+
+.vh360-subscription-plan-card.is-selected {
+    border-color: #1d7f43;
+    box-shadow: 0 8px 22px rgba(29, 127, 67, .16);
+}

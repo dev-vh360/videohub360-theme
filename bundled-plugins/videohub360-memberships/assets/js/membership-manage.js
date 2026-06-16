@@ -157,4 +157,18 @@
         });
     });
 
+
+    $(function() {
+        if (!config.selectedPlan || !config.autoCheckout) {
+            return;
+        }
+
+        var $button = $('.vh360-start-subscription[data-plan-key="' + config.selectedPlan + '"]').first();
+        if (!$button.length || $button.data('vh360AutoCheckoutStarted')) {
+            return;
+        }
+
+        $button.data('vh360AutoCheckoutStarted', true).trigger('click');
+    });
+
 })(jQuery);

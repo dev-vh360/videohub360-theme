@@ -168,7 +168,8 @@ $vh360_login_show_create_account  = (bool) get_theme_mod('vh360_login_show_creat
                             $links_output[] = '<a href="' . esc_url(vh360_get_lost_password_page_url()) . '" class="vh360-auth-link">' . esc_html__('Forgot Password?', 'videohub360-theme') . '</a>';
                         }
                         if ($vh360_login_show_create_account && get_option('users_can_register')) {
-                            $links_output[] = '<a href="' . esc_url(vh360_get_register_page_url()) . '" class="vh360-auth-link">' . esc_html__('Create Account', 'videohub360-theme') . '</a>';
+                            $register_url = function_exists('vh360_append_recurring_membership_bridge_args') ? vh360_append_recurring_membership_bridge_args(vh360_get_register_page_url()) : vh360_get_register_page_url();
+                            $links_output[] = '<a href="' . esc_url($register_url) . '" class="vh360-auth-link">' . esc_html__('Create Account', 'videohub360-theme') . '</a>';
                         }
                         echo implode(' <span class="vh360-auth-separator">|</span> ', $links_output);
                         ?>
