@@ -324,8 +324,6 @@ class VH360_Membership_Plans {
             'live_rooms'              => __('Live Rooms', 'videohub360-memberships'),
             'appointments'            => __('Appointments', 'videohub360-memberships'),
             'push_notifications'      => __('Push Notifications', 'videohub360-memberships'),
-            'course_learning'         => __('Course Learning Access', 'videohub360-memberships'),
-            'course_instructor_tools' => __('Course Instructor Tools', 'videohub360-memberships'),
         );
 
         return apply_filters('vh360_membership_feature_access_options', $feature_access_options);
@@ -497,6 +495,13 @@ class VH360_Membership_Plans {
         if (!is_array($features)) {
             $features = preg_split('/\r\n|\r|\n/', (string) $features);
         }
+        $access_features_configured = array_key_exists('access_features', $plan);
+        if (array_key_exists('access_features_configured', $plan)) {
+            $access_features_configured = (bool) $plan['access_features_configured'] || $access_features_configured;
+        }
+        $access_features = $access_features_configured
+            ? self::sanitize_access_features(isset($plan['access_features']) ? $plan['access_features'] : array())
+            : array();
         $name = isset($plan['name']) ? $plan['name'] : (isset($plan['label']) ? $plan['label'] : $id);
         $label = isset($plan['label']) ? $plan['label'] : $name;
         $enabled = array_key_exists('is_enabled', $plan) ? (bool) $plan['is_enabled'] : (!array_key_exists('enabled', $plan) || (bool) $plan['enabled']);

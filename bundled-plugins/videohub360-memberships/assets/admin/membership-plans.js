@@ -68,7 +68,7 @@
         if (!billingType || !warning) {
             return;
         }
-        var advanced = ['create_videos', 'live_rooms', 'appointments', 'push_notifications', 'direct_messages', 'course_instructor_tools'];
+        var advanced = ['create_videos', 'live_rooms', 'appointments', 'push_notifications', 'direct_messages'];
         var hasAdvanced = advanced.some(function(feature){
             var checkbox = card.querySelector('input[type="checkbox"][value="' + feature + '"]');
             return checkbox && checkbox.checked;

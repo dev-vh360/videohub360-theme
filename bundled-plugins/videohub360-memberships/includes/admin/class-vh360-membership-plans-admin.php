@@ -462,12 +462,13 @@ class VH360_Membership_Plans_Admin {
                 <div class="vh360-plan-section vh360-plan-section--access">
                     <h3><?php esc_html_e('Feature Access', 'videohub360-memberships'); ?></h3>
                     <p class="description"><?php esc_html_e('Choose which Videohub360 features this plan unlocks. These settings control actual membership access and are separate from the public pricing-card feature text.', 'videohub360-memberships'); ?></p>
+                    <input type="hidden" name="<?php echo esc_attr($field); ?>[access_features_configured]" value="1" />
                     <div class="vh360-feature-access-grid">
                         <?php foreach (VH360_Membership_Plans::get_feature_access_options() as $feature_key => $feature_label) : ?>
                             <label class="vh360-feature-access-option"><input type="checkbox" name="<?php echo esc_attr($field); ?>[access_features][]" value="<?php echo esc_attr($feature_key); ?>" <?php checked(in_array($feature_key, $access_features, true)); ?> /> <?php echo esc_html($feature_label); ?></label>
                         <?php endforeach; ?>
                     </div>
-                    <?php $show_free_access_warning = 'free' === $plan['billing_type'] && array_intersect($access_features, array('create_videos', 'live_rooms', 'appointments', 'push_notifications', 'direct_messages', 'course_instructor_tools')); ?>
+                    <?php $show_free_access_warning = 'free' === $plan['billing_type'] && array_intersect($access_features, array('create_videos', 'live_rooms', 'appointments', 'push_notifications', 'direct_messages')); ?>
                     <p class="vh360-plan-access-warning <?php echo $show_free_access_warning ? '' : 'is-hidden'; ?>" data-vh360-free-access-warning><?php esc_html_e('This is a free plan with advanced access enabled. Confirm this is intentional before using it publicly.', 'videohub360-memberships'); ?></p>
                 </div>
 
