@@ -68,10 +68,44 @@ class VH360_Membership_Plans_Admin {
         check_admin_referer(self::NONCE_ACTION);
 
         $plans = class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan_registry() : array();
-        $submitted = isset($_POST['plans']) && is_array($_POST['plans']) ? wp_unslash($_POST['plans']) : array();
-        $new_plans = isset($_POST['new_plans']) && is_array($_POST['new_plans']) ? wp_unslash($_POST['new_plans']) : array();
         $delete = isset($_POST['delete_plan']) ? sanitize_key(wp_unslash($_POST['delete_plan'])) : '';
         $duplicate = isset($_POST['duplicate_plan']) ? sanitize_key(wp_unslash($_POST['duplicate_plan'])) : '';
+
+        if ($delete) {
+            if (isset($plans[$delete])) {
+                unset($plans[$delete]);
+                VH360_Membership_Plans::save_plans($plans);
+                $this->set_admin_notice('success', array(sprintf(__('The plan `%s` was deleted.', 'videohub360-memberships'), $delete)));
+            } else {
+                $this->set_admin_notice('warning', array(sprintf(__('The plan `%s` could not be found. No plan was deleted.', 'videohub360-memberships'), $delete)));
+            }
+            wp_safe_redirect(self::get_admin_url());
+            exit;
+        }
+
+        if ($duplicate) {
+            if (isset($plans[$duplicate])) {
+                $copy = $plans[$duplicate];
+                $copy['id'] = $this->unique_copy_key($copy['id'], $plans);
+                $copy['plan_key'] = $copy['id'];
+                $copy['name'] = sprintf(__('%s Copy', 'videohub360-memberships'), $copy['name']);
+                $copy['display_order'] = absint($copy['display_order']) + 1;
+                $copy['is_enabled'] = false;
+                $copy['enabled'] = false;
+                $copy['created_at'] = current_time('mysql');
+                $copy['updated_at'] = current_time('mysql');
+                $plans[$copy['id']] = $copy;
+                VH360_Membership_Plans::save_plans($plans);
+                $this->set_admin_notice('success', array(sprintf(__('A disabled duplicate was created with the unique plan key `%s`.', 'videohub360-memberships'), $copy['id'])));
+            } else {
+                $this->set_admin_notice('warning', array(sprintf(__('The plan `%s` could not be found. No duplicate was created.', 'videohub360-memberships'), $duplicate)));
+            }
+            wp_safe_redirect(self::get_admin_url());
+            exit;
+        }
+
+        $submitted = isset($_POST['plans']) && is_array($_POST['plans']) ? wp_unslash($_POST['plans']) : array();
+        $new_plans = isset($_POST['new_plans']) && is_array($_POST['new_plans']) ? wp_unslash($_POST['new_plans']) : array();
 
         // Start from existing valid plans so failed identity validation cannot delete or overwrite records.
         $next = $plans;
@@ -84,12 +118,6 @@ class VH360_Membership_Plans_Admin {
             $row_key = sanitize_key($row_key);
             $raw_plan = $this->prepare_raw_plan($raw_plan, $row_key);
             $original_key = !empty($raw_plan['original_plan_key']) ? sanitize_key($raw_plan['original_plan_key']) : $row_key;
-
-            if ($delete && $delete === $original_key) {
-                unset($next[$original_key]);
-                $messages[] = sprintf(__('The plan `%s` was deleted.', 'videohub360-memberships'), $original_key);
-                continue;
-            }
 
             $identity_errors = $this->get_identity_errors($raw_plan, $plans, $next, $submitted_key_counts, $accepted_keys, $original_key, false);
             if (!empty($identity_errors)) {
@@ -115,20 +143,6 @@ class VH360_Membership_Plans_Admin {
             }
             $next[$plan['id']] = $plan;
             $accepted_keys[$plan['id']] = true;
-
-            if ($duplicate && $duplicate === $original_key) {
-                $copy = $plan;
-                $copy['id'] = $this->unique_copy_key($copy['id'], $next);
-                $copy['plan_key'] = $copy['id'];
-                $copy['name'] = sprintf(__('%s Copy', 'videohub360-memberships'), $copy['name']);
-                $copy['display_order'] = absint($copy['display_order']) + 1;
-                $copy['is_enabled'] = false;
-                $copy['enabled'] = false;
-                $copy['created_at'] = current_time('mysql');
-                $copy['updated_at'] = current_time('mysql');
-                $next[$copy['id']] = $copy;
-                $messages[] = sprintf(__('A disabled duplicate was created with the unique plan key `%s`.', 'videohub360-memberships'), $copy['id']);
-            }
         }
 
         foreach ((array) $new_plans as $raw) {
@@ -158,13 +172,18 @@ class VH360_Membership_Plans_Admin {
         if (empty($messages)) {
             $messages[] = __('Membership plans saved.', 'videohub360-memberships');
         }
-        set_transient('vh360_membership_plans_admin_notice', array(
-            'type' => $has_errors ? 'warning' : 'success',
-            'messages' => $messages,
-        ), 60);
+        $this->set_admin_notice($has_errors ? 'warning' : 'success', $messages);
 
         wp_safe_redirect(self::get_admin_url());
         exit;
+    }
+
+
+    private function set_admin_notice($type, $messages) {
+        set_transient('vh360_membership_plans_admin_notice', array(
+            'type' => $type,
+            'messages' => (array) $messages,
+        ), 60);
     }
 
     private function get_submitted_key_counts($submitted, $new_plans) {
