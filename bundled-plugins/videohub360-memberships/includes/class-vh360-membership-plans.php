@@ -133,8 +133,18 @@ class VH360_Membership_Plans {
                 <?php $first = false; endforeach; ?>
             </div>
             <?php $first = true; foreach ($available_intervals as $interval => $label) : ?>
+                <?php
+                $interval_plan_count = 0;
+                foreach ($groups as $group) {
+                    if (!empty($group['plans'][$interval])) {
+                        $interval_plan_count += count($group['plans'][$interval]);
+                    }
+                }
+                $effective_columns = max(1, min($columns, $interval_plan_count));
+                $count_class = min(6, max(1, $interval_plan_count));
+                ?>
                 <div id="vh360-pricing-<?php echo esc_attr($interval); ?>" class="vh360-pricing-panel <?php echo $first ? 'is-active' : ''; ?>" role="tabpanel" <?php echo $first ? '' : 'hidden'; ?>>
-                    <div class="vh360-pricing-grid">
+                    <div class="vh360-pricing-grid vh360-pricing-grid-count-<?php echo esc_attr($count_class); ?> vh360-pricing-grid-columns-<?php echo esc_attr($effective_columns); ?>">
                         <?php foreach ($groups as $group_key => $group) : if (empty($group['plans'][$interval])) continue; foreach ($group['plans'][$interval] as $key => $plan) : echo $this->render_pricing_card($plan, $atts['button_style'], $admin_view); endforeach; endforeach; ?>
                     </div>
                 </div>
