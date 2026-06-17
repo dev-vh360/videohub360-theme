@@ -1,9 +1,198 @@
-.vh360-membership-plans-admin .vh360-plan-card{background:#fff;border:1px solid #dcdcde;border-radius:14px;margin:0 0 18px;padding:0;box-shadow:0 8px 22px rgba(15,23,42,.05)}
-.vh360-membership-plans-admin .vh360-plan-card__header{align-items:center;background:#f8fafc;border-bottom:1px solid #e5e7eb;border-radius:14px 14px 0 0;display:flex;gap:12px;justify-content:space-between;padding:14px 18px}
-.vh360-membership-plans-admin .vh360-plan-card__body{padding:18px}
-.vh360-membership-plans-admin .vh360-plan-grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
-.vh360-membership-plans-admin .vh360-plan-field label{display:block;font-weight:700;margin-bottom:6px}
-.vh360-membership-plans-admin .vh360-plan-field input[type=text],.vh360-membership-plans-admin .vh360-plan-field input[type=number],.vh360-membership-plans-admin .vh360-plan-field select,.vh360-membership-plans-admin .vh360-plan-field textarea{max-width:100%;width:100%}
-.vh360-membership-plans-admin .vh360-plan-field .description{color:#646970;margin:.35rem 0 0}
-.vh360-membership-plans-admin .vh360-plan-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
-.vh360-membership-plans-admin .vh360-plan-pill{border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px;font-weight:700;padding:3px 8px}
+.vh360-membership-plans-admin {
+    max-width: 1180px;
+}
+
+.vh360-plans-toolbar {
+    align-items: center;
+    display: flex;
+    gap: 18px;
+    justify-content: space-between;
+    margin: 18px 0 22px;
+}
+
+.vh360-plans-toolbar h1 {
+    margin: 0 0 6px;
+}
+
+.vh360-plans-toolbar p {
+    color: #475569;
+    font-size: 14px;
+    margin: 0;
+}
+
+.vh360-plans-empty-state {
+    background: linear-gradient(135deg, #fff, #f8fafc);
+    border: 1px dashed #94a3b8;
+    border-radius: 16px;
+    margin: 0 0 22px;
+    padding: 28px;
+    text-align: center;
+}
+
+.vh360-plans-empty-state h2 {
+    font-size: 22px;
+    margin: 0 0 10px;
+}
+
+.vh360-plans-empty-state p {
+    color: #475569;
+    margin: 8px auto;
+    max-width: 720px;
+}
+
+.vh360-sample-plans-form {
+    border-top: 1px solid #e2e8f0;
+    margin: 22px auto 0;
+    max-width: 680px;
+    padding-top: 18px;
+}
+
+.vh360-plan-list {
+    margin-top: 10px;
+}
+
+.vh360-membership-plans-admin .is-hidden {
+    display: none !important;
+}
+
+.vh360-membership-plans-admin .vh360-plan-card {
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 16px;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, .06);
+    margin: 0 0 20px;
+    overflow: hidden;
+    padding: 0;
+}
+
+.vh360-membership-plans-admin .vh360-plan-card__header {
+    align-items: center;
+    background: #f8fafc;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    padding: 16px 20px;
+}
+
+.vh360-membership-plans-admin .vh360-plan-card__header h2 {
+    font-size: 18px;
+    line-height: 1.3;
+    margin: 0;
+}
+
+.vh360-plan-card__header-actions {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+}
+
+.vh360-membership-plans-admin .vh360-plan-card__body {
+    padding: 20px;
+}
+
+.vh360-plan-section {
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    margin: 0 0 18px;
+    padding: 18px;
+}
+
+.vh360-plan-section h3 {
+    color: #334155;
+    font-size: 14px;
+    letter-spacing: .04em;
+    margin: 0 0 14px;
+    text-transform: uppercase;
+}
+
+.vh360-plan-section--primary {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+}
+
+.vh360-plan-section--checkout {
+    background: #f8fafc;
+}
+
+.vh360-plan-section--display {
+    background: #fff;
+}
+
+.vh360-plan-advanced {
+    background: #fcfcfd;
+}
+
+.vh360-plan-advanced summary {
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.vh360-plan-advanced[open] summary {
+    margin-bottom: 14px;
+}
+
+.vh360-membership-plans-admin .vh360-plan-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.vh360-membership-plans-admin .vh360-plan-grid--wide {
+    margin-top: 16px;
+}
+
+.vh360-membership-plans-admin .vh360-plan-field label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.vh360-membership-plans-admin .vh360-plan-field input[type=text],
+.vh360-membership-plans-admin .vh360-plan-field input[type=number],
+.vh360-membership-plans-admin .vh360-plan-field select,
+.vh360-membership-plans-admin .vh360-plan-field textarea {
+    max-width: 100%;
+    width: 100%;
+}
+
+.vh360-membership-plans-admin .vh360-plan-field .description {
+    color: #646970;
+    margin: .35rem 0 0;
+}
+
+.vh360-plan-toggle-field {
+    align-self: center;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.vh360-membership-plans-admin .vh360-plan-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.vh360-membership-plans-admin .vh360-plan-pill {
+    background: #eef2ff;
+    border-radius: 999px;
+    color: #3730a3;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 9px;
+}
+
+@media (max-width: 782px) {
+    .vh360-plans-toolbar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .vh360-membership-plans-admin .vh360-plan-card__header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}

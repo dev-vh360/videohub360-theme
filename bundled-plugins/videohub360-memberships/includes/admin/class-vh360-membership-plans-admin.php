@@ -22,6 +22,7 @@ class VH360_Membership_Plans_Admin {
     private function __construct() {
         add_action('admin_init', array($this, 'redirect_tools_page'));
         add_action('admin_post_vh360_save_membership_plans', array($this, 'handle_save'));
+        add_action('admin_post_vh360_create_membership_sample_plans', array($this, 'handle_create_sample_plans'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
     }
 
@@ -60,6 +61,7 @@ class VH360_Membership_Plans_Admin {
 
         $plans = class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan_registry() : array();
         $submitted = isset($_POST['plans']) && is_array($_POST['plans']) ? wp_unslash($_POST['plans']) : array();
+        $new_plans = isset($_POST['new_plans']) && is_array($_POST['new_plans']) ? wp_unslash($_POST['new_plans']) : array();
         $delete = isset($_POST['delete_plan']) ? sanitize_key(wp_unslash($_POST['delete_plan'])) : '';
         $duplicate = isset($_POST['duplicate_plan']) ? sanitize_key(wp_unslash($_POST['duplicate_plan'])) : '';
 
@@ -67,7 +69,7 @@ class VH360_Membership_Plans_Admin {
         $next = $plans;
         $messages = array();
         $has_errors = false;
-        $submitted_key_counts = $this->get_submitted_key_counts($submitted, isset($_POST['new_plan']) && is_array($_POST['new_plan']) ? wp_unslash($_POST['new_plan']) : array());
+        $submitted_key_counts = $this->get_submitted_key_counts($submitted, $new_plans);
         $accepted_keys = array();
 
         foreach ($submitted as $row_key => $raw_plan) {
@@ -121,26 +123,27 @@ class VH360_Membership_Plans_Admin {
             }
         }
 
-        if (!empty($_POST['new_plan']) && is_array($_POST['new_plan'])) {
-            $raw = $this->prepare_raw_plan(wp_unslash($_POST['new_plan']));
-            if (!empty($raw['id']) || !empty($raw['name']) || !empty($raw['label'])) {
-                $identity_errors = $this->get_identity_errors($raw, $plans, $next, $submitted_key_counts, $accepted_keys, '', true);
-                if (!empty($identity_errors)) {
-                    $has_errors = true;
-                    $messages = array_merge($messages, $identity_errors);
-                } else {
-                    $plan = VH360_Membership_Plans::normalize_plan($raw);
-                    $soft_errors = $this->get_configuration_errors($raw);
-                    if (!empty($soft_errors)) {
-                        $has_errors = true;
-                        $plan['is_enabled'] = false;
-                        $plan['enabled'] = false;
-                        $messages = array_merge($messages, $soft_errors);
-                    }
-                    $next[$plan['id']] = $plan;
-                    $accepted_keys[$plan['id']] = true;
-                }
+        foreach ((array) $new_plans as $raw) {
+            $raw = $this->prepare_raw_plan($raw);
+            if (empty($raw['id']) && empty($raw['name']) && empty($raw['label'])) {
+                continue;
             }
+            $identity_errors = $this->get_identity_errors($raw, $plans, $next, $submitted_key_counts, $accepted_keys, '', true);
+            if (!empty($identity_errors)) {
+                $has_errors = true;
+                $messages = array_merge($messages, $identity_errors);
+                continue;
+            }
+            $plan = VH360_Membership_Plans::normalize_plan($raw);
+            $soft_errors = $this->get_configuration_errors($raw);
+            if (!empty($soft_errors)) {
+                $has_errors = true;
+                $plan['is_enabled'] = false;
+                $plan['enabled'] = false;
+                $messages = array_merge($messages, $soft_errors);
+            }
+            $next[$plan['id']] = $plan;
+            $accepted_keys[$plan['id']] = true;
         }
 
         VH360_Membership_Plans::save_plans($next);
@@ -156,7 +159,7 @@ class VH360_Membership_Plans_Admin {
         exit;
     }
 
-    private function get_submitted_key_counts($submitted, $new_plan) {
+    private function get_submitted_key_counts($submitted, $new_plans) {
         $counts = array();
         foreach ((array) $submitted as $raw_plan) {
             if (!is_array($raw_plan) || empty($raw_plan['id'])) {
@@ -167,7 +170,10 @@ class VH360_Membership_Plans_Admin {
                 $counts[$key] = isset($counts[$key]) ? $counts[$key] + 1 : 1;
             }
         }
-        if (is_array($new_plan) && !empty($new_plan['id'])) {
+        foreach ((array) $new_plans as $new_plan) {
+            if (!is_array($new_plan) || empty($new_plan['id'])) {
+                continue;
+            }
             $key = sanitize_key($new_plan['id']);
             if ($key) {
                 $counts[$key] = isset($counts[$key]) ? $counts[$key] + 1 : 1;
@@ -271,6 +277,30 @@ class VH360_Membership_Plans_Admin {
         return $key;
     }
 
+
+    public function handle_create_sample_plans() {
+        if (!current_user_can(self::CAPABILITY)) {
+            wp_die(esc_html__('You do not have permission to manage membership plans.', 'videohub360-memberships'));
+        }
+        check_admin_referer('vh360_create_membership_sample_plans');
+        $plans = class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan_registry() : array();
+        if (!empty($plans)) {
+            $notice = array(
+                'type' => 'warning',
+                'messages' => array(__('Sample plans were not created because membership plans already exist.', 'videohub360-memberships')),
+            );
+        } else {
+            VH360_Membership_Plans::maybe_seed_default_plans();
+            $notice = array(
+                'type' => 'success',
+                'messages' => array(__('Disabled sample plans were created. Edit the checkout settings and enable only the plans you want to publish.', 'videohub360-memberships')),
+            );
+        }
+        set_transient('vh360_membership_plans_admin_notice', $notice, 60);
+        wp_safe_redirect(self::get_admin_url());
+        exit;
+    }
+
     public function render_page() {
         $this->render_manager(true);
     }
@@ -285,18 +315,41 @@ class VH360_Membership_Plans_Admin {
         ?>
         <?php if ($wrap) : ?><div class="wrap"><?php endif; ?>
         <div class="vh360-membership-plans-admin">
-            <h1><?php esc_html_e('Membership Plans', 'videohub360-memberships'); ?></h1>
-            <p><?php esc_html_e('Manage every membership plan from one central registry. These plans power pricing displays, checkout routing, product grants, and access tiers.', 'videohub360-memberships'); ?></p>
+            <div class="vh360-plans-toolbar">
+                <div>
+                    <h1><?php esc_html_e('Membership Plans', 'videohub360-memberships'); ?></h1>
+                    <p><?php esc_html_e('Create and manage the plans shown on pricing pages and used for Stripe or WooCommerce checkout.', 'videohub360-memberships'); ?></p>
+                </div>
+                <button type="button" class="button button-primary" data-vh360-add-plan><?php esc_html_e('+ Add New Plan', 'videohub360-memberships'); ?></button>
+            </div>
             <?php if ($notice && !empty($notice['messages'])) : ?>
                 <div class="notice notice-<?php echo esc_attr($notice['type']); ?>"><ul><?php foreach ($notice['messages'] as $message) : ?><li><?php echo esc_html($message); ?></li><?php endforeach; ?></ul></div>
             <?php endif; ?>
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+            <?php if (empty($plans)) : ?>
+                <div class="vh360-plans-empty-state" data-vh360-empty-state>
+                    <h2><?php esc_html_e('No membership plans yet.', 'videohub360-memberships'); ?></h2>
+                    <p><?php esc_html_e('Membership plans control what appears on your pricing page and how users subscribe through Stripe or purchase one-time/lifetime access through WooCommerce.', 'videohub360-memberships'); ?></p>
+                    <p><?php esc_html_e('Create your first membership plan to get started.', 'videohub360-memberships'); ?></p>
+                    <button type="button" class="button button-primary" data-vh360-add-plan><?php esc_html_e('Add New Plan', 'videohub360-memberships'); ?></button>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="vh360-sample-plans-form">
+                        <?php wp_nonce_field('vh360_create_membership_sample_plans'); ?>
+                        <input type="hidden" name="action" value="vh360_create_membership_sample_plans" />
+                        <p class="description"><?php esc_html_e('Optional: create disabled sample plans to see how monthly, yearly, free, and lifetime plans can be configured. You can edit or delete them.', 'videohub360-memberships'); ?></p>
+                        <?php submit_button(__('Create Sample Plans', 'videohub360-memberships'), 'secondary', 'submit', false); ?>
+                    </form>
+                </div>
+            <?php endif; ?>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="vh360-plans-form">
                 <?php wp_nonce_field(self::NONCE_ACTION); ?>
                 <input type="hidden" name="action" value="vh360_save_membership_plans" />
-                <?php foreach ($plans as $key => $plan) : $this->render_plan_card($key, $plan); endforeach; ?>
-                <?php $this->render_plan_card('new_plan', $this->get_empty_plan(), true); ?>
+                <div class="vh360-plan-list" data-vh360-plan-list>
+                    <?php foreach ($plans as $key => $plan) : $this->render_plan_card($key, $plan); endforeach; ?>
+                </div>
                 <?php submit_button(__('Save Membership Plans', 'videohub360-memberships')); ?>
             </form>
+            <template id="vh360-new-plan-template">
+                <?php $this->render_plan_card('__NEW_PLAN_INDEX__', $this->get_empty_plan(), true); ?>
+            </template>
         </div>
         <?php if ($wrap) : ?></div><?php endif; ?>
         <?php
@@ -307,58 +360,96 @@ class VH360_Membership_Plans_Admin {
     }
 
     private function render_plan_card($key, $plan, $is_new = false) {
-        $field = $is_new ? 'new_plan' : 'plans[' . $key . ']';
+        $field = $is_new ? 'new_plans[' . $key . ']' : 'plans[' . $key . ']';
         $features = !empty($plan['features']) && is_array($plan['features']) ? implode("\n", $plan['features']) : '';
+        $title = $is_new ? __('New Membership Plan', 'videohub360-memberships') : (!empty($plan['name']) ? $plan['name'] : $key);
         ?>
-        <section class="vh360-plan-card">
+        <section class="vh360-plan-card" data-vh360-plan-card>
             <?php if (!$is_new) : ?><input type="hidden" name="<?php echo esc_attr($field); ?>[original_plan_key]" value="<?php echo esc_attr($key); ?>" /><?php endif; ?>
             <div class="vh360-plan-card__header">
-                <div><h2 style="margin:0;"><?php echo $is_new ? esc_html__('Add New Plan', 'videohub360-memberships') : esc_html($plan['name']); ?></h2><?php if (!$is_new) : ?><code><?php echo esc_html($key); ?></code><?php endif; ?></div>
-                <?php if (!$is_new) : ?><span class="vh360-plan-pill"><?php echo !empty($plan['is_enabled']) ? esc_html__('Enabled', 'videohub360-memberships') : esc_html__('Disabled', 'videohub360-memberships'); ?></span><?php endif; ?>
+                <div>
+                    <h2><?php echo esc_html($title); ?></h2>
+                    <?php if (!$is_new) : ?><code><?php echo esc_html($key); ?></code><?php endif; ?>
+                </div>
+                <div class="vh360-plan-card__header-actions">
+                    <?php if ($is_new) : ?>
+                        <button type="button" class="button button-link-delete" data-vh360-remove-new-plan><?php esc_html_e('Remove', 'videohub360-memberships'); ?></button>
+                    <?php else : ?>
+                        <span class="vh360-plan-pill"><?php echo !empty($plan['is_enabled']) ? esc_html__('Enabled', 'videohub360-memberships') : esc_html__('Disabled', 'videohub360-memberships'); ?></span>
+                    <?php endif; ?>
+                </div>
             </div>
             <div class="vh360-plan-card__body">
-                <div class="vh360-plan-grid">
-                    <?php $this->field($field, 'id', __('Plan Key', 'videohub360-memberships'), $plan['id'], __('Required lowercase slug. Used by gates, checkout, member records, and integrations.', 'videohub360-memberships')); ?>
-                    <?php $this->field($field, 'name', __('Plan Name', 'videohub360-memberships'), $plan['name'], __('Required internal/admin name.', 'videohub360-memberships')); ?>
-                    <?php $this->field($field, 'label', __('Display Label', 'videohub360-memberships'), $plan['label'], __('Name shown on pricing cards and dashboards.', 'videohub360-memberships')); ?>
-                    <?php $this->field($field, 'plan_group', __('Plan Group', 'videohub360-memberships'), $plan['plan_group'], __('Connects monthly/yearly versions of the same plan for aligned pricing cards.', 'videohub360-memberships')); ?>
-                    <?php $this->select($field, 'billing_type', __('Billing Type', 'videohub360-memberships'), $plan['billing_type'], VH360_Membership_Plans::get_allowed_billing_types(), __('Controls checkout behavior.', 'videohub360-memberships')); ?>
-                    <?php $this->select($field, 'billing_interval', __('Billing Interval', 'videohub360-memberships'), $plan['billing_interval'], VH360_Membership_Plans::get_allowed_billing_intervals(), __('Controls frontend tab placement.', 'videohub360-memberships')); ?>
-                    <?php $this->field($field, 'price', __('Price', 'videohub360-memberships'), $plan['price'], __('Numeric amount for paid plans. Use 0 or empty for free plans.', 'videohub360-memberships'), 'number', '0.01'); ?>
-                    <?php $this->field($field, 'currency', __('Currency', 'videohub360-memberships'), $plan['currency'], __('ISO currency code used for display.', 'videohub360-memberships')); ?>
-                    <?php $this->field($field, 'stripe_price_id', __('Stripe Price ID', 'videohub360-memberships'), $plan['stripe_price_id'], __('Required for enabled recurring Stripe Checkout plans.', 'videohub360-memberships')); ?>
-                    <?php $this->field($field, 'woocommerce_product_id', __('WooCommerce Product ID', 'videohub360-memberships'), $plan['woocommerce_product_id'], __('Required for WooCommerce checkout plans and must be a published product.', 'videohub360-memberships'), 'number'); ?>
-                    <?php $this->select($field, 'checkout_behavior', __('Checkout Behavior', 'videohub360-memberships'), $plan['checkout_behavior'], VH360_Membership_Plans::get_allowed_checkout_behaviors(), __('Determines whether buttons use Stripe, product pages, add-to-cart, or free activation.', 'videohub360-memberships')); ?>
-                    <?php $this->field($field, 'tier_level', __('Access Tier', 'videohub360-memberships'), $plan['tier_level'], __('Higher numbers satisfy higher-tier access checks.', 'videohub360-memberships'), 'number'); ?>
-                    <?php $this->field($field, 'display_order', __('Display Order', 'videohub360-memberships'), $plan['display_order'], __('Controls admin and frontend ordering.', 'videohub360-memberships'), 'number'); ?>
-                    <?php $this->field($field, 'button_text', __('Button Text', 'videohub360-memberships'), $plan['button_text'], __('Pricing card call-to-action text.', 'videohub360-memberships')); ?>
-                    <?php $this->field($field, 'compare_at_price', __('Compare At Price', 'videohub360-memberships'), $plan['compare_at_price'], __('Optional crossed-out price text.', 'videohub360-memberships')); ?>
-                    <?php $this->field($field, 'savings_text', __('Savings Text', 'videohub360-memberships'), $plan['savings_text'], __('Optional savings badge text.', 'videohub360-memberships')); ?>
+                <div class="vh360-plan-section vh360-plan-section--primary">
+                    <h3><?php esc_html_e('Plan Basics', 'videohub360-memberships'); ?></h3>
+                    <div class="vh360-plan-grid">
+                        <?php $this->field($field, 'name', __('Plan Name', 'videohub360-memberships'), $plan['name'], __('Required. Used in admin and as the default public label.', 'videohub360-memberships'), 'text', '', 'data-vh360-plan-name'); ?>
+                        <?php $this->field($field, 'price', __('Price', 'videohub360-memberships'), $plan['price'], __('Numeric amount for paid plans. Use 0 or empty for free plans.', 'videohub360-memberships'), 'number', '0.01'); ?>
+                        <?php $this->select($field, 'billing_type', __('Billing Type', 'videohub360-memberships'), $plan['billing_type'], VH360_Membership_Plans::get_allowed_billing_types(), __('Controls whether checkout is recurring, one-time/lifetime, or free.', 'videohub360-memberships'), 'data-vh360-billing-type'); ?>
+                        <?php $this->select($field, 'billing_interval', __('Billing Interval', 'videohub360-memberships'), $plan['billing_interval'], VH360_Membership_Plans::get_allowed_billing_intervals(), __('Controls frontend tab placement.', 'videohub360-memberships'), 'data-vh360-billing-interval'); ?>
+                    </div>
+                    <div class="vh360-plan-grid vh360-plan-grid--wide">
+                        <?php $this->textarea($field, 'features', __('Features', 'videohub360-memberships'), $features, __('One plain-text feature per line.', 'videohub360-memberships'), 5); ?>
+                        <div class="vh360-plan-field vh360-plan-toggle-field"><label><input type="checkbox" name="<?php echo esc_attr($field); ?>[is_enabled]" value="1" <?php checked(!empty($plan['is_enabled'])); ?> /> <?php esc_html_e('Enabled', 'videohub360-memberships'); ?></label><p class="description"><?php esc_html_e('Only enabled, checkout-ready plans appear to visitors.', 'videohub360-memberships'); ?></p></div>
+                    </div>
                 </div>
-                <div class="vh360-plan-grid" style="margin-top:16px;">
-                    <?php $this->textarea($field, 'description', __('Description', 'videohub360-memberships'), $plan['description'], __('Short pricing card description.', 'videohub360-memberships'), 3); ?>
-                    <?php $this->textarea($field, 'features', __('Features', 'videohub360-memberships'), $features, __('One plain-text feature per line.', 'videohub360-memberships'), 5); ?>
+
+                <div class="vh360-plan-section vh360-plan-section--checkout">
+                    <h3><?php esc_html_e('Checkout Settings', 'videohub360-memberships'); ?></h3>
+                    <div class="vh360-plan-grid">
+                        <div data-vh360-show-for="recurring">
+                            <?php $this->field($field, 'stripe_price_id', __('Stripe Price ID', 'videohub360-memberships'), $plan['stripe_price_id'], __('Required for enabled recurring Stripe Checkout plans.', 'videohub360-memberships')); ?>
+                        </div>
+                        <div data-vh360-show-for="woocommerce">
+                            <?php $this->field($field, 'woocommerce_product_id', __('WooCommerce Product ID', 'videohub360-memberships'), $plan['woocommerce_product_id'], __('Required for WooCommerce checkout plans and must be a published product.', 'videohub360-memberships'), 'number'); ?>
+                        </div>
+                        <div data-vh360-show-for="woocommerce">
+                            <?php $this->select($field, 'checkout_behavior', __('Checkout Behavior', 'videohub360-memberships'), $plan['checkout_behavior'], VH360_Membership_Plans::get_allowed_checkout_behaviors(), __('Determines whether buttons use a product page or add-to-cart for WooCommerce plans.', 'videohub360-memberships'), 'data-vh360-checkout-behavior'); ?>
+                        </div>
+                    </div>
                 </div>
-                <p>
-                    <label><input type="checkbox" name="<?php echo esc_attr($field); ?>[is_enabled]" value="1" <?php checked(!empty($plan['is_enabled'])); ?> /> <?php esc_html_e('Enabled', 'videohub360-memberships'); ?></label>
-                    &nbsp; <label><input type="checkbox" name="<?php echo esc_attr($field); ?>[is_featured]" value="1" <?php checked(!empty($plan['is_featured'])); ?> /> <?php esc_html_e('Featured / Recommended', 'videohub360-memberships'); ?></label>
-                </p>
+
+                <div class="vh360-plan-section vh360-plan-section--display">
+                    <h3><?php esc_html_e('Pricing Display', 'videohub360-memberships'); ?></h3>
+                    <div class="vh360-plan-grid">
+                        <?php $this->field($field, 'label', __('Display Label', 'videohub360-memberships'), $plan['label'], __('Name shown on pricing cards and dashboards.', 'videohub360-memberships')); ?>
+                        <?php $this->field($field, 'button_text', __('Button Text', 'videohub360-memberships'), $plan['button_text'], __('Pricing card call-to-action text.', 'videohub360-memberships')); ?>
+                        <?php $this->field($field, 'compare_at_price', __('Compare At Price', 'videohub360-memberships'), $plan['compare_at_price'], __('Optional crossed-out price text.', 'videohub360-memberships')); ?>
+                        <?php $this->field($field, 'savings_text', __('Savings Text', 'videohub360-memberships'), $plan['savings_text'], __('Optional savings badge text.', 'videohub360-memberships')); ?>
+                    </div>
+                    <div class="vh360-plan-grid vh360-plan-grid--wide">
+                        <?php $this->textarea($field, 'description', __('Description', 'videohub360-memberships'), $plan['description'], __('Short pricing card description.', 'videohub360-memberships'), 3); ?>
+                        <div class="vh360-plan-field vh360-plan-toggle-field"><label><input type="checkbox" name="<?php echo esc_attr($field); ?>[is_featured]" value="1" <?php checked(!empty($plan['is_featured'])); ?> /> <?php esc_html_e('Featured / Recommended', 'videohub360-memberships'); ?></label><p class="description"><?php esc_html_e('Adds a recommendation badge to pricing displays.', 'videohub360-memberships'); ?></p></div>
+                    </div>
+                </div>
+
+                <details class="vh360-plan-section vh360-plan-advanced">
+                    <summary><?php esc_html_e('Advanced Settings', 'videohub360-memberships'); ?></summary>
+                    <div class="vh360-plan-grid">
+                        <?php $this->field($field, 'id', __('Plan Key', 'videohub360-memberships'), $plan['id'], __('Stable internal identifier. It is auto-generated from the plan name and should not be changed after memberships exist.', 'videohub360-memberships'), 'text', '', 'data-vh360-plan-key'); ?>
+                        <?php $this->field($field, 'plan_group', __('Plan Group', 'videohub360-memberships'), $plan['plan_group'], __('Connects monthly/yearly versions of the same plan for aligned pricing cards.', 'videohub360-memberships'), 'text', '', 'data-vh360-plan-group'); ?>
+                        <?php $this->field($field, 'tier_level', __('Access Tier', 'videohub360-memberships'), $plan['tier_level'], __('Higher numbers satisfy higher-tier access checks.', 'videohub360-memberships'), 'number'); ?>
+                        <?php $this->field($field, 'display_order', __('Display Order', 'videohub360-memberships'), $plan['display_order'], __('Controls admin and frontend ordering.', 'videohub360-memberships'), 'number'); ?>
+                        <?php $this->field($field, 'currency', __('Currency', 'videohub360-memberships'), $plan['currency'], __('ISO currency code used for display.', 'videohub360-memberships')); ?>
+                    </div>
+                </details>
+
                 <?php if (!$is_new) : ?><div class="vh360-plan-actions"><button class="button" type="submit" name="duplicate_plan" value="<?php echo esc_attr($key); ?>"><?php esc_html_e('Duplicate', 'videohub360-memberships'); ?></button><button class="button button-link-delete" type="submit" name="delete_plan" value="<?php echo esc_attr($key); ?>" data-vh360-delete-plan data-confirm="<?php esc_attr_e('Delete this membership plan?', 'videohub360-memberships'); ?>"><?php esc_html_e('Delete', 'videohub360-memberships'); ?></button></div><?php endif; ?>
             </div>
         </section>
         <?php
     }
 
-    private function field($field, $key, $label, $value, $description, $type = 'text', $step = '') {
-        ?><div class="vh360-plan-field"><label><?php echo esc_html($label); ?></label><input type="<?php echo esc_attr($type); ?>" <?php echo $step ? 'step="' . esc_attr($step) . '"' : ''; ?> name="<?php echo esc_attr($field); ?>[<?php echo esc_attr($key); ?>]" value="<?php echo esc_attr($value); ?>" /><p class="description"><?php echo esc_html($description); ?></p></div><?php
+    private function field($field, $key, $label, $value, $description, $type = 'text', $step = '', $attrs = '') {
+        ?><div class="vh360-plan-field"><label><?php echo esc_html($label); ?></label><input type="<?php echo esc_attr($type); ?>" <?php echo $step ? 'step="' . esc_attr($step) . '"' : ''; ?> name="<?php echo esc_attr($field); ?>[<?php echo esc_attr($key); ?>]" value="<?php echo esc_attr($value); ?>" <?php echo $attrs; ?> /><p class="description"><?php echo esc_html($description); ?></p></div><?php
     }
 
     private function textarea($field, $key, $label, $value, $description, $rows = 4) {
         ?><div class="vh360-plan-field"><label><?php echo esc_html($label); ?></label><textarea rows="<?php echo esc_attr($rows); ?>" name="<?php echo esc_attr($field); ?>[<?php echo esc_attr($key); ?>]"><?php echo esc_textarea($value); ?></textarea><p class="description"><?php echo esc_html($description); ?></p></div><?php
     }
 
-    private function select($field, $key, $label, $value, $options, $description) {
-        ?><div class="vh360-plan-field"><label><?php echo esc_html($label); ?></label><select name="<?php echo esc_attr($field); ?>[<?php echo esc_attr($key); ?>]">
+    private function select($field, $key, $label, $value, $options, $description, $attrs = '') {
+        ?><div class="vh360-plan-field"><label><?php echo esc_html($label); ?></label><select name="<?php echo esc_attr($field); ?>[<?php echo esc_attr($key); ?>]" <?php echo $attrs; ?>>
             <?php foreach ($options as $option) : ?><option value="<?php echo esc_attr($option); ?>" <?php selected($value, $option); ?>><?php echo esc_html(ucwords(str_replace('_', ' ', $option))); ?></option><?php endforeach; ?>
         </select><p class="description"><?php echo esc_html($description); ?></p></div><?php
     }

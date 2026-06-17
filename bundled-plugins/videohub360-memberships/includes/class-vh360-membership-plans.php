@@ -329,7 +329,6 @@ class VH360_Membership_Plans {
      * @return array
      */
     public static function get_plan_registry() {
-        self::maybe_seed_default_plans();
         $plans = get_option(self::PLANS_OPTION, array());
         $plans = is_array($plans) ? $plans : array();
 
@@ -347,19 +346,16 @@ class VH360_Membership_Plans {
         return apply_filters('vh360_membership_plans', $plans);
     }
 
-    /** Seed editable starter plan samples only when no central plans exist. Paid samples start disabled until checkout settings are configured. */
+    /** Create optional editable sample plans only when an administrator explicitly requests them. */
     public static function maybe_seed_default_plans() {
         $existing = get_option(self::PLANS_OPTION, null);
         if (is_array($existing) && !empty($existing)) {
             return;
         }
-        if (is_array($existing) && empty($existing)) {
-            return;
-        }
 
         $now = current_time('mysql');
         $defaults = array(
-            'free_fan' => array('name'=>'Free Fan','label'=>'Free Fan','description'=>'Start watching free member content.','plan_group'=>'fan','billing_type'=>'free','billing_interval'=>'free','price'=>'0','currency'=>'USD','features'=>array('Free community access','Public videos','Basic profile'),'tier_level'=>0,'is_featured'=>false,'is_enabled'=>true,'display_order'=>10,'button_text'=>'Join Free','checkout_behavior'=>'free'),
+            'free_fan' => array('name'=>'Free Fan','label'=>'Free Fan','description'=>'Start watching free member content.','plan_group'=>'fan','billing_type'=>'free','billing_interval'=>'free','price'=>'0','currency'=>'USD','features'=>array('Free community access','Public videos','Basic profile'),'tier_level'=>0,'is_featured'=>false,'is_enabled'=>false,'display_order'=>10,'button_text'=>'Join Free','checkout_behavior'=>'free'),
             'creator_monthly' => array('name'=>'Creator Monthly','label'=>'Creator','description'=>'Monthly access for creators.','plan_group'=>'creator','billing_type'=>'recurring','billing_interval'=>'monthly','price'=>'19','currency'=>'USD','features'=>array('Creator tools','Member content','Community access'),'tier_level'=>10,'is_featured'=>false,'is_enabled'=>false,'display_order'=>20,'button_text'=>'Start Monthly','checkout_behavior'=>'stripe'),
             'creator_yearly' => array('name'=>'Creator Yearly','label'=>'Creator','description'=>'Annual creator access.','plan_group'=>'creator','billing_type'=>'recurring','billing_interval'=>'yearly','price'=>'190','currency'=>'USD','savings_text'=>'Save 17%','features'=>array('Creator tools','Member content','Community access'),'tier_level'=>10,'is_featured'=>false,'is_enabled'=>false,'display_order'=>30,'button_text'=>'Start Yearly','checkout_behavior'=>'stripe'),
             'pro_monthly' => array('name'=>'Pro Monthly','label'=>'Pro','description'=>'Monthly access for professionals.','plan_group'=>'pro','billing_type'=>'recurring','billing_interval'=>'monthly','price'=>'39','currency'=>'USD','features'=>array('All creator features','Advanced tools','Priority support'),'tier_level'=>20,'is_featured'=>true,'is_enabled'=>false,'display_order'=>40,'button_text'=>'Go Pro','checkout_behavior'=>'stripe'),
