@@ -171,7 +171,7 @@ class VH360_Membership_Plans_Admin {
                 unset($next[$original_key]);
             }
             $next[$plan['id']] = $plan;
-            $accepted_keys[$plan['id']] = true;
+            $accepted_keys[$plan['id']] = array('duplicate_reported' => false);
         }
 
         foreach ((array) $new_plans as $raw) {
@@ -194,7 +194,7 @@ class VH360_Membership_Plans_Admin {
                 $messages = array_merge($messages, $soft_errors);
             }
             $next[$plan['id']] = $plan;
-            $accepted_keys[$plan['id']] = true;
+            $accepted_keys[$plan['id']] = array('duplicate_reported' => false);
         }
 
         VH360_Membership_Plans::save_plans($next);
@@ -238,7 +238,7 @@ class VH360_Membership_Plans_Admin {
         return $counts;
     }
 
-    private function get_identity_errors($raw_plan, $existing_plans, $next_plans, $submitted_key_counts, $accepted_keys, $original_key = '', $is_new = false) {
+    private function get_identity_errors($raw_plan, $existing_plans, $next_plans, $submitted_key_counts, &$accepted_keys, $original_key = '', $is_new = false) {
         $errors = array();
         $raw_id = isset($raw_plan['id']) ? trim((string) $raw_plan['id']) : '';
         $candidate_key = sanitize_key($raw_id);
@@ -257,7 +257,10 @@ class VH360_Membership_Plans_Admin {
         }
 
         if (!empty($submitted_key_counts[$candidate_key]) && $submitted_key_counts[$candidate_key] > 1 && !empty($accepted_keys[$candidate_key])) {
-            $errors[] = sprintf(__('The plan key `%s` was submitted more than once. The duplicate row `%s` was not saved.', 'videohub360-memberships'), $candidate_key, $row_label);
+            if (empty($accepted_keys[$candidate_key]['duplicate_reported'])) {
+                $errors[] = sprintf(__('The plan key `%s` was submitted more than once. Duplicate rows for that key were not saved.', 'videohub360-memberships'), $candidate_key);
+                $accepted_keys[$candidate_key]['duplicate_reported'] = true;
+            }
             return $errors;
         }
 
