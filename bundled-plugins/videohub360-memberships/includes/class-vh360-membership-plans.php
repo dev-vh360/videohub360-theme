@@ -495,10 +495,9 @@ class VH360_Membership_Plans {
         if (!is_array($features)) {
             $features = preg_split('/\r\n|\r|\n/', (string) $features);
         }
-        $access_features_configured = array_key_exists('access_features', $plan);
-        if (array_key_exists('access_features_configured', $plan)) {
-            $access_features_configured = (bool) $plan['access_features_configured'] || $access_features_configured;
-        }
+        $access_features_configured = array_key_exists('access_features_configured', $plan)
+            ? (bool) $plan['access_features_configured']
+            : array_key_exists('access_features', $plan);
         $access_features = $access_features_configured
             ? self::sanitize_access_features(isset($plan['access_features']) ? $plan['access_features'] : array())
             : array();
