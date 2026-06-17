@@ -353,7 +353,10 @@ class VH360_Membership_Plans_Admin {
                 <div class="vh360-plan-list" data-vh360-plan-list>
                     <?php foreach ($plans as $key => $plan) : $this->render_plan_card($key, $plan); endforeach; ?>
                 </div>
-                <?php submit_button(__('Save Membership Plans', 'videohub360-memberships')); ?>
+                <div class="vh360-membership-plan-actions">
+                    <button type="button" class="button vh360-add-plan-button" data-vh360-add-plan><?php esc_html_e('+ Add New Plan', 'videohub360-memberships'); ?></button>
+                    <button type="submit" class="button button-primary"><?php esc_html_e('Save Membership Plans', 'videohub360-memberships'); ?></button>
+                </div>
             </form>
             <template id="vh360-new-plan-template">
                 <?php $this->render_plan_card('__NEW_PLAN_INDEX__', $this->get_empty_plan(), true); ?>

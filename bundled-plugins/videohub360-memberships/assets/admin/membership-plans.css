@@ -169,6 +169,15 @@
     padding: 14px;
 }
 
+
+.vh360-membership-plan-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 18px 0 0;
+}
+
 .vh360-membership-plans-admin .vh360-plan-actions {
     display: flex;
     flex-wrap: wrap;
