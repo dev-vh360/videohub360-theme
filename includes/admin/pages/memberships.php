@@ -737,11 +737,10 @@ $plan_config = $plans;
     
     <!-- Membership Plans Tab -->
     <div id="tab-plan-mapping" class="vh360-tab-content" style="display:none;">
-        <h2><?php esc_html_e('Membership Plans', 'videohub360-theme'); ?></h2>
-        <p><?php esc_html_e('Membership plans are managed by the VideoHub360 Memberships plugin so the plan registry, pricing display, checkout routing, and access tiers use one source of truth.', 'videohub360-theme'); ?></p>
         <?php if (class_exists('VH360_Membership_Plans_Admin')) : ?>
-            <p><a class="button button-primary" href="<?php echo esc_url(admin_url('tools.php?page=vh360-membership-plans')); ?>"><?php esc_html_e('Open Membership Plans Manager', 'videohub360-theme'); ?></a></p>
+            <?php VH360_Membership_Plans_Admin::get_instance()->render_manager(false); ?>
         <?php else : ?>
+            <h2><?php esc_html_e('Membership Plans', 'videohub360-theme'); ?></h2>
             <div class="notice notice-warning inline"><p><?php esc_html_e('Activate the VideoHub360 Memberships plugin to manage membership plans.', 'videohub360-theme'); ?></p></div>
         <?php endif; ?>
         <p><code>[vh360_pricing_toggle show_lifetime="true" show_free="true"]</code></p>
@@ -839,10 +838,11 @@ jQuery(document).ready(function($) {
         window.location.hash = tab;
     });
     
-    // Restore tab from hash
-    var hash = window.location.hash.replace('#', '');
-    if (hash && $('[data-tab="' + hash + '"]').length) {
-        $('[data-tab="' + hash + '"]').trigger('click');
+    // Restore tab from query string or hash.
+    var params = new URLSearchParams(window.location.search);
+    var requestedTab = params.get('tab') || window.location.hash.replace('#', '');
+    if (requestedTab && $('[data-tab="' + requestedTab + '"]').length) {
+        $('[data-tab="' + requestedTab + '"]').trigger('click');
     }
 });
 </script>

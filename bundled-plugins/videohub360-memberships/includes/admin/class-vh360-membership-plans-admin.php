@@ -20,24 +20,32 @@ class VH360_Membership_Plans_Admin {
     }
 
     private function __construct() {
-        add_action('admin_menu', array($this, 'register_page'));
+        add_action('admin_init', array($this, 'redirect_tools_page'));
         add_action('admin_post_vh360_save_membership_plans', array($this, 'handle_save'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
     }
 
-    public function register_page() {
-        add_submenu_page(
-            'tools.php',
-            __('Membership Plans', 'videohub360-memberships'),
-            __('Membership Plans', 'videohub360-memberships'),
-            self::CAPABILITY,
-            'vh360-membership-plans',
-            array($this, 'render_page')
-        );
+    public static function get_admin_url() {
+        return add_query_arg(array(
+            'page' => 'vh360-theme-memberships',
+            'tab'  => 'plan-mapping',
+        ), admin_url('admin.php'));
+    }
+
+    public function redirect_tools_page() {
+        global $pagenow;
+        if ('tools.php' !== $pagenow || !isset($_GET['page']) || 'vh360-membership-plans' !== sanitize_key(wp_unslash($_GET['page']))) {
+            return;
+        }
+        if (!current_user_can(self::CAPABILITY)) {
+            wp_die(esc_html__('You do not have permission to manage membership plans.', 'videohub360-memberships'));
+        }
+        wp_safe_redirect(self::get_admin_url());
+        exit;
     }
 
     public function enqueue_assets($hook) {
-        if (false === strpos((string) $hook, 'vh360-membership-plans')) {
+        if (false === strpos((string) $hook, 'vh360-theme-memberships')) {
             return;
         }
         wp_enqueue_style('vh360-membership-plans-admin', VH360_MEMBERSHIPS_URL . 'assets/admin/membership-plans.css', array(), VH360_MEMBERSHIPS_VERSION);
@@ -144,7 +152,7 @@ class VH360_Membership_Plans_Admin {
             'messages' => $messages,
         ), 60);
 
-        wp_safe_redirect(add_query_arg('page', 'vh360-membership-plans', admin_url('tools.php')));
+        wp_safe_redirect(self::get_admin_url());
         exit;
     }
 
@@ -264,6 +272,10 @@ class VH360_Membership_Plans_Admin {
     }
 
     public function render_page() {
+        $this->render_manager(true);
+    }
+
+    public function render_manager($wrap = false) {
         if (!current_user_can(self::CAPABILITY)) {
             return;
         }
@@ -271,7 +283,8 @@ class VH360_Membership_Plans_Admin {
         $notice = get_transient('vh360_membership_plans_admin_notice');
         delete_transient('vh360_membership_plans_admin_notice');
         ?>
-        <div class="wrap vh360-membership-plans-admin">
+        <?php if ($wrap) : ?><div class="wrap"><?php endif; ?>
+        <div class="vh360-membership-plans-admin">
             <h1><?php esc_html_e('Membership Plans', 'videohub360-memberships'); ?></h1>
             <p><?php esc_html_e('Manage every membership plan from one central registry. These plans power pricing displays, checkout routing, product grants, and access tiers.', 'videohub360-memberships'); ?></p>
             <?php if ($notice && !empty($notice['messages'])) : ?>
@@ -285,6 +298,7 @@ class VH360_Membership_Plans_Admin {
                 <?php submit_button(__('Save Membership Plans', 'videohub360-memberships')); ?>
             </form>
         </div>
+        <?php if ($wrap) : ?></div><?php endif; ?>
         <?php
     }
 
