@@ -492,6 +492,23 @@ class VH360_Theme_Admin {
                 'subscription_card_button_label' => '',
                 'subscription_card_button_bg_color' => '',
                 'subscription_card_button_text_color' => '',
+                'pricing_card_background_color' => '#ffffff',
+                'pricing_card_border_color' => '#e5e7eb',
+                'pricing_card_text_color' => '#4b5563',
+                'pricing_card_title_color' => '#111827',
+                'pricing_card_price_color' => '#111827',
+                'pricing_card_description_color' => '#6b7280',
+                'pricing_card_feature_text_color' => '#4b5563',
+                'pricing_card_button_background_color' => '#2563eb',
+                'pricing_card_button_text_color' => '#ffffff',
+                'pricing_card_button_hover_background_color' => '#1d4ed8',
+                'pricing_card_featured_border_color' => '#2563eb',
+                'pricing_card_featured_badge_background_color' => '#dbeafe',
+                'pricing_card_featured_badge_text_color' => '#1d4ed8',
+                'pricing_toggle_active_background_color' => '#2563eb',
+                'pricing_toggle_active_text_color' => '#ffffff',
+                'pricing_toggle_inactive_background_color' => '#ffffff',
+                'pricing_toggle_inactive_text_color' => '#1f2937',
             ),
         ));
         
@@ -1801,7 +1818,7 @@ class VH360_Theme_Admin {
         
         return $output;
     }
-    
+
     /**
      * Sanitize membership settings
      */
@@ -1809,49 +1826,53 @@ class VH360_Theme_Admin {
         if (!is_array($input)) {
             $input = array();
         }
-        
-        $output = array();
-        
-        // Sanitize enable_memberships checkbox
-        $output['enable_memberships'] = !empty($input['enable_memberships']) ? 1 : 0;
-        
-        // Sanitize pricing_page_url
-        $output['pricing_page_url'] = !empty($input['pricing_page_url']) ? esc_url_raw($input['pricing_page_url']) : '';
-        $output['support_url'] = !empty($input['support_url']) ? esc_url_raw($input['support_url']) : '';
-        $output['contact_url'] = !empty($input['contact_url']) ? esc_url_raw($input['contact_url']) : '';
 
-        // Sanitize course purchase destination.
-        $course_purchase_destination = isset($input['course_purchase_destination']) ? sanitize_key($input['course_purchase_destination']) : 'product_page';
-        $output['course_purchase_destination'] = in_array($course_purchase_destination, array('product_page', 'add_to_cart'), true)
-            ? $course_purchase_destination
-            : 'product_page';
-        
-        // Sanitize login_required checkbox
-        $output['login_required'] = !empty($input['login_required']) ? 1 : 0;
-        
-        // Sanitize locked_message
-        $output['locked_message'] = !empty($input['locked_message']) ? wp_kses_post($input['locked_message']) : '';
-        
-        // Sanitize reminder_days
-        $output['reminder_days'] = isset($input['reminder_days']) ? absint($input['reminder_days']) : 7;
-        
-        // Sanitize grace_period_days
-        $output['grace_period_days'] = isset($input['grace_period_days']) ? absint($input['grace_period_days']) : 0;
-        
-        // Sanitize feature gating toggles
-        $output['gate_live_rooms'] = !empty($input['gate_live_rooms']) ? 1 : 0;
-        $output['gate_create_videos'] = !empty($input['gate_create_videos']) ? 1 : 0;
-        $output['gate_create_posts'] = !empty($input['gate_create_posts']) ? 1 : 0;
-        $output['gate_create_events'] = !empty($input['gate_create_events']) ? 1 : 0;
-        $output['gate_create_bulletins'] = !empty($input['gate_create_bulletins']) ? 1 : 0;
-        $output['gate_create_galleries'] = !empty($input['gate_create_galleries']) ? 1 : 0;
-        $output['gate_direct_messages'] = !empty($input['gate_direct_messages']) ? 1 : 0;
-        $output['gate_activity_feed'] = !empty($input['gate_activity_feed']) ? 1 : 0;
-        $output['gate_members_directory'] = !empty($input['gate_members_directory']) ? 1 : 0;
-        $output['gate_appointments'] = !empty($input['gate_appointments']) ? 1 : 0;
-        $output['gate_push_notifications'] = !empty($input['gate_push_notifications']) ? 1 : 0;
-        
-        // Sanitize subscription card styling
+        $output = get_option('vh360_membership_options', array());
+        $output = is_array($output) ? $output : array();
+        $section = isset($input['_settings_section']) ? sanitize_key($input['_settings_section']) : 'general';
+
+        if ('general' === $section) {
+            // Sanitize enable_memberships checkbox
+            $output['enable_memberships'] = !empty($input['enable_memberships']) ? 1 : 0;
+
+            // Sanitize pricing_page_url
+            $output['pricing_page_url'] = !empty($input['pricing_page_url']) ? esc_url_raw($input['pricing_page_url']) : '';
+            $output['support_url'] = !empty($input['support_url']) ? esc_url_raw($input['support_url']) : '';
+            $output['contact_url'] = !empty($input['contact_url']) ? esc_url_raw($input['contact_url']) : '';
+
+            // Sanitize course purchase destination.
+            $course_purchase_destination = isset($input['course_purchase_destination']) ? sanitize_key($input['course_purchase_destination']) : 'product_page';
+            $output['course_purchase_destination'] = in_array($course_purchase_destination, array('product_page', 'add_to_cart'), true)
+                ? $course_purchase_destination
+                : 'product_page';
+
+            // Sanitize login_required checkbox
+            $output['login_required'] = !empty($input['login_required']) ? 1 : 0;
+
+            // Sanitize locked_message
+            $output['locked_message'] = !empty($input['locked_message']) ? wp_kses_post($input['locked_message']) : '';
+
+            // Sanitize reminder_days
+            $output['reminder_days'] = isset($input['reminder_days']) ? absint($input['reminder_days']) : 7;
+
+            // Sanitize grace_period_days
+            $output['grace_period_days'] = isset($input['grace_period_days']) ? absint($input['grace_period_days']) : 0;
+
+            // Sanitize feature gating toggles
+            $output['gate_live_rooms'] = !empty($input['gate_live_rooms']) ? 1 : 0;
+            $output['gate_create_videos'] = !empty($input['gate_create_videos']) ? 1 : 0;
+            $output['gate_create_posts'] = !empty($input['gate_create_posts']) ? 1 : 0;
+            $output['gate_create_events'] = !empty($input['gate_create_events']) ? 1 : 0;
+            $output['gate_create_bulletins'] = !empty($input['gate_create_bulletins']) ? 1 : 0;
+            $output['gate_create_galleries'] = !empty($input['gate_create_galleries']) ? 1 : 0;
+            $output['gate_direct_messages'] = !empty($input['gate_direct_messages']) ? 1 : 0;
+            $output['gate_activity_feed'] = !empty($input['gate_activity_feed']) ? 1 : 0;
+            $output['gate_members_directory'] = !empty($input['gate_members_directory']) ? 1 : 0;
+            $output['gate_appointments'] = !empty($input['gate_appointments']) ? 1 : 0;
+            $output['gate_push_notifications'] = !empty($input['gate_push_notifications']) ? 1 : 0;
+        }
+
+        // Sanitize dashboard subscription card and pricing plan card styling.
         $color_fields = array(
             'subscription_card_bg_color',
             'subscription_card_border_color',
@@ -1860,11 +1881,32 @@ class VH360_Theme_Admin {
             'subscription_card_text_color',
             'subscription_card_button_bg_color',
             'subscription_card_button_text_color',
+            'pricing_card_background_color',
+            'pricing_card_border_color',
+            'pricing_card_text_color',
+            'pricing_card_title_color',
+            'pricing_card_price_color',
+            'pricing_card_description_color',
+            'pricing_card_feature_text_color',
+            'pricing_card_button_background_color',
+            'pricing_card_button_text_color',
+            'pricing_card_button_hover_background_color',
+            'pricing_card_featured_border_color',
+            'pricing_card_featured_badge_background_color',
+            'pricing_card_featured_badge_text_color',
+            'pricing_toggle_active_background_color',
+            'pricing_toggle_active_text_color',
+            'pricing_toggle_inactive_background_color',
+            'pricing_toggle_inactive_text_color',
         );
         foreach ($color_fields as $field) {
-            $output[$field] = isset($input[$field]) ? sanitize_text_field($input[$field]) : '';
+            if (array_key_exists($field, $input)) {
+                $output[$field] = sanitize_hex_color($input[$field]) ?: '';
+            }
         }
-        $output['subscription_card_button_label'] = isset($input['subscription_card_button_label']) ? sanitize_text_field($input['subscription_card_button_label']) : '';
+        if (array_key_exists('subscription_card_button_label', $input)) {
+            $output['subscription_card_button_label'] = sanitize_text_field($input['subscription_card_button_label']);
+        }
         
         return $output;
     }

@@ -122,8 +122,10 @@ class VH360_Membership_Plans {
             }
         }
 
+        $style_vars = self::get_pricing_style_attribute();
+
         ob_start(); ?>
-        <section class="vh360-pricing-toggle" data-columns="<?php echo esc_attr(max(1, absint($atts['columns']))); ?>">
+        <section class="vh360-pricing-toggle" data-columns="<?php echo esc_attr(max(1, absint($atts['columns']))); ?>" style="<?php echo esc_attr($style_vars); ?>">
             <div class="vh360-pricing-tabs" role="tablist" aria-label="<?php esc_attr_e('Membership billing intervals', 'videohub360-memberships'); ?>">
                 <?php $first = true; foreach ($available_intervals as $interval => $label) : ?>
                     <button type="button" class="vh360-pricing-tab <?php echo $first ? 'is-active' : ''; ?>" role="tab" tabindex="<?php echo $first ? '0' : '-1'; ?>" aria-selected="<?php echo $first ? 'true' : 'false'; ?>" aria-controls="vh360-pricing-<?php echo esc_attr($interval); ?>" data-vh360-pricing-tab><?php echo esc_html($label); ?></button>
@@ -140,6 +142,62 @@ class VH360_Membership_Plans {
         <?php return ob_get_clean();
     }
 
+    public static function get_pricing_style_defaults() {
+        return array(
+            'pricing_card_background_color' => '#ffffff',
+            'pricing_card_border_color' => '#e5e7eb',
+            'pricing_card_text_color' => '#4b5563',
+            'pricing_card_title_color' => '#111827',
+            'pricing_card_price_color' => '#111827',
+            'pricing_card_description_color' => '#6b7280',
+            'pricing_card_feature_text_color' => '#4b5563',
+            'pricing_card_button_background_color' => '#2563eb',
+            'pricing_card_button_text_color' => '#ffffff',
+            'pricing_card_button_hover_background_color' => '#1d4ed8',
+            'pricing_card_featured_border_color' => '#2563eb',
+            'pricing_card_featured_badge_background_color' => '#dbeafe',
+            'pricing_card_featured_badge_text_color' => '#1d4ed8',
+            'pricing_toggle_active_background_color' => '#2563eb',
+            'pricing_toggle_active_text_color' => '#ffffff',
+            'pricing_toggle_inactive_background_color' => '#ffffff',
+            'pricing_toggle_inactive_text_color' => '#1f2937',
+        );
+    }
+
+    private static function get_pricing_style_attribute() {
+        $options = get_option('vh360_membership_options', array());
+        $options = is_array($options) ? $options : array();
+        $map = array(
+            'pricing_card_background_color' => '--vh360-pricing-card-bg',
+            'pricing_card_border_color' => '--vh360-pricing-card-border',
+            'pricing_card_text_color' => '--vh360-pricing-text-color',
+            'pricing_card_title_color' => '--vh360-pricing-title-color',
+            'pricing_card_price_color' => '--vh360-pricing-price-color',
+            'pricing_card_description_color' => '--vh360-pricing-description-color',
+            'pricing_card_feature_text_color' => '--vh360-pricing-feature-color',
+            'pricing_card_button_background_color' => '--vh360-pricing-button-bg',
+            'pricing_card_button_text_color' => '--vh360-pricing-button-color',
+            'pricing_card_button_hover_background_color' => '--vh360-pricing-button-hover-bg',
+            'pricing_card_featured_border_color' => '--vh360-pricing-featured-border',
+            'pricing_card_featured_badge_background_color' => '--vh360-pricing-badge-bg',
+            'pricing_card_featured_badge_text_color' => '--vh360-pricing-badge-color',
+            'pricing_toggle_active_background_color' => '--vh360-pricing-tab-active-bg',
+            'pricing_toggle_active_text_color' => '--vh360-pricing-tab-active-color',
+            'pricing_toggle_inactive_background_color' => '--vh360-pricing-tab-bg',
+            'pricing_toggle_inactive_text_color' => '--vh360-pricing-tab-color',
+        );
+        $defaults = self::get_pricing_style_defaults();
+        $styles = array();
+        foreach ($map as $option_key => $css_var) {
+            $value = !empty($options[$option_key]) ? sanitize_hex_color($options[$option_key]) : '';
+            if (!$value) {
+                $value = $defaults[$option_key];
+            }
+            $styles[] = $css_var . ': ' . $value;
+        }
+        return implode('; ', $styles) . ';';
+    }
+
     private function render_pricing_card($plan, $button_style, $admin_view = false) {
         $url = self::get_plan_button_url($plan['id']);
         if (!$url && !$admin_view) {
@@ -148,7 +206,7 @@ class VH360_Membership_Plans {
         ob_start(); ?>
         <article class="vh360-pricing-card <?php echo !empty($plan['is_featured']) ? 'is-featured' : ''; ?>">
             <?php if (!empty($plan['is_featured'])) : ?><div class="vh360-pricing-badge"><?php esc_html_e('Recommended', 'videohub360-memberships'); ?></div><?php endif; ?>
-            <h3><?php echo esc_html($plan['label']); ?></h3>
+            <h3 class="vh360-pricing-card-title"><?php echo esc_html($plan['label']); ?></h3>
             <?php if ($plan['description']) : ?><p class="vh360-pricing-description"><?php echo esc_html($plan['description']); ?></p><?php endif; ?>
             <div class="vh360-pricing-price"><?php echo esc_html($plan['display_price']); ?></div>
             <?php if ($plan['compare_at_price']) : ?><div class="vh360-pricing-compare"><?php echo esc_html($plan['compare_at_price']); ?></div><?php endif; ?>
