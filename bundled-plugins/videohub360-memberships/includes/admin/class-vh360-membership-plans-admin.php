@@ -35,7 +35,12 @@ class VH360_Membership_Plans_Admin {
 
     public function redirect_tools_page() {
         global $pagenow;
-        if ('tools.php' !== $pagenow || !isset($_GET['page']) || 'vh360-membership-plans' !== sanitize_key(wp_unslash($_GET['page']))) {
+        $page = isset($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : '';
+        $tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : '';
+        $is_old_tools_page = 'tools.php' === $pagenow && 'vh360-membership-plans' === $page;
+        $is_old_tab_slug = 'admin.php' === $pagenow && 'vh360-theme-memberships' === $page && 'plan-mapping' === $tab;
+
+        if (!$is_old_tools_page && !$is_old_tab_slug) {
             return;
         }
         if (!current_user_can(self::CAPABILITY)) {
@@ -46,7 +51,10 @@ class VH360_Membership_Plans_Admin {
     }
 
     public function enqueue_assets($hook) {
-        if (false === strpos((string) $hook, 'vh360-theme-memberships')) {
+        $is_paid_memberships_page = false !== strpos((string) $hook, 'vh360-theme-memberships');
+        $current_tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : '';
+
+        if (!$is_paid_memberships_page || 'membership-plans' !== $current_tab) {
             return;
         }
         wp_enqueue_style('vh360-membership-plans-admin', VH360_MEMBERSHIPS_URL . 'assets/admin/membership-plans.css', array(), VH360_MEMBERSHIPS_VERSION);

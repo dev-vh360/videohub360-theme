@@ -81,7 +81,7 @@ $plan_config = $plans;
     <h2 class="nav-tab-wrapper">
         <a href="#general" class="nav-tab nav-tab-active" data-tab="general"><?php esc_html_e('General', 'videohub360-theme'); ?></a>
         <a href="#stripe" class="nav-tab" data-tab="stripe"><?php esc_html_e('Stripe / Recurring', 'videohub360-theme'); ?></a>
-        <a href="#membership-plans" class="nav-tab" data-tab="membership-plans"><?php esc_html_e('Membership Plans', 'videohub360-theme'); ?></a>
+        <a href="<?php echo esc_url(admin_url('admin.php?page=vh360-theme-memberships&tab=membership-plans')); ?>" class="nav-tab" data-tab="membership-plans"><?php esc_html_e('Membership Plans', 'videohub360-theme'); ?></a>
         <a href="#stats" class="nav-tab" data-tab="stats"><?php esc_html_e('Statistics', 'videohub360-theme'); ?></a>
     </h2>
     
@@ -825,6 +825,11 @@ jQuery(document).ready(function($) {
     $('.nav-tab').on('click', function(e) {
         e.preventDefault();
         var tab = $(this).data('tab');
+        var params = new URLSearchParams(window.location.search);
+        if (tab === 'membership-plans' && params.get('tab') !== 'membership-plans') {
+            window.location.href = $(this).attr('href');
+            return;
+        }
         
         // Update active tab
         $('.nav-tab').removeClass('nav-tab-active');
@@ -842,11 +847,14 @@ jQuery(document).ready(function($) {
     var params = new URLSearchParams(window.location.search);
     var requestedTab = params.get('tab') || window.location.hash.replace('#', '');
     if (requestedTab === 'plan-mapping') {
-        requestedTab = 'membership-plans';
-        if (window.history && window.history.replaceState && params.get('tab') === 'plan-mapping') {
-            params.set('tab', requestedTab);
-            window.history.replaceState(null, '', window.location.pathname + '?' + params.toString() + window.location.hash);
-        }
+        params.set('tab', 'membership-plans');
+        window.location.href = window.location.pathname + '?' + params.toString();
+        return;
+    }
+    if (requestedTab === 'membership-plans' && params.get('tab') !== 'membership-plans') {
+        params.set('tab', 'membership-plans');
+        window.location.href = window.location.pathname + '?' + params.toString();
+        return;
     }
     if (requestedTab && $('[data-tab="' + requestedTab + '"]').length) {
         $('[data-tab="' + requestedTab + '"]').trigger('click');
