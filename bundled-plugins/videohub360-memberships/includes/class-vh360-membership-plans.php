@@ -482,10 +482,17 @@ class VH360_Membership_Plans {
         // Product-side meta remains a fallback only; central Membership Plans mapping has priority.
         if (empty($plan_key)) {
             $plan_key = sanitize_key(get_post_meta($product_id, '_vh360_membership_plan', true));
-            $registry_plan = $plan_key ? self::get_plan($plan_key) : false;
+            if (empty($plan_key)) {
+                return false;
+            }
+
+            $registry_plan = self::get_plan($plan_key);
+            if (!$registry_plan) {
+                return false;
+            }
         }
 
-        if (empty($plan_key)) {
+        if (empty($plan_key) || !$registry_plan) {
             return false;
         }
 
@@ -562,9 +569,13 @@ class VH360_Membership_Plans {
         
         $plans = self::get_plan_registry();
         $registry_plan_for_product = self::get_plan_by_product_id($post->ID);
+        $stale_product_plan_key = ($plan_key && !$registry_plan_for_product && empty($plans[$plan_key])) ? sanitize_key($plan_key) : '';
         
         ?>
         <div class="vh360-membership-mapping">
+            <?php if ($stale_product_plan_key) : ?>
+                <p class="description" style="color:#b32d2e;"><strong><?php esc_html_e('Outdated mapping:', 'videohub360-memberships'); ?></strong> <?php esc_html_e('This product has a fallback membership plan mapping that no longer exists. Manage product-plan assignments from VH360 Theme → Paid Memberships → Membership Plans.', 'videohub360-memberships'); ?></p>
+            <?php endif; ?>
             <?php if ($registry_plan_for_product) : ?>
                 <p class="description"><strong><?php esc_html_e('Plan Manager:', 'videohub360-memberships'); ?></strong> <?php printf(esc_html__('This product is assigned to %s in the Membership Plans Manager. That central assignment has priority over the fallback product mapping below.', 'videohub360-memberships'), esc_html($registry_plan_for_product['label'])); ?></p>
                 <?php if (class_exists('VH360_Membership_Plans_Admin')) : ?>
