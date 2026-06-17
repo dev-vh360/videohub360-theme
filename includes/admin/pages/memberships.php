@@ -11,12 +11,8 @@ if (!defined('ABSPATH')) {
 }
 
 // Get current options.
-$dashboard_style_defaults = class_exists('VH360_Membership_Subscription_Management')
-    ? VH360_Membership_Subscription_Management::get_dashboard_card_style_defaults()
-    : VH360_Theme_Admin::get_membership_dashboard_card_style_fallbacks();
-$pricing_style_defaults = class_exists('VH360_Membership_Plans')
-    ? VH360_Membership_Plans::get_pricing_style_defaults()
-    : VH360_Theme_Admin::get_membership_pricing_card_style_fallbacks();
+$dashboard_style_defaults = VH360_Theme_Admin::get_membership_dashboard_card_style_defaults();
+$pricing_style_defaults = VH360_Theme_Admin::get_membership_pricing_card_style_defaults();
 $membership_option_defaults = array_merge(array(
     'enable_memberships' => true,
     'pricing_page_url' => '',
@@ -59,7 +55,7 @@ $stripe_settings = get_option('vh360_stripe_settings', array(
 ));
 
 // Membership plans are managed by the VideoHub360 Memberships plugin.
-$plans = class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan_registry() : array();
+$plans = (class_exists('VH360_Membership_Plans') && method_exists('VH360_Membership_Plans', 'get_plan_registry')) ? VH360_Membership_Plans::get_plan_registry() : array();
 $plan_config = $plans;
 
 ?>
@@ -652,8 +648,13 @@ $plan_config = $plans;
     
     <!-- Membership Plans Tab -->
     <div id="tab-membership-plans" class="vh360-tab-content" style="display:none;">
-        <?php if (class_exists('VH360_Membership_Plans_Admin')) : ?>
-            <?php VH360_Membership_Plans_Admin::get_instance()->render_manager(false); ?>
+        <?php
+        $vh360_plans_admin = (class_exists('VH360_Membership_Plans_Admin') && method_exists('VH360_Membership_Plans_Admin', 'get_instance'))
+            ? VH360_Membership_Plans_Admin::get_instance()
+            : null;
+        ?>
+        <?php if (is_object($vh360_plans_admin) && method_exists($vh360_plans_admin, 'render_manager')) : ?>
+            <?php $vh360_plans_admin->render_manager(false); ?>
         <?php else : ?>
             <h2><?php esc_html_e('Membership Plans', 'videohub360-theme'); ?></h2>
             <div class="notice notice-warning inline"><p><?php esc_html_e('Activate the VideoHub360 Memberships plugin to manage membership plans.', 'videohub360-theme'); ?></p></div>
@@ -666,7 +667,7 @@ $plan_config = $plans;
         <h2><?php esc_html_e('Membership Statistics', 'videohub360-theme'); ?></h2>
         
         <?php
-        if (class_exists('VH360_Membership_Database')) {
+        if (class_exists('VH360_Membership_Database') && method_exists('VH360_Membership_Database', 'get_memberships_table')) {
             global $wpdb;
             $table = VH360_Membership_Database::get_memberships_table();
             

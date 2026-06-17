@@ -83,6 +83,39 @@ class VH360_Theme_Admin {
         ), '');
     }
 
+
+    /**
+     * Get dashboard subscription card style defaults without assuming plugin helper availability.
+     *
+     * @return array
+     */
+    public static function get_membership_dashboard_card_style_defaults() {
+        if (
+            class_exists('VH360_Membership_Subscription_Management')
+            && method_exists('VH360_Membership_Subscription_Management', 'get_dashboard_card_style_defaults')
+        ) {
+            return VH360_Membership_Subscription_Management::get_dashboard_card_style_defaults();
+        }
+
+        return self::get_membership_dashboard_card_style_fallbacks();
+    }
+
+    /**
+     * Get pricing plan card style defaults without assuming plugin helper availability.
+     *
+     * @return array
+     */
+    public static function get_membership_pricing_card_style_defaults() {
+        if (
+            class_exists('VH360_Membership_Plans')
+            && method_exists('VH360_Membership_Plans', 'get_pricing_style_defaults')
+        ) {
+            return VH360_Membership_Plans::get_pricing_style_defaults();
+        }
+
+        return self::get_membership_pricing_card_style_fallbacks();
+    }
+
     /**
      * Constructor
      */
@@ -507,12 +540,8 @@ class VH360_Theme_Admin {
         ));
         
         // Membership settings
-        $dashboard_card_style_defaults = class_exists('VH360_Membership_Subscription_Management')
-            ? VH360_Membership_Subscription_Management::get_dashboard_card_style_defaults()
-            : self::get_membership_dashboard_card_style_fallbacks();
-        $pricing_card_style_defaults = class_exists('VH360_Membership_Plans')
-            ? VH360_Membership_Plans::get_pricing_style_defaults()
-            : self::get_membership_pricing_card_style_fallbacks();
+        $dashboard_card_style_defaults = self::get_membership_dashboard_card_style_defaults();
+        $pricing_card_style_defaults = self::get_membership_pricing_card_style_defaults();
         register_setting('vh360_membership_settings', 'vh360_membership_options', array(
             'type' => 'array',
             'sanitize_callback' => array($this, 'sanitize_membership_settings'),
@@ -1903,8 +1932,8 @@ class VH360_Theme_Admin {
         }
 
         // Sanitize dashboard subscription card and pricing plan card styling.
-        $dashboard_card_style_defaults = class_exists('VH360_Membership_Subscription_Management') ? VH360_Membership_Subscription_Management::get_dashboard_card_style_defaults() : self::get_membership_dashboard_card_style_fallbacks();
-        $pricing_card_style_defaults = class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_pricing_style_defaults() : self::get_membership_pricing_card_style_fallbacks();
+        $dashboard_card_style_defaults = self::get_membership_dashboard_card_style_defaults();
+        $pricing_card_style_defaults = self::get_membership_pricing_card_style_defaults();
         $color_fields = array_merge(array_keys($dashboard_card_style_defaults), array_keys($pricing_card_style_defaults));
         foreach ($color_fields as $field) {
             if (array_key_exists($field, $input)) {
