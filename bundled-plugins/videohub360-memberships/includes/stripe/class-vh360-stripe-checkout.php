@@ -58,21 +58,36 @@ class VH360_Stripe_Checkout {
             wp_send_json_error(array('message' => __('You must be logged in to subscribe.', 'videohub360-memberships')));
         }
         
-        $plan_key = isset($_POST['plan_key']) ? sanitize_text_field($_POST['plan_key']) : '';
+        $plan_key = isset($_POST['plan_key']) ? sanitize_key(wp_unslash($_POST['plan_key'])) : '';
         
         if (empty($plan_key)) {
             wp_send_json_error(array('message' => __('No plan selected.', 'videohub360-memberships')));
         }
         
-        // Get plan billing config
-        $billing_config = VH360_Membership_Plans::get_plan_billing_config($plan_key);
-        
-        if (!$billing_config || $billing_config['billing_mode'] !== 'recurring' || empty($billing_config['stripe_price_id'])) {
-            wp_send_json_error(array('message' => __('This plan is not configured for recurring billing.', 'videohub360-memberships')));
+        $plan = class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan($plan_key) : false;
+        if (!$plan || empty($plan['is_enabled'])) {
+            wp_send_json_error(array('message' => __('This membership plan is currently unavailable.', 'videohub360-memberships')));
         }
-        
+
+        $billing_type = isset($plan['billing_type']) ? $plan['billing_type'] : (isset($plan['billing_mode']) ? $plan['billing_mode'] : '');
+        $checkout_behavior = isset($plan['checkout_behavior']) ? $plan['checkout_behavior'] : 'stripe';
+        if ('recurring' !== $billing_type || 'stripe' !== $checkout_behavior) {
+            wp_send_json_error(array('message' => __('This membership plan is not eligible for recurring checkout.', 'videohub360-memberships')));
+        }
+
+        if (empty($plan['stripe_price_id'])) {
+            wp_send_json_error(array('message' => __('This membership plan is not configured for checkout.', 'videohub360-memberships')));
+        }
+
+        if (function_exists('vh360_membership_is_valid_recurring_signup_plan') && !vh360_membership_is_valid_recurring_signup_plan($plan_key, true)) {
+            wp_send_json_error(array('message' => __('This membership plan is currently unavailable.', 'videohub360-memberships')));
+        }
+
+        // Get plan billing config from the central registry after validating checkout eligibility.
+        $billing_config = VH360_Membership_Plans::get_plan_billing_config($plan_key);
+
         $stripe = VH360_Stripe_Bootstrap::get_instance();
-        
+
         if (!$stripe->is_configured()) {
             wp_send_json_error(array('message' => __('Stripe is not configured.', 'videohub360-memberships')));
         }

@@ -476,25 +476,17 @@ class VH360_Membership_Plans {
      * @return array|false Membership mapping data or false if not set
      */
     public static function get_product_membership_mapping($product_id) {
-        $plan_key = get_post_meta($product_id, '_vh360_membership_plan', true);
-        $registry_plan = false;
+        $registry_plan = self::get_plan_by_product_id($product_id);
+        $plan_key = $registry_plan ? $registry_plan['id'] : '';
 
+        // Product-side meta remains a fallback only; central Membership Plans mapping has priority.
         if (empty($plan_key)) {
-            foreach (self::get_plan_registry() as $key => $plan) {
-                if (!empty($plan['woocommerce_product_id']) && absint($plan['woocommerce_product_id']) === absint($product_id)) {
-                    $plan_key = $key;
-                    $registry_plan = $plan;
-                    break;
-                }
-            }
+            $plan_key = sanitize_key(get_post_meta($product_id, '_vh360_membership_plan', true));
+            $registry_plan = $plan_key ? self::get_plan($plan_key) : false;
         }
 
         if (empty($plan_key)) {
             return false;
-        }
-
-        if (!$registry_plan) {
-            $registry_plan = self::get_plan($plan_key);
         }
 
         $duration = (int) get_post_meta($product_id, '_vh360_membership_duration', true);
@@ -574,11 +566,14 @@ class VH360_Membership_Plans {
         ?>
         <div class="vh360-membership-mapping">
             <?php if ($registry_plan_for_product) : ?>
-                <p class="description"><strong><?php esc_html_e('Plan Manager:', 'videohub360-memberships'); ?></strong> <?php printf(esc_html__('This product is assigned to %s in the central Membership Plans manager.', 'videohub360-memberships'), esc_html($registry_plan_for_product['label'])); ?></p>
+                <p class="description"><strong><?php esc_html_e('Plan Manager:', 'videohub360-memberships'); ?></strong> <?php printf(esc_html__('This product is assigned to %s in the Membership Plans Manager. That central assignment has priority over the fallback product mapping below.', 'videohub360-memberships'), esc_html($registry_plan_for_product['label'])); ?></p>
+                <?php if (class_exists('VH360_Membership_Plans_Admin')) : ?>
+                    <p class="description"><a href="<?php echo esc_url(VH360_Membership_Plans_Admin::get_admin_url()); ?>"><?php esc_html_e('Manage this relationship in VH360 Theme → Paid Memberships → Membership Plans.', 'videohub360-memberships'); ?></a></p>
+                <?php endif; ?>
             <?php endif; ?>
             <p>
                 <label for="vh360_membership_plan">
-                    <strong><?php esc_html_e('Membership Plan:', 'videohub360-memberships'); ?></strong>
+                    <strong><?php esc_html_e('Fallback Membership Plan:', 'videohub360-memberships'); ?></strong>
                 </label>
                 <select name="vh360_membership_plan" id="vh360_membership_plan" style="width: 100%;">
                     <option value=""><?php esc_html_e('None (Regular Product)', 'videohub360-memberships'); ?></option>
@@ -624,7 +619,7 @@ class VH360_Membership_Plans {
                 <p class="description" style="color:#b32d2e;"><strong><?php esc_html_e('Warning:', 'videohub360-memberships'); ?></strong> <?php esc_html_e('This product is mapped to a recurring Stripe plan. Recurring plans should use Stripe Checkout, so choose a one-time/lifetime plan or clear the mapping before saving.', 'videohub360-memberships'); ?></p>
             <?php endif; ?>
             <p class="description">
-                <?php esc_html_e('When this product is purchased, grant or extend the selected WooCommerce-based membership plan.', 'videohub360-memberships'); ?>
+                <?php esc_html_e('When no central Membership Plans assignment exists for this product, the fallback mapping below can grant or extend a WooCommerce-based membership plan.', 'videohub360-memberships'); ?>
             </p>
             <p class="description">
                 <?php esc_html_e('Recurring membership plans are configured in Membership Plans with Stripe Price IDs and should not be mapped to WooCommerce products.', 'videohub360-memberships'); ?>

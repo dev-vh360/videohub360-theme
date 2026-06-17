@@ -728,7 +728,11 @@ function vh360_membership_is_valid_recurring_signup_plan($plan_key, $require_str
     }
 
     $plan = $plans[$plan_key];
-    if ((isset($plan['enabled']) && !$plan['enabled']) || !isset($plan['billing_mode']) || $plan['billing_mode'] !== 'recurring' || empty($plan['stripe_price_id'])) {
+    $enabled = !empty($plan['is_enabled']) || (!isset($plan['is_enabled']) && !empty($plan['enabled']));
+    $billing_type = isset($plan['billing_type']) ? $plan['billing_type'] : (isset($plan['billing_mode']) ? $plan['billing_mode'] : '');
+    $checkout_behavior = isset($plan['checkout_behavior']) ? $plan['checkout_behavior'] : 'stripe';
+
+    if (!$enabled || 'recurring' !== $billing_type || 'stripe' !== $checkout_behavior || empty($plan['stripe_price_id'])) {
         return false;
     }
 
