@@ -617,7 +617,7 @@ class VH360_Membership_API {
             return $recurring;
         }
         
-        // Second try: active one-time/fixed-term/lifetime membership.
+        // Second try: active one-time or lifetime membership.
         // Prefer the highest configured tier, then latest expiration, then latest creation date.
         $fixed_memberships = $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM {$table}
@@ -690,15 +690,6 @@ class VH360_Membership_API {
             }
         }
 
-        if (empty($hierarchy)) {
-            $hierarchy = array(
-                'basic_monthly' => 10,
-                'basic_yearly'  => 10,
-                'pro_monthly'   => 20,
-                'pro_yearly'    => 20,
-                'lifetime'      => 30,
-            );
-        }
         
         return apply_filters('vh360_plan_tier_hierarchy', $hierarchy);
     }

@@ -1,0 +1,145 @@
+(function(){
+    var newPlanCounter = 0;
+
+    function slugify(value) {
+        return (value || '')
+            .toString()
+            .toLowerCase()
+            .replace(/&/g, ' and ')
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '')
+            .replace(/_{2,}/g, '_');
+    }
+
+    function groupSlug(value) {
+        return slugify((value || '').replace(/\b(monthly|month|yearly|annual|annually|lifetime|one[\s-]?time|free)\b/gi, ''));
+    }
+
+    function updateEmptyState() {
+        var list = document.querySelector('[data-vh360-plan-list]');
+        var empty = document.querySelector('[data-vh360-empty-state]');
+        if (!list || !empty) {
+            return;
+        }
+        empty.classList.toggle('is-hidden', !!list.querySelector('[data-vh360-plan-card]'));
+    }
+
+    function updateConditionalFields(card) {
+        var billingType = card.querySelector('[data-vh360-billing-type]');
+        var behavior = card.querySelector('[data-vh360-checkout-behavior]');
+        var type = billingType ? billingType.value : 'recurring';
+
+        card.querySelectorAll('[data-vh360-show-for]').forEach(function(field){
+            var showFor = field.getAttribute('data-vh360-show-for');
+            var visible = ('recurring' === type && 'recurring' === showFor) || (('one_time' === type || 'lifetime' === type) && 'woocommerce' === showFor);
+            field.classList.toggle('is-hidden', !visible);
+        });
+
+        if (behavior) {
+            if ('recurring' === type) {
+                behavior.value = 'stripe';
+            } else if ('free' === type) {
+                behavior.value = 'free';
+            } else if ('stripe' === behavior.value || 'free' === behavior.value) {
+                behavior.value = 'woocommerce';
+            }
+        }
+    }
+
+    function suggestKeys(card) {
+        var name = card.querySelector('[data-vh360-plan-name]');
+        var key = card.querySelector('[data-vh360-plan-key]');
+        var group = card.querySelector('[data-vh360-plan-group]');
+        var interval = card.querySelector('[data-vh360-billing-interval]');
+        if (!name) {
+            return;
+        }
+        if (key && !key.dataset.vh360Dirty) {
+            key.value = slugify(name.value);
+        }
+        if (group && !group.dataset.vh360Dirty && interval && ('monthly' === interval.value || 'yearly' === interval.value)) {
+            group.value = groupSlug(name.value);
+        }
+    }
+
+    function setupCard(card) {
+        if (!card || card.dataset.vh360Ready) {
+            return;
+        }
+        card.dataset.vh360Ready = '1';
+        var name = card.querySelector('[data-vh360-plan-name]');
+        var key = card.querySelector('[data-vh360-plan-key]');
+        var group = card.querySelector('[data-vh360-plan-group]');
+        var billingType = card.querySelector('[data-vh360-billing-type]');
+        var interval = card.querySelector('[data-vh360-billing-interval]');
+
+        [key, group].forEach(function(input){
+            if (!input) {
+                return;
+            }
+            input.addEventListener('input', function(){ input.dataset.vh360Dirty = '1'; });
+        });
+        if (name) {
+            name.addEventListener('input', function(){ suggestKeys(card); });
+        }
+        if (interval) {
+            interval.addEventListener('change', function(){ suggestKeys(card); });
+        }
+        if (billingType) {
+            billingType.addEventListener('change', function(){ updateConditionalFields(card); });
+        }
+        suggestKeys(card);
+        updateConditionalFields(card);
+    }
+
+    function addPlanCard() {
+        var template = document.getElementById('vh360-new-plan-template');
+        var list = document.querySelector('[data-vh360-plan-list]');
+        if (!template || !list) {
+            return;
+        }
+        newPlanCounter += 1;
+        var rowId = 'new_' + Date.now() + '_' + newPlanCounter;
+        var html = template.innerHTML.replace(/__NEW_PLAN_INDEX__/g, rowId);
+        var holder = document.createElement('div');
+        holder.innerHTML = html.trim();
+        var card = holder.firstElementChild;
+        list.appendChild(card);
+        setupCard(card);
+        updateEmptyState();
+        var firstInput = card.querySelector('[data-vh360-plan-name]');
+        if (firstInput) {
+            firstInput.focus();
+        }
+    }
+
+    document.addEventListener('click', function(event){
+        var addButton = event.target.closest('[data-vh360-add-plan]');
+        if (addButton) {
+            event.preventDefault();
+            addPlanCard();
+            return;
+        }
+
+        var removeButton = event.target.closest('[data-vh360-remove-new-plan]');
+        if (removeButton) {
+            event.preventDefault();
+            var card = removeButton.closest('[data-vh360-plan-card]');
+            if (card) {
+                card.remove();
+                updateEmptyState();
+            }
+            return;
+        }
+
+        var deleteButton = event.target.closest('[data-vh360-delete-plan]');
+        if (deleteButton && !window.confirm(deleteButton.getAttribute('data-confirm') || 'Delete this plan?')) {
+            event.preventDefault();
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', function(){
+        document.querySelectorAll('[data-vh360-plan-card]').forEach(setupCard);
+        updateEmptyState();
+    });
+})();

@@ -631,7 +631,21 @@ function vh360_get_membership_products() {
     $plans = class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan_registry() : array();
     $mapped = array();
 
+    $registry_product_ids = class_exists('VH360_Membership_Plans') ? array_keys(VH360_Membership_Plans::get_woocommerce_product_plan_map()) : array();
+    $product_posts = array();
     foreach ($products as $post) {
+        $product_posts[$post->ID] = $post;
+    }
+    foreach ($registry_product_ids as $product_id) {
+        if (!isset($product_posts[$product_id])) {
+            $post = get_post($product_id);
+            if ($post && 'product' === $post->post_type && 'publish' === $post->post_status) {
+                $product_posts[$product_id] = $post;
+            }
+        }
+    }
+
+    foreach ($product_posts as $post) {
         $product = wc_get_product($post->ID);
         if (!$product || $product->get_status() !== 'publish' || !$product->is_purchasable() || !$product->is_in_stock()) {
             continue;
@@ -714,7 +728,11 @@ function vh360_membership_is_valid_recurring_signup_plan($plan_key, $require_str
     }
 
     $plan = $plans[$plan_key];
-    if ((isset($plan['enabled']) && !$plan['enabled']) || !isset($plan['billing_mode']) || $plan['billing_mode'] !== 'recurring' || empty($plan['stripe_price_id'])) {
+    $enabled = !empty($plan['is_enabled']) || (!isset($plan['is_enabled']) && !empty($plan['enabled']));
+    $billing_type = isset($plan['billing_type']) ? $plan['billing_type'] : (isset($plan['billing_mode']) ? $plan['billing_mode'] : '');
+    $checkout_behavior = isset($plan['checkout_behavior']) ? $plan['checkout_behavior'] : 'stripe';
+
+    if (!$enabled || 'recurring' !== $billing_type || 'stripe' !== $checkout_behavior || empty($plan['stripe_price_id'])) {
         return false;
     }
 
@@ -861,7 +879,7 @@ function vh360_membership_is_recurring_stripe_membership($membership) {
 }
 
 /**
- * Get mapped WooCommerce fixed-term/lifetime upgrade products for a user.
+ * Get mapped WooCommerce membership upgrade products for a user.
  *
  * @param int $user_id User ID.
  * @return array
@@ -891,4 +909,64 @@ function vh360_get_upgrade_products_for_user($user_id) {
     });
 
     return vh360_sort_membership_plan_items(array_values($products));
+}
+
+if (!function_exists('vh360_memberships_get_plans')) {
+    function vh360_memberships_get_plans() { return class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan_registry() : array(); }
+}
+if (!function_exists('vh360_memberships_get_enabled_plans')) {
+    function vh360_memberships_get_enabled_plans() { return class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_enabled_plans() : array(); }
+}
+if (!function_exists('vh360_memberships_get_plan')) {
+    function vh360_memberships_get_plan($plan_key) { return class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan($plan_key) : false; }
+}
+if (!function_exists('vh360_memberships_save_plan')) {
+    function vh360_memberships_save_plan($plan_data) { return class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::save_plan($plan_data) : false; }
+}
+if (!function_exists('vh360_memberships_delete_plan')) {
+    function vh360_memberships_delete_plan($plan_key) { return class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::delete_plan($plan_key) : false; }
+}
+if (!function_exists('vh360_memberships_get_plans_by_interval')) {
+    function vh360_memberships_get_plans_by_interval($interval) { return class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plans_by_interval($interval) : array(); }
+}
+if (!function_exists('vh360_memberships_get_plans_by_group')) {
+    function vh360_memberships_get_plans_by_group() { return class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plans_by_group() : array(); }
+}
+if (!function_exists('vh360_memberships_get_featured_plan')) {
+    function vh360_memberships_get_featured_plan() { return class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_featured_plan() : false; }
+}
+if (!function_exists('vh360_memberships_user_has_plan_access')) {
+    function vh360_memberships_user_has_plan_access($user_id, $plan_key) { return vh360_user_has_membership_plan($user_id, $plan_key); }
+}
+if (!function_exists('vh360_memberships_user_has_tier_access')) {
+    function vh360_memberships_user_has_tier_access($user_id, $required_tier) {
+        $membership = function_exists('vh360_get_active_membership') ? vh360_get_active_membership($user_id) : false;
+        if (!$membership || empty($membership->plan_key) || !class_exists('VH360_Membership_Plans')) {
+            return false;
+        }
+        return VH360_Membership_Plans::get_plan_tier($membership->plan_key) >= absint($required_tier);
+    }
+}
+
+if (!function_exists('vh360_memberships_get_plan_label')) {
+    function vh360_memberships_get_plan_label($plan_key) {
+        $plan = vh360_memberships_get_plan($plan_key);
+        return $plan && !empty($plan['label']) ? $plan['label'] : '';
+    }
+}
+if (!function_exists('vh360_memberships_get_plan_price')) {
+    function vh360_memberships_get_plan_price($plan_key) {
+        $plan = vh360_memberships_get_plan($plan_key);
+        return $plan && isset($plan['display_price']) ? $plan['display_price'] : '';
+    }
+}
+if (!function_exists('vh360_memberships_get_plan_button_url')) {
+    function vh360_memberships_get_plan_button_url($plan_key) {
+        return class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan_button_url($plan_key) : '';
+    }
+}
+if (!function_exists('vh360_memberships_get_plan_by_product_id')) {
+    function vh360_memberships_get_plan_by_product_id($product_id) {
+        return class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan_by_product_id($product_id) : false;
+    }
 }

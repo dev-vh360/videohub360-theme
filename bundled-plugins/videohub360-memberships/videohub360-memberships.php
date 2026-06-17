@@ -75,6 +75,7 @@ class VH360_Memberships {
         // Load core classes
         require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-database.php';
         require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-plans.php';
+        require_once VH360_MEMBERSHIPS_DIR . 'includes/admin/class-vh360-membership-plans-admin.php';
         require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-api.php';
         require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-woocommerce.php';
         require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-cron.php';
@@ -103,6 +104,12 @@ class VH360_Memberships {
      * Initialize plugin
      */
     public function init() {
+        // Membership plans are owned by this plugin and must be manageable even before checkout integrations are ready.
+        VH360_Membership_Plans::get_instance();
+        if (is_admin() && class_exists('VH360_Membership_Plans_Admin')) {
+            VH360_Membership_Plans_Admin::get_instance();
+        }
+
         // Check for WooCommerce
         if (!class_exists('WooCommerce')) {
             add_action('admin_notices', array($this, 'woocommerce_missing_notice'));
@@ -111,7 +118,6 @@ class VH360_Memberships {
         
         // Initialize core components
         VH360_Membership_Database::get_instance();
-        VH360_Membership_Plans::get_instance();
         VH360_Membership_API::get_instance();
         VH360_Membership_WooCommerce::get_instance();
         VH360_Membership_Cron::get_instance();

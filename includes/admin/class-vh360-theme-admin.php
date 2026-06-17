@@ -34,6 +34,88 @@ class VH360_Theme_Admin {
         return self::$instance;
     }
     
+
+    /**
+     * Minimal fallback keys for dashboard subscription card styling when the memberships plugin is unavailable.
+     *
+     * Real color defaults live in VH360_Membership_Subscription_Management::get_dashboard_card_style_defaults().
+     *
+     * @return array
+     */
+    public static function get_membership_dashboard_card_style_fallbacks() {
+        return array_fill_keys(array(
+            'subscription_card_bg_color',
+            'subscription_card_border_color',
+            'subscription_card_title_color',
+            'subscription_card_price_color',
+            'subscription_card_text_color',
+            'subscription_card_button_bg_color',
+            'subscription_card_button_text_color',
+        ), '');
+    }
+
+    /**
+     * Minimal fallback keys for pricing plan card styling when the memberships plugin is unavailable.
+     *
+     * Real color defaults live in VH360_Membership_Plans::get_pricing_style_defaults().
+     *
+     * @return array
+     */
+    public static function get_membership_pricing_card_style_fallbacks() {
+        return array_fill_keys(array(
+            'pricing_card_background_color',
+            'pricing_card_border_color',
+            'pricing_card_text_color',
+            'pricing_card_title_color',
+            'pricing_card_price_color',
+            'pricing_card_description_color',
+            'pricing_card_feature_text_color',
+            'pricing_card_button_background_color',
+            'pricing_card_button_text_color',
+            'pricing_card_button_hover_background_color',
+            'pricing_card_featured_border_color',
+            'pricing_card_featured_badge_background_color',
+            'pricing_card_featured_badge_text_color',
+            'pricing_toggle_active_background_color',
+            'pricing_toggle_active_text_color',
+            'pricing_toggle_inactive_background_color',
+            'pricing_toggle_inactive_text_color',
+        ), '');
+    }
+
+
+    /**
+     * Get dashboard subscription card style defaults without assuming plugin helper availability.
+     *
+     * @return array
+     */
+    public static function get_membership_dashboard_card_style_defaults() {
+        if (
+            class_exists('VH360_Membership_Subscription_Management')
+            && method_exists('VH360_Membership_Subscription_Management', 'get_dashboard_card_style_defaults')
+        ) {
+            return VH360_Membership_Subscription_Management::get_dashboard_card_style_defaults();
+        }
+
+        return self::get_membership_dashboard_card_style_fallbacks();
+    }
+
+    /**
+     * Get pricing plan card style defaults without assuming plugin helper availability.
+     *
+     * @return array
+     */
+    public static function get_membership_pricing_card_style_defaults() {
+        if (
+            class_exists('VH360_Membership_Plans')
+            && method_exists('VH360_Membership_Plans', 'get_pricing_style_defaults')
+        ) {
+            return VH360_Membership_Plans::get_pricing_style_defaults();
+        }
+
+        return self::get_membership_pricing_card_style_fallbacks();
+    }
+
     /**
      * Constructor
      */
@@ -458,10 +540,12 @@ class VH360_Theme_Admin {
         ));
         
         // Membership settings
+        $dashboard_card_style_defaults = self::get_membership_dashboard_card_style_defaults();
+        $pricing_card_style_defaults = self::get_membership_pricing_card_style_defaults();
         register_setting('vh360_membership_settings', 'vh360_membership_options', array(
             'type' => 'array',
             'sanitize_callback' => array($this, 'sanitize_membership_settings'),
-            'default' => array(
+            'default' => array_merge(array(
                 'enable_memberships' => true,
                 'pricing_page_url' => '',
                 'support_url' => '',
@@ -483,16 +567,8 @@ class VH360_Theme_Admin {
                 'gate_members_directory' => 0,
                 'gate_appointments' => 0,
                 'gate_push_notifications' => 0,
-                // Subscription card styling
-                'subscription_card_bg_color' => '',
-                'subscription_card_border_color' => '',
-                'subscription_card_title_color' => '',
-                'subscription_card_price_color' => '',
-                'subscription_card_text_color' => '',
                 'subscription_card_button_label' => '',
-                'subscription_card_button_bg_color' => '',
-                'subscription_card_button_text_color' => '',
-            ),
+            ), $dashboard_card_style_defaults, $pricing_card_style_defaults),
         ));
         
         // Stripe / recurring billing settings
@@ -1801,7 +1877,7 @@ class VH360_Theme_Admin {
         
         return $output;
     }
-    
+
     /**
      * Sanitize membership settings
      */
@@ -1809,62 +1885,64 @@ class VH360_Theme_Admin {
         if (!is_array($input)) {
             $input = array();
         }
-        
-        $output = array();
-        
-        // Sanitize enable_memberships checkbox
-        $output['enable_memberships'] = !empty($input['enable_memberships']) ? 1 : 0;
-        
-        // Sanitize pricing_page_url
-        $output['pricing_page_url'] = !empty($input['pricing_page_url']) ? esc_url_raw($input['pricing_page_url']) : '';
-        $output['support_url'] = !empty($input['support_url']) ? esc_url_raw($input['support_url']) : '';
-        $output['contact_url'] = !empty($input['contact_url']) ? esc_url_raw($input['contact_url']) : '';
 
-        // Sanitize course purchase destination.
-        $course_purchase_destination = isset($input['course_purchase_destination']) ? sanitize_key($input['course_purchase_destination']) : 'product_page';
-        $output['course_purchase_destination'] = in_array($course_purchase_destination, array('product_page', 'add_to_cart'), true)
-            ? $course_purchase_destination
-            : 'product_page';
-        
-        // Sanitize login_required checkbox
-        $output['login_required'] = !empty($input['login_required']) ? 1 : 0;
-        
-        // Sanitize locked_message
-        $output['locked_message'] = !empty($input['locked_message']) ? wp_kses_post($input['locked_message']) : '';
-        
-        // Sanitize reminder_days
-        $output['reminder_days'] = isset($input['reminder_days']) ? absint($input['reminder_days']) : 7;
-        
-        // Sanitize grace_period_days
-        $output['grace_period_days'] = isset($input['grace_period_days']) ? absint($input['grace_period_days']) : 0;
-        
-        // Sanitize feature gating toggles
-        $output['gate_live_rooms'] = !empty($input['gate_live_rooms']) ? 1 : 0;
-        $output['gate_create_videos'] = !empty($input['gate_create_videos']) ? 1 : 0;
-        $output['gate_create_posts'] = !empty($input['gate_create_posts']) ? 1 : 0;
-        $output['gate_create_events'] = !empty($input['gate_create_events']) ? 1 : 0;
-        $output['gate_create_bulletins'] = !empty($input['gate_create_bulletins']) ? 1 : 0;
-        $output['gate_create_galleries'] = !empty($input['gate_create_galleries']) ? 1 : 0;
-        $output['gate_direct_messages'] = !empty($input['gate_direct_messages']) ? 1 : 0;
-        $output['gate_activity_feed'] = !empty($input['gate_activity_feed']) ? 1 : 0;
-        $output['gate_members_directory'] = !empty($input['gate_members_directory']) ? 1 : 0;
-        $output['gate_appointments'] = !empty($input['gate_appointments']) ? 1 : 0;
-        $output['gate_push_notifications'] = !empty($input['gate_push_notifications']) ? 1 : 0;
-        
-        // Sanitize subscription card styling
-        $color_fields = array(
-            'subscription_card_bg_color',
-            'subscription_card_border_color',
-            'subscription_card_title_color',
-            'subscription_card_price_color',
-            'subscription_card_text_color',
-            'subscription_card_button_bg_color',
-            'subscription_card_button_text_color',
-        );
-        foreach ($color_fields as $field) {
-            $output[$field] = isset($input[$field]) ? sanitize_text_field($input[$field]) : '';
+        $output = get_option('vh360_membership_options', array());
+        $output = is_array($output) ? $output : array();
+        $section = isset($input['_settings_section']) ? sanitize_key($input['_settings_section']) : 'general';
+
+        if ('general' === $section) {
+            // Sanitize enable_memberships checkbox
+            $output['enable_memberships'] = !empty($input['enable_memberships']) ? 1 : 0;
+
+            // Sanitize pricing_page_url
+            $output['pricing_page_url'] = !empty($input['pricing_page_url']) ? esc_url_raw($input['pricing_page_url']) : '';
+            $output['support_url'] = !empty($input['support_url']) ? esc_url_raw($input['support_url']) : '';
+            $output['contact_url'] = !empty($input['contact_url']) ? esc_url_raw($input['contact_url']) : '';
+
+            // Sanitize course purchase destination.
+            $course_purchase_destination = isset($input['course_purchase_destination']) ? sanitize_key($input['course_purchase_destination']) : 'product_page';
+            $output['course_purchase_destination'] = in_array($course_purchase_destination, array('product_page', 'add_to_cart'), true)
+                ? $course_purchase_destination
+                : 'product_page';
+
+            // Sanitize login_required checkbox
+            $output['login_required'] = !empty($input['login_required']) ? 1 : 0;
+
+            // Sanitize locked_message
+            $output['locked_message'] = !empty($input['locked_message']) ? wp_kses_post($input['locked_message']) : '';
+
+            // Sanitize reminder_days
+            $output['reminder_days'] = isset($input['reminder_days']) ? absint($input['reminder_days']) : 7;
+
+            // Sanitize grace_period_days
+            $output['grace_period_days'] = isset($input['grace_period_days']) ? absint($input['grace_period_days']) : 0;
+
+            // Sanitize feature gating toggles
+            $output['gate_live_rooms'] = !empty($input['gate_live_rooms']) ? 1 : 0;
+            $output['gate_create_videos'] = !empty($input['gate_create_videos']) ? 1 : 0;
+            $output['gate_create_posts'] = !empty($input['gate_create_posts']) ? 1 : 0;
+            $output['gate_create_events'] = !empty($input['gate_create_events']) ? 1 : 0;
+            $output['gate_create_bulletins'] = !empty($input['gate_create_bulletins']) ? 1 : 0;
+            $output['gate_create_galleries'] = !empty($input['gate_create_galleries']) ? 1 : 0;
+            $output['gate_direct_messages'] = !empty($input['gate_direct_messages']) ? 1 : 0;
+            $output['gate_activity_feed'] = !empty($input['gate_activity_feed']) ? 1 : 0;
+            $output['gate_members_directory'] = !empty($input['gate_members_directory']) ? 1 : 0;
+            $output['gate_appointments'] = !empty($input['gate_appointments']) ? 1 : 0;
+            $output['gate_push_notifications'] = !empty($input['gate_push_notifications']) ? 1 : 0;
         }
-        $output['subscription_card_button_label'] = isset($input['subscription_card_button_label']) ? sanitize_text_field($input['subscription_card_button_label']) : '';
+
+        // Sanitize dashboard subscription card and pricing plan card styling.
+        $dashboard_card_style_defaults = self::get_membership_dashboard_card_style_defaults();
+        $pricing_card_style_defaults = self::get_membership_pricing_card_style_defaults();
+        $color_fields = array_merge(array_keys($dashboard_card_style_defaults), array_keys($pricing_card_style_defaults));
+        foreach ($color_fields as $field) {
+            if (array_key_exists($field, $input)) {
+                $output[$field] = sanitize_hex_color($input[$field]) ?: '';
+            }
+        }
+        if (array_key_exists('subscription_card_button_label', $input)) {
+            $output['subscription_card_button_label'] = sanitize_text_field($input['subscription_card_button_label']);
+        }
         
         return $output;
     }

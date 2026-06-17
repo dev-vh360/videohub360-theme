@@ -287,8 +287,8 @@
 }
 
 .vh360-subscription-plan-card {
-    background: var(--vh360-card-bg, #fff);
-    border: 1px solid var(--vh360-card-border, #e0e0e0);
+    background: var(--vh360-dashboard-card-bg, #fff);
+    border: 1px solid var(--vh360-dashboard-card-border, #e0e0e0);
     border-radius: 8px;
     padding: 24px;
     text-align: center;
@@ -301,21 +301,21 @@
     margin: 0 0 12px;
     font-size: 18px;
     font-weight: 600;
-    color: var(--vh360-card-title, inherit);
+    color: var(--vh360-dashboard-title-color, #333);
 }
 
 .vh360-plan-price {
     font-size: 24px;
     font-weight: 700;
     margin: 0 0 12px;
-    color: var(--vh360-card-price, inherit);
+    color: var(--vh360-dashboard-price-color, #333);
 }
 
 .vh360-plan-description {
     font-size: 14px;
     line-height: 1.5;
     margin: 0 0 12px;
-    color: var(--vh360-card-text, #666);
+    color: var(--vh360-dashboard-text-color, #666);
 }
 
 .vh360-plan-features {
@@ -323,7 +323,7 @@
     padding: 0;
     margin: 0 0 16px;
     text-align: center;
-    color: var(--vh360-card-text, #666);
+    color: var(--vh360-dashboard-text-color, #666);
 }
 
 .vh360-plan-features li {
@@ -333,18 +333,19 @@
 }
 
 .vh360-plan-trial {
-    color: var(--vh360-card-text, #0073aa);
+    color: var(--vh360-dashboard-text-color, #0073aa);
     font-size: 13px;
     margin: 0 0 16px;
 }
 
 .vh360-subscription-plan-card .vh360-btn {
+    color: var(--vh360-dashboard-button-color, #fff);
     width: 100%;
 }
 
 .vh360-subscription-plan-card .vh360-btn-primary {
-    background: var(--vh360-card-btn-bg, #0073aa);
-    color: var(--vh360-card-btn-text, #fff);
+    background: var(--vh360-dashboard-button-bg, #0073aa);
+    color: var(--vh360-dashboard-button-color, #fff);
 }
 
 .vh360-subscription-plan-card .vh360-btn-primary:hover:not(:disabled) {
@@ -427,7 +428,7 @@
 }
 
 .vh360-subscription-plan-card.is-featured {
-    border-color: #0073aa;
+    border-color: var(--vh360-dashboard-button-bg, #0073aa);
     box-shadow: 0 8px 22px rgba(0, 115, 170, .14);
 }
 
