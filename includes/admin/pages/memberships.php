@@ -81,7 +81,7 @@ $plan_config = $plans;
     <h2 class="nav-tab-wrapper">
         <a href="#general" class="nav-tab nav-tab-active" data-tab="general"><?php esc_html_e('General', 'videohub360-theme'); ?></a>
         <a href="#stripe" class="nav-tab" data-tab="stripe"><?php esc_html_e('Stripe / Recurring', 'videohub360-theme'); ?></a>
-        <a href="#plan-mapping" class="nav-tab" data-tab="plan-mapping"><?php esc_html_e('Membership Plans', 'videohub360-theme'); ?></a>
+        <a href="#membership-plans" class="nav-tab" data-tab="membership-plans"><?php esc_html_e('Membership Plans', 'videohub360-theme'); ?></a>
         <a href="#stats" class="nav-tab" data-tab="stats"><?php esc_html_e('Statistics', 'videohub360-theme'); ?></a>
     </h2>
     
@@ -736,7 +736,7 @@ $plan_config = $plans;
     </div>
     
     <!-- Membership Plans Tab -->
-    <div id="tab-plan-mapping" class="vh360-tab-content" style="display:none;">
+    <div id="tab-membership-plans" class="vh360-tab-content" style="display:none;">
         <?php if (class_exists('VH360_Membership_Plans_Admin')) : ?>
             <?php VH360_Membership_Plans_Admin::get_instance()->render_manager(false); ?>
         <?php else : ?>
@@ -841,6 +841,13 @@ jQuery(document).ready(function($) {
     // Restore tab from query string or hash.
     var params = new URLSearchParams(window.location.search);
     var requestedTab = params.get('tab') || window.location.hash.replace('#', '');
+    if (requestedTab === 'plan-mapping') {
+        requestedTab = 'membership-plans';
+        if (window.history && window.history.replaceState && params.get('tab') === 'plan-mapping') {
+            params.set('tab', requestedTab);
+            window.history.replaceState(null, '', window.location.pathname + '?' + params.toString() + window.location.hash);
+        }
+    }
     if (requestedTab && $('[data-tab="' + requestedTab + '"]').length) {
         $('[data-tab="' + requestedTab + '"]').trigger('click');
     }

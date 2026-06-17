@@ -28,7 +28,7 @@ class VH360_Membership_Plans_Admin {
     public static function get_admin_url() {
         return add_query_arg(array(
             'page' => 'vh360-theme-memberships',
-            'tab'  => 'plan-mapping',
+            'tab'  => 'membership-plans',
         ), admin_url('admin.php'));
     }
 
