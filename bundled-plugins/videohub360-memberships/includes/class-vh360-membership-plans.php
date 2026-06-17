@@ -310,6 +310,40 @@ class VH360_Membership_Plans {
      */
     const PLANS_OPTION = 'vh360_membership_plans';
 
+
+    public static function get_feature_access_options() {
+        $feature_access_options = array(
+            'activity_feed'           => __('Activity Feed', 'videohub360-memberships'),
+            'members_directory'       => __('Members Directory', 'videohub360-memberships'),
+            'direct_messages'         => __('Direct Messages', 'videohub360-memberships'),
+            'create_videos'           => __('Create Videos / Lessons', 'videohub360-memberships'),
+            'create_posts'            => __('Create Blog Posts', 'videohub360-memberships'),
+            'create_events'           => __('Create Events', 'videohub360-memberships'),
+            'create_bulletins'        => __('Create Bulletins', 'videohub360-memberships'),
+            'create_galleries'        => __('Create Galleries', 'videohub360-memberships'),
+            'live_rooms'              => __('Live Rooms', 'videohub360-memberships'),
+            'appointments'            => __('Appointments', 'videohub360-memberships'),
+            'push_notifications'      => __('Push Notifications', 'videohub360-memberships'),
+            'course_learning'         => __('Course Learning Access', 'videohub360-memberships'),
+            'course_instructor_tools' => __('Course Instructor Tools', 'videohub360-memberships'),
+        );
+
+        return apply_filters('vh360_membership_feature_access_options', $feature_access_options);
+    }
+
+    public static function sanitize_access_features($features) {
+        $allowed = array_keys(self::get_feature_access_options());
+        $features = is_array($features) ? $features : array();
+        $sanitized = array();
+        foreach ($features as $feature_key) {
+            $feature_key = sanitize_key($feature_key);
+            if ($feature_key && in_array($feature_key, $allowed, true)) {
+                $sanitized[$feature_key] = $feature_key;
+            }
+        }
+        return array_values($sanitized);
+    }
+
     public static function get_allowed_billing_types() {
         return array('recurring', 'one_time', 'lifetime', 'free');
     }
@@ -480,6 +514,8 @@ class VH360_Membership_Plans {
             'stripe_price_id'=>isset($plan['stripe_price_id']) ? sanitize_text_field($plan['stripe_price_id']) : '',
             'woocommerce_product_id'=>isset($plan['woocommerce_product_id']) ? absint($plan['woocommerce_product_id']) : 0,
             'features'=>array_values(array_filter(array_map('sanitize_text_field',$features))),
+            'access_features'=>$access_features,
+            'access_features_configured'=>$access_features_configured,
             'tier_level'=>isset($plan['tier_level']) ? absint($plan['tier_level']) : 0,
             'is_featured'=>$featured,'is_enabled'=>$enabled,
             'display_order'=>isset($plan['display_order']) ? absint($plan['display_order']) : 999,

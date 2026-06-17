@@ -317,6 +317,9 @@ class VH360_Membership_Plans_Admin {
         if (isset($raw['features']) && is_string($raw['features'])) {
             $raw['features'] = preg_split('/\r\n|\r|\n/', $raw['features']);
         }
+        if (!isset($raw['access_features']) || !is_array($raw['access_features'])) {
+            $raw['access_features'] = array();
+        }
         $raw['is_enabled'] = !empty($raw['is_enabled']);
         $raw['is_featured'] = !empty($raw['is_featured']);
         return $raw;
@@ -416,12 +419,13 @@ class VH360_Membership_Plans_Admin {
     }
 
     private function get_empty_plan() {
-        return array('id'=>'','name'=>'','label'=>'','description'=>'','plan_group'=>'','billing_type'=>'recurring','billing_interval'=>'monthly','price'=>'','currency'=>'USD','compare_at_price'=>'','savings_text'=>'','stripe_price_id'=>'','woocommerce_product_id'=>0,'features'=>array(),'tier_level'=>0,'is_featured'=>false,'is_enabled'=>false,'display_order'=>999,'button_text'=>__('Choose Plan','videohub360-memberships'),'checkout_behavior'=>'stripe');
+        return array('id'=>'','name'=>'','label'=>'','description'=>'','plan_group'=>'','billing_type'=>'recurring','billing_interval'=>'monthly','price'=>'','currency'=>'USD','compare_at_price'=>'','savings_text'=>'','stripe_price_id'=>'','woocommerce_product_id'=>0,'features'=>array(),'access_features'=>array(),'access_features_configured'=>true,'tier_level'=>0,'is_featured'=>false,'is_enabled'=>false,'display_order'=>999,'button_text'=>__('Choose Plan','videohub360-memberships'),'checkout_behavior'=>'stripe');
     }
 
     private function render_plan_card($key, $plan, $is_new = false) {
         $field = $is_new ? 'new_plans[' . $key . ']' : 'plans[' . $key . ']';
         $features = !empty($plan['features']) && is_array($plan['features']) ? implode("\n", $plan['features']) : '';
+        $access_features = !empty($plan['access_features']) && is_array($plan['access_features']) ? $plan['access_features'] : array();
         $title = $is_new ? __('New Membership Plan', 'videohub360-memberships') : (!empty($plan['name']) ? $plan['name'] : $key);
         ?>
         <section class="vh360-plan-card" data-vh360-plan-card>
@@ -452,6 +456,19 @@ class VH360_Membership_Plans_Admin {
                         <?php $this->textarea($field, 'features', __('Features', 'videohub360-memberships'), $features, __('One plain-text feature per line.', 'videohub360-memberships'), 5); ?>
                         <div class="vh360-plan-field vh360-plan-toggle-field"><label><input type="checkbox" name="<?php echo esc_attr($field); ?>[is_enabled]" value="1" <?php checked(!empty($plan['is_enabled'])); ?> /> <?php esc_html_e('Enabled', 'videohub360-memberships'); ?></label><p class="description"><?php esc_html_e('Only enabled, checkout-ready plans appear to visitors.', 'videohub360-memberships'); ?></p></div>
                     </div>
+                </div>
+
+
+                <div class="vh360-plan-section vh360-plan-section--access">
+                    <h3><?php esc_html_e('Feature Access', 'videohub360-memberships'); ?></h3>
+                    <p class="description"><?php esc_html_e('Choose which Videohub360 features this plan unlocks. These settings control actual membership access and are separate from the public pricing-card feature text.', 'videohub360-memberships'); ?></p>
+                    <div class="vh360-feature-access-grid">
+                        <?php foreach (VH360_Membership_Plans::get_feature_access_options() as $feature_key => $feature_label) : ?>
+                            <label class="vh360-feature-access-option"><input type="checkbox" name="<?php echo esc_attr($field); ?>[access_features][]" value="<?php echo esc_attr($feature_key); ?>" <?php checked(in_array($feature_key, $access_features, true)); ?> /> <?php echo esc_html($feature_label); ?></label>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php $show_free_access_warning = 'free' === $plan['billing_type'] && array_intersect($access_features, array('create_videos', 'live_rooms', 'appointments', 'push_notifications', 'direct_messages', 'course_instructor_tools')); ?>
+                    <p class="vh360-plan-access-warning <?php echo $show_free_access_warning ? '' : 'is-hidden'; ?>" data-vh360-free-access-warning><?php esc_html_e('This is a free plan with advanced access enabled. Confirm this is intentional before using it publicly.', 'videohub360-memberships'); ?></p>
                 </div>
 
                 <div class="vh360-plan-section vh360-plan-section--checkout">
