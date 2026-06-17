@@ -132,6 +132,42 @@ class VH360_Membership_Subscription_Management {
      * @param array $atts Shortcode attributes
      * @return string HTML output
      */
+    public static function get_dashboard_card_style_defaults() {
+        return array(
+            'subscription_card_bg_color' => '#ffffff',
+            'subscription_card_border_color' => '#e0e0e0',
+            'subscription_card_title_color' => '#333333',
+            'subscription_card_price_color' => '#333333',
+            'subscription_card_text_color' => '#666666',
+            'subscription_card_button_bg_color' => '#0073aa',
+            'subscription_card_button_text_color' => '#ffffff',
+        );
+    }
+
+    public static function get_dashboard_card_style_attribute() {
+        $options = get_option('vh360_membership_options', array());
+        $options = is_array($options) ? $options : array();
+        $map = array(
+            'subscription_card_bg_color' => '--vh360-dashboard-card-bg',
+            'subscription_card_border_color' => '--vh360-dashboard-card-border',
+            'subscription_card_title_color' => '--vh360-dashboard-title-color',
+            'subscription_card_price_color' => '--vh360-dashboard-price-color',
+            'subscription_card_text_color' => '--vh360-dashboard-text-color',
+            'subscription_card_button_bg_color' => '--vh360-dashboard-button-bg',
+            'subscription_card_button_text_color' => '--vh360-dashboard-button-color',
+        );
+        $defaults = self::get_dashboard_card_style_defaults();
+        $styles = array();
+        foreach ($map as $option_key => $css_var) {
+            $value = !empty($options[$option_key]) ? sanitize_hex_color($options[$option_key]) : '';
+            if (!$value) {
+                $value = $defaults[$option_key];
+            }
+            $styles[] = $css_var . ': ' . $value;
+        }
+        return implode('; ', $styles) . ';';
+    }
+
     public function render_shortcode($atts = array()) {
         $selected_plan = function_exists('vh360_membership_get_selected_plan_from_request') ? vh360_membership_get_selected_plan_from_request() : '';
         $user_id = get_current_user_id();
@@ -153,10 +189,11 @@ class VH360_Membership_Subscription_Management {
         $recurring_plans = $this->get_dashboard_recurring_plans($plans, $membership);
         $card_options = get_option('vh360_membership_options', array());
         $button_label = !empty($card_options['subscription_card_button_label']) ? $card_options['subscription_card_button_label'] : __('Subscribe', 'videohub360-memberships');
+        $dashboard_style = self::get_dashboard_card_style_attribute();
 
         ob_start();
         ?>
-        <div class="vh360-membership-management vh360-membership-account-center" id="vh360-membership-management">
+        <div class="vh360-membership-management vh360-membership-account-center" id="vh360-membership-management" style="<?php echo esc_attr($dashboard_style); ?>">
             <?php if ($selected_plan) : ?>
                 <div class="vh360-membership-notice vh360-membership-notice-info">
                     <?php esc_html_e('Your account is ready. Continue to Stripe to activate your membership.', 'videohub360-memberships'); ?>
@@ -299,13 +336,14 @@ class VH360_Membership_Subscription_Management {
         }
 
         $recurring_plans = $this->get_dashboard_recurring_plans($plans, false);
+        $dashboard_style = self::get_dashboard_card_style_attribute();
         if (empty($recurring_plans)) {
             return vh360_render_login_gate();
         }
 
         ob_start();
         ?>
-        <div class="vh360-membership-management vh360-membership-account-center" id="vh360-membership-management">
+        <div class="vh360-membership-management vh360-membership-account-center" id="vh360-membership-management" style="<?php echo esc_attr($dashboard_style); ?>">
             <section class="vh360-membership-section vh360-guest-recurring-section">
                 <div class="vh360-membership-empty-state">
                     <h3><?php esc_html_e('Create an account to start a recurring membership.', 'videohub360-memberships'); ?></h3>

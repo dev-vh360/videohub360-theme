@@ -10,8 +10,40 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Get current options
-$options = get_option('vh360_membership_options', array(
+// Get current options.
+$dashboard_style_defaults = class_exists('VH360_Membership_Subscription_Management')
+    ? VH360_Membership_Subscription_Management::get_dashboard_card_style_defaults()
+    : array(
+        'subscription_card_bg_color' => '#ffffff',
+        'subscription_card_border_color' => '#e0e0e0',
+        'subscription_card_title_color' => '#333333',
+        'subscription_card_price_color' => '#333333',
+        'subscription_card_text_color' => '#666666',
+        'subscription_card_button_bg_color' => '#0073aa',
+        'subscription_card_button_text_color' => '#ffffff',
+    );
+$pricing_style_defaults = class_exists('VH360_Membership_Plans')
+    ? VH360_Membership_Plans::get_pricing_style_defaults()
+    : array(
+        'pricing_card_background_color' => '#ffffff',
+        'pricing_card_border_color' => '#e5e7eb',
+        'pricing_card_text_color' => '#4b5563',
+        'pricing_card_title_color' => '#111827',
+        'pricing_card_price_color' => '#111827',
+        'pricing_card_description_color' => '#6b7280',
+        'pricing_card_feature_text_color' => '#4b5563',
+        'pricing_card_button_background_color' => '#2563eb',
+        'pricing_card_button_text_color' => '#ffffff',
+        'pricing_card_button_hover_background_color' => '#1d4ed8',
+        'pricing_card_featured_border_color' => '#2563eb',
+        'pricing_card_featured_badge_background_color' => '#dbeafe',
+        'pricing_card_featured_badge_text_color' => '#1d4ed8',
+        'pricing_toggle_active_background_color' => '#2563eb',
+        'pricing_toggle_active_text_color' => '#ffffff',
+        'pricing_toggle_inactive_background_color' => '#ffffff',
+        'pricing_toggle_inactive_text_color' => '#1f2937',
+    );
+$membership_option_defaults = array_merge(array(
     'enable_memberships' => true,
     'pricing_page_url' => '',
     'support_url' => '',
@@ -32,56 +64,9 @@ $options = get_option('vh360_membership_options', array(
     'gate_members_directory' => 0,
     'gate_appointments' => 0,
     'gate_push_notifications' => 0,
-    'subscription_card_bg_color' => '',
-    'subscription_card_border_color' => '',
-    'subscription_card_title_color' => '',
-    'subscription_card_price_color' => '',
-    'subscription_card_text_color' => '',
     'subscription_card_button_label' => '',
-    'subscription_card_button_bg_color' => '',
-    'subscription_card_button_text_color' => '',
-    'pricing_card_background_color' => '#ffffff',
-    'pricing_card_border_color' => '#e5e7eb',
-    'pricing_card_text_color' => '#4b5563',
-    'pricing_card_title_color' => '#111827',
-    'pricing_card_price_color' => '#111827',
-    'pricing_card_description_color' => '#6b7280',
-    'pricing_card_feature_text_color' => '#4b5563',
-    'pricing_card_button_background_color' => '#2563eb',
-    'pricing_card_button_text_color' => '#ffffff',
-    'pricing_card_button_hover_background_color' => '#1d4ed8',
-    'pricing_card_featured_border_color' => '#2563eb',
-    'pricing_card_featured_badge_background_color' => '#dbeafe',
-    'pricing_card_featured_badge_text_color' => '#1d4ed8',
-    'pricing_toggle_active_background_color' => '#2563eb',
-    'pricing_toggle_active_text_color' => '#ffffff',
-    'pricing_toggle_inactive_background_color' => '#ffffff',
-    'pricing_toggle_inactive_text_color' => '#1f2937',
-));
-
-$options = wp_parse_args($options, array(
-    'pricing_page_url' => '',
-    'support_url' => '',
-    'contact_url' => '',
-    'course_purchase_destination' => 'product_page',
-    'pricing_card_background_color' => '#ffffff',
-    'pricing_card_border_color' => '#e5e7eb',
-    'pricing_card_text_color' => '#4b5563',
-    'pricing_card_title_color' => '#111827',
-    'pricing_card_price_color' => '#111827',
-    'pricing_card_description_color' => '#6b7280',
-    'pricing_card_feature_text_color' => '#4b5563',
-    'pricing_card_button_background_color' => '#2563eb',
-    'pricing_card_button_text_color' => '#ffffff',
-    'pricing_card_button_hover_background_color' => '#1d4ed8',
-    'pricing_card_featured_border_color' => '#2563eb',
-    'pricing_card_featured_badge_background_color' => '#dbeafe',
-    'pricing_card_featured_badge_text_color' => '#1d4ed8',
-    'pricing_toggle_active_background_color' => '#2563eb',
-    'pricing_toggle_active_text_color' => '#ffffff',
-    'pricing_toggle_inactive_background_color' => '#ffffff',
-    'pricing_toggle_inactive_text_color' => '#1f2937',
-));
+), $dashboard_style_defaults, $pricing_style_defaults);
+$options = wp_parse_args(get_option('vh360_membership_options', array()), $membership_option_defaults);
 if (!in_array($options['course_purchase_destination'], array('product_page', 'add_to_cart'), true)) {
     $options['course_purchase_destination'] = 'product_page';
 }

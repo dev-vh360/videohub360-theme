@@ -122,10 +122,11 @@ class VH360_Membership_Plans {
             }
         }
 
-        $style_vars = self::get_pricing_style_attribute();
+        $columns = min(4, max(1, absint($atts['columns'])));
+        $style_vars = self::get_pricing_style_attribute() . ' --vh360-pricing-columns: ' . $columns . ';';
 
         ob_start(); ?>
-        <section class="vh360-pricing-toggle" data-columns="<?php echo esc_attr(max(1, absint($atts['columns']))); ?>" style="<?php echo esc_attr($style_vars); ?>">
+        <section class="vh360-pricing-toggle vh360-pricing-columns-<?php echo esc_attr($columns); ?>" data-columns="<?php echo esc_attr($columns); ?>" style="<?php echo esc_attr($style_vars); ?>">
             <div class="vh360-pricing-tabs" role="tablist" aria-label="<?php esc_attr_e('Membership billing intervals', 'videohub360-memberships'); ?>">
                 <?php $first = true; foreach ($available_intervals as $interval => $label) : ?>
                     <button type="button" class="vh360-pricing-tab <?php echo $first ? 'is-active' : ''; ?>" role="tab" tabindex="<?php echo $first ? '0' : '-1'; ?>" aria-selected="<?php echo $first ? 'true' : 'false'; ?>" aria-controls="vh360-pricing-<?php echo esc_attr($interval); ?>" data-vh360-pricing-tab><?php echo esc_html($label); ?></button>
