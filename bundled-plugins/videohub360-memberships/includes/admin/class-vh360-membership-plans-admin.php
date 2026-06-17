@@ -22,6 +22,7 @@ class VH360_Membership_Plans_Admin {
     private function __construct() {
         add_action('admin_init', array($this, 'redirect_tools_page'));
         add_action('admin_post_vh360_save_membership_plans', array($this, 'handle_save'));
+        add_action('admin_post_vh360_delete_membership_plan', array($this, 'handle_delete'));
         add_action('admin_post_vh360_create_membership_sample_plans', array($this, 'handle_create_sample_plans'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
     }
@@ -61,6 +62,33 @@ class VH360_Membership_Plans_Admin {
         wp_enqueue_script('vh360-membership-plans-admin', VH360_MEMBERSHIPS_URL . 'assets/admin/membership-plans.js', array(), VH360_MEMBERSHIPS_VERSION, true);
     }
 
+    public function handle_delete() {
+        if (!current_user_can(self::CAPABILITY)) {
+            wp_die(esc_html__('You do not have permission to manage membership plans.', 'videohub360-memberships'));
+        }
+
+        $plan_key = isset($_POST['plan_key']) ? sanitize_key(wp_unslash($_POST['plan_key'])) : '';
+        if (!$plan_key) {
+            $this->set_admin_notice('warning', array(__('No membership plan was selected for deletion.', 'videohub360-memberships')));
+            wp_safe_redirect(self::get_admin_url());
+            exit;
+        }
+
+        check_admin_referer('vh360_delete_membership_plan_' . $plan_key);
+
+        $plans = class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan_registry() : array();
+        if (isset($plans[$plan_key])) {
+            unset($plans[$plan_key]);
+            VH360_Membership_Plans::save_plans($plans);
+            $this->set_admin_notice('success', array(sprintf(__('The plan `%s` was deleted.', 'videohub360-memberships'), $plan_key)));
+        } else {
+            $this->set_admin_notice('warning', array(sprintf(__('The plan `%s` could not be found. No plan was deleted.', 'videohub360-memberships'), $plan_key)));
+        }
+
+        wp_safe_redirect(self::get_admin_url());
+        exit;
+    }
+
     public function handle_save() {
         if (!current_user_can(self::CAPABILITY)) {
             wp_die(esc_html__('You do not have permission to manage membership plans.', 'videohub360-memberships'));
@@ -71,6 +99,7 @@ class VH360_Membership_Plans_Admin {
         $delete = isset($_POST['delete_plan']) ? sanitize_key(wp_unslash($_POST['delete_plan'])) : '';
         $duplicate = isset($_POST['duplicate_plan']) ? sanitize_key(wp_unslash($_POST['duplicate_plan'])) : '';
 
+        // Fallback only. Normal delete buttons use vh360_delete_membership_plan and do not submit the full save form.
         if ($delete) {
             if (isset($plans[$delete])) {
                 unset($plans[$delete]);
@@ -377,6 +406,7 @@ class VH360_Membership_Plans_Admin {
                     <button type="submit" class="button button-primary"><?php esc_html_e('Save Membership Plans', 'videohub360-memberships'); ?></button>
                 </div>
             </form>
+            <?php foreach ($plans as $key => $plan) : $this->render_delete_form($key); endforeach; ?>
             <template id="vh360-new-plan-template">
                 <?php $this->render_plan_card('__NEW_PLAN_INDEX__', $this->get_empty_plan(), true); ?>
             </template>
@@ -464,9 +494,20 @@ class VH360_Membership_Plans_Admin {
                     </div>
                 </details>
 
-                <?php if (!$is_new) : ?><div class="vh360-plan-actions"><button class="button" type="submit" name="duplicate_plan" value="<?php echo esc_attr($key); ?>"><?php esc_html_e('Duplicate', 'videohub360-memberships'); ?></button><button class="button button-link-delete" type="submit" name="delete_plan" value="<?php echo esc_attr($key); ?>" data-vh360-delete-plan data-confirm="<?php esc_attr_e('Delete this membership plan?', 'videohub360-memberships'); ?>"><?php esc_html_e('Delete', 'videohub360-memberships'); ?></button></div><?php endif; ?>
+                <?php if (!$is_new) : ?><div class="vh360-plan-actions"><button class="button" type="submit" name="duplicate_plan" value="<?php echo esc_attr($key); ?>"><?php esc_html_e('Duplicate', 'videohub360-memberships'); ?></button><button class="button button-link-delete" type="submit" form="vh360-delete-plan-<?php echo esc_attr($key); ?>" data-vh360-delete-plan data-confirm="<?php esc_attr_e('Delete this membership plan?', 'videohub360-memberships'); ?>"><?php esc_html_e('Delete', 'videohub360-memberships'); ?></button></div><?php endif; ?>
             </div>
         </section>
+        <?php
+    }
+
+
+    private function render_delete_form($key) {
+        ?>
+        <form id="vh360-delete-plan-<?php echo esc_attr($key); ?>" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="vh360-delete-plan-form">
+            <?php wp_nonce_field('vh360_delete_membership_plan_' . $key); ?>
+            <input type="hidden" name="action" value="vh360_delete_membership_plan" />
+            <input type="hidden" name="plan_key" value="<?php echo esc_attr($key); ?>" />
+        </form>
         <?php
     }
 
