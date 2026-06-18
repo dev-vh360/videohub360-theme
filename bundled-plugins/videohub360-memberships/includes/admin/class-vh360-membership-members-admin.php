@@ -139,7 +139,18 @@ class VH360_Membership_Members_Admin {
     private function redirect($notice) { wp_safe_redirect(self::get_admin_url(array('vh360_members_notice'=>$notice))); exit; }
     private function require_action() { if (!current_user_can(self::CAPABILITY)) wp_die(esc_html__('Permission denied.', 'videohub360-memberships')); check_admin_referer(self::NONCE_ACTION); return isset($_REQUEST['membership_id']) ? absint($_REQUEST['membership_id']) : 0; }
     public function handle_sync() { $id = $this->require_action(); $result = class_exists('VH360_Stripe_Sync') ? VH360_Stripe_Sync::get_instance()->sync_membership($id) : false; $ok = true === $result && !is_wp_error($result); $this->redirect($ok ? 'synced' : 'sync_failed'); }
-    public function handle_extend() { $id = $this->require_action(); $d = isset($_POST['duration']) ? max(1, absint($_POST['duration'])) : 1; $u = isset($_POST['duration_unit']) ? sanitize_key(wp_unslash($_POST['duration_unit'])) : 'months'; $ok = class_exists('VH360_Membership_API') && VH360_Membership_API::get_instance()->extend_membership($id, $d, in_array($u, array('days','months','years','lifetime'), true) ? $u : 'months'); $this->redirect($ok ? 'extended' : 'extend_failed'); }
+    public function handle_extend() {
+        $id = $this->require_action();
+        $m = $this->get_membership($id);
+        if ($m && $this->is_stripe_recurring($m)) {
+            $this->redirect('skipped_recurring');
+        }
+        $d = isset($_POST['duration']) ? max(1, absint($_POST['duration'])) : 1;
+        $u = isset($_POST['duration_unit']) ? sanitize_key(wp_unslash($_POST['duration_unit'])) : 'months';
+        $u = in_array($u, array('days', 'months', 'years', 'lifetime'), true) ? $u : 'months';
+        $ok = class_exists('VH360_Membership_API') && VH360_Membership_API::get_instance()->extend_membership($id, $d, $u);
+        $this->redirect($ok ? 'extended' : 'extend_failed');
+    }
     public function handle_cancel() { $id = $this->require_action(); $m = $this->get_membership($id); if ($m && $this->is_stripe_recurring($m)) $this->redirect('skipped_recurring'); $ok = class_exists('VH360_Membership_API') && VH360_Membership_API::get_instance()->cancel_membership($id); $this->redirect($ok ? 'cancelled' : 'cancel_failed'); }
     public function handle_expire() { $id = $this->require_action(); $m = $this->get_membership($id); if ($m && $this->is_stripe_recurring($m)) $this->redirect('skipped_recurring'); $ok = class_exists('VH360_Membership_API') && VH360_Membership_API::get_instance()->expire_membership($id); $this->redirect($ok ? 'expired' : 'expire_failed'); }
     public function handle_reactivate() { $id = $this->require_action(); $m = $this->get_membership($id); if ($m && $this->is_stripe_recurring($m)) $this->redirect('skipped_recurring'); $ok = class_exists('VH360_Membership_API') && method_exists('VH360_Membership_API','get_instance') && method_exists(VH360_Membership_API::get_instance(), 'reactivate_membership') && VH360_Membership_API::get_instance()->reactivate_membership($id); $this->redirect($ok ? 'reactivated' : 'reactivate_failed'); }
@@ -231,12 +242,17 @@ class VH360_Membership_Members_List_Table extends WP_List_Table {
             $this->admin->stream_csv_export($_REQUEST, $ids);
         }
         $notice = 'sync' === $action ? 'sync_failed' : ('expire' === $action ? 'expire_failed' : 'cancel_failed');
+        $skipped_recurring = false;
         foreach ($ids as $id) {
             $m = $this->admin->get_membership($id);
             if (!$m) continue;
             if ('sync' === $action && $this->admin->is_stripe_recurring($m) && class_exists('VH360_Stripe_Sync')) { $result = VH360_Stripe_Sync::get_instance()->sync_membership($id); if (true === $result && !is_wp_error($result)) $notice = 'sync_failed' === $notice ? 'synced' : $notice; else $notice = 'sync_failed'; }
-            if ('expire' === $action && !$this->admin->is_stripe_recurring($m) && class_exists('VH360_Membership_API')) { $ok = VH360_Membership_API::get_instance()->expire_membership($id); $notice = $ok ? 'expired' : 'expire_failed'; }
-            if ('cancel' === $action && !$this->admin->is_stripe_recurring($m) && class_exists('VH360_Membership_API')) { $ok = VH360_Membership_API::get_instance()->cancel_membership($id); $notice = $ok ? 'cancelled' : 'cancel_failed'; }
+            if (in_array($action, array('expire', 'cancel'), true) && $this->admin->is_stripe_recurring($m)) { $skipped_recurring = true; continue; }
+            if ('expire' === $action && class_exists('VH360_Membership_API')) { $ok = VH360_Membership_API::get_instance()->expire_membership($id); $notice = $ok ? 'expired' : 'expire_failed'; }
+            if ('cancel' === $action && class_exists('VH360_Membership_API')) { $ok = VH360_Membership_API::get_instance()->cancel_membership($id); $notice = $ok ? 'cancelled' : 'cancel_failed'; }
+        }
+        if ($skipped_recurring) {
+            $notice = 'skipped_recurring';
         }
         wp_safe_redirect(VH360_Membership_Members_Admin::get_admin_url(array('vh360_members_notice'=>$notice)));
         exit;
