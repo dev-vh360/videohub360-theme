@@ -999,6 +999,10 @@ function vh360_get_upgrade_products_for_user($user_id) {
             return false;
         }
 
+        if (isset($plans[$product['plan_key']]['show_in_dashboard']) && !$plans[$product['plan_key']]['show_in_dashboard']) {
+            return false;
+        }
+
         if ($current_is_recurring) {
             $show_woocommerce_upgrades = (bool) apply_filters('vh360_show_woocommerce_upgrades_for_recurring_members', false, $product, $current);
             $is_lifetime = (isset($product['duration_unit']) && $product['duration_unit'] === 'lifetime')

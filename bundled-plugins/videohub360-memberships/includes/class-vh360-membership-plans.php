@@ -64,6 +64,9 @@ class VH360_Membership_Plans {
         ), $atts, 'vh360_pricing_toggle');
 
         $plans = self::get_enabled_plans();
+        $plans = array_filter($plans, function($plan) {
+            return !isset($plan['show_on_pricing']) || !empty($plan['show_on_pricing']);
+        });
         $admin_view = current_user_can('manage_options');
 
         if ($atts['groups']) {
@@ -526,6 +529,8 @@ class VH360_Membership_Plans {
             'access_features'=>$access_features,
             'access_features_configured'=>$access_features_configured,
             'tier_level'=>isset($plan['tier_level']) ? absint($plan['tier_level']) : 0,
+            'show_on_pricing'=>array_key_exists('show_on_pricing', $plan) ? (bool) $plan['show_on_pricing'] : true,
+            'show_in_dashboard'=>array_key_exists('show_in_dashboard', $plan) ? (bool) $plan['show_in_dashboard'] : true,
             'is_featured'=>$featured,'is_enabled'=>$enabled,
             'display_order'=>isset($plan['display_order']) ? absint($plan['display_order']) : 999,
             'button_text'=>isset($plan['button_text']) ? sanitize_text_field($plan['button_text']) : __('Choose Plan','videohub360-memberships'),
