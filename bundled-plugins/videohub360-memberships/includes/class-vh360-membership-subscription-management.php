@@ -549,7 +549,7 @@ class VH360_Membership_Subscription_Management {
      */
     private function resolve_plan_display_label($plans, $plan_key) {
         if (!isset($plans[$plan_key])) {
-            return $plan_key;
+            return sprintf(__('Legacy plan: %s', 'videohub360-memberships'), $plan_key);
         }
         $plan = $plans[$plan_key];
         if (!empty($plan['display_label'])) {

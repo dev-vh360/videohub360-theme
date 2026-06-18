@@ -25,6 +25,7 @@ class VH360_Membership_Plans_Admin {
         add_action('admin_post_vh360_delete_membership_plan', array($this, 'handle_delete'));
         add_action('admin_post_vh360_create_membership_sample_plans', array($this, 'handle_create_sample_plans'));
         add_action('admin_post_vh360_cleanup_membership_sample_plans', array($this, 'handle_cleanup_sample_plans'));
+        add_action('admin_post_vh360_remap_membership_plan_key', array($this, 'handle_remap_membership_plan_key'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
     }
 
@@ -458,6 +459,133 @@ class VH360_Membership_Plans_Admin {
         delete_transient('vh360_membership_plans_admin_notice');
     }
 
+    public function handle_remap_membership_plan_key() {
+        if (!current_user_can(self::CAPABILITY)) {
+            wp_die(esc_html__('You do not have permission to manage membership plans.', 'videohub360-memberships'));
+        }
+        check_admin_referer('vh360_remap_membership_plan_key');
+
+        $old_plan_key = isset($_POST['old_plan_key']) ? sanitize_key(wp_unslash($_POST['old_plan_key'])) : '';
+        $new_plan_key = isset($_POST['new_plan_key']) ? sanitize_key(wp_unslash($_POST['new_plan_key'])) : '';
+        $plans = class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan_registry() : array();
+        $errors = array();
+
+        if (!$old_plan_key) {
+            $errors[] = __('Please enter the old plan key.', 'videohub360-memberships');
+        }
+        if (!$new_plan_key) {
+            $errors[] = __('Please choose a valid new plan key.', 'videohub360-memberships');
+        } elseif (empty($plans[$new_plan_key])) {
+            $errors[] = __('The selected new plan does not exist.', 'videohub360-memberships');
+        }
+        if ($old_plan_key && $new_plan_key && $old_plan_key === $new_plan_key) {
+            $errors[] = __('The old and new plan keys must be different.', 'videohub360-memberships');
+        }
+
+        if (!empty($errors)) {
+            $this->set_admin_notice('error', $errors);
+            wp_safe_redirect(self::get_admin_url());
+            exit;
+        }
+
+        global $wpdb;
+        $table = $this->get_memberships_table_name();
+        $affected_memberships = $wpdb->get_results($wpdb->prepare("SELECT id, user_id FROM {$table} WHERE plan_key = %s", $old_plan_key));
+        if (empty($affected_memberships)) {
+            $this->set_admin_notice('warning', array(sprintf(__('No membership records were found using `%s`.', 'videohub360-memberships'), $old_plan_key)));
+            wp_safe_redirect(self::get_admin_url());
+            exit;
+        }
+
+        $updated = $wpdb->update(
+            $table,
+            array(
+                'plan_key'   => $new_plan_key,
+                'updated_at' => current_time('mysql'),
+            ),
+            array('plan_key' => $old_plan_key),
+            array('%s', '%s'),
+            array('%s')
+        );
+
+        if (false === $updated) {
+            $message = __('Could not remap membership plan keys. Please check the database error log.', 'videohub360-memberships');
+            if (defined('WP_DEBUG') && WP_DEBUG && !empty($wpdb->last_error)) {
+                $message .= ' ' . sprintf(__('Database error: %s', 'videohub360-memberships'), $wpdb->last_error);
+            }
+            $this->set_admin_notice('error', array($message));
+            wp_safe_redirect(self::get_admin_url());
+            exit;
+        }
+
+        $this->log_plan_key_remap_events($affected_memberships, $old_plan_key, $new_plan_key);
+        $this->clear_membership_user_caches($affected_memberships);
+
+        $this->set_admin_notice('success', array(sprintf(
+            __('Remapped %1$d membership record(s) from `%2$s` to `%3$s`.', 'videohub360-memberships'),
+            (int) $updated,
+            $old_plan_key,
+            $new_plan_key
+        )));
+        wp_safe_redirect(self::get_admin_url());
+        exit;
+    }
+
+    private function get_memberships_table_name() {
+        global $wpdb;
+        return class_exists('VH360_Membership_Database') && method_exists('VH360_Membership_Database', 'get_memberships_table')
+            ? VH360_Membership_Database::get_memberships_table()
+            : $wpdb->prefix . 'vh360_memberships';
+    }
+
+    private function log_plan_key_remap_events($memberships, $old_plan_key, $new_plan_key) {
+        $api = class_exists('VH360_Membership_API') ? VH360_Membership_API::get_instance() : null;
+        if (!$api || !method_exists($api, 'log_event')) {
+            return;
+        }
+
+        $admin_user_id = get_current_user_id();
+        foreach ((array) $memberships as $membership) {
+            $api->log_event(absint($membership->id), 'plan_key_remapped', array(
+                'message'       => sprintf('Plan key remapped by admin from %s to %s.', $old_plan_key, $new_plan_key),
+                'old_plan_key'  => $old_plan_key,
+                'new_plan_key'  => $new_plan_key,
+                'admin_user_id' => $admin_user_id,
+            ), $admin_user_id);
+        }
+    }
+
+    private function clear_membership_user_caches($memberships) {
+        $user_ids = array();
+        foreach ((array) $memberships as $membership) {
+            $user_id = isset($membership->user_id) ? absint($membership->user_id) : 0;
+            if ($user_id) {
+                $user_ids[$user_id] = true;
+            }
+        }
+        foreach (array_keys($user_ids) as $user_id) {
+            clean_user_cache($user_id);
+        }
+    }
+
+    private function get_missing_membership_plan_key_counts($plans) {
+        global $wpdb;
+        $table = $this->get_memberships_table_name();
+        $rows = $wpdb->get_results("SELECT plan_key, COUNT(*) AS record_count FROM {$table} GROUP BY plan_key");
+        if (empty($rows)) {
+            return array();
+        }
+
+        $missing = array();
+        foreach ($rows as $row) {
+            $plan_key = sanitize_key($row->plan_key);
+            if ($plan_key && empty($plans[$plan_key])) {
+                $missing[$plan_key] = absint($row->record_count);
+            }
+        }
+        return $missing;
+    }
+
     public function render_page() {
         $this->render_manager(true);
     }
@@ -467,6 +595,7 @@ class VH360_Membership_Plans_Admin {
             return;
         }
         $plans = VH360_Membership_Plans::get_plan_registry();
+        $missing_plan_key_counts = $this->get_missing_membership_plan_key_counts($plans);
         $notice = get_transient('vh360_membership_plans_admin_notice');
         delete_transient('vh360_membership_plans_admin_notice');
         ?>
@@ -481,6 +610,9 @@ class VH360_Membership_Plans_Admin {
             </div>
             <?php if ($notice && !empty($notice['messages'])) : ?>
                 <div class="notice notice-<?php echo esc_attr($notice['type']); ?>"><ul><?php foreach ($notice['messages'] as $message) : ?><li><?php echo esc_html($message); ?></li><?php endforeach; ?></ul></div>
+            <?php endif; ?>
+            <?php if (!empty($missing_plan_key_counts)) : ?>
+                <div class="notice notice-warning"><p><?php printf(esc_html__('%d membership record(s) reference plan keys that no longer exist. Use “Remap Existing Membership Plan Keys” to repair them.', 'videohub360-memberships'), array_sum($missing_plan_key_counts)); ?></p></div>
             <?php endif; ?>
             <?php if (empty($plans)) : ?>
                 <div class="vh360-plans-empty-state" data-vh360-empty-state>
@@ -497,6 +629,7 @@ class VH360_Membership_Plans_Admin {
                 </div>
             <?php endif; ?>
             <?php $this->render_cleanup_sample_plans_tool(); ?>
+            <?php $this->render_remap_membership_plan_keys_tool($plans, $missing_plan_key_counts); ?>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="vh360-plans-form">
                 <?php wp_nonce_field(self::NONCE_ACTION); ?>
                 <input type="hidden" name="action" value="vh360_save_membership_plans" />
@@ -536,6 +669,45 @@ class VH360_Membership_Plans_Admin {
             </form>
         </div>
         <?php
+    }
+
+    private function render_remap_membership_plan_keys_tool($plans, $missing_plan_key_counts = array()) {
+        ?>
+        <div class="vh360-maintenance-card">
+            <h2><?php esc_html_e('Remap Existing Membership Plan Keys', 'videohub360-memberships'); ?></h2>
+            <p><?php esc_html_e('Use this repair tool when existing membership records point to an old plan key that no longer exists in the current plan registry. This updates active and historical membership records from one plan key to another valid plan key. Plan keys should normally be treated as permanent IDs.', 'videohub360-memberships'); ?></p>
+            <p class="description"><?php esc_html_e('This updates local Videohub360 membership records only. It does not modify Stripe subscriptions.', 'videohub360-memberships'); ?></p>
+            <?php if (!empty($missing_plan_key_counts)) : ?>
+                <p class="description"><strong><?php esc_html_e('Missing plan keys currently found:', 'videohub360-memberships'); ?></strong> <?php echo esc_html($this->format_missing_plan_key_counts($missing_plan_key_counts)); ?></p>
+            <?php endif; ?>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <?php wp_nonce_field('vh360_remap_membership_plan_key'); ?>
+                <input type="hidden" name="action" value="vh360_remap_membership_plan_key" />
+                <p>
+                    <label for="vh360_old_plan_key"><strong><?php esc_html_e('Old plan key', 'videohub360-memberships'); ?></strong></label><br />
+                    <input type="text" id="vh360_old_plan_key" name="old_plan_key" class="regular-text" value="" placeholder="<?php esc_attr_e('pro_monthly', 'videohub360-memberships'); ?>" />
+                </p>
+                <p>
+                    <label for="vh360_new_plan_key"><strong><?php esc_html_e('New plan key', 'videohub360-memberships'); ?></strong></label><br />
+                    <select id="vh360_new_plan_key" name="new_plan_key">
+                        <option value=""><?php esc_html_e('Choose a current plan…', 'videohub360-memberships'); ?></option>
+                        <?php foreach ($plans as $key => $plan) : ?>
+                            <option value="<?php echo esc_attr($key); ?>"><?php echo esc_html(sprintf('%s (%s)', !empty($plan['label']) ? $plan['label'] : $key, $key)); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </p>
+                <?php submit_button(__('Remap Membership Plan Keys', 'videohub360-memberships'), 'secondary', 'submit', false); ?>
+            </form>
+        </div>
+        <?php
+    }
+
+    private function format_missing_plan_key_counts($missing_plan_key_counts) {
+        $parts = array();
+        foreach ((array) $missing_plan_key_counts as $plan_key => $count) {
+            $parts[] = sprintf('%s (%d)', $plan_key, $count);
+        }
+        return implode(', ', $parts);
     }
 
     private function get_empty_plan() {
