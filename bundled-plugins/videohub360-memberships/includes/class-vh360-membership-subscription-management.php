@@ -185,9 +185,11 @@ class VH360_Membership_Subscription_Management {
         $support_url = isset($options['support_url']) ? $options['support_url'] : (isset($options['contact_url']) ? $options['contact_url'] : '');
         $woo_products = function_exists('vh360_get_upgrade_products_for_user') ? vh360_get_upgrade_products_for_user($user_id) : array();
         if (!$membership && function_exists('vh360_get_membership_products')) {
-            $woo_products = vh360_get_membership_products();
+            $woo_products = $this->filter_dashboard_woocommerce_products(vh360_get_membership_products(), $plans);
+        } else {
+            $woo_products = $this->filter_dashboard_woocommerce_products($woo_products, $plans);
         }
-        $recurring_plans = $this->get_dashboard_recurring_plans($plans, $membership);
+        $recurring_plans = $this->get_dashboard_recurring_plans($plans, $membership, $selected_plan);
         $recurring_plan_groups = $this->group_dashboard_recurring_plans_by_interval($recurring_plans);
         $card_options = get_option('vh360_membership_options', array());
         $button_label = !empty($card_options['subscription_card_button_label']) ? $card_options['subscription_card_button_label'] : __('Subscribe', 'videohub360-memberships');
@@ -318,7 +320,7 @@ class VH360_Membership_Subscription_Management {
             return '<div class="vh360-membership-management"><div class="vh360-membership-notice vh360-membership-notice-warning">' . esc_html__('Recurring memberships are not available right now. Please contact support.', 'videohub360-memberships') . '</div>' . vh360_render_login_gate() . '</div>';
         }
 
-        $recurring_plans = $this->get_dashboard_recurring_plans($plans, false);
+        $recurring_plans = $this->get_dashboard_recurring_plans($plans, false, $selected_plan);
         $recurring_plan_groups = $this->group_dashboard_recurring_plans_by_interval($recurring_plans);
         $dashboard_style = self::get_dashboard_card_style_attribute();
         if (empty($recurring_plans)) {
@@ -341,6 +343,24 @@ class VH360_Membership_Subscription_Management {
         </div>
         <?php
         return ob_get_clean();
+    }
+
+
+    /**
+     * Filter WooCommerce dashboard products by the membership plan dashboard visibility flag.
+     *
+     * @param array $products Membership product records.
+     * @param array $plans    Full plan registry.
+     * @return array
+     */
+    private function filter_dashboard_woocommerce_products($products, $plans) {
+        return array_values(array_filter((array) $products, function($product) use ($plans) {
+            if (empty($product['plan_key']) || empty($plans[$product['plan_key']])) {
+                return false;
+            }
+
+            return !isset($plans[$product['plan_key']]['show_in_dashboard']) || !empty($plans[$product['plan_key']]['show_in_dashboard']);
+        }));
     }
 
     /**
@@ -477,7 +497,7 @@ class VH360_Membership_Subscription_Management {
      * @param object|false $membership Current membership.
      * @return array
      */
-    private function get_dashboard_recurring_plans($plans, $membership) {
+    private function get_dashboard_recurring_plans($plans, $membership, $selected_plan = '') {
         $eligible = array();
         foreach ($plans as $key => $plan) {
             if (!function_exists('vh360_membership_plan_is_eligible_change')) {
@@ -489,7 +509,8 @@ class VH360_Membership_Subscription_Management {
                 continue;
             }
 
-            if (isset($plan['show_in_dashboard']) && !$plan['show_in_dashboard']) {
+            $is_selected_plan = $selected_plan && $selected_plan === $key;
+            if (!$is_selected_plan && isset($plan['show_in_dashboard']) && !$plan['show_in_dashboard']) {
                 continue;
             }
 
