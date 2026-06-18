@@ -24,6 +24,7 @@ class VH360_Membership_Plans_Admin {
         add_action('admin_post_vh360_save_membership_plans', array($this, 'handle_save'));
         add_action('admin_post_vh360_delete_membership_plan', array($this, 'handle_delete'));
         add_action('admin_post_vh360_create_membership_sample_plans', array($this, 'handle_create_sample_plans'));
+        add_action('admin_post_vh360_cleanup_membership_sample_plans', array($this, 'handle_cleanup_sample_plans'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
     }
 
@@ -365,6 +366,98 @@ class VH360_Membership_Plans_Admin {
         exit;
     }
 
+    public function handle_cleanup_sample_plans() {
+        if (!current_user_can(self::CAPABILITY)) {
+            wp_die(esc_html__('You do not have permission to manage membership plans.', 'videohub360-memberships'));
+        }
+        check_admin_referer('vh360_cleanup_membership_sample_plans');
+
+        $plans = class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan_registry() : array();
+        $sample_keys = class_exists('VH360_Membership_Plans') && method_exists('VH360_Membership_Plans', 'get_default_sample_plan_keys')
+            ? VH360_Membership_Plans::get_default_sample_plan_keys()
+            : array();
+        $removed_plans = 0;
+
+        foreach ($sample_keys as $sample_key) {
+            $sample_key = sanitize_key($sample_key);
+            if ($sample_key && isset($plans[$sample_key])) {
+                unset($plans[$sample_key]);
+                $removed_plans++;
+            }
+        }
+
+        if (class_exists('VH360_Membership_Plans')) {
+            VH360_Membership_Plans::save_plans($plans);
+        }
+
+        $valid_plan_keys = array_fill_keys(array_keys($plans), true);
+        $mapping_result = $this->cleanup_stale_woocommerce_plan_mappings($valid_plan_keys);
+        $this->clear_membership_plan_caches();
+
+        $messages = array();
+        if ($removed_plans || $mapping_result['cleared']) {
+            if ($mapping_result['skipped']) {
+                $messages[] = sprintf(
+                    __('Sample plan cleanup complete. Removed %1$d sample plans. WooCommerce was not active, so product mapping cleanup was skipped.', 'videohub360-memberships'),
+                    $removed_plans
+                );
+            } else {
+                $messages[] = sprintf(
+                    __('Sample plan cleanup complete. Removed %1$d sample plans and cleared %2$d stale WooCommerce product mappings.', 'videohub360-memberships'),
+                    $removed_plans,
+                    $mapping_result['cleared']
+                );
+            }
+        } else {
+            $messages[] = $mapping_result['skipped']
+                ? __('No sample plans were found. WooCommerce was not active, so product mapping cleanup was skipped.', 'videohub360-memberships')
+                : __('No sample plans or stale product mappings were found.', 'videohub360-memberships');
+        }
+        $messages[] = __('If old frontend output still appears, clear any active object cache or page cache plugin.', 'videohub360-memberships');
+
+        $this->set_admin_notice('success', $messages);
+        wp_safe_redirect(self::get_admin_url());
+        exit;
+    }
+
+    private function cleanup_stale_woocommerce_plan_mappings($valid_plan_keys) {
+        if (!function_exists('wc_get_product')) {
+            return array('cleared' => 0, 'skipped' => true);
+        }
+
+        $product_ids = get_posts(array(
+            'post_type'      => 'product',
+            'post_status'    => 'any',
+            'posts_per_page' => -1,
+            'fields'         => 'ids',
+            'meta_query'     => array(
+                array(
+                    'key'     => '_vh360_membership_plan',
+                    'value'   => '',
+                    'compare' => '!=',
+                ),
+            ),
+        ));
+
+        $cleared = 0;
+        foreach ($product_ids as $product_id) {
+            $mapped_plan_key = sanitize_key(get_post_meta($product_id, '_vh360_membership_plan', true));
+            if (!$mapped_plan_key || isset($valid_plan_keys[$mapped_plan_key])) {
+                continue;
+            }
+            delete_post_meta($product_id, '_vh360_membership_plan');
+            $cleared++;
+        }
+
+        return array('cleared' => $cleared, 'skipped' => false);
+    }
+
+    private function clear_membership_plan_caches() {
+        wp_cache_delete('vh360_membership_plans', 'options');
+        wp_cache_delete('alloptions', 'options');
+        delete_transient('vh360_membership_plans_admin_notice');
+    }
+
     public function render_page() {
         $this->render_manager(true);
     }
@@ -403,6 +496,7 @@ class VH360_Membership_Plans_Admin {
                     </form>
                 </div>
             <?php endif; ?>
+            <?php $this->render_cleanup_sample_plans_tool(); ?>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="vh360-plans-form">
                 <?php wp_nonce_field(self::NONCE_ACTION); ?>
                 <input type="hidden" name="action" value="vh360_save_membership_plans" />
@@ -420,6 +514,27 @@ class VH360_Membership_Plans_Admin {
             </template>
         </div>
         <?php if ($wrap) : ?></div><?php endif; ?>
+        <?php
+    }
+
+    private function render_cleanup_sample_plans_tool() {
+        $sample_keys = class_exists('VH360_Membership_Plans') && method_exists('VH360_Membership_Plans', 'get_default_sample_plan_keys')
+            ? VH360_Membership_Plans::get_default_sample_plan_keys()
+            : array();
+        ?>
+        <div class="vh360-maintenance-card">
+            <h2><?php esc_html_e('Cleanup Sample Plans / Stale Plan Data', 'videohub360-memberships'); ?></h2>
+            <p><?php esc_html_e('Removes default sample membership plans and clears WooCommerce product mappings that point to deleted or missing plans. Use this if old demo plans still appear on the frontend Membership dashboard after deletion.', 'videohub360-memberships'); ?></p>
+            <p class="description"><strong><?php esc_html_e('Warning:', 'videohub360-memberships'); ?></strong> <?php esc_html_e('This removes plans using the default sample plan keys. Do not run this if you intentionally use those sample keys for real live plans.', 'videohub360-memberships'); ?></p>
+            <?php if (!empty($sample_keys)) : ?>
+                <p class="description"><?php printf(esc_html__('Default sample keys: %s', 'videohub360-memberships'), esc_html(implode(', ', $sample_keys))); ?></p>
+            <?php endif; ?>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <?php wp_nonce_field('vh360_cleanup_membership_sample_plans'); ?>
+                <input type="hidden" name="action" value="vh360_cleanup_membership_sample_plans" />
+                <?php submit_button(__('Clean Up Sample Plans & Stale Mappings', 'videohub360-memberships'), 'secondary', 'submit', false); ?>
+            </form>
+        </div>
         <?php
     }
 
