@@ -78,9 +78,10 @@ class VH360_Membership_Members_Admin {
             'expired' => __('Local membership access expired.', 'videohub360-memberships'), 'reactivated' => __('Local membership access reactivated.', 'videohub360-memberships'),
             'extend_failed' => __('Membership extension failed.', 'videohub360-memberships'), 'cancel_failed' => __('Local membership cancellation failed.', 'videohub360-memberships'),
             'expire_failed' => __('Local membership expiration failed.', 'videohub360-memberships'), 'reactivate_failed' => __('Local membership reactivation failed.', 'videohub360-memberships'),
-            'export_failed' => __('CSV export failed.', 'videohub360-memberships'), 'skipped_recurring' => __('Recurring Stripe memberships were skipped for local-only mutation. Use Sync from Stripe.', 'videohub360-memberships'),
+            'export_failed' => __('CSV export failed.', 'videohub360-memberships'), 'no_members_selected' => __('No paid members were selected.', 'videohub360-memberships'), 'skipped_recurring' => __('Recurring Stripe memberships were skipped for local-only mutation. Use Sync from Stripe.', 'videohub360-memberships'),
         );
-        if (isset($messages[$code])) echo '<div class="notice notice-' . esc_attr(false !== strpos($code, 'failed') ? 'error' : 'success') . ' inline"><p>' . esc_html($messages[$code]) . '</p></div>';
+        $notice_type = 'no_members_selected' === $code ? 'warning' : (false !== strpos($code, 'failed') ? 'error' : 'success');
+        if (isset($messages[$code])) echo '<div class="notice notice-' . esc_attr($notice_type) . ' inline"><p>' . esc_html($messages[$code]) . '</p></div>';
     }
 
     private function render_filters() {
@@ -238,7 +239,11 @@ class VH360_Membership_Members_List_Table extends WP_List_Table {
         check_admin_referer('bulk-' . $this->_args['plural']);
         if (!current_user_can(VH360_Membership_Members_Admin::CAPABILITY)) wp_die(esc_html__('Permission denied.', 'videohub360-memberships'));
         $ids = isset($_REQUEST['membership_ids']) ? array_map('absint', (array) wp_unslash($_REQUEST['membership_ids'])) : array();
-        if ('export' === $action && $ids) {
+        if (empty($ids)) {
+            wp_safe_redirect(VH360_Membership_Members_Admin::get_admin_url(array('vh360_members_notice' => 'no_members_selected')));
+            exit;
+        }
+        if ('export' === $action) {
             $this->admin->stream_csv_export($_REQUEST, $ids);
         }
         $notice = 'sync' === $action ? 'sync_failed' : ('expire' === $action ? 'expire_failed' : 'cancel_failed');
