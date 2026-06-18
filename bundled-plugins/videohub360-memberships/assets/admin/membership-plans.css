@@ -205,3 +205,34 @@
         flex-direction: column;
     }
 }
+
+.vh360-plan-section--access {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+}
+
+.vh360-feature-access-grid {
+    display: grid;
+    gap: 10px 16px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    margin-top: 14px;
+}
+
+.vh360-feature-access-option {
+    align-items: center;
+    background: #fff;
+    border: 1px solid #dcfce7;
+    border-radius: 10px;
+    display: flex;
+    gap: 8px;
+    padding: 10px 12px;
+}
+
+.vh360-plan-access-warning {
+    background: #fff7ed;
+    border-left: 4px solid #f97316;
+    color: #9a3412;
+    font-weight: 700;
+    margin: 14px 0 0;
+    padding: 10px 12px;
+}

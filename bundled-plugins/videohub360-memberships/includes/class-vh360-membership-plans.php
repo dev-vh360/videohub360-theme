@@ -123,15 +123,20 @@ class VH360_Membership_Plans {
         }
 
         $columns = min(4, max(1, absint($atts['columns'])));
+        $show_tabs = count($available_intervals) > 1;
         $style_vars = self::get_pricing_style_attribute() . ' --vh360-pricing-columns: ' . $columns . ';';
 
         ob_start(); ?>
         <section class="vh360-pricing-toggle vh360-pricing-columns-<?php echo esc_attr($columns); ?>" data-columns="<?php echo esc_attr($columns); ?>" style="<?php echo esc_attr($style_vars); ?>">
-            <div class="vh360-pricing-tabs" role="tablist" aria-label="<?php esc_attr_e('Membership billing intervals', 'videohub360-memberships'); ?>">
-                <?php $first = true; foreach ($available_intervals as $interval => $label) : ?>
-                    <button type="button" class="vh360-pricing-tab <?php echo $first ? 'is-active' : ''; ?>" role="tab" tabindex="<?php echo $first ? '0' : '-1'; ?>" aria-selected="<?php echo $first ? 'true' : 'false'; ?>" aria-controls="vh360-pricing-<?php echo esc_attr($interval); ?>" data-vh360-pricing-tab><?php echo esc_html($label); ?></button>
-                <?php $first = false; endforeach; ?>
-            </div>
+            <?php if ($show_tabs) : ?>
+                <div class="vh360-pricing-tabs" role="tablist" aria-label="<?php esc_attr_e('Membership billing intervals', 'videohub360-memberships'); ?>">
+                    <?php $first = true; foreach ($available_intervals as $interval => $label) : ?>
+                        <button type="button" class="vh360-pricing-tab <?php echo $first ? 'is-active' : ''; ?>" role="tab" tabindex="<?php echo $first ? '0' : '-1'; ?>" aria-selected="<?php echo $first ? 'true' : 'false'; ?>" aria-controls="vh360-pricing-<?php echo esc_attr($interval); ?>" data-vh360-pricing-tab><?php echo esc_html($label); ?></button>
+                    <?php $first = false; endforeach; ?>
+                </div>
+            <?php else : ?>
+                <div class="vh360-pricing-tabs-spacer" aria-hidden="true"></div>
+            <?php endif; ?>
             <?php $first = true; foreach ($available_intervals as $interval => $label) : ?>
                 <?php
                 $interval_plan_count = 0;
@@ -310,6 +315,38 @@ class VH360_Membership_Plans {
      */
     const PLANS_OPTION = 'vh360_membership_plans';
 
+
+    public static function get_feature_access_options() {
+        $feature_access_options = array(
+            'activity_feed'           => __('Activity Feed', 'videohub360-memberships'),
+            'members_directory'       => __('Members Directory', 'videohub360-memberships'),
+            'direct_messages'         => __('Direct Messages', 'videohub360-memberships'),
+            'create_videos'           => __('Create Videos / Lessons', 'videohub360-memberships'),
+            'create_posts'            => __('Create Blog Posts', 'videohub360-memberships'),
+            'create_events'           => __('Create Events', 'videohub360-memberships'),
+            'create_bulletins'        => __('Create Bulletins', 'videohub360-memberships'),
+            'create_galleries'        => __('Create Galleries', 'videohub360-memberships'),
+            'live_rooms'              => __('Live Rooms', 'videohub360-memberships'),
+            'appointments'            => __('Appointments', 'videohub360-memberships'),
+            'push_notifications'      => __('Push Notifications', 'videohub360-memberships'),
+        );
+
+        return apply_filters('vh360_membership_feature_access_options', $feature_access_options);
+    }
+
+    public static function sanitize_access_features($features) {
+        $allowed = array_keys(self::get_feature_access_options());
+        $features = is_array($features) ? $features : array();
+        $sanitized = array();
+        foreach ($features as $feature_key) {
+            $feature_key = sanitize_key($feature_key);
+            if ($feature_key && in_array($feature_key, $allowed, true)) {
+                $sanitized[$feature_key] = $feature_key;
+            }
+        }
+        return array_values($sanitized);
+    }
+
     public static function get_allowed_billing_types() {
         return array('recurring', 'one_time', 'lifetime', 'free');
     }
@@ -463,6 +500,12 @@ class VH360_Membership_Plans {
         if (!is_array($features)) {
             $features = preg_split('/\r\n|\r|\n/', (string) $features);
         }
+        $access_features_configured = array_key_exists('access_features_configured', $plan)
+            ? (bool) $plan['access_features_configured']
+            : array_key_exists('access_features', $plan);
+        $access_features = $access_features_configured
+            ? self::sanitize_access_features(isset($plan['access_features']) ? $plan['access_features'] : array())
+            : array();
         $name = isset($plan['name']) ? $plan['name'] : (isset($plan['label']) ? $plan['label'] : $id);
         $label = isset($plan['label']) ? $plan['label'] : $name;
         $enabled = array_key_exists('is_enabled', $plan) ? (bool) $plan['is_enabled'] : (!array_key_exists('enabled', $plan) || (bool) $plan['enabled']);
@@ -480,6 +523,8 @@ class VH360_Membership_Plans {
             'stripe_price_id'=>isset($plan['stripe_price_id']) ? sanitize_text_field($plan['stripe_price_id']) : '',
             'woocommerce_product_id'=>isset($plan['woocommerce_product_id']) ? absint($plan['woocommerce_product_id']) : 0,
             'features'=>array_values(array_filter(array_map('sanitize_text_field',$features))),
+            'access_features'=>$access_features,
+            'access_features_configured'=>$access_features_configured,
             'tier_level'=>isset($plan['tier_level']) ? absint($plan['tier_level']) : 0,
             'is_featured'=>$featured,'is_enabled'=>$enabled,
             'display_order'=>isset($plan['display_order']) ? absint($plan['display_order']) : 999,

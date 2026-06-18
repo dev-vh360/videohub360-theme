@@ -62,6 +62,20 @@
         }
     }
 
+    function updateAdvancedAccessWarning(card) {
+        var billingType = card.querySelector('[data-vh360-billing-type]');
+        var warning = card.querySelector('[data-vh360-free-access-warning]');
+        if (!billingType || !warning) {
+            return;
+        }
+        var advanced = ['create_videos', 'live_rooms', 'appointments', 'push_notifications', 'direct_messages'];
+        var hasAdvanced = advanced.some(function(feature){
+            var checkbox = card.querySelector('input[type="checkbox"][value="' + feature + '"]');
+            return checkbox && checkbox.checked;
+        });
+        warning.classList.toggle('is-hidden', !('free' === billingType.value && hasAdvanced));
+    }
+
     function setupCard(card) {
         if (!card || card.dataset.vh360Ready) {
             return;
@@ -86,10 +100,14 @@
             interval.addEventListener('change', function(){ suggestKeys(card); });
         }
         if (billingType) {
-            billingType.addEventListener('change', function(){ updateConditionalFields(card); });
+            billingType.addEventListener('change', function(){ updateConditionalFields(card); updateAdvancedAccessWarning(card); });
         }
+        card.querySelectorAll('.vh360-feature-access-option input[type="checkbox"]').forEach(function(input){
+            input.addEventListener('change', function(){ updateAdvancedAccessWarning(card); });
+        });
         suggestKeys(card);
         updateConditionalFields(card);
+        updateAdvancedAccessWarning(card);
     }
 
     function addPlanCard() {

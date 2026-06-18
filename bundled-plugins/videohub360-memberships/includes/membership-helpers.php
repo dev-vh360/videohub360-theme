@@ -167,6 +167,102 @@ function vh360_get_user_membership_status($user_id = 0, $plan_key = null) {
     return apply_filters('vh360_get_user_membership_status', $status, $user_id, $plan_key);
 }
 
+
+/**
+ * Get registered membership feature access options.
+ *
+ * @return array Feature key => label map.
+ */
+function vh360_get_membership_feature_access_options() {
+    if (class_exists('VH360_Membership_Plans') && method_exists('VH360_Membership_Plans', 'get_feature_access_options')) {
+        return VH360_Membership_Plans::get_feature_access_options();
+    }
+
+    return apply_filters('vh360_membership_feature_access_options', array());
+}
+
+/**
+ * Get explicitly configured access features for a plan.
+ *
+ * Returns null when the plan has no access_features key yet so legacy
+ * installations can keep the previous any-active-membership behavior until
+ * an administrator edits and saves the plan.
+ *
+ * @param string $plan_key Plan key.
+ * @return array|null Access feature keys, empty array for intentionally none, or null for legacy missing config.
+ */
+function vh360_get_plan_access_features($plan_key) {
+    $plan_key = sanitize_key($plan_key);
+    if (!$plan_key || !class_exists('VH360_Membership_Plans')) {
+        return null;
+    }
+
+    $plan = VH360_Membership_Plans::get_plan($plan_key);
+    if (!$plan) {
+        return null;
+    }
+
+    if (empty($plan['access_features_configured']) && !array_key_exists('access_features', $plan)) {
+        return null;
+    }
+
+    if (empty($plan['access_features_configured'])) {
+        return null;
+    }
+
+    return isset($plan['access_features']) && is_array($plan['access_features']) ? $plan['access_features'] : array();
+}
+
+/**
+ * Check whether a plan explicitly grants a feature.
+ *
+ * @param string $plan_key Plan key.
+ * @param string $feature_key Feature key.
+ * @return bool
+ */
+function vh360_plan_has_access_feature($plan_key, $feature_key) {
+    $feature_key = sanitize_key($feature_key);
+    $features = vh360_get_plan_access_features($plan_key);
+
+    if (null === $features) {
+        return false;
+    }
+
+    return in_array($feature_key, $features, true);
+}
+
+/**
+ * Check whether the user's active membership plan grants a feature.
+ *
+ * @param int $user_id User ID. Defaults to current user.
+ * @param string $feature_key Feature key.
+ * @return bool
+ */
+function vh360_user_plan_has_access_feature($user_id, $feature_key) {
+    $feature_key = sanitize_key($feature_key);
+    $plan_key = '';
+    $has_access = false;
+
+    if (!$user_id) {
+        $user_id = get_current_user_id();
+    }
+
+    if ($user_id && $feature_key) {
+        $membership = vh360_get_active_membership($user_id);
+        if ($membership && !empty($membership->plan_key)) {
+            $plan_key = sanitize_key($membership->plan_key);
+            $features = vh360_get_plan_access_features($plan_key);
+            if (null === $features) {
+                $has_access = vh360_user_has_active_membership($user_id);
+            } else {
+                $has_access = in_array($feature_key, $features, true);
+            }
+        }
+    }
+
+    return apply_filters('vh360_user_plan_has_access_feature', $has_access, $user_id, $feature_key, $plan_key);
+}
+
 /**
  * Check if user can access membership feature
  *
@@ -202,16 +298,25 @@ function vh360_can_access_membership_feature($feature_key, $user_id = 0) {
         return true;
     }
     
-    // Check if user has any of the required plans
-    foreach ($required_plans as $plan_key) {
-        if (vh360_user_has_membership_plan($user_id, $plan_key)) {
-            return true;
-        }
-    }
-    
-    // Check if user has any active membership (for features requiring any paid plan)
+    // Feature-level gates now require the active plan to explicitly unlock the feature.
+    // Legacy plans without an access_features key fall back inside this helper to the
+    // previous any-active-membership behavior until an admin saves the plan.
     if (in_array('any', $required_plans, true)) {
-        return vh360_user_has_active_membership($user_id);
+        $has_access = vh360_user_plan_has_access_feature($user_id, $feature_key);
+        return apply_filters('vh360_can_access_membership_feature', $has_access, $feature_key, $user_id);
+    }
+
+    // Preserve specific-plan filters for legacy/content integrations, but require the
+    // matched active plan to include this feature when access_features has been saved.
+    foreach ($required_plans as $plan_key) {
+        if (!vh360_user_has_membership_plan($user_id, $plan_key)) {
+            continue;
+        }
+        $features = vh360_get_plan_access_features($plan_key);
+        $has_access = null === $features ? true : in_array($feature_key, $features, true);
+        if ($has_access) {
+            return apply_filters('vh360_can_access_membership_feature', true, $feature_key, $user_id);
+        }
     }
     
     return apply_filters('vh360_can_access_membership_feature', false, $feature_key, $user_id);
