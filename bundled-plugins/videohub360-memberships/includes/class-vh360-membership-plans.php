@@ -134,6 +134,8 @@ class VH360_Membership_Plans {
                         <button type="button" class="vh360-pricing-tab <?php echo $first ? 'is-active' : ''; ?>" role="tab" tabindex="<?php echo $first ? '0' : '-1'; ?>" aria-selected="<?php echo $first ? 'true' : 'false'; ?>" aria-controls="vh360-pricing-<?php echo esc_attr($interval); ?>" data-vh360-pricing-tab><?php echo esc_html($label); ?></button>
                     <?php $first = false; endforeach; ?>
                 </div>
+            <?php else : ?>
+                <div class="vh360-pricing-tabs-spacer" aria-hidden="true"></div>
             <?php endif; ?>
             <?php $first = true; foreach ($available_intervals as $interval => $label) : ?>
                 <?php

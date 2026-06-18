@@ -9,6 +9,10 @@
     justify-content: center;
     margin-bottom: 1.5rem;
 }
+.vh360-pricing-tabs-spacer {
+    margin-bottom: 1.5rem;
+    min-height: calc(1em + 1.3rem + 2px);
+}
 .vh360-pricing-tab {
     background: var(--vh360-pricing-tab-bg, #fff);
     border: 1px solid #d0d7de;
@@ -127,6 +131,10 @@
 }
 
 @media (max-width: 640px) {
+    .vh360-pricing-tabs-spacer {
+        display: none;
+    }
+
     .vh360-pricing-grid {
         grid-template-columns: 1fr !important;
     }
