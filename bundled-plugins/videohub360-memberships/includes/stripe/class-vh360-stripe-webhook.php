@@ -481,42 +481,88 @@ class VH360_Stripe_Webhook {
     }
     
     /**
-     * Resolve plan key from Stripe subscription
+     * Resolve plan key from Stripe subscription.
      *
-     * @param array $subscription Stripe subscription object
-     * @return string Plan key or empty string
+     * Prefer the current local plan registry by Stripe Price ID before falling
+     * back to subscription metadata, because metadata can contain an old plan
+     * key after an administrator remaps local membership records.
+     *
+     * @param array|object $subscription Stripe subscription object.
+     * @return string Plan key or empty string.
      */
     private function resolve_plan_key_from_subscription($subscription) {
-        // Check subscription metadata
-        if (!empty($subscription['metadata']['plan_key'])) {
-            return sanitize_text_field($subscription['metadata']['plan_key']);
-        }
-        
-        // Try to match by price ID
+        $plans = class_exists('VH360_Membership_Plans') ? VH360_Membership_Plans::get_plan_registry() : array();
+        $metadata_plan_key = $this->get_metadata_plan_key_from_subscription($subscription);
         $price_id = $this->get_price_id_from_subscription($subscription);
+
         if ($price_id) {
-            $plan_key = VH360_Membership_Plans::get_plan_key_by_stripe_price($price_id);
-            if ($plan_key) {
+            foreach ($plans as $plan_key => $plan) {
+                if (empty($plan['stripe_price_id']) || $plan['stripe_price_id'] !== $price_id) {
+                    continue;
+                }
+
+                if ($metadata_plan_key && $metadata_plan_key !== $plan_key && defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log(sprintf(
+                        'VH360 Stripe webhook resolved plan by price ID (%s) instead of subscription metadata (%s).',
+                        $plan_key,
+                        $metadata_plan_key
+                    ));
+                }
+
                 return $plan_key;
             }
         }
-        
+
+        if ($metadata_plan_key) {
+            return $metadata_plan_key;
+        }
+
+        return '';
+    }
+
+    /**
+     * Get the plan key stored in Stripe subscription metadata.
+     *
+     * @param array|object $subscription Stripe subscription.
+     * @return string Metadata plan key or empty string.
+     */
+    private function get_metadata_plan_key_from_subscription($subscription) {
+        if (is_array($subscription) && !empty($subscription['metadata']['plan_key'])) {
+            return sanitize_key($subscription['metadata']['plan_key']);
+        }
+
+        if (is_object($subscription) && !empty($subscription->metadata->plan_key)) {
+            return sanitize_key($subscription->metadata->plan_key);
+        }
+
         return '';
     }
     
     /**
-     * Get the Stripe price ID from a subscription object
+     * Get the Stripe price ID from a subscription object.
      *
-     * @param array $subscription Stripe subscription
-     * @return string Price ID or empty string
+     * @param array|object $subscription Stripe subscription.
+     * @return string Price ID or empty string.
      */
     private function get_price_id_from_subscription($subscription) {
-        if (!empty($subscription['items']['data'][0]['price']['id'])) {
-            return $subscription['items']['data'][0]['price']['id'];
+        if (is_array($subscription)) {
+            if (!empty($subscription['items']['data'][0]['price']['id'])) {
+                return sanitize_text_field($subscription['items']['data'][0]['price']['id']);
+            }
+
+            if (!empty($subscription['plan']['id'])) {
+                return sanitize_text_field($subscription['plan']['id']);
+            }
         }
-        
-        if (!empty($subscription['plan']['id'])) {
-            return $subscription['plan']['id'];
+
+        if (is_object($subscription)) {
+            if (!empty($subscription->items->data[0]->price->id)) {
+                return sanitize_text_field($subscription->items->data[0]->price->id);
+            }
+
+            if (!empty($subscription->plan->id)) {
+                return sanitize_text_field($subscription->plan->id);
+            }
         }
         
         return '';
