@@ -157,6 +157,35 @@
         });
     });
 
+    /**
+     * Dashboard recurring plan interval tabs
+     */
+    $(document).on('click', '[data-vh360-dashboard-plan-tab]', function(e) {
+        e.preventDefault();
+
+        var $tab = $(this);
+        var interval = $tab.data('vh360-dashboard-plan-tab');
+        var $switcher = $tab.closest('[data-vh360-dashboard-plan-switcher]');
+
+        if (!interval || !$switcher.length) {
+            return;
+        }
+
+        $switcher.find('[data-vh360-dashboard-plan-tab]').each(function() {
+            var $item = $(this);
+            var isActive = $item.data('vh360-dashboard-plan-tab') === interval;
+            $item.toggleClass('is-active', isActive)
+                .attr('aria-selected', isActive ? 'true' : 'false')
+                .attr('tabindex', isActive ? '0' : '-1');
+        });
+
+        $switcher.find('[data-vh360-dashboard-plan-panel]').each(function() {
+            var $panel = $(this);
+            var isActive = $panel.data('vh360-dashboard-plan-panel') === interval;
+            $panel.toggleClass('is-active', isActive).prop('hidden', !isActive);
+        });
+    });
+
 
     $(function() {
         if (!config.selectedPlan || !config.autoCheckout) {

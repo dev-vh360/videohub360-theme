@@ -325,6 +325,8 @@ class VH360_Membership_Plans_Admin {
         }
         $raw['is_enabled'] = !empty($raw['is_enabled']);
         $raw['is_featured'] = !empty($raw['is_featured']);
+        $raw['show_on_pricing'] = !empty($raw['show_on_pricing']);
+        $raw['show_in_dashboard'] = !empty($raw['show_in_dashboard']);
         return $raw;
     }
 
@@ -422,7 +424,7 @@ class VH360_Membership_Plans_Admin {
     }
 
     private function get_empty_plan() {
-        return array('id'=>'','name'=>'','label'=>'','description'=>'','plan_group'=>'','billing_type'=>'recurring','billing_interval'=>'monthly','price'=>'','currency'=>'USD','compare_at_price'=>'','savings_text'=>'','stripe_price_id'=>'','woocommerce_product_id'=>0,'features'=>array(),'access_features'=>array(),'access_features_configured'=>true,'tier_level'=>0,'is_featured'=>false,'is_enabled'=>false,'display_order'=>999,'button_text'=>__('Choose Plan','videohub360-memberships'),'checkout_behavior'=>'stripe');
+        return array('id'=>'','name'=>'','label'=>'','description'=>'','plan_group'=>'','billing_type'=>'recurring','billing_interval'=>'monthly','price'=>'','currency'=>'USD','compare_at_price'=>'','savings_text'=>'','stripe_price_id'=>'','woocommerce_product_id'=>0,'features'=>array(),'access_features'=>array(),'access_features_configured'=>true,'tier_level'=>0,'show_on_pricing'=>true,'show_in_dashboard'=>true,'is_featured'=>false,'is_enabled'=>false,'display_order'=>999,'button_text'=>__('Choose Plan','videohub360-memberships'),'checkout_behavior'=>'stripe');
     }
 
     private function render_plan_card($key, $plan, $is_new = false) {
@@ -501,6 +503,9 @@ class VH360_Membership_Plans_Admin {
                     <div class="vh360-plan-grid vh360-plan-grid--wide">
                         <?php $this->textarea($field, 'description', __('Description', 'videohub360-memberships'), $plan['description'], __('Short pricing card description.', 'videohub360-memberships'), 3); ?>
                         <div class="vh360-plan-field vh360-plan-toggle-field"><label><input type="checkbox" name="<?php echo esc_attr($field); ?>[is_featured]" value="1" <?php checked(!empty($plan['is_featured'])); ?> /> <?php esc_html_e('Featured / Recommended', 'videohub360-memberships'); ?></label><p class="description"><?php esc_html_e('Adds a recommendation badge to pricing displays.', 'videohub360-memberships'); ?></p></div>
+                    </div>
+                    <div class="vh360-plan-grid vh360-plan-grid--wide">
+                        <div class="vh360-plan-field vh360-plan-toggle-field"><strong><?php esc_html_e('Display Locations', 'videohub360-memberships'); ?></strong><label><input type="checkbox" name="<?php echo esc_attr($field); ?>[show_on_pricing]" value="1" <?php checked(!empty($plan['show_on_pricing'])); ?> /> <?php esc_html_e('Show on public pricing pages', 'videohub360-memberships'); ?></label><label><input type="checkbox" name="<?php echo esc_attr($field); ?>[show_in_dashboard]" value="1" <?php checked(!empty($plan['show_in_dashboard'])); ?> /> <?php esc_html_e('Show in Membership dashboard tab', 'videohub360-memberships'); ?></label><p class="description"><?php esc_html_e('Choose where this plan appears. Disabling a display location does not disable the plan itself or break existing memberships.', 'videohub360-memberships'); ?></p></div>
                     </div>
                 </div>
 

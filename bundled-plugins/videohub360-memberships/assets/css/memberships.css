@@ -440,6 +440,51 @@
     margin-top: auto;
 }
 
+.vh360-dashboard-recurring-plans {
+    margin: 0 0 24px;
+}
+
+.vh360-dashboard-plan-tabs {
+    align-items: center;
+    display: inline-flex;
+    gap: 6px;
+    margin: 0 0 16px;
+    padding: 4px;
+    background: #f4f7f9;
+    border: 1px solid #dfe7ee;
+    border-radius: 999px;
+}
+
+.vh360-dashboard-plan-tab {
+    background: transparent;
+    border: 0;
+    border-radius: 999px;
+    color: var(--vh360-dashboard-text-color, #52616d);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 10px 16px;
+}
+
+.vh360-dashboard-plan-tab.is-active {
+    background: var(--vh360-dashboard-button-bg, #0073aa);
+    color: var(--vh360-dashboard-button-color, #fff);
+    box-shadow: 0 6px 16px rgba(0, 115, 170, .18);
+}
+
+.vh360-dashboard-plan-panel[hidden] {
+    display: none;
+}
+
+.vh360-dashboard-plan-group-card {
+    padding: 20px;
+}
+
+.vh360-dashboard-plan-group-card .vh360-plan-price {
+    font-size: 22px;
+}
+
 .vh360-membership-muted {
     color: #666;
     font-size: 14px;
