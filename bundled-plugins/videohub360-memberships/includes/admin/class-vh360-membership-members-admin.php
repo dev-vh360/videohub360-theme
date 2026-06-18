@@ -47,13 +47,13 @@ class VH360_Membership_Members_Admin {
             echo '<div class="notice notice-error inline"><p>' . esc_html__('You do not have permission to view paid members.', 'videohub360-memberships') . '</p></div>';
             return;
         }
+        $table = new VH360_Membership_Members_List_Table($this);
+        $table->prepare_items();
         if ($wrap) echo '<div class="wrap">';
         echo '<h2>' . esc_html__('Paid Members', 'videohub360-memberships') . '</h2>';
         $this->render_notice();
         $membership_id = isset($_GET['membership_id']) ? absint($_GET['membership_id']) : 0;
         if ($membership_id) $this->render_details($membership_id);
-        $table = new VH360_Membership_Members_List_Table($this);
-        $table->prepare_items();
         echo '<form method="get" class="vh360-paid-members-form">';
         echo '<input type="hidden" name="page" value="vh360-theme-memberships" /><input type="hidden" name="tab" value="paid-members" />';
         $this->render_filters();
@@ -76,6 +76,8 @@ class VH360_Membership_Members_Admin {
             'synced' => __('Membership synced from Stripe.', 'videohub360-memberships'), 'sync_failed' => __('Stripe sync failed or was unavailable.', 'videohub360-memberships'),
             'extended' => __('Membership extended.', 'videohub360-memberships'), 'cancelled' => __('Local membership access cancelled.', 'videohub360-memberships'),
             'expired' => __('Local membership access expired.', 'videohub360-memberships'), 'reactivated' => __('Local membership access reactivated.', 'videohub360-memberships'),
+            'extend_failed' => __('Membership extension failed.', 'videohub360-memberships'), 'cancel_failed' => __('Local membership cancellation failed.', 'videohub360-memberships'),
+            'expire_failed' => __('Local membership expiration failed.', 'videohub360-memberships'), 'reactivate_failed' => __('Local membership reactivation failed.', 'videohub360-memberships'),
             'export_failed' => __('CSV export failed.', 'videohub360-memberships'), 'skipped_recurring' => __('Recurring Stripe memberships were skipped for local-only mutation. Use Sync from Stripe.', 'videohub360-memberships'),
         );
         if (isset($messages[$code])) echo '<div class="notice notice-' . esc_attr(false !== strpos($code, 'failed') ? 'error' : 'success') . ' inline"><p>' . esc_html($messages[$code]) . '</p></div>';
@@ -117,7 +119,8 @@ class VH360_Membership_Members_Admin {
     public function build_query($count = false, $limit = 25, $offset = 0, $orderby = 'updated_at', $order = 'DESC', $source = null, $ids = array()) {
         global $wpdb; $table = VH360_Membership_Database::get_memberships_table(); $users = $wpdb->users;
         $where = array('1=1'); $f = $this->get_filters($source);
-        foreach (array('status','plan_key','billing_mode') as $key) if ($f[$key] !== '') $where[] = $wpdb->prepare("m.$key = %s", $f[$key]);
+        foreach (array('plan_key','billing_mode') as $key) if ($f[$key] !== '') $where[] = $wpdb->prepare("m.$key = %s", $f[$key]);
+        if ('past_due' === $f['status']) $where[] = $wpdb->prepare('m.subscription_status = %s', 'past_due'); elseif ($f['status'] !== '') $where[] = $wpdb->prepare('m.status = %s', $f['status']);
         if ($f['billing_provider'] === 'manual') $where[] = "(m.billing_provider = '' OR m.billing_provider IS NULL OR m.billing_provider = 'manual')"; elseif ($f['billing_provider'] !== '') $where[] = $wpdb->prepare('m.billing_provider = %s', $f['billing_provider']);
         if ('yes' === $f['cancel_pending']) $where[] = 'm.cancel_at_period_end = 1'; elseif ('no' === $f['cancel_pending']) $where[] = '(m.cancel_at_period_end = 0 OR m.cancel_at_period_end IS NULL)';
         if ($f['s'] !== '') { $like = '%' . $wpdb->esc_like($f['s']) . '%'; $num = absint($f['s']); $where[] = $wpdb->prepare('(u.user_email LIKE %s OR u.display_name LIKE %s OR u.user_login LIKE %s OR m.stripe_subscription_id LIKE %s OR m.stripe_customer_id LIKE %s OR m.stripe_price_id LIKE %s OR m.id = %d OR m.source_order_id = %d)', $like,$like,$like,$like,$like,$like,$num,$num); }
@@ -135,33 +138,79 @@ class VH360_Membership_Members_Admin {
     public function action_url($action, $id) { return wp_nonce_url(add_query_arg(array('action'=>$action, 'membership_id'=>absint($id)), admin_url('admin-post.php')), self::NONCE_ACTION); }
     private function redirect($notice) { wp_safe_redirect(self::get_admin_url(array('vh360_members_notice'=>$notice))); exit; }
     private function require_action() { if (!current_user_can(self::CAPABILITY)) wp_die(esc_html__('Permission denied.', 'videohub360-memberships')); check_admin_referer(self::NONCE_ACTION); return isset($_REQUEST['membership_id']) ? absint($_REQUEST['membership_id']) : 0; }
-    public function handle_sync() { $id = $this->require_action(); $ok = class_exists('VH360_Stripe_Sync') && VH360_Stripe_Sync::get_instance()->sync_membership($id); $this->redirect($ok ? 'synced' : 'sync_failed'); }
-    public function handle_extend() { $id = $this->require_action(); $d = isset($_POST['duration']) ? max(1, absint($_POST['duration'])) : 1; $u = isset($_POST['duration_unit']) ? sanitize_key(wp_unslash($_POST['duration_unit'])) : 'months'; $ok = class_exists('VH360_Membership_API') && VH360_Membership_API::get_instance()->extend_membership($id, $d, in_array($u, array('days','months','years','lifetime'), true) ? $u : 'months'); $this->redirect($ok ? 'extended' : 'export_failed'); }
-    public function handle_cancel() { $id = $this->require_action(); $m = $this->get_membership($id); if ($m && $this->is_stripe_recurring($m)) $this->redirect('skipped_recurring'); $ok = class_exists('VH360_Membership_API') && VH360_Membership_API::get_instance()->cancel_membership($id); $this->redirect($ok ? 'cancelled' : 'export_failed'); }
-    public function handle_expire() { $id = $this->require_action(); $m = $this->get_membership($id); if ($m && $this->is_stripe_recurring($m)) $this->redirect('skipped_recurring'); $ok = class_exists('VH360_Membership_API') && VH360_Membership_API::get_instance()->expire_membership($id); $this->redirect($ok ? 'expired' : 'export_failed'); }
-    public function handle_reactivate() { $id = $this->require_action(); $m = $this->get_membership($id); if ($m && $this->is_stripe_recurring($m)) $this->redirect('skipped_recurring'); $ok = class_exists('VH360_Membership_API') && method_exists('VH360_Membership_API','get_instance') && method_exists(VH360_Membership_API::get_instance(), 'reactivate_membership') && VH360_Membership_API::get_instance()->reactivate_membership($id); $this->redirect($ok ? 'reactivated' : 'export_failed'); }
+    public function handle_sync() { $id = $this->require_action(); $result = class_exists('VH360_Stripe_Sync') ? VH360_Stripe_Sync::get_instance()->sync_membership($id) : false; $ok = true === $result && !is_wp_error($result); $this->redirect($ok ? 'synced' : 'sync_failed'); }
+    public function handle_extend() { $id = $this->require_action(); $d = isset($_POST['duration']) ? max(1, absint($_POST['duration'])) : 1; $u = isset($_POST['duration_unit']) ? sanitize_key(wp_unslash($_POST['duration_unit'])) : 'months'; $ok = class_exists('VH360_Membership_API') && VH360_Membership_API::get_instance()->extend_membership($id, $d, in_array($u, array('days','months','years','lifetime'), true) ? $u : 'months'); $this->redirect($ok ? 'extended' : 'extend_failed'); }
+    public function handle_cancel() { $id = $this->require_action(); $m = $this->get_membership($id); if ($m && $this->is_stripe_recurring($m)) $this->redirect('skipped_recurring'); $ok = class_exists('VH360_Membership_API') && VH360_Membership_API::get_instance()->cancel_membership($id); $this->redirect($ok ? 'cancelled' : 'cancel_failed'); }
+    public function handle_expire() { $id = $this->require_action(); $m = $this->get_membership($id); if ($m && $this->is_stripe_recurring($m)) $this->redirect('skipped_recurring'); $ok = class_exists('VH360_Membership_API') && VH360_Membership_API::get_instance()->expire_membership($id); $this->redirect($ok ? 'expired' : 'expire_failed'); }
+    public function handle_reactivate() { $id = $this->require_action(); $m = $this->get_membership($id); if ($m && $this->is_stripe_recurring($m)) $this->redirect('skipped_recurring'); $ok = class_exists('VH360_Membership_API') && method_exists('VH360_Membership_API','get_instance') && method_exists(VH360_Membership_API::get_instance(), 'reactivate_membership') && VH360_Membership_API::get_instance()->reactivate_membership($id); $this->redirect($ok ? 'reactivated' : 'reactivate_failed'); }
 
     public function handle_export() {
         if (!current_user_can(self::CAPABILITY)) wp_die(esc_html__('Permission denied.', 'videohub360-memberships')); check_admin_referer(self::NONCE_ACTION);
-        $ids = isset($_POST['membership_ids']) ? array_map('absint', (array) wp_unslash($_POST['membership_ids'])) : array();
-        $rows = $this->get_memberships(5000, 0, 'updated_at', 'DESC', $_POST, $ids);
-        if (!$rows) $rows = array();
+        $ids = isset($_REQUEST['membership_ids']) ? array_map('absint', (array) wp_unslash($_REQUEST['membership_ids'])) : array();
+        $this->stream_csv_export($_REQUEST, $ids);
+    }
+
+    public function stream_csv_export($source, $ids = array()) {
         nocache_headers(); header('Content-Type: text/csv; charset=utf-8'); header('Content-Disposition: attachment; filename=vh360-paid-members-' . gmdate('Y-m-d') . '.csv');
         $out = fopen('php://output', 'w'); $cols = array('membership_id','user_id','display_name','user_email','plan_key','plan_label','status','billing_mode','billing_provider','subscription_status','cancel_at_period_end','starts_at','expires_at','current_period_start','current_period_end','source_order_id','stripe_customer_id','stripe_subscription_id','stripe_price_id','created_at','updated_at','last_billing_sync_at'); fputcsv($out, $cols);
-        foreach ($rows as $r) fputcsv($out, array($r->id,$r->user_id,$r->display_name,$r->user_email,$r->plan_key,$this->plan_label($r->plan_key),$r->status,$r->billing_mode,$r->billing_provider,$r->subscription_status,$r->cancel_at_period_end,$r->starts_at,$r->expires_at,$r->current_period_start,$r->current_period_end,$r->source_order_id,$r->stripe_customer_id,$r->stripe_subscription_id,$r->stripe_price_id,$r->created_at,$r->updated_at,$r->last_billing_sync_at));
+        $offset = 0; $limit = 500;
+        do {
+            $rows = $this->get_memberships($limit, $offset, 'updated_at', 'DESC', $source, $ids);
+            foreach ($rows as $r) fputcsv($out, array($r->id,$r->user_id,$r->display_name,$r->user_email,$r->plan_key,$this->plan_label($r->plan_key),$r->status,$r->billing_mode,$r->billing_provider,$r->subscription_status,$r->cancel_at_period_end,$r->starts_at,$r->expires_at,$r->current_period_start,$r->current_period_end,$r->source_order_id,$r->stripe_customer_id,$r->stripe_subscription_id,$r->stripe_price_id,$r->created_at,$r->updated_at,$r->last_billing_sync_at));
+            $offset += $limit;
+        } while (count($rows) === $limit && empty($ids));
         fclose($out); exit;
     }
 
     private function render_details($id) {
-        global $wpdb; $m = $this->get_membership($id); if (!$m) { echo '<div class="notice notice-warning inline"><p>' . esc_html__('Membership not found.', 'videohub360-memberships') . '</p></div>'; return; }
+        global $wpdb;
+        $m = $this->get_membership($id);
+        if (!$m) {
+            echo '<div class="notice notice-warning inline"><p>' . esc_html__('Membership not found.', 'videohub360-memberships') . '</p></div>';
+            return;
+        }
+
+        $user_label = trim(($m->display_name ?: $m->user_login) . ' <' . $m->user_email . '> (#' . $m->user_id . ')');
+        $user_value = $m->user_id ? '<a href="' . esc_url(get_edit_user_link($m->user_id)) . '">' . esc_html($user_label) . '</a>' : esc_html($user_label ?: __('Unknown user', 'videohub360-memberships'));
+        $order_link = $this->order_link($m->source_order_id);
+        $order_value = $m->source_order_id ? ($order_link ? '<a href="' . esc_url($order_link) . '">#' . esc_html($m->source_order_id) . '</a>' : esc_html('#' . $m->source_order_id)) : '—';
+        $stripe_source = array_filter(array($m->stripe_customer_id ? 'Customer: ' . $m->stripe_customer_id : '', $m->stripe_subscription_id ? 'Subscription: ' . $m->stripe_subscription_id : '', $m->stripe_price_id ? 'Price: ' . $m->stripe_price_id : ''));
+
         echo '<div class="vh360-member-details"><h3>' . esc_html(sprintf(__('Membership #%d Details', 'videohub360-memberships'), $id)) . '</h3><div class="vh360-details-grid">';
-        $fields = array('Membership ID'=>$m->id,'User'=>$m->display_name . ' <' . $m->user_email . '> (#' . $m->user_id . ')','Plan'=>$this->plan_label($m->plan_key) . ' (' . $m->plan_key . ')','Status'=>$m->status,'Billing'=>$m->billing_mode . ' / ' . $m->billing_provider,'Source order ID'=>$m->source_order_id,'Stripe customer ID'=>$m->stripe_customer_id,'Stripe subscription ID'=>$m->stripe_subscription_id,'Stripe price ID'=>$m->stripe_price_id,'Subscription status'=>$m->subscription_status,'Current period start'=>$m->current_period_start,'Current period end'=>$m->current_period_end,'Cancel at period end'=>!empty($m->cancel_at_period_end)?'Yes':'No','Cancelled at'=>$m->cancelled_at,'Starts at'=>$m->starts_at,'Expires at'=>$m->expires_at,'Created at'=>$m->created_at,'Updated at'=>$m->updated_at,'Last billing sync'=>$m->last_billing_sync_at);
-        foreach ($fields as $label=>$value) echo '<div class="vh360-detail-card"><strong>' . esc_html($label) . '</strong><span>' . esc_html($value ?: '—') . '</span></div>';
+        $this->detail_card('Membership ID', esc_html($m->id));
+        $this->detail_card('User', $user_value, true);
+        $this->detail_card('Plan', esc_html($this->plan_label($m->plan_key) . ' (' . $m->plan_key . ')'));
+        $this->detail_card('Status', esc_html($m->status ?: '—'));
+        $this->detail_card('Billing', esc_html(($m->billing_mode ?: '—') . ' / ' . ($m->billing_provider ?: 'local')));
+        $this->detail_card('Source order', $order_value, true);
+        $this->detail_card('Stripe source', esc_html($stripe_source ? implode(' | ', $stripe_source) : '—'));
+        $this->detail_card('Subscription status', esc_html($m->subscription_status ?: '—'));
+        $this->detail_card('Current period start', esc_html($m->current_period_start ?: '—'));
+        $this->detail_card('Current period end', esc_html($m->current_period_end ?: '—'));
+        $this->detail_card('Cancel at period end', esc_html(!empty($m->cancel_at_period_end) ? 'Yes' : 'No'));
+        $this->detail_card('Cancelled at', esc_html($m->cancelled_at ?: '—'));
+        $this->detail_card('Starts at', esc_html($m->starts_at ?: '—'));
+        $this->detail_card('Expires at', esc_html($m->expires_at ?: 'Lifetime / No expiration'));
+        $this->detail_card('Created at', esc_html($m->created_at ?: '—'));
+        $this->detail_card('Updated at', esc_html($m->updated_at ?: '—'));
+        $this->detail_card('Last billing sync', esc_html($m->last_billing_sync_at ?: '—'));
         echo '</div>';
-        $events_table = VH360_Membership_Database::get_events_table(); $events = $wpdb->get_results($wpdb->prepare("SELECT event_type, actor_id, event_data, created_at FROM {$events_table} WHERE membership_id=%d ORDER BY created_at DESC LIMIT 20", $id));
+
+        if (!$this->is_stripe_recurring($m)) {
+            echo '<div id="extend-local-access" class="vh360-detail-action"><h4>' . esc_html__('Extend Local Access', 'videohub360-memberships') . '</h4><form method="post" action="' . esc_url(admin_url('admin-post.php')) . '"><input type="hidden" name="action" value="vh360_membership_extend"><input type="hidden" name="membership_id" value="' . esc_attr($m->id) . '">';
+            wp_nonce_field(self::NONCE_ACTION);
+            echo '<input type="number" name="duration" value="1" min="1"> <select name="duration_unit"><option value="months">' . esc_html__('months', 'videohub360-memberships') . '</option><option value="days">' . esc_html__('days', 'videohub360-memberships') . '</option><option value="years">' . esc_html__('years', 'videohub360-memberships') . '</option><option value="lifetime">' . esc_html__('lifetime', 'videohub360-memberships') . '</option></select> <button class="button button-secondary">' . esc_html__('Extend Membership', 'videohub360-memberships') . '</button></form></div>';
+        }
+
+        $events_table = VH360_Membership_Database::get_events_table();
+        $events = $wpdb->get_results($wpdb->prepare("SELECT event_type, actor_id, event_data, created_at FROM {$events_table} WHERE membership_id=%d ORDER BY created_at DESC LIMIT 20", $id));
         echo '<h4>' . esc_html__('Recent Events', 'videohub360-memberships') . '</h4><table class="widefat vh360-events-table"><thead><tr><th>Type</th><th>Actor</th><th>Date</th><th>Summary</th></tr></thead><tbody>';
         if ($events) foreach ($events as $e) echo '<tr><td>' . esc_html($e->event_type) . '</td><td>' . esc_html($e->actor_id) . '</td><td>' . esc_html($e->created_at) . '</td><td><code>' . esc_html(wp_trim_words((string) $e->event_data, 20)) . '</code></td></tr>'; else echo '<tr><td colspan="4">' . esc_html__('No events found.', 'videohub360-memberships') . '</td></tr>';
         echo '</tbody></table><p><a class="button" href="' . esc_url(self::get_admin_url()) . '">' . esc_html__('Back to Paid Members', 'videohub360-memberships') . '</a></p></div>';
+    }
+
+    private function detail_card($label, $value, $is_html = false) {
+        echo '<div class="vh360-detail-card"><strong>' . esc_html($label) . '</strong><span>' . ($is_html ? wp_kses_post($value) : $value) . '</span></div>';
     }
 }
 
@@ -179,18 +228,15 @@ class VH360_Membership_Members_List_Table extends WP_List_Table {
         if (!current_user_can(VH360_Membership_Members_Admin::CAPABILITY)) wp_die(esc_html__('Permission denied.', 'videohub360-memberships'));
         $ids = isset($_REQUEST['membership_ids']) ? array_map('absint', (array) wp_unslash($_REQUEST['membership_ids'])) : array();
         if ('export' === $action && $ids) {
-            echo '<form id="vh360-bulk-export" method="post" action="' . esc_url(admin_url('admin-post.php')) . '"><input type="hidden" name="action" value="vh360_export_paid_members">' . wp_nonce_field(VH360_Membership_Members_Admin::NONCE_ACTION, '_wpnonce', true, false);
-            foreach ($ids as $id) echo '<input type="hidden" name="membership_ids[]" value="' . esc_attr($id) . '">';
-            echo '</form><script>document.getElementById("vh360-bulk-export").submit();</script>';
-            return;
+            $this->admin->stream_csv_export($_REQUEST, $ids);
         }
-        $notice = 'synced';
+        $notice = 'sync' === $action ? 'sync_failed' : ('expire' === $action ? 'expire_failed' : 'cancel_failed');
         foreach ($ids as $id) {
             $m = $this->admin->get_membership($id);
             if (!$m) continue;
-            if ('sync' === $action && $this->admin->is_stripe_recurring($m) && class_exists('VH360_Stripe_Sync')) VH360_Stripe_Sync::get_instance()->sync_membership($id);
-            if ('expire' === $action && !$this->admin->is_stripe_recurring($m) && class_exists('VH360_Membership_API')) { VH360_Membership_API::get_instance()->expire_membership($id); $notice = 'expired'; }
-            if ('cancel' === $action && !$this->admin->is_stripe_recurring($m) && class_exists('VH360_Membership_API')) { VH360_Membership_API::get_instance()->cancel_membership($id); $notice = 'cancelled'; }
+            if ('sync' === $action && $this->admin->is_stripe_recurring($m) && class_exists('VH360_Stripe_Sync')) { $result = VH360_Stripe_Sync::get_instance()->sync_membership($id); if (true === $result && !is_wp_error($result)) $notice = 'sync_failed' === $notice ? 'synced' : $notice; else $notice = 'sync_failed'; }
+            if ('expire' === $action && !$this->admin->is_stripe_recurring($m) && class_exists('VH360_Membership_API')) { $ok = VH360_Membership_API::get_instance()->expire_membership($id); $notice = $ok ? 'expired' : 'expire_failed'; }
+            if ('cancel' === $action && !$this->admin->is_stripe_recurring($m) && class_exists('VH360_Membership_API')) { $ok = VH360_Membership_API::get_instance()->cancel_membership($id); $notice = $ok ? 'cancelled' : 'cancel_failed'; }
         }
         wp_safe_redirect(VH360_Membership_Members_Admin::get_admin_url(array('vh360_members_notice'=>$notice)));
         exit;
@@ -204,5 +250,5 @@ class VH360_Membership_Members_List_Table extends WP_List_Table {
     public function column_renews($m) { $date = $this->admin->is_recurring($m) ? $m->current_period_end : $m->expires_at; return esc_html($date ?: ($this->admin->is_recurring($m) ? '—' : 'Lifetime / No expiration')); }
     public function column_source($m) { $link = $this->admin->order_link($m->source_order_id); if ($link) return '<a href="' . esc_url($link) . '">Order #' . esc_html($m->source_order_id) . '</a>'; if ($m->stripe_customer_id || $m->stripe_subscription_id) return '<span class="vh360-muted">Stripe customer/subscription</span>'; return '<span class="vh360-muted">Manual/local</span>'; }
     public function column_last_sync($m) { return esc_html($m->last_billing_sync_at ?: '—'); }
-    public function column_actions($m) { $links = array('<a class="button button-small" href="' . esc_url(VH360_Membership_Members_Admin::get_admin_url(array('membership_id'=>$m->id))) . '">View Details</a>'); if ($this->admin->is_stripe_recurring($m) && class_exists('VH360_Stripe_Sync')) $links[] = '<a class="button button-small" href="' . esc_url($this->admin->action_url('vh360_membership_sync', $m->id)) . '">Sync from Stripe</a>'; if (!$this->admin->is_stripe_recurring($m)) { $links[] = '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" class="vh360-inline-action"><input type="hidden" name="action" value="vh360_membership_extend"><input type="hidden" name="membership_id" value="' . esc_attr($m->id) . '">' . wp_nonce_field(VH360_Membership_Members_Admin::NONCE_ACTION, '_wpnonce', true, false) . '<input type="number" name="duration" value="1" min="1"><select name="duration_unit"><option value="months">months</option><option value="days">days</option><option value="years">years</option><option value="lifetime">lifetime</option></select><button class="button button-small">Extend</button></form>'; $links[] = '<a class="button button-small vh360-confirm" data-confirm="Cancel local access?" href="' . esc_url($this->admin->action_url('vh360_membership_cancel', $m->id)) . '">Cancel local access</a>'; $links[] = '<a class="button button-small vh360-confirm" data-confirm="Expire local access?" href="' . esc_url($this->admin->action_url('vh360_membership_expire', $m->id)) . '">Expire</a>'; if ('active' !== $m->status) $links[] = '<a class="button button-small vh360-confirm" data-confirm="Reactivate local access?" href="' . esc_url($this->admin->action_url('vh360_membership_reactivate', $m->id)) . '">Reactivate local access</a>'; } else $links[] = '<span class="vh360-warning-badge">Stripe is source of truth</span>'; return implode(' ', $links); }
+    public function column_actions($m) { $links = array('<a class="button button-small" href="' . esc_url(VH360_Membership_Members_Admin::get_admin_url(array('membership_id'=>$m->id))) . '">View Details</a>'); if ($this->admin->is_stripe_recurring($m) && class_exists('VH360_Stripe_Sync')) $links[] = '<a class="button button-small" href="' . esc_url($this->admin->action_url('vh360_membership_sync', $m->id)) . '">Sync from Stripe</a>'; if (!$this->admin->is_stripe_recurring($m)) { $links[] = '<a class="button button-small" href="' . esc_url(VH360_Membership_Members_Admin::get_admin_url(array('membership_id'=>$m->id))) . '#extend-local-access">Extend</a>'; $links[] = '<a class="button button-small vh360-confirm" data-confirm="Cancel local access?" href="' . esc_url($this->admin->action_url('vh360_membership_cancel', $m->id)) . '">Cancel local access</a>'; $links[] = '<a class="button button-small vh360-confirm" data-confirm="Expire local access?" href="' . esc_url($this->admin->action_url('vh360_membership_expire', $m->id)) . '">Expire</a>'; if ('active' !== $m->status) $links[] = '<a class="button button-small vh360-confirm" data-confirm="Reactivate local access?" href="' . esc_url($this->admin->action_url('vh360_membership_reactivate', $m->id)) . '">Reactivate local access</a>'; } else $links[] = '<span class="vh360-warning-badge">Stripe is source of truth</span>'; return implode(' ', $links); }
 }
