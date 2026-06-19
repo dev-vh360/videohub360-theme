@@ -1067,9 +1067,12 @@ window.initializeAgoraPlayer = function(config) {
         });
 
         participantRegistry.clear();
-        remoteUsers = {};
-        if (window.remoteUsers) {
-            window.remoteUsers = {};
+        Object.keys(remoteUsers).forEach((uid) => {
+            delete remoteUsers[uid];
+        });
+        window.remoteUsers = remoteUsers;
+        if (window.vh360AgoraPlayer && window.vh360AgoraPlayer.remoteUsers !== remoteUsers) {
+            window.vh360AgoraPlayer.remoteUsers = remoteUsers;
         }
         activeSpeakerUid = null;
         if (activeSpeakerDebounceTimeout) {
@@ -4597,6 +4600,7 @@ window.initializeAgoraPlayer = function(config) {
     }
 
     // Debug/cleanup global
+    window.remoteUsers = remoteUsers;
     window.vh360AgoraPlayer = {
         client,
         localTracks,
