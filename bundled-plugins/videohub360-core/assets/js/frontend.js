@@ -851,6 +851,167 @@ window.initializeAgoraPlayer = function(config) {
     // Make getCurrentDisplayName available globally
     window.getCurrentDisplayName = getCurrentDisplayName;
 
+
+
+    // Persistent participant tiles: Agora UID owns live track attachment; WordPress user ID stays as platform identity.
+    const participantRegistry = new Map();
+    window.vh360AgoraParticipants = participantRegistry;
+
+    function normalizeParticipantUid(uid) {
+        return uid === null || typeof uid === 'undefined' ? null : String(uid);
+    }
+
+    function getParticipantStage() {
+        const remote = document.getElementById("vh360-agora-remote-players");
+        if (remote) {
+            remote.classList.add('vh360-participant-stage', 'vh360-persistent-speaker-stage');
+            return remote;
+        }
+        return document.getElementById("vh360-agora-local-player");
+    }
+
+    function resolveWordPressUserId(uid, options = {}) {
+        if (Object.prototype.hasOwnProperty.call(options, 'wordpressUserId')) return options.wordpressUserId || null;
+        if (window.pendingUserInfo && window.pendingUserInfo[uid] && window.pendingUserInfo[uid].wordpressUserId) return window.pendingUserInfo[uid].wordpressUserId;
+        if (remoteUsers[uid] && remoteUsers[uid].wordpressUserId) return remoteUsers[uid].wordpressUserId;
+        if (currentUserUID && String(uid) === String(currentUserUID)) return security.user_id || null;
+        return null;
+    }
+
+    function resolveParticipantDisplayName(uid, options = {}) {
+        if (options.displayName) return options.displayName;
+        if (window.pendingUserInfo && window.pendingUserInfo[uid] && window.pendingUserInfo[uid].displayName) return window.pendingUserInfo[uid].displayName;
+        if (remoteUsers[uid] && remoteUsers[uid].displayName) return remoteUsers[uid].displayName;
+        if (currentUserUID && String(uid) === String(currentUserUID)) return config.displayName || security.display_name || `User ${uid}`;
+        return `User ${uid}`;
+    }
+
+    function getOrCreateParticipant(uid, options = {}) {
+        const key = normalizeParticipantUid(uid);
+        if (!key) return null;
+        let participant = participantRegistry.get(key);
+        if (!participant) {
+            participant = {
+                uid: key,
+                agoraUid: key,
+                wordpressUserId: resolveWordPressUserId(key, options),
+                isLocal: !!options.isLocal || (currentUserUID && key === String(currentUserUID)),
+                isOriginalHost: !!options.isOriginalHost || key === String(originalHostUID || ''),
+                isActiveSpeaker: false,
+                audioTrack: null,
+                videoTrack: null,
+                tileElement: null,
+                videoContainerElement: null,
+                displayName: resolveParticipantDisplayName(key, options),
+                cameraOn: false,
+                audioOn: false
+            };
+            participantRegistry.set(key, participant);
+        } else {
+            participant.wordpressUserId = resolveWordPressUserId(key, { wordpressUserId: participant.wordpressUserId || options.wordpressUserId });
+            participant.displayName = resolveParticipantDisplayName(key, { displayName: options.displayName || participant.displayName });
+            participant.isLocal = participant.isLocal || !!options.isLocal || (currentUserUID && key === String(currentUserUID));
+            participant.isOriginalHost = participant.isOriginalHost || !!options.isOriginalHost || key === String(originalHostUID || '');
+        }
+        ensureParticipantTile(participant);
+        updateParticipantTile(participant);
+        return participant;
+    }
+
+    function ensureParticipantTile(participant) {
+        const stage = getParticipantStage();
+        if (!stage) return null;
+        let tile = participant.tileElement || document.getElementById(`player-${participant.uid}`);
+        if (!tile) {
+            tile = document.createElement('div');
+            tile.id = `player-${participant.uid}`;
+            tile.className = 'vh360-participant-tile vh360-video-remote camera-off audio-muted';
+            const video = document.createElement('div');
+            video.id = `player-video-${participant.uid}`;
+            video.className = 'vh360-participant-video';
+            tile.appendChild(video);
+            const placeholder = document.createElement('div');
+            placeholder.className = 'vh360-video-content vh360-participant-placeholder';
+            placeholder.innerHTML = '<div class="vh360-camera-icon vh360-icon-small">📹</div><div class="vh360-placeholder-text">Camera Off</div>';
+            tile.appendChild(placeholder);
+            const name = document.createElement('div');
+            name.className = 'vh360-user-info vh360-video-name-overlay';
+            tile.appendChild(name);
+            stage.appendChild(tile);
+        }
+        participant.tileElement = tile;
+        let videoContainer = tile.querySelector('.vh360-participant-video');
+        if (!videoContainer) {
+            videoContainer = document.createElement('div');
+            videoContainer.id = `player-video-${participant.uid}`;
+            videoContainer.className = 'vh360-participant-video';
+            tile.insertBefore(videoContainer, tile.firstChild);
+        }
+        participant.videoContainerElement = videoContainer;
+        return tile;
+    }
+
+    function updateParticipantTile(participant) {
+        const tile = ensureParticipantTile(participant);
+        if (!tile) return;
+        tile.dataset.agoraUid = participant.agoraUid || participant.uid;
+        tile.dataset.wordpressUserId = participant.wordpressUserId || '';
+        tile.dataset.identitySource = participant.wordpressUserId ? 'wordpress' : 'agora';
+        tile.classList.toggle('is-local-user', !!participant.isLocal);
+        tile.classList.toggle('is-original-host', !!participant.isOriginalHost);
+        tile.classList.toggle('is-active-speaker', !!participant.isActiveSpeaker);
+        tile.classList.toggle('has-video', !!participant.videoTrack && participant.cameraOn !== false);
+        tile.classList.toggle('has-audio', !!participant.audioTrack && participant.audioOn !== false);
+        tile.classList.toggle('camera-off', !participant.videoTrack || participant.cameraOn === false);
+        tile.classList.toggle('audio-muted', !participant.audioTrack || participant.audioOn === false);
+        tile.classList.toggle('is-featured', shouldFeatureParticipant(participant.uid));
+        const label = tile.querySelector('.vh360-user-info, .vh360-video-name-overlay');
+        if (label) label.textContent = participant.displayName || `User ${participant.uid}`;
+    }
+
+    function shouldFeatureParticipant(uid) {
+        const key = normalizeParticipantUid(uid);
+        if (!key) return false;
+        if (activeSpeakerUid && key === String(activeSpeakerUid)) return true;
+        if (!activeSpeakerUid && originalHostUID && key === String(originalHostUID)) return true;
+        if (!activeSpeakerUid && !originalHostUID && currentUserUID && key === String(currentUserUID)) return true;
+        return participantRegistry.size === 1;
+    }
+
+    function refreshFeaturedParticipantTiles() {
+        participantRegistry.forEach((participant) => updateParticipantTile(participant));
+    }
+
+    function attachParticipantVideo(participant, videoTrack, isLocalTrack = false) {
+        if (!participant || !videoTrack || typeof videoTrack.play !== 'function') return;
+        participant.videoTrack = videoTrack;
+        participant.cameraOn = true;
+        const container = ensureParticipantTile(participant).querySelector('.vh360-participant-video');
+        participant.videoContainerElement = container;
+        videoTrack.play(container, isLocalTrack ? { mirror: false } : undefined);
+        videoElementManager.registerTrackBinding(container.id, !!isLocalTrack, isLocalTrack ? null : videoTrack);
+        setTimeout(() => cleanupParticipantVideoStyles(participant), 200);
+        updateParticipantTile(participant);
+    }
+
+    function cleanupParticipantVideoStyles(participant) {
+        const videoElement = participant && participant.tileElement ? participant.tileElement.querySelector('video') : null;
+        if (!videoElement) return;
+        videoElement.style.width = ''; videoElement.style.height = ''; videoElement.style.maxWidth = ''; videoElement.style.maxHeight = ''; videoElement.style.objectFit = '';
+        videoElement.removeAttribute('width'); videoElement.removeAttribute('height');
+    }
+
+    function removeParticipantTile(uid) {
+        const key = normalizeParticipantUid(uid);
+        const participant = participantRegistry.get(key);
+        const tile = participant ? participant.tileElement : document.getElementById(`player-${key}`);
+        if (tile && tile._moderationDropdown) tile._moderationDropdown.remove();
+        if (participant && participant.videoContainerElement && window.videoElementManager) window.videoElementManager.unregisterTrackBinding(participant.videoContainerElement.id);
+        if (tile) tile.remove();
+        participantRegistry.delete(key);
+        refreshFeaturedParticipantTiles();
+    }
+
     // === Participant Moderation Functions ===
     
     /**
@@ -1261,142 +1422,19 @@ window.initializeAgoraPlayer = function(config) {
     }
     
     function shouldSwitchToSpeaker(uid) {
-        // Don't switch if the speaker is already in the main view
-        const mainPlayer = document.getElementById("vh360-agora-local-player");
-        const currentMainElement = mainPlayer ? mainPlayer.querySelector('[id^="player-"]') : null;
-         if (currentMainElement) {
-          const currentMainUid = currentMainElement.id.replace('player-', '');
-           if (currentMainUid === uid.toString()) {
-            return false;
-          }
-       }
-    
-            return true;
+        const participant = participantRegistry.get(normalizeParticipantUid(uid));
+        return !!participant;
     }
     
     function switchMainVideoToSpeaker(uid) {
-        // Guard against race conditions during view transitions
-        if (window.vh360LayoutManager && !window.vh360LayoutManager.shouldAllowVideoMovement()) {
-            window.vh360Log('[VH360 Debug] Blocking main video switch during view transition:', uid);
+        const participant = participantRegistry.get(normalizeParticipantUid(uid));
+        if (!participant) {
+            window.vh360Warn("Agora: Speaker participant not found for UID:", uid);
             return;
         }
-        
-        window.vh360Log('[VH360 Debug] Switching main video to speaker:', uid);
-        
-        const mainPlayer = document.getElementById("vh360-agora-local-player");
-        const remotePlayersContainer = document.getElementById("vh360-agora-remote-players");
-        
-        if (!mainPlayer || !remotePlayersContainer) {
-            window.vh360Warn("Agora: Missing main player or remote container");
-            return;
-        }
-        
-        // SIMPLIFIED APPROACH: Move elements but DON'T rebind tracks
-        // The tracks stay bound to the original elements even when DOM position changes
-        
-        // Step 1: Move any current main element back to remote players
-        const currentMainElement = mainPlayer.querySelector('[id^="player-"]');
-        if (currentMainElement && currentMainElement.id !== `player-${uid}`) {
-            window.vh360Log('[VH360 Debug] Moving current main back to remote:', currentMainElement.id);
-            
-            // Update classes for remote display
-            currentMainElement.classList.remove('vh360-video-main', 'vh360-main-placeholder');
-            currentMainElement.classList.add('vh360-video-remote');
-            
-            // Just move it - track stays bound
-            remotePlayersContainer.appendChild(currentMainElement);
-        }
-        
-        // Handle local user video: If local user isn't the speaker and has video in main player,
-        // create a player element for them in remote players
-        if (currentUserUID && uid !== currentUserUID.toString()) {
-            // Check if local video track exists and is playing in main player
-            const hasLocalVideoInMain = mainPlayer.querySelector('video') && 
-                                       !mainPlayer.querySelector('[id^="player-"]');
-            
-            if (hasLocalVideoInMain && localTracks.videoTrack) {
-                // Create a player element for local user
-                let localPlayerElement = document.getElementById(`player-${currentUserUID}`);
-                if (!localPlayerElement) {
-                    localPlayerElement = document.createElement('div');
-                    localPlayerElement.id = `player-${currentUserUID}`;
-                    localPlayerElement.classList.add('vh360-video-remote');
-                    
-                    // Add display name BEFORE playing video (so it renders properly)
-                    if (config.displayName) {
-                        const nameOverlay = document.createElement('div');
-                        nameOverlay.className = 'vh360-video-name-overlay';
-                        nameOverlay.textContent = config.displayName;
-                        localPlayerElement.appendChild(nameOverlay);
-                    }
-                    
-                    // Add to remote players first
-                    remotePlayersContainer.appendChild(localPlayerElement);
-                    
-                    // Now play local video on this new element
-                    if (typeof localTracks.videoTrack.play === 'function') {
-                        localTracks.videoTrack.play(localPlayerElement.id, { mirror: false });
-                        videoElementManager.registerTrackBinding(localPlayerElement.id, true);
-                        window.vh360Log('[VH360 Debug] Created player element for local user in remote players');
-                    }
-                }
-            }
-        }
-        
-        // Step 2: Handle speaker element - could be local user or remote user
-        let speakerElement = document.getElementById(`player-${uid}`);
-        
-        // If speaker is local user and element doesn't exist, create it
-        if (!speakerElement && currentUserUID && uid === currentUserUID.toString()) {
-            // Local user is the speaker but doesn't have a player element yet
-            if (localTracks.videoTrack && typeof localTracks.videoTrack.play === 'function') {
-                speakerElement = document.createElement('div');
-                speakerElement.id = `player-${currentUserUID}`;
-                
-                // Add display name
-                if (config.displayName) {
-                    const nameOverlay = document.createElement('div');
-                    nameOverlay.className = 'vh360-video-name-overlay';
-                    nameOverlay.textContent = config.displayName;
-                    speakerElement.appendChild(nameOverlay);
-                }
-                
-                // Add to main first, then play
-                mainPlayer.innerHTML = '';
-                speakerElement.classList.add('vh360-video-main');
-                mainPlayer.appendChild(speakerElement);
-                
-                // Play local video on this element
-                localTracks.videoTrack.play(speakerElement.id, { mirror: false });
-                videoElementManager.registerTrackBinding(speakerElement.id, true);
-                
-                window.vh360Log('[VH360 Debug] Created player element for local user as main speaker');
-                window.vh360Log("Agora: Switched main video to local user UID:", uid);
-                return;
-            }
-        }
-        
-        // If speaker element still doesn't exist, log and wait
-        if (!speakerElement) {
-            window.vh360Warn("Agora: Speaker element not found for UID:", uid);
-            return;
-        }
-        
-        // Move speaker to main (if not already there)
-        if (speakerElement.parentElement !== mainPlayer) {
-            window.vh360Log('[VH360 Debug] Moving speaker to main:', uid);
-            
-            // Clear main player completely before adding speaker
-            mainPlayer.innerHTML = '';
-            
-            // Update classes for main display
-            speakerElement.classList.remove('vh360-video-remote');
-            speakerElement.classList.add('vh360-video-main');
-            
-            // Just move it - track stays bound, no rebinding needed!
-            mainPlayer.appendChild(speakerElement);
-            window.vh360Log("Agora: Switched main video to active speaker UID:", uid);
-        }
+
+        window.vh360Log('[VH360 Debug] Featuring speaker without moving video DOM:', uid);
+        refreshFeaturedParticipantTiles();
     }
     
     function updateVolumeIndicator(uid, level) {
@@ -1442,64 +1480,26 @@ window.initializeAgoraPlayer = function(config) {
     }
     
     function updateActiveSpeakerVisuals(uid, isActive) {
-        const playerElement = document.getElementById(`player-${uid}`);
+        const participant = getOrCreateParticipant(uid);
+        if (!participant) return;
+
+        participant.isActiveSpeaker = !!isActive;
+        refreshFeaturedParticipantTiles();
+
+        const playerElement = participant.tileElement;
         if (!playerElement) return;
-        
-        // Skip visual indicators for original host
-        if (uid === originalHostUID) {
-            return;
-        }
-        
-        if (isActive) {
-            // Add green border for active speaker (works for both video and placeholder)
-            playerElement.style.border = '3px solid #4CAF50';
-            playerElement.style.boxShadow = '0 0 12px rgba(76, 175, 80, 0.6)';
-            
-            // Add active speaker badge only for placeholders in thumbnails, not for actual video
-            let speakerBadge = playerElement.querySelector('.active-speaker-badge');
-            
-            // Only show text badge for audio-only participants (placeholders)
-            const shouldShowBadge = playerElement.classList.contains('video-placeholder');
-            
-            if (shouldShowBadge) {
-                if (!speakerBadge) {
-                    speakerBadge = document.createElement('div');
-                    speakerBadge.className = 'active-speaker-badge';
-                    speakerBadge.style.cssText = `
-                        position: absolute;
-                        top: 4px;
-                        left: 4px;
-                        background: rgba(76, 175, 80, 0.9);
-                        color: #fff;
-                        padding: 2px 6px;
-                        border-radius: 4px;
-                        font-size: 10px;
-                        font-weight: bold;
-                        z-index: 25;
-                        text-transform: uppercase;
-                    `;
-                    
-                    // Only show "SPEAKING" text for audio-only participants
-                    speakerBadge.textContent = 'SPEAKING (AUDIO)';
-                    playerElement.appendChild(speakerBadge);
-                }
-                speakerBadge.style.display = 'block';
-            } else {
-                // For video participants, just rely on the border indicator
-                if (speakerBadge) {
-                    speakerBadge.style.display = 'none';
-                }
+
+        let speakerBadge = playerElement.querySelector('.active-speaker-badge');
+        if (isActive && playerElement.classList.contains('camera-off')) {
+            if (!speakerBadge) {
+                speakerBadge = document.createElement('div');
+                speakerBadge.className = 'active-speaker-badge';
+                speakerBadge.textContent = 'SPEAKING (AUDIO)';
+                playerElement.appendChild(speakerBadge);
             }
-        } else {
-            // Remove green border
-            playerElement.style.border = '2px solid #333';
-            playerElement.style.boxShadow = '';
-            
-            // Hide active speaker badge
-            const speakerBadge = playerElement.querySelector('.active-speaker-badge');
-            if (speakerBadge) {
-                speakerBadge.style.display = 'none';
-            }
+            speakerBadge.style.display = 'block';
+        } else if (speakerBadge) {
+            speakerBadge.style.display = 'none';
         }
     }
 
@@ -1943,6 +1943,11 @@ window.initializeAgoraPlayer = function(config) {
                 // If we got a valid WordPress user ID, store it in remoteUsers
                 if (data.data.wordpress_user_id && remoteUsers[uid]) {
                     remoteUsers[uid].wordpressUserId = data.data.wordpress_user_id;
+                    const participant = participantRegistry.get(normalizeParticipantUid(uid));
+                    if (participant) {
+                        participant.wordpressUserId = data.data.wordpress_user_id;
+                        updateParticipantTile(participant);
+                    }
                     window.vh360Log('VideoHub360: Updated WordPress user ID for UID', uid, ':', data.data.wordpress_user_id);
                 }
                 
@@ -2002,9 +2007,14 @@ window.initializeAgoraPlayer = function(config) {
     }
 
     function updateRemoteUserDisplayName(uid, displayName) {
+        const participant = participantRegistry.get(normalizeParticipantUid(uid));
+        if (participant) {
+            participant.displayName = displayName;
+            updateParticipantTile(participant);
+        }
         const playerElement = document.getElementById(`player-${uid}`);
         if (playerElement) {
-            const userInfo = playerElement.querySelector('div');
+            const userInfo = playerElement.querySelector('.vh360-user-info, .vh360-video-name-overlay');
             if (userInfo) {
                 userInfo.textContent = displayName;
             }
@@ -2095,6 +2105,9 @@ window.initializeAgoraPlayer = function(config) {
                 window.vh360Log('Agora: Updating user info for UID:', targetUID, 'WordPress ID:', data.fromUserId);
                 remoteUsers[targetUID].displayName = data.displayName;
                 remoteUsers[targetUID].wordpressUserId = data.fromUserId;
+                const participant = getOrCreateParticipant(targetUID, { displayName: data.displayName, wordpressUserId: data.fromUserId, isOriginalHost: data.isOriginalHost });
+                participant.wordpressUserId = data.fromUserId || participant.wordpressUserId;
+                updateParticipantTile(participant);
                 updateRemoteUserDisplayName(targetUID, data.displayName);
             } else {
                 // If we can't find an existing remote user, store the info for when they join
@@ -2248,197 +2261,55 @@ window.initializeAgoraPlayer = function(config) {
 
         if (mediaType === "video") {
             const remoteVideoTrack = user.videoTrack;
-            
-            // Validate video track before proceeding
             if (!remoteVideoTrack) {
                 window.vh360Warn("Agora: No video track available for user:", user.uid);
                 return;
             }
-            let targetContainer;
-            let shouldUseMainPlayer = false;
-            
-            // Check if this is the original host publishing video
-            const isOriginalHostPublishing = user.uid === originalHostUID;
-            
-            if (currentRole === 'audience') {
-                const mainPlayer = document.getElementById("vh360-agora-local-player");
-                const hasMainContent = mainPlayer && mainPlayer.children.length > 0 && !mainPlayer.querySelector('.waiting-message');
-                if (!hasMainContent || Object.keys(remoteUsers).length === 0) {
-                    targetContainer = mainPlayer;
-                    shouldUseMainPlayer = true;
-                } else {
-                    targetContainer = document.getElementById("vh360-agora-remote-players");
-                }
-            } else if (config.agoraMode === 'interactive' && !isOriginalHost) {
-                // In interactive mode, non-original hosts should check if main player is empty
-                const mainPlayer = document.getElementById("vh360-agora-local-player");
-                
-                // Check if main player has actual video content (not just waiting/joining messages)
-                const hasPlayerElement = mainPlayer && mainPlayer.querySelector('[id^="player-"]');
-                const hasJoiningMessage = mainPlayer && mainPlayer.textContent.includes('Joining as host');
-                const hasWaitingMessage = mainPlayer && mainPlayer.querySelector('.waiting-message');
-                const hasMainContent = hasPlayerElement && !hasJoiningMessage && !hasWaitingMessage;
-                
-                // If main player is empty or just has joining/waiting message, put remote video there
-                // Strongly prefer original host if we know who they are
-                if (!hasMainContent) {
-                    window.vh360Log('VideoHub360: Main player empty/waiting - placing remote video -', isOriginalHostPublishing ? 'ORIGINAL HOST' : 'remote user');
-                    targetContainer = mainPlayer;
-                    shouldUseMainPlayer = true;
-                } else if (isOriginalHostPublishing) {
-                    // Original host should replace whoever is in main player
-                    window.vh360Log('VideoHub360: Original host detected - replacing current main view');
-                    targetContainer = mainPlayer;
-                    shouldUseMainPlayer = true;
-                } else {
-                    targetContainer = document.getElementById("vh360-agora-remote-players");
-                }
-            } else {
-                targetContainer = document.getElementById("vh360-agora-remote-players");
-            }
-            if (!targetContainer) return;
-            
-            let playerElement = document.getElementById(`player-${user.uid}`);
-            
-            // Check if this is a placeholder that needs to transition to video
-            if (playerElement && playerElement.classList.contains('video-placeholder')) {
-                window.vh360Log("Agora: Transitioning from placeholder to video for UID:", user.uid);
-                transitionToVideo(user.uid, remoteVideoTrack);
-            } else if (!playerElement) {
-                // Create new video player element
-                playerElement = document.createElement("div");
-                playerElement.id = `player-${user.uid}`;
-                if (shouldUseMainPlayer) {
-                    targetContainer.innerHTML = '';
-                    playerElement.className = 'vh360-video-main';
-                } else {
-                    // Use existing CSS class instead of inline styles
-                    playerElement.className = 'vh360-video-remote';
-                }
-                const userInfo = document.createElement("div");
-                userInfo.className = 'vh360-user-info';
-                
-                // Improved display name resolution
-                let displayName = `User ${user.uid}`;
-                
-                // Check if we already have this user with a good display name
-                if (remoteUsers[user.uid] && remoteUsers[user.uid].displayName && !remoteUsers[user.uid].displayName.startsWith('User ')) {
-                    displayName = remoteUsers[user.uid].displayName;
-                } else if (user.uid == security.user_id) {
-                    displayName = security.display_name;
-                } else if (shouldUseMainPlayer) {
-                    displayName = isOriginalHost ? security.display_name : "Host";
-                } else {
-                    // For new users, try to resolve display name asynchronously
-                    resolveAndUpdateDisplayName(user.uid);
-                }
-                
-                userInfo.textContent = displayName;
-                playerElement.appendChild(userInfo);
-                
-                // Add 3-dot moderation menu for remote participants (host or moderators only)
-                if (!shouldUseMainPlayer && (isOriginalHost || config.canModerate) && user.uid !== security.user_id) {
-                    addParticipantModerationMenu(playerElement, user.uid, displayName);
-                }
-                
-                targetContainer.appendChild(playerElement);
-                
-                // Play the video track with null check
-                if (remoteVideoTrack && typeof remoteVideoTrack.play === 'function') {
-                    remoteVideoTrack.play(playerElement);
-                    
-                    // Register track binding so video manager can preserve tracks during DOM movements
-                    videoElementManager.registerTrackBinding(playerElement.id, false, remoteVideoTrack);
-                    
-                    // Remove Agora SDK inline styles that interfere with CSS
-                    // Increased timeout to ensure Agora SDK has finished applying styles
-                    setTimeout(() => {
-                        const videoElement = playerElement.querySelector('video');
-                        if (videoElement) {
-                            // Remove inline width/height that Agora SDK might add
-                            videoElement.style.width = '';
-                            videoElement.style.height = '';
-                            videoElement.style.maxWidth = '';
-                            videoElement.style.maxHeight = '';
-                            videoElement.style.objectFit = '';
-                            // Remove width/height attributes
-                            videoElement.removeAttribute('width');
-                            videoElement.removeAttribute('height');
-                            window.vh360Log("Agora: Cleaned video element inline styles for UID:", user.uid);
-                            
-                            // Additional cleanup pass to ensure container bounds are respected
-                            if (playerElement.classList.contains('vh360-video-remote')) {
-                                // Ensure parent container has proper overflow handling
-                                playerElement.style.overflow = '';
-                                window.vh360Log("Agora: Applied container bounds check for UID:", user.uid);
-                            }
-                        }
-                    }, 200); // Increased from 100ms to 200ms for better reliability
-                } else {
-                    window.vh360Warn("Agora: Invalid video track for UID:", user.uid);
-                }
-                
 
+            let initialDisplayName = `User ${user.uid}`;
+            let wordpressUserId = null;
+            let isUserOriginalHost = user.uid === originalHostUID;
+
+            if (window.pendingUserInfo && window.pendingUserInfo[user.uid]) {
+                const pendingInfo = window.pendingUserInfo[user.uid];
+                initialDisplayName = pendingInfo.displayName || initialDisplayName;
+                wordpressUserId = pendingInfo.wordpressUserId || null;
+                isUserOriginalHost = !!pendingInfo.isOriginalHost;
+                if (isUserOriginalHost && !originalHostUID) {
+                    originalHostUID = user.uid;
+                }
+                delete window.pendingUserInfo[user.uid];
+            } else if (remoteUsers[user.uid]) {
+                initialDisplayName = remoteUsers[user.uid].displayName || initialDisplayName;
+                wordpressUserId = remoteUsers[user.uid].wordpressUserId || null;
+            } else if (user.uid == currentUserUID) {
+                initialDisplayName = security.display_name;
+                wordpressUserId = security.user_id;
             }
-            if (!remoteUsers[user.uid]) {
-                let initialDisplayName = `User ${user.uid}`;
-                let wordpressUserId = null;
-                let isUserOriginalHost = false;
-                
-                // Check for pending user info first
-                if (window.pendingUserInfo && window.pendingUserInfo[user.uid]) {
-                    const pendingInfo = window.pendingUserInfo[user.uid];
-                    initialDisplayName = pendingInfo.displayName;
-                    wordpressUserId = pendingInfo.wordpressUserId;
-                    isUserOriginalHost = pendingInfo.isOriginalHost || false;
-                    window.vh360Log('Agora: Using pending user info for UID', user.uid, ':', pendingInfo);
-                    
-                    // Track original host UID if this is them
-                    if (isUserOriginalHost && !originalHostUID) {
-                        originalHostUID = user.uid;
-                        window.vh360Log('VideoHub360: Original host UID identified from pending info:', originalHostUID);
-                    }
-                    
-                    // Clean up used pending info
-                    delete window.pendingUserInfo[user.uid];
-                } else if (user.uid == currentUserUID) {
-                    // This is actually the local user showing up as remote (shouldn't happen normally)
-                    initialDisplayName = security.display_name;
-                    wordpressUserId = security.user_id;
-                }
-                
-                remoteUsers[user.uid] = { 
-                    ...user, 
-                    displayName: initialDisplayName,
-                    wordpressUserId: wordpressUserId
-                };
-                
-                // Start AJAX lookup for display name if we don't have a good one
-                if (initialDisplayName.startsWith('User ')) {
-                    resolveAndUpdateDisplayName(user.uid);
-                }
-                
-                // Always broadcast user info when a new remote user joins
-                broadcastUserInfo();
-                
-                // Check if we should set initial view to original host
-                if (!isOriginalHost && user.uid === originalHostUID && config.agoraMode === 'interactive') {
-                    window.vh360Log('VideoHub360: Original host video published, checking initial view setup');
-                    // Delay slightly to ensure video element is fully set up
-                    setTimeout(() => {
-                        checkAndSetInitialHostView();
-                    }, 500);
-                }
-            } else {
-                remoteUsers[user.uid] = { ...remoteUsers[user.uid], ...user };
-                // Always check for existing display name on render
-                if (remoteUsers[user.uid].displayName && remoteUsers[user.uid].displayName !== `User ${user.uid}`) {
-                    updateRemoteUserDisplayName(user.uid, remoteUsers[user.uid].displayName);
-                } else {
-                    // Try to resolve display name if we still don't have a good one
-                    resolveAndUpdateDisplayName(user.uid);
-                }
+
+            remoteUsers[user.uid] = {
+                ...(remoteUsers[user.uid] || {}),
+                ...user,
+                displayName: initialDisplayName,
+                wordpressUserId: wordpressUserId
+            };
+
+            const participant = getOrCreateParticipant(user.uid, {
+                displayName: initialDisplayName,
+                wordpressUserId: wordpressUserId,
+                isOriginalHost: isUserOriginalHost
+            });
+            attachParticipantVideo(participant, remoteVideoTrack, false);
+
+            if ((isOriginalHost || config.canModerate) && user.uid !== security.user_id && participant.tileElement && !participant.tileElement.querySelector('.vh360-participant-menu-container')) {
+                addParticipantModerationMenu(participant.tileElement, user.uid, participant.displayName);
             }
+
+            if (initialDisplayName.startsWith('User ')) {
+                resolveAndUpdateDisplayName(user.uid);
+            }
+            broadcastUserInfo();
+            refreshFeaturedParticipantTiles();
         }
         if (mediaType === "audio") {
             if (user.audioTrack && typeof user.audioTrack.play === 'function') {
@@ -2453,80 +2324,46 @@ window.initializeAgoraPlayer = function(config) {
                 window.vh360Log("Agora: Audio track subscribed for UID:", user.uid, "- Volume tracking enabled");
             }
             
-            // Check if user has no video track but we should show a placeholder
-            if (!user.videoTrack && !document.getElementById(`player-${user.uid}`)) {
-                window.vh360Log("Agora: Audio-only user joined, creating placeholder for UID:", user.uid);
-                
-                // Get display name for placeholder
-                let displayName = `User ${user.uid}`;
-                if (remoteUsers[user.uid] && remoteUsers[user.uid].displayName) {
-                    displayName = remoteUsers[user.uid].displayName;
-                } else if (user.uid == security.user_id) {
-                    displayName = security.display_name;
-                }
-                
-                // Create placeholder for audio-only user
-                const placeholderElement = showVideoPlaceholder(user.uid, displayName);
-                
-                // Store user information
-                if (!remoteUsers[user.uid]) {
-                    let wordpressUserId = null;
-                    
-                    // Check for pending user info first
-                    if (window.pendingUserInfo && window.pendingUserInfo[user.uid]) {
-                        const pendingInfo = window.pendingUserInfo[user.uid];
-                        displayName = pendingInfo.displayName;
-                        wordpressUserId = pendingInfo.wordpressUserId;
-                        window.vh360Log('Agora: Using pending user info for audio-only UID', user.uid, ':', pendingInfo);
-                        // Clean up used pending info
-                        delete window.pendingUserInfo[user.uid];
-                    } else if (user.uid == currentUserUID) {
-                        wordpressUserId = security.user_id;
-                    }
-                    
-                    remoteUsers[user.uid] = { 
-                        ...user, 
-                        displayName: displayName,
-                        wordpressUserId: wordpressUserId
-                    };
-                    
-                    // Try to resolve display name if needed
-                    if (displayName.startsWith('User ')) {
-                        resolveAndUpdateDisplayName(user.uid);
-                    }
-                    
-                    // Broadcast user info when a new remote user joins
-                    broadcastUserInfo();
-                } else {
-                    remoteUsers[user.uid] = { ...remoteUsers[user.uid], ...user };
-                }
+            let displayName = resolveParticipantDisplayName(user.uid);
+            let wordpressUserId = resolveWordPressUserId(user.uid);
+            if (window.pendingUserInfo && window.pendingUserInfo[user.uid]) {
+                displayName = window.pendingUserInfo[user.uid].displayName || displayName;
+                wordpressUserId = window.pendingUserInfo[user.uid].wordpressUserId || wordpressUserId;
+                delete window.pendingUserInfo[user.uid];
             }
+            remoteUsers[user.uid] = { ...(remoteUsers[user.uid] || {}), ...user, displayName, wordpressUserId };
+            const participant = getOrCreateParticipant(user.uid, { displayName, wordpressUserId });
+            participant.audioTrack = user.audioTrack || participant.audioTrack;
+            participant.audioOn = !!participant.audioTrack;
+            updateParticipantTile(participant);
+            if (displayName.startsWith('User ')) {
+                resolveAndUpdateDisplayName(user.uid);
+            }
+            broadcastUserInfo();
         }
     });
 
     client.on("user-unpublished", (user, mediaType) => {
         if (mediaType === "video") {
-            const playerElement = document.getElementById(`player-${user.uid}`);
-            if (playerElement) {
-                // Get display name for placeholder
-                let displayName = `User ${user.uid}`;
-                if (remoteUsers[user.uid] && remoteUsers[user.uid].displayName) {
-                    displayName = remoteUsers[user.uid].displayName;
-                } else if (user.uid == security.user_id) {
-                    displayName = security.display_name;
-                }
-                
-                // Transition to placeholder instead of removing the element
-                transitionToPlaceholder(user.uid, displayName);
-                window.vh360Log("Agora: User camera off, showing placeholder for UID:", user.uid);
+            const participant = getOrCreateParticipant(user.uid);
+            if (participant) {
+                participant.videoTrack = null;
+                participant.cameraOn = false;
+                updateParticipantTile(participant);
+                window.vh360Log("Agora: User camera off, updating persistent tile for UID:", user.uid);
             }
-            // Keep the user in remoteUsers since they're still connected (just camera off)
         }
         
         // Handle audio unpublished - check for cleaning up active speaker
         if (mediaType === "audio") {
             window.vh360Log("Agora: User unpublished audio, UID:", user.uid);
             
+            const participant = participantRegistry.get(normalizeParticipantUid(user.uid));
+            if (participant) {
+                participant.audioTrack = null;
+                participant.audioOn = false;
+                updateParticipantTile(participant);
+            }
             // Clean up active speaker if this user was the active speaker and now has no audio
             if (user.uid === activeSpeakerUid) {
                 setActiveSpeaker(null);
@@ -2541,39 +2378,20 @@ window.initializeAgoraPlayer = function(config) {
     });
 
     client.on("user-left", (user) => {
-        const playerElement = document.getElementById(`player-${user.uid}`);
-        if (playerElement) {
-            const wasMainPlayer = playerElement.parentElement && playerElement.parentElement.id === 'vh360-agora-local-player';
-            
-            // Clean up moderation dropdown if it exists
-            if (playerElement._moderationDropdown) {
-                playerElement._moderationDropdown.remove();
-            }
-            
-            // Clean up video track binding before removing element
-            if (window.videoElementManager) {
-                window.videoElementManager.unregisterTrackBinding(playerElement.id);
-            }
-            
-            playerElement.remove(); // Remove completely when user leaves
-            if (currentRole === 'audience' && wasMainPlayer) {
-                setTimeout(() => {
-                    const remainingUsers = Object.keys(remoteUsers).filter(uid => uid != user.uid);
-                    if (remainingUsers.length === 0) {
-                        showAudienceWaitingMessage();
-                    }
-                }, 100);
-            }
+        if (!user || !user.uid) {
+            return;
         }
-        if (remoteUsers[user.uid]) delete remoteUsers[user.uid];
 
-        if (user && user.uid) {
-            participantJoinSoundThrottle.delete(user.uid);
-        }
-        
-        // Clean up active speaker if this user was the active speaker
+        removeParticipantTile(user.uid);
+        if (remoteUsers[user.uid]) delete remoteUsers[user.uid];
+        participantJoinSoundThrottle.delete(user.uid);
+
         if (user.uid === activeSpeakerUid) {
             setActiveSpeaker(null);
+        }
+
+        if (currentRole === 'audience' && Object.keys(remoteUsers).length === 0) {
+            setTimeout(() => showAudienceWaitingMessage(), 100);
         }
     });
 
@@ -3010,51 +2828,28 @@ window.initializeAgoraPlayer = function(config) {
                 }
             }
             
-            // Determine where to place local video based on user role in interactive mode
-            const shouldPlaceInRemote = !isOriginalHost && config.agoraMode === 'interactive';
-            
-            if (shouldPlaceInRemote) {
-                window.vh360Log('VideoHub360: Non-original host in interactive mode - placing local video in remote players');
-                
-                // Create player element for local user in remote players
-                const remotePlayersContainer = document.getElementById("vh360-agora-remote-players");
-                if (remotePlayersContainer && localTracks.videoTrack && typeof localTracks.videoTrack.play === 'function') {
-                    let localPlayerElement = document.createElement('div');
-                    localPlayerElement.id = `player-${currentUserUID}`;
-                    localPlayerElement.classList.add('vh360-video-remote');
-                    
-                    // Add display name overlay
-                    if (config.displayName) {
-                        const nameOverlay = document.createElement('div');
-                        nameOverlay.className = 'vh360-video-name-overlay';
-                        nameOverlay.textContent = config.displayName;
-                        localPlayerElement.appendChild(nameOverlay);
-                    }
-                    
-                    remotePlayersContainer.appendChild(localPlayerElement);
-                    localTracks.videoTrack.play(localPlayerElement.id, { mirror: false });
-                    videoElementManager.registerTrackBinding(localPlayerElement.id, true);
-                    window.vh360Log('VideoHub360: Local video placed in remote players');
-                }
-            } else {
-                window.vh360Log('VideoHub360: Original host or broadcast mode - placing local video in main player');
-                
-                const localPlayerContainer = document.getElementById("vh360-agora-local-player");
-                if (localPlayerContainer) {
-                    const existingOverlay = localPlayerContainer.querySelector('#agora-error-overlay');
-                    if (existingOverlay) existingOverlay.remove();
-                    localPlayerContainer.innerHTML = '';
-                }
-                
-                if (localTracks.videoTrack && typeof localTracks.videoTrack.play === 'function') {
-                    localTracks.videoTrack.play("vh360-agora-local-player", { mirror: false });
-                    
-                    // Register local track binding with video manager
-                    videoElementManager.registerTrackBinding("vh360-agora-local-player", true);
-                } else {
-                    window.vh360Warn("Agora: Invalid local video track for publishing");
-                }
+            const localParticipant = getOrCreateParticipant(currentUserUID || security.user_id || config.uid, {
+                isLocal: true,
+                isOriginalHost: isOriginalHost,
+                displayName: config.displayName || security.display_name,
+                wordpressUserId: security.user_id || null
+            });
+
+            if (localTracks.audioTrack) {
+                localParticipant.audioTrack = localTracks.audioTrack;
+                localParticipant.audioOn = !isAudioMuted;
             }
+
+            if (localTracks.videoTrack && typeof localTracks.videoTrack.play === 'function') {
+                attachParticipantVideo(localParticipant, localTracks.videoTrack, true);
+                window.vh360Log('VideoHub360: Local video attached to persistent participant tile');
+            } else {
+                localParticipant.cameraOn = false;
+                updateParticipantTile(localParticipant);
+                window.vh360Warn("Agora: Invalid local video track for publishing");
+            }
+
+            refreshFeaturedParticipantTiles();
             
             await client.publish([localTracks.audioTrack, localTracks.videoTrack]);
             window.vh360Log("Agora: Successfully published tracks");
@@ -3063,10 +2858,14 @@ window.initializeAgoraPlayer = function(config) {
             if (muteAudioBtn) {
                 muteAudioBtn.textContent = isAudioMuted ? '🔇 Unmute' : '🎤 Mute';
                 muteAudioBtn.style.backgroundColor = isAudioMuted ? '#e53935' : 'transparent';
+                const participant = currentUserUID ? participantRegistry.get(String(currentUserUID)) : null;
+                if (participant) { participant.audioOn = !isAudioMuted; updateParticipantTile(participant); }
             }
             if (muteVideoBtn) {
                 muteVideoBtn.textContent = isVideoMuted ? '📹 Turn On' : '📹 Camera';
                 muteVideoBtn.style.backgroundColor = isVideoMuted ? '#e53935' : 'transparent';
+                const participant = currentUserUID ? participantRegistry.get(String(currentUserUID)) : null;
+                if (participant) { participant.cameraOn = !isVideoMuted; updateParticipantTile(participant); }
             }
         } catch (error) {
             window.vh360Error("Agora: Publishing failed", error);
@@ -3105,8 +2904,14 @@ window.initializeAgoraPlayer = function(config) {
                 localTracks.videoTrack.close();
                 localTracks.videoTrack = null;
             }
-            const localPlayer = document.getElementById("vh360-agora-local-player");
-            if (localPlayer) localPlayer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #fff; font-size: 1.2em; background: #333;">Camera Off</div>';
+            const localParticipant = currentUserUID ? participantRegistry.get(String(currentUserUID)) : null;
+            if (localParticipant) {
+                localParticipant.audioTrack = null;
+                localParticipant.videoTrack = null;
+                localParticipant.audioOn = false;
+                localParticipant.cameraOn = false;
+                updateParticipantTile(localParticipant);
+            }
         } catch (error) {}
     }
 
@@ -3118,6 +2923,8 @@ window.initializeAgoraPlayer = function(config) {
                 isAudioMuted = !isAudioMuted;
                 muteAudioBtn.textContent = isAudioMuted ? '🔇 Unmute' : '🎤 Mute';
                 muteAudioBtn.style.backgroundColor = isAudioMuted ? '#e53935' : 'transparent';
+                const participant = currentUserUID ? participantRegistry.get(String(currentUserUID)) : null;
+                if (participant) { participant.audioOn = !isAudioMuted; updateParticipantTile(participant); }
             }
         });
     }
@@ -3128,6 +2935,8 @@ window.initializeAgoraPlayer = function(config) {
                 isVideoMuted = !isVideoMuted;
                 muteVideoBtn.textContent = isVideoMuted ? '📹 Turn On' : '📹 Camera';
                 muteVideoBtn.style.backgroundColor = isVideoMuted ? '#e53935' : 'transparent';
+                const participant = currentUserUID ? participantRegistry.get(String(currentUserUID)) : null;
+                if (participant) { participant.cameraOn = !isVideoMuted; updateParticipantTile(participant); }
             }
         });
     }
