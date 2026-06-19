@@ -716,39 +716,69 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
 }
 
 
-/* Phase One fix: #vh360-agora-local-player is the persistent Speaker View stage. */
+/* Phase One fixed-region Speaker View: persistent tiles never move DOM parents. */
 .vh360-speaker-view #vh360-agora-local-player.vh360-persistent-speaker-stage,
 #vh360-agora-local-player.vh360-persistent-speaker-stage {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 180px));
-    grid-auto-rows: 120px;
+    --vh360-speaker-stage-padding: 16px;
+    --vh360-thumbnail-rail-height: 112px;
+    --vh360-thumbnail-width: 160px;
+    --vh360-thumbnail-height: 90px;
+    position: relative;
+    display: flex;
+    flex-flow: row nowrap;
+    align-items: flex-end;
+    justify-content: center;
     gap: 10px;
-    align-items: stretch;
-    align-content: start;
     width: 100%;
-    min-height: 420px;
-    padding: 0;
+    min-height: clamp(360px, 56vw, 720px);
+    aspect-ratio: 16 / 9;
+    padding: var(--vh360-speaker-stage-padding);
+    overflow-x: auto;
+    overflow-y: hidden;
     background: #000;
+    box-sizing: border-box;
+    scroll-padding-inline: var(--vh360-speaker-stage-padding);
+}
+
+#vh360-agora-local-player.vh360-persistent-speaker-stage.has-single-participant {
+    overflow: hidden;
 }
 
 #vh360-agora-local-player.vh360-persistent-speaker-stage .vh360-participant-tile {
     position: relative;
+    flex: 0 0 var(--vh360-thumbnail-width);
+    width: var(--vh360-thumbnail-width);
+    height: var(--vh360-thumbnail-height);
+    min-width: var(--vh360-thumbnail-width);
+    min-height: var(--vh360-thumbnail-height);
     overflow: hidden;
-    min-width: 0;
-    min-height: 0;
-    width: auto;
-    height: auto;
     border: 2px solid #333;
     border-radius: 8px;
     background: #111;
+    box-sizing: border-box;
+    z-index: 3;
 }
 
 #vh360-agora-local-player.vh360-persistent-speaker-stage .vh360-participant-tile.is-featured {
-    grid-column: 1 / -1;
-    grid-row: span 4;
-    min-height: 360px;
+    position: absolute;
+    top: var(--vh360-speaker-stage-padding);
+    right: var(--vh360-speaker-stage-padding);
+    bottom: calc(var(--vh360-thumbnail-rail-height) + var(--vh360-speaker-stage-padding));
+    left: var(--vh360-speaker-stage-padding);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    height: auto;
+    min-width: 0;
+    min-height: 0;
+    z-index: 2;
     border-color: #4CAF50;
     box-shadow: 0 0 16px rgba(76, 175, 80, 0.35);
+}
+
+#vh360-agora-local-player.vh360-persistent-speaker-stage.has-single-participant .vh360-participant-tile.is-featured {
+    bottom: var(--vh360-speaker-stage-padding);
 }
 
 #vh360-agora-local-player.vh360-persistent-speaker-stage .vh360-participant-tile.is-active-speaker:not(.is-featured) {
@@ -762,14 +792,21 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
 
 @media (max-width: 768px) {
     #vh360-agora-local-player.vh360-persistent-speaker-stage {
-        grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
-        grid-auto-rows: 92px;
-        min-height: 300px;
+        --vh360-speaker-stage-padding: 10px;
+        --vh360-thumbnail-rail-height: 84px;
+        --vh360-thumbnail-width: 112px;
+        --vh360-thumbnail-height: 64px;
+        min-height: clamp(280px, 62vh, 520px);
+        justify-content: flex-start;
     }
+}
 
-    #vh360-agora-local-player.vh360-persistent-speaker-stage .vh360-participant-tile.is-featured {
-        min-height: 240px;
-        grid-row: span 3;
+@media (max-width: 768px) and (orientation: landscape) {
+    #vh360-agora-local-player.vh360-persistent-speaker-stage {
+        --vh360-thumbnail-rail-height: 74px;
+        --vh360-thumbnail-width: 104px;
+        --vh360-thumbnail-height: 58px;
+        min-height: clamp(240px, 78vh, 420px);
     }
 }
 

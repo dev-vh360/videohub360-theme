@@ -766,6 +766,8 @@ window.initializeAgoraPlayer = function(config) {
     let activeSpeakerUid = null;
     let lastActiveSpeakerChange = 0;
     let activeSpeakerDebounceTimeout = null;
+    let speakerCandidateUid = null;
+    let speakerCandidateSince = 0;
 
     // Original host tracking for initial view preference
     let originalHostUID = null; // Store the original host's UID for initial view display
@@ -1030,6 +1032,12 @@ window.initializeAgoraPlayer = function(config) {
     }
 
     function refreshFeaturedParticipantTiles() {
+        const stage = getParticipantStage();
+        if (stage) {
+            const participantCount = participantRegistry.size;
+            stage.classList.toggle('has-single-participant', participantCount <= 1);
+            stage.classList.toggle('has-multiple-participants', participantCount > 1);
+        }
         participantRegistry.forEach((participant) => updateParticipantTile(participant));
     }
 
@@ -1122,6 +1130,8 @@ window.initializeAgoraPlayer = function(config) {
             window.vh360AgoraPlayer.remoteUsers = remoteUsers;
         }
         activeSpeakerUid = null;
+        speakerCandidateUid = null;
+        speakerCandidateSince = 0;
         if (activeSpeakerDebounceTimeout) {
             clearTimeout(activeSpeakerDebounceTimeout);
             activeSpeakerDebounceTimeout = null;
@@ -1479,6 +1489,11 @@ window.initializeAgoraPlayer = function(config) {
         }
 
         // If no one is speaking above threshold, clear active speaker after a delay
+        if (!newActiveSpeaker) {
+            speakerCandidateUid = null;
+            speakerCandidateSince = 0;
+        }
+
         if (!newActiveSpeaker && activeSpeakerUid) {
             if (activeSpeakerDebounceTimeout) {
                 clearTimeout(activeSpeakerDebounceTimeout);
@@ -1496,16 +1511,28 @@ window.initializeAgoraPlayer = function(config) {
             return;
         }
 
-        // If we have a new active speaker and enough time has passed since last change
-        if (newActiveSpeaker && newActiveSpeaker !== activeSpeakerUid) {
+        // If we have a new active speaker, require a stable hold before featuring them.
+        if (newActiveSpeaker && String(newActiveSpeaker) !== String(activeSpeakerUid)) {
             const now = Date.now();
-            // Use shorter cooldown on mobile for better responsiveness
+            const candidateKey = String(newActiveSpeaker);
             const isMobileDevice = window.innerWidth <= 768;
-            const currentCooldown = isMobileDevice ? 500 : switchingCooldown; // 500ms on mobile, 1s on desktop
+            const currentCooldown = isMobileDevice ? 900 : Math.max(switchingCooldown, 1200);
+            const requiredHold = isMobileDevice ? 1000 : 1300;
 
-            if (now - lastActiveSpeakerChange >= currentCooldown) {
-                setActiveSpeaker(newActiveSpeaker);
+            if (speakerCandidateUid !== candidateKey) {
+                speakerCandidateUid = candidateKey;
+                speakerCandidateSince = now;
+                return;
             }
+
+            if (now - speakerCandidateSince >= requiredHold && now - lastActiveSpeakerChange >= currentCooldown) {
+                setActiveSpeaker(newActiveSpeaker);
+                speakerCandidateUid = null;
+                speakerCandidateSince = 0;
+            }
+        } else if (newActiveSpeaker && String(newActiveSpeaker) === String(activeSpeakerUid)) {
+            speakerCandidateUid = null;
+            speakerCandidateSince = 0;
         }
     }
 
@@ -1515,6 +1542,9 @@ window.initializeAgoraPlayer = function(config) {
             window.vh360Log('[VH360 Debug] Blocking speaker change during view transition:', uid);
             return;
         }
+
+        speakerCandidateUid = null;
+        speakerCandidateSince = 0;
 
         // Clear any pending debounce timeout
         if (activeSpeakerDebounceTimeout) {
