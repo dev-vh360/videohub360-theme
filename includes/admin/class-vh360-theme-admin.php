@@ -51,6 +51,9 @@ class VH360_Theme_Admin {
             'subscription_card_text_color',
             'subscription_card_button_bg_color',
             'subscription_card_button_text_color',
+            'dashboard_current_plan_button_bg_color',
+            'dashboard_current_plan_button_text_color',
+            'dashboard_current_plan_button_border_color',
         ), '');
     }
 

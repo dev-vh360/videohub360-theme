@@ -142,6 +142,9 @@ class VH360_Membership_Subscription_Management {
             'subscription_card_text_color' => '#666666',
             'subscription_card_button_bg_color' => '#0073aa',
             'subscription_card_button_text_color' => '#ffffff',
+            'dashboard_current_plan_button_bg_color' => '#f4f7f9',
+            'dashboard_current_plan_button_text_color' => '#1f2933',
+            'dashboard_current_plan_button_border_color' => '#cbd5df',
         );
     }
 
@@ -156,6 +159,9 @@ class VH360_Membership_Subscription_Management {
             'subscription_card_text_color' => '--vh360-dashboard-text-color',
             'subscription_card_button_bg_color' => '--vh360-dashboard-button-bg',
             'subscription_card_button_text_color' => '--vh360-dashboard-button-color',
+            'dashboard_current_plan_button_bg_color' => '--vh360-dashboard-current-plan-button-bg',
+            'dashboard_current_plan_button_text_color' => '--vh360-dashboard-current-plan-button-color',
+            'dashboard_current_plan_button_border_color' => '--vh360-dashboard-current-plan-button-border',
         );
         $defaults = self::get_dashboard_card_style_defaults();
         $styles = array();
@@ -462,7 +468,7 @@ class VH360_Membership_Subscription_Management {
                         <button type="button" class="vh360-btn vh360-btn-secondary" disabled><?php echo esc_html($action_state['button_label']); ?></button>
                     <?php endif; ?>
                 <?php elseif (!empty($action_state['disabled'])) : ?>
-                    <button type="button" class="vh360-btn vh360-btn-secondary" disabled><?php echo esc_html($action_state['button_label']); ?></button>
+                    <button type="button" class="vh360-btn vh360-btn-secondary <?php echo !empty($action_state['is_current_plan']) ? esc_attr('vh360-current-plan-button') : ''; ?>" disabled><?php echo esc_html($action_state['button_label']); ?></button>
                 <?php elseif (!empty($action_state['use_checkout']) || !empty($action_state['use_billing_portal'])) : ?>
                     <button type="button" class="vh360-btn vh360-btn-primary <?php echo esc_attr($action_class); ?>" data-plan-key="<?php echo esc_attr($key); ?>"><?php echo esc_html($action_state['button_label']); ?></button>
                 <?php endif; ?>
