@@ -938,6 +938,8 @@ window.initializeAgoraPlayer = function(config) {
             ':scope > .waiting-message',
             ':scope > .vh360-waiting-message',
             ':scope > .vh360-waiting-text',
+            ':scope > .vh360-agora-stage-status',
+            ':scope > [data-vh360-stage-status="true"]',
             ':scope > #agora-error-overlay',
             ':scope > #agora-success-overlay'
         ];
@@ -947,6 +949,12 @@ window.initializeAgoraPlayer = function(config) {
                 stage.querySelectorAll(selector).forEach((element) => element.remove());
             } catch (error) {
                 // Some older browsers may not support :scope; ignore and avoid broad child cleanup.
+            }
+        });
+
+        stage.querySelectorAll('.vh360-agora-stage-status, [data-vh360-stage-status="true"]').forEach((element) => {
+            if (element.parentElement === stage) {
+                element.remove();
             }
         });
     }
@@ -1005,6 +1013,11 @@ window.initializeAgoraPlayer = function(config) {
         tile.classList.toggle('is-featured', shouldFeatureParticipant(participant.uid));
         const label = tile.querySelector('.vh360-user-info, .vh360-video-name-overlay');
         if (label) label.textContent = participant.displayName || `User ${participant.uid}`;
+
+        const speakerBadge = tile.querySelector('.active-speaker-badge');
+        if (speakerBadge && participant.videoTrack && participant.cameraOn !== false) {
+            speakerBadge.style.display = 'none';
+        }
     }
 
     function shouldFeatureParticipant(uid) {
@@ -1021,15 +1034,49 @@ window.initializeAgoraPlayer = function(config) {
     }
 
     function attachParticipantVideo(participant, videoTrack, isLocalTrack = false) {
-        if (!participant || !videoTrack || typeof videoTrack.play !== 'function') return;
+        if (!participant || !videoTrack || typeof videoTrack.play !== 'function') {
+            window.vh360Warn('Agora: Cannot attach participant video; missing participant or playable track', {
+                uid: participant && participant.uid,
+                hasTrack: !!videoTrack
+            });
+            return false;
+        }
+
         participant.videoTrack = videoTrack;
         participant.cameraOn = true;
-        const container = ensureParticipantTile(participant).querySelector('.vh360-participant-video');
+
+        const tile = ensureParticipantTile(participant);
+        const container = tile ? tile.querySelector('.vh360-participant-video') : null;
+        if (!container) {
+            window.vh360Warn('Agora: Cannot attach participant video; missing video container', participant.uid);
+            return false;
+        }
+
         participant.videoContainerElement = container;
-        videoTrack.play(container, isLocalTrack ? { mirror: false } : undefined);
-        videoElementManager.registerTrackBinding(container.id, !!isLocalTrack, isLocalTrack ? null : videoTrack);
-        setTimeout(() => cleanupParticipantVideoStyles(participant), 200);
         updateParticipantTile(participant);
+
+        try {
+            videoTrack.play(container, isLocalTrack ? { mirror: false } : undefined);
+            videoElementManager.registerTrackBinding(container.id, !!isLocalTrack, isLocalTrack ? null : videoTrack);
+            setTimeout(() => cleanupParticipantVideoStyles(participant), 200);
+            window.vh360Log('Agora: Attached video track to persistent participant tile', {
+                uid: participant.uid,
+                containerId: container.id,
+                hasVideoClass: participant.tileElement && participant.tileElement.classList.contains('has-video'),
+                cameraOffClass: participant.tileElement && participant.tileElement.classList.contains('camera-off')
+            });
+            return true;
+        } catch (error) {
+            participant.videoTrack = null;
+            participant.cameraOn = false;
+            updateParticipantTile(participant);
+            window.vh360Warn('Agora: Failed to play video track in participant tile', {
+                uid: participant.uid,
+                containerId: container.id,
+                error
+            });
+            return false;
+        }
     }
 
     function cleanupParticipantVideoStyles(participant) {
@@ -1098,7 +1145,7 @@ window.initializeAgoraPlayer = function(config) {
         clearAllParticipantTiles();
         const localPlayer = document.getElementById("vh360-agora-local-player");
         if (localPlayer) {
-            localPlayer.innerHTML = html;
+            localPlayer.innerHTML = '<div class="vh360-agora-stage-status" data-vh360-stage-status="true">' + html + '</div>';
         }
     }
 
@@ -2600,12 +2647,15 @@ window.initializeAgoraPlayer = function(config) {
             // Replace with new track
             localTracks.videoTrack = newVideoTrack;
 
-            // Restart video display
+            // Restart video display in the persistent local participant tile.
             if (localTracks.videoTrack && typeof localTracks.videoTrack.play === 'function') {
-                localTracks.videoTrack.play("vh360-agora-local-player", { mirror: false });
-
-                // Register local track binding with video manager
-                videoElementManager.registerTrackBinding("vh360-agora-local-player", true);
+                const localParticipant = getOrCreateParticipant(currentUserUID || security.user_id || config.uid, {
+                    isLocal: true,
+                    isOriginalHost: isOriginalHost,
+                    displayName: config.displayName || security.display_name,
+                    wordpressUserId: security.user_id || null
+                });
+                attachParticipantVideo(localParticipant, localTracks.videoTrack, true);
             } else {
                 window.vh360Warn("Agora: Invalid local video track for restart");
             }

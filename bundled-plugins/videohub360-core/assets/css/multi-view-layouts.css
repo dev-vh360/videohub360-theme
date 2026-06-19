@@ -776,3 +776,50 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
         grid-row: span 3;
     }
 }
+
+/* Ensure active Agora video cannot be covered by camera-off placeholders. */
+.vh360-participant-tile .vh360-participant-video {
+    position: absolute;
+    inset: 0;
+    display: block;
+    z-index: 1;
+    overflow: hidden;
+    background: #000;
+}
+
+.vh360-participant-tile.has-video .vh360-participant-video {
+    display: block;
+    visibility: visible;
+    opacity: 1;
+}
+
+.vh360-participant-tile.camera-off:not(.has-video) .vh360-participant-video {
+    display: none;
+}
+
+.vh360-participant-tile .vh360-participant-video > div,
+.vh360-participant-tile .vh360-participant-video video,
+.vh360-participant-tile .vh360-participant-video canvas,
+.vh360-participant-tile .vh360-participant-video .agora_video_player,
+.vh360-participant-tile .vh360-participant-video [class*="agora"] {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+}
+
+.vh360-participant-tile .vh360-participant-video video,
+.vh360-participant-tile .vh360-participant-video canvas {
+    display: block;
+    object-fit: cover;
+}
+
+.vh360-participant-tile.has-video .vh360-participant-placeholder {
+    display: none !important;
+    pointer-events: none;
+}
+
+.vh360-participant-tile.camera-off:not(.has-video) .vh360-participant-placeholder {
+    display: flex;
+    z-index: 2;
+}
