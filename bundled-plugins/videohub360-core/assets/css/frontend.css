@@ -4534,3 +4534,196 @@ body.vh360-ios-immersive-active
     justify-content: center;
     margin-top: 1rem;
 }
+
+/* =========================================================
+   Agora Broadcast Viewer Custom Fullscreen
+   Professional, CSS-only fullscreen presentation that avoids
+   native mobile video fullscreen play/pause controls.
+   ========================================================= */
+body.vh360-broadcast-viewer-fullscreen-active {
+    overflow: hidden !important;
+}
+
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen:fullscreen,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen:-webkit-full-screen {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    min-width: 100vw !important;
+    min-height: 100vh !important;
+    min-height: 100dvh !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #000 !important;
+    overflow: hidden !important;
+    z-index: 2147483000 !important;
+    box-sizing: border-box !important;
+    touch-action: manipulation;
+}
+
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-agora-container,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-player-wrapper,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-agora-video-area,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-local-player,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-multi-view-container,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-broadcast-player,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-stream-player {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 100% !important;
+    min-height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: #000 !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+}
+
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen video,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen canvas,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .agora_video_player,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen [class*="agora"] video,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen [class*="agora"] canvas {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    object-fit: contain !important;
+    object-position: center center !important;
+    background: #000 !important;
+    border-radius: 0 !important;
+}
+
+/* Future opt-in for cropped cinematic mode; contain remains the safe default. */
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-fit-cover video,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-fit-cover canvas,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-fit-cover .agora_video_player {
+    object-fit: cover !important;
+}
+
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-view-selector,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-view-selector,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-gallery-controls,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-pagination-controls,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-title,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-meta,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-user-info,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-name-overlay,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .active-speaker-badge,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .volume-indicator {
+    display: none !important;
+}
+
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-controls,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-agora-controls,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-mobile-controls,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-live-controls {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.45), transparent 28%, transparent 72%, rgba(0, 0, 0, 0.35)) !important;
+    border: 0 !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    transition: opacity 180ms ease, visibility 180ms ease !important;
+    z-index: 2147483004 !important;
+}
+
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-controls-visible #vh360-agora-controls,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-controls-visible .vh360-agora-controls,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-controls-visible .vh360-mobile-controls,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-controls-visible .vh360-live-controls {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-controls > :not(#vh360-agora-fullscreen-btn),
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-agora-controls > :not(#vh360-agora-fullscreen-btn),
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-mobile-controls > :not(#vh360-agora-fullscreen-btn),
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-live-controls > :not(#vh360-agora-fullscreen-btn) {
+    display: none !important;
+}
+
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-fullscreen-btn,
+body.vh360-broadcast-viewer-fullscreen-active #vh360-ios-immersive-exit-btn {
+    position: fixed !important;
+    top: calc(12px + env(safe-area-inset-top, 0px)) !important;
+    right: calc(12px + env(safe-area-inset-right, 0px)) !important;
+    width: 48px !important;
+    height: 48px !important;
+    min-width: 48px !important;
+    min-height: 48px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 0 !important;
+    border-radius: 999px !important;
+    background: rgba(0, 0, 0, 0.72) !important;
+    color: #fff !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35) !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    z-index: 2147483007 !important;
+    transition: opacity 180ms ease, visibility 180ms ease, background-color 180ms ease !important;
+    cursor: pointer !important;
+    touch-action: manipulation;
+}
+
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-controls-visible #vh360-agora-fullscreen-btn,
+body.vh360-broadcast-viewer-fullscreen-active.vh360-broadcast-controls-visible #vh360-ios-immersive-exit-btn {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+}
+
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-fullscreen-btn:hover,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-fullscreen-btn:focus-visible,
+body.vh360-broadcast-viewer-fullscreen-active #vh360-ios-immersive-exit-btn:hover,
+body.vh360-broadcast-viewer-fullscreen-active #vh360-ios-immersive-exit-btn:focus-visible {
+    background: rgba(20, 20, 20, 0.9) !important;
+    outline: 2px solid rgba(255, 255, 255, 0.75) !important;
+    outline-offset: 2px !important;
+}
+
+body.vh360-broadcast-viewer-fullscreen-active .site-header,
+body.vh360-broadcast-viewer-fullscreen-active header,
+body.vh360-broadcast-viewer-fullscreen-active .mobile-navigation,
+body.vh360-broadcast-viewer-fullscreen-active .videohub360-sidebar,
+body.vh360-broadcast-viewer-fullscreen-active .videohub360-chat-wrapper,
+body.vh360-broadcast-viewer-fullscreen-active #vh360-chat-popup,
+body.vh360-broadcast-viewer-fullscreen-active .vh360-chat-popup,
+body.vh360-broadcast-viewer-fullscreen-active .videohub360-dashboard-wrapper,
+body.vh360-broadcast-viewer-fullscreen-active .entry-title,
+body.vh360-broadcast-viewer-fullscreen-active .page-title {
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+body.vh360-broadcast-viewer-fullscreen-active > #vh360-agora-player,
+body.vh360-broadcast-viewer-fullscreen-active #vh360-agora-player,
+body.vh360-broadcast-viewer-fullscreen-active #vh360-ios-immersive-exit-btn {
+    visibility: visible !important;
+    pointer-events: auto !important;
+}

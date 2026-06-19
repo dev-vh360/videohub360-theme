@@ -761,6 +761,8 @@ window.initializeAgoraPlayer = function(config) {
     let iosImmersivePreviousActiveElement = null;
     let iosImmersiveOriginalParent = null;
     let iosImmersivePlaceholder = null;
+    let broadcastFullscreenControlsTimer = null;
+    let broadcastFullscreenTapHandler = null;
 
     // Voice-activated video switching variables
     let activeSpeakerUid = null;
@@ -4897,11 +4899,13 @@ window.initializeAgoraPlayer = function(config) {
             if (window.exitFullscreen) {
                 window.exitFullscreen().then(() => {
                     updateMobileFullscreenButton(false);
+                    teardownBroadcastViewerFullscreenPresentation();
                     resumeAgoraBroadcastViewerPlayback('standard-fullscreen-exit');
                     window.vh360Log('VideoHub360 Mobile: Exited fullscreen successfully');
                 }).catch((err) => {
                     window.vh360Error('VideoHub360 Mobile: Failed to exit fullscreen:', err);
                     updateMobileFullscreenButton(false);
+                    teardownBroadcastViewerFullscreenPresentation();
                     resumeAgoraBroadcastViewerPlayback('standard-fullscreen-exit-error');
                 });
             }
@@ -4990,6 +4994,9 @@ window.initializeAgoraPlayer = function(config) {
         try {
             // Indicate we're attempting fullscreen to prevent double clicks
             targetElement.classList.add('vh360-entering-fullscreen');
+            if (isBroadcastViewer && targetElement.id === 'vh360-agora-player') {
+                setupBroadcastViewerFullscreenPresentation(targetElement);
+            }
             // Use standard API; do not delay for user gesture compliance
             window.enterFullscreen(targetElement).then(() => {
                 targetElement.classList.remove('vh360-entering-fullscreen');
@@ -4997,6 +5004,7 @@ window.initializeAgoraPlayer = function(config) {
                 window.vh360Log('VideoHub360 Mobile: Entered fullscreen successfully');
             }).catch((err) => {
                 targetElement.classList.remove('vh360-entering-fullscreen');
+                teardownBroadcastViewerFullscreenPresentation();
                 window.vh360Error('VideoHub360 Mobile: Failed to enter fullscreen:', err);
                 let errorMessage = 'Fullscreen failed. ';
                 if (err.name === 'NotAllowedError') {
@@ -5021,6 +5029,88 @@ window.initializeAgoraPlayer = function(config) {
             config.agoraMode === 'broadcast' &&
             currentRole !== 'host' &&
             !isOriginalHost
+        );
+    }
+
+    function getAgoraBroadcastFullscreenPlayer() {
+        return document.getElementById('vh360-agora-player');
+    }
+
+    function setBroadcastViewerControlsVisible(isVisible) {
+        const player = getAgoraBroadcastFullscreenPlayer();
+        if (!player || !player.classList.contains('vh360-broadcast-viewer-fullscreen')) {
+            return;
+        }
+
+        player.classList.toggle('vh360-broadcast-controls-visible', !!isVisible);
+        player.classList.toggle('vh360-broadcast-controls-hidden', !isVisible);
+        document.body.classList.toggle('vh360-broadcast-controls-visible', !!isVisible);
+        document.body.classList.toggle('vh360-broadcast-controls-hidden', !isVisible);
+
+        if (broadcastFullscreenControlsTimer) {
+            clearTimeout(broadcastFullscreenControlsTimer);
+            broadcastFullscreenControlsTimer = null;
+        }
+
+        if (isVisible) {
+            broadcastFullscreenControlsTimer = setTimeout(() => {
+                setBroadcastViewerControlsVisible(false);
+            }, 2800);
+        }
+    }
+
+    function setupBroadcastViewerFullscreenPresentation(player) {
+        if (!isAgoraBroadcastViewer() || !player) {
+            return;
+        }
+
+        player.classList.add('vh360-broadcast-viewer-fullscreen');
+        document.body.classList.add('vh360-broadcast-viewer-fullscreen-active');
+        setBroadcastViewerControlsVisible(true);
+
+        if (broadcastFullscreenTapHandler) {
+            player.removeEventListener('click', broadcastFullscreenTapHandler);
+        }
+
+        broadcastFullscreenTapHandler = (event) => {
+            if (event.target.closest('button, a, input, select, textarea, [role="button"], #vh360-ios-immersive-exit-btn')) {
+                return;
+            }
+
+            setBroadcastViewerControlsVisible(
+                !player.classList.contains('vh360-broadcast-controls-visible')
+            );
+        };
+
+        player.addEventListener('click', broadcastFullscreenTapHandler);
+    }
+
+    function teardownBroadcastViewerFullscreenPresentation() {
+        const player = getAgoraBroadcastFullscreenPlayer();
+
+        if (broadcastFullscreenControlsTimer) {
+            clearTimeout(broadcastFullscreenControlsTimer);
+            broadcastFullscreenControlsTimer = null;
+        }
+
+        if (player && broadcastFullscreenTapHandler) {
+            player.removeEventListener('click', broadcastFullscreenTapHandler);
+        }
+
+        broadcastFullscreenTapHandler = null;
+
+        if (player) {
+            player.classList.remove(
+                'vh360-broadcast-viewer-fullscreen',
+                'vh360-broadcast-controls-visible',
+                'vh360-broadcast-controls-hidden'
+            );
+        }
+
+        document.body.classList.remove(
+            'vh360-broadcast-viewer-fullscreen-active',
+            'vh360-broadcast-controls-visible',
+            'vh360-broadcast-controls-hidden'
         );
     }
 
@@ -5062,6 +5152,7 @@ window.initializeAgoraPlayer = function(config) {
     function handleAgoraBroadcastViewerFullscreenChange() {
         const isStandardFullscreen = window.isInFullscreen && window.isInFullscreen();
         if (!isStandardFullscreen && !isIOSImmersiveFullscreen) {
+            teardownBroadcastViewerFullscreenPresentation();
             resumeAgoraBroadcastViewerPlayback('fullscreenchange-exit');
         }
     }
@@ -5190,6 +5281,9 @@ window.initializeAgoraPlayer = function(config) {
         document.documentElement.classList.add('vh360-ios-immersive-active');
         document.body.classList.add('vh360-ios-immersive-active');
         player.classList.add('vh360-ios-immersive-fullscreen');
+        if (isAgoraBroadcastViewer()) {
+            setupBroadcastViewerFullscreenPresentation(player);
+        }
 
         document.body.style.top = '-' + iosImmersiveScrollY + 'px';
 
@@ -5224,6 +5318,8 @@ window.initializeAgoraPlayer = function(config) {
                 'vh360-ios-immersive-portrait'
             );
         }
+
+        teardownBroadcastViewerFullscreenPresentation();
 
         restoreIOSImmersivePlayer(player);
 
