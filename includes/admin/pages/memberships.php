@@ -617,6 +617,8 @@ $plan_config = $plans;
                                        <?php checked(1, $stripe_settings['enable_portal']); ?> />
                                 <?php esc_html_e('Enable Stripe Customer Portal for self-service billing management', 'videohub360-theme'); ?>
                             </label>
+                            <p class="description"><?php esc_html_e('To allow members to upgrade, downgrade, or change recurring plans through Manage Billing, enable subscription updates in your payment provider’s customer portal settings and make sure the relevant recurring prices are available.', 'videohub360-theme'); ?></p>
+                            <p class="description"><?php esc_html_e('Because Stripe controls the hosted billing portal, plan changes must also be enabled in your Stripe Customer Portal settings.', 'videohub360-theme'); ?></p>
                         </td>
                     </tr>
                     

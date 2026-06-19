@@ -89,7 +89,7 @@ class VH360_Stripe_Checkout {
         $stripe = VH360_Stripe_Bootstrap::get_instance();
 
         if (!$stripe->is_configured()) {
-            wp_send_json_error(array('message' => __('Stripe is not configured.', 'videohub360-memberships')));
+            wp_send_json_error(array('message' => __('Payment is not configured.', 'videohub360-memberships')));
         }
 
         $active_membership = function_exists('vh360_get_active_membership') ? vh360_get_active_membership($user_id) : false;
@@ -182,7 +182,7 @@ class VH360_Stripe_Checkout {
         }
         
         if (empty($customer['id'])) {
-            return new WP_Error('stripe_error', __('Failed to create Stripe customer.', 'videohub360-memberships'));
+            return new WP_Error('stripe_error', __('Failed to start payment checkout.', 'videohub360-memberships'));
         }
         
         // Store the customer ID
@@ -238,7 +238,7 @@ class VH360_Stripe_Checkout {
         $stripe = VH360_Stripe_Bootstrap::get_instance();
         
         if ( ! $stripe->is_configured() ) {
-            $this->set_return_notice( $user_id, 'error', __( 'Stripe is not configured.', 'videohub360-memberships' ) );
+            $this->set_return_notice( $user_id, 'error', __( 'Payment is not configured.', 'videohub360-memberships' ) );
             wp_safe_redirect( self::get_dashboard_membership_url() );
             exit;
         }

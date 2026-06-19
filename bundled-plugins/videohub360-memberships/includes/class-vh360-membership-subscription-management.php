@@ -4,7 +4,7 @@
  *
  * Provides user-facing subscription management through a shortcode
  * and AJAX-driven interface. Users can view their plan, billing status,
- * cancel, reactivate, and access the Stripe billing portal.
+ * cancel, reactivate, and access the billing portal.
  *
  * @package VideoHub360_Memberships
  * @since 1.0.0
@@ -198,10 +198,13 @@ class VH360_Membership_Subscription_Management {
         ob_start();
         ?>
         <div class="vh360-membership-management vh360-membership-account-center" id="vh360-membership-management" style="<?php echo esc_attr($dashboard_style); ?>">
-            <?php if ($selected_plan) : ?>
-                <div class="vh360-membership-notice vh360-membership-notice-info">
-                    <?php esc_html_e('Your account is ready. Continue to Stripe to activate your membership.', 'videohub360-memberships'); ?>
-                </div>
+            <?php if ($selected_plan && !empty($recurring_plans[$selected_plan])) : ?>
+                <?php $selected_plan_action = $this->get_recurring_plan_action_state($user_id, $selected_plan, $recurring_plans[$selected_plan], $membership); ?>
+                <?php if (!empty($selected_plan_action['notice_text'])) : ?>
+                    <div class="vh360-membership-notice vh360-membership-notice-info">
+                        <?php echo esc_html($selected_plan_action['notice_text']); ?>
+                    </div>
+                <?php endif; ?>
             <?php elseif (isset($_GET['vh360_plan'])) : ?>
                 <div class="vh360-membership-notice vh360-membership-notice-warning">
                     <?php esc_html_e('The selected membership plan is no longer available. Please choose another plan.', 'videohub360-memberships'); ?>
@@ -214,7 +217,7 @@ class VH360_Membership_Subscription_Management {
                     $is_recurring = isset($membership->billing_mode) && $membership->billing_mode === 'recurring';
                     $cancel_pending = !empty($membership->cancel_at_period_end);
                     $sub_status = isset($membership->subscription_status) ? $membership->subscription_status : '';
-                    $provider = $is_recurring ? __('Stripe', 'videohub360-memberships') : __('WooCommerce', 'videohub360-memberships');
+                    $provider = $is_recurring ? __('Payment provider', 'videohub360-memberships') : __('WooCommerce', 'videohub360-memberships');
                     $type_label = $is_recurring ? __('Recurring Subscription', 'videohub360-memberships') : (empty($membership->expires_at) ? __('Lifetime Access', 'videohub360-memberships') : __('Fixed-Term Access', 'videohub360-memberships'));
                 ?>
                     <div class="vh360-membership-card vh360-current-plan-card">
@@ -227,7 +230,7 @@ class VH360_Membership_Subscription_Management {
                         </div>
                         <div class="vh360-membership-card-body">
                             <div class="vh360-membership-detail"><span class="vh360-membership-detail-label"><?php esc_html_e('Billing Type', 'videohub360-memberships'); ?></span><span class="vh360-membership-detail-value"><?php echo esc_html($type_label); ?></span></div>
-                            <div class="vh360-membership-detail"><span class="vh360-membership-detail-label"><?php esc_html_e('Billing Provider', 'videohub360-memberships'); ?></span><span class="vh360-membership-detail-value"><?php echo esc_html($provider); ?></span></div>
+                            <div class="vh360-membership-detail"><span class="vh360-membership-detail-label"><?php esc_html_e('Billing Source', 'videohub360-memberships'); ?></span><span class="vh360-membership-detail-value"><?php echo esc_html($provider); ?></span></div>
                             <?php if ($is_recurring && $sub_status) : ?><div class="vh360-membership-detail"><span class="vh360-membership-detail-label"><?php esc_html_e('Subscription Status', 'videohub360-memberships'); ?></span><span class="vh360-membership-detail-value vh360-billing-status-<?php echo esc_attr($sub_status); ?>"><?php echo esc_html($this->format_subscription_status($sub_status)); ?></span></div><?php endif; ?>
                             <?php if ($is_recurring && !empty($membership->current_period_end)) : ?><div class="vh360-membership-detail"><span class="vh360-membership-detail-label"><?php echo $cancel_pending ? esc_html__('Access Until', 'videohub360-memberships') : esc_html__('Next Billing Date', 'videohub360-memberships'); ?></span><span class="vh360-membership-detail-value"><?php echo esc_html(date_i18n(get_option('date_format'), strtotime($membership->current_period_end))); ?></span></div>
                             <?php elseif (!$is_recurring && !empty($membership->expires_at)) : ?><div class="vh360-membership-detail"><span class="vh360-membership-detail-label"><?php esc_html_e('Expiration Date', 'videohub360-memberships'); ?></span><span class="vh360-membership-detail-value"><?php echo esc_html(date_i18n(get_option('date_format'), strtotime($membership->expires_at))); ?></span></div>
@@ -270,10 +273,10 @@ class VH360_Membership_Subscription_Management {
                 <?php endif; ?>
 
                 <?php if (!empty($recurring_plans) && $stripe->is_configured()) : ?>
-                    <h4 class="vh360-plan-group-title"><?php echo $is_recurring_stripe_member ? esc_html__('Change Your Recurring Plan', 'videohub360-memberships') : esc_html__('Recurring Stripe Plans', 'videohub360-memberships'); ?></h4>
+                    <h4 class="vh360-plan-group-title"><?php echo $is_recurring_stripe_member ? esc_html__('Change Your Recurring Plan', 'videohub360-memberships') : esc_html__('Recurring Plans', 'videohub360-memberships'); ?></h4>
                     <?php if ($is_recurring_stripe_member) : ?>
                         <div class="vh360-membership-notice vh360-membership-notice-info">
-                            <p><?php esc_html_e('Recurring subscription changes are managed securely through the Stripe Billing Portal. Open the portal to change your plan, update your payment method, view invoices, or manage your subscription.', 'videohub360-memberships'); ?></p>
+                            <p><?php esc_html_e('Recurring subscription changes are managed securely through the Billing Portal. Open the portal to change your plan, update your payment method, view invoices, or manage your subscription.', 'videohub360-memberships'); ?></p>
                             <?php if ($stripe->is_portal_enabled()) : ?>
                                 <button type="button" class="vh360-btn vh360-btn-primary vh360-open-portal"><?php esc_html_e('Manage Billing', 'videohub360-memberships'); ?></button>
                             <?php else : ?>
@@ -282,7 +285,7 @@ class VH360_Membership_Subscription_Management {
                             <?php endif; ?>
                         </div>
                     <?php endif; ?>
-                    <?php $this->render_dashboard_recurring_plan_groups($recurring_plan_groups, $plans, $membership, $selected_plan, $button_label, !$is_recurring_stripe_member); ?>
+                    <?php $this->render_dashboard_recurring_plan_groups($recurring_plan_groups, $plans, $membership, $selected_plan, $button_label, true); ?>
                 <?php endif; ?>
 
                 <?php if (empty($woo_products) && (empty($recurring_plans) || !$stripe->is_configured())) : ?>
@@ -299,7 +302,7 @@ class VH360_Membership_Subscription_Management {
                     <?php if ($pricing_url) : ?><a class="vh360-btn vh360-btn-secondary" href="<?php echo esc_url($pricing_url); ?>"><?php esc_html_e('View All Plans', 'videohub360-memberships'); ?></a><?php endif; ?>
                     <?php if ($support_url) : ?><a class="vh360-btn vh360-btn-secondary" href="<?php echo esc_url($support_url); ?>"><?php esc_html_e('Contact Support', 'videohub360-memberships'); ?></a><?php endif; ?>
                 </div>
-                <?php if ($membership && isset($membership->billing_mode) && $membership->billing_mode === 'recurring' && !$stripe->is_portal_enabled()) : ?><p class="vh360-membership-muted"><?php esc_html_e('Stripe billing portal is not configured. Contact support for billing changes.', 'videohub360-memberships'); ?></p><?php endif; ?>
+                <?php if ($membership && isset($membership->billing_mode) && $membership->billing_mode === 'recurring' && !$stripe->is_portal_enabled()) : ?><p class="vh360-membership-muted"><?php esc_html_e('Billing management is not configured. Contact support for billing changes.', 'videohub360-memberships'); ?></p><?php endif; ?>
             </section>
         </div>
         <?php
@@ -333,7 +336,7 @@ class VH360_Membership_Subscription_Management {
             <section class="vh360-membership-section vh360-guest-recurring-section">
                 <div class="vh360-membership-empty-state">
                     <h3><?php esc_html_e('Create an account to start a recurring membership.', 'videohub360-memberships'); ?></h3>
-                    <p><?php esc_html_e('Choose a recurring plan, create your account, then continue securely to Stripe Checkout.', 'videohub360-memberships'); ?></p>
+                    <p><?php esc_html_e('Choose a recurring plan, create your account, then continue securely to payment.', 'videohub360-memberships'); ?></p>
                 </div>
                 <?php if (isset($_GET['vh360_plan']) && !$selected_plan) : ?>
                     <div class="vh360-membership-notice vh360-membership-notice-warning"><?php esc_html_e('The selected membership plan is no longer available. Please choose another plan.', 'videohub360-memberships'); ?></div>
@@ -435,8 +438,9 @@ class VH360_Membership_Subscription_Management {
      * Render a single compact recurring dashboard plan card.
      */
     private function render_dashboard_recurring_plan_card($key, $plan, $plans, $membership, $selected_plan, $button_label, $show_buttons, $guest_links) {
-        $stripe_same_tier = $membership && VH360_Membership_Plans::get_plan_tier($key) === VH360_Membership_Plans::get_plan_tier($membership->plan_key);
-        $stripe_button_label = ($selected_plan && $selected_plan === $key) ? __('Continue to Stripe', 'videohub360-memberships') : (!$membership ? $button_label : ($stripe_same_tier ? __('Switch Billing Term', 'videohub360-memberships') : __('Switch to recurring billing', 'videohub360-memberships')));
+        $user_id = get_current_user_id();
+        $action_state = $this->get_recurring_plan_action_state($user_id, $key, $plan, $membership);
+        $action_class = !empty($action_state['use_billing_portal']) ? 'vh360-manage-billing' : 'vh360-start-subscription';
         ?>
         <article class="vh360-subscription-plan-card vh360-dashboard-plan-group-card <?php echo !empty($plan['featured']) ? 'is-featured' : ''; ?> <?php echo ($selected_plan && $selected_plan === $key) ? 'is-selected' : ''; ?>">
             <?php if (!empty($plan['featured'])) : ?><span class="vh360-plan-pill"><?php esc_html_e('Recommended', 'videohub360-memberships'); ?></span><?php endif; ?>
@@ -450,10 +454,80 @@ class VH360_Membership_Subscription_Management {
                 <a class="vh360-btn vh360-btn-primary" href="<?php echo esc_url(vh360_membership_get_recurring_register_url($key)); ?>"><?php esc_html_e('Create Account & Subscribe', 'videohub360-memberships'); ?></a>
                 <a class="vh360-auth-link" href="<?php echo esc_url(vh360_membership_get_recurring_login_url($key)); ?>"><?php esc_html_e('Already have an account? Sign in', 'videohub360-memberships'); ?></a>
             <?php elseif ($show_buttons) : ?>
-                <button type="button" class="vh360-btn vh360-btn-primary vh360-start-subscription" data-plan-key="<?php echo esc_attr($key); ?>"><?php echo esc_html($stripe_button_label); ?></button>
+                <?php if ('portal_unavailable' === $action_state['action_type']) : ?>
+                    <?php if (!empty($action_state['support_url'])) : ?>
+                        <a class="vh360-btn vh360-btn-secondary" href="<?php echo esc_url($action_state['support_url']); ?>"><?php echo esc_html($action_state['button_label']); ?></a>
+                    <?php else : ?>
+                        <p class="vh360-membership-muted"><?php echo esc_html($action_state['notice_text']); ?></p>
+                        <button type="button" class="vh360-btn vh360-btn-secondary" disabled><?php echo esc_html($action_state['button_label']); ?></button>
+                    <?php endif; ?>
+                <?php elseif (!empty($action_state['disabled'])) : ?>
+                    <button type="button" class="vh360-btn vh360-btn-secondary" disabled><?php echo esc_html($action_state['button_label']); ?></button>
+                <?php elseif (!empty($action_state['use_checkout']) || !empty($action_state['use_billing_portal'])) : ?>
+                    <button type="button" class="vh360-btn vh360-btn-primary <?php echo esc_attr($action_class); ?>" data-plan-key="<?php echo esc_attr($key); ?>"><?php echo esc_html($action_state['button_label']); ?></button>
+                <?php endif; ?>
             <?php endif; ?>
         </article>
         <?php
+    }
+
+
+    /**
+     * Determine the correct frontend action for a recurring dashboard plan.
+     */
+    private function get_recurring_plan_action_state($user_id, $plan_key, $plan, $membership = false) {
+        $options = get_option('vh360_membership_options', array());
+        $support_url = isset($options['support_url']) ? $options['support_url'] : (isset($options['contact_url']) ? $options['contact_url'] : '');
+        $stripe = VH360_Stripe_Bootstrap::get_instance();
+        $is_current_plan = $membership && isset($membership->billing_mode, $membership->plan_key) && 'recurring' === $membership->billing_mode && $membership->plan_key === $plan_key;
+        $has_active_recurring = $membership && isset($membership->billing_mode) && 'recurring' === $membership->billing_mode;
+        $is_checkout_ready = !empty($plan['stripe_price_id']) && (!isset($plan['enabled']) || !empty($plan['enabled'])) && $stripe->is_configured();
+
+        $state = array(
+            'action_type'        => 'unavailable',
+            'button_label'       => __('Unavailable', 'videohub360-memberships'),
+            'notice_text'        => '',
+            'disabled'           => true,
+            'use_checkout'       => false,
+            'use_billing_portal' => false,
+            'is_current_plan'    => $is_current_plan,
+            'is_selected_plan'   => function_exists('vh360_membership_get_selected_plan_from_request') && vh360_membership_get_selected_plan_from_request() === $plan_key,
+            'support_url'        => $support_url,
+        );
+
+        if (!$is_checkout_ready) {
+            return $state;
+        }
+
+        if ($is_current_plan) {
+            $state['action_type'] = 'current_plan';
+            $state['button_label'] = __('Current Plan', 'videohub360-memberships');
+            $state['notice_text'] = __('This is your current plan.', 'videohub360-memberships');
+            return $state;
+        }
+
+        if ($has_active_recurring) {
+            if (!$stripe->is_portal_enabled()) {
+                $state['action_type'] = 'portal_unavailable';
+                $state['button_label'] = $support_url ? __('Contact Support', 'videohub360-memberships') : __('Billing Unavailable', 'videohub360-memberships');
+                $state['notice_text'] = __('Plan changes are currently unavailable from your account. Please contact support.', 'videohub360-memberships');
+                return $state;
+            }
+
+            $state['action_type'] = 'switch_via_billing';
+            $state['button_label'] = __('Change Plan', 'videohub360-memberships');
+            $state['notice_text'] = __('You selected a different recurring plan. Use billing management to update your subscription.', 'videohub360-memberships');
+            $state['disabled'] = false;
+            $state['use_billing_portal'] = true;
+            return $state;
+        }
+
+        $state['action_type'] = 'start_checkout';
+        $state['button_label'] = __('Continue to Payment', 'videohub360-memberships');
+        $state['notice_text'] = $membership ? __('Continue to payment to activate recurring billing for this plan.', 'videohub360-memberships') : __('Your account is ready. Continue to payment to activate your membership.', 'videohub360-memberships');
+        $state['disabled'] = false;
+        $state['use_checkout'] = true;
+        return $state;
     }
 
     /**
@@ -514,7 +588,8 @@ class VH360_Membership_Subscription_Management {
                 continue;
             }
 
-            if (!vh360_membership_plan_is_eligible_change($key, $plan, $membership)) {
+            $is_current_recurring_plan = $membership && isset($membership->billing_mode, $membership->plan_key) && 'recurring' === $membership->billing_mode && $membership->plan_key === $key;
+            if (!$is_current_recurring_plan && !vh360_membership_plan_is_eligible_change($key, $plan, $membership)) {
                 continue;
             }
 
