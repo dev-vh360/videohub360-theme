@@ -229,36 +229,6 @@ body #vh360-agora-local-player [id^="player-"].vh360-video-main,
     bottom: 0;
 }
 
-/* === View Selector Styling === */
-.vh360-view-selector {
-    background: transparent;
-    border: 1px solid #fff;
-    padding: 6px 12px;
-    font-size: 0.8em;
-    line-height: 1;
-    display: inline-flex;
-    align-items: center;    
-    border-radius: var(--vh360-radius-sm);
-    appearance: none;
-    cursor: pointer;
-    transition: background-color var(--vh360-mv-transition-smooth);
-    color: var(--vh360-color-white);
-    box-sizing: border-box;
-}
-
-.vh360-view-selector:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-.vh360-view-selector:focus {
-    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.3);
-}
-
-.vh360-view-selector option {
-    background: var(--vh360-mv-bg-medium);
-    color: var(--vh360-color-white);
-}
-
 /* === Multi-View Container Base === */
 .vh360-multi-view-container {
     position: relative;
@@ -707,40 +677,7 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
     pointer-events: none;
 }
 
-/* Phase One persistent Agora participant tiles: speaker view is class-based, not DOM-moved. */
-.vh360-speaker-view #vh360-agora-remote-players.vh360-persistent-speaker-stage,
-#vh360-agora-remote-players.vh360-persistent-speaker-stage {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 180px));
-    grid-auto-rows: 120px;
-    gap: 10px;
-    align-items: stretch;
-    width: 100%;
-}
-
-#vh360-agora-remote-players.vh360-persistent-speaker-stage .vh360-participant-tile {
-    position: relative;
-    overflow: hidden;
-    min-width: 0;
-    min-height: 0;
-    border: 2px solid #333;
-    border-radius: 8px;
-    background: #111;
-}
-
-#vh360-agora-remote-players.vh360-persistent-speaker-stage .vh360-participant-tile.is-featured {
-    grid-column: 1 / -1;
-    grid-row: span 4;
-    min-height: 360px;
-    border-color: #4CAF50;
-    box-shadow: 0 0 16px rgba(76, 175, 80, 0.35);
-}
-
-#vh360-agora-remote-players.vh360-persistent-speaker-stage .vh360-participant-tile.is-active-speaker:not(.is-featured) {
-    border-color: #4CAF50;
-    box-shadow: 0 0 12px rgba(76, 175, 80, 0.6);
-}
-
+/* Phase One persistent Agora participant tile internals. */
 .vh360-participant-video,
 .vh360-participant-video > div,
 .vh360-participant-video video {
@@ -782,17 +719,6 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
     text-transform: uppercase;
 }
 
-@media (max-width: 768px) {
-    #vh360-agora-remote-players.vh360-persistent-speaker-stage {
-        grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
-        grid-auto-rows: 92px;
-    }
-
-    #vh360-agora-remote-players.vh360-persistent-speaker-stage .vh360-participant-tile.is-featured {
-        min-height: 240px;
-        grid-row: span 3;
-    }
-}
 
 /* Phase One fix: #vh360-agora-local-player is the persistent Speaker View stage. */
 .vh360-speaker-view #vh360-agora-local-player.vh360-persistent-speaker-stage,

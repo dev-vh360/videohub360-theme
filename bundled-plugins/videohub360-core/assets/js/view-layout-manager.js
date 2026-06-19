@@ -480,7 +480,10 @@ class ViewLayoutManager {
     }
     
     updateLayout(participants) {
-        this.participantCount = participants ? Object.keys(participants).length : 0;
+        if (!participants || typeof participants !== 'object') {
+            participants = {};
+        }
+        this.participantCount = Object.keys(participants).length;
         this.applyLayout();
     }
     
