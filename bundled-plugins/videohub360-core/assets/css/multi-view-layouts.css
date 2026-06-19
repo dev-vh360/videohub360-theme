@@ -689,10 +689,6 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
     object-fit: cover;
 }
 
-.vh360-participant-tile.camera-off .vh360-participant-video,
-.vh360-participant-tile.has-video .vh360-participant-placeholder {
-    display: none;
-}
 
 .vh360-participant-placeholder {
     position: absolute;
