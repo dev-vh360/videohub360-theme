@@ -352,6 +352,19 @@
     opacity: 0.9;
 }
 
+.vh360-subscription-plan-card .vh360-current-plan-button,
+.vh360-subscription-plan-card .vh360-current-plan-button:disabled,
+.vh360-subscription-plan-card .vh360-current-plan-button:hover,
+.vh360-subscription-plan-card .vh360-current-plan-button:focus,
+.vh360-subscription-plan-card .vh360-current-plan-button:active {
+    background: var(--vh360-dashboard-current-plan-button-bg, #f4f7f9);
+    color: var(--vh360-dashboard-current-plan-button-color, #1f2933);
+    border: 1px solid var(--vh360-dashboard-current-plan-button-border, #cbd5df);
+    opacity: 1;
+    cursor: default;
+    box-shadow: none;
+}
+
 /* Membership account center */
 .vh360-membership-account-center {
     max-width: 1100px;

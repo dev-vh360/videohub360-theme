@@ -1,7 +1,7 @@
 /**
  * VH360 Membership Management Frontend
  *
- * Handles Stripe checkout initiation, subscription cancellation,
+ * Handles payment checkout initiation, subscription cancellation,
  * reactivation, and billing portal access from the frontend.
  *
  * @package VideoHub360_Memberships
@@ -26,7 +26,7 @@
     }
 
     /**
-     * Start a new Stripe subscription checkout
+     * Start a new recurring subscription checkout
      */
     $(document).on('click', '.vh360-start-subscription', function(e) {
         e.preventDefault();
@@ -131,7 +131,7 @@
     });
 
     /**
-     * Open Stripe billing portal
+     * Open billing portal
      */
     $(document).on('click', '.vh360-open-portal, .vh360-manage-billing', function(e) {
         e.preventDefault();
@@ -192,7 +192,13 @@
             return;
         }
 
+        var $card = $('.vh360-dashboard-plan-group-card.is-selected').first();
         var $button = $('.vh360-start-subscription[data-plan-key="' + config.selectedPlan + '"]').first();
+
+        if ($card.length) {
+            $('html, body').animate({ scrollTop: Math.max(0, $card.offset().top - 80) }, 250);
+        }
+
         if (!$button.length || $button.data('vh360AutoCheckoutStarted')) {
             return;
         }

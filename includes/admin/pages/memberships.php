@@ -399,6 +399,9 @@ $plan_config = $plans;
                     'subscription_card_text_color' => __('Plan Text Color', 'videohub360-theme'),
                     'subscription_card_button_bg_color' => __('Subscribe Button Background Color', 'videohub360-theme'),
                     'subscription_card_button_text_color' => __('Subscribe Button Text Color', 'videohub360-theme'),
+                    'dashboard_current_plan_button_bg_color' => __('Current Plan Button Background Color', 'videohub360-theme'),
+                    'dashboard_current_plan_button_text_color' => __('Current Plan Button Text Color', 'videohub360-theme'),
+                    'dashboard_current_plan_button_border_color' => __('Current Plan Button Border Color', 'videohub360-theme'),
                 );
                 foreach ($dashboard_color_fields as $field => $label) : ?>
                     <tr><th scope="row"><label for="<?php echo esc_attr($field); ?>"><?php echo esc_html($label); ?></label></th><td><input type="text" name="vh360_membership_options[<?php echo esc_attr($field); ?>]" id="<?php echo esc_attr($field); ?>" value="<?php echo esc_attr($options[$field]); ?>" class="vh360-color-picker" data-default-color="<?php echo esc_attr($options[$field]); ?>" /></td></tr>
@@ -617,6 +620,8 @@ $plan_config = $plans;
                                        <?php checked(1, $stripe_settings['enable_portal']); ?> />
                                 <?php esc_html_e('Enable Stripe Customer Portal for self-service billing management', 'videohub360-theme'); ?>
                             </label>
+                            <p class="description"><?php esc_html_e('To allow members to upgrade, downgrade, or change recurring plans through Manage Billing, enable subscription updates in your payment provider’s customer portal settings and make sure the relevant recurring prices are available.', 'videohub360-theme'); ?></p>
+                            <p class="description"><?php esc_html_e('Because Stripe controls the hosted billing portal, plan changes must also be enabled in your Stripe Customer Portal settings.', 'videohub360-theme'); ?></p>
                         </td>
                     </tr>
                     
@@ -794,4 +799,3 @@ jQuery(document).ready(function($) {
     }
 });
 </script>
-
