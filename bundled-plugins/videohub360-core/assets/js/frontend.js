@@ -941,6 +941,7 @@ window.initializeAgoraPlayer = function(config) {
             ':scope > .vh360-waiting-message',
             ':scope > .vh360-waiting-text',
             ':scope > .vh360-agora-stage-status',
+            ':scope > .vh360-agora-status-message',
             ':scope > [data-vh360-stage-status="true"]',
             ':scope > #agora-error-overlay',
             ':scope > #agora-success-overlay'
@@ -954,7 +955,7 @@ window.initializeAgoraPlayer = function(config) {
             }
         });
 
-        stage.querySelectorAll('.vh360-agora-stage-status, [data-vh360-stage-status="true"]').forEach((element) => {
+        stage.querySelectorAll('.vh360-agora-stage-status, .vh360-agora-status-message, [data-vh360-stage-status="true"]').forEach((element) => {
             if (element.parentElement === stage) {
                 element.remove();
             }
@@ -1038,7 +1039,24 @@ window.initializeAgoraPlayer = function(config) {
             stage.classList.toggle('has-single-participant', participantCount <= 1);
             stage.classList.toggle('has-multiple-participants', participantCount > 1);
         }
+
         participantRegistry.forEach((participant) => updateParticipantTile(participant));
+
+        let thumbnailIndex = 0;
+        participantRegistry.forEach((participant) => {
+            if (!participant.tileElement) return;
+
+            const isFeatured = participant.tileElement.classList.contains('is-featured');
+            if (isFeatured) {
+                participant.tileElement.style.removeProperty('--vh360-thumbnail-index');
+                delete participant.tileElement.dataset.thumbnailIndex;
+                return;
+            }
+
+            participant.tileElement.style.setProperty('--vh360-thumbnail-index', thumbnailIndex);
+            participant.tileElement.dataset.thumbnailIndex = String(thumbnailIndex);
+            thumbnailIndex += 1;
+        });
     }
 
     function attachParticipantVideo(participant, videoTrack, isLocalTrack = false) {

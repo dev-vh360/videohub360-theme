@@ -723,30 +723,22 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
     --vh360-thumbnail-rail-height: 112px;
     --vh360-thumbnail-width: 160px;
     --vh360-thumbnail-height: 90px;
+    --vh360-thumbnail-gap: 10px;
     position: relative;
-    display: flex;
-    flex-flow: row nowrap;
-    align-items: flex-end;
-    justify-content: center;
-    gap: 10px;
+    display: block;
     width: 100%;
     min-height: clamp(360px, 56vw, 720px);
     aspect-ratio: 16 / 9;
-    padding: var(--vh360-speaker-stage-padding);
-    overflow-x: auto;
-    overflow-y: hidden;
+    padding: 0;
+    overflow: hidden;
     background: #000;
     box-sizing: border-box;
-    scroll-padding-inline: var(--vh360-speaker-stage-padding);
-}
-
-#vh360-agora-local-player.vh360-persistent-speaker-stage.has-single-participant {
-    overflow: hidden;
 }
 
 #vh360-agora-local-player.vh360-persistent-speaker-stage .vh360-participant-tile {
-    position: relative;
-    flex: 0 0 var(--vh360-thumbnail-width);
+    position: absolute;
+    left: calc(var(--vh360-speaker-stage-padding) + (var(--vh360-thumbnail-index, 0) * (var(--vh360-thumbnail-width) + var(--vh360-thumbnail-gap))));
+    bottom: var(--vh360-speaker-stage-padding);
     width: var(--vh360-thumbnail-width);
     height: var(--vh360-thumbnail-height);
     min-width: var(--vh360-thumbnail-width);
@@ -760,7 +752,6 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
 }
 
 #vh360-agora-local-player.vh360-persistent-speaker-stage .vh360-participant-tile.is-featured {
-    position: absolute;
     top: var(--vh360-speaker-stage-padding);
     right: var(--vh360-speaker-stage-padding);
     bottom: calc(var(--vh360-thumbnail-rail-height) + var(--vh360-speaker-stage-padding));
@@ -796,8 +787,8 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
         --vh360-thumbnail-rail-height: 84px;
         --vh360-thumbnail-width: 112px;
         --vh360-thumbnail-height: 64px;
+        --vh360-thumbnail-gap: 8px;
         min-height: clamp(280px, 62vh, 520px);
-        justify-content: flex-start;
     }
 }
 
