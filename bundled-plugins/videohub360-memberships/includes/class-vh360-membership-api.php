@@ -842,6 +842,46 @@ class VH360_Membership_API {
         return true;
     }
     
+
+    /**
+     * Reactivate local membership access.
+     *
+     * @param int $membership_id Membership ID.
+     * @param array $args Optional args. Supports expires_at.
+     * @return bool Success.
+     */
+    public function reactivate_membership($membership_id, $args = array()) {
+        global $wpdb;
+
+        $data = array(
+            'status' => 'active',
+            'updated_at' => current_time('mysql'),
+        );
+        $formats = array('%s', '%s');
+
+        if (array_key_exists('expires_at', $args)) {
+            $data['expires_at'] = $args['expires_at'] ? sanitize_text_field($args['expires_at']) : null;
+            $formats[] = '%s';
+        }
+
+        $result = $wpdb->update(
+            VH360_Membership_Database::get_memberships_table(),
+            $data,
+            array('id' => absint($membership_id)),
+            $formats,
+            array('%d')
+        );
+
+        if ($result === false) {
+            return false;
+        }
+
+        $this->log_event($membership_id, 'reactivated', array('expires_at' => isset($data['expires_at']) ? $data['expires_at'] : null), get_current_user_id());
+        do_action('vh360_membership_reactivated', $membership_id, $args);
+
+        return true;
+    }
+
     /**
      * Calculate expiration date
      *

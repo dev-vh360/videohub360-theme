@@ -76,6 +76,7 @@ class VH360_Memberships {
         require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-database.php';
         require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-plans.php';
         require_once VH360_MEMBERSHIPS_DIR . 'includes/admin/class-vh360-membership-plans-admin.php';
+        require_once VH360_MEMBERSHIPS_DIR . 'includes/admin/class-vh360-membership-members-admin.php';
         require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-api.php';
         require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-woocommerce.php';
         require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-cron.php';
@@ -108,6 +109,9 @@ class VH360_Memberships {
         VH360_Membership_Plans::get_instance();
         if (is_admin() && class_exists('VH360_Membership_Plans_Admin')) {
             VH360_Membership_Plans_Admin::get_instance();
+        }
+        if (is_admin() && class_exists('VH360_Membership_Members_Admin')) {
+            VH360_Membership_Members_Admin::get_instance();
         }
 
         // Check for WooCommerce

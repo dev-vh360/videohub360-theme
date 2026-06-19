@@ -71,6 +71,7 @@ $plan_config = $plans;
         <a href="#general" class="nav-tab nav-tab-active" data-tab="general"><?php esc_html_e('General', 'videohub360-theme'); ?></a>
         <a href="#stripe" class="nav-tab" data-tab="stripe"><?php esc_html_e('Stripe / Recurring', 'videohub360-theme'); ?></a>
         <a href="<?php echo esc_url(admin_url('admin.php?page=vh360-theme-memberships&tab=membership-plans')); ?>" class="nav-tab" data-tab="membership-plans"><?php esc_html_e('Membership Plans', 'videohub360-theme'); ?></a>
+        <a href="<?php echo esc_url(admin_url('admin.php?page=vh360-theme-memberships&tab=paid-members')); ?>" class="nav-tab" data-tab="paid-members"><?php esc_html_e('Paid Members', 'videohub360-theme'); ?></a>
         <a href="#styling" class="nav-tab" data-tab="styling"><?php esc_html_e('Styling', 'videohub360-theme'); ?></a>
         <a href="#stats" class="nav-tab" data-tab="stats"><?php esc_html_e('Statistics', 'videohub360-theme'); ?></a>
     </h2>
@@ -662,9 +663,25 @@ $plan_config = $plans;
         <p><code>[vh360_pricing_toggle show_lifetime="true" show_free="true"]</code></p>
     </div>
 
+    <!-- Paid Members Tab -->
+    <div id="tab-paid-members" class="vh360-tab-content" style="display:none;">
+        <?php
+        $vh360_members_admin = (class_exists('VH360_Membership_Members_Admin') && method_exists('VH360_Membership_Members_Admin', 'get_instance'))
+            ? VH360_Membership_Members_Admin::get_instance()
+            : null;
+        ?>
+        <?php if (is_object($vh360_members_admin) && method_exists($vh360_members_admin, 'render_manager')) : ?>
+            <?php $vh360_members_admin->render_manager(false); ?>
+        <?php else : ?>
+            <h2><?php esc_html_e('Paid Members', 'videohub360-theme'); ?></h2>
+            <div class="notice notice-warning inline"><p><?php esc_html_e('The VideoHub360 Memberships plugin must be active to view paid members.', 'videohub360-theme'); ?></p></div>
+        <?php endif; ?>
+    </div>
+
     <!-- Statistics Tab -->
     <div id="tab-stats" class="vh360-tab-content" style="display:none;">
         <h2><?php esc_html_e('Membership Statistics', 'videohub360-theme'); ?></h2>
+        <p><a class="button" href="<?php echo esc_url(admin_url('admin.php?page=vh360-theme-memberships&tab=paid-members')); ?>"><?php esc_html_e('View Paid Members', 'videohub360-theme'); ?></a></p>
         
         <?php
         if (class_exists('VH360_Membership_Database') && method_exists('VH360_Membership_Database', 'get_memberships_table')) {
@@ -742,7 +759,7 @@ jQuery(document).ready(function($) {
         e.preventDefault();
         var tab = $(this).data('tab');
         var params = new URLSearchParams(window.location.search);
-        if (tab === 'membership-plans' && params.get('tab') !== 'membership-plans') {
+        if ((tab === 'membership-plans' || tab === 'paid-members') && params.get('tab') !== tab) {
             window.location.href = $(this).attr('href');
             return;
         }
@@ -767,8 +784,8 @@ jQuery(document).ready(function($) {
         window.location.href = window.location.pathname + '?' + params.toString();
         return;
     }
-    if (requestedTab === 'membership-plans' && params.get('tab') !== 'membership-plans') {
-        params.set('tab', 'membership-plans');
+    if ((requestedTab === 'membership-plans' || requestedTab === 'paid-members') && params.get('tab') !== requestedTab) {
+        params.set('tab', requestedTab);
         window.location.href = window.location.pathname + '?' + params.toString();
         return;
     }
