@@ -577,6 +577,15 @@ function showModerationConfirmation(uid, displayName, actionType) {
  * Removes participant from UI
  */
 function removeParticipantFromUI(uid) {
+    if (window.vh360RemoveParticipantTile) {
+        window.vh360Log('Agora: Removing participant via persistent registry cleanup:', uid);
+        window.vh360RemoveParticipantTile(uid);
+        if (window.vh360LayoutManager) {
+            window.vh360LayoutManager.updateLayout(window.remoteUsers || {});
+        }
+        return;
+    }
+
     const playerElement = document.getElementById(`player-${uid}`);
     if (playerElement) {
         window.vh360Log('Agora: Removing participant from UI:', uid);
@@ -862,12 +871,17 @@ window.initializeAgoraPlayer = function(config) {
     }
 
     function getParticipantStage() {
-        const remote = document.getElementById("vh360-agora-remote-players");
-        if (remote) {
-            remote.classList.add('vh360-participant-stage', 'vh360-persistent-speaker-stage');
-            return remote;
+        const local = document.getElementById("vh360-agora-local-player");
+        if (local) {
+            local.classList.add('vh360-participant-stage', 'vh360-persistent-speaker-stage');
+            const remote = document.getElementById("vh360-agora-remote-players");
+            if (remote) {
+                remote.classList.remove('vh360-persistent-speaker-stage', 'vh360-participant-stage');
+                remote.setAttribute('aria-hidden', 'true');
+            }
+            return local;
         }
-        return document.getElementById("vh360-agora-local-player");
+        return document.getElementById("vh360-agora-remote-players");
     }
 
     function resolveWordPressUserId(uid, options = {}) {
@@ -921,6 +935,12 @@ window.initializeAgoraPlayer = function(config) {
     function ensureParticipantTile(participant) {
         const stage = getParticipantStage();
         if (!stage) return null;
+        Array.from(stage.children).forEach((child) => {
+            if (!child.id || !child.id.startsWith('player-')) {
+                child.remove();
+            }
+        });
+
         let tile = participant.tileElement || document.getElementById(`player-${participant.uid}`);
         if (!tile) {
             tile = document.createElement('div');
@@ -1009,8 +1029,12 @@ window.initializeAgoraPlayer = function(config) {
         if (participant && participant.videoContainerElement && window.videoElementManager) window.videoElementManager.unregisterTrackBinding(participant.videoContainerElement.id);
         if (tile) tile.remove();
         participantRegistry.delete(key);
+        if (remoteUsers && remoteUsers[key]) {
+            delete remoteUsers[key];
+        }
         refreshFeaturedParticipantTiles();
     }
+    window.vh360RemoveParticipantTile = removeParticipantTile;
 
     // === Participant Moderation Functions ===
     
@@ -1114,17 +1138,21 @@ window.initializeAgoraPlayer = function(config) {
         // Show loading state
         showModerationToast(`${actionType.charAt(0).toUpperCase() + actionType.slice(1)}ing ${participantName}...`, 'info');
         
-        // Get target user ID (if available from remoteUsers data)
+        // Get target WordPress user ID from the participant registry first; Agora UID is not always a WordPress ID.
+        const participantRecord = participantRegistry.get(normalizeParticipantUid(uid));
         let targetUserId = 0;
-        if (remoteUsers[uid] && remoteUsers[uid].wordpressUserId) {
+        if (participantRecord && participantRecord.wordpressUserId) {
+            targetUserId = participantRecord.wordpressUserId;
+            window.vh360Log('Agora: Found WordPress user ID in participant registry for UID', uid, ':', targetUserId);
+        } else if (remoteUsers[uid] && remoteUsers[uid].wordpressUserId) {
             targetUserId = remoteUsers[uid].wordpressUserId;
-            window.vh360Log('Agora: Found WordPress user ID for UID', uid, ':', targetUserId);
-        } else if (uid === currentUserUID) {
+            window.vh360Log('Agora: Found WordPress user ID in remoteUsers for UID', uid, ':', targetUserId);
+        } else if (uid === currentUserUID || String(uid) === String(currentUserUID)) {
             // If moderating self
             targetUserId = security.user_id;
             window.vh360Log('Agora: Self-moderation detected, using own WordPress ID:', targetUserId);
         } else {
-            window.vh360Log('Agora: No WordPress user ID found for UID', uid, 'in remoteUsers:', remoteUsers);
+            window.vh360Log('Agora: No WordPress user ID found for UID', uid, 'in participant registry or remoteUsers:', { participantRecord, remoteUsers });
         }
         
         window.vh360Log('Agora: Final targetUserId for moderation:', targetUserId);
@@ -1501,203 +1529,6 @@ window.initializeAgoraPlayer = function(config) {
         } else if (speakerBadge) {
             speakerBadge.style.display = 'none';
         }
-    }
-
-    // == Camera-Off Placeholder Functions ==
-    function createVideoPlaceholder(uid, displayName, isMainPlayer = false) {
-        const placeholderElement = document.createElement("div");
-        placeholderElement.id = `player-${uid}`;
-        placeholderElement.className = 'video-placeholder';
-        
-        // Apply styling based on player type and context
-        if (isMainPlayer) {
-            placeholderElement.classList.add('vh360-main-placeholder');
-        } else {
-            // Regular remote placeholder - let CSS handle all styling
-            // CSS classes will handle responsive sizing automatically
-        }
-        
-        // Create placeholder content container
-        const contentContainer = document.createElement("div");
-        contentContainer.className = 'vh360-video-content';
-        
-        // Add camera-off icon with responsive sizing
-        const cameraIcon = document.createElement("div");
-        cameraIcon.className = 'vh360-camera-icon';
-        if (isMainPlayer) {
-            cameraIcon.classList.add('vh360-icon-large');
-        } else {
-            cameraIcon.classList.add('vh360-icon-small');
-        }
-        cameraIcon.innerHTML = "📹";
-        
-        // Add camera-off text
-        const cameraText = document.createElement("div");
-        cameraText.className = 'vh360-placeholder-text';
-        cameraText.textContent = "Camera Off";
-        
-        // Add user info overlay (same as video players)
-        const userInfo = document.createElement("div");
-        userInfo.className = 'vh360-user-info';
-        userInfo.textContent = displayName || `User ${uid}`;
-        
-        contentContainer.appendChild(cameraIcon);
-        contentContainer.appendChild(cameraText);
-        placeholderElement.appendChild(contentContainer);
-        placeholderElement.appendChild(userInfo);
-        
-        // Add 3-dot moderation menu for remote participants (host or moderators only)
-        if (!isMainPlayer && (isOriginalHost || config.canModerate) && uid !== security.user_id) {
-            addParticipantModerationMenu(placeholderElement, uid, displayName || `User ${uid}`);
-        }
-        
-        return placeholderElement;
-    }
-    
-    function showVideoPlaceholder(uid, displayName) {
-        // Check if we need to create placeholder in main player or remote players
-        const mainPlayer = document.getElementById("vh360-agora-local-player");
-        const remotePlayersContainer = document.getElementById("vh360-agora-remote-players");
-        
-        // Determine target container and styling
-        let targetContainer;
-        let isMainPlayer = false;
-        
-        if (currentRole === 'audience') {
-            const hasMainContent = mainPlayer && mainPlayer.children.length > 0 && !mainPlayer.querySelector('.waiting-message');
-            if (!hasMainContent || Object.keys(remoteUsers).length === 0) {
-                targetContainer = mainPlayer;
-                isMainPlayer = true;
-            } else {
-                targetContainer = remotePlayersContainer;
-            }
-        } else {
-            targetContainer = remotePlayersContainer;
-        }
-        
-        if (!targetContainer) return null;
-        
-        // Clear main player if using it for placeholder
-        if (isMainPlayer) {
-            targetContainer.innerHTML = '';
-        }
-        
-        const placeholderElement = createVideoPlaceholder(uid, displayName, isMainPlayer);
-        targetContainer.appendChild(placeholderElement);
-        
-        return placeholderElement;
-    }
-    
-    function transitionToVideo(uid, videoTrack) {
-        const playerElement = document.getElementById(`player-${uid}`);
-        if (!playerElement) return false;
-        
-        // Remove placeholder-specific content
-        const contentContainer = playerElement.querySelector('div:not([style*="position: absolute"])');
-        if (contentContainer) {
-            contentContainer.remove();
-        }
-        
-        // Remove placeholder class and update styling for video
-        playerElement.classList.remove('video-placeholder');
-        playerElement.classList.remove('vh360-main-placeholder');
-        
-        // Determine if this is main player or remote player
-        const isMainPlayer = playerElement.parentElement && playerElement.parentElement.id === 'vh360-agora-local-player';
-        
-        if (isMainPlayer) {
-            // Remove any existing video classes first
-            playerElement.classList.remove('vh360-video-remote');
-            playerElement.classList.add('vh360-video-main');
-        } else {
-            // Regular remote video
-            playerElement.classList.remove('vh360-video-main');
-            playerElement.classList.add('vh360-video-remote');
-        }
-        
-        // Play the video track with null check
-        if (videoTrack && typeof videoTrack.play === 'function') {
-            videoTrack.play(playerElement);
-            
-            // Remove Agora SDK inline styles that interfere with CSS
-            setTimeout(() => {
-                const videoElement = playerElement.querySelector('video');
-                if (videoElement) {
-                    // Remove inline width/height that Agora SDK might add
-                    videoElement.style.width = '';
-                    videoElement.style.height = '';
-                    videoElement.style.maxWidth = '';
-                    videoElement.style.maxHeight = '';
-                    videoElement.style.objectFit = '';
-                    // Remove width/height attributes
-                    videoElement.removeAttribute('width');
-                    videoElement.removeAttribute('height');
-                    window.vh360Log("Agora: Cleaned video element inline styles for transition to video, UID:", uid);
-                }
-            }, 100);
-            
-            // Register the track binding with the video manager
-            videoElementManager.registerTrackBinding(playerElement.id, false, videoTrack);
-        } else {
-            window.vh360Warn("Agora: Invalid video track for transition to video");
-        }
-        
-        return true;
-    }
-    
-    function transitionToPlaceholder(uid, displayName) {
-        const playerElement = document.getElementById(`player-${uid}`);
-        if (!playerElement) return false;
-        
-        // Stop any existing video playback
-        const videoElement = playerElement.querySelector('video');
-        if (videoElement) {
-            videoElement.remove();
-        }
-        
-        // Determine if this is main player or remote player
-        const isMainPlayer = playerElement.parentElement && playerElement.parentElement.id === 'vh360-agora-local-player';
-        
-        // Add placeholder class while preserving existing classes (like vh360-video-remote)
-        playerElement.classList.add('video-placeholder');
-        
-        if (isMainPlayer) {
-            playerElement.classList.add('vh360-main-placeholder');
-        } else {
-            // Regular remote placeholder - CSS will handle styling
-            // Keep existing classes like vh360-video-remote for proper sizing
-        }
-        
-        // Create and add placeholder content
-        const contentContainer = document.createElement("div");
-        contentContainer.className = 'vh360-video-content';
-        
-        // Add camera-off icon with responsive sizing
-        const cameraIcon = document.createElement("div");
-        cameraIcon.className = 'vh360-camera-icon';
-        if (isMainPlayer) {
-            cameraIcon.classList.add('vh360-icon-large');
-        } else {
-            cameraIcon.classList.add('vh360-icon-small');
-        }
-        cameraIcon.innerHTML = "📹";
-        
-        const cameraText = document.createElement("div");
-        cameraText.className = 'vh360-placeholder-text';
-        cameraText.textContent = "Camera Off";
-        
-        contentContainer.appendChild(cameraIcon);
-        contentContainer.appendChild(cameraText);
-        
-        // Insert before user info (if it exists)
-        const userInfo = playerElement.querySelector('.vh360-user-info');
-        if (userInfo) {
-            playerElement.insertBefore(contentContainer, userInfo);
-        } else {
-            playerElement.appendChild(contentContainer);
-        }
-        
-        return true;
     }
 
     // Data stream for audience/host requests
@@ -2347,6 +2178,12 @@ window.initializeAgoraPlayer = function(config) {
         if (mediaType === "video") {
             const participant = getOrCreateParticipant(user.uid);
             if (participant) {
+                if (participant.videoContainerElement) {
+                    if (window.videoElementManager) {
+                        window.videoElementManager.unregisterTrackBinding(participant.videoContainerElement.id);
+                    }
+                    participant.videoContainerElement.replaceChildren();
+                }
                 participant.videoTrack = null;
                 participant.cameraOn = false;
                 updateParticipantTile(participant);

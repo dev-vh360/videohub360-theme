@@ -525,27 +525,17 @@ class ViewLayoutManager {
             this.remoteContainer.classList.remove('vh360-remote-players-initial');
         }
         
-        // Remove grid wrapper if present (legacy cleanup)
+        // Remove legacy grid wrappers without moving live Agora video nodes.
+        // Persistent participant tiles remain in their existing stage; only empty/legacy wrappers are removed.
         const gridWrapper = this.containerElement.querySelector('.vh360-grid-wrapper');
         if (gridWrapper) {
-            // Move participants back to their containers before removing wrapper
-            const participants = gridWrapper.querySelectorAll('[id^="player-"], #vh360-agora-local-player');
-            participants.forEach(participant => {
-                if (participant.id === 'vh360-agora-local-player') {
-                    if (window.videoElementManager) {
-                        window.videoElementManager.moveVideoElement(participant, this.containerElement, true);
-                    } else {
-                        this.containerElement.appendChild(participant);
-                    }
-                } else if (participant.id.startsWith('player-') && this.remoteContainer) {
-                    if (window.videoElementManager) {
-                        window.videoElementManager.moveVideoElement(participant, this.remoteContainer, true);
-                    } else {
-                        this.remoteContainer.appendChild(participant);
-                    }
-                }
-            });
-            gridWrapper.remove();
+            const liveParticipants = gridWrapper.querySelectorAll('[id^="player-"], #vh360-agora-local-player');
+            if (liveParticipants.length === 0) {
+                gridWrapper.remove();
+            } else {
+                gridWrapper.classList.remove('vh360-grid-wrapper');
+                gridWrapper.removeAttribute('style');
+            }
         }
         
         // Remove pagination controls if present (legacy cleanup)
