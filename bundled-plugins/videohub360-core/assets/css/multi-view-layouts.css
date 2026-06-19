@@ -916,9 +916,9 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
     max-height: none;
     overflow: hidden;
     background: #000;
-    --vh360-agora-controls-height: 64px;
-    --vh360-thumbnail-rail-height: 112px;
-    --vh360-speaker-stage-padding: 16px;
+    --vh360-agora-controls-height: 84px;
+    --vh360-thumbnail-rail-height: 120px;
+    --vh360-speaker-stage-padding: 18px;
 }
 
 #vh360-agora-player:fullscreen #vh360-agora-local-player.vh360-persistent-speaker-stage,
@@ -952,34 +952,9 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
     #vh360-agora-player:fullscreen #vh360-agora-local-player.vh360-persistent-speaker-stage,
     #vh360-agora-player:-webkit-full-screen #vh360-agora-local-player.vh360-persistent-speaker-stage,
     #vh360-agora-player.vh360-ios-immersive-fullscreen #vh360-agora-local-player.vh360-persistent-speaker-stage {
-        --vh360-agora-controls-height: calc(104px + var(--vh360-mobile-bottom-safe-space));
-        --vh360-thumbnail-rail-height: 74px;
-        --vh360-speaker-stage-padding: 10px;
-        --vh360-mobile-header-safe-space: env(safe-area-inset-top, 0px);
-    }
-}
-
-/* Fullscreen polish: lift thumbnails completely above the controls bar. */
-#vh360-agora-player:fullscreen,
-#vh360-agora-player:-webkit-full-screen,
-#vh360-agora-player.vh360-ios-immersive-fullscreen,
-#vh360-agora-player:fullscreen #vh360-agora-local-player.vh360-persistent-speaker-stage,
-#vh360-agora-player:-webkit-full-screen #vh360-agora-local-player.vh360-persistent-speaker-stage,
-#vh360-agora-player.vh360-ios-immersive-fullscreen #vh360-agora-local-player.vh360-persistent-speaker-stage {
-    --vh360-agora-controls-height: 84px;
-    --vh360-thumbnail-rail-height: 120px;
-    --vh360-speaker-stage-padding: 18px;
-}
-
-@media (max-width: 768px) {
-    #vh360-agora-player:fullscreen,
-    #vh360-agora-player:-webkit-full-screen,
-    #vh360-agora-player.vh360-ios-immersive-fullscreen,
-    #vh360-agora-player:fullscreen #vh360-agora-local-player.vh360-persistent-speaker-stage,
-    #vh360-agora-player:-webkit-full-screen #vh360-agora-local-player.vh360-persistent-speaker-stage,
-    #vh360-agora-player.vh360-ios-immersive-fullscreen #vh360-agora-local-player.vh360-persistent-speaker-stage {
         --vh360-agora-controls-height: calc(132px + var(--vh360-mobile-bottom-safe-space));
         --vh360-thumbnail-rail-height: 86px;
         --vh360-speaker-stage-padding: 14px;
+        --vh360-mobile-header-safe-space: env(safe-area-inset-top, 0px);
     }
 }
