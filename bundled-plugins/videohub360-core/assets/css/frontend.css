@@ -4312,13 +4312,13 @@ body.vh360-ios-immersive-active
 
 /* Reserve space so video/grid does not overlap bottom controls */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen
+#vh360-agora-player.vh360-ios-immersive-fullscreen:not(.vh360-broadcast-viewer-fullscreen)
 #vh360-agora-local-player,
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen
+#vh360-agora-player.vh360-ios-immersive-fullscreen:not(.vh360-broadcast-viewer-fullscreen)
 #vh360-agora-remote-players,
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen
+#vh360-agora-player.vh360-ios-immersive-fullscreen:not(.vh360-broadcast-viewer-fullscreen)
 .vh360-multi-view-container {
     padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important;
     box-sizing: border-box !important;
@@ -4365,14 +4365,14 @@ body.vh360-ios-immersive-active > #vh360-agora-player.vh360-ios-immersive-fullsc
 
 /* Container layout in landscape */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape {
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen) {
     display: block !important;
     overflow: hidden !important;
 }
 
 /* Main stage fills the entire immersive viewport */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
 #vh360-agora-local-player {
     position: absolute !important;
     inset: 0 !important;
@@ -4389,13 +4389,13 @@ body.vh360-ios-immersive-active
 
 /* Main stage video: contain so it is never cropped */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
 #vh360-agora-local-player video,
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
 #vh360-agora-local-player .agora_video_player,
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
 #vh360-agora-local-player [class*="agora"] video {
     width: 100% !important;
     height: 100% !important;
@@ -4408,7 +4408,7 @@ body.vh360-ios-immersive-active
 
 /* Remote videos: floating thumbnail strip along the top */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
 #vh360-agora-remote-players {
     position: fixed !important;
     top: calc(8px + env(safe-area-inset-top, 0px)) !important;
@@ -4433,10 +4433,10 @@ body.vh360-ios-immersive-active
 
 /* Remote thumbnail tile sizing */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
 #vh360-agora-remote-players > *,
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
 .vh360-remote-player {
     flex: 0 0 120px !important;
     width: 120px !important;
@@ -4451,10 +4451,10 @@ body.vh360-ios-immersive-active
 
 /* Remote thumbnail video fill */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
 #vh360-agora-remote-players video,
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
 .vh360-remote-player video {
     width: 100% !important;
     height: 100% !important;
@@ -4498,13 +4498,13 @@ body.vh360-ios-immersive-active
 
 /* Remove portrait bottom-padding in landscape (controls are floating, no reserved space needed) */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
 #vh360-agora-local-player,
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
 #vh360-agora-remote-players,
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
 .vh360-multi-view-container {
     padding-bottom: 0 !important;
 }
