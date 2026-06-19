@@ -7,7 +7,7 @@ if (typeof window !== 'undefined') {
 /**
  * VideoHub360 View Layout Manager
  * 
- * Modular view management system for Speaker View
+ * Modular view management system for Speaker and Gallery View
  * Extracted from frontend.js for better maintainability and reduced complexity
  * 
  * @since 2.0.1
@@ -64,12 +64,12 @@ class ViewLayoutManager {
     loadUserPreference() {
         try {
             const saved = localStorage.getItem('vh360-layout-view-preference');
-            // Migrate removed gallery and focus preferences to 'speaker' for backward compatibility
-            if (saved === 'gallery' || saved === 'large-gallery' || saved === 'focus') {
-                if (window.__VH360_DEBUG) console.log('Migrating legacy preference to speaker view');
+            // Keep Phase 2 supported views; migrate only unsupported legacy layouts.
+            if (saved === 'large-gallery' || saved === 'focus') {
+                if (window.__VH360_DEBUG) console.log('Migrating unsupported legacy preference to speaker view');
                 this.currentView = 'speaker';
-                this.saveUserPreference(); // Update localStorage with new preference
-            } else if (saved && saved === 'speaker') {
+                this.saveUserPreference(); // Update localStorage with supported preference
+            } else if (saved && this.isValidView(saved)) {
                 this.currentView = saved;
             }
             // Add defensive cleanup - remove any old gallery classes from container
@@ -90,16 +90,22 @@ class ViewLayoutManager {
     cleanupLegacyGalleryClasses() {
         // Defensive cleanup to remove any old gallery classes from container
         if (this.containerElement) {
-            this.containerElement.classList.remove('vh360-gallery-view', 'vh360-large-gallery-view');
+            this.containerElement.classList.remove('vh360-large-gallery-view');
             
-            // Remove any gallery grid wrappers
+            // Remove only empty legacy gallery grid wrappers. Never detach live participant/video nodes.
             const gridWrapper = this.containerElement.querySelector('.vh360-grid-wrapper');
             if (gridWrapper) {
-                gridWrapper.remove();
+                const liveNodes = gridWrapper.querySelectorAll('#vh360-agora-local-player, #vh360-agora-remote-players, [id^="player-"]');
+                if (liveNodes.length === 0) {
+                    gridWrapper.remove();
+                } else {
+                    gridWrapper.classList.remove('vh360-grid-wrapper');
+                    gridWrapper.removeAttribute('style');
+                }
             }
             
             // Remove any pagination controls
-            const paginationControls = this.containerElement.querySelector('#vh360-pagination-controls');
+            const paginationControls = this.containerElement.querySelector('#vh360-pagination-controls, .vh360-pagination-controls');
             if (paginationControls) {
                 paginationControls.remove();
             }
@@ -128,14 +134,59 @@ class ViewLayoutManager {
         this.bindFullscreenEvents();
     }
     
+    isValidView(viewType) {
+        return viewType === 'speaker' || viewType === 'gallery';
+    }
+
+    getViewLabel(viewType) {
+        return viewType === 'gallery' ? 'Gallery' : 'Speaker';
+    }
+
+    createViewButton(viewType) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'vh360-view-option';
+        button.dataset.viewType = viewType;
+        button.textContent = this.getViewLabel(viewType);
+        button.setAttribute('aria-pressed', String(this.currentView === viewType));
+        button.addEventListener('click', () => this.switchView(viewType));
+        return button;
+    }
+
+    updateViewSelectorState() {
+        const selector = document.getElementById('vh360-view-selector');
+        if (!selector) return;
+        selector.querySelectorAll('[data-view-type]').forEach((button) => {
+            const isActive = button.dataset.viewType === this.currentView;
+            button.classList.toggle('is-active', isActive);
+            button.setAttribute('aria-pressed', String(isActive));
+        });
+    }
+
     createMobileViewButtons(controlsContainer) {
-        // View selector removed - only speaker view is available
-        this.viewSelector = null;
+        const wrapper = document.createElement('div');
+        wrapper.id = 'vh360-view-selector';
+        wrapper.className = 'vh360-view-selector vh360-view-selector-mobile';
+        wrapper.setAttribute('role', 'group');
+        wrapper.setAttribute('aria-label', 'Video layout');
+        wrapper.appendChild(this.createViewButton('speaker'));
+        wrapper.appendChild(this.createViewButton('gallery'));
+        controlsContainer.appendChild(wrapper);
+        this.viewSelector = wrapper;
+        this.updateViewSelectorState();
     }
     
     createDesktopViewSelector(controlsContainer) {
-        // View selector removed - only speaker view is available
-        this.viewSelector = null;
+        const wrapper = document.createElement('div');
+        wrapper.id = 'vh360-view-selector';
+        wrapper.className = 'vh360-view-selector vh360-view-selector-desktop';
+        wrapper.setAttribute('role', 'group');
+        wrapper.setAttribute('aria-label', 'Video layout');
+        wrapper.appendChild(this.createViewButton('speaker'));
+        wrapper.appendChild(this.createViewButton('gallery'));
+        controlsContainer.appendChild(wrapper);
+        this.viewSelector = wrapper;
+        this.updateViewSelectorState();
     }
     
     bindFullscreenEvents() {
@@ -441,8 +492,7 @@ class ViewLayoutManager {
     }
     
     switchView(viewType) {
-        // Only speaker view is supported
-        if (viewType !== 'speaker') {
+        if (!this.isValidView(viewType)) {
             if (window.__VH360_DEBUG) console.log(`View type ${viewType} not supported, defaulting to speaker`);
             viewType = 'speaker';
         }
@@ -469,6 +519,10 @@ class ViewLayoutManager {
         
         // Apply layout immediately - CSS handles transitions
         this.applyLayout();
+        this.updateViewSelectorState();
+        if (typeof window.vh360RefreshFeaturedParticipantTiles === 'function') {
+            window.vh360RefreshFeaturedParticipantTiles();
+        }
         
         // Short timeout to allow CSS transitions to start, then re-enable switching
         setTimeout(() => {
@@ -512,10 +566,18 @@ class ViewLayoutManager {
             'vh360-large-gallery-view'
         );
         
-        // Only speaker view is supported
-        this.currentView = 'speaker';
-        this.containerElement.classList.add('vh360-speaker-view');
-        this.applySpeakerView();
+        if (!this.isValidView(this.currentView)) {
+            this.currentView = 'speaker';
+        }
+
+        if (this.currentView === 'gallery') {
+            this.containerElement.classList.add('vh360-gallery-view');
+            this.applyGalleryView();
+        } else {
+            this.containerElement.classList.add('vh360-speaker-view');
+            this.applySpeakerView();
+        }
+        this.updateViewSelectorState();
         
         this.debugLog(`Applied ${this.currentView} layout`);
     }
@@ -578,9 +640,13 @@ class ViewLayoutManager {
         this.debugLog('Applied speaker view - layout handled by CSS');
     }
     
+    applyGalleryView() {
+        // Gallery view is handled entirely by CSS on persistent tiles; never move Agora nodes.
+        this.debugLog('Applied gallery view - layout handled by CSS');
+    }
+
     getOptimalView(participantCount) {
-        // Only speaker view is supported
-        return 'speaker';
+        return participantCount > 1 ? 'gallery' : 'speaker';
     }
     
     // Cleanup method to be called when layout manager is destroyed

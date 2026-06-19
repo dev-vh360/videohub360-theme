@@ -1026,6 +1026,16 @@ window.initializeAgoraPlayer = function(config) {
     function shouldFeatureParticipant(uid) {
         const key = normalizeParticipantUid(uid);
         if (!key) return false;
+
+        const layoutManager = window.vh360LayoutManager || window.viewLayoutManager || window.vh360?.viewLayoutManager;
+        const currentLayoutView = layoutManager && layoutManager.currentView ? layoutManager.currentView : 'speaker';
+
+        // Gallery View keeps every persistent tile in the grid. Keep the single-participant
+        // fallback so one-person rooms still fill the stage, but do not feature active speakers.
+        if (currentLayoutView === 'gallery') {
+            return participantRegistry.size === 1;
+        }
+
         if (activeSpeakerUid && key === String(activeSpeakerUid)) return true;
         if (!activeSpeakerUid && originalHostUID && key === String(originalHostUID)) return true;
         if (!activeSpeakerUid && !originalHostUID && currentUserUID && key === String(currentUserUID)) return true;
@@ -1058,6 +1068,9 @@ window.initializeAgoraPlayer = function(config) {
             thumbnailIndex += 1;
         });
     }
+
+
+    window.vh360RefreshFeaturedParticipantTiles = refreshFeaturedParticipantTiles;
 
     function attachParticipantVideo(participant, videoTrack, isLocalTrack = false) {
         if (!participant || !videoTrack || typeof videoTrack.play !== 'function') {
@@ -4100,6 +4113,9 @@ window.initializeAgoraPlayer = function(config) {
 
                 // Make layout manager globally accessible
                 window.vh360LayoutManager = viewLayoutManager;
+                window.viewLayoutManager = viewLayoutManager;
+                window.vh360 = window.vh360 || {};
+                window.vh360.viewLayoutManager = viewLayoutManager;
 
                 // Ensure controls are still visible after layout manager setup
                 setTimeout(() => {
