@@ -4875,10 +4875,17 @@ window.initializeAgoraPlayer = function(config) {
         // window.config caused `undefined` on iOS and prevented broadcast
         // detection, so use the captured config directly.
         const isBroadcast = config && config.agoraMode === 'broadcast';
+        const isBroadcastViewer = isAgoraBroadcastViewer();
 
-        // On iOS in interactive mode use the immersive fullscreen fallback
-        if (isiOS && !isBroadcast) {
-            window.vh360Log('VideoHub360 Mobile: iOS interactive mode – using immersive fullscreen');
+        // On iOS, keep Agora interactive users and broadcast viewers inside our
+        // custom container fullscreen. Native video fullscreen exposes browser
+        // play/pause controls that can leave live broadcast viewers paused on exit.
+        if (isiOS && (!isBroadcast || isBroadcastViewer)) {
+            window.vh360Log(
+                isBroadcastViewer
+                    ? 'VideoHub360 Mobile: iOS broadcast viewer – using immersive fullscreen'
+                    : 'VideoHub360 Mobile: iOS interactive mode – using immersive fullscreen'
+            );
             toggleIOSImmersiveFullscreen();
             return;
         }
@@ -4890,10 +4897,12 @@ window.initializeAgoraPlayer = function(config) {
             if (window.exitFullscreen) {
                 window.exitFullscreen().then(() => {
                     updateMobileFullscreenButton(false);
+                    resumeAgoraBroadcastViewerPlayback('standard-fullscreen-exit');
                     window.vh360Log('VideoHub360 Mobile: Exited fullscreen successfully');
                 }).catch((err) => {
                     window.vh360Error('VideoHub360 Mobile: Failed to exit fullscreen:', err);
                     updateMobileFullscreenButton(false);
+                    resumeAgoraBroadcastViewerPlayback('standard-fullscreen-exit-error');
                 });
             }
             return;
@@ -5005,6 +5014,60 @@ window.initializeAgoraPlayer = function(config) {
             alert('An error occurred while trying to toggle fullscreen.');
         }
     }
+
+    function isAgoraBroadcastViewer() {
+        return !!(
+            config &&
+            config.agoraMode === 'broadcast' &&
+            currentRole !== 'host' &&
+            !isOriginalHost
+        );
+    }
+
+    function resumeAgoraBroadcastViewerPlayback(reason) {
+        if (!isAgoraBroadcastViewer()) {
+            return;
+        }
+
+        const player = document.getElementById('vh360-agora-player');
+        if (!player) {
+            return;
+        }
+
+        const videos = Array.from(player.querySelectorAll('video'));
+        videos.forEach((video) => {
+            if (!video || !video.paused || typeof video.play !== 'function') {
+                return;
+            }
+
+            try {
+                const playResult = video.play();
+                if (playResult && typeof playResult.catch === 'function') {
+                    playResult.catch((error) => {
+                        window.vh360Warn('VideoHub360 Mobile: Agora broadcast playback resume was rejected', {
+                            reason,
+                            error
+                        });
+                    });
+                }
+            } catch (error) {
+                window.vh360Warn('VideoHub360 Mobile: Unable to resume Agora broadcast playback', {
+                    reason,
+                    error
+                });
+            }
+        });
+    }
+
+    function handleAgoraBroadcastViewerFullscreenChange() {
+        const isStandardFullscreen = window.isInFullscreen && window.isInFullscreen();
+        if (!isStandardFullscreen && !isIOSImmersiveFullscreen) {
+            resumeAgoraBroadcastViewerPlayback('fullscreenchange-exit');
+        }
+    }
+
+    document.addEventListener('fullscreenchange', handleAgoraBroadcastViewerFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleAgoraBroadcastViewerFullscreenChange);
 
     // Update fullscreen button appearance for mobile
     // Exposed globally so ViewLayoutManager can call it from centralized event listeners
@@ -5191,6 +5254,8 @@ window.initializeAgoraPlayer = function(config) {
         iosImmersivePreviousActiveElement = null;
 
         window.dispatchEvent(new Event('resize'));
+
+        resumeAgoraBroadcastViewerPlayback('ios-immersive-exit');
 
         window.vh360Log('VideoHub360 iOS Immersive: Exited immersive fullscreen');
     }
