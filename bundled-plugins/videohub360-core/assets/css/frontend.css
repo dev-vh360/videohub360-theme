@@ -4261,7 +4261,7 @@ body.vh360-ios-immersive-active .vh360-unified-settings-content {
 
 /* Fixed bottom controls bar while immersive */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen
+#vh360-agora-player.vh360-ios-immersive-fullscreen:not(.vh360-broadcast-viewer-fullscreen)
 #vh360-agora-controls.vh360-mobile-controls-simple {
     position: fixed !important;
     left: env(safe-area-inset-left, 0px) !important;
@@ -4287,10 +4287,10 @@ body.vh360-ios-immersive-active
 
 /* Keep controls visible even when auto-hide or stream-live classes are present */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-stream-live
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-stream-live:not(.vh360-broadcast-viewer-fullscreen)
 #vh360-agora-controls.vh360-mobile-controls-simple,
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-controls-hidden
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-controls-hidden:not(.vh360-broadcast-viewer-fullscreen)
 #vh360-agora-controls.vh360-mobile-controls-simple {
     opacity: 1 !important;
     visibility: visible !important;
@@ -4299,10 +4299,10 @@ body.vh360-ios-immersive-active
 
 /* Ensure control buttons/selects are touchable */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen
+#vh360-agora-player.vh360-ios-immersive-fullscreen:not(.vh360-broadcast-viewer-fullscreen)
 #vh360-agora-controls.vh360-mobile-controls-simple button,
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen
+#vh360-agora-player.vh360-ios-immersive-fullscreen:not(.vh360-broadcast-viewer-fullscreen)
 #vh360-agora-controls.vh360-mobile-controls-simple select {
     position: relative !important;
     z-index: 2147483005 !important;
@@ -4463,7 +4463,7 @@ body.vh360-ios-immersive-active
 
 /* Controls: compact pill floating above the bottom safe area */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
 #vh360-agora-controls.vh360-mobile-controls-simple {
     position: fixed !important;
     left: 50% !important;
@@ -4488,7 +4488,7 @@ body.vh360-ios-immersive-active
 
 /* Compact control buttons in landscape */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
 #vh360-agora-controls.vh360-mobile-controls-simple button {
     min-width: 38px !important;
     width: 38px !important;
