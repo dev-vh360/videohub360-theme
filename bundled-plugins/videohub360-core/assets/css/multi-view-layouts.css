@@ -229,36 +229,6 @@ body #vh360-agora-local-player [id^="player-"].vh360-video-main,
     bottom: 0;
 }
 
-/* === View Selector Styling === */
-.vh360-view-selector {
-    background: transparent;
-    border: 1px solid #fff;
-    padding: 6px 12px;
-    font-size: 0.8em;
-    line-height: 1;
-    display: inline-flex;
-    align-items: center;    
-    border-radius: var(--vh360-radius-sm);
-    appearance: none;
-    cursor: pointer;
-    transition: background-color var(--vh360-mv-transition-smooth);
-    color: var(--vh360-color-white);
-    box-sizing: border-box;
-}
-
-.vh360-view-selector:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-.vh360-view-selector:focus {
-    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.3);
-}
-
-.vh360-view-selector option {
-    background: var(--vh360-mv-bg-medium);
-    color: var(--vh360-color-white);
-}
-
 /* === Multi-View Container Base === */
 .vh360-multi-view-container {
     position: relative;
@@ -705,4 +675,286 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
+}
+
+/* Phase One persistent Agora participant tile internals. */
+.vh360-participant-video,
+.vh360-participant-video > div,
+.vh360-participant-video video {
+    width: 100%;
+    height: 100%;
+}
+
+.vh360-participant-video video {
+    object-fit: cover;
+}
+
+
+.vh360-participant-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    background: #333;
+}
+
+.vh360-participant-tile .active-speaker-badge {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    z-index: 25;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(76, 175, 80, 0.9);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+
+/* Phase One fixed-region Speaker View: persistent tiles never move DOM parents. */
+.vh360-speaker-view #vh360-agora-local-player.vh360-persistent-speaker-stage,
+#vh360-agora-local-player.vh360-persistent-speaker-stage {
+    --vh360-speaker-stage-padding: 16px;
+    --vh360-thumbnail-rail-height: 112px;
+    --vh360-thumbnail-width: 160px;
+    --vh360-thumbnail-height: 90px;
+    --vh360-thumbnail-gap: 10px;
+    position: relative;
+    display: block;
+    width: 100%;
+    min-height: clamp(360px, 56vw, 720px);
+    aspect-ratio: 16 / 9;
+    padding: 0;
+    overflow: hidden;
+    background: #000;
+    box-sizing: border-box;
+}
+
+#vh360-agora-local-player.vh360-persistent-speaker-stage .vh360-participant-tile {
+    position: absolute;
+    left: calc(var(--vh360-speaker-stage-padding) + (var(--vh360-thumbnail-index, 0) * (var(--vh360-thumbnail-width) + var(--vh360-thumbnail-gap))));
+    bottom: var(--vh360-speaker-stage-padding);
+    width: var(--vh360-thumbnail-width);
+    height: var(--vh360-thumbnail-height);
+    min-width: var(--vh360-thumbnail-width);
+    min-height: var(--vh360-thumbnail-height);
+    overflow: hidden;
+    border: 2px solid #333;
+    border-radius: 8px;
+    background: #111;
+    box-sizing: border-box;
+    z-index: 3;
+}
+
+#vh360-agora-local-player.vh360-persistent-speaker-stage .vh360-participant-tile.is-featured {
+    top: var(--vh360-speaker-stage-padding);
+    right: var(--vh360-speaker-stage-padding);
+    bottom: calc(var(--vh360-thumbnail-rail-height) + var(--vh360-speaker-stage-padding));
+    left: var(--vh360-speaker-stage-padding);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    height: auto;
+    min-width: 0;
+    min-height: 0;
+    z-index: 2;
+    border-color: #4CAF50;
+    box-shadow: 0 0 16px rgba(76, 175, 80, 0.35);
+}
+
+#vh360-agora-local-player.vh360-persistent-speaker-stage.has-single-participant .vh360-participant-tile.is-featured {
+    bottom: var(--vh360-speaker-stage-padding);
+}
+
+#vh360-agora-local-player.vh360-persistent-speaker-stage .vh360-participant-tile.is-active-speaker:not(.is-featured) {
+    border-color: #4CAF50;
+    box-shadow: 0 0 12px rgba(76, 175, 80, 0.6);
+}
+
+.vh360-speaker-view #vh360-agora-remote-players:not(.vh360-persistent-speaker-stage) {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    #vh360-agora-local-player.vh360-persistent-speaker-stage {
+        --vh360-speaker-stage-padding: 10px;
+        --vh360-thumbnail-rail-height: 84px;
+        --vh360-thumbnail-width: 112px;
+        --vh360-thumbnail-height: 64px;
+        --vh360-thumbnail-gap: 8px;
+        min-height: clamp(280px, 62vh, 520px);
+    }
+}
+
+@media (max-width: 768px) and (orientation: landscape) {
+    #vh360-agora-local-player.vh360-persistent-speaker-stage {
+        --vh360-thumbnail-rail-height: 74px;
+        --vh360-thumbnail-width: 104px;
+        --vh360-thumbnail-height: 58px;
+        min-height: clamp(240px, 78vh, 420px);
+    }
+}
+
+/* Ensure active Agora video cannot be covered by camera-off placeholders. */
+.vh360-participant-tile .vh360-participant-video {
+    position: absolute;
+    inset: 0;
+    display: block;
+    z-index: 1;
+    overflow: hidden;
+    background: #000;
+}
+
+.vh360-participant-tile.has-video .vh360-participant-video {
+    display: block;
+    visibility: visible;
+    opacity: 1;
+}
+
+.vh360-participant-tile.camera-off:not(.has-video) .vh360-participant-video {
+    display: none;
+}
+
+.vh360-participant-tile .vh360-participant-video > div,
+.vh360-participant-tile .vh360-participant-video video,
+.vh360-participant-tile .vh360-participant-video canvas,
+.vh360-participant-tile .vh360-participant-video .agora_video_player,
+.vh360-participant-tile .vh360-participant-video [class*="agora"] {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+}
+
+.vh360-participant-tile .vh360-participant-video video,
+.vh360-participant-tile .vh360-participant-video canvas {
+    display: block;
+    object-fit: cover;
+}
+
+.vh360-participant-tile.has-video .vh360-participant-placeholder {
+    display: none !important;
+    pointer-events: none;
+}
+
+.vh360-participant-tile.camera-off:not(.has-video) .vh360-participant-placeholder {
+    display: flex;
+    z-index: 2;
+}
+
+/* Speaker View polish: reserve fixed space for controls and keep thumbnails above them. */
+#vh360-agora-player,
+.vh360-multi-view-container,
+#vh360-agora-local-player.vh360-persistent-speaker-stage {
+    --vh360-agora-controls-height: 64px;
+    --vh360-thumbnail-rail-height: 112px;
+    --vh360-thumbnail-gap: 10px;
+    --vh360-speaker-stage-padding: 16px;
+    --vh360-mobile-header-safe-space: 0px;
+    --vh360-mobile-bottom-safe-space: env(safe-area-inset-bottom, 0px);
+}
+
+#vh360-agora-player #vh360-agora-controls,
+#vh360-agora-player .vh360-agora-controls,
+.vh360-multi-view-container #vh360-agora-controls,
+.vh360-multi-view-container .vh360-agora-controls {
+    bottom: 0;
+}
+
+#vh360-agora-local-player.vh360-persistent-speaker-stage {
+    --vh360-thumbnail-bottom: calc(var(--vh360-agora-controls-height) + var(--vh360-speaker-stage-padding));
+    --vh360-featured-bottom: calc(var(--vh360-thumbnail-bottom) + var(--vh360-thumbnail-rail-height) + var(--vh360-speaker-stage-padding));
+}
+
+#vh360-agora-local-player.vh360-persistent-speaker-stage .vh360-participant-tile {
+    bottom: var(--vh360-thumbnail-bottom);
+}
+
+#vh360-agora-local-player.vh360-persistent-speaker-stage .vh360-participant-tile.is-featured {
+    top: calc(var(--vh360-speaker-stage-padding) + var(--vh360-mobile-header-safe-space));
+    bottom: var(--vh360-featured-bottom);
+}
+
+#vh360-agora-local-player.vh360-persistent-speaker-stage.has-single-participant .vh360-participant-tile.is-featured {
+    bottom: var(--vh360-thumbnail-bottom);
+}
+
+@media (max-width: 768px) {
+    #vh360-agora-player,
+    .vh360-multi-view-container,
+    #vh360-agora-local-player.vh360-persistent-speaker-stage {
+        --vh360-agora-controls-height: calc(96px + var(--vh360-mobile-bottom-safe-space));
+        --vh360-thumbnail-rail-height: 78px;
+        --vh360-thumbnail-gap: 8px;
+        --vh360-speaker-stage-padding: 10px;
+        --vh360-mobile-header-safe-space: 0px;
+    }
+
+    #vh360-agora-local-player.vh360-persistent-speaker-stage .vh360-participant-video video,
+    #vh360-agora-local-player.vh360-persistent-speaker-stage .vh360-participant-video canvas {
+        object-fit: contain;
+        background: #000;
+    }
+}
+
+#vh360-agora-player:fullscreen,
+#vh360-agora-player:-webkit-full-screen,
+#vh360-agora-player.vh360-ios-immersive-fullscreen,
+#vh360-agora-player:fullscreen #vh360-agora-local-player.vh360-persistent-speaker-stage,
+#vh360-agora-player:-webkit-full-screen #vh360-agora-local-player.vh360-persistent-speaker-stage,
+#vh360-agora-player.vh360-ios-immersive-fullscreen #vh360-agora-local-player.vh360-persistent-speaker-stage {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    overflow: hidden;
+    background: #000;
+    --vh360-agora-controls-height: 84px;
+    --vh360-thumbnail-rail-height: 120px;
+    --vh360-speaker-stage-padding: 18px;
+}
+
+#vh360-agora-player:fullscreen #vh360-agora-local-player.vh360-persistent-speaker-stage,
+#vh360-agora-player:-webkit-full-screen #vh360-agora-local-player.vh360-persistent-speaker-stage,
+#vh360-agora-player.vh360-ios-immersive-fullscreen #vh360-agora-local-player.vh360-persistent-speaker-stage {
+    width: 100%;
+    height: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+    aspect-ratio: auto;
+    overflow: hidden;
+}
+
+#vh360-agora-player:fullscreen #vh360-agora-controls,
+#vh360-agora-player:fullscreen .vh360-agora-controls,
+#vh360-agora-player:-webkit-full-screen #vh360-agora-controls,
+#vh360-agora-player:-webkit-full-screen .vh360-agora-controls,
+#vh360-agora-player.vh360-ios-immersive-fullscreen #vh360-agora-controls,
+#vh360-agora-player.vh360-ios-immersive-fullscreen .vh360-agora-controls {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 20;
+}
+
+@media (max-width: 768px) {
+    #vh360-agora-player:fullscreen,
+    #vh360-agora-player:-webkit-full-screen,
+    #vh360-agora-player.vh360-ios-immersive-fullscreen,
+    #vh360-agora-player:fullscreen #vh360-agora-local-player.vh360-persistent-speaker-stage,
+    #vh360-agora-player:-webkit-full-screen #vh360-agora-local-player.vh360-persistent-speaker-stage,
+    #vh360-agora-player.vh360-ios-immersive-fullscreen #vh360-agora-local-player.vh360-persistent-speaker-stage {
+        --vh360-agora-controls-height: calc(132px + var(--vh360-mobile-bottom-safe-space));
+        --vh360-thumbnail-rail-height: 86px;
+        --vh360-speaker-stage-padding: 14px;
+        --vh360-mobile-header-safe-space: env(safe-area-inset-top, 0px);
+    }
 }

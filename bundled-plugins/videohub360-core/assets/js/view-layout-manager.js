@@ -480,51 +480,20 @@ class ViewLayoutManager {
     }
     
     updateLayout(participants) {
-        this.participantCount = participants ? Object.keys(participants).length : 0;
+        if (!participants || typeof participants !== 'object') {
+            participants = {};
+        }
+        this.participantCount = Object.keys(participants).length;
         this.applyLayout();
     }
     
-    // Safe cleanup that reparents existing video DOM nodes instead of removing them
-    // This prevents video tracks from being destroyed during view transitions
+    // Phase One persistent participant tiles: never reparent live Agora nodes during layout cleanup.
+    // Speaker View is controlled by classes on the stable participant tiles.
     safeCleanupPreviousView() {
         if (!this.containerElement) return;
-        
-        this.debugLog('Starting safe cleanup of previous view');
-        
-        // Instead of removing elements, just reparent them back to their default containers
-        // This preserves video tracks and prevents race conditions
-        
-        // Move all remote players back to remote container if they're elsewhere
-        if (this.remoteContainer) {
-            const misplacedRemotePlayers = this.containerElement.querySelectorAll('[id^="player-"]:not(.vh360-agora-local-player [id^="player-"])');
-            misplacedRemotePlayers.forEach(player => {
-                if (!this.remoteContainer.contains(player)) {
-                    this.debugLog('Reparenting remote player back to remote container:', player.id);
-                    // Use unified video manager if available
-                    if (window.videoElementManager) {
-                        window.videoElementManager.moveVideoElement(player, this.remoteContainer, true);
-                    } else {
-                        this.remoteContainer.appendChild(player);
-                    }
-                }
-            });
-        }
-        
-        // Ensure local player is in its proper container
-        if (this.localContainer) {
-            const localPlayer = document.getElementById('vh360-agora-local-player');
-            if (localPlayer && !this.localContainer.contains(localPlayer)) {
-                this.debugLog('Reparenting local player back to local container');
-                // Use unified video manager if available
-                if (window.videoElementManager) {
-                    window.videoElementManager.moveVideoElement(localPlayer, this.localContainer, true);
-                } else {
-                    this.localContainer.appendChild(localPlayer);
-                }
-            }
-        }
-        
-        this.debugLog('Safe cleanup completed');
+
+        this.debugLog('Skipping video-node reparenting for persistent participant tiles');
+        this.cleanupLegacyGalleryClasses();
     }
     
     applyLayout() {
@@ -559,27 +528,17 @@ class ViewLayoutManager {
             this.remoteContainer.classList.remove('vh360-remote-players-initial');
         }
         
-        // Remove grid wrapper if present (legacy cleanup)
+        // Remove legacy grid wrappers without moving live Agora video nodes.
+        // Persistent participant tiles remain in their existing stage; only empty/legacy wrappers are removed.
         const gridWrapper = this.containerElement.querySelector('.vh360-grid-wrapper');
         if (gridWrapper) {
-            // Move participants back to their containers before removing wrapper
-            const participants = gridWrapper.querySelectorAll('[id^="player-"], #vh360-agora-local-player');
-            participants.forEach(participant => {
-                if (participant.id === 'vh360-agora-local-player') {
-                    if (window.videoElementManager) {
-                        window.videoElementManager.moveVideoElement(participant, this.containerElement, true);
-                    } else {
-                        this.containerElement.appendChild(participant);
-                    }
-                } else if (participant.id.startsWith('player-') && this.remoteContainer) {
-                    if (window.videoElementManager) {
-                        window.videoElementManager.moveVideoElement(participant, this.remoteContainer, true);
-                    } else {
-                        this.remoteContainer.appendChild(participant);
-                    }
-                }
-            });
-            gridWrapper.remove();
+            const liveParticipants = gridWrapper.querySelectorAll('[id^="player-"], #vh360-agora-local-player');
+            if (liveParticipants.length === 0) {
+                gridWrapper.remove();
+            } else {
+                gridWrapper.classList.remove('vh360-grid-wrapper');
+                gridWrapper.removeAttribute('style');
+            }
         }
         
         // Remove pagination controls if present (legacy cleanup)
