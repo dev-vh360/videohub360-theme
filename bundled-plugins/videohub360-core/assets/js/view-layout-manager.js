@@ -37,16 +37,16 @@ class ViewLayoutManager {
     init() {
         this.loadUserPreference();
         
-        // For broadcast mode, only create view selector (no multi-view containers)
-        // This prevents aspect ratio issues in broadcast mode
+        // Broadcast mode does not support Gallery View yet. Bind fullscreen controls only
+        // and avoid showing a Speaker/Gallery selector that cannot control a layout.
         if (this.agoraMode === 'broadcast') {
-            this.createViewSelector();
-            // Skip setupContainers to avoid adding multi-view classes that break aspect ratio
-        } else {
-            // Interactive mode: full functionality
-            this.createViewSelector();
-            this.setupContainers();
+            this.bindFullscreenEvents();
+            return;
         }
+
+        // Interactive mode: full Speaker/Gallery functionality.
+        this.createViewSelector();
+        this.setupContainers();
     }
     
     // Utility function to determine if video elements can be moved safely
@@ -645,10 +645,6 @@ class ViewLayoutManager {
         this.debugLog('Applied gallery view - layout handled by CSS');
     }
 
-    getOptimalView(participantCount) {
-        return participantCount > 1 ? 'gallery' : 'speaker';
-    }
-    
     // Cleanup method to be called when layout manager is destroyed
     destroy() {
         // Clear any pending timeouts

@@ -917,7 +917,6 @@ window.initializeAgoraPlayer = function(config) {
                 audioTrack: null,
                 videoTrack: null,
                 tileElement: null,
-                videoContainerElement: null,
                 displayName: resolveParticipantDisplayName(key, options),
                 cameraOn: false,
                 audioOn: false
