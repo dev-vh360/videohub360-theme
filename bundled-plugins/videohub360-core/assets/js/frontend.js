@@ -1515,7 +1515,12 @@ window.initializeAgoraPlayer = function(config) {
 
         // Guard against race conditions during view transitions
         // Continue updating visual indicators but don't trigger speaker changes
-        const allowSpeakerChange = window.vh360LayoutManager ? window.vh360LayoutManager.shouldAllowVideoMovement() : true;
+        const layoutManager = window.vh360LayoutManager;
+        const allowSpeakerChange = layoutManager
+            ? (typeof layoutManager.shouldAllowSpeakerSwitch === 'function'
+                ? layoutManager.shouldAllowSpeakerSwitch()
+                : layoutManager.shouldAllowVideoMovement())
+            : true;
 
         // Find the user with the highest volume above threshold
         let newActiveSpeaker = null;
@@ -1591,7 +1596,14 @@ window.initializeAgoraPlayer = function(config) {
 
     function setActiveSpeaker(uid) {
         // Guard against race conditions during view transitions
-        if (window.vh360LayoutManager && !window.vh360LayoutManager.shouldAllowVideoMovement()) {
+        const layoutManager = window.vh360LayoutManager;
+        const allowSpeakerChange = layoutManager
+            ? (typeof layoutManager.shouldAllowSpeakerSwitch === 'function'
+                ? layoutManager.shouldAllowSpeakerSwitch()
+                : layoutManager.shouldAllowVideoMovement())
+            : true;
+
+        if (!allowSpeakerChange) {
             window.vh360Log('[VH360 Debug] Blocking speaker change during view transition:', uid);
             return;
         }
@@ -5088,7 +5100,7 @@ window.initializeAgoraPlayer = function(config) {
 
     function setBroadcastFullscreenControlsVisible(isVisible) {
         const player = getAgoraBroadcastFullscreenPlayer();
-        if (!player || !player.classList.contains('vh360-broadcast-viewer-fullscreen')) {
+        if (!player || !player.classList.contains('vh360-broadcast-fullscreen')) {
             return;
         }
 
@@ -5114,8 +5126,8 @@ window.initializeAgoraPlayer = function(config) {
             return;
         }
 
-        player.classList.add('vh360-broadcast-viewer-fullscreen');
-        document.body.classList.add('vh360-broadcast-viewer-fullscreen-active');
+        player.classList.add('vh360-broadcast-fullscreen');
+        document.body.classList.add('vh360-broadcast-fullscreen-active');
         markBroadcastFullscreenVideoPath(player);
         window.vh360Log('VideoHub360 Mobile: Broadcast custom fullscreen presentation setup', {
             currentRole,
@@ -5159,14 +5171,14 @@ window.initializeAgoraPlayer = function(config) {
         if (player) {
             clearBroadcastFullscreenVideoPath(player);
             player.classList.remove(
-                'vh360-broadcast-viewer-fullscreen',
+                'vh360-broadcast-fullscreen',
                 'vh360-broadcast-controls-visible',
                 'vh360-broadcast-controls-hidden'
             );
         }
 
         document.body.classList.remove(
-            'vh360-broadcast-viewer-fullscreen-active',
+            'vh360-broadcast-fullscreen-active',
             'vh360-broadcast-controls-visible',
             'vh360-broadcast-controls-hidden'
         );
