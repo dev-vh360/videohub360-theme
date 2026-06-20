@@ -125,8 +125,11 @@ class ViewLayoutManager {
     }
     
     createViewSelector() {
-        // Check if selector already exists
-        if (document.getElementById('vh360-view-selector')) return;
+        // Remove any stale selector so this manager owns the dropdown and its listeners.
+        const existingSelector = document.getElementById('vh360-view-selector');
+        if (existingSelector) {
+            existingSelector.remove();
+        }
         
         const controlsContainer = document.getElementById('vh360-agora-controls');
         if (!controlsContainer) return;
@@ -611,8 +614,13 @@ class ViewLayoutManager {
         }
         
         // Short timeout to allow CSS transitions to start, then re-enable switching
-        setTimeout(() => {
+        if (this.transitionTimeout) {
+            clearTimeout(this.transitionTimeout);
+            this.transitionTimeout = null;
+        }
+        this.transitionTimeout = setTimeout(() => {
             this.isTransitioning = false;
+            this.transitionTimeout = null;
             this.debugLog(`Completed view transition to ${viewType}`);
         }, 100);
         
@@ -792,11 +800,32 @@ class ViewLayoutManager {
 
     // Cleanup method to be called when layout manager is destroyed
     destroy() {
-        // Clear any pending timeouts
+        // Clear any pending transition timeout/state owned by this manager.
         if (this.transitionTimeout) {
             clearTimeout(this.transitionTimeout);
             this.transitionTimeout = null;
         }
+        this.isTransitioning = false;
+
+        // Remove dropdown document listeners to avoid duplicate handlers after reinitialization.
+        if (this.boundViewDropdownOutsideHandler) {
+            document.removeEventListener('click', this.boundViewDropdownOutsideHandler);
+            this.boundViewDropdownOutsideHandler = null;
+        }
+        if (this.boundViewDropdownKeyHandler) {
+            document.removeEventListener('keydown', this.boundViewDropdownKeyHandler);
+            this.boundViewDropdownKeyHandler = null;
+        }
+
+        // Remove generated selector DOM and clear stale references.
+        const selector = this.viewSelector || document.getElementById('vh360-view-selector');
+        if (selector && selector.parentElement) {
+            selector.remove();
+        }
+        this.viewSelector = null;
+        this.viewDropdownToggle = null;
+        this.viewDropdownMenu = null;
+        this.isViewDropdownOpen = false;
         
         // Note: Fullscreen event listeners are now global and managed centrally
         // They should not be removed when ViewLayoutManager is destroyed
@@ -808,6 +837,7 @@ class ViewLayoutManager {
                 'vh360-speaker-view', 
                 'vh360-gallery-view', 
                 'vh360-large-gallery-view',
+                'vh360-focus-view',
                 'vh360-multi-view-container'
             );
         }
