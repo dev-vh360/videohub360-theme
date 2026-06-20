@@ -181,11 +181,12 @@ class ViewLayoutManager {
     }
 
     updateViewSelectorState() {
-        const selector = document.getElementById('vh360-view-selector');
-        if (!selector) return;
+        const selector = this.viewSelector || document.getElementById('vh360-view-selector');
+        const optionRoot = this.viewDropdownMenu || selector;
+        if (!optionRoot) return;
 
         const hasPinnedParticipant = !!this.pinnedParticipantUid;
-        selector.querySelectorAll('[data-view-type]').forEach((button) => {
+        optionRoot.querySelectorAll('[data-view-type]').forEach((button) => {
             const viewType = button.dataset.viewType;
             const isActive = viewType === this.currentView;
             const isFocusWithoutPin = viewType === 'focus' && !hasPinnedParticipant;
