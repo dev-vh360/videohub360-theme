@@ -699,6 +699,7 @@ window.initializeAgoraPlayer = function(config) {
 
     function destroyViewLayoutManager() {
         const manager = viewLayoutManager || window.vh360LayoutManager || window.viewLayoutManager || window.vh360?.viewLayoutManager;
+        cleanupThumbnailRailScrolling();
         if (manager && typeof manager.destroy === 'function') {
             try {
                 manager.destroy();
@@ -888,6 +889,22 @@ window.initializeAgoraPlayer = function(config) {
     const participantRegistry = new Map();
     window.vh360AgoraParticipants = participantRegistry;
 
+    let thumbnailRailStage = null;
+    let thumbnailRailResizeTimeout = null;
+    let thumbnailRailPointerState = null;
+    let thumbnailRailTouchState = null;
+    const thumbnailRailHandlers = {
+        wheel: null,
+        pointerDown: null,
+        pointerMove: null,
+        pointerUp: null,
+        touchStart: null,
+        touchMove: null,
+        touchEnd: null,
+        resize: null,
+        fullscreenChange: null
+    };
+
     function normalizeParticipantUid(uid) {
         return uid === null || typeof uid === 'undefined' ? null : String(uid);
     }
@@ -896,6 +913,7 @@ window.initializeAgoraPlayer = function(config) {
         const local = document.getElementById("vh360-agora-local-player");
         if (local) {
             local.classList.add('vh360-participant-stage', 'vh360-persistent-speaker-stage');
+            ensureThumbnailRailScrolling(local);
             const remote = document.getElementById("vh360-agora-remote-players");
             if (remote) {
                 remote.classList.remove('vh360-persistent-speaker-stage', 'vh360-participant-stage');
@@ -904,6 +922,262 @@ window.initializeAgoraPlayer = function(config) {
             return local;
         }
         return document.getElementById("vh360-agora-remote-players");
+    }
+
+
+    function parseStagePixelValue(styles, propertyName, fallback = 0) {
+        const rawValue = styles.getPropertyValue(propertyName).trim();
+        const parsed = parseFloat(rawValue);
+        return Number.isFinite(parsed) ? parsed : fallback;
+    }
+
+    function getThumbnailRailMetrics(stage) {
+        if (!stage) return null;
+        const styles = window.getComputedStyle(stage);
+        const thumbnailWidth = parseStagePixelValue(styles, '--vh360-thumbnail-width', 160);
+        const thumbnailHeight = parseStagePixelValue(styles, '--vh360-thumbnail-height', 90);
+        const thumbnailGap = parseStagePixelValue(styles, '--vh360-thumbnail-gap', 10);
+        const stagePadding = parseStagePixelValue(styles, '--vh360-speaker-stage-padding', 16);
+        const controlsHeight = parseStagePixelValue(styles, '--vh360-agora-controls-height', 64);
+        const thumbnailRailHeight = parseStagePixelValue(styles, '--vh360-thumbnail-rail-height', thumbnailHeight);
+        const thumbnailBottom = controlsHeight + stagePadding;
+        const thumbnailCount = stage.querySelectorAll('.vh360-participant-tile[data-thumbnail-index]').length;
+        const availableWidth = Math.max(0, stage.clientWidth - (stagePadding * 2));
+        const totalWidth = thumbnailCount > 0
+            ? (thumbnailCount * thumbnailWidth) + (Math.max(0, thumbnailCount - 1) * thumbnailGap)
+            : 0;
+        const maxScroll = Math.max(0, totalWidth - availableWidth);
+        const rect = stage.getBoundingClientRect();
+        const railTop = Math.max(rect.top, rect.bottom - thumbnailBottom - thumbnailRailHeight - stagePadding);
+        const railBottom = Math.max(railTop, rect.bottom - controlsHeight);
+
+        return {
+            thumbnailCount,
+            thumbnailWidth,
+            thumbnailHeight,
+            thumbnailGap,
+            stagePadding,
+            controlsHeight,
+            thumbnailRailHeight,
+            availableWidth,
+            totalWidth,
+            maxScroll,
+            railTop,
+            railBottom
+        };
+    }
+
+    function getThumbnailScrollOffset(stage) {
+        if (!stage) return 0;
+        const rawOffset = stage.style.getPropertyValue('--vh360-thumbnail-scroll-offset') || '0';
+        const parsed = parseFloat(rawOffset);
+        return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    function clampThumbnailScrollOffset(stage, offset) {
+        if (!stage) return 0;
+        const maxScroll = parseFloat(stage.dataset.thumbnailMaxScroll || '0');
+        const safeMax = Number.isFinite(maxScroll) ? maxScroll : 0;
+        const safeOffset = Number.isFinite(offset) ? offset : 0;
+        return Math.max(0, Math.min(safeOffset, safeMax));
+    }
+
+    function setThumbnailScrollOffset(stage, offset) {
+        if (!stage) return 0;
+        const clampedOffset = clampThumbnailScrollOffset(stage, offset);
+        stage.style.setProperty('--vh360-thumbnail-scroll-offset', `${clampedOffset}px`);
+        stage.dataset.thumbnailScrollOffset = String(clampedOffset);
+        stage.classList.toggle('is-thumbnail-scrolled-start', clampedOffset > 0);
+        const maxScroll = parseFloat(stage.dataset.thumbnailMaxScroll || '0') || 0;
+        stage.classList.toggle('is-thumbnail-scrolled-end', clampedOffset >= maxScroll - 1 && maxScroll > 0);
+        return clampedOffset;
+    }
+
+    function isThumbnailRailLayout(stage) {
+        const container = stage ? stage.closest('.vh360-multi-view-container, #vh360-agora-player') : null;
+        return !!stage && !container?.classList.contains('vh360-gallery-view');
+    }
+
+    function updateThumbnailRailOverflow(stage) {
+        if (!stage) return;
+        const metrics = getThumbnailRailMetrics(stage);
+        if (!metrics) return;
+        stage.dataset.thumbnailMaxScroll = String(metrics.maxScroll);
+        stage.dataset.thumbnailCount = String(metrics.thumbnailCount);
+        const hasOverflow = metrics.maxScroll > 1 && isThumbnailRailLayout(stage);
+        stage.classList.toggle('has-thumbnail-overflow', hasOverflow);
+        if (!hasOverflow) {
+            setThumbnailScrollOffset(stage, 0);
+            return;
+        }
+        setThumbnailScrollOffset(stage, getThumbnailScrollOffset(stage));
+    }
+
+    function isPointInThumbnailRail(stage, clientY) {
+        const metrics = getThumbnailRailMetrics(stage);
+        return !!metrics && clientY >= metrics.railTop && clientY <= metrics.railBottom;
+    }
+
+    function shouldIgnoreThumbnailRailEventTarget(target) {
+        return !!(target && target.closest && target.closest('button, a, input, select, textarea, .vh360-view-selector, .vh360-view-dropdown-menu, .vh360-participant-menu-container, .vh360-participant-dropdown'));
+    }
+
+    function scheduleThumbnailRailOverflowUpdate(stage = thumbnailRailStage) {
+        if (thumbnailRailResizeTimeout) {
+            clearTimeout(thumbnailRailResizeTimeout);
+        }
+        thumbnailRailResizeTimeout = setTimeout(() => {
+            thumbnailRailResizeTimeout = null;
+            updateThumbnailRailOverflow(stage);
+        }, 120);
+    }
+
+    function handleThumbnailRailWheel(event) {
+        const stage = thumbnailRailStage;
+        if (!stage || !stage.classList.contains('has-thumbnail-overflow') || !isThumbnailRailLayout(stage) || !isPointInThumbnailRail(stage, event.clientY)) return;
+        const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+        if (!delta) return;
+        event.preventDefault();
+        setThumbnailScrollOffset(stage, getThumbnailScrollOffset(stage) + delta);
+    }
+
+    function handleThumbnailRailPointerDown(event) {
+        const stage = thumbnailRailStage;
+        if (!stage || !stage.classList.contains('has-thumbnail-overflow') || !isThumbnailRailLayout(stage) || shouldIgnoreThumbnailRailEventTarget(event.target) || !isPointInThumbnailRail(stage, event.clientY)) return;
+        thumbnailRailPointerState = {
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            startOffset: getThumbnailScrollOffset(stage),
+            dragging: false
+        };
+        if (stage.setPointerCapture) {
+            try { stage.setPointerCapture(event.pointerId); } catch (error) {}
+        }
+    }
+
+    function handleThumbnailRailPointerMove(event) {
+        const stage = thumbnailRailStage;
+        const state = thumbnailRailPointerState;
+        if (!stage || !state || state.pointerId !== event.pointerId) return;
+        const deltaX = state.startX - event.clientX;
+        const deltaY = state.startY - event.clientY;
+        if (!state.dragging && Math.abs(deltaX) <= 6 && Math.abs(deltaX) <= Math.abs(deltaY)) return;
+        state.dragging = true;
+        event.preventDefault();
+        stage.classList.add('is-thumbnail-rail-dragging');
+        setThumbnailScrollOffset(stage, state.startOffset + deltaX);
+    }
+
+    function endThumbnailRailPointerDrag(event) {
+        const stage = thumbnailRailStage;
+        if (stage) stage.classList.remove('is-thumbnail-rail-dragging');
+        if (stage && thumbnailRailPointerState && stage.releasePointerCapture) {
+            try { stage.releasePointerCapture(thumbnailRailPointerState.pointerId); } catch (error) {}
+        }
+        thumbnailRailPointerState = null;
+    }
+
+    function handleThumbnailRailTouchStart(event) {
+        const stage = thumbnailRailStage;
+        const touch = event.touches && event.touches[0];
+        if (!stage || !touch || !stage.classList.contains('has-thumbnail-overflow') || !isThumbnailRailLayout(stage) || shouldIgnoreThumbnailRailEventTarget(event.target) || !isPointInThumbnailRail(stage, touch.clientY)) return;
+        thumbnailRailTouchState = {
+            startX: touch.clientX,
+            startY: touch.clientY,
+            startOffset: getThumbnailScrollOffset(stage),
+            dragging: false
+        };
+    }
+
+    function handleThumbnailRailTouchMove(event) {
+        const stage = thumbnailRailStage;
+        const state = thumbnailRailTouchState;
+        const touch = event.touches && event.touches[0];
+        if (!stage || !state || !touch) return;
+        const deltaX = state.startX - touch.clientX;
+        const deltaY = state.startY - touch.clientY;
+        if (!state.dragging) {
+            if (Math.abs(deltaX) < 8 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return;
+            state.dragging = true;
+            stage.classList.add('is-thumbnail-rail-dragging');
+        }
+        event.preventDefault();
+        setThumbnailScrollOffset(stage, state.startOffset + deltaX);
+    }
+
+    function endThumbnailRailTouchDrag() {
+        if (thumbnailRailStage) thumbnailRailStage.classList.remove('is-thumbnail-rail-dragging');
+        thumbnailRailTouchState = null;
+    }
+
+    function ensureThumbnailRailScrolling(stage) {
+        if (!stage || thumbnailRailStage === stage) return;
+        cleanupThumbnailRailScrolling();
+        thumbnailRailStage = stage;
+        thumbnailRailHandlers.wheel = handleThumbnailRailWheel;
+        thumbnailRailHandlers.pointerDown = handleThumbnailRailPointerDown;
+        thumbnailRailHandlers.pointerMove = handleThumbnailRailPointerMove;
+        thumbnailRailHandlers.pointerUp = endThumbnailRailPointerDrag;
+        thumbnailRailHandlers.touchStart = handleThumbnailRailTouchStart;
+        thumbnailRailHandlers.touchMove = handleThumbnailRailTouchMove;
+        thumbnailRailHandlers.touchEnd = endThumbnailRailTouchDrag;
+        thumbnailRailHandlers.resize = () => scheduleThumbnailRailOverflowUpdate(stage);
+        thumbnailRailHandlers.fullscreenChange = () => scheduleThumbnailRailOverflowUpdate(stage);
+
+        stage.addEventListener('wheel', thumbnailRailHandlers.wheel, { passive: false });
+        stage.addEventListener('pointerdown', thumbnailRailHandlers.pointerDown);
+        stage.addEventListener('pointermove', thumbnailRailHandlers.pointerMove);
+        stage.addEventListener('pointerup', thumbnailRailHandlers.pointerUp);
+        stage.addEventListener('pointercancel', thumbnailRailHandlers.pointerUp);
+        stage.addEventListener('touchstart', thumbnailRailHandlers.touchStart, { passive: true });
+        stage.addEventListener('touchmove', thumbnailRailHandlers.touchMove, { passive: false });
+        stage.addEventListener('touchend', thumbnailRailHandlers.touchEnd);
+        stage.addEventListener('touchcancel', thumbnailRailHandlers.touchEnd);
+        window.addEventListener('resize', thumbnailRailHandlers.resize);
+        window.addEventListener('orientationchange', thumbnailRailHandlers.resize);
+        document.addEventListener('fullscreenchange', thumbnailRailHandlers.fullscreenChange);
+        document.addEventListener('webkitfullscreenchange', thumbnailRailHandlers.fullscreenChange);
+    }
+
+    function cleanupThumbnailRailScrolling() {
+        const stage = thumbnailRailStage;
+        if (thumbnailRailResizeTimeout) {
+            clearTimeout(thumbnailRailResizeTimeout);
+            thumbnailRailResizeTimeout = null;
+        }
+        if (stage) {
+            if (thumbnailRailHandlers.wheel) stage.removeEventListener('wheel', thumbnailRailHandlers.wheel);
+            if (thumbnailRailHandlers.pointerDown) stage.removeEventListener('pointerdown', thumbnailRailHandlers.pointerDown);
+            if (thumbnailRailHandlers.pointerMove) stage.removeEventListener('pointermove', thumbnailRailHandlers.pointerMove);
+            if (thumbnailRailHandlers.pointerUp) {
+                stage.removeEventListener('pointerup', thumbnailRailHandlers.pointerUp);
+                stage.removeEventListener('pointercancel', thumbnailRailHandlers.pointerUp);
+            }
+            if (thumbnailRailHandlers.touchStart) stage.removeEventListener('touchstart', thumbnailRailHandlers.touchStart);
+            if (thumbnailRailHandlers.touchMove) stage.removeEventListener('touchmove', thumbnailRailHandlers.touchMove);
+            if (thumbnailRailHandlers.touchEnd) {
+                stage.removeEventListener('touchend', thumbnailRailHandlers.touchEnd);
+                stage.removeEventListener('touchcancel', thumbnailRailHandlers.touchEnd);
+            }
+            stage.classList.remove('has-thumbnail-overflow', 'is-thumbnail-rail-dragging', 'is-thumbnail-scrolled-start', 'is-thumbnail-scrolled-end');
+            stage.style.removeProperty('--vh360-thumbnail-scroll-offset');
+            delete stage.dataset.thumbnailMaxScroll;
+            delete stage.dataset.thumbnailScrollOffset;
+            delete stage.dataset.thumbnailCount;
+        }
+        if (thumbnailRailHandlers.resize) {
+            window.removeEventListener('resize', thumbnailRailHandlers.resize);
+            window.removeEventListener('orientationchange', thumbnailRailHandlers.resize);
+        }
+        if (thumbnailRailHandlers.fullscreenChange) {
+            document.removeEventListener('fullscreenchange', thumbnailRailHandlers.fullscreenChange);
+            document.removeEventListener('webkitfullscreenchange', thumbnailRailHandlers.fullscreenChange);
+        }
+        Object.keys(thumbnailRailHandlers).forEach((key) => { thumbnailRailHandlers[key] = null; });
+        thumbnailRailPointerState = null;
+        thumbnailRailTouchState = null;
+        thumbnailRailStage = null;
     }
 
     function resolveWordPressUserId(uid, options = {}) {
@@ -1150,6 +1424,7 @@ window.initializeAgoraPlayer = function(config) {
         participantRegistry.forEach((participant) => updateParticipantTile(participant));
 
         let thumbnailIndex = 0;
+        let previousThumbnailCount = stage ? parseInt(stage.dataset.thumbnailCount || '0', 10) || 0 : 0;
         participantRegistry.forEach((participant) => {
             if (!participant.tileElement) return;
 
@@ -1164,6 +1439,13 @@ window.initializeAgoraPlayer = function(config) {
             participant.tileElement.dataset.thumbnailIndex = String(thumbnailIndex);
             thumbnailIndex += 1;
         });
+
+        if (stage) {
+            if (previousThumbnailCount !== thumbnailIndex) {
+                setThumbnailScrollOffset(stage, 0);
+            }
+            updateThumbnailRailOverflow(stage);
+        }
     }
 
 

@@ -724,6 +724,7 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
     --vh360-thumbnail-width: 160px;
     --vh360-thumbnail-height: 90px;
     --vh360-thumbnail-gap: 10px;
+    --vh360-thumbnail-scroll-offset: 0px;
     position: relative;
     display: block;
     width: 100%;
@@ -737,7 +738,7 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
 
 #vh360-agora-local-player.vh360-persistent-speaker-stage .vh360-participant-tile {
     position: absolute;
-    left: calc(var(--vh360-speaker-stage-padding) + (var(--vh360-thumbnail-index, 0) * (var(--vh360-thumbnail-width) + var(--vh360-thumbnail-gap))));
+    left: calc(var(--vh360-speaker-stage-padding) + (var(--vh360-thumbnail-index, 0) * (var(--vh360-thumbnail-width) + var(--vh360-thumbnail-gap))) - var(--vh360-thumbnail-scroll-offset, 0px));
     bottom: var(--vh360-speaker-stage-padding);
     width: var(--vh360-thumbnail-width);
     height: var(--vh360-thumbnail-height);
@@ -775,6 +776,43 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
 #vh360-agora-local-player.vh360-persistent-speaker-stage .vh360-participant-tile.is-active-speaker:not(.is-featured) {
     border-color: #4CAF50;
     box-shadow: 0 0 12px rgba(76, 175, 80, 0.6);
+}
+
+
+#vh360-agora-local-player.vh360-persistent-speaker-stage.has-thumbnail-overflow {
+    cursor: grab;
+}
+
+#vh360-agora-local-player.vh360-persistent-speaker-stage.has-thumbnail-overflow.is-thumbnail-rail-dragging {
+    cursor: grabbing;
+    user-select: none;
+}
+
+#vh360-agora-local-player.vh360-persistent-speaker-stage.has-thumbnail-overflow::before,
+#vh360-agora-local-player.vh360-persistent-speaker-stage.has-thumbnail-overflow::after {
+    content: "";
+    position: absolute;
+    bottom: var(--vh360-thumbnail-bottom, calc(var(--vh360-agora-controls-height, 64px) + var(--vh360-speaker-stage-padding, 16px)));
+    width: 42px;
+    height: var(--vh360-thumbnail-height);
+    z-index: 4;
+    pointer-events: none;
+    opacity: 0.85;
+}
+
+#vh360-agora-local-player.vh360-persistent-speaker-stage.has-thumbnail-overflow::before {
+    left: 0;
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0));
+}
+
+#vh360-agora-local-player.vh360-persistent-speaker-stage.has-thumbnail-overflow::after {
+    right: 0;
+    background: linear-gradient(270deg, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0));
+}
+
+#vh360-agora-local-player.vh360-persistent-speaker-stage.has-thumbnail-overflow:not(.is-thumbnail-scrolled-start)::before,
+#vh360-agora-local-player.vh360-persistent-speaker-stage.has-thumbnail-overflow.is-thumbnail-scrolled-end::after {
+    opacity: 0.25;
 }
 
 .vh360-speaker-view #vh360-agora-remote-players:not(.vh360-persistent-speaker-stage) {
