@@ -960,12 +960,14 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
 }
 
 /* === Phase Two Gallery View: persistent Agora tiles stay in the speaker stage === */
-.vh360-view-selector {
+.vh360-view-selector,
+.vh360-view-dropdown {
     position: relative;
     display: inline-flex;
     align-items: center;
     flex: 0 0 auto;
-    z-index: 50;
+    z-index: 1000;
+    overflow: visible;
 }
 
 .vh360-view-dropdown-toggle {
@@ -993,9 +995,9 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
 }
 
 .vh360-view-dropdown-menu {
-    position: absolute;
-    left: 0;
-    bottom: calc(100% + 8px);
+    position: fixed;
+    right: auto;
+    bottom: auto;
     display: flex;
     flex-direction: column;
     min-width: 172px;
@@ -1004,6 +1006,15 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
     border-radius: 12px;
     background: rgba(18, 18, 18, 0.98);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    z-index: 2147482500;
+}
+
+/* Keep the view dropdown from being clipped by the Agora control bar. */
+#vh360-agora-player #vh360-agora-controls,
+#vh360-agora-player .vh360-agora-controls,
+.vh360-multi-view-container #vh360-agora-controls,
+.vh360-multi-view-container .vh360-agora-controls {
+    overflow: visible !important;
     z-index: 1000;
 }
 
@@ -1011,7 +1022,8 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
     display: none;
 }
 
-.vh360-view-selector .vh360-view-option {
+.vh360-view-selector .vh360-view-option,
+.vh360-view-dropdown-menu .vh360-view-option {
     min-height: 34px;
     width: 100%;
     padding: 7px 10px;
@@ -1025,24 +1037,29 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
     white-space: nowrap;
 }
 
-.vh360-view-selector .vh360-view-option:hover {
+.vh360-view-selector .vh360-view-option:hover,
+.vh360-view-dropdown-menu .vh360-view-option:hover {
     background: rgba(255, 255, 255, 0.12);
 }
 
-.vh360-view-selector .vh360-view-option:focus-visible {
+.vh360-view-selector .vh360-view-option:focus-visible,
+.vh360-view-dropdown-menu .vh360-view-option:focus-visible {
     background: rgba(255, 255, 255, 0.12);
     outline: 2px solid var(--vh360-mv-border-active);
     outline-offset: -2px;
 }
 
-.vh360-view-selector .vh360-view-option.is-active {
+.vh360-view-selector .vh360-view-option.is-active,
+.vh360-view-dropdown-menu .vh360-view-option.is-active {
     background: var(--vh360-mv-border-active);
     color: var(--vh360-color-dark, #111);
     font-weight: 700;
 }
 
 .vh360-view-selector .vh360-view-option.is-disabled,
-.vh360-view-selector .vh360-view-option:disabled {
+.vh360-view-selector .vh360-view-option:disabled,
+.vh360-view-dropdown-menu .vh360-view-option.is-disabled,
+.vh360-view-dropdown-menu .vh360-view-option:disabled {
     cursor: not-allowed;
     color: rgba(255, 255, 255, 0.46);
     background: transparent;
@@ -1146,9 +1163,14 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
     }
 
     .vh360-view-dropdown-menu {
-        right: 0;
-        left: auto;
         min-width: 164px;
+        max-width: calc(100vw - 16px);
+    }
+
+    .vh360-view-selector .vh360-view-option,
+    .vh360-view-dropdown-menu .vh360-view-option {
+        min-height: 44px;
+        padding: 10px 12px;
     }
 
     .vh360-gallery-view #vh360-agora-local-player.vh360-persistent-speaker-stage {

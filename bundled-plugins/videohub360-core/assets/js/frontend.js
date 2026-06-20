@@ -696,6 +696,24 @@ window.initializeAgoraPlayer = function(config) {
     // Initialize layout manager
     let viewLayoutManager = null;
 
+
+    function destroyViewLayoutManager() {
+        const manager = viewLayoutManager || window.vh360LayoutManager || window.viewLayoutManager || window.vh360?.viewLayoutManager;
+        if (manager && typeof manager.destroy === 'function') {
+            try {
+                manager.destroy();
+            } catch (error) {
+                window.vh360Warn('Agora: Error destroying layout manager:', error);
+            }
+        }
+        viewLayoutManager = null;
+        window.vh360LayoutManager = null;
+        window.viewLayoutManager = null;
+        if (window.vh360) {
+            window.vh360.viewLayoutManager = null;
+        }
+    }
+
     // === Early Error Handler ===
     function showEarlyAgoraError(message) {
         window.vh360Error('Agora Error:', message);
@@ -3457,6 +3475,9 @@ window.initializeAgoraPlayer = function(config) {
             // Set moderation flag
             isBeingModerated = true;
 
+            // Tear down layout controls/listeners before hiding or clearing player UI.
+            destroyViewLayoutManager();
+
             // IMMEDIATE UI UPDATE: Hide video players first for instant visual feedback
             const localPlayer = document.getElementById('vh360-agora-local-player');
             const remotePlayersContainer = document.getElementById('vh360-agora-remote-players');
@@ -3542,15 +3563,6 @@ window.initializeAgoraPlayer = function(config) {
             // Clear pending user info
             if (window.pendingUserInfo) {
                 window.pendingUserInfo = {};
-            }
-
-            // Reset layout manager if available
-            if (window.vh360LayoutManager && typeof window.vh360LayoutManager.updateLayout === 'function') {
-                try {
-                    window.vh360LayoutManager.updateLayout({});
-                } catch (error) {
-                    window.vh360Warn('Agora: Error resetting layout manager:', error);
-                }
             }
 
             window.vh360Log('Agora: Disconnection and cleanup completed');
@@ -4291,6 +4303,9 @@ window.initializeAgoraPlayer = function(config) {
             if (isIOSImmersiveFullscreen) {
                 exitIOSImmersiveFullscreen();
             }
+
+            // Tear down layout controls/listeners before leaving or clearing player UI.
+            destroyViewLayoutManager();
 
             // Stop stream status polling
             stopStreamStatusPolling();

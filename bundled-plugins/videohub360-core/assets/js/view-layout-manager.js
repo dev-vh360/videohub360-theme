@@ -130,6 +130,10 @@ class ViewLayoutManager {
         if (existingSelector) {
             existingSelector.remove();
         }
+        const existingMenu = document.getElementById('vh360-view-dropdown-menu');
+        if (existingMenu) {
+            existingMenu.remove();
+        }
         
         const controlsContainer = document.getElementById('vh360-agora-controls');
         if (!controlsContainer) return;
@@ -233,14 +237,16 @@ class ViewLayoutManager {
         });
 
         wrapper.appendChild(toggle);
-        wrapper.appendChild(menu);
+        document.body.appendChild(menu);
         controlsContainer.appendChild(wrapper);
 
         this.viewSelector = wrapper;
         this.viewDropdownToggle = toggle;
         this.viewDropdownMenu = menu;
         this.boundViewDropdownOutsideHandler = (event) => {
-            if (this.viewSelector && !this.viewSelector.contains(event.target)) {
+            const clickedSelector = this.viewSelector && this.viewSelector.contains(event.target);
+            const clickedMenu = this.viewDropdownMenu && this.viewDropdownMenu.contains(event.target);
+            if (!clickedSelector && !clickedMenu) {
                 this.closeViewDropdown();
             }
         };
@@ -262,6 +268,9 @@ class ViewLayoutManager {
         }
         if (this.viewDropdownMenu) {
             this.viewDropdownMenu.hidden = !this.isViewDropdownOpen;
+            if (this.isViewDropdownOpen) {
+                this.positionViewDropdownMenu();
+            }
         }
         if (this.viewDropdownToggle) {
             this.viewDropdownToggle.setAttribute('aria-expanded', String(this.isViewDropdownOpen));
@@ -270,6 +279,30 @@ class ViewLayoutManager {
 
     closeViewDropdown() {
         this.setViewDropdownOpen(false);
+    }
+
+    positionViewDropdownMenu() {
+        if (!this.viewDropdownToggle || !this.viewDropdownMenu) return;
+        const toggleRect = this.viewDropdownToggle.getBoundingClientRect();
+        const menu = this.viewDropdownMenu;
+        const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+        const margin = 8;
+
+        menu.style.visibility = 'hidden';
+        menu.hidden = false;
+        const menuWidth = Math.min(menu.offsetWidth || 172, Math.max(160, viewportWidth - (margin * 2)));
+        const menuHeight = menu.offsetHeight || 140;
+        const left = Math.max(margin, Math.min(toggleRect.right - menuWidth, viewportWidth - menuWidth - margin));
+        const hasRoomAbove = toggleRect.top >= menuHeight + margin;
+        const top = hasRoomAbove
+            ? Math.max(margin, toggleRect.top - menuHeight - margin)
+            : Math.min(viewportHeight - menuHeight - margin, toggleRect.bottom + margin);
+
+        menu.style.width = `${menuWidth}px`;
+        menu.style.left = `${left}px`;
+        menu.style.top = `${Math.max(margin, top)}px`;
+        menu.style.visibility = '';
     }
     
     bindFullscreenEvents() {
@@ -821,6 +854,9 @@ class ViewLayoutManager {
         const selector = this.viewSelector || document.getElementById('vh360-view-selector');
         if (selector && selector.parentElement) {
             selector.remove();
+        }
+        if (this.viewDropdownMenu && this.viewDropdownMenu.parentElement) {
+            this.viewDropdownMenu.remove();
         }
         this.viewSelector = null;
         this.viewDropdownToggle = null;
