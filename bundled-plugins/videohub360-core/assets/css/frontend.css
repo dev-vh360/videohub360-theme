@@ -4571,8 +4571,6 @@ body.vh360-broadcast-viewer-fullscreen-active {
 #vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-agora-container,
 #vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-player-wrapper,
 #vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-agora-video-area,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-local-player,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players,
 #vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-multi-view-container,
 #vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-broadcast-player,
 #vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-stream-player {
@@ -4618,7 +4616,6 @@ body.vh360-broadcast-viewer-fullscreen-active {
 
 #vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-view-selector,
 #vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-view-selector,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players,
 #vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-gallery-controls,
 #vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-pagination-controls,
 #vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-title,
@@ -4755,30 +4752,37 @@ body.vh360-broadcast-viewer-fullscreen-active #vh360-ios-immersive-exit-btn {
 }
 
 #vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-local-player,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-tile,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-video,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-player,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-container,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-agora-video-container,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-main,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-remote,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-broadcast-player,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-stream-player,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen [id^="player-"],
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen [id^="player-video-"] {
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players {
     position: absolute !important;
     inset: 0 !important;
-    top: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    height: 100dvh !important;
-    min-width: 100vw !important;
-    min-height: 100vh !important;
-    min-height: 100dvh !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    max-height: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+    background: transparent !important;
+}
+
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-local-player.vh360-has-active-agora-video,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players.vh360-has-active-agora-video {
+    z-index: 2147483001 !important;
+}
+
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-has-active-agora-video,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-tile.has-video,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-video.vh360-has-active-agora-video {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
     max-width: none !important;
     max-height: none !important;
     display: flex !important;
@@ -4786,18 +4790,20 @@ body.vh360-broadcast-viewer-fullscreen-active #vh360-ios-immersive-exit-btn {
     justify-content: center !important;
     overflow: hidden !important;
     box-sizing: border-box !important;
-    z-index: 2147483000 !important;
-}
-
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players:has(video),
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players:has(canvas),
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players:has(.agora_video_player),
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players:has(video) > *,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players:has(canvas) > *,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players:has(.agora_video_player) > * {
-    display: flex !important;
+    z-index: 2147483002 !important;
     opacity: 1 !important;
     visibility: visible !important;
+}
+
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-placeholder,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .waiting-message,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-waiting-message,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-agora-stage-status,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-agora-status-message {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    z-index: -1 !important;
 }
 
 #vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-tile.is-active-speaker,

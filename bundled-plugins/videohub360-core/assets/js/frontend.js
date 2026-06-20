@@ -1001,6 +1001,23 @@ window.initializeAgoraPlayer = function(config) {
         return tile;
     }
 
+    function setActiveAgoraVideoClasses(participant, hasActiveVideo) {
+        const tile = participant && participant.tileElement ? participant.tileElement : null;
+        const container = participant && participant.videoContainerElement ? participant.videoContainerElement : null;
+        const stage = container ? container.closest('#vh360-agora-local-player, #vh360-agora-remote-players') : getParticipantStage();
+
+        [tile, container].forEach((element) => {
+            if (element) {
+                element.classList.toggle('vh360-has-active-agora-video', !!hasActiveVideo);
+            }
+        });
+
+        if (stage) {
+            const stageHasActiveVideo = !!hasActiveVideo || !!stage.querySelector('.vh360-participant-tile.vh360-has-active-agora-video, .vh360-participant-video.vh360-has-active-agora-video');
+            stage.classList.toggle('vh360-has-active-agora-video', stageHasActiveVideo);
+        }
+    }
+
     function updateParticipantTile(participant) {
         const tile = ensureParticipantTile(participant);
         if (!tile) return;
@@ -1011,6 +1028,7 @@ window.initializeAgoraPlayer = function(config) {
         tile.classList.toggle('is-original-host', !!participant.isOriginalHost);
         tile.classList.toggle('is-active-speaker', !!participant.isActiveSpeaker);
         tile.classList.toggle('has-video', !!participant.videoTrack && participant.cameraOn !== false);
+        setActiveAgoraVideoClasses(participant, !!participant.videoTrack && participant.cameraOn !== false);
         tile.classList.toggle('has-audio', !!participant.audioTrack && participant.audioOn !== false);
         tile.classList.toggle('camera-off', !participant.videoTrack || participant.cameraOn === false);
         tile.classList.toggle('audio-muted', !participant.audioTrack || participant.audioOn === false);
@@ -1097,6 +1115,7 @@ window.initializeAgoraPlayer = function(config) {
 
         try {
             videoTrack.play(container, isLocalTrack ? { mirror: false } : undefined);
+            setActiveAgoraVideoClasses(participant, true);
             videoElementManager.registerTrackBinding(container.id, !!isLocalTrack, isLocalTrack ? null : videoTrack);
             setTimeout(() => cleanupParticipantVideoStyles(participant), 200);
             window.vh360Log('Agora: Attached video track to persistent participant tile', {
@@ -1109,6 +1128,7 @@ window.initializeAgoraPlayer = function(config) {
         } catch (error) {
             participant.videoTrack = null;
             participant.cameraOn = false;
+            setActiveAgoraVideoClasses(participant, false);
             updateParticipantTile(participant);
             window.vh360Warn('Agora: Failed to play video track in participant tile', {
                 uid: participant.uid,
@@ -1132,6 +1152,7 @@ window.initializeAgoraPlayer = function(config) {
         const tile = participant ? participant.tileElement : document.getElementById(`player-${key}`);
         if (tile && tile._moderationDropdown) tile._moderationDropdown.remove();
         if (participant && participant.videoContainerElement && window.videoElementManager) window.videoElementManager.unregisterTrackBinding(participant.videoContainerElement.id);
+        if (participant) setActiveAgoraVideoClasses(participant, false);
         if (tile) tile.remove();
         participantRegistry.delete(key);
         if (remoteUsers && remoteUsers[key]) {
