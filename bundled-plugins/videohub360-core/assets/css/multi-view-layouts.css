@@ -961,31 +961,82 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
 
 /* === Phase Two Gallery View: persistent Agora tiles stay in the speaker stage === */
 .vh360-view-selector {
+    position: relative;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 3px;
+    flex: 0 0 auto;
+    z-index: 50;
+}
+
+.vh360-view-dropdown-toggle {
+    min-height: 30px;
+    padding: 5px 12px;
     border: 1px solid rgba(255, 255, 255, 0.18);
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.28);
+    color: #fff;
+    background: rgba(0, 0, 0, 0.34);
+    cursor: pointer;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.vh360-view-dropdown-toggle:hover,
+.vh360-view-dropdown-toggle:focus-visible,
+.vh360-view-selector.is-open .vh360-view-dropdown-toggle {
+    background: rgba(255, 255, 255, 0.14);
+    outline: 2px solid transparent;
+}
+
+.vh360-view-dropdown-menu {
+    position: absolute;
+    left: 0;
+    bottom: calc(100% + 8px);
+    display: flex;
+    flex-direction: column;
+    min-width: 172px;
+    padding: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 12px;
+    background: rgba(18, 18, 18, 0.98);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    z-index: 1000;
+}
+
+.vh360-view-dropdown-menu[hidden] {
+    display: none;
 }
 
 .vh360-view-selector .vh360-view-option {
-    min-height: 28px;
-    padding: 5px 12px;
+    min-height: 34px;
+    width: 100%;
+    padding: 7px 10px;
     border: 0;
-    border-radius: 999px;
+    border-radius: 8px;
     color: #fff;
     background: transparent;
     cursor: pointer;
     line-height: 1.2;
+    text-align: left;
+    white-space: nowrap;
 }
 
-.vh360-view-selector .vh360-view-option.is-active,
-.vh360-view-selector .vh360-view-option[aria-pressed="true"] {
+.vh360-view-selector .vh360-view-option:hover,
+.vh360-view-selector .vh360-view-option:focus-visible {
+    background: rgba(255, 255, 255, 0.12);
+    outline: none;
+}
+
+.vh360-view-selector .vh360-view-option.is-active {
     background: var(--vh360-mv-border-active);
     color: #0b1f0b;
     font-weight: 700;
+}
+
+.vh360-view-selector .vh360-view-option.is-disabled,
+.vh360-view-selector .vh360-view-option:disabled {
+    cursor: not-allowed;
+    color: rgba(255, 255, 255, 0.46);
+    background: transparent;
 }
 
 .vh360-gallery-view {
@@ -1081,10 +1132,14 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
 }
 
 @media (max-width: 768px) {
-    .vh360-view-selector-mobile {
+    .vh360-view-selector {
         order: 20;
-        width: 100%;
-        justify-content: center;
+    }
+
+    .vh360-view-dropdown-menu {
+        right: 0;
+        left: auto;
+        min-width: 164px;
     }
 
     .vh360-gallery-view #vh360-agora-local-player.vh360-persistent-speaker-stage {
