@@ -18,6 +18,7 @@ class ViewLayoutManager {
         this.agoraMode = agoraMode; // 'interactive' or 'broadcast'
         this.isAdmin = isAdmin;
         this.currentView = 'speaker'; // Default view mode
+        this.pinnedParticipantUid = null;
         this.participantCount = 0;
         this.containerElement = null;
         this.remoteContainer = null;
@@ -71,7 +72,7 @@ class ViewLayoutManager {
         try {
             const saved = localStorage.getItem('vh360-layout-view-preference');
             // Keep Phase 2 supported views; migrate only unsupported legacy layouts.
-            if (saved === 'large-gallery' || saved === 'focus') {
+            if (saved === 'large-gallery') {
                 if (window.__VH360_DEBUG) console.log('Migrating unsupported legacy preference to speaker view');
                 this.currentView = 'speaker';
                 this.saveUserPreference(); // Update localStorage with supported preference
@@ -141,11 +142,13 @@ class ViewLayoutManager {
     }
     
     isValidView(viewType) {
-        return viewType === 'speaker' || viewType === 'gallery';
+        return viewType === 'speaker' || viewType === 'gallery' || viewType === 'focus';
     }
 
     getViewLabel(viewType) {
-        return viewType === 'gallery' ? 'Gallery' : 'Speaker';
+        if (viewType === 'gallery') return 'Gallery';
+        if (viewType === 'focus') return 'Focus';
+        return 'Speaker';
     }
 
     createViewButton(viewType) {
@@ -155,6 +158,10 @@ class ViewLayoutManager {
         button.dataset.viewType = viewType;
         button.textContent = this.getViewLabel(viewType);
         button.setAttribute('aria-pressed', String(this.currentView === viewType));
+        if (viewType === 'focus') {
+            button.hidden = this.participantCount < 1;
+            button.disabled = this.participantCount < 1;
+        }
         button.addEventListener('click', () => this.switchView(viewType));
         return button;
     }
@@ -166,6 +173,11 @@ class ViewLayoutManager {
             const isActive = button.dataset.viewType === this.currentView;
             button.classList.toggle('is-active', isActive);
             button.setAttribute('aria-pressed', String(isActive));
+            if (button.dataset.viewType === 'focus') {
+                const canFocus = this.participantCount > 0;
+                button.hidden = !canFocus;
+                button.disabled = !canFocus;
+            }
         });
     }
 
@@ -177,6 +189,7 @@ class ViewLayoutManager {
         wrapper.setAttribute('aria-label', 'Video layout');
         wrapper.appendChild(this.createViewButton('speaker'));
         wrapper.appendChild(this.createViewButton('gallery'));
+        wrapper.appendChild(this.createViewButton('focus'));
         controlsContainer.appendChild(wrapper);
         this.viewSelector = wrapper;
         this.updateViewSelectorState();
@@ -190,6 +203,7 @@ class ViewLayoutManager {
         wrapper.setAttribute('aria-label', 'Video layout');
         wrapper.appendChild(this.createViewButton('speaker'));
         wrapper.appendChild(this.createViewButton('gallery'));
+        wrapper.appendChild(this.createViewButton('focus'));
         controlsContainer.appendChild(wrapper);
         this.viewSelector = wrapper;
         this.updateViewSelectorState();
@@ -539,11 +553,58 @@ class ViewLayoutManager {
         if (window.__VH360_DEBUG) console.log(`Switched from ${oldView} to ${viewType} view`);
     }
     
+
+    pinParticipant(uid) {
+        if (!uid) return;
+        this.pinnedParticipantUid = String(uid);
+        this.debugLog('Focus set', this.pinnedParticipantUid);
+        this.switchView('focus');
+        if (typeof window.vh360RefreshFeaturedParticipantTiles === 'function') {
+            window.vh360RefreshFeaturedParticipantTiles();
+        }
+    }
+
+    unpinParticipant(options = {}) {
+        const oldUid = this.pinnedParticipantUid;
+        this.pinnedParticipantUid = null;
+        this.debugLog(options.reason === 'left' ? 'Pinned participant left; focus cleared' : 'Focus cleared', oldUid);
+        if (this.currentView === 'focus') {
+            this.debugLog('Fallback to speaker');
+            this.switchView('speaker');
+        } else if (typeof window.vh360RefreshFeaturedParticipantTiles === 'function') {
+            window.vh360RefreshFeaturedParticipantTiles();
+        }
+    }
+
+    toggleParticipantFocus(uid) {
+        const key = uid ? String(uid) : '';
+        if (!key) return;
+        if (this.pinnedParticipantUid === key && this.currentView === 'focus') {
+            this.unpinParticipant();
+        } else {
+            this.pinParticipant(key);
+        }
+    }
+
+    getPinnedParticipantUid() {
+        return this.pinnedParticipantUid;
+    }
+
+    handleParticipantLeft(uid) {
+        if (uid && this.pinnedParticipantUid === String(uid)) {
+            this.unpinParticipant({ reason: 'left' });
+        }
+    }
+
     updateLayout(participants) {
         if (!participants || typeof participants !== 'object') {
             participants = {};
         }
         this.participantCount = Object.keys(participants).length;
+        if (this.participantCount < 1 && this.currentView === 'focus') {
+            this.unpinParticipant();
+            return;
+        }
         this.applyLayout();
     }
     
@@ -569,6 +630,7 @@ class ViewLayoutManager {
         this.containerElement.classList.remove(
             'vh360-speaker-view', 
             'vh360-gallery-view', 
+            'vh360-focus-view',
             'vh360-large-gallery-view'
         );
         
@@ -579,6 +641,17 @@ class ViewLayoutManager {
         if (this.currentView === 'gallery') {
             this.containerElement.classList.add('vh360-gallery-view');
             this.applyGalleryView();
+        } else if (this.currentView === 'focus') {
+            if (!this.pinnedParticipantUid) {
+                this.debugLog('Focus view requested without pinned participant; falling back to speaker');
+                this.currentView = 'speaker';
+                this.saveUserPreference();
+                this.containerElement.classList.add('vh360-speaker-view');
+                this.applySpeakerView();
+            } else {
+                this.containerElement.classList.add('vh360-speaker-view', 'vh360-focus-view');
+                this.applySpeakerView();
+            }
         } else {
             this.containerElement.classList.add('vh360-speaker-view');
             this.applySpeakerView();

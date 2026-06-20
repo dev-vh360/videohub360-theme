@@ -1195,3 +1195,79 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
     pointer-events: none !important;
     z-index: -1 !important;
 }
+
+/* === Phase Three Focus View: pinned participant uses Speaker View fixed regions === */
+.vh360-focus-view #vh360-agora-local-player.vh360-persistent-speaker-stage .vh360-participant-tile.is-featured {
+    border-color: #5b8cff;
+    box-shadow: 0 0 16px rgba(91, 140, 255, 0.28);
+}
+
+.vh360-participant-focus-btn {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 104;
+    min-width: 44px;
+    min-height: 32px;
+    padding: 6px 10px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.68);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--vh360-mv-transition-fast), background var(--vh360-mv-transition-fast);
+}
+
+.vh360-participant-tile:hover .vh360-participant-focus-btn,
+.vh360-participant-tile:focus-within .vh360-participant-focus-btn,
+.vh360-participant-focus-btn[aria-pressed="true"] {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.vh360-participant-focus-btn:hover,
+.vh360-participant-focus-btn:focus-visible,
+.vh360-participant-focus-btn[aria-pressed="true"] {
+    background: rgba(91, 140, 255, 0.92);
+    color: #fff;
+}
+
+.vh360-participant-tile.is-focused-participant::after {
+    content: "Focused";
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 103;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: rgba(91, 140, 255, 0.88);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    pointer-events: none;
+}
+
+.vh360-participant-tile.is-focused-participant .vh360-participant-menu-container {
+    top: 42px;
+}
+
+@media (hover: none), (max-width: 768px) {
+    .vh360-participant-focus-btn {
+        opacity: 1;
+        pointer-events: auto;
+        min-height: 40px;
+        padding: 8px 12px;
+    }
+
+    .vh360-participant-tile.is-focused-participant::after {
+        top: 52px;
+        left: 8px;
+        right: auto;
+    }
+}

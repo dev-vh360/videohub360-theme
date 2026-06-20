@@ -1018,6 +1018,32 @@ window.initializeAgoraPlayer = function(config) {
         }
     }
 
+    function ensureParticipantFocusControl(participant, tile) {
+        if (!participant || !tile || config.agoraMode !== 'interactive') return;
+        let button = tile.querySelector('.vh360-participant-focus-btn');
+        if (!button) {
+            button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'vh360-participant-focus-btn';
+            button.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                const layoutManager = window.vh360LayoutManager || window.viewLayoutManager || window.vh360?.viewLayoutManager;
+                if (layoutManager && typeof layoutManager.toggleParticipantFocus === 'function') {
+                    layoutManager.toggleParticipantFocus(participant.uid);
+                }
+            });
+            tile.appendChild(button);
+        }
+
+        const layoutManager = window.vh360LayoutManager || window.viewLayoutManager || window.vh360?.viewLayoutManager;
+        const isFocused = !!(layoutManager && typeof layoutManager.getPinnedParticipantUid === 'function' && layoutManager.getPinnedParticipantUid() === String(participant.uid));
+        const name = participant.displayName || `User ${participant.uid}`;
+        button.textContent = isFocused ? 'Unfocus' : 'Focus';
+        button.setAttribute('aria-label', `${isFocused ? 'Unfocus' : 'Focus'} ${name}`);
+        button.setAttribute('aria-pressed', String(isFocused));
+    }
+
     function updateParticipantTile(participant) {
         const tile = ensureParticipantTile(participant);
         if (!tile) return;
@@ -1032,7 +1058,10 @@ window.initializeAgoraPlayer = function(config) {
         tile.classList.toggle('has-audio', !!participant.audioTrack && participant.audioOn !== false);
         tile.classList.toggle('camera-off', !participant.videoTrack || participant.cameraOn === false);
         tile.classList.toggle('audio-muted', !participant.audioTrack || participant.audioOn === false);
+        const isFocused = isFocusedParticipant(participant.uid);
+        tile.classList.toggle('is-focused-participant', isFocused);
         tile.classList.toggle('is-featured', shouldFeatureParticipant(participant.uid));
+        ensureParticipantFocusControl(participant, tile);
         const label = tile.querySelector('.vh360-user-info, .vh360-video-name-overlay');
         if (label) label.textContent = participant.displayName || `User ${participant.uid}`;
 
@@ -1040,6 +1069,19 @@ window.initializeAgoraPlayer = function(config) {
         if (speakerBadge && participant.videoTrack && participant.cameraOn !== false) {
             speakerBadge.style.display = 'none';
         }
+    }
+
+    function getPinnedParticipantUidFromLayout() {
+        const layoutManager = window.vh360LayoutManager || window.viewLayoutManager || window.vh360?.viewLayoutManager;
+        if (layoutManager && typeof layoutManager.getPinnedParticipantUid === 'function') {
+            return layoutManager.getPinnedParticipantUid();
+        }
+        return layoutManager && layoutManager.pinnedParticipantUid ? layoutManager.pinnedParticipantUid : null;
+    }
+
+    function isFocusedParticipant(uid) {
+        const pinnedUid = getPinnedParticipantUidFromLayout();
+        return !!pinnedUid && normalizeParticipantUid(uid) === String(pinnedUid);
     }
 
     function shouldFeatureParticipant(uid) {
@@ -1055,6 +1097,16 @@ window.initializeAgoraPlayer = function(config) {
             return participantRegistry.size === 1;
         }
 
+        if (currentLayoutView === 'focus') {
+            const pinnedUid = getPinnedParticipantUidFromLayout();
+            if (pinnedUid && participantRegistry.has(String(pinnedUid))) {
+                return key === String(pinnedUid);
+            }
+            if (layoutManager && typeof layoutManager.unpinParticipant === 'function') {
+                layoutManager.unpinParticipant();
+            }
+        }
+
         if (activeSpeakerUid && key === String(activeSpeakerUid)) return true;
         if (!activeSpeakerUid && originalHostUID && key === String(originalHostUID)) return true;
         if (!activeSpeakerUid && !originalHostUID && currentUserUID && key === String(currentUserUID)) return true;
@@ -1063,10 +1115,18 @@ window.initializeAgoraPlayer = function(config) {
 
     function refreshFeaturedParticipantTiles() {
         const stage = getParticipantStage();
+        const participantCount = participantRegistry.size;
         if (stage) {
-            const participantCount = participantRegistry.size;
             stage.classList.toggle('has-single-participant', participantCount <= 1);
             stage.classList.toggle('has-multiple-participants', participantCount > 1);
+        }
+
+        const layoutManager = window.vh360LayoutManager || window.viewLayoutManager || window.vh360?.viewLayoutManager;
+        if (layoutManager) {
+            layoutManager.participantCount = participantCount;
+            if (typeof layoutManager.updateViewSelectorState === 'function') {
+                layoutManager.updateViewSelectorState();
+            }
         }
 
         participantRegistry.forEach((participant) => updateParticipantTile(participant));
@@ -1153,6 +1213,10 @@ window.initializeAgoraPlayer = function(config) {
         if (tile && tile._moderationDropdown) tile._moderationDropdown.remove();
         if (participant && participant.videoContainerElement && window.videoElementManager) window.videoElementManager.unregisterTrackBinding(participant.videoContainerElement.id);
         if (participant) setActiveAgoraVideoClasses(participant, false);
+        const layoutManager = window.vh360LayoutManager || window.viewLayoutManager || window.vh360?.viewLayoutManager;
+        if (layoutManager && typeof layoutManager.handleParticipantLeft === 'function') {
+            layoutManager.handleParticipantLeft(key);
+        }
         if (tile) tile.remove();
         participantRegistry.delete(key);
         if (remoteUsers && remoteUsers[key]) {
@@ -1633,7 +1697,7 @@ window.initializeAgoraPlayer = function(config) {
             // Add active speaker styling to new speaker
             updateActiveSpeakerVisuals(uid, true);
 
-            // Switch main video to active speaker (unless it's the host viewing themselves)
+            // Switch main video to active speaker (unless Focus View has a pinned participant).
             if (shouldSwitchToSpeaker(uid)) {
                 switchMainVideoToSpeaker(uid);
             }
@@ -1658,6 +1722,13 @@ window.initializeAgoraPlayer = function(config) {
     }
 
     function shouldSwitchToSpeaker(uid) {
+        const layoutManager = window.vh360LayoutManager || window.viewLayoutManager || window.vh360?.viewLayoutManager;
+        const pinnedUid = getPinnedParticipantUidFromLayout();
+        if (layoutManager && layoutManager.currentView === 'focus' && pinnedUid) {
+            window.vh360Log('[VH360 Debug] Focus pinned participant retained; active speaker did not steal featured area:', { pinnedUid, activeSpeakerUid: uid });
+            refreshFeaturedParticipantTiles();
+            return false;
+        }
         const participant = participantRegistry.get(normalizeParticipantUid(uid));
         return !!participant;
     }
