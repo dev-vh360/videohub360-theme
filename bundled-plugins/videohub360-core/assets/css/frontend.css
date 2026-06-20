@@ -4727,3 +4727,129 @@ body.vh360-broadcast-viewer-fullscreen-active #vh360-ios-immersive-exit-btn {
     visibility: visible !important;
     pointer-events: auto !important;
 }
+
+/* Broadcast viewer fullscreen tile/card reset: the live video should be the fullscreen stage. */
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-local-player,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-tile,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-video,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-player,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-container,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-agora-video-container,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-main,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-remote,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-broadcast-player,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-stream-player,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen [id^="player-"],
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen [id^="player-video-"],
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .agora_video_player,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen [class*="agora_video"] {
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    outline: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #000 !important;
+    transform: none !important;
+}
+
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-local-player,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-tile,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-video,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-player,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-container,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-agora-video-container,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-main,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-remote,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-broadcast-player,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-stream-player,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen [id^="player-"],
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen [id^="player-video-"] {
+    position: absolute !important;
+    inset: 0 !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    min-width: 100vw !important;
+    min-height: 100vh !important;
+    min-height: 100dvh !important;
+    max-width: none !important;
+    max-height: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+    z-index: 2147483000 !important;
+}
+
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players:has(video),
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players:has(canvas),
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players:has(.agora_video_player),
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players:has(video) > *,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players:has(canvas) > *,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players:has(.agora_video_player) > * {
+    display: flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-tile.is-active-speaker,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-tile.is-active-speaker:not(.is-featured),
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-tile.is-featured,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-remote.active-speaker,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .active-speaker,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .is-active-speaker,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .is-featured {
+    border: 0 !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    outline: 0 !important;
+    transform: none !important;
+}
+
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-video > div,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-video video,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-video canvas,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-player video,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-player canvas,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-container video,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-container canvas,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-agora-video-container video,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-agora-video-container canvas,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .agora_video_player,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen .agora_video_player video,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen [class*="agora"] video,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen [class*="agora"] canvas,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen video,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen canvas {
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    max-height: none !important;
+    object-fit: contain !important;
+    object-position: center center !important;
+    background: #000 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    outline: 0 !important;
+}
+
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-fit-cover .vh360-participant-video video,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-fit-cover .vh360-video-container video,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-fit-cover .agora_video_player,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-fit-cover video,
+#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-fit-cover canvas {
+    object-fit: cover !important;
+}
