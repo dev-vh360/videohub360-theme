@@ -4261,7 +4261,7 @@ body.vh360-ios-immersive-active .vh360-unified-settings-content {
 
 /* Fixed bottom controls bar while immersive */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen:not(.vh360-broadcast-viewer-fullscreen)
+#vh360-agora-player.vh360-ios-immersive-fullscreen:not(.vh360-broadcast-fullscreen)
 #vh360-agora-controls.vh360-mobile-controls-simple {
     position: fixed !important;
     left: env(safe-area-inset-left, 0px) !important;
@@ -4287,10 +4287,10 @@ body.vh360-ios-immersive-active
 
 /* Keep controls visible even when auto-hide or stream-live classes are present */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-stream-live:not(.vh360-broadcast-viewer-fullscreen)
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-stream-live:not(.vh360-broadcast-fullscreen)
 #vh360-agora-controls.vh360-mobile-controls-simple,
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-controls-hidden:not(.vh360-broadcast-viewer-fullscreen)
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-controls-hidden:not(.vh360-broadcast-fullscreen)
 #vh360-agora-controls.vh360-mobile-controls-simple {
     opacity: 1 !important;
     visibility: visible !important;
@@ -4299,10 +4299,10 @@ body.vh360-ios-immersive-active
 
 /* Ensure control buttons/selects are touchable */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen:not(.vh360-broadcast-viewer-fullscreen)
+#vh360-agora-player.vh360-ios-immersive-fullscreen:not(.vh360-broadcast-fullscreen)
 #vh360-agora-controls.vh360-mobile-controls-simple button,
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen:not(.vh360-broadcast-viewer-fullscreen)
+#vh360-agora-player.vh360-ios-immersive-fullscreen:not(.vh360-broadcast-fullscreen)
 #vh360-agora-controls.vh360-mobile-controls-simple select {
     position: relative !important;
     z-index: 2147483005 !important;
@@ -4312,13 +4312,13 @@ body.vh360-ios-immersive-active
 
 /* Reserve space so video/grid does not overlap bottom controls */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen:not(.vh360-broadcast-viewer-fullscreen)
+#vh360-agora-player.vh360-ios-immersive-fullscreen:not(.vh360-broadcast-fullscreen)
 #vh360-agora-local-player,
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen:not(.vh360-broadcast-viewer-fullscreen)
+#vh360-agora-player.vh360-ios-immersive-fullscreen:not(.vh360-broadcast-fullscreen)
 #vh360-agora-remote-players,
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen:not(.vh360-broadcast-viewer-fullscreen)
+#vh360-agora-player.vh360-ios-immersive-fullscreen:not(.vh360-broadcast-fullscreen)
 .vh360-multi-view-container {
     padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important;
     box-sizing: border-box !important;
@@ -4365,14 +4365,14 @@ body.vh360-ios-immersive-active > #vh360-agora-player.vh360-ios-immersive-fullsc
 
 /* Container layout in landscape */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen) {
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-fullscreen) {
     display: block !important;
     overflow: hidden !important;
 }
 
 /* Main stage fills the entire immersive viewport */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-fullscreen)
 #vh360-agora-local-player {
     position: absolute !important;
     inset: 0 !important;
@@ -4389,13 +4389,13 @@ body.vh360-ios-immersive-active
 
 /* Main stage video: contain so it is never cropped */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-fullscreen)
 #vh360-agora-local-player video,
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-fullscreen)
 #vh360-agora-local-player .agora_video_player,
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-fullscreen)
 #vh360-agora-local-player [class*="agora"] video {
     width: 100% !important;
     height: 100% !important;
@@ -4408,7 +4408,7 @@ body.vh360-ios-immersive-active
 
 /* Remote videos: floating thumbnail strip along the top */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-fullscreen)
 #vh360-agora-remote-players {
     position: fixed !important;
     top: calc(8px + env(safe-area-inset-top, 0px)) !important;
@@ -4433,10 +4433,10 @@ body.vh360-ios-immersive-active
 
 /* Remote thumbnail tile sizing */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-fullscreen)
 #vh360-agora-remote-players > *,
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-fullscreen)
 .vh360-remote-player {
     flex: 0 0 120px !important;
     width: 120px !important;
@@ -4451,10 +4451,10 @@ body.vh360-ios-immersive-active
 
 /* Remote thumbnail video fill */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-fullscreen)
 #vh360-agora-remote-players video,
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-fullscreen)
 .vh360-remote-player video {
     width: 100% !important;
     height: 100% !important;
@@ -4463,7 +4463,7 @@ body.vh360-ios-immersive-active
 
 /* Controls: compact pill floating above the bottom safe area */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-fullscreen)
 #vh360-agora-controls.vh360-mobile-controls-simple {
     position: fixed !important;
     left: 50% !important;
@@ -4488,7 +4488,7 @@ body.vh360-ios-immersive-active
 
 /* Compact control buttons in landscape */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-fullscreen)
 #vh360-agora-controls.vh360-mobile-controls-simple button {
     min-width: 38px !important;
     width: 38px !important;
@@ -4498,13 +4498,13 @@ body.vh360-ios-immersive-active
 
 /* Remove portrait bottom-padding in landscape (controls are floating, no reserved space needed) */
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-fullscreen)
 #vh360-agora-local-player,
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-fullscreen)
 #vh360-agora-remote-players,
 body.vh360-ios-immersive-active
-#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-viewer-fullscreen)
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-fullscreen)
 .vh360-multi-view-container {
     padding-bottom: 0 !important;
 }
@@ -4540,13 +4540,13 @@ body.vh360-ios-immersive-active
    Professional, CSS-only fullscreen presentation that avoids
    native mobile video fullscreen play/pause controls.
    ========================================================= */
-body.vh360-broadcast-viewer-fullscreen-active {
+body.vh360-broadcast-fullscreen-active {
     overflow: hidden !important;
 }
 
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen:fullscreen,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen:-webkit-full-screen {
+#vh360-agora-player.vh360-broadcast-fullscreen,
+#vh360-agora-player.vh360-broadcast-fullscreen:fullscreen,
+#vh360-agora-player.vh360-broadcast-fullscreen:-webkit-full-screen {
     position: fixed !important;
     inset: 0 !important;
     width: 100vw !important;
@@ -4568,14 +4568,12 @@ body.vh360-broadcast-viewer-fullscreen-active {
     touch-action: manipulation;
 }
 
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-agora-container,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-player-wrapper,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-agora-video-area,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-local-player,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-multi-view-container,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-broadcast-player,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-stream-player {
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-agora-container,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-player-wrapper,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-agora-video-area,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-multi-view-container,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-broadcast-player,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-stream-player {
     position: absolute !important;
     inset: 0 !important;
     width: 100% !important;
@@ -4594,11 +4592,11 @@ body.vh360-broadcast-viewer-fullscreen-active {
     box-sizing: border-box !important;
 }
 
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen video,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen canvas,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .agora_video_player,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen [class*="agora"] video,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen [class*="agora"] canvas {
+#vh360-agora-player.vh360-broadcast-fullscreen video,
+#vh360-agora-player.vh360-broadcast-fullscreen canvas,
+#vh360-agora-player.vh360-broadcast-fullscreen .agora_video_player,
+#vh360-agora-player.vh360-broadcast-fullscreen [class*="agora"] video,
+#vh360-agora-player.vh360-broadcast-fullscreen [class*="agora"] canvas {
     width: 100% !important;
     height: 100% !important;
     max-width: 100% !important;
@@ -4610,30 +4608,29 @@ body.vh360-broadcast-viewer-fullscreen-active {
 }
 
 /* Future opt-in for cropped cinematic mode; contain remains the safe default. */
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-fit-cover video,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-fit-cover canvas,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-fit-cover .agora_video_player {
+#vh360-agora-player.vh360-broadcast-fullscreen.vh360-broadcast-fit-cover video,
+#vh360-agora-player.vh360-broadcast-fullscreen.vh360-broadcast-fit-cover canvas,
+#vh360-agora-player.vh360-broadcast-fullscreen.vh360-broadcast-fit-cover .agora_video_player {
     object-fit: cover !important;
 }
 
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-view-selector,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-view-selector,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-gallery-controls,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-pagination-controls,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-title,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-meta,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-user-info,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-name-overlay,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .active-speaker-badge,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .volume-indicator {
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-view-selector,
+#vh360-agora-player.vh360-broadcast-fullscreen #vh360-view-selector,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-gallery-controls,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-pagination-controls,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-video-title,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-video-meta,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-user-info,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-video-name-overlay,
+#vh360-agora-player.vh360-broadcast-fullscreen .active-speaker-badge,
+#vh360-agora-player.vh360-broadcast-fullscreen .volume-indicator {
     display: none !important;
 }
 
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-controls,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-agora-controls,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-mobile-controls,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-live-controls {
+#vh360-agora-player.vh360-broadcast-fullscreen #vh360-agora-controls,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-agora-controls,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-mobile-controls,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-live-controls {
     position: fixed !important;
     inset: 0 !important;
     width: 100vw !important;
@@ -4650,23 +4647,23 @@ body.vh360-broadcast-viewer-fullscreen-active {
     z-index: 2147483004 !important;
 }
 
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-controls-visible #vh360-agora-controls,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-controls-visible .vh360-agora-controls,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-controls-visible .vh360-mobile-controls,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-controls-visible .vh360-live-controls {
+#vh360-agora-player.vh360-broadcast-fullscreen.vh360-broadcast-controls-visible #vh360-agora-controls,
+#vh360-agora-player.vh360-broadcast-fullscreen.vh360-broadcast-controls-visible .vh360-agora-controls,
+#vh360-agora-player.vh360-broadcast-fullscreen.vh360-broadcast-controls-visible .vh360-mobile-controls,
+#vh360-agora-player.vh360-broadcast-fullscreen.vh360-broadcast-controls-visible .vh360-live-controls {
     opacity: 1 !important;
     visibility: visible !important;
 }
 
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-controls > :not(#vh360-agora-fullscreen-btn),
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-agora-controls > :not(#vh360-agora-fullscreen-btn),
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-mobile-controls > :not(#vh360-agora-fullscreen-btn),
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-live-controls > :not(#vh360-agora-fullscreen-btn) {
+#vh360-agora-player.vh360-broadcast-fullscreen #vh360-agora-controls > :not(#vh360-agora-fullscreen-btn),
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-agora-controls > :not(#vh360-agora-fullscreen-btn),
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-mobile-controls > :not(#vh360-agora-fullscreen-btn),
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-live-controls > :not(#vh360-agora-fullscreen-btn) {
     display: none !important;
 }
 
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-fullscreen-btn,
-body.vh360-broadcast-viewer-fullscreen-active #vh360-ios-immersive-exit-btn {
+#vh360-agora-player.vh360-broadcast-fullscreen #vh360-agora-fullscreen-btn,
+body.vh360-broadcast-fullscreen-active #vh360-ios-immersive-exit-btn {
     position: fixed !important;
     top: calc(12px + env(safe-area-inset-top, 0px)) !important;
     right: calc(12px + env(safe-area-inset-right, 0px)) !important;
@@ -4691,59 +4688,59 @@ body.vh360-broadcast-viewer-fullscreen-active #vh360-ios-immersive-exit-btn {
     touch-action: manipulation;
 }
 
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-controls-visible #vh360-agora-fullscreen-btn,
-body.vh360-broadcast-viewer-fullscreen-active.vh360-broadcast-controls-visible #vh360-ios-immersive-exit-btn {
+#vh360-agora-player.vh360-broadcast-fullscreen.vh360-broadcast-controls-visible #vh360-agora-fullscreen-btn,
+body.vh360-broadcast-fullscreen-active.vh360-broadcast-controls-visible #vh360-ios-immersive-exit-btn {
     opacity: 1 !important;
     visibility: visible !important;
     pointer-events: auto !important;
 }
 
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-fullscreen-btn:hover,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-fullscreen-btn:focus-visible,
-body.vh360-broadcast-viewer-fullscreen-active #vh360-ios-immersive-exit-btn:hover,
-body.vh360-broadcast-viewer-fullscreen-active #vh360-ios-immersive-exit-btn:focus-visible {
+#vh360-agora-player.vh360-broadcast-fullscreen #vh360-agora-fullscreen-btn:hover,
+#vh360-agora-player.vh360-broadcast-fullscreen #vh360-agora-fullscreen-btn:focus-visible,
+body.vh360-broadcast-fullscreen-active #vh360-ios-immersive-exit-btn:hover,
+body.vh360-broadcast-fullscreen-active #vh360-ios-immersive-exit-btn:focus-visible {
     background: rgba(20, 20, 20, 0.9) !important;
     outline: 2px solid rgba(255, 255, 255, 0.75) !important;
     outline-offset: 2px !important;
 }
 
-body.vh360-broadcast-viewer-fullscreen-active .site-header,
-body.vh360-broadcast-viewer-fullscreen-active header,
-body.vh360-broadcast-viewer-fullscreen-active .mobile-navigation,
-body.vh360-broadcast-viewer-fullscreen-active .videohub360-sidebar,
-body.vh360-broadcast-viewer-fullscreen-active .videohub360-chat-wrapper,
-body.vh360-broadcast-viewer-fullscreen-active #vh360-chat-popup,
-body.vh360-broadcast-viewer-fullscreen-active .vh360-chat-popup,
-body.vh360-broadcast-viewer-fullscreen-active .videohub360-dashboard-wrapper,
-body.vh360-broadcast-viewer-fullscreen-active .entry-title,
-body.vh360-broadcast-viewer-fullscreen-active .page-title {
+body.vh360-broadcast-fullscreen-active .site-header,
+body.vh360-broadcast-fullscreen-active header,
+body.vh360-broadcast-fullscreen-active .mobile-navigation,
+body.vh360-broadcast-fullscreen-active .videohub360-sidebar,
+body.vh360-broadcast-fullscreen-active .videohub360-chat-wrapper,
+body.vh360-broadcast-fullscreen-active #vh360-chat-popup,
+body.vh360-broadcast-fullscreen-active .vh360-chat-popup,
+body.vh360-broadcast-fullscreen-active .videohub360-dashboard-wrapper,
+body.vh360-broadcast-fullscreen-active .entry-title,
+body.vh360-broadcast-fullscreen-active .page-title {
     visibility: hidden !important;
     pointer-events: none !important;
 }
 
-body.vh360-broadcast-viewer-fullscreen-active > #vh360-agora-player,
-body.vh360-broadcast-viewer-fullscreen-active #vh360-agora-player,
-body.vh360-broadcast-viewer-fullscreen-active #vh360-ios-immersive-exit-btn {
+body.vh360-broadcast-fullscreen-active > #vh360-agora-player,
+body.vh360-broadcast-fullscreen-active #vh360-agora-player,
+body.vh360-broadcast-fullscreen-active #vh360-ios-immersive-exit-btn {
     visibility: visible !important;
     pointer-events: auto !important;
 }
 
-/* Broadcast viewer fullscreen tile/card reset: the live video should be the fullscreen stage. */
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-local-player,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-tile,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-video,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-player,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-container,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-agora-video-container,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-main,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-remote,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-broadcast-player,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-stream-player,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen [id^="player-"],
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen [id^="player-video-"],
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .agora_video_player,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen [class*="agora_video"] {
+/* Broadcast fullscreen tile/card reset: the live video should be the fullscreen stage. */
+#vh360-agora-player.vh360-broadcast-fullscreen #vh360-agora-local-player,
+#vh360-agora-player.vh360-broadcast-fullscreen #vh360-agora-remote-players,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-participant-tile,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-participant-video,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-video-player,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-video-container,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-agora-video-container,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-video-main,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-video-remote,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-broadcast-player,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-stream-player,
+#vh360-agora-player.vh360-broadcast-fullscreen [id^="player-"],
+#vh360-agora-player.vh360-broadcast-fullscreen [id^="player-video-"],
+#vh360-agora-player.vh360-broadcast-fullscreen .agora_video_player,
+#vh360-agora-player.vh360-broadcast-fullscreen [class*="agora_video"] {
     border: 0 !important;
     border-radius: 0 !important;
     box-shadow: none !important;
@@ -4754,31 +4751,38 @@ body.vh360-broadcast-viewer-fullscreen-active #vh360-ios-immersive-exit-btn {
     transform: none !important;
 }
 
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-local-player,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-tile,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-video,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-player,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-container,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-agora-video-container,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-main,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-remote,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-broadcast-player,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-stream-player,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen [id^="player-"],
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen [id^="player-video-"] {
+#vh360-agora-player.vh360-broadcast-fullscreen #vh360-agora-local-player,
+#vh360-agora-player.vh360-broadcast-fullscreen #vh360-agora-remote-players {
     position: absolute !important;
     inset: 0 !important;
-    top: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    height: 100dvh !important;
-    min-width: 100vw !important;
-    min-height: 100vh !important;
-    min-height: 100dvh !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    max-height: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+    background: transparent !important;
+}
+
+#vh360-agora-player.vh360-broadcast-fullscreen #vh360-agora-local-player.vh360-has-active-agora-video,
+#vh360-agora-player.vh360-broadcast-fullscreen #vh360-agora-remote-players.vh360-has-active-agora-video {
+    z-index: 2147483001 !important;
+}
+
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-has-active-agora-video,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-participant-tile.has-video,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-participant-video.vh360-has-active-agora-video {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
     max-width: none !important;
     max-height: none !important;
     display: flex !important;
@@ -4786,27 +4790,29 @@ body.vh360-broadcast-viewer-fullscreen-active #vh360-ios-immersive-exit-btn {
     justify-content: center !important;
     overflow: hidden !important;
     box-sizing: border-box !important;
-    z-index: 2147483000 !important;
-}
-
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players:has(video),
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players:has(canvas),
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players:has(.agora_video_player),
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players:has(video) > *,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players:has(canvas) > *,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen #vh360-agora-remote-players:has(.agora_video_player) > * {
-    display: flex !important;
+    z-index: 2147483002 !important;
     opacity: 1 !important;
     visibility: visible !important;
 }
 
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-tile.is-active-speaker,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-tile.is-active-speaker:not(.is-featured),
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-tile.is-featured,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-remote.active-speaker,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .active-speaker,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .is-active-speaker,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .is-featured {
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-participant-placeholder,
+#vh360-agora-player.vh360-broadcast-fullscreen .waiting-message,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-waiting-message,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-agora-stage-status,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-agora-status-message {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    z-index: -1 !important;
+}
+
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-participant-tile.is-active-speaker,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-participant-tile.is-active-speaker:not(.is-featured),
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-participant-tile.is-featured,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-video-remote.active-speaker,
+#vh360-agora-player.vh360-broadcast-fullscreen .active-speaker,
+#vh360-agora-player.vh360-broadcast-fullscreen .is-active-speaker,
+#vh360-agora-player.vh360-broadcast-fullscreen .is-featured {
     border: 0 !important;
     border-color: transparent !important;
     box-shadow: none !important;
@@ -4814,21 +4820,21 @@ body.vh360-broadcast-viewer-fullscreen-active #vh360-ios-immersive-exit-btn {
     transform: none !important;
 }
 
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-video > div,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-video video,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-participant-video canvas,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-player video,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-player canvas,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-container video,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-video-container canvas,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-agora-video-container video,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .vh360-agora-video-container canvas,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .agora_video_player,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen .agora_video_player video,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen [class*="agora"] video,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen [class*="agora"] canvas,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen video,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen canvas {
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-participant-video > div,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-participant-video video,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-participant-video canvas,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-video-player video,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-video-player canvas,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-video-container video,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-video-container canvas,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-agora-video-container video,
+#vh360-agora-player.vh360-broadcast-fullscreen .vh360-agora-video-container canvas,
+#vh360-agora-player.vh360-broadcast-fullscreen .agora_video_player,
+#vh360-agora-player.vh360-broadcast-fullscreen .agora_video_player video,
+#vh360-agora-player.vh360-broadcast-fullscreen [class*="agora"] video,
+#vh360-agora-player.vh360-broadcast-fullscreen [class*="agora"] canvas,
+#vh360-agora-player.vh360-broadcast-fullscreen video,
+#vh360-agora-player.vh360-broadcast-fullscreen canvas {
     position: relative !important;
     inset: auto !important;
     width: 100% !important;
@@ -4846,10 +4852,10 @@ body.vh360-broadcast-viewer-fullscreen-active #vh360-ios-immersive-exit-btn {
     outline: 0 !important;
 }
 
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-fit-cover .vh360-participant-video video,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-fit-cover .vh360-video-container video,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-fit-cover .agora_video_player,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-fit-cover video,
-#vh360-agora-player.vh360-broadcast-viewer-fullscreen.vh360-broadcast-fit-cover canvas {
+#vh360-agora-player.vh360-broadcast-fullscreen.vh360-broadcast-fit-cover .vh360-participant-video video,
+#vh360-agora-player.vh360-broadcast-fullscreen.vh360-broadcast-fit-cover .vh360-video-container video,
+#vh360-agora-player.vh360-broadcast-fullscreen.vh360-broadcast-fit-cover .agora_video_player,
+#vh360-agora-player.vh360-broadcast-fullscreen.vh360-broadcast-fit-cover video,
+#vh360-agora-player.vh360-broadcast-fullscreen.vh360-broadcast-fit-cover canvas {
     object-fit: cover !important;
 }

@@ -49,9 +49,15 @@ class ViewLayoutManager {
         this.setupContainers();
     }
     
-    // Utility function to determine if video elements can be moved safely
-    shouldAllowVideoMovement() {
+    // Utility function to determine if speaker switching can run safely during layout transitions.
+    shouldAllowSpeakerSwitch() {
         return !this.isTransitioning;
+    }
+
+    // Backward-compatible alias for older callers. This no longer means live Agora
+    // video DOM nodes may be moved.
+    shouldAllowVideoMovement() {
+        return this.shouldAllowSpeakerSwitch();
     }
     
     // Debug logging utility
