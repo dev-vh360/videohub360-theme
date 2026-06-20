@@ -18,11 +18,17 @@ class ViewLayoutManager {
         this.agoraMode = agoraMode; // 'interactive' or 'broadcast'
         this.isAdmin = isAdmin;
         this.currentView = 'speaker'; // Default view mode
+        this.pinnedParticipantUid = null;
         this.participantCount = 0;
         this.containerElement = null;
         this.remoteContainer = null;
         this.localContainer = null;
         this.viewSelector = null;
+        this.viewDropdownToggle = null;
+        this.viewDropdownMenu = null;
+        this.boundViewDropdownOutsideHandler = null;
+        this.boundViewDropdownKeyHandler = null;
+        this.isViewDropdownOpen = false;
         this.isTransitioning = false; // Guard against race conditions during view transitions
         this.transitionTimeout = null;
         this.fullscreenBtn = null;
@@ -44,7 +50,7 @@ class ViewLayoutManager {
             return;
         }
 
-        // Interactive mode: full Speaker/Gallery functionality.
+        // Interactive mode: Speaker/Gallery dropdown plus Focus state support.
         this.createViewSelector();
         this.setupContainers();
     }
@@ -71,7 +77,7 @@ class ViewLayoutManager {
         try {
             const saved = localStorage.getItem('vh360-layout-view-preference');
             // Keep Phase 2 supported views; migrate only unsupported legacy layouts.
-            if (saved === 'large-gallery' || saved === 'focus') {
+            if (saved === 'large-gallery') {
                 if (window.__VH360_DEBUG) console.log('Migrating unsupported legacy preference to speaker view');
                 this.currentView = 'speaker';
                 this.saveUserPreference(); // Update localStorage with supported preference
@@ -119,80 +125,185 @@ class ViewLayoutManager {
     }
     
     createViewSelector() {
-        // Check if selector already exists
-        if (document.getElementById('vh360-view-selector')) return;
+        // Remove any stale selector so this manager owns the dropdown and its listeners.
+        const existingSelector = document.getElementById('vh360-view-selector');
+        if (existingSelector) {
+            existingSelector.remove();
+        }
+        const existingMenu = document.getElementById('vh360-view-dropdown-menu');
+        if (existingMenu) {
+            existingMenu.remove();
+        }
         
         const controlsContainer = document.getElementById('vh360-agora-controls');
         if (!controlsContainer) return;
         
-        // Check if we're on mobile (768px or less)
-        const isMobile = window.innerWidth <= 768;
-        
-        if (isMobile) {
-            // Create mobile-friendly view buttons instead of dropdown
-            this.createMobileViewButtons(controlsContainer);
-        } else {
-            // Create desktop dropdown
-            this.createDesktopViewSelector(controlsContainer);
-        }
+        this.createViewDropdown(controlsContainer);
         
         // Fullscreen button is now created in PHP template - just bind events
         this.bindFullscreenEvents();
     }
     
     isValidView(viewType) {
-        return viewType === 'speaker' || viewType === 'gallery';
+        return viewType === 'speaker' || viewType === 'gallery' || viewType === 'focus';
     }
 
     getViewLabel(viewType) {
-        return viewType === 'gallery' ? 'Gallery' : 'Speaker';
+        if (viewType === 'gallery') return 'Gallery View';
+        if (viewType === 'focus') return 'Focus View';
+        return 'Speaker View';
     }
 
-    createViewButton(viewType) {
+    getCompactViewLabel() {
+        return 'Views ▾';
+    }
+
+    getSelectableViewTypes() {
+        return ['speaker', 'gallery', 'focus'];
+    }
+
+    createViewOption(viewType) {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'vh360-view-option';
         button.dataset.viewType = viewType;
-        button.textContent = this.getViewLabel(viewType);
-        button.setAttribute('aria-pressed', String(this.currentView === viewType));
-        button.addEventListener('click', () => this.switchView(viewType));
+        button.setAttribute('role', 'menuitemradio');
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (button.disabled || button.getAttribute('aria-disabled') === 'true') {
+                return;
+            }
+            this.closeViewDropdown();
+            this.switchView(viewType);
+        });
         return button;
     }
 
     updateViewSelectorState() {
-        const selector = document.getElementById('vh360-view-selector');
-        if (!selector) return;
-        selector.querySelectorAll('[data-view-type]').forEach((button) => {
-            const isActive = button.dataset.viewType === this.currentView;
+        const selector = this.viewSelector || document.getElementById('vh360-view-selector');
+        const optionRoot = this.viewDropdownMenu || selector;
+        if (!optionRoot) return;
+
+        const hasPinnedParticipant = !!this.pinnedParticipantUid;
+        optionRoot.querySelectorAll('[data-view-type]').forEach((button) => {
+            const viewType = button.dataset.viewType;
+            const isActive = viewType === this.currentView;
+            const isFocusWithoutPin = viewType === 'focus' && !hasPinnedParticipant;
+            const label = this.getViewLabel(viewType);
+
             button.classList.toggle('is-active', isActive);
-            button.setAttribute('aria-pressed', String(isActive));
+            button.classList.toggle('is-disabled', isFocusWithoutPin);
+            button.disabled = isFocusWithoutPin;
+            button.setAttribute('aria-checked', String(isActive));
+            button.setAttribute('aria-current', isActive ? 'true' : 'false');
+            button.setAttribute('aria-disabled', String(isFocusWithoutPin));
+            button.title = isFocusWithoutPin ? 'Select Focus on a participant first' : label;
+            button.textContent = `${isActive ? '✓ ' : ''}${label}`;
         });
+
+        if (this.viewDropdownToggle) {
+            this.viewDropdownToggle.textContent = this.getCompactViewLabel();
+            this.viewDropdownToggle.setAttribute('aria-expanded', String(this.isViewDropdownOpen));
+        }
     }
 
-    createMobileViewButtons(controlsContainer) {
+    createViewDropdown(controlsContainer) {
         const wrapper = document.createElement('div');
         wrapper.id = 'vh360-view-selector';
-        wrapper.className = 'vh360-view-selector vh360-view-selector-mobile';
-        wrapper.setAttribute('role', 'group');
-        wrapper.setAttribute('aria-label', 'Video layout');
-        wrapper.appendChild(this.createViewButton('speaker'));
-        wrapper.appendChild(this.createViewButton('gallery'));
+        wrapper.className = 'vh360-view-selector vh360-view-dropdown';
+
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'vh360-view-dropdown-toggle';
+        toggle.textContent = this.getCompactViewLabel();
+        toggle.setAttribute('aria-haspopup', 'true');
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.setAttribute('aria-controls', 'vh360-view-dropdown-menu');
+        toggle.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            this.setViewDropdownOpen(!this.isViewDropdownOpen);
+        });
+
+        const menu = document.createElement('div');
+        menu.id = 'vh360-view-dropdown-menu';
+        menu.className = 'vh360-view-dropdown-menu';
+        menu.setAttribute('role', 'menu');
+        menu.setAttribute('aria-label', 'Video layout views');
+        menu.hidden = true;
+
+        this.getSelectableViewTypes().forEach((viewType) => {
+            menu.appendChild(this.createViewOption(viewType));
+        });
+
+        wrapper.appendChild(toggle);
+        document.body.appendChild(menu);
         controlsContainer.appendChild(wrapper);
+
         this.viewSelector = wrapper;
+        this.viewDropdownToggle = toggle;
+        this.viewDropdownMenu = menu;
+        this.boundViewDropdownOutsideHandler = (event) => {
+            const clickedSelector = this.viewSelector && this.viewSelector.contains(event.target);
+            const clickedMenu = this.viewDropdownMenu && this.viewDropdownMenu.contains(event.target);
+            if (!clickedSelector && !clickedMenu) {
+                this.closeViewDropdown();
+            }
+        };
+        this.boundViewDropdownKeyHandler = (event) => {
+            if (event.key === 'Escape' && this.isViewDropdownOpen) {
+                this.closeViewDropdown();
+                if (this.viewDropdownToggle) this.viewDropdownToggle.focus();
+            }
+        };
+        document.addEventListener('click', this.boundViewDropdownOutsideHandler);
+        document.addEventListener('keydown', this.boundViewDropdownKeyHandler);
         this.updateViewSelectorState();
     }
-    
-    createDesktopViewSelector(controlsContainer) {
-        const wrapper = document.createElement('div');
-        wrapper.id = 'vh360-view-selector';
-        wrapper.className = 'vh360-view-selector vh360-view-selector-desktop';
-        wrapper.setAttribute('role', 'group');
-        wrapper.setAttribute('aria-label', 'Video layout');
-        wrapper.appendChild(this.createViewButton('speaker'));
-        wrapper.appendChild(this.createViewButton('gallery'));
-        controlsContainer.appendChild(wrapper);
-        this.viewSelector = wrapper;
-        this.updateViewSelectorState();
+
+    setViewDropdownOpen(isOpen) {
+        this.isViewDropdownOpen = !!isOpen;
+        if (this.viewSelector) {
+            this.viewSelector.classList.toggle('is-open', this.isViewDropdownOpen);
+        }
+        if (this.viewDropdownMenu) {
+            this.viewDropdownMenu.hidden = !this.isViewDropdownOpen;
+            if (this.isViewDropdownOpen) {
+                this.positionViewDropdownMenu();
+            }
+        }
+        if (this.viewDropdownToggle) {
+            this.viewDropdownToggle.setAttribute('aria-expanded', String(this.isViewDropdownOpen));
+        }
+    }
+
+    closeViewDropdown() {
+        this.setViewDropdownOpen(false);
+    }
+
+    positionViewDropdownMenu() {
+        if (!this.viewDropdownToggle || !this.viewDropdownMenu) return;
+        const toggleRect = this.viewDropdownToggle.getBoundingClientRect();
+        const menu = this.viewDropdownMenu;
+        const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+        const margin = 8;
+
+        menu.style.visibility = 'hidden';
+        menu.hidden = false;
+        const menuWidth = Math.min(menu.offsetWidth || 172, Math.max(160, viewportWidth - (margin * 2)));
+        const menuHeight = menu.offsetHeight || 140;
+        const left = Math.max(margin, Math.min(toggleRect.right - menuWidth, viewportWidth - menuWidth - margin));
+        const hasRoomAbove = toggleRect.top >= menuHeight + margin;
+        const top = hasRoomAbove
+            ? Math.max(margin, toggleRect.top - menuHeight - margin)
+            : Math.min(viewportHeight - menuHeight - margin, toggleRect.bottom + margin);
+
+        menu.style.width = `${menuWidth}px`;
+        menu.style.left = `${left}px`;
+        menu.style.top = `${Math.max(margin, top)}px`;
+        menu.style.visibility = '';
     }
     
     bindFullscreenEvents() {
@@ -503,6 +614,12 @@ class ViewLayoutManager {
             viewType = 'speaker';
         }
         
+        if (viewType === 'focus' && !this.pinnedParticipantUid) {
+            this.debugLog('Ignoring Focus View selection without a pinned participant');
+            this.updateViewSelectorState();
+            return;
+        }
+
         const oldView = this.currentView;
         
         // Prevent rapid switching during transitions
@@ -531,19 +648,71 @@ class ViewLayoutManager {
         }
         
         // Short timeout to allow CSS transitions to start, then re-enable switching
-        setTimeout(() => {
+        if (this.transitionTimeout) {
+            clearTimeout(this.transitionTimeout);
+            this.transitionTimeout = null;
+        }
+        this.transitionTimeout = setTimeout(() => {
             this.isTransitioning = false;
+            this.transitionTimeout = null;
             this.debugLog(`Completed view transition to ${viewType}`);
         }, 100);
         
         if (window.__VH360_DEBUG) console.log(`Switched from ${oldView} to ${viewType} view`);
     }
     
+
+    pinParticipant(uid) {
+        if (!uid) return;
+        this.pinnedParticipantUid = String(uid);
+        this.debugLog('Focus set', this.pinnedParticipantUid);
+        this.switchView('focus');
+        if (typeof window.vh360RefreshFeaturedParticipantTiles === 'function') {
+            window.vh360RefreshFeaturedParticipantTiles();
+        }
+    }
+
+    unpinParticipant(options = {}) {
+        const oldUid = this.pinnedParticipantUid;
+        this.pinnedParticipantUid = null;
+        this.debugLog(options.reason === 'left' ? 'Pinned participant left; focus cleared' : 'Focus cleared', oldUid);
+        if (this.currentView === 'focus') {
+            this.debugLog('Fallback to speaker');
+            this.switchView('speaker');
+        } else if (typeof window.vh360RefreshFeaturedParticipantTiles === 'function') {
+            window.vh360RefreshFeaturedParticipantTiles();
+        }
+    }
+
+    toggleParticipantFocus(uid) {
+        const key = uid ? String(uid) : '';
+        if (!key) return;
+        if (this.pinnedParticipantUid === key && this.currentView === 'focus') {
+            this.unpinParticipant();
+        } else {
+            this.pinParticipant(key);
+        }
+    }
+
+    getPinnedParticipantUid() {
+        return this.pinnedParticipantUid;
+    }
+
+    handleParticipantLeft(uid) {
+        if (uid && this.pinnedParticipantUid === String(uid)) {
+            this.unpinParticipant({ reason: 'left' });
+        }
+    }
+
     updateLayout(participants) {
         if (!participants || typeof participants !== 'object') {
             participants = {};
         }
         this.participantCount = Object.keys(participants).length;
+        if (this.participantCount < 1 && this.currentView === 'focus') {
+            this.unpinParticipant();
+            return;
+        }
         this.applyLayout();
     }
     
@@ -569,6 +738,7 @@ class ViewLayoutManager {
         this.containerElement.classList.remove(
             'vh360-speaker-view', 
             'vh360-gallery-view', 
+            'vh360-focus-view',
             'vh360-large-gallery-view'
         );
         
@@ -579,6 +749,17 @@ class ViewLayoutManager {
         if (this.currentView === 'gallery') {
             this.containerElement.classList.add('vh360-gallery-view');
             this.applyGalleryView();
+        } else if (this.currentView === 'focus') {
+            if (!this.pinnedParticipantUid) {
+                this.debugLog('Focus view requested without pinned participant; falling back to speaker');
+                this.currentView = 'speaker';
+                this.saveUserPreference();
+                this.containerElement.classList.add('vh360-speaker-view');
+                this.applySpeakerView();
+            } else {
+                this.containerElement.classList.add('vh360-speaker-view', 'vh360-focus-view');
+                this.applySpeakerView();
+            }
         } else {
             this.containerElement.classList.add('vh360-speaker-view');
             this.applySpeakerView();
@@ -653,11 +834,35 @@ class ViewLayoutManager {
 
     // Cleanup method to be called when layout manager is destroyed
     destroy() {
-        // Clear any pending timeouts
+        // Clear any pending transition timeout/state owned by this manager.
         if (this.transitionTimeout) {
             clearTimeout(this.transitionTimeout);
             this.transitionTimeout = null;
         }
+        this.isTransitioning = false;
+
+        // Remove dropdown document listeners to avoid duplicate handlers after reinitialization.
+        if (this.boundViewDropdownOutsideHandler) {
+            document.removeEventListener('click', this.boundViewDropdownOutsideHandler);
+            this.boundViewDropdownOutsideHandler = null;
+        }
+        if (this.boundViewDropdownKeyHandler) {
+            document.removeEventListener('keydown', this.boundViewDropdownKeyHandler);
+            this.boundViewDropdownKeyHandler = null;
+        }
+
+        // Remove generated selector DOM and clear stale references.
+        const selector = this.viewSelector || document.getElementById('vh360-view-selector');
+        if (selector && selector.parentElement) {
+            selector.remove();
+        }
+        if (this.viewDropdownMenu && this.viewDropdownMenu.parentElement) {
+            this.viewDropdownMenu.remove();
+        }
+        this.viewSelector = null;
+        this.viewDropdownToggle = null;
+        this.viewDropdownMenu = null;
+        this.isViewDropdownOpen = false;
         
         // Note: Fullscreen event listeners are now global and managed centrally
         // They should not be removed when ViewLayoutManager is destroyed
@@ -669,6 +874,7 @@ class ViewLayoutManager {
                 'vh360-speaker-view', 
                 'vh360-gallery-view', 
                 'vh360-large-gallery-view',
+                'vh360-focus-view',
                 'vh360-multi-view-container'
             );
         }
