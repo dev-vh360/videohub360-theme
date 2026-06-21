@@ -222,14 +222,6 @@
 
   function initRefreshControls() {
     if (!isStandalone()) return;
-    if (CFG.showRefreshButton) {
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'vh360-pwa-refresh-button';
-      btn.textContent = CFG.refreshLabel || 'Refresh';
-      btn.addEventListener('click', function () { window.location.reload(); });
-      document.body.appendChild(btn);
-    }
     if (!CFG.enablePullToRefresh) return;
     var indicator = document.createElement('div');
     indicator.className = 'vh360-pwa-ptr';

@@ -58,8 +58,6 @@ function vh360_pwa_get_options() : array {
 		'show_ios_onboarding'  => 1,
 
 		'enable_pull_to_refresh' => 1,
-		'show_refresh_button'  => 1,
-		'refresh_label'        => 'Refresh',
 		'splash_enabled'       => 1,
 		'splash_background_color' => '#0f172a',
 		'splash_logo'          => '',
@@ -80,6 +78,8 @@ function vh360_pwa_get_options() : array {
 		$opts = array();
 	}
 	$opts = wp_parse_args( $opts, $defaults );
+	// Remove legacy floating refresh button options; pull-to-refresh is the only app refresh UI.
+	unset( $opts['show_refresh_button'], $opts['refresh_label'] );
 
 	// Sanity: start_url/scope must be same-origin.
 	$home = home_url( '/' );

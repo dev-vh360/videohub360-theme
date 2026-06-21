@@ -105,8 +105,6 @@ class VH360_PWA_Frontend {
 				'skipSWRegister'     => $this->should_skip_sw_registration() ? 1 : 0,
 				'appShortName'       => ! empty( $opts['short_name'] ) ? (string) $opts['short_name'] : get_bloginfo( 'name' ),
 				'enablePullToRefresh' => ! empty( $opts['enable_pull_to_refresh'] ) ? 1 : 0,
-				'showRefreshButton' => ! empty( $opts['show_refresh_button'] ) ? 1 : 0,
-				'refreshLabel' => (string) $opts['refresh_label'],
 			)
 		);
 

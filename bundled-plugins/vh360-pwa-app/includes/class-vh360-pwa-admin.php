@@ -87,10 +87,9 @@ $out['app_name'] = sanitize_text_field( $input['app_name'] ?? $current['app_name
 
 		$out['theme_color'] = sanitize_hex_color( $input['theme_color'] ?? $current['theme_color'] ) ?: $current['theme_color'];
 		$out['background_color'] = sanitize_hex_color( $input['background_color'] ?? $current['background_color'] ) ?: $current['background_color'];
-		$out['enable_pull_to_refresh'] = vh360_pwa_boolval( $input['enable_pull_to_refresh'] ?? $current['enable_pull_to_refresh'] );
-		$out['show_refresh_button'] = vh360_pwa_boolval( $input['show_refresh_button'] ?? $current['show_refresh_button'] );
-		$out['refresh_label'] = sanitize_text_field( $input['refresh_label'] ?? $current['refresh_label'] );
-		$out['splash_enabled'] = vh360_pwa_boolval( $input['splash_enabled'] ?? $current['splash_enabled'] );
+		$out['enable_pull_to_refresh'] = vh360_pwa_boolval( $input['enable_pull_to_refresh'] ?? 0 );
+		unset( $out['show_refresh_button'], $out['refresh_label'] );
+		$out['splash_enabled'] = vh360_pwa_boolval( $input['splash_enabled'] ?? 0 );
 		$out['splash_background_color'] = sanitize_hex_color( $input['splash_background_color'] ?? $current['splash_background_color'] ) ?: $out['background_color'];
 		$out['splash_logo'] = ! empty( $input['splash_logo'] ) ? esc_url_raw( (string) $input['splash_logo'] ) : '';
 		$out['splash_title'] = sanitize_text_field( $input['splash_title'] ?? $current['splash_title'] );
@@ -503,9 +502,7 @@ $manifest_url = esc_url( vh360_pwa_endpoint_url( VH360_PWA_MANIFEST_SLUG ) );
 		echo '</td></tr>';
 
 		echo '<tr><th scope="row">' . esc_html__( 'App Experience', 'vh360-pwa-app' ) . '</th><td>';
-		echo '<label><input type="checkbox" name="vh360_pwa_options[enable_pull_to_refresh]" value="1" ' . checked( ! empty( $opts['enable_pull_to_refresh'] ), true, false ) . '> ' . esc_html__( 'Enable pull-to-refresh in standalone app mode', 'vh360-pwa-app' ) . '</label><br>';
-		echo '<label><input type="checkbox" name="vh360_pwa_options[show_refresh_button]" value="1" ' . checked( ! empty( $opts['show_refresh_button'] ), true, false ) . '> ' . esc_html__( 'Show floating refresh button in standalone app mode', 'vh360-pwa-app' ) . '</label><br>';
-		echo '<input type="text" class="regular-text" name="vh360_pwa_options[refresh_label]" value="' . esc_attr( (string) $opts['refresh_label'] ) . '" placeholder="Refresh">';
+		echo '<label><input type="checkbox" name="vh360_pwa_options[enable_pull_to_refresh]" value="1" ' . checked( ! empty( $opts['enable_pull_to_refresh'] ), true, false ) . '> ' . esc_html__( 'Enable pull-to-refresh in standalone app mode', 'vh360-pwa-app' ) . '</label>';
 		echo '</td></tr>';
 
 		echo '<tr><th scope="row">' . esc_html__( 'Launch Experience', 'vh360-pwa-app' ) . '</th><td>';
