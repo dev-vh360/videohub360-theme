@@ -1237,6 +1237,20 @@ body.vh360-ios-immersive-active #vh360-view-dropdown-menu {
 }
 
 
+@media (max-width: 932px) and (orientation: landscape) {
+    #vh360-agora-player:fullscreen .vh360-view-dropdown-menu,
+    #vh360-agora-player:-webkit-full-screen .vh360-view-dropdown-menu,
+    #vh360-agora-player:-moz-full-screen .vh360-view-dropdown-menu,
+    #vh360-agora-player:-ms-fullscreen .vh360-view-dropdown-menu,
+    #vh360-agora-player.vh360-ios-immersive-fullscreen .vh360-view-dropdown-menu,
+    body.vh360-ios-immersive-active #vh360-view-dropdown-menu {
+        z-index: 2147483647 !important;
+        max-height: calc(100vh - 72px);
+        overflow-y: auto;
+    }
+}
+
+
 .vh360-view-dropdown-menu[hidden] {
     display: none;
 }

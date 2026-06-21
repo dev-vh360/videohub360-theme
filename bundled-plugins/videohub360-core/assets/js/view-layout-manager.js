@@ -29,6 +29,8 @@ class ViewLayoutManager {
         this.boundViewDropdownOutsideHandler = null;
         this.boundViewDropdownKeyHandler = null;
         this.boundViewDropdownFullscreenHandler = null;
+        this.boundViewDropdownViewportChangeHandler = null;
+        this.viewDropdownViewportChangeTimer = null;
         this.boundFullscreenKeyHandler = null;
         this.isViewDropdownOpen = false;
         this.isTransitioning = false; // Guard against race conditions during view transitions
@@ -246,6 +248,52 @@ class ViewLayoutManager {
         this.syncViewDropdownPortal();
     }
 
+
+    handleViewDropdownViewportChange(event) {
+        if (this.viewDropdownViewportChangeTimer) {
+            clearTimeout(this.viewDropdownViewportChangeTimer);
+        }
+
+        if (event && event.type === 'orientationchange' && this.isViewDropdownOpen) {
+            this.setViewDropdownOpen(false);
+        }
+
+        this.viewDropdownViewportChangeTimer = setTimeout(() => {
+            this.viewDropdownViewportChangeTimer = null;
+            this.syncViewDropdownPortal();
+
+            if (this.isViewDropdownOpen) {
+                this.positionViewDropdownMenu();
+                setTimeout(() => {
+                    if (this.isViewDropdownOpen) {
+                        this.syncViewDropdownPortal();
+                        this.positionViewDropdownMenu();
+                    }
+                }, 100);
+            }
+        }, 150);
+    }
+
+    addViewDropdownViewportListeners() {
+        if (this.boundViewDropdownViewportChangeHandler) return;
+        this.boundViewDropdownViewportChangeHandler = this.handleViewDropdownViewportChange.bind(this);
+        window.addEventListener('resize', this.boundViewDropdownViewportChangeHandler);
+        window.addEventListener('orientationchange', this.boundViewDropdownViewportChangeHandler);
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', this.boundViewDropdownViewportChangeHandler);
+        }
+    }
+
+    removeViewDropdownViewportListeners() {
+        if (!this.boundViewDropdownViewportChangeHandler) return;
+        window.removeEventListener('resize', this.boundViewDropdownViewportChangeHandler);
+        window.removeEventListener('orientationchange', this.boundViewDropdownViewportChangeHandler);
+        if (window.visualViewport) {
+            window.visualViewport.removeEventListener('resize', this.boundViewDropdownViewportChangeHandler);
+        }
+        this.boundViewDropdownViewportChangeHandler = null;
+    }
+
     addViewDropdownFullscreenListeners() {
         if (this.boundViewDropdownFullscreenHandler) return;
         this.boundViewDropdownFullscreenHandler = this.handleViewDropdownFullscreenChange.bind(this);
@@ -321,6 +369,7 @@ class ViewLayoutManager {
         document.addEventListener('click', this.boundViewDropdownOutsideHandler);
         document.addEventListener('keydown', this.boundViewDropdownKeyHandler);
         this.addViewDropdownFullscreenListeners();
+        this.addViewDropdownViewportListeners();
         this.updateViewSelectorState();
     }
 
@@ -334,6 +383,12 @@ class ViewLayoutManager {
             this.viewDropdownMenu.hidden = !this.isViewDropdownOpen;
             if (this.isViewDropdownOpen) {
                 this.positionViewDropdownMenu();
+                setTimeout(() => {
+                    if (this.isViewDropdownOpen) {
+                        this.syncViewDropdownPortal();
+                        this.positionViewDropdownMenu();
+                    }
+                }, 100);
             }
         }
         if (this.viewDropdownToggle) {
@@ -350,8 +405,11 @@ class ViewLayoutManager {
         this.syncViewDropdownPortal();
         const toggleRect = this.viewDropdownToggle.getBoundingClientRect();
         const menu = this.viewDropdownMenu;
-        const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
-        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+        const viewport = window.visualViewport || null;
+        const viewportWidth = viewport ? viewport.width : (window.innerWidth || document.documentElement.clientWidth || 0);
+        const viewportHeight = viewport ? viewport.height : (window.innerHeight || document.documentElement.clientHeight || 0);
+        const viewportOffsetLeft = viewport ? viewport.offsetLeft : 0;
+        const viewportOffsetTop = viewport ? viewport.offsetTop : 0;
         const margin = 8;
 
         menu.style.visibility = 'hidden';
@@ -362,10 +420,14 @@ class ViewLayoutManager {
         const maxMenuHeight = Math.max(120, viewportHeight - (isMobileViewport && isFullscreenContext ? 96 : margin * 2));
         const menuWidth = Math.min(menu.offsetWidth || 172, maxMenuWidth);
         const menuHeight = Math.min(menu.offsetHeight || 140, maxMenuHeight);
-        const left = Math.max(margin, Math.min(toggleRect.right - menuWidth, viewportWidth - menuWidth - margin));
+        const minLeft = viewportOffsetLeft + margin;
+        const maxLeft = viewportOffsetLeft + viewportWidth - menuWidth - margin;
+        const minTop = viewportOffsetTop + margin;
+        const maxTop = viewportOffsetTop + viewportHeight - menuHeight - margin;
+        const left = Math.max(minLeft, Math.min(toggleRect.right - menuWidth, maxLeft));
         const hasRoomAbove = toggleRect.top >= menuHeight + margin;
         const unclampedTop = hasRoomAbove ? toggleRect.top - menuHeight - margin : toggleRect.bottom + margin;
-        const top = Math.max(margin, Math.min(unclampedTop, viewportHeight - menuHeight - margin));
+        const top = Math.max(minTop, Math.min(unclampedTop, maxTop));
 
         menu.style.width = `${menuWidth}px`;
         menu.style.maxWidth = `${maxMenuWidth}px`;
@@ -907,6 +969,11 @@ class ViewLayoutManager {
             this.boundFullscreenKeyHandler = null;
         }
         this.removeViewDropdownFullscreenListeners();
+        this.removeViewDropdownViewportListeners();
+        if (this.viewDropdownViewportChangeTimer) {
+            clearTimeout(this.viewDropdownViewportChangeTimer);
+            this.viewDropdownViewportChangeTimer = null;
+        }
 
         // Remove generated selector DOM and clear stale references.
         const selector = this.viewSelector || document.getElementById('vh360-view-selector');
