@@ -229,17 +229,52 @@ class ViewLayoutManager {
     getViewDropdownPortalParent() {
         const agoraPlayer = document.getElementById('vh360-agora-player');
         const fullscreenElement = this.getActiveFullscreenElement();
-        if (agoraPlayer && (fullscreenElement === agoraPlayer || agoraPlayer.classList.contains('vh360-ios-immersive-fullscreen'))) {
+
+        if (fullscreenElement) {
+            if (
+                fullscreenElement === agoraPlayer ||
+                (agoraPlayer && fullscreenElement.contains(agoraPlayer)) ||
+                (this.viewSelector && fullscreenElement.contains(this.viewSelector)) ||
+                fullscreenElement.classList.contains('vh360-ios-immersive-fullscreen')
+            ) {
+                return fullscreenElement;
+            }
+        }
+
+        if (agoraPlayer && agoraPlayer.classList.contains('vh360-ios-immersive-fullscreen')) {
             return agoraPlayer;
         }
+
         return document.body;
+    }
+
+    describeDropdownPortalElement(element) {
+        if (!element) return '(none)';
+        const id = element.id ? `#${element.id}` : '';
+        const classes = element.className && typeof element.className === 'string'
+            ? `.${element.className.trim().replace(/\s+/g, '.')}`
+            : '';
+        return `${element.tagName || 'element'}${id}${classes}`;
     }
 
     syncViewDropdownPortal() {
         if (!this.viewDropdownMenu) return;
+        const fullscreenElement = this.getActiveFullscreenElement();
         const parent = this.getViewDropdownPortalParent();
-        if (parent && this.viewDropdownMenu.parentElement !== parent) {
+        const currentParent = this.viewDropdownMenu.parentElement;
+        const shouldMove = !!(parent && currentParent !== parent);
+
+        if (shouldMove) {
             parent.appendChild(this.viewDropdownMenu);
+        }
+
+        if (window.__VH360_DEBUG) {
+            console.log('[VH360 Layout Manager] View dropdown portal sync', {
+                fullscreenElement: this.describeDropdownPortalElement(fullscreenElement),
+                selectedParent: this.describeDropdownPortalElement(parent),
+                previousParent: this.describeDropdownPortalElement(currentParent),
+                moved: shouldMove
+            });
         }
     }
 

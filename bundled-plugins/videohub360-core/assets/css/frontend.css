@@ -4464,11 +4464,26 @@ body.vh360-ios-immersive-active
 /* Compact control buttons in landscape */
 body.vh360-ios-immersive-active
 #vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-fullscreen)
-#vh360-agora-controls.vh360-mobile-controls-simple button {
+#vh360-agora-controls.vh360-mobile-controls-simple button:not(.vh360-agora-views-btn):not(.vh360-view-dropdown-toggle) {
     min-width: 38px !important;
     width: 38px !important;
     height: 38px !important;
     flex: 0 0 38px !important;
+}
+
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-fullscreen)
+#vh360-agora-controls.vh360-mobile-controls-simple .vh360-agora-views-btn,
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-fullscreen)
+#vh360-agora-controls.vh360-mobile-controls-simple .vh360-view-dropdown-toggle {
+    width: auto !important;
+    min-width: auto !important;
+    max-width: none !important;
+    flex: 0 0 auto !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    white-space: nowrap !important;
 }
 
 /* Remove portrait bottom-padding in landscape (controls are floating, no reserved space needed) */

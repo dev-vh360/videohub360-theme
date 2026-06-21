@@ -1213,6 +1213,14 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
 
 
 /* Keep the portaled View dropdown above browser and iOS immersive fullscreen layers. */
+:fullscreen .vh360-view-dropdown-menu,
+:-webkit-full-screen .vh360-view-dropdown-menu,
+:-moz-full-screen .vh360-view-dropdown-menu,
+:-ms-fullscreen .vh360-view-dropdown-menu,
+.vh360-agora-interactive-container:fullscreen .vh360-view-dropdown-menu,
+.vh360-agora-interactive-container:-webkit-full-screen .vh360-view-dropdown-menu,
+.vh360-multi-view-container:fullscreen .vh360-view-dropdown-menu,
+.vh360-multi-view-container:-webkit-full-screen .vh360-view-dropdown-menu,
 #vh360-agora-player:fullscreen .vh360-view-dropdown-menu,
 #vh360-agora-player:-webkit-full-screen .vh360-view-dropdown-menu,
 #vh360-agora-player:-moz-full-screen .vh360-view-dropdown-menu,
@@ -1238,6 +1246,14 @@ body.vh360-ios-immersive-active #vh360-view-dropdown-menu {
 
 
 @media (max-width: 932px) and (orientation: landscape) {
+    :fullscreen .vh360-view-dropdown-menu,
+    :-webkit-full-screen .vh360-view-dropdown-menu,
+    :-moz-full-screen .vh360-view-dropdown-menu,
+    :-ms-fullscreen .vh360-view-dropdown-menu,
+    .vh360-agora-interactive-container:fullscreen .vh360-view-dropdown-menu,
+    .vh360-agora-interactive-container:-webkit-full-screen .vh360-view-dropdown-menu,
+    .vh360-multi-view-container:fullscreen .vh360-view-dropdown-menu,
+    .vh360-multi-view-container:-webkit-full-screen .vh360-view-dropdown-menu,
     #vh360-agora-player:fullscreen .vh360-view-dropdown-menu,
     #vh360-agora-player:-webkit-full-screen .vh360-view-dropdown-menu,
     #vh360-agora-player:-moz-full-screen .vh360-view-dropdown-menu,
@@ -1245,6 +1261,7 @@ body.vh360-ios-immersive-active #vh360-view-dropdown-menu {
     #vh360-agora-player.vh360-ios-immersive-fullscreen .vh360-view-dropdown-menu,
     body.vh360-ios-immersive-active #vh360-view-dropdown-menu {
         z-index: 2147483647 !important;
+        max-width: calc(100vw - 16px);
         max-height: calc(100vh - 72px);
         overflow-y: auto;
     }
