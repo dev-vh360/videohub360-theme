@@ -36,7 +36,7 @@ function vh360_pwa_get_options() : array {
 		'short_name'           => get_bloginfo( 'name' ),
 		'description'          => get_bloginfo( 'description' ),
 		'theme_color'          => '#2563eb',
-		'background_color'     => '#ffffff',
+		'background_color'     => '#0f172a',
 		'display'              => 'standalone',
 		// Prefer portrait-primary to avoid upside-down rotation where supported.
 		'orientation'          => 'portrait-primary',
@@ -56,6 +56,14 @@ function vh360_pwa_get_options() : array {
 		'install_banner_text'  => 'Install the VH360 App',
 		'install_banner_dismiss_days' => 7,
 		'show_ios_onboarding'  => 1,
+
+		'enable_pull_to_refresh' => 1,
+		'show_refresh_button'  => 1,
+		'refresh_label'        => 'Refresh',
+		'splash_enabled'       => 1,
+		'splash_background_color' => '#0f172a',
+		'splash_logo'          => '',
+		'splash_title'         => get_bloginfo( 'name' ),
 
 		'icon_192'             => '',
 		'icon_512'             => '',
@@ -144,6 +152,97 @@ function vh360_pwa_get_precache_urls( array $opts ) : array {
 }
 
 
+
+/**
+ * Build the canonical manifest shared by dynamic endpoint and root file.
+ */
+function vh360_pwa_build_manifest( ?array $opts = null ) : array {
+	$opts = is_array( $opts ) ? $opts : vh360_pwa_get_options();
+	$background = ! empty( $opts['splash_enabled'] ) && ! empty( $opts['splash_background_color'] ) ? (string) $opts['splash_background_color'] : (string) $opts['background_color'];
+	$scope = esc_url_raw( (string) $opts['scope'] );
+	return array(
+		'name'             => (string) $opts['app_name'],
+		'short_name'       => (string) $opts['short_name'],
+		'description'      => (string) $opts['description'],
+		'start_url'        => esc_url_raw( (string) $opts['start_url'] ),
+		'scope'            => $scope,
+		'id'               => $scope ?: '/',
+		'display'          => (string) $opts['display'],
+		'orientation'      => (string) $opts['orientation'],
+		'theme_color'      => (string) $opts['theme_color'],
+		'background_color' => $background,
+		'lang'             => (string) $opts['lang'],
+		'icons'            => function_exists( 'vh360_pwa_get_manifest_icons' ) ? vh360_pwa_get_manifest_icons() : array(),
+	);
+}
+
+/**
+ * Build the canonical service worker payload and script.
+ */
+function vh360_pwa_build_sw_script( ?array $opts = null ) : string {
+	$opts = is_array( $opts ) ? $opts : vh360_pwa_get_options();
+	$cache_version = preg_replace( '/[^a-zA-Z0-9._-]/', '', (string) $opts['cache_version'] );
+	if ( '' === $cache_version ) {
+		$cache_version = 'v1';
+	}
+	$strategy = (string) $opts['cache_strategy'];
+	if ( ! in_array( $strategy, array( 'safe', 'balanced', 'aggressive' ), true ) ) {
+		$strategy = 'safe';
+	}
+	$onesignal = array();
+	$push_settings = get_option( 'vh360_pwa_push_settings', array() );
+	if ( is_array( $push_settings ) ) {
+		$active_provider = (string) ( $push_settings['active_provider'] ?? 'onesignal' );
+		$providers = $push_settings['providers'] ?? array();
+		if ( isset( $providers[ $active_provider ] ) && is_array( $providers[ $active_provider ] ) && ! empty( $providers[ $active_provider ]['app_id'] ) ) {
+			$sdk_version = defined( 'VH360_PWA_ONESIGNAL_SDK_VERSION' ) ? VH360_PWA_ONESIGNAL_SDK_VERSION : 'v16';
+			$onesignal = array( 'importUrl' => 'https://cdn.onesignal.com/sdks/web/' . $sdk_version . '/OneSignalSDK.sw.js' );
+		}
+	}
+	$payload = array(
+		'cacheVersion' => $cache_version,
+		'strategy'     => $strategy,
+		'precache'     => vh360_pwa_get_precache_urls( $opts ),
+		'offlineUrl'   => vh360_pwa_endpoint_url( VH360_PWA_OFFLINE_SLUG ),
+		'homeOrigin'   => home_url(),
+		'onesignal'    => $onesignal,
+	);
+	$template = file_exists( VH360_PWA_APP_DIR . 'templates/sw-template.js' ) ? file_get_contents( VH360_PWA_APP_DIR . 'templates/sw-template.js' ) : '';
+	return "/* VH360 Managed File: vh360-sw.js */\n// VH360 Service Worker\nconst VH360_PWA = " . wp_json_encode( $payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . ";\n" . $template;
+}
+
+function vh360_pwa_get_ios_startup_images() : array {
+	$opts = vh360_pwa_get_options();
+	if ( empty( $opts['splash_enabled'] ) ) { return array(); }
+	$generated = get_option( 'vh360_pwa_ios_startup_images', array() );
+	return is_array( $generated ) ? $generated : array();
+}
+
+function vh360_pwa_generate_ios_startup_images() : array {
+	$opts = vh360_pwa_get_options();
+	if ( empty( $opts['splash_enabled'] ) || empty( $opts['splash_logo'] ) ) { return array(); }
+	$sizes = array( 'iphone-portrait' => array(750,1334,'(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)'), 'iphone-x-portrait' => array(1125,2436,'(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)'), 'ipad-portrait' => array(1536,2048,'(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)') );
+	$uploads = wp_upload_dir();
+	$dir = trailingslashit( $uploads['basedir'] ) . 'vh360-pwa/splash';
+	$url = trailingslashit( $uploads['baseurl'] ) . 'vh360-pwa/splash';
+	wp_mkdir_p( $dir );
+	$logo_path = vh360_pwa_url_to_upload_path( $opts['splash_logo'] );
+	if ( '' === $logo_path || ! file_exists( $logo_path ) || ! function_exists( 'imagecreatetruecolor' ) ) { return array(); }
+	$logo_data = @file_get_contents( $logo_path );
+	$logo_src = $logo_data ? @imagecreatefromstring( $logo_data ) : false;
+	if ( ! $logo_src ) { return array(); }
+	$bg = sanitize_hex_color( $opts['splash_background_color'] ?? $opts['background_color'] ) ?: '#0f172a';
+	$r=hexdec(substr($bg,1,2)); $g=hexdec(substr($bg,3,2)); $b=hexdec(substr($bg,5,2));
+	$out = array();
+	foreach ( $sizes as $key => $data ) {
+		list($w,$h,$media) = $data; $img = imagecreatetruecolor($w,$h); $c=imagecolorallocate($img,$r,$g,$b); imagefill($img,0,0,$c);
+		$lw=imagesx($logo_src); $lh=imagesy($logo_src); $target=(int)min($w*.32,$h*.18); $scale=$target/max($lw,$lh); $nw=(int)($lw*$scale); $nh=(int)($lh*$scale);
+		imagecopyresampled($img,$logo_src,(int)(($w-$nw)/2),(int)(($h-$nh)/2),0,0,$nw,$nh,$lw,$lh);
+		$file='vh360-startup-' . $key . '-' . md5($bg . $opts['splash_logo']) . '.png'; imagepng($img, trailingslashit($dir).$file); imagedestroy($img);
+		$out[] = array('href'=>trailingslashit($url).$file,'media'=>$media);
+	}
+	imagedestroy($logo_src); update_option('vh360_pwa_ios_startup_images',$out); return $out;
+}
 
 /**
  * Validate and normalize a manifest icon entry.

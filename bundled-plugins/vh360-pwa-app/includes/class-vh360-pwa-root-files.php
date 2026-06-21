@@ -54,95 +54,26 @@ final class VH360_PWA_Root_Files {
 
 	private static function maybe_write_manifest( string $root ) : void {
 		$path = $root . 'vh360-manifest.json';
-		
-		// Get PWA options to use dynamic app name values
-		$opts = function_exists( 'vh360_pwa_get_options' ) ? vh360_pwa_get_options() : array();
-		
-		// Use PWA app_name if set, fallback to site name
-		$app_name = ! empty( $opts['app_name'] ) && is_string( $opts['app_name'] ) ? $opts['app_name'] : get_bloginfo( 'name' );
-		
-		// Use PWA short_name if set, fallback to app_name or site name
-		$short_name = ! empty( $opts['short_name'] ) && is_string( $opts['short_name'] ) ? $opts['short_name'] : $app_name;
-		
-		// Ensure name and short_name are never empty
-		if ( empty( $app_name ) || ! is_string( $app_name ) ) {
-			$app_name = 'VideoHub360';
-		}
-		if ( empty( $short_name ) || ! is_string( $short_name ) ) {
-			$short_name = 'VH360';
-		}
-
-		$manifest = array(
-			'name'             => $app_name,
-			'short_name'       => $short_name,
-			'start_url'        => isset( $opts['start_url'] ) ? (string) $opts['start_url'] : '/',
-			'scope'            => isset( $opts['scope'] ) ? (string) $opts['scope'] : '/',
-			'display'          => isset( $opts['display'] ) ? (string) $opts['display'] : 'standalone',
-			'background_color' => isset( $opts['background_color'] ) ? (string) $opts['background_color'] : '#000000',
-			'theme_color'      => isset( $opts['theme_color'] ) ? (string) $opts['theme_color'] : '#000000',
-			'icons'            => function_exists( 'vh360_pwa_get_manifest_icons' ) ? vh360_pwa_get_manifest_icons() : array(),
-			'generated_by'     => 'VH360 PWA & App plugin',
-			'generated_at'     => gmdate( 'c' ),
-		);
-
-		$written = self::write_file( $path, wp_json_encode( $manifest, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT ) . "\n" );
-		update_option( 'vh360_pwa_root_manifest_write_status', array(
-			'success'      => $written,
-			'path'         => $path,
-			'generated_at' => time(),
-		) );
+		$manifest = vh360_pwa_build_manifest();
+		$manifest['generated_by'] = 'VH360 PWA & App plugin';
+		$manifest['generated_at'] = gmdate( 'c' );
+		$written = self::write_managed_file( $path, wp_json_encode( $manifest, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT ) . "\n", 'vh360-manifest.json' );
+		update_option( 'vh360_pwa_root_manifest_write_status', array( 'success' => $written, 'path' => $path, 'generated_at' => time() ) );
 	}
 
 	private static function maybe_write_offline_page( string $root ) : void {
 		$path = $root . 'vh360-offline.html';
-		if ( file_exists( $path ) ) {
-			return;
-		}
-
-		$html = "<!doctype html>\n" .
-			"<html lang=\"en\">\n" .
-			"<head>\n" .
-			"  <meta charset=\"utf-8\">\n" .
-			"  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n" .
-			"  <title>Offline</title>\n" .
-			"  <style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;padding:40px;background:#0b0b0b;color:#fff}a{color:#8ab4f8}</style>\n" .
-			"</head>\n" .
-			"<body>\n" .
-			"  <h1>You’re offline</h1>\n" .
-			"  <p>Please check your connection and try again.</p>\n" .
-			"</body>\n" .
-			"</html>\n";
-
-		self::write_file( $path, $html );
+		$opts = vh360_pwa_get_options();
+		$app = esc_html( (string) $opts['app_name'] );
+		$bg = esc_attr( (string) ( $opts['splash_background_color'] ?: $opts['background_color'] ) );
+		$theme = esc_attr( (string) $opts['theme_color'] );
+		$html = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Offline</title><style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;min-height:100vh;display:grid;place-items:center;padding:40px;background:' . $bg . ';color:#fff}main{max-width:520px;text-align:center}a{color:' . $theme . '}</style></head><body><!-- VH360 Managed File: vh360-offline.html --><main><h1>' . $app . ' is offline</h1><p>Please check your connection and try again.</p><p><a href="/">Return home</a></p></main></body></html>' . "\n";
+		self::write_managed_file( $path, $html, 'vh360-offline.html' );
 	}
 
 	private static function maybe_write_vh360_sw( string $root ) : void {
 		$path = $root . 'vh360-sw.js';
-		if ( file_exists( $path ) ) {
-			return;
-		}
-
-		// Minimal, safe SW that provides an offline fallback without aggressive caching.
-		// This avoids introducing unexpected behavior while still enabling PWA install support.
-		$js = "/* VH360 Managed File: vh360-sw.js */\n" .
-			"self.addEventListener('install', function (event) {\n" .
-			"  self.skipWaiting();\n" .
-			"});\n" .
-			"self.addEventListener('activate', function (event) {\n" .
-			"  event.waitUntil(self.clients.claim());\n" .
-			"});\n" .
-			"self.addEventListener('fetch', function (event) {\n" .
-			"  // Only provide an offline fallback for navigations.\n" .
-			"  if (event.request && event.request.mode === 'navigate') {\n" .
-			"    event.respondWith(\n" .
-			"      fetch(event.request).catch(function () {\n" .
-			"        return fetch('/vh360-offline.html', { cache: 'no-store' });\n" .
-			"      })\n" .
-			"    );\n" .
-			"  }\n" .
-			"});\n";
-
-		self::write_file( $path, $js );
+		self::write_managed_file( $path, vh360_pwa_build_sw_script(), 'vh360-sw.js' );
 	}
 
 	private static function maybe_write_onesignal_workers( string $root ) : void {
@@ -178,6 +109,19 @@ final class VH360_PWA_Root_Files {
 				self::write_file( $path, $wrapper );
 			}
 		}
+	}
+
+	private static function write_managed_file( string $path, string $contents, string $marker ) : bool {
+		if ( file_exists( $path ) ) {
+			$existing = @file_get_contents( $path );
+			if ( ! is_string( $existing ) || false === strpos( $existing, 'VH360 Managed File' ) && false === strpos( $existing, 'VH360 PWA & App plugin' ) ) {
+				return false;
+			}
+		}
+		if ( 'vh360-manifest.json' !== $marker && false === strpos( $contents, 'VH360 Managed File' ) ) {
+			$contents = '/* VH360 Managed File: ' . $marker . ' */' . "\n" . $contents;
+		}
+		return self::write_file( $path, $contents );
 	}
 
 	private static function write_file( string $path, string $contents ) : bool {

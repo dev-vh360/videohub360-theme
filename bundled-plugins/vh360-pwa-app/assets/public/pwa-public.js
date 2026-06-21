@@ -197,8 +197,87 @@
     // If OneSignal is active, it must own the root scope SW. In that case, our
     // caching/offline logic is imported into the OneSignal worker instead.
     if (CFG && CFG.skipSWRegister) return;
-    navigator.serviceWorker.register(swUrl).catch(function () {
+    navigator.serviceWorker.register(swUrl).then(function (registration) {
+      setupUpdatePrompt(registration);
+    }).catch(function () {
       // silently ignore; install UX still works without SW prompt (browser may not allow install)
+    });
+  }
+
+
+  function isIgnoredRefreshTarget(target) {
+    if (!target || !target.closest) return false;
+    return !!target.closest('input,textarea,select,button,a,video,iframe,[role="dialog"],.modal,.vh360-pwa-modal,.vh360-live-room-player,.videohub360-video-player,.vh360-agora,.agora_video_player,.agora-player,[data-vh360-interactive]');
+  }
+
+  function initRefreshControls() {
+    if (!isStandalone()) return;
+    if (CFG.showRefreshButton) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'vh360-pwa-refresh-button';
+      btn.textContent = CFG.refreshLabel || 'Refresh';
+      btn.addEventListener('click', function () { window.location.reload(); });
+      document.body.appendChild(btn);
+    }
+    if (!CFG.enablePullToRefresh) return;
+    var indicator = document.createElement('div');
+    indicator.className = 'vh360-pwa-ptr';
+    indicator.textContent = 'Pull to refresh';
+    document.body.appendChild(indicator);
+    var startY = 0, pulling = false, ready = false, threshold = 86;
+    document.addEventListener('touchstart', function (e) {
+      if (!isStandalone() || window.scrollY > 0 || isIgnoredRefreshTarget(e.target)) return;
+      startY = e.touches && e.touches[0] ? e.touches[0].clientY : 0;
+      pulling = true; ready = false;
+    }, { passive: true });
+    document.addEventListener('touchmove', function (e) {
+      if (!pulling || !e.touches || !e.touches[0]) return;
+      var diff = e.touches[0].clientY - startY;
+      if (diff <= 0 || window.scrollY > 0) return;
+      ready = diff > threshold;
+      indicator.textContent = ready ? 'Release to refresh' : 'Pull to refresh';
+      indicator.style.transform = 'translate(-50%, ' + Math.min(diff / 2, 70) + 'px)';
+      indicator.classList.add('is-visible');
+    }, { passive: true });
+    document.addEventListener('touchend', function () {
+      if (!pulling) return;
+      pulling = false;
+      if (ready) {
+        indicator.textContent = 'Refreshing…';
+        setTimeout(function () { window.location.reload(); }, 120);
+      } else {
+        indicator.classList.remove('is-visible');
+        indicator.style.transform = '';
+      }
+    }, { passive: true });
+  }
+
+  var reloadingForUpdate = false;
+  function setupUpdatePrompt(registration) {
+    if (!registration) return;
+    function showUpdatePrompt(worker) {
+      if (!worker || document.getElementById('vh360-pwa-update')) return;
+      var prompt = document.createElement('div');
+      prompt.id = 'vh360-pwa-update';
+      prompt.className = 'vh360-pwa-update';
+      prompt.innerHTML = '<span>New version available</span><button type="button">Refresh</button>';
+      prompt.querySelector('button').addEventListener('click', function () {
+        reloadingForUpdate = true;
+        worker.postMessage({ type: 'VH360_PWA_SKIP_WAITING' });
+      });
+      document.body.appendChild(prompt);
+    }
+    if (registration.waiting) showUpdatePrompt(registration.waiting);
+    registration.addEventListener('updatefound', function () {
+      var worker = registration.installing;
+      if (!worker) return;
+      worker.addEventListener('statechange', function () {
+        if (worker.state === 'installed' && navigator.serviceWorker.controller) showUpdatePrompt(worker);
+      });
+    });
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (reloadingForUpdate) window.location.reload();
     });
   }
 
@@ -345,6 +424,7 @@
     maybeShowBanner();
     // Ensure any newly injected banner button gets the correct label.
     setInstallButtonsPromptAvailable(!!(deferredPrompt && deferredPrompt.prompt));
+    initRefreshControls();
   });
 
   window.addEventListener('load', function () {

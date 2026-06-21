@@ -29,6 +29,7 @@ class VH360_PWA_Frontend {
 		// Prefer a root-level manifest for maximum compatibility across hosts/CDNs.
 		$manifest = esc_url( home_url( '/' . VH360_PWA_MANIFEST_SLUG ) );
 		$theme_color = esc_attr( (string) $opts['theme_color'] );
+		$splash_bg = esc_attr( (string) ( ! empty( $opts['splash_enabled'] ) ? $opts['splash_background_color'] : $opts['background_color'] ) );
 		$apple_icon = function_exists( 'vh360_pwa_get_apple_touch_icon_url' ) ? esc_url( vh360_pwa_get_apple_touch_icon_url() ) : '';
 		
 		// Get app title for iOS - use short_name from PWA options or fallback to site name
@@ -42,12 +43,20 @@ class VH360_PWA_Frontend {
 		// If a theme outputs wp_head() in an unexpected place, literal "\\n" text can appear on the page.
 		echo '<link rel="manifest" href="' . $manifest . '">' . "\n";
 		echo '<meta name="theme-color" content="' . $theme_color . '">' . "\n";
+		echo '<style id="vh360-pwa-launch-bg">html,body{background:' . $splash_bg . ';}</style>' . "\n";
 		echo '<meta name="apple-mobile-web-app-capable" content="yes">' . "\n";
 		echo '<meta name="apple-mobile-web-app-title" content="' . esc_attr( $app_title ) . '">' . "\n";
 		echo '<meta name="mobile-web-app-capable" content="yes">' . "\n";
 		echo '<meta name="apple-mobile-web-app-status-bar-style" content="default">' . "\n";
 		if ( $apple_icon ) {
 			echo '<link rel="apple-touch-icon" href="' . $apple_icon . '">' . "\n";
+		}
+		if ( ! empty( $opts['splash_enabled'] ) && function_exists( 'vh360_pwa_get_ios_startup_images' ) ) {
+			foreach ( vh360_pwa_get_ios_startup_images() as $startup ) {
+				if ( ! empty( $startup['href'] ) && ! empty( $startup['media'] ) ) {
+					echo '<link rel="apple-touch-startup-image" href="' . esc_url( $startup['href'] ) . '" media="' . esc_attr( $startup['media'] ) . '">' . "\n";
+				}
+			}
 		}
 
 		// Note: Diagnostic banners were intentionally removed. PWAs should not inject admin-only frontend warnings.
@@ -95,6 +104,9 @@ class VH360_PWA_Frontend {
 				// If OneSignal is active, it must own the root scope service worker.
 				'skipSWRegister'     => $this->should_skip_sw_registration() ? 1 : 0,
 				'appShortName'       => ! empty( $opts['short_name'] ) ? (string) $opts['short_name'] : get_bloginfo( 'name' ),
+				'enablePullToRefresh' => ! empty( $opts['enable_pull_to_refresh'] ) ? 1 : 0,
+				'showRefreshButton' => ! empty( $opts['show_refresh_button'] ) ? 1 : 0,
+				'refreshLabel' => (string) $opts['refresh_label'],
 			)
 		);
 

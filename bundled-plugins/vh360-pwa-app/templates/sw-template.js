@@ -31,10 +31,10 @@ function shouldBypass(request) {
   const url = new URL(request.url);
   const p = url.pathname || '';
 
-  // Never cache admin/auth/REST/ajax.
+  // Never cache admin/auth/REST/ajax or highly personalized commerce/community areas.
   if (p.startsWith('/wp-admin') || p.startsWith('/wp-login.php')) return true;
-  if (p.includes('/wp-json')) return true;
-  if (p.includes('/admin-ajax.php')) return true;
+  if (p.includes('/wp-json') || p.includes('/admin-ajax.php')) return true;
+  if (/(^|\/)(dashboard|my-account|account|cart|checkout|messages|notifications|login|logout|register|members|settings)(\/|$)/i.test(p)) return true;
 
   // Avoid preview, nonces, actions.
   const qp = url.searchParams;

@@ -87,6 +87,13 @@ $out['app_name'] = sanitize_text_field( $input['app_name'] ?? $current['app_name
 
 		$out['theme_color'] = sanitize_hex_color( $input['theme_color'] ?? $current['theme_color'] ) ?: $current['theme_color'];
 		$out['background_color'] = sanitize_hex_color( $input['background_color'] ?? $current['background_color'] ) ?: $current['background_color'];
+		$out['enable_pull_to_refresh'] = vh360_pwa_boolval( $input['enable_pull_to_refresh'] ?? $current['enable_pull_to_refresh'] );
+		$out['show_refresh_button'] = vh360_pwa_boolval( $input['show_refresh_button'] ?? $current['show_refresh_button'] );
+		$out['refresh_label'] = sanitize_text_field( $input['refresh_label'] ?? $current['refresh_label'] );
+		$out['splash_enabled'] = vh360_pwa_boolval( $input['splash_enabled'] ?? $current['splash_enabled'] );
+		$out['splash_background_color'] = sanitize_hex_color( $input['splash_background_color'] ?? $current['splash_background_color'] ) ?: $out['background_color'];
+		$out['splash_logo'] = ! empty( $input['splash_logo'] ) ? esc_url_raw( (string) $input['splash_logo'] ) : '';
+		$out['splash_title'] = sanitize_text_field( $input['splash_title'] ?? $current['splash_title'] );
 		$out['display'] = in_array( (string) ( $input['display'] ?? '' ), array( 'standalone','fullscreen','minimal-ui','browser' ), true ) ? (string) $input['display'] : $current['display'];
 		$out['orientation'] = in_array( (string) ( $input['orientation'] ?? '' ), array( 'any','portrait','portrait-primary','landscape' ), true ) ? (string) $input['orientation'] : $current['orientation'];
 
@@ -395,6 +402,8 @@ $out['scope']     = $normalize_to_path( $scope );
 			VH360_PWA_Root_Files::ensure_root_files();
 		}
 		update_option( 'vh360_pwa_manifest_generated_at', time() );
+		if ( function_exists( 'vh360_pwa_generate_ios_startup_images' ) ) { vh360_pwa_generate_ios_startup_images(); }
+		if ( class_exists( 'VH360_PWA_Root_Files' ) ) { VH360_PWA_Root_Files::ensure_root_files(); }
 	}
 
 	public function render_page() : void {
@@ -493,8 +502,21 @@ $manifest_url = esc_url( vh360_pwa_endpoint_url( VH360_PWA_MANIFEST_SLUG ) );
 		echo '</td></tr>';
 
 		echo '<tr><th scope="row">' . esc_html__( 'Background Color', 'vh360-pwa-app' ) . '</th><td>';
-		echo '<input type="text" class="vh360-color" name="vh360_pwa_options[background_color]" value="' . esc_attr( (string) $opts['background_color'] ) . '" data-default-color="#ffffff">';
+		echo '<input type="text" class="vh360-color" name="vh360_pwa_options[background_color]" value="' . esc_attr( (string) $opts['background_color'] ) . '" data-default-color="#0f172a">';
 		echo '</td></tr>';
+
+		echo '<tr><th scope="row">' . esc_html__( 'App Experience', 'vh360-pwa-app' ) . '</th><td>';
+		echo '<label><input type="checkbox" name="vh360_pwa_options[enable_pull_to_refresh]" value="1" ' . checked( ! empty( $opts['enable_pull_to_refresh'] ), true, false ) . '> ' . esc_html__( 'Enable pull-to-refresh in standalone app mode', 'vh360-pwa-app' ) . '</label><br>';
+		echo '<label><input type="checkbox" name="vh360_pwa_options[show_refresh_button]" value="1" ' . checked( ! empty( $opts['show_refresh_button'] ), true, false ) . '> ' . esc_html__( 'Show floating refresh button in standalone app mode', 'vh360-pwa-app' ) . '</label><br>';
+		echo '<input type="text" class="regular-text" name="vh360_pwa_options[refresh_label]" value="' . esc_attr( (string) $opts['refresh_label'] ) . '" placeholder="Refresh">';
+		echo '</td></tr>';
+
+		echo '<tr><th scope="row">' . esc_html__( 'Launch Experience', 'vh360-pwa-app' ) . '</th><td>';
+		echo '<label><input type="checkbox" name="vh360_pwa_options[splash_enabled]" value="1" ' . checked( ! empty( $opts['splash_enabled'] ), true, false ) . '> ' . esc_html__( 'Enable branded splash/launch screens', 'vh360-pwa-app' ) . '</label><br>';
+		echo '<label>' . esc_html__( 'Splash background', 'vh360-pwa-app' ) . '<br><input type="text" class="vh360-color" name="vh360_pwa_options[splash_background_color]" value="' . esc_attr( (string) $opts['splash_background_color'] ) . '" data-default-color="#0f172a"></label><br>';
+		echo '<label>' . esc_html__( 'Splash title', 'vh360-pwa-app' ) . '<br><input type="text" class="regular-text" name="vh360_pwa_options[splash_title]" value="' . esc_attr( (string) $opts['splash_title'] ) . '"></label>';
+		echo '</td></tr>';
+		$this->render_media_row( 'splash_logo', __( 'Splash Logo', 'vh360-pwa-app' ), (string) ( $opts['splash_logo'] ?? '' ) );
 
 		echo '<tr><th scope="row">' . esc_html__( 'Display', 'vh360-pwa-app' ) . '</th><td>';
 		$display_opts = array('standalone'=>'standalone','fullscreen'=>'fullscreen','minimal-ui'=>'minimal-ui','browser'=>'browser');
