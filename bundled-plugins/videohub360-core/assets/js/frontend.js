@@ -1279,8 +1279,10 @@ window.initializeAgoraPlayer = function(config) {
             const name = document.createElement('div');
             name.className = 'vh360-user-info vh360-video-name-overlay';
             tile.appendChild(name);
+            ensureParticipantStateIndicators(participant, tile);
             stage.appendChild(tile);
         }
+        ensureParticipantStateIndicators(participant, tile);
         participant.tileElement = tile;
         let videoContainer = tile.querySelector('.vh360-participant-video');
         if (!videoContainer) {
@@ -1291,6 +1293,96 @@ window.initializeAgoraPlayer = function(config) {
         }
         participant.videoContainerElement = videoContainer;
         return tile;
+    }
+
+
+    function ensureParticipantStateIndicators(participant, tile) {
+        if (!participant || !tile) return null;
+
+        tile.querySelectorAll('.volume-indicator').forEach((legacyIndicator) => legacyIndicator.remove());
+
+        let layer = tile.querySelector('.vh360-participant-status-layer');
+        if (!layer) {
+            layer = document.createElement('div');
+            layer.className = 'vh360-participant-status-layer';
+            layer.setAttribute('aria-hidden', 'true');
+            tile.appendChild(layer);
+        }
+
+        let roleBadges = layer.querySelector('.vh360-participant-role-badges');
+        if (!roleBadges) {
+            roleBadges = document.createElement('div');
+            roleBadges.className = 'vh360-participant-role-badges';
+            layer.appendChild(roleBadges);
+        }
+
+        let mediaIndicators = layer.querySelector('.vh360-participant-media-indicators');
+        if (!mediaIndicators) {
+            mediaIndicators = document.createElement('div');
+            mediaIndicators.className = 'vh360-participant-media-indicators';
+            layer.appendChild(mediaIndicators);
+        }
+
+        let speakingIndicator = layer.querySelector('.vh360-participant-speaking-indicator');
+        if (!speakingIndicator) {
+            speakingIndicator = document.createElement('div');
+            speakingIndicator.className = 'vh360-participant-speaking-indicator';
+            speakingIndicator.textContent = 'Speaking';
+            layer.appendChild(speakingIndicator);
+        }
+
+        return { layer, roleBadges, mediaIndicators, speakingIndicator };
+    }
+
+    function updateParticipantStateIndicators(participant, tile) {
+        const indicators = ensureParticipantStateIndicators(participant, tile);
+        if (!participant || !tile || !indicators) return;
+
+        const roleBadges = indicators.roleBadges;
+        const mediaIndicators = indicators.mediaIndicators;
+        roleBadges.textContent = '';
+        mediaIndicators.textContent = '';
+
+        if (participant.isLocal) {
+            const youBadge = document.createElement('span');
+            youBadge.className = 'vh360-participant-badge vh360-participant-badge-you';
+            youBadge.textContent = 'You';
+            roleBadges.appendChild(youBadge);
+        }
+
+        if (participant.isOriginalHost) {
+            const hostBadge = document.createElement('span');
+            hostBadge.className = 'vh360-participant-badge vh360-participant-badge-host';
+            hostBadge.textContent = 'Host';
+            roleBadges.appendChild(hostBadge);
+        }
+
+        if (!participant.audioTrack || participant.audioOn === false) {
+            const micIndicator = document.createElement('span');
+            micIndicator.className = 'vh360-participant-media-indicator vh360-participant-mic-muted';
+            micIndicator.textContent = 'Mic off';
+            mediaIndicators.appendChild(micIndicator);
+        }
+
+        if (!participant.videoTrack || participant.cameraOn === false) {
+            const cameraIndicator = document.createElement('span');
+            cameraIndicator.className = 'vh360-participant-media-indicator vh360-participant-camera-off';
+            cameraIndicator.textContent = 'Camera off';
+            mediaIndicators.appendChild(cameraIndicator);
+        }
+
+        indicators.speakingIndicator.textContent = participant.isSpeaking ? 'Speaking' : '';
+    }
+
+    function setParticipantSpeakingState(uid, level) {
+        const participant = participantRegistry.get(normalizeParticipantUid(uid));
+        if (!participant) return;
+        const isSpeaking = Number(level) > volumeThreshold;
+        if (participant.isSpeaking === isSpeaking) {
+            return;
+        }
+        participant.isSpeaking = isSpeaking;
+        updateParticipantTile(participant);
     }
 
     function setActiveAgoraVideoClasses(participant, hasActiveVideo) {
@@ -1350,12 +1442,27 @@ window.initializeAgoraPlayer = function(config) {
         tile.classList.toggle('has-audio', !!participant.audioTrack && participant.audioOn !== false);
         tile.classList.toggle('camera-off', !participant.videoTrack || participant.cameraOn === false);
         tile.classList.toggle('audio-muted', !participant.audioTrack || participant.audioOn === false);
+        tile.classList.toggle('is-speaking', !!participant.isSpeaking);
+        tile.dataset.audioState = participant.audioTrack && participant.audioOn !== false ? 'on' : 'muted';
+        tile.dataset.videoState = participant.videoTrack && participant.cameraOn !== false ? 'on' : 'off';
+        tile.dataset.participantRole = participant.isOriginalHost ? 'host' : 'participant';
+        tile.dataset.speaking = participant.isSpeaking ? 'true' : 'false';
         const isFocused = isFocusedParticipant(participant.uid);
         tile.classList.toggle('is-focused-participant', isFocused);
         tile.classList.toggle('is-featured', shouldFeatureParticipant(participant.uid));
         ensureParticipantFocusControl(participant, tile);
         const label = tile.querySelector('.vh360-user-info, .vh360-video-name-overlay');
         if (label) label.textContent = participant.displayName || `User ${participant.uid}`;
+        const stateParts = [participant.displayName || `User ${participant.uid}`];
+        if (participant.isLocal) stateParts.push('You');
+        if (participant.isOriginalHost) stateParts.push('Host');
+        stateParts.push(tile.dataset.videoState === 'on' ? 'camera on' : 'camera off');
+        stateParts.push(tile.dataset.audioState === 'on' ? 'mic on' : 'mic muted');
+        if (participant.isSpeaking) stateParts.push('speaking');
+        if (isFocused) stateParts.push('focused');
+        tile.setAttribute('aria-label', stateParts.join(', '));
+        tile.setAttribute('title', stateParts.join(', '));
+        updateParticipantStateIndicators(participant, tile);
 
         const speakerBadge = tile.querySelector('.active-speaker-badge');
         if (speakerBadge && participant.videoTrack && participant.cameraOn !== false) {
@@ -2045,45 +2152,7 @@ window.initializeAgoraPlayer = function(config) {
     }
 
     function updateVolumeIndicator(uid, level) {
-        const playerElement = document.getElementById(`player-${uid}`);
-        if (!playerElement) return;
-
-        let volumeIndicator = playerElement.querySelector('.volume-indicator');
-        if (!volumeIndicator) {
-            volumeIndicator = document.createElement('div');
-            volumeIndicator.className = 'volume-indicator';
-            volumeIndicator.style.cssText = `
-                position: absolute;
-                top: 4px;
-                right: 4px;
-                width: 16px;
-                height: 16px;
-                background: rgba(76, 175, 80, 0.8);
-                border-radius: 50%;
-                display: none;
-                z-index: 15;
-            `;
-
-            // Add microphone icon
-            volumeIndicator.innerHTML = '🎤';
-            volumeIndicator.style.fontSize = '8px';
-            volumeIndicator.style.display = 'flex';
-            volumeIndicator.style.alignItems = 'center';
-            volumeIndicator.style.justifyContent = 'center';
-            volumeIndicator.style.color = '#fff';
-
-            playerElement.appendChild(volumeIndicator);
-        }
-
-        // Show/hide indicator based on volume level
-        if (level > volumeThreshold) {
-            volumeIndicator.style.display = 'flex';
-            // Scale opacity based on volume level (30-100 maps to 0.5-1.0)
-            const opacity = Math.min(1.0, 0.5 + (level - volumeThreshold) / 140);
-            volumeIndicator.style.background = `rgba(76, 175, 80, ${opacity})`;
-        } else {
-            volumeIndicator.style.display = 'none';
-        }
+        setParticipantSpeakingState(uid, level);
     }
 
     function updateActiveSpeakerVisuals(uid, isActive) {
@@ -2150,6 +2219,49 @@ window.initializeAgoraPlayer = function(config) {
     }
 
     // -- Controls UI handling --
+
+    function setAgoraControlButtonContent(button, state) {
+        if (!button || !state) return;
+        button.classList.add('vh360-agora-control-btn', 'vh360-agora-media-control-btn');
+        button.classList.toggle('is-audio-on', state.type === 'audio' && !state.isMuted);
+        button.classList.toggle('is-audio-muted', state.type === 'audio' && state.isMuted);
+        button.classList.toggle('is-camera-on', state.type === 'video' && !state.isMuted);
+        button.classList.toggle('is-camera-off', state.type === 'video' && state.isMuted);
+        button.setAttribute('aria-label', state.accessibleLabel);
+        button.setAttribute('title', state.accessibleLabel);
+        button.innerHTML = `<span class="vh360-agora-control-icon" aria-hidden="true">${state.icon}</span><span class="vh360-agora-control-label">${state.label}</span>`;
+    }
+
+    function updateAgoraControlButtonStates() {
+        setAgoraControlButtonContent(muteAudioBtn, isAudioMuted ? {
+            type: 'audio',
+            isMuted: true,
+            accessibleLabel: 'Unmute microphone',
+            icon: '🔇',
+            label: 'Unmute'
+        } : {
+            type: 'audio',
+            isMuted: false,
+            accessibleLabel: 'Mute microphone',
+            icon: '🎤',
+            label: 'Mute'
+        });
+
+        setAgoraControlButtonContent(muteVideoBtn, isVideoMuted ? {
+            type: 'video',
+            isMuted: true,
+            accessibleLabel: 'Turn camera on',
+            icon: '📹',
+            label: 'Turn On'
+        } : {
+            type: 'video',
+            isMuted: false,
+            accessibleLabel: 'Turn camera off',
+            icon: '📹',
+            label: 'Camera'
+        });
+    }
+
     function updateControlsVisibility() {
         if (!controlsContainer) return;
 
@@ -2174,10 +2286,10 @@ window.initializeAgoraPlayer = function(config) {
 
         if (currentRole === 'host' || isAppointmentPublisher) {
             if (muteAudioBtn) {
-                muteAudioBtn.style.display = 'inline-block';
+                muteAudioBtn.style.display = 'inline-flex';
             }
             if (muteVideoBtn) {
-                muteVideoBtn.style.display = 'inline-block';
+                muteVideoBtn.style.display = 'inline-flex';
             }
         } else if (currentRole === 'audience') {
             if (config.agoraMode === 'interactive' && joinAsPresenterBtn && security.is_logged_in && !isOriginalHost) {
@@ -2187,6 +2299,7 @@ window.initializeAgoraPlayer = function(config) {
 
         if (leaveBtn) leaveBtn.style.display = 'inline-block';
         if (endStreamBtn) endStreamBtn.style.display = shouldShowEndStreamButton() ? 'inline-block' : 'none';
+        updateAgoraControlButtonStates();
 
         // Handle moderation button visibility
         const moderationBtn = document.getElementById('vh360-moderation-panel-btn');
@@ -2778,6 +2891,7 @@ window.initializeAgoraPlayer = function(config) {
             if (participant) {
                 participant.audioTrack = null;
                 participant.audioOn = false;
+                participant.isSpeaking = false;
                 updateParticipantTile(participant);
             }
             // Clean up active speaker if this user was the active speaker and now has no audio
@@ -3243,6 +3357,7 @@ window.initializeAgoraPlayer = function(config) {
             if (localTracks.audioTrack) {
                 localParticipant.audioTrack = localTracks.audioTrack;
                 localParticipant.audioOn = !isAudioMuted;
+                if (isAudioMuted) localParticipant.isSpeaking = false;
             }
 
             if (localTracks.videoTrack && typeof localTracks.videoTrack.play === 'function') {
@@ -3261,13 +3376,17 @@ window.initializeAgoraPlayer = function(config) {
             window.vh360Log('VideoHub360: Publish completed for UID:', currentUserUID);
 
             if (muteAudioBtn) {
-                muteAudioBtn.textContent = isAudioMuted ? '🔇 Unmute' : '🎤 Mute';
+                updateAgoraControlButtonStates();
                 muteAudioBtn.style.backgroundColor = isAudioMuted ? '#e53935' : 'transparent';
                 const participant = currentUserUID ? participantRegistry.get(String(currentUserUID)) : null;
-                if (participant) { participant.audioOn = !isAudioMuted; updateParticipantTile(participant); }
+                if (participant) {
+                    participant.audioOn = !isAudioMuted;
+                    if (isAudioMuted) participant.isSpeaking = false;
+                    updateParticipantTile(participant);
+                }
             }
             if (muteVideoBtn) {
-                muteVideoBtn.textContent = isVideoMuted ? '📹 Turn On' : '📹 Camera';
+                updateAgoraControlButtonStates();
                 muteVideoBtn.style.backgroundColor = isVideoMuted ? '#e53935' : 'transparent';
                 const participant = currentUserUID ? participantRegistry.get(String(currentUserUID)) : null;
                 if (participant) { participant.cameraOn = !isVideoMuted; updateParticipantTile(participant); }
@@ -3300,6 +3419,13 @@ window.initializeAgoraPlayer = function(config) {
                 localTracks.audioTrack.stop();
                 localTracks.audioTrack.close();
                 localTracks.audioTrack = null;
+                const participant = currentUserUID ? participantRegistry.get(String(currentUserUID)) : null;
+                if (participant) {
+                    participant.audioTrack = null;
+                    participant.audioOn = false;
+                    participant.isSpeaking = false;
+                    updateParticipantTile(participant);
+                }
             }
             if (localTracks.videoTrack) {
                 localTracks.videoTrack.stop();
@@ -3311,6 +3437,7 @@ window.initializeAgoraPlayer = function(config) {
                 localParticipant.audioTrack = null;
                 localParticipant.videoTrack = null;
                 localParticipant.audioOn = false;
+                localParticipant.isSpeaking = false;
                 localParticipant.cameraOn = false;
                 updateParticipantTile(localParticipant);
             }
@@ -3323,10 +3450,14 @@ window.initializeAgoraPlayer = function(config) {
             if (localTracks.audioTrack) {
                 await localTracks.audioTrack.setMuted(!isAudioMuted);
                 isAudioMuted = !isAudioMuted;
-                muteAudioBtn.textContent = isAudioMuted ? '🔇 Unmute' : '🎤 Mute';
+                updateAgoraControlButtonStates();
                 muteAudioBtn.style.backgroundColor = isAudioMuted ? '#e53935' : 'transparent';
                 const participant = currentUserUID ? participantRegistry.get(String(currentUserUID)) : null;
-                if (participant) { participant.audioOn = !isAudioMuted; updateParticipantTile(participant); }
+                if (participant) {
+                    participant.audioOn = !isAudioMuted;
+                    if (isAudioMuted) participant.isSpeaking = false;
+                    updateParticipantTile(participant);
+                }
             }
         });
     }
@@ -3335,7 +3466,7 @@ window.initializeAgoraPlayer = function(config) {
             if (localTracks.videoTrack) {
                 await localTracks.videoTrack.setMuted(!isVideoMuted);
                 isVideoMuted = !isVideoMuted;
-                muteVideoBtn.textContent = isVideoMuted ? '📹 Turn On' : '📹 Camera';
+                updateAgoraControlButtonStates();
                 muteVideoBtn.style.backgroundColor = isVideoMuted ? '#e53935' : 'transparent';
                 const participant = currentUserUID ? participantRegistry.get(String(currentUserUID)) : null;
                 if (participant) { participant.cameraOn = !isVideoMuted; updateParticipantTile(participant); }
@@ -3588,6 +3719,13 @@ window.initializeAgoraPlayer = function(config) {
                 localTracks.audioTrack.stop();
                 localTracks.audioTrack.close();
                 localTracks.audioTrack = null;
+                const participant = currentUserUID ? participantRegistry.get(String(currentUserUID)) : null;
+                if (participant) {
+                    participant.audioTrack = null;
+                    participant.audioOn = false;
+                    participant.isSpeaking = false;
+                    updateParticipantTile(participant);
+                }
             }
             if (localTracks.videoTrack) {
                 localTracks.videoTrack.stop();
@@ -5740,6 +5878,7 @@ window.initializeAgoraPlayer = function(config) {
         ensureIOSImmersiveExitButton();
 
         window.dispatchEvent(new Event('resize'));
+        window.dispatchEvent(new Event('vh360:fullscreenchange'));
 
         window.vh360Log('VideoHub360 iOS Immersive: Entered immersive fullscreen');
     }
@@ -5795,6 +5934,7 @@ window.initializeAgoraPlayer = function(config) {
         iosImmersivePreviousActiveElement = null;
 
         window.dispatchEvent(new Event('resize'));
+        window.dispatchEvent(new Event('vh360:fullscreenchange'));
 
         resumeAgoraBroadcastPlayback('ios-immersive-exit');
 
