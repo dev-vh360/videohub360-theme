@@ -93,6 +93,10 @@ $out['app_name'] = sanitize_text_field( $input['app_name'] ?? $current['app_name
 		$out['splash_background_color'] = sanitize_hex_color( $input['splash_background_color'] ?? $current['splash_background_color'] ) ?: $out['background_color'];
 		$out['splash_logo'] = ! empty( $input['splash_logo'] ) ? esc_url_raw( (string) $input['splash_logo'] ) : '';
 		$out['splash_title'] = sanitize_text_field( $input['splash_title'] ?? $current['splash_title'] );
+		$out['splash_title_enabled'] = vh360_pwa_boolval( $input['splash_title_enabled'] ?? 0 );
+		$out['splash_title_font_size'] = max( 18, min( 96, absint( $input['splash_title_font_size'] ?? $current['splash_title_font_size'] ) ) );
+		$out['splash_title_color'] = sanitize_hex_color( $input['splash_title_color'] ?? $current['splash_title_color'] ) ?: '#ffffff';
+		$out['splash_title_offset'] = max( 20, min( 200, absint( $input['splash_title_offset'] ?? $current['splash_title_offset'] ) ) );
 		$out['display'] = in_array( (string) ( $input['display'] ?? '' ), array( 'standalone','fullscreen','minimal-ui','browser' ), true ) ? (string) $input['display'] : $current['display'];
 		$out['orientation'] = in_array( (string) ( $input['orientation'] ?? '' ), array( 'any','portrait','portrait-primary','landscape' ), true ) ? (string) $input['orientation'] : $current['orientation'];
 
@@ -398,6 +402,17 @@ $out['scope']     = $normalize_to_path( $scope );
 			flush_rewrite_rules();
 		}
 		update_option( 'vh360_pwa_manifest_generated_at', time() );
+		$splash_keys = array( 'splash_enabled', 'splash_logo', 'splash_title', 'splash_title_enabled', 'splash_title_font_size', 'splash_title_color', 'splash_title_offset', 'splash_background_color', 'background_color' );
+		$splash_changed = false;
+		foreach ( $splash_keys as $splash_key ) {
+			$old_setting = is_array( $old_value ) && array_key_exists( $splash_key, $old_value ) ? $old_value[ $splash_key ] : null;
+			$new_setting = is_array( $value ) && array_key_exists( $splash_key, $value ) ? $value[ $splash_key ] : null;
+			if ( $old_setting !== $new_setting ) {
+				$splash_changed = true;
+				break;
+			}
+		}
+		if ( $splash_changed && function_exists( 'vh360_pwa_clear_ios_startup_images' ) ) { vh360_pwa_clear_ios_startup_images(); }
 		if ( function_exists( 'vh360_pwa_generate_ios_startup_images' ) ) { vh360_pwa_generate_ios_startup_images(); }
 		if ( class_exists( 'VH360_PWA_Root_Files' ) ) { VH360_PWA_Root_Files::ensure_root_files(); }
 	}
@@ -508,7 +523,11 @@ $manifest_url = esc_url( vh360_pwa_endpoint_url( VH360_PWA_MANIFEST_SLUG ) );
 		echo '<tr><th scope="row">' . esc_html__( 'Launch Experience', 'vh360-pwa-app' ) . '</th><td>';
 		echo '<label><input type="checkbox" name="vh360_pwa_options[splash_enabled]" value="1" ' . checked( ! empty( $opts['splash_enabled'] ), true, false ) . '> ' . esc_html__( 'Enable branded splash/launch screens', 'vh360-pwa-app' ) . '</label><br>';
 		echo '<label>' . esc_html__( 'Splash background', 'vh360-pwa-app' ) . '<br><input type="text" class="vh360-color" name="vh360_pwa_options[splash_background_color]" value="' . esc_attr( (string) $opts['splash_background_color'] ) . '" data-default-color="#0f172a"></label><br>';
-		echo '<label>' . esc_html__( 'Splash title', 'vh360-pwa-app' ) . '<br><input type="text" class="regular-text" name="vh360_pwa_options[splash_title]" value="' . esc_attr( (string) $opts['splash_title'] ) . '"></label>';
+		echo '<label>' . esc_html__( 'Splash title', 'vh360-pwa-app' ) . '<br><input type="text" class="regular-text" name="vh360_pwa_options[splash_title]" value="' . esc_attr( (string) $opts['splash_title'] ) . '"></label><br>';
+		echo '<label><input type="checkbox" name="vh360_pwa_options[splash_title_enabled]" value="1" ' . checked( ! empty( $opts['splash_title_enabled'] ), true, false ) . '> ' . esc_html__( 'Show splash title in generated launch images', 'vh360-pwa-app' ) . '</label><br>';
+		echo '<label>' . esc_html__( 'Splash title font size', 'vh360-pwa-app' ) . '<br><input type="number" min="18" max="96" name="vh360_pwa_options[splash_title_font_size]" value="' . esc_attr( (string) $opts['splash_title_font_size'] ) . '" style="width:90px"> px</label><br>';
+		echo '<label>' . esc_html__( 'Splash title color', 'vh360-pwa-app' ) . '<br><input type="text" class="vh360-color" name="vh360_pwa_options[splash_title_color]" value="' . esc_attr( (string) $opts['splash_title_color'] ) . '" data-default-color="#ffffff"></label><br>';
+		echo '<label>' . esc_html__( 'Splash title spacing below logo', 'vh360-pwa-app' ) . '<br><input type="number" min="20" max="200" name="vh360_pwa_options[splash_title_offset]" value="' . esc_attr( (string) $opts['splash_title_offset'] ) . '" style="width:90px"> px</label>';
 		echo '</td></tr>';
 		$this->render_media_row( 'splash_logo', __( 'Splash Logo', 'vh360-pwa-app' ), (string) ( $opts['splash_logo'] ?? '' ) );
 

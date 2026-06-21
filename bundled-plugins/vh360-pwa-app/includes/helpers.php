@@ -62,6 +62,10 @@ function vh360_pwa_get_options() : array {
 		'splash_background_color' => '#0f172a',
 		'splash_logo'          => '',
 		'splash_title'         => get_bloginfo( 'name' ),
+		'splash_title_enabled' => 1,
+		'splash_title_font_size' => 44,
+		'splash_title_color'   => '#ffffff',
+		'splash_title_offset'  => 80,
 
 		'icon_192'             => '',
 		'icon_512'             => '',
@@ -220,6 +224,85 @@ function vh360_pwa_get_ios_startup_images() : array {
 	return is_array( $generated ) ? $generated : array();
 }
 
+
+function vh360_pwa_clear_ios_startup_images() : void {
+	$uploads = wp_upload_dir();
+	$dir = trailingslashit( $uploads['basedir'] ) . 'vh360-pwa/splash';
+	if ( is_dir( $dir ) ) {
+		foreach ( glob( trailingslashit( $dir ) . 'vh360-startup-*.png' ) ?: array() as $file ) {
+			if ( is_string( $file ) && is_file( $file ) ) {
+				@unlink( $file );
+			}
+		}
+	}
+	delete_option( 'vh360_pwa_ios_startup_images' );
+}
+
+function vh360_pwa_get_startup_image_font_path() : string {
+	$candidates = array(
+		VH360_PWA_APP_DIR . 'assets/fonts/DejaVuSans-Bold.ttf',
+		VH360_PWA_APP_DIR . 'assets/fonts/OpenSans-Bold.ttf',
+		'/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+		'/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf',
+		'/Library/Fonts/Arial Bold.ttf',
+		'C:\\Windows\\Fonts\\arialbd.ttf',
+	);
+	foreach ( $candidates as $candidate ) {
+		if ( is_string( $candidate ) && file_exists( $candidate ) && is_readable( $candidate ) ) {
+			return $candidate;
+		}
+	}
+	return '';
+}
+
+function vh360_pwa_allocate_hex_color( $image, string $hex, array $fallback = array( 255, 255, 255 ) ) : int {
+	$hex = sanitize_hex_color( $hex );
+	if ( ! $hex ) {
+		return imagecolorallocate( $image, $fallback[0], $fallback[1], $fallback[2] );
+	}
+	return imagecolorallocate( $image, hexdec( substr( $hex, 1, 2 ) ), hexdec( substr( $hex, 3, 2 ) ), hexdec( substr( $hex, 5, 2 ) ) );
+}
+
+function vh360_pwa_draw_startup_title( $image, string $title, int $center_x, int $baseline_y, int $font_size, string $color ) : void {
+	$title = trim( $title );
+	if ( '' === $title ) {
+		return;
+	}
+	$text_color = vh360_pwa_allocate_hex_color( $image, $color );
+	$font_path = vh360_pwa_get_startup_image_font_path();
+	if ( $font_path && function_exists( 'imagettfbbox' ) && function_exists( 'imagettftext' ) ) {
+		$box = imagettfbbox( $font_size, 0, $font_path, $title );
+		if ( is_array( $box ) ) {
+			$text_width = abs( (int) $box[2] - (int) $box[0] );
+			$x = (int) max( 0, $center_x - ( $text_width / 2 ) );
+			imagettftext( $image, $font_size, 0, $x, $baseline_y, $text_color, $font_path, $title );
+			return;
+		}
+	}
+
+	// Fallback for hosts without TrueType support: render GD's built-in font to a temporary
+	// layer and scale it up so the admin-configured title size is still respected.
+	$font = 5;
+	$raw_width = imagefontwidth( $font ) * strlen( $title );
+	$raw_height = imagefontheight( $font );
+	if ( $raw_width < 1 || $raw_height < 1 ) {
+		return;
+	}
+	$scale = max( 1, $font_size / 14 );
+	$tmp = imagecreatetruecolor( $raw_width, $raw_height );
+	imagesavealpha( $tmp, true );
+	$transparent = imagecolorallocatealpha( $tmp, 0, 0, 0, 127 );
+	imagefill( $tmp, 0, 0, $transparent );
+	$tmp_color = vh360_pwa_allocate_hex_color( $tmp, $color );
+	imagestring( $tmp, $font, 0, 0, $title, $tmp_color );
+	$scaled_width = (int) ceil( $raw_width * $scale );
+	$scaled_height = (int) ceil( $raw_height * $scale );
+	$x = (int) max( 0, $center_x - ( $scaled_width / 2 ) );
+	$y = (int) max( 0, $baseline_y - $scaled_height );
+	imagecopyresampled( $image, $tmp, $x, $y, 0, 0, $scaled_width, $scaled_height, $raw_width, $raw_height );
+	imagedestroy( $tmp );
+}
+
 function vh360_pwa_generate_ios_startup_images() : array {
 	$opts = vh360_pwa_get_options();
 	if ( empty( $opts['splash_enabled'] ) || empty( $opts['splash_logo'] ) ) { return array(); }
@@ -246,7 +329,11 @@ function vh360_pwa_generate_ios_startup_images() : array {
 	$logo_src = $logo_data ? @imagecreatefromstring( $logo_data ) : false;
 	if ( ! $logo_src ) { return array(); }
 	$bg = sanitize_hex_color( $opts['splash_background_color'] ?? $opts['background_color'] ) ?: '#0f172a';
-	$title = trim( (string) ( $opts['splash_title'] ?? $opts['short_name'] ?? '' ) );
+	$title_enabled = ! empty( $opts['splash_title_enabled'] );
+	$title = $title_enabled ? trim( (string) ( $opts['splash_title'] ?? $opts['short_name'] ?? '' ) ) : '';
+	$title_font_size = max( 18, min( 96, absint( $opts['splash_title_font_size'] ?? 44 ) ) );
+	$title_color = sanitize_hex_color( $opts['splash_title_color'] ?? '#ffffff' ) ?: '#ffffff';
+	$title_offset = max( 20, min( 200, absint( $opts['splash_title_offset'] ?? 80 ) ) );
 	$r=hexdec(substr($bg,1,2)); $g=hexdec(substr($bg,3,2)); $b=hexdec(substr($bg,5,2));
 	$out = array();
 	foreach ( $sizes as $key => $data ) {
@@ -256,16 +343,12 @@ function vh360_pwa_generate_ios_startup_images() : array {
 		$logo_y = (int) ( ( $h - $nh ) / 2 ) - ( '' !== $title ? (int) ( $h * 0.035 ) : 0 );
 		imagecopyresampled($img,$logo_src,$logo_x,$logo_y,0,0,$nw,$nh,$lw,$lh);
 		if ( '' !== $title ) {
-			$font = 5;
-			$max_chars = max( 12, (int) floor( $w / imagefontwidth( $font ) * 0.72 ) );
+			$max_chars = max( 12, (int) floor( $w / max( 10, $title_font_size * 0.58 ) * 0.82 ) );
 			$render_title = function_exists( 'mb_substr' ) ? mb_substr( $title, 0, $max_chars ) : substr( $title, 0, $max_chars );
-			$text_width = imagefontwidth( $font ) * strlen( $render_title );
-			$text_x = (int) max( 0, ( $w - $text_width ) / 2 );
-			$text_y = (int) min( $h - 60, $logo_y + $nh + max( 28, $h * 0.025 ) );
-			$text_color = imagecolorallocate( $img, 255, 255, 255 );
-			imagestring( $img, $font, $text_x, $text_y, $render_title, $text_color );
+			$text_y = (int) min( $h - 60, $logo_y + $nh + $title_offset );
+			vh360_pwa_draw_startup_title( $img, $render_title, (int) ( $w / 2 ), $text_y, $title_font_size, $title_color );
 		}
-		$file='vh360-startup-' . $key . '-' . md5($bg . $opts['splash_logo'] . $title) . '.png'; imagepng($img, trailingslashit($dir).$file); imagedestroy($img);
+		$file='vh360-startup-' . $key . '-' . md5($bg . $opts['splash_logo'] . $title . $title_font_size . $title_color . $title_offset) . '.png'; imagepng($img, trailingslashit($dir).$file); imagedestroy($img);
 		$out[] = array('href'=>trailingslashit($url).$file,'media'=>$media);
 	}
 	imagedestroy($logo_src); update_option('vh360_pwa_ios_startup_images',$out); return $out;
