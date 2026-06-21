@@ -27,10 +27,12 @@ class VH360_PWA_Frontend {
 		}
 
 		// Prefer a root-level manifest for maximum compatibility across hosts/CDNs.
-		$manifest = esc_url( home_url( '/' . VH360_PWA_MANIFEST_SLUG ) );
+		$manifest_url = home_url( '/' . VH360_PWA_MANIFEST_SLUG );
+		$manifest = esc_url( function_exists( 'vh360_pwa_version_url' ) ? vh360_pwa_version_url( $manifest_url, $opts ) : $manifest_url );
 		$theme_color = esc_attr( (string) $opts['theme_color'] );
 		$splash_bg = esc_attr( (string) ( ! empty( $opts['splash_enabled'] ) ? $opts['splash_background_color'] : $opts['background_color'] ) );
-		$apple_icon = function_exists( 'vh360_pwa_get_apple_touch_icon_url' ) ? esc_url( vh360_pwa_get_apple_touch_icon_url() ) : '';
+		$apple_icon_url = function_exists( 'vh360_pwa_get_apple_touch_icon_url' ) ? vh360_pwa_get_apple_touch_icon_url() : '';
+		$apple_icon = $apple_icon_url && function_exists( 'vh360_pwa_version_url' ) ? esc_url( vh360_pwa_version_url( $apple_icon_url, $opts ) ) : esc_url( $apple_icon_url );
 		
 		// Get app title for iOS - use short_name from PWA options or fallback to site name
 		$app_title = ! empty( $opts['short_name'] ) && is_string( $opts['short_name'] ) ? $opts['short_name'] : get_bloginfo( 'name' );
@@ -54,7 +56,8 @@ class VH360_PWA_Frontend {
 		if ( ! empty( $opts['splash_enabled'] ) && function_exists( 'vh360_pwa_get_ios_startup_images' ) ) {
 			foreach ( vh360_pwa_get_ios_startup_images() as $startup ) {
 				if ( ! empty( $startup['href'] ) && ! empty( $startup['media'] ) ) {
-					echo '<link rel="apple-touch-startup-image" href="' . esc_url( $startup['href'] ) . '" media="' . esc_attr( $startup['media'] ) . '">' . "\n";
+					$startup_href = function_exists( 'vh360_pwa_version_url' ) ? vh360_pwa_version_url( (string) $startup['href'], $opts ) : (string) $startup['href'];
+					echo '<link rel="apple-touch-startup-image" href="' . esc_url( $startup_href ) . '" media="' . esc_attr( $startup['media'] ) . '">' . "\n";
 				}
 			}
 		}
@@ -92,7 +95,7 @@ class VH360_PWA_Frontend {
 			array(
 				// Use root-level, static files for maximum compatibility across hosts/CDNs.
 				'swUrl'              => home_url( '/' . VH360_PWA_SW_SLUG ),
-				'offlineUrl'         => home_url( '/' . VH360_PWA_OFFLINE_SLUG ),
+				'offlineUrl'         => function_exists( 'vh360_pwa_version_url' ) ? vh360_pwa_version_url( home_url( '/' . VH360_PWA_OFFLINE_SLUG ), $opts ) : home_url( '/' . VH360_PWA_OFFLINE_SLUG ),
 				'showInstallPrompt'  => ! empty( $opts['show_install_prompt'] ) ? 1 : 0,
 				'installPromptText'  => (string) $opts['install_prompt_text'],
 				'showInstallBanner'  => ! empty( $opts['show_install_banner'] ) ? 1 : 0,

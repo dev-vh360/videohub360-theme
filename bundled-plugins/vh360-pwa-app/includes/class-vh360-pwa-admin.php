@@ -11,6 +11,7 @@ class VH360_PWA_Admin {
 		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action( 'admin_init', array( $this, 'handle_icon_actions' ) );
+		add_action( 'admin_init', array( $this, 'handle_asset_regeneration' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
 		add_action( 'update_option_vh360_pwa_options', array( $this, 'maybe_flush_rewrite_on_option_update' ), 10, 3 );
 		add_action( 'admin_notices', array( $this, 'theme_notice' ) );
@@ -39,6 +40,35 @@ class VH360_PWA_Admin {
 		);
 	}
 
+
+	private function handle_asset_regeneration() : void {
+		if ( empty( $_POST['vh360_pwa_regenerate_assets'] ) ) {
+			return;
+		}
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+		check_admin_referer( 'vh360_pwa_regenerate_assets' );
+
+		if ( function_exists( 'vh360_pwa_bump_asset_version' ) ) { vh360_pwa_bump_asset_version(); }
+
+		if ( function_exists( 'vh360_pwa_clear_ios_startup_images' ) ) { vh360_pwa_clear_ios_startup_images(); }
+		if ( function_exists( 'vh360_pwa_generate_ios_startup_images' ) ) { vh360_pwa_generate_ios_startup_images(); }
+		if ( class_exists( 'VH360_PWA_Root_Files' ) ) { VH360_PWA_Root_Files::ensure_root_files(); }
+		$this->purge_common_caches();
+
+		wp_safe_redirect( admin_url( 'admin.php?page=' . $this->page_slug . '&tab=tools&vh360_pwa_assets_regenerated=1' ) );
+		exit;
+	}
+
+	private function purge_common_caches() : void {
+		if ( has_action( 'litespeed_purge_all' ) ) { do_action( 'litespeed_purge_all' ); }
+		if ( function_exists( 'rocket_clean_domain' ) ) { rocket_clean_domain(); }
+		if ( function_exists( 'w3tc_flush_all' ) ) { w3tc_flush_all(); }
+		if ( function_exists( 'wp_cache_clear_cache' ) ) { wp_cache_clear_cache(); }
+		if ( function_exists( 'wp_cache_flush' ) ) { wp_cache_flush(); }
+	}
+
     /**
      * Render the Tools tab for resetting the install banner dismissal.
      *
@@ -52,6 +82,10 @@ class VH360_PWA_Admin {
         $url_unreg_sw     = esc_url( add_query_arg( array( 'vh360_pwa_tool' => 'unregister_sw' ), $base ) );
         $url_reset_all    = esc_url( add_query_arg( array( 'vh360_pwa_tool' => 'reset_device' ), $base ) );
 
+        if ( ! empty( $_GET['vh360_pwa_assets_regenerated'] ) ) {
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'PWA assets regenerated and common caches purged where available.', 'vh360-pwa-app' ) . '</p></div>';
+        }
+
         echo '<p>' . esc_html__( 'These tools run in your browser (per device) and can help resolve stale service worker or caching issues during setup and support.', 'vh360-pwa-app' ) . '</p>';
 
         echo '<div class="vh360-pwa-tools" style="display:flex;flex-wrap:wrap;gap:10px;margin:12px 0;">';
@@ -62,6 +96,13 @@ class VH360_PWA_Admin {
         echo '</div>';
 
         echo '<p class="description" style="max-width:820px;">' . esc_html__( 'Each button opens your site in a new tab with a one-time action. After the action runs, you can close that tab and return here.', 'vh360-pwa-app' ) . '</p>';
+
+        echo '<hr><h2>' . esc_html__( 'PWA Asset Cache Busting', 'vh360-pwa-app' ) . '</h2>';
+        echo '<p>' . esc_html__( 'Use this after changing splash screens, app icons, manifest identity, or launch-screen styling. It bumps PWA asset URLs, regenerates launch images, rewrites root files, and attempts common cache-plugin purges.', 'vh360-pwa-app' ) . '</p>';
+        echo '<form method="post">';
+        wp_nonce_field( 'vh360_pwa_regenerate_assets' );
+        echo '<button type="submit" name="vh360_pwa_regenerate_assets" value="1" class="button button-primary">' . esc_html__( 'Regenerate PWA Assets', 'vh360-pwa-app' ) . '</button>';
+        echo '</form>';
     }
 
 	public function register_settings() : void {
@@ -153,6 +194,15 @@ $out['scope']     = $normalize_to_path( $scope );
 			$out[ $k ] = $val ? esc_url_raw( $val ) : '';
 		}
 		
+		$out['pwa_asset_version'] = ! empty( $current['pwa_asset_version'] ) ? absint( $current['pwa_asset_version'] ) : time();
+		$asset_keys = array( 'splash_enabled', 'splash_logo', 'splash_background_color', 'splash_title', 'splash_title_enabled', 'splash_title_font_size', 'splash_title_color', 'splash_title_offset', 'icon_192', 'icon_512', 'icon_maskable_192', 'icon_maskable_512', 'app_name', 'short_name', 'theme_color', 'background_color', 'start_url', 'cache_version' );
+		foreach ( $asset_keys as $asset_key ) {
+			if ( ( $current[ $asset_key ] ?? null ) !== ( $out[ $asset_key ] ?? null ) ) {
+				$out['pwa_asset_version'] = max( time(), absint( $out['pwa_asset_version'] ) + 1 );
+				break;
+			}
+		}
+
 		// Push Sender Roles: array of role keys that can send push notifications
 		$out['push_sender_roles'] = array();
 		if ( isset( $input['push_sender_roles'] ) && is_array( $input['push_sender_roles'] ) ) {
@@ -355,6 +405,7 @@ $out['scope']     = $normalize_to_path( $scope );
 		$result = $icon_generator->generate_all_icons( $master_icon );
 		
 		if ( $result['success'] ) {
+			if ( function_exists( 'vh360_pwa_bump_asset_version' ) ) { vh360_pwa_bump_asset_version(); }
 			if ( function_exists( 'vh360_pwa_backfill_legacy_icons_from_generated' ) ) {
 				vh360_pwa_backfill_legacy_icons_from_generated();
 			}
@@ -402,7 +453,7 @@ $out['scope']     = $normalize_to_path( $scope );
 			flush_rewrite_rules();
 		}
 		update_option( 'vh360_pwa_manifest_generated_at', time() );
-		$splash_keys = array( 'splash_enabled', 'splash_logo', 'splash_title', 'splash_title_enabled', 'splash_title_font_size', 'splash_title_color', 'splash_title_offset', 'splash_background_color', 'background_color' );
+		$splash_keys = array( 'pwa_asset_version', 'splash_enabled', 'splash_logo', 'splash_title', 'splash_title_enabled', 'splash_title_font_size', 'splash_title_color', 'splash_title_offset', 'splash_background_color', 'background_color' );
 		$splash_changed = false;
 		foreach ( $splash_keys as $splash_key ) {
 			$old_setting = is_array( $old_value ) && array_key_exists( $splash_key, $old_value ) ? $old_value[ $splash_key ] : null;
@@ -415,6 +466,7 @@ $out['scope']     = $normalize_to_path( $scope );
 		if ( $splash_changed && function_exists( 'vh360_pwa_clear_ios_startup_images' ) ) { vh360_pwa_clear_ios_startup_images(); }
 		if ( function_exists( 'vh360_pwa_generate_ios_startup_images' ) ) { vh360_pwa_generate_ios_startup_images(); }
 		if ( class_exists( 'VH360_PWA_Root_Files' ) ) { VH360_PWA_Root_Files::ensure_root_files(); }
+		if ( $splash_changed ) { $this->purge_common_caches(); }
 	}
 
 	public function render_page() : void {
@@ -528,6 +580,7 @@ $manifest_url = esc_url( vh360_pwa_endpoint_url( VH360_PWA_MANIFEST_SLUG ) );
 		echo '<label>' . esc_html__( 'Splash title font size', 'vh360-pwa-app' ) . '<br><input type="number" min="18" max="96" name="vh360_pwa_options[splash_title_font_size]" value="' . esc_attr( (string) $opts['splash_title_font_size'] ) . '" style="width:90px"> px</label><br>';
 		echo '<label>' . esc_html__( 'Splash title color', 'vh360-pwa-app' ) . '<br><input type="text" class="vh360-color" name="vh360_pwa_options[splash_title_color]" value="' . esc_attr( (string) $opts['splash_title_color'] ) . '" data-default-color="#ffffff"></label><br>';
 		echo '<label>' . esc_html__( 'Splash title spacing below logo', 'vh360-pwa-app' ) . '<br><input type="number" min="20" max="200" name="vh360_pwa_options[splash_title_offset]" value="' . esc_attr( (string) $opts['splash_title_offset'] ) . '" style="width:90px"> px</label>';
+		echo '<p class="description" style="max-width:760px;">' . esc_html__( 'PWA launch screens are cached aggressively by iOS and Android. After changing splash/icon settings, click Regenerate PWA Assets in Tools. Installed users may need to fully close and reopen the app. Major app identity changes may still require reinstalling the app.', 'vh360-pwa-app' ) . '</p>';
 		echo '</td></tr>';
 		$this->render_media_row( 'splash_logo', __( 'Splash Logo', 'vh360-pwa-app' ), (string) ( $opts['splash_logo'] ?? '' ) );
 

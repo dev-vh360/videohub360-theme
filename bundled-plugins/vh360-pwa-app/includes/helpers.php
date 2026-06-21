@@ -46,6 +46,7 @@ function vh360_pwa_get_options() : array {
 
 		'cache_strategy'       => 'safe', // safe | balanced | aggressive
 		'cache_version'        => 'v1',
+		'pwa_asset_version'    => 0,
 		'precache_offline'     => 1,
 		'precache_home'        => 0,
 		'precache_urls'        => '',
@@ -84,6 +85,15 @@ function vh360_pwa_get_options() : array {
 	$opts = wp_parse_args( $opts, $defaults );
 	// Remove legacy floating refresh button options; pull-to-refresh is the only app refresh UI.
 	unset( $opts['show_refresh_button'], $opts['refresh_label'] );
+	if ( empty( $opts['pwa_asset_version'] ) ) {
+		$opts['pwa_asset_version'] = time();
+		$persisted = get_option( 'vh360_pwa_options', array() );
+		$persisted = is_array( $persisted ) ? $persisted : array();
+		if ( empty( $persisted['pwa_asset_version'] ) ) {
+			$persisted['pwa_asset_version'] = $opts['pwa_asset_version'];
+			update_option( 'vh360_pwa_options', $persisted );
+		}
+	}
 
 	// Sanity: start_url/scope must be same-origin.
 	$home = home_url( '/' );
@@ -157,6 +167,41 @@ function vh360_pwa_get_precache_urls( array $opts ) : array {
 
 
 
+
+
+function vh360_pwa_bump_asset_version() : int {
+	$opts = get_option( 'vh360_pwa_options', array() );
+	$opts = is_array( $opts ) ? $opts : array();
+	$current = ! empty( $opts['pwa_asset_version'] ) ? absint( $opts['pwa_asset_version'] ) : 0;
+	$version = max( time(), $current + 1 );
+	$opts['pwa_asset_version'] = $version;
+	update_option( 'vh360_pwa_options', $opts );
+	return $version;
+}
+
+function vh360_pwa_get_asset_version( ?array $opts = null ) : int {
+	$opts = is_array( $opts ) ? $opts : vh360_pwa_get_options();
+	$version = isset( $opts['pwa_asset_version'] ) ? absint( $opts['pwa_asset_version'] ) : 0;
+	return $version > 0 ? $version : time();
+}
+
+function vh360_pwa_version_url( string $url, ?array $opts = null ) : string {
+	if ( '' === $url ) {
+		return '';
+	}
+	return esc_url_raw( add_query_arg( 'v', vh360_pwa_get_asset_version( $opts ), $url ) );
+}
+
+function vh360_pwa_version_manifest_icons( array $icons, ?array $opts = null ) : array {
+	foreach ( $icons as &$icon ) {
+		if ( is_array( $icon ) && ! empty( $icon['src'] ) ) {
+			$icon['src'] = vh360_pwa_version_url( (string) $icon['src'], $opts );
+		}
+	}
+	unset( $icon );
+	return $icons;
+}
+
 /**
  * Build the canonical manifest shared by dynamic endpoint and root file.
  */
@@ -164,6 +209,7 @@ function vh360_pwa_build_manifest( ?array $opts = null ) : array {
 	$opts = is_array( $opts ) ? $opts : vh360_pwa_get_options();
 	$background = ! empty( $opts['splash_enabled'] ) && ! empty( $opts['splash_background_color'] ) ? (string) $opts['splash_background_color'] : (string) $opts['background_color'];
 	$scope = esc_url_raw( (string) $opts['scope'] );
+	$icons = function_exists( 'vh360_pwa_get_manifest_icons' ) ? vh360_pwa_version_manifest_icons( vh360_pwa_get_manifest_icons(), $opts ) : array();
 	return array(
 		'name'             => (string) $opts['app_name'],
 		'short_name'       => (string) $opts['short_name'],
@@ -176,7 +222,8 @@ function vh360_pwa_build_manifest( ?array $opts = null ) : array {
 		'theme_color'      => (string) $opts['theme_color'],
 		'background_color' => $background,
 		'lang'             => (string) $opts['lang'],
-		'icons'            => function_exists( 'vh360_pwa_get_manifest_icons' ) ? vh360_pwa_get_manifest_icons() : array(),
+		'icons'            => $icons,
+		'pwa_asset_version' => vh360_pwa_get_asset_version( $opts ),
 		'generated_by'     => 'VH360 PWA & App plugin',
 		'vh360_managed'    => true,
 	);
@@ -208,8 +255,8 @@ function vh360_pwa_build_sw_script( ?array $opts = null ) : string {
 	$payload = array(
 		'cacheVersion' => $cache_version,
 		'strategy'     => $strategy,
-		'precache'     => vh360_pwa_get_precache_urls( $opts ),
-		'offlineUrl'   => vh360_pwa_endpoint_url( VH360_PWA_OFFLINE_SLUG ),
+		'precache'     => array_map( function( $url ) use ( $opts ) { return vh360_pwa_version_url( (string) $url, $opts ); }, vh360_pwa_get_precache_urls( $opts ) ),
+		'offlineUrl'   => vh360_pwa_version_url( vh360_pwa_endpoint_url( VH360_PWA_OFFLINE_SLUG ), $opts ),
 		'homeOrigin'   => home_url(),
 		'onesignal'    => $onesignal,
 	);
@@ -334,6 +381,7 @@ function vh360_pwa_generate_ios_startup_images() : array {
 	$title_font_size = max( 18, min( 96, absint( $opts['splash_title_font_size'] ?? 44 ) ) );
 	$title_color = sanitize_hex_color( $opts['splash_title_color'] ?? '#ffffff' ) ?: '#ffffff';
 	$title_offset = max( 20, min( 200, absint( $opts['splash_title_offset'] ?? 80 ) ) );
+	$asset_version = vh360_pwa_get_asset_version( $opts );
 	$r=hexdec(substr($bg,1,2)); $g=hexdec(substr($bg,3,2)); $b=hexdec(substr($bg,5,2));
 	$out = array();
 	foreach ( $sizes as $key => $data ) {
@@ -348,8 +396,8 @@ function vh360_pwa_generate_ios_startup_images() : array {
 			$text_y = (int) min( $h - 60, $logo_y + $nh + $title_offset );
 			vh360_pwa_draw_startup_title( $img, $render_title, (int) ( $w / 2 ), $text_y, $title_font_size, $title_color );
 		}
-		$file='vh360-startup-' . $key . '-' . md5($bg . $opts['splash_logo'] . $title . $title_font_size . $title_color . $title_offset) . '.png'; imagepng($img, trailingslashit($dir).$file); imagedestroy($img);
-		$out[] = array('href'=>trailingslashit($url).$file,'media'=>$media);
+		$file='vh360-startup-' . $key . '-' . $asset_version . '-' . substr( md5($bg . $opts['splash_logo'] . $title . $title_font_size . $title_color . $title_offset), 0, 10 ) . '.png'; imagepng($img, trailingslashit($dir).$file); imagedestroy($img);
+		$out[] = array('href'=>vh360_pwa_version_url( trailingslashit($url).$file, $opts ),'media'=>$media);
 	}
 	imagedestroy($logo_src); update_option('vh360_pwa_ios_startup_images',$out); return $out;
 }
