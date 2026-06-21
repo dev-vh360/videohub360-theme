@@ -5878,6 +5878,7 @@ window.initializeAgoraPlayer = function(config) {
         ensureIOSImmersiveExitButton();
 
         window.dispatchEvent(new Event('resize'));
+        window.dispatchEvent(new Event('vh360:fullscreenchange'));
 
         window.vh360Log('VideoHub360 iOS Immersive: Entered immersive fullscreen');
     }
@@ -5933,6 +5934,7 @@ window.initializeAgoraPlayer = function(config) {
         iosImmersivePreviousActiveElement = null;
 
         window.dispatchEvent(new Event('resize'));
+        window.dispatchEvent(new Event('vh360:fullscreenchange'));
 
         resumeAgoraBroadcastPlayback('ios-immersive-exit');
 

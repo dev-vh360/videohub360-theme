@@ -212,17 +212,22 @@ class ViewLayoutManager {
 
 
     getActiveFullscreenElement() {
-        return document.fullscreenElement ||
+        const browserFullscreenElement = document.fullscreenElement ||
             document.webkitFullscreenElement ||
             document.mozFullScreenElement ||
             document.msFullscreenElement ||
+            null;
+        if (browserFullscreenElement) return browserFullscreenElement;
+
+        return document.querySelector('#vh360-agora-player.vh360-ios-immersive-fullscreen') ||
+            document.querySelector('.vh360-ios-immersive-fullscreen') ||
             null;
     }
 
     getViewDropdownPortalParent() {
         const agoraPlayer = document.getElementById('vh360-agora-player');
         const fullscreenElement = this.getActiveFullscreenElement();
-        if (agoraPlayer && fullscreenElement === agoraPlayer) {
+        if (agoraPlayer && (fullscreenElement === agoraPlayer || agoraPlayer.classList.contains('vh360-ios-immersive-fullscreen'))) {
             return agoraPlayer;
         }
         return document.body;
@@ -249,6 +254,7 @@ class ViewLayoutManager {
         document.addEventListener('mozfullscreenchange', this.boundViewDropdownFullscreenHandler);
         document.addEventListener('MSFullscreenChange', this.boundViewDropdownFullscreenHandler);
         document.addEventListener('msfullscreenchange', this.boundViewDropdownFullscreenHandler);
+        window.addEventListener('vh360:fullscreenchange', this.boundViewDropdownFullscreenHandler);
     }
 
     removeViewDropdownFullscreenListeners() {
@@ -258,6 +264,7 @@ class ViewLayoutManager {
         document.removeEventListener('mozfullscreenchange', this.boundViewDropdownFullscreenHandler);
         document.removeEventListener('MSFullscreenChange', this.boundViewDropdownFullscreenHandler);
         document.removeEventListener('msfullscreenchange', this.boundViewDropdownFullscreenHandler);
+        window.removeEventListener('vh360:fullscreenchange', this.boundViewDropdownFullscreenHandler);
         this.boundViewDropdownFullscreenHandler = null;
     }
 
@@ -276,6 +283,7 @@ class ViewLayoutManager {
         toggle.addEventListener('click', (event) => {
             event.preventDefault();
             event.stopPropagation();
+            this.syncViewDropdownPortal();
             this.setViewDropdownOpen(!this.isViewDropdownOpen);
         });
 
@@ -348,17 +356,23 @@ class ViewLayoutManager {
 
         menu.style.visibility = 'hidden';
         menu.hidden = false;
-        const menuWidth = Math.min(menu.offsetWidth || 172, Math.max(160, viewportWidth - (margin * 2)));
-        const menuHeight = menu.offsetHeight || 140;
+        const isMobileViewport = viewportWidth <= 768;
+        const isFullscreenContext = !!this.getActiveFullscreenElement();
+        const maxMenuWidth = Math.max(160, viewportWidth - (margin * 2));
+        const maxMenuHeight = Math.max(120, viewportHeight - (isMobileViewport && isFullscreenContext ? 96 : margin * 2));
+        const menuWidth = Math.min(menu.offsetWidth || 172, maxMenuWidth);
+        const menuHeight = Math.min(menu.offsetHeight || 140, maxMenuHeight);
         const left = Math.max(margin, Math.min(toggleRect.right - menuWidth, viewportWidth - menuWidth - margin));
         const hasRoomAbove = toggleRect.top >= menuHeight + margin;
-        const top = hasRoomAbove
-            ? Math.max(margin, toggleRect.top - menuHeight - margin)
-            : Math.min(viewportHeight - menuHeight - margin, toggleRect.bottom + margin);
+        const unclampedTop = hasRoomAbove ? toggleRect.top - menuHeight - margin : toggleRect.bottom + margin;
+        const top = Math.max(margin, Math.min(unclampedTop, viewportHeight - menuHeight - margin));
 
         menu.style.width = `${menuWidth}px`;
+        menu.style.maxWidth = `${maxMenuWidth}px`;
+        menu.style.maxHeight = `${maxMenuHeight}px`;
+        menu.style.overflowY = 'auto';
         menu.style.left = `${left}px`;
-        menu.style.top = `${Math.max(margin, top)}px`;
+        menu.style.top = `${top}px`;
         menu.style.visibility = '';
     }
     

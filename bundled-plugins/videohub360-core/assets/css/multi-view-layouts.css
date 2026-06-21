@@ -1211,6 +1211,32 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
     z-index: 1000;
 }
 
+
+/* Keep the portaled View dropdown above browser and iOS immersive fullscreen layers. */
+#vh360-agora-player:fullscreen .vh360-view-dropdown-menu,
+#vh360-agora-player:-webkit-full-screen .vh360-view-dropdown-menu,
+#vh360-agora-player:-moz-full-screen .vh360-view-dropdown-menu,
+#vh360-agora-player:-ms-fullscreen .vh360-view-dropdown-menu,
+#vh360-agora-player.vh360-ios-immersive-fullscreen .vh360-view-dropdown-menu,
+body.vh360-ios-immersive-active #vh360-view-dropdown-menu {
+    position: fixed;
+    z-index: 2147483647 !important;
+}
+
+@media (max-width: 768px) {
+    #vh360-agora-player:fullscreen .vh360-view-dropdown-menu,
+    #vh360-agora-player:-webkit-full-screen .vh360-view-dropdown-menu,
+    #vh360-agora-player:-moz-full-screen .vh360-view-dropdown-menu,
+    #vh360-agora-player:-ms-fullscreen .vh360-view-dropdown-menu,
+    #vh360-agora-player.vh360-ios-immersive-fullscreen .vh360-view-dropdown-menu,
+    body.vh360-ios-immersive-active #vh360-view-dropdown-menu {
+        max-width: calc(100vw - 16px);
+        max-height: calc(100vh - 96px);
+        overflow-y: auto;
+    }
+}
+
+
 .vh360-view-dropdown-menu[hidden] {
     display: none;
 }
