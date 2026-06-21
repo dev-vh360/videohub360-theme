@@ -1379,7 +1379,6 @@ window.initializeAgoraPlayer = function(config) {
         if (!participant) return;
         const isSpeaking = Number(level) > volumeThreshold;
         if (participant.isSpeaking === isSpeaking) {
-            updateParticipantTile(participant);
             return;
         }
         participant.isSpeaking = isSpeaking;
@@ -2848,6 +2847,7 @@ window.initializeAgoraPlayer = function(config) {
             if (participant) {
                 participant.audioTrack = null;
                 participant.audioOn = false;
+                participant.isSpeaking = false;
                 updateParticipantTile(participant);
             }
             // Clean up active speaker if this user was the active speaker and now has no audio
@@ -3313,6 +3313,7 @@ window.initializeAgoraPlayer = function(config) {
             if (localTracks.audioTrack) {
                 localParticipant.audioTrack = localTracks.audioTrack;
                 localParticipant.audioOn = !isAudioMuted;
+                if (isAudioMuted) localParticipant.isSpeaking = false;
             }
 
             if (localTracks.videoTrack && typeof localTracks.videoTrack.play === 'function') {
@@ -3334,7 +3335,11 @@ window.initializeAgoraPlayer = function(config) {
                 muteAudioBtn.textContent = isAudioMuted ? '🔇 Unmute' : '🎤 Mute';
                 muteAudioBtn.style.backgroundColor = isAudioMuted ? '#e53935' : 'transparent';
                 const participant = currentUserUID ? participantRegistry.get(String(currentUserUID)) : null;
-                if (participant) { participant.audioOn = !isAudioMuted; updateParticipantTile(participant); }
+                if (participant) {
+                    participant.audioOn = !isAudioMuted;
+                    if (isAudioMuted) participant.isSpeaking = false;
+                    updateParticipantTile(participant);
+                }
             }
             if (muteVideoBtn) {
                 muteVideoBtn.textContent = isVideoMuted ? '📹 Turn On' : '📹 Camera';
@@ -3370,6 +3375,13 @@ window.initializeAgoraPlayer = function(config) {
                 localTracks.audioTrack.stop();
                 localTracks.audioTrack.close();
                 localTracks.audioTrack = null;
+                const participant = currentUserUID ? participantRegistry.get(String(currentUserUID)) : null;
+                if (participant) {
+                    participant.audioTrack = null;
+                    participant.audioOn = false;
+                    participant.isSpeaking = false;
+                    updateParticipantTile(participant);
+                }
             }
             if (localTracks.videoTrack) {
                 localTracks.videoTrack.stop();
@@ -3381,6 +3393,7 @@ window.initializeAgoraPlayer = function(config) {
                 localParticipant.audioTrack = null;
                 localParticipant.videoTrack = null;
                 localParticipant.audioOn = false;
+                localParticipant.isSpeaking = false;
                 localParticipant.cameraOn = false;
                 updateParticipantTile(localParticipant);
             }
@@ -3396,7 +3409,11 @@ window.initializeAgoraPlayer = function(config) {
                 muteAudioBtn.textContent = isAudioMuted ? '🔇 Unmute' : '🎤 Mute';
                 muteAudioBtn.style.backgroundColor = isAudioMuted ? '#e53935' : 'transparent';
                 const participant = currentUserUID ? participantRegistry.get(String(currentUserUID)) : null;
-                if (participant) { participant.audioOn = !isAudioMuted; updateParticipantTile(participant); }
+                if (participant) {
+                    participant.audioOn = !isAudioMuted;
+                    if (isAudioMuted) participant.isSpeaking = false;
+                    updateParticipantTile(participant);
+                }
             }
         });
     }
@@ -3658,6 +3675,13 @@ window.initializeAgoraPlayer = function(config) {
                 localTracks.audioTrack.stop();
                 localTracks.audioTrack.close();
                 localTracks.audioTrack = null;
+                const participant = currentUserUID ? participantRegistry.get(String(currentUserUID)) : null;
+                if (participant) {
+                    participant.audioTrack = null;
+                    participant.audioOn = false;
+                    participant.isSpeaking = false;
+                    updateParticipantTile(participant);
+                }
             }
             if (localTracks.videoTrack) {
                 localTracks.videoTrack.stop();
