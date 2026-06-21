@@ -2219,6 +2219,49 @@ window.initializeAgoraPlayer = function(config) {
     }
 
     // -- Controls UI handling --
+
+    function setAgoraControlButtonContent(button, state) {
+        if (!button || !state) return;
+        button.classList.add('vh360-agora-control-btn', 'vh360-agora-media-control-btn');
+        button.classList.toggle('is-audio-on', state.type === 'audio' && !state.isMuted);
+        button.classList.toggle('is-audio-muted', state.type === 'audio' && state.isMuted);
+        button.classList.toggle('is-camera-on', state.type === 'video' && !state.isMuted);
+        button.classList.toggle('is-camera-off', state.type === 'video' && state.isMuted);
+        button.setAttribute('aria-label', state.accessibleLabel);
+        button.setAttribute('title', state.accessibleLabel);
+        button.innerHTML = `<span class="vh360-agora-control-icon" aria-hidden="true">${state.icon}</span><span class="vh360-agora-control-label">${state.label}</span>`;
+    }
+
+    function updateAgoraControlButtonStates() {
+        setAgoraControlButtonContent(muteAudioBtn, isAudioMuted ? {
+            type: 'audio',
+            isMuted: true,
+            accessibleLabel: 'Unmute microphone',
+            icon: '🔇',
+            label: 'Unmute'
+        } : {
+            type: 'audio',
+            isMuted: false,
+            accessibleLabel: 'Mute microphone',
+            icon: '🎤',
+            label: 'Mute'
+        });
+
+        setAgoraControlButtonContent(muteVideoBtn, isVideoMuted ? {
+            type: 'video',
+            isMuted: true,
+            accessibleLabel: 'Turn camera on',
+            icon: '📹',
+            label: 'Turn On'
+        } : {
+            type: 'video',
+            isMuted: false,
+            accessibleLabel: 'Turn camera off',
+            icon: '📹',
+            label: 'Camera'
+        });
+    }
+
     function updateControlsVisibility() {
         if (!controlsContainer) return;
 
@@ -2243,10 +2286,10 @@ window.initializeAgoraPlayer = function(config) {
 
         if (currentRole === 'host' || isAppointmentPublisher) {
             if (muteAudioBtn) {
-                muteAudioBtn.style.display = 'inline-block';
+                muteAudioBtn.style.display = 'inline-flex';
             }
             if (muteVideoBtn) {
-                muteVideoBtn.style.display = 'inline-block';
+                muteVideoBtn.style.display = 'inline-flex';
             }
         } else if (currentRole === 'audience') {
             if (config.agoraMode === 'interactive' && joinAsPresenterBtn && security.is_logged_in && !isOriginalHost) {
@@ -2256,6 +2299,7 @@ window.initializeAgoraPlayer = function(config) {
 
         if (leaveBtn) leaveBtn.style.display = 'inline-block';
         if (endStreamBtn) endStreamBtn.style.display = shouldShowEndStreamButton() ? 'inline-block' : 'none';
+        updateAgoraControlButtonStates();
 
         // Handle moderation button visibility
         const moderationBtn = document.getElementById('vh360-moderation-panel-btn');
@@ -3332,7 +3376,7 @@ window.initializeAgoraPlayer = function(config) {
             window.vh360Log('VideoHub360: Publish completed for UID:', currentUserUID);
 
             if (muteAudioBtn) {
-                muteAudioBtn.textContent = isAudioMuted ? '🔇 Unmute' : '🎤 Mute';
+                updateAgoraControlButtonStates();
                 muteAudioBtn.style.backgroundColor = isAudioMuted ? '#e53935' : 'transparent';
                 const participant = currentUserUID ? participantRegistry.get(String(currentUserUID)) : null;
                 if (participant) {
@@ -3342,7 +3386,7 @@ window.initializeAgoraPlayer = function(config) {
                 }
             }
             if (muteVideoBtn) {
-                muteVideoBtn.textContent = isVideoMuted ? '📹 Turn On' : '📹 Camera';
+                updateAgoraControlButtonStates();
                 muteVideoBtn.style.backgroundColor = isVideoMuted ? '#e53935' : 'transparent';
                 const participant = currentUserUID ? participantRegistry.get(String(currentUserUID)) : null;
                 if (participant) { participant.cameraOn = !isVideoMuted; updateParticipantTile(participant); }
@@ -3406,7 +3450,7 @@ window.initializeAgoraPlayer = function(config) {
             if (localTracks.audioTrack) {
                 await localTracks.audioTrack.setMuted(!isAudioMuted);
                 isAudioMuted = !isAudioMuted;
-                muteAudioBtn.textContent = isAudioMuted ? '🔇 Unmute' : '🎤 Mute';
+                updateAgoraControlButtonStates();
                 muteAudioBtn.style.backgroundColor = isAudioMuted ? '#e53935' : 'transparent';
                 const participant = currentUserUID ? participantRegistry.get(String(currentUserUID)) : null;
                 if (participant) {
@@ -3422,7 +3466,7 @@ window.initializeAgoraPlayer = function(config) {
             if (localTracks.videoTrack) {
                 await localTracks.videoTrack.setMuted(!isVideoMuted);
                 isVideoMuted = !isVideoMuted;
-                muteVideoBtn.textContent = isVideoMuted ? '📹 Turn On' : '📹 Camera';
+                updateAgoraControlButtonStates();
                 muteVideoBtn.style.backgroundColor = isVideoMuted ? '#e53935' : 'transparent';
                 const participant = currentUserUID ? participantRegistry.get(String(currentUserUID)) : null;
                 if (participant) { participant.cameraOn = !isVideoMuted; updateParticipantTile(participant); }
