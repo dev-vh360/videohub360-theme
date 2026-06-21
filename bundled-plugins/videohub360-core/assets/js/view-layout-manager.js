@@ -29,6 +29,7 @@ class ViewLayoutManager {
         this.boundViewDropdownOutsideHandler = null;
         this.boundViewDropdownKeyHandler = null;
         this.boundViewDropdownFullscreenHandler = null;
+        this.boundFullscreenKeyHandler = null;
         this.isViewDropdownOpen = false;
         this.isTransitioning = false; // Guard against race conditions during view transitions
         this.transitionTimeout = null;
@@ -553,6 +554,27 @@ class ViewLayoutManager {
         }
     }
     
+    handleFullscreenKeydown(e) {
+        const agoraPlayer = document.getElementById('vh360-agora-player');
+        const targetTagName = e.target && e.target.tagName ? e.target.tagName : '';
+        if (!agoraPlayer || targetTagName === 'INPUT' || targetTagName === 'TEXTAREA') {
+            return;
+        }
+
+        // F key to toggle fullscreen.
+        if (e.key === 'f' || e.key === 'F') {
+            e.preventDefault();
+            this.toggleFullscreen();
+        }
+
+        // Escape exits fullscreen in the browser; update the button state after it completes.
+        if (e.key === 'Escape' && window.isInFullscreen()) {
+            setTimeout(() => {
+                this.updateFullscreenButton(false);
+            }, 100);
+        }
+    }
+
     initializeFullscreenHandlers() {
         // Only add fullscreen change listeners once globally.
         if (!window.vh360FullscreenListenersAdded) {
@@ -576,27 +598,11 @@ class ViewLayoutManager {
             window.vh360FullscreenListenersAdded = true;
         }
         
-        // Add keyboard support for F key and Escape
-        document.addEventListener('keydown', (e) => {
-            // Only handle if Agora player exists and user is not typing in an input
-            const agoraPlayer = document.getElementById('vh360-agora-player');
-            if (!agoraPlayer || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-                return;
-            }
-            
-            // F key to toggle fullscreen
-            if (e.key === 'f' || e.key === 'F') {
-                e.preventDefault();
-                this.toggleFullscreen();
-            }
-            
-            // Escape key to exit fullscreen (browser handles this but we update our button)
-            if (e.key === 'Escape' && window.isInFullscreen()) {
-                setTimeout(() => {
-                    this.updateFullscreenButton(false);
-                }, 100);
-            }
-        });
+        // Add removable keyboard support for F key and Escape.
+        if (!this.boundFullscreenKeyHandler) {
+            this.boundFullscreenKeyHandler = this.handleFullscreenKeydown.bind(this);
+            document.addEventListener('keydown', this.boundFullscreenKeyHandler);
+        }
     }
     
     setupContainers() {
@@ -881,6 +887,10 @@ class ViewLayoutManager {
         if (this.boundViewDropdownKeyHandler) {
             document.removeEventListener('keydown', this.boundViewDropdownKeyHandler);
             this.boundViewDropdownKeyHandler = null;
+        }
+        if (this.boundFullscreenKeyHandler) {
+            document.removeEventListener('keydown', this.boundFullscreenKeyHandler);
+            this.boundFullscreenKeyHandler = null;
         }
         this.removeViewDropdownFullscreenListeners();
 
