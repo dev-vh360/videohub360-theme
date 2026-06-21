@@ -554,47 +554,24 @@ class ViewLayoutManager {
     }
     
     initializeFullscreenHandlers() {
-        // Only add fullscreen change listeners once globally
+        // Only add fullscreen change listeners once globally.
         if (!window.vh360FullscreenListenersAdded) {
-            // Handle fullscreen change events (for when user exits with Escape key or browser controls)
-            document.addEventListener('fullscreenchange', () => {
+            window.vh360FullscreenChangeHandler = window.vh360FullscreenChangeHandler || (() => {
                 const isFullscreen = window.isInFullscreen();
-                // Update desktop button if ViewLayoutManager instance exists
+                // Update desktop button if ViewLayoutManager instance exists.
                 if (window.viewLayoutManager && window.viewLayoutManager.updateFullscreenButton) {
                     window.viewLayoutManager.updateFullscreenButton(isFullscreen);
                 }
-                // Update mobile button if it exists
+                // Update mobile button if it exists.
                 if (typeof window.updateMobileFullscreenButton === 'function') {
                     window.updateMobileFullscreenButton(isFullscreen);
                 }
             });
-            document.addEventListener('webkitfullscreenchange', () => {
-                const isFullscreen = window.isInFullscreen();
-                if (window.viewLayoutManager && window.viewLayoutManager.updateFullscreenButton) {
-                    window.viewLayoutManager.updateFullscreenButton(isFullscreen);
-                }
-                if (typeof window.updateMobileFullscreenButton === 'function') {
-                    window.updateMobileFullscreenButton(isFullscreen);
-                }
-            });
-            document.addEventListener('mozfullscreenchange', () => {
-                const isFullscreen = window.isInFullscreen();
-                if (window.viewLayoutManager && window.viewLayoutManager.updateFullscreenButton) {
-                    window.viewLayoutManager.updateFullscreenButton(isFullscreen);
-                }
-                if (typeof window.updateMobileFullscreenButton === 'function') {
-                    window.updateMobileFullscreenButton(isFullscreen);
-                }
-            });
-            document.addEventListener('msfullscreenchange', () => {
-                const isFullscreen = window.isInFullscreen();
-                if (window.viewLayoutManager && window.viewLayoutManager.updateFullscreenButton) {
-                    window.viewLayoutManager.updateFullscreenButton(isFullscreen);
-                }
-                if (typeof window.updateMobileFullscreenButton === 'function') {
-                    window.updateMobileFullscreenButton(isFullscreen);
-                }
-            });
+
+            document.addEventListener('fullscreenchange', window.vh360FullscreenChangeHandler);
+            document.addEventListener('webkitfullscreenchange', window.vh360FullscreenChangeHandler);
+            document.addEventListener('mozfullscreenchange', window.vh360FullscreenChangeHandler);
+            document.addEventListener('msfullscreenchange', window.vh360FullscreenChangeHandler);
             
             window.vh360FullscreenListenersAdded = true;
         }

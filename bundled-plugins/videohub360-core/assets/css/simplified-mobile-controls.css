@@ -79,6 +79,46 @@
         transition: all var(--vh360-transition-normal);
     }
 
+
+
+    /* Structured Agora media controls: icon-only mic/camera, text-preserving Views button. */
+    #vh360-agora-controls.vh360-mobile-controls-simple #vh360-agora-mute-audio .vh360-agora-control-label,
+    #vh360-agora-controls.vh360-mobile-controls-simple #vh360-agora-mute-video .vh360-agora-control-label {
+        display: none;
+    }
+
+    #vh360-agora-controls.vh360-mobile-controls-simple #vh360-agora-mute-audio,
+    #vh360-agora-controls.vh360-mobile-controls-simple #vh360-agora-mute-video {
+        width: 44px;
+        min-width: 44px;
+        max-width: 44px;
+        height: 44px;
+        min-height: 44px;
+        padding: 0;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+        flex: 0 0 44px;
+    }
+
+    #vh360-agora-controls.vh360-mobile-controls-simple #vh360-agora-mute-audio .vh360-agora-control-icon,
+    #vh360-agora-controls.vh360-mobile-controls-simple #vh360-agora-mute-video .vh360-agora-control-icon {
+        margin: 0;
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+
+    #vh360-agora-controls.vh360-mobile-controls-simple .vh360-agora-views-btn,
+    #vh360-agora-controls.vh360-mobile-controls-simple #vh360-view-selector .vh360-view-dropdown-toggle {
+        width: auto;
+        min-width: auto;
+        max-width: none;
+        padding-left: 10px;
+        padding-right: 10px;
+        white-space: nowrap;
+        flex: 0 0 auto;
+    }
+
     /* Button hover effects */
     body #vh360-agora-controls.vh360-mobile-controls-simple button:hover,
     .vh360-speaker-view #vh360-agora-controls.vh360-mobile-controls-simple button:hover,
@@ -214,4 +254,21 @@
     #vh360-agora-controls.vh360-mobile-controls-simple * {
         box-sizing: border-box;
     }
+}
+
+
+/* Preserve Views text in iOS immersive landscape where generic mobile button rules force square buttons. */
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-fullscreen)
+#vh360-agora-controls.vh360-mobile-controls-simple .vh360-agora-views-btn,
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-fullscreen)
+#vh360-agora-controls.vh360-mobile-controls-simple #vh360-view-selector .vh360-view-dropdown-toggle {
+    width: auto !important;
+    min-width: auto !important;
+    max-width: none !important;
+    flex: 0 0 auto !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    white-space: nowrap !important;
 }
