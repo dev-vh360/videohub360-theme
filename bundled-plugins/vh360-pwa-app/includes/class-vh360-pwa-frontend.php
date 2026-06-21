@@ -43,7 +43,7 @@ class VH360_PWA_Frontend {
 		// If a theme outputs wp_head() in an unexpected place, literal "\\n" text can appear on the page.
 		echo '<link rel="manifest" href="' . $manifest . '">' . "\n";
 		echo '<meta name="theme-color" content="' . $theme_color . '">' . "\n";
-		echo '<style id="vh360-pwa-launch-bg">html,body{background:' . $splash_bg . ';}</style>' . "\n";
+		echo '<style id="vh360-pwa-launch-bg">html{background:' . $splash_bg . ';}</style>' . "\n";
 		echo '<meta name="apple-mobile-web-app-capable" content="yes">' . "\n";
 		echo '<meta name="apple-mobile-web-app-title" content="' . esc_attr( $app_title ) . '">' . "\n";
 		echo '<meta name="mobile-web-app-capable" content="yes">' . "\n";

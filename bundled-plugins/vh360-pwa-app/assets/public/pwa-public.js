@@ -54,6 +54,16 @@
       (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
   }
 
+  function updateStandaloneClass() {
+    if (isStandalone()) {
+      document.documentElement.classList.add('vh360-pwa-standalone');
+    } else {
+      document.documentElement.classList.remove('vh360-pwa-standalone');
+    }
+  }
+
+  updateStandaloneClass();
+
   function storageKey() {
     return 'vh360_pwa_install_banner_dismissed_until';
   }
@@ -235,11 +245,12 @@
       if (!pulling || !e.touches || !e.touches[0]) return;
       var diff = e.touches[0].clientY - startY;
       if (diff <= 0 || window.scrollY > 0) return;
+      if (e.cancelable) e.preventDefault();
       ready = diff > threshold;
       indicator.textContent = ready ? 'Release to refresh' : 'Pull to refresh';
       indicator.style.transform = 'translate(-50%, ' + Math.min(diff / 2, 70) + 'px)';
       indicator.classList.add('is-visible');
-    }, { passive: true });
+    }, { passive: false });
     document.addEventListener('touchend', function () {
       if (!pulling) return;
       pulling = false;
@@ -416,6 +427,7 @@
         history.replaceState({}, document.title, newUrl);
       }
     } catch (e) {}
+    updateStandaloneClass();
     // Modal container
     ensureModal();
     // Default label ("How to install") unless/until the browser provides a native prompt.

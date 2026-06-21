@@ -60,7 +60,13 @@ self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(STATIC_CACHE);
     const precache = Array.isArray(VH360_PWA.precache) ? VH360_PWA.precache : [];
-    await cache.addAll(precache);
+    await Promise.all(precache.map(async (url) => {
+      try {
+        await cache.add(url);
+      } catch (e) {
+        // Ignore individual precache failures so one bad URL does not abort SW install.
+      }
+    }));
     // Keep updates controllable: we won't skipWaiting automatically.
   })());
 });

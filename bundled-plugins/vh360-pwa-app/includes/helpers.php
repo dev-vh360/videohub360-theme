@@ -221,7 +221,19 @@ function vh360_pwa_get_ios_startup_images() : array {
 function vh360_pwa_generate_ios_startup_images() : array {
 	$opts = vh360_pwa_get_options();
 	if ( empty( $opts['splash_enabled'] ) || empty( $opts['splash_logo'] ) ) { return array(); }
-	$sizes = array( 'iphone-portrait' => array(750,1334,'(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)'), 'iphone-x-portrait' => array(1125,2436,'(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)'), 'ipad-portrait' => array(1536,2048,'(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)') );
+	$sizes = array(
+		'iphone-8-portrait'       => array( 750, 1334, '(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)' ),
+		'iphone-11-portrait'      => array( 828, 1792, '(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)' ),
+		'iphone-x-portrait'       => array( 1125, 2436, '(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)' ),
+		'iphone-12-portrait'      => array( 1170, 2532, '(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)' ),
+		'iphone-14-portrait'      => array( 1179, 2556, '(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)' ),
+		'iphone-pro-max-portrait' => array( 1284, 2778, '(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)' ),
+		'iphone-15-pro-max-portrait' => array( 1290, 2796, '(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)' ),
+		'ipad-portrait'           => array( 1536, 2048, '(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)' ),
+		'ipad-pro-10-5-portrait'  => array( 1668, 2224, '(device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)' ),
+		'ipad-pro-11-portrait'    => array( 1668, 2388, '(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)' ),
+		'ipad-pro-12-9-portrait'  => array( 2048, 2732, '(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)' ),
+	);
 	$uploads = wp_upload_dir();
 	$dir = trailingslashit( $uploads['basedir'] ) . 'vh360-pwa/splash';
 	$url = trailingslashit( $uploads['baseurl'] ) . 'vh360-pwa/splash';
@@ -232,13 +244,26 @@ function vh360_pwa_generate_ios_startup_images() : array {
 	$logo_src = $logo_data ? @imagecreatefromstring( $logo_data ) : false;
 	if ( ! $logo_src ) { return array(); }
 	$bg = sanitize_hex_color( $opts['splash_background_color'] ?? $opts['background_color'] ) ?: '#0f172a';
+	$title = trim( (string) ( $opts['splash_title'] ?? $opts['short_name'] ?? '' ) );
 	$r=hexdec(substr($bg,1,2)); $g=hexdec(substr($bg,3,2)); $b=hexdec(substr($bg,5,2));
 	$out = array();
 	foreach ( $sizes as $key => $data ) {
 		list($w,$h,$media) = $data; $img = imagecreatetruecolor($w,$h); $c=imagecolorallocate($img,$r,$g,$b); imagefill($img,0,0,$c);
 		$lw=imagesx($logo_src); $lh=imagesy($logo_src); $target=(int)min($w*.32,$h*.18); $scale=$target/max($lw,$lh); $nw=(int)($lw*$scale); $nh=(int)($lh*$scale);
-		imagecopyresampled($img,$logo_src,(int)(($w-$nw)/2),(int)(($h-$nh)/2),0,0,$nw,$nh,$lw,$lh);
-		$file='vh360-startup-' . $key . '-' . md5($bg . $opts['splash_logo']) . '.png'; imagepng($img, trailingslashit($dir).$file); imagedestroy($img);
+		$logo_x = (int) ( ( $w - $nw ) / 2 );
+		$logo_y = (int) ( ( $h - $nh ) / 2 ) - ( '' !== $title ? (int) ( $h * 0.035 ) : 0 );
+		imagecopyresampled($img,$logo_src,$logo_x,$logo_y,0,0,$nw,$nh,$lw,$lh);
+		if ( '' !== $title ) {
+			$font = 5;
+			$max_chars = max( 12, (int) floor( $w / imagefontwidth( $font ) * 0.72 ) );
+			$render_title = function_exists( 'mb_substr' ) ? mb_substr( $title, 0, $max_chars ) : substr( $title, 0, $max_chars );
+			$text_width = imagefontwidth( $font ) * strlen( $render_title );
+			$text_x = (int) max( 0, ( $w - $text_width ) / 2 );
+			$text_y = (int) min( $h - 60, $logo_y + $nh + max( 28, $h * 0.025 ) );
+			$text_color = imagecolorallocate( $img, 255, 255, 255 );
+			imagestring( $img, $font, $text_x, $text_y, $render_title, $text_color );
+		}
+		$file='vh360-startup-' . $key . '-' . md5($bg . $opts['splash_logo'] . $title) . '.png'; imagepng($img, trailingslashit($dir).$file); imagedestroy($img);
 		$out[] = array('href'=>trailingslashit($url).$file,'media'=>$media);
 	}
 	imagedestroy($logo_src); update_option('vh360_pwa_ios_startup_images',$out); return $out;
