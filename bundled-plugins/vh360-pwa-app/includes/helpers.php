@@ -173,6 +173,8 @@ function vh360_pwa_build_manifest( ?array $opts = null ) : array {
 		'background_color' => $background,
 		'lang'             => (string) $opts['lang'],
 		'icons'            => function_exists( 'vh360_pwa_get_manifest_icons' ) ? vh360_pwa_get_manifest_icons() : array(),
+		'generated_by'     => 'VH360 PWA & App plugin',
+		'vh360_managed'    => true,
 	);
 }
 

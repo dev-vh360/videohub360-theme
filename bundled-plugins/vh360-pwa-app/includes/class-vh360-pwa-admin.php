@@ -398,9 +398,6 @@ $out['scope']     = $normalize_to_path( $scope );
 			VH360_PWA_Endpoints::add_rewrite_rules();
 			flush_rewrite_rules();
 		}
-		if ( class_exists( 'VH360_PWA_Root_Files' ) ) {
-			VH360_PWA_Root_Files::ensure_root_files();
-		}
 		update_option( 'vh360_pwa_manifest_generated_at', time() );
 		if ( function_exists( 'vh360_pwa_generate_ios_startup_images' ) ) { vh360_pwa_generate_ios_startup_images(); }
 		if ( class_exists( 'VH360_PWA_Root_Files' ) ) { VH360_PWA_Root_Files::ensure_root_files(); }

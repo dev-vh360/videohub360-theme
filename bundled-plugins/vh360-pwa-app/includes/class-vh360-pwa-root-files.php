@@ -55,7 +55,6 @@ final class VH360_PWA_Root_Files {
 	private static function maybe_write_manifest( string $root ) : void {
 		$path = $root . 'vh360-manifest.json';
 		$manifest = vh360_pwa_build_manifest();
-		$manifest['generated_by'] = 'VH360 PWA & App plugin';
 		$manifest['generated_at'] = gmdate( 'c' );
 		$written = self::write_managed_file( $path, wp_json_encode( $manifest, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT ) . "\n", 'vh360-manifest.json' );
 		update_option( 'vh360_pwa_root_manifest_write_status', array( 'success' => $written, 'path' => $path, 'generated_at' => time() ) );
@@ -106,7 +105,7 @@ final class VH360_PWA_Root_Files {
 	}
 
 	private static function is_managed_file_content( string $existing ) : bool {
-		foreach ( array( 'VH360 Managed File', 'VH360 PWA & App plugin', 'VH360 Service Worker', 'vh360-sw.js', 'vh360-offline.html' ) as $marker ) {
+		foreach ( array( 'VH360 Managed File', 'VH360 PWA & App plugin', '"generated_by": "VH360 PWA & App plugin"', '"vh360_managed": true', 'VH360 Service Worker', 'vh360-sw.js', 'vh360-offline.html' ) as $marker ) {
 			if ( false !== strpos( $existing, $marker ) ) {
 				return true;
 			}
