@@ -57,6 +57,8 @@ function vh360_pwa_get_options() : array {
 		'install_banner_text'  => 'Install the VH360 App',
 		'install_banner_dismiss_days' => 7,
 		'show_ios_onboarding'  => 1,
+		'show_ios_reinstall_notice' => 0,
+		'ios_reinstall_notice_text' => 'We updated this app’s icon or launch screen. If your iPhone or iPad still shows the old branding, remove the app from your Home Screen and add it again from Safari.',
 
 		'enable_pull_to_refresh' => 1,
 		'splash_enabled'       => 1,

@@ -125,7 +125,7 @@ class VH360_PWA_Admin {
             echo '<h3>' . esc_html__( 'Last Regeneration Results', 'vh360-pwa-app' ) . '</h3>';
             echo '<pre style="max-width:980px;white-space:pre-wrap;background:#fff;border:1px solid #ccd0d4;padding:12px;">' . esc_html( wp_json_encode( $last_regen, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) ) . '</pre>';
         }
-        echo '<p class="description" style="max-width:980px;">' . esc_html__( 'Some hosts/CDNs, including server-level cache layers, may require manual purge if the page HTML itself is cached. The versioned URLs above confirm whether VH360 generated fresh PWA assets.', 'vh360-pwa-app' ) . '</p>';
+        echo '<p class="description" style="max-width:980px;">' . esc_html__( 'Some hosts/CDNs, including server-level cache layers, may require manual purge if the page HTML itself is cached. The versioned URLs above confirm whether VH360 generated fresh PWA assets. If an already-installed iPhone/iPad app still shows old launch assets, remove it from the Home Screen and add it again from Safari.', 'vh360-pwa-app' ) . '</p>';
 
         echo '<p>' . esc_html__( 'These tools run in your browser (per device) and can help resolve stale service worker or caching issues during setup and support.', 'vh360-pwa-app' ) . '</p>';
 
@@ -226,6 +226,8 @@ $out['scope']     = $normalize_to_path( $scope );
 		$out['install_banner_text'] = sanitize_text_field( $input['install_banner_text'] ?? $current['install_banner_text'] );
 		$out['install_banner_dismiss_days'] = max( 1, min( 365, absint( $input['install_banner_dismiss_days'] ?? $current['install_banner_dismiss_days'] ) ) );
 		$out['show_ios_onboarding'] = vh360_pwa_boolval( $input['show_ios_onboarding'] ?? $current['show_ios_onboarding'] );
+		$out['show_ios_reinstall_notice'] = vh360_pwa_boolval( $input['show_ios_reinstall_notice'] ?? 0 );
+		$out['ios_reinstall_notice_text'] = sanitize_text_field( $input['ios_reinstall_notice_text'] ?? $current['ios_reinstall_notice_text'] );
 
 		$out['debug_mode'] = vh360_pwa_boolval( $input['debug_mode'] ?? $current['debug_mode'] );
 
@@ -621,7 +623,7 @@ $manifest_url = esc_url( vh360_pwa_endpoint_url( VH360_PWA_MANIFEST_SLUG ) );
 		echo '<label>' . esc_html__( 'Splash title font size', 'vh360-pwa-app' ) . '<br><input type="number" min="18" max="96" name="vh360_pwa_options[splash_title_font_size]" value="' . esc_attr( (string) $opts['splash_title_font_size'] ) . '" style="width:90px"> px</label><br>';
 		echo '<label>' . esc_html__( 'Splash title color', 'vh360-pwa-app' ) . '<br><input type="text" class="vh360-color" name="vh360_pwa_options[splash_title_color]" value="' . esc_attr( (string) $opts['splash_title_color'] ) . '" data-default-color="#ffffff"></label><br>';
 		echo '<label>' . esc_html__( 'Splash title spacing below logo', 'vh360-pwa-app' ) . '<br><input type="number" min="20" max="200" name="vh360_pwa_options[splash_title_offset]" value="' . esc_attr( (string) $opts['splash_title_offset'] ) . '" style="width:90px"> px</label>';
-		echo '<p class="description" style="max-width:760px;">' . esc_html__( 'PWA launch screens are cached aggressively by iOS and Android. After changing splash/icon settings, click Regenerate PWA Assets in Tools. Installed users may need to fully close and reopen the app. Major app identity changes may still require reinstalling the app.', 'vh360-pwa-app' ) . '</p>';
+		echo '<p class="description" style="max-width:760px;">' . esc_html__( 'PWA launch screens are cached aggressively by iOS and Android. Regenerate PWA Assets refreshes server-side files and URLs for new installs, Android/Chrome, and normal PWA assets, but it cannot force existing iPhone/iPad Home Screen apps to replace installed launch metadata. Existing iOS users may need to remove the app from the Home Screen and add it again from Safari after splash, icon, or app-name changes.', 'vh360-pwa-app' ) . '</p>';
 		echo '</td></tr>';
 		$this->render_media_row( 'splash_logo', __( 'Splash Logo', 'vh360-pwa-app' ), (string) ( $opts['splash_logo'] ?? '' ) );
 
@@ -678,6 +680,12 @@ $manifest_url = esc_url( vh360_pwa_endpoint_url( VH360_PWA_MANIFEST_SLUG ) );
 
 		echo '<tr><th scope="row">' . esc_html__( 'iOS Onboarding', 'vh360-pwa-app' ) . '</th><td>';
 		echo '<label><input type="checkbox" name="vh360_pwa_options[show_ios_onboarding]" value="1" ' . checked( ! empty( $opts['show_ios_onboarding'] ), true, false ) . '> ' . esc_html__( 'Show Add to Home Screen instructions on iOS', 'vh360-pwa-app' ) . '</label>';
+		echo '</td></tr>';
+
+		echo '<tr><th scope="row">' . esc_html__( 'iOS Reinstall Notice', 'vh360-pwa-app' ) . '</th><td>';
+		echo '<label><input type="checkbox" name="vh360_pwa_options[show_ios_reinstall_notice]" value="1" ' . checked( ! empty( $opts['show_ios_reinstall_notice'] ), true, false ) . '> ' . esc_html__( 'Show iOS reinstall notice to app users', 'vh360-pwa-app' ) . '</label><br>';
+		echo '<input type="text" class="large-text" name="vh360_pwa_options[ios_reinstall_notice_text]" value="' . esc_attr( (string) $opts['ios_reinstall_notice_text'] ) . '">';
+		echo '<p class="description">' . esc_html__( 'Shown only once per PWA asset version to users running the installed iOS/iPadOS home-screen app.', 'vh360-pwa-app' ) . '</p>';
 		echo '</td></tr>';
 
 		echo '<tr><th scope="row">' . esc_html__( 'Install Button Text', 'vh360-pwa-app' ) . '</th><td>';

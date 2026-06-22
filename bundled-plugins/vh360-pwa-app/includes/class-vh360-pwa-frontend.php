@@ -108,6 +108,9 @@ class VH360_PWA_Frontend {
 				'skipSWRegister'     => $this->should_skip_sw_registration() ? 1 : 0,
 				'appShortName'       => ! empty( $opts['short_name'] ) ? (string) $opts['short_name'] : get_bloginfo( 'name' ),
 				'enablePullToRefresh' => ! empty( $opts['enable_pull_to_refresh'] ) ? 1 : 0,
+				'pwaAssetVersion' => function_exists( 'vh360_pwa_get_asset_version' ) ? vh360_pwa_get_asset_version( $opts ) : 0,
+				'showIosReinstallNotice' => ! empty( $opts['show_ios_reinstall_notice'] ) ? 1 : 0,
+				'iosReinstallNoticeText' => (string) $opts['ios_reinstall_notice_text'],
 			)
 		);
 
