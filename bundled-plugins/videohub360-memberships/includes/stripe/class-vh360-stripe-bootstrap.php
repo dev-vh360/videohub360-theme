@@ -139,14 +139,27 @@ class VH360_Stripe_Bootstrap {
     }
     
     /**
-     * Check if Stripe is properly configured
+     * Check if Stripe payment credentials are available.
+     *
+     * One-time payment features, such as VideoHub360 Giving, only need
+     * usable API credentials and must not require recurring memberships
+     * to be enabled.
+     *
+     * @return bool
+     */
+    public function has_payment_credentials() {
+        return !empty($this->get_secret_key())
+            && !empty($this->get_publishable_key());
+    }
+
+    /**
+     * Check if Stripe recurring membership billing is properly configured.
      *
      * @return bool
      */
     public function is_configured() {
         return $this->is_enabled()
-            && !empty($this->get_secret_key())
-            && !empty($this->get_publishable_key());
+            && $this->has_payment_credentials();
     }
     
     /**

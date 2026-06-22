@@ -1,1 +1,2 @@
 .vh360-giving-admin .vh360-giving-cards{display:flex;gap:1rem}.vh360-giving-admin .big{font-size:2rem;font-weight:700}.vh360-giving-admin textarea{width:25em;min-height:80px}
+.vh360-giving-filters{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin:1rem 0}.vh360-giving-filters input,.vh360-giving-filters select{min-height:32px}

@@ -130,6 +130,13 @@ class VH360_Memberships {
             VH360_Giving_Database::get_instance();
         }
 
+        // Stripe credentials are shared by recurring memberships and one-time Giving payments.
+        VH360_Stripe_Bootstrap::get_instance();
+        VH360_Stripe_Webhook::get_instance();
+        if (class_exists('VH360_Giving_Checkout')) {
+            VH360_Giving_Checkout::get_instance();
+        }
+
         // Check for WooCommerce
         if (!class_exists('WooCommerce')) {
             add_action('admin_notices', array($this, 'woocommerce_missing_notice'));
@@ -144,19 +151,12 @@ class VH360_Memberships {
         VH360_Membership_Frontend::get_instance();
         VH360_Membership_Content_Gates::get_instance();
         
-        // Initialize Stripe components
-        VH360_Stripe_Bootstrap::get_instance();
-        VH360_Stripe_Webhook::get_instance();
-        
-        // Only initialize checkout/portal if Stripe is configured
+        // Only initialize recurring membership checkout/portal if Stripe recurring billing is configured
         $stripe = VH360_Stripe_Bootstrap::get_instance();
         if ($stripe->is_configured()) {
             VH360_Stripe_Checkout::get_instance();
             VH360_Stripe_Portal::get_instance();
             VH360_Stripe_Sync::get_instance();
-            if (class_exists('VH360_Giving_Checkout')) {
-                VH360_Giving_Checkout::get_instance();
-            }
         }
         
         // Initialize subscription management frontend
