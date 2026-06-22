@@ -347,9 +347,15 @@ $out['scope']     = $normalize_to_path( $scope );
 		}
 		
 		// Handle icon generation
-		if ( isset( $_POST['vh360_pwa_generate_icons'] ) ) {
+		if ( isset( $_POST['vh360_pwa_generate_icons'] ) || isset( $_POST['vh360_pwa_regenerate_icons_assets'] ) ) {
 			check_admin_referer( 'vh360_pwa_generate_icons' );
 			$this->handle_icon_generation();
+			return;
+		}
+
+		if ( isset( $_POST['vh360_pwa_clear_generated_icons'] ) ) {
+			check_admin_referer( 'vh360_pwa_clear_generated_icons' );
+			$this->handle_clear_generated_icons();
 			return;
 		}
 	}
@@ -400,8 +406,13 @@ $out['scope']     = $normalize_to_path( $scope );
 			return;
 		}
 		
-		// Store master icon path
+		$hash = is_readable( $upload['file'] ) ? md5_file( $upload['file'] ) : false;
 		update_option( 'vh360_pwa_master_icon_source', $upload['file'] );
+		update_option( 'vh360_pwa_master_icon_uploaded_at', time() );
+		update_option( 'vh360_pwa_master_icon_hash', false !== $hash ? $hash : '' );
+		update_option( 'vh360_pwa_master_icon_hash_error', false !== $hash ? '' : __( 'Unable to hash uploaded master icon file.', 'vh360-pwa-app' ) );
+		update_option( 'vh360_pwa_master_icon_basename', basename( $upload['file'] ) );
+		update_option( 'vh360_pwa_master_icon_size_bytes', is_readable( $upload['file'] ) ? filesize( $upload['file'] ) : 0 );
 		
 		add_settings_error(
 			'vh360_pwa_options',
@@ -420,35 +431,31 @@ $out['scope']     = $normalize_to_path( $scope );
 	 */
 	private function handle_icon_generation() : void {
 		$master_icon = get_option( 'vh360_pwa_master_icon_source' );
-		
-		if ( ! $master_icon || ! file_exists( $master_icon ) ) {
-			add_settings_error(
-				'vh360_pwa_options',
-				'no_master',
-				__( 'No master icon found. Please upload a master icon first.', 'vh360-pwa-app' ),
-				'error'
-			);
+		if ( ! $master_icon ) {
+			$this->record_icon_generation_failure( __( 'No master icon found. Please upload a master icon first.', 'vh360-pwa-app' ) );
 			return;
 		}
-		
-		// Check requirements
+		if ( ! file_exists( $master_icon ) ) {
+			$this->record_icon_generation_failure( __( 'The saved master icon path does not exist. Please upload the master icon again.', 'vh360-pwa-app' ) );
+			return;
+		}
+
 		$icon_generator = new VH360_PWA_Icon_Generator();
 		$requirements = $icon_generator->check_requirements();
 		if ( ! $requirements['available'] ) {
-			add_settings_error(
-				'vh360_pwa_options',
-				'no_library',
-				__( 'Neither Imagick nor GD library is available. Please install one to generate icons.', 'vh360-pwa-app' ),
-				'error'
-			);
+			$this->record_icon_generation_failure( __( 'Neither Imagick nor GD library is available. Please install one to generate icons.', 'vh360-pwa-app' ), $master_icon );
 			return;
 		}
-		
-		// Generate icons
+
+		$new_asset_version = function_exists( 'vh360_pwa_bump_asset_version' ) ? vh360_pwa_bump_asset_version() : time();
+		$clear_results = $icon_generator->clear_generated_icons();
 		$result = $icon_generator->generate_all_icons( $master_icon );
-		
-		if ( $result['success'] ) {
-			$new_asset_version = function_exists( 'vh360_pwa_bump_asset_version' ) ? vh360_pwa_bump_asset_version() : time();
+		$generated_count = $this->count_generated_icons( $result['generated'] ?? array() );
+		$root_results = array();
+		$startup_images = array();
+		$purge_results = array();
+
+		if ( ! empty( $result['generated'] ) ) {
 			if ( function_exists( 'vh360_pwa_backfill_legacy_icons_from_generated' ) ) {
 				vh360_pwa_backfill_legacy_icons_from_generated();
 			}
@@ -456,41 +463,71 @@ $out['scope']     = $normalize_to_path( $scope );
 				vh360_pwa_clear_ios_startup_images();
 			}
 			if ( function_exists( 'vh360_pwa_generate_ios_startup_images' ) ) {
-				vh360_pwa_generate_ios_startup_images();
+				$startup_images = vh360_pwa_generate_ios_startup_images();
 			}
 			if ( class_exists( 'VH360_PWA_Root_Files' ) ) {
-				VH360_PWA_Root_Files::ensure_root_files();
+				$root_results = VH360_PWA_Root_Files::ensure_root_files();
 			}
+			$purge_results = $this->purge_common_caches();
 			update_option( 'vh360_pwa_icons_generated_at', time() );
-			update_option( 'vh360_pwa_last_icon_generation', array(
-				'asset_version' => $new_asset_version,
-				'generated_at'   => time(),
-			) );
-
-			// Clear readiness check cache
-			$readiness_checker = new VH360_PWA_Readiness_Checker();
-			$readiness_checker->clear_cache();
-			
-			add_settings_error(
-				'vh360_pwa_options',
-				'generation_success',
-				__( 'All icons generated successfully! Your PWA manifest will now use the complete icon set.', 'vh360-pwa-app' ),
-				'success'
-			);
-		} else {
-			$error_message = __( 'Icon generation failed:', 'vh360-pwa-app' );
-			if ( ! empty( $result['errors'] ) ) {
-				$error_message .= '<ul><li>' . implode( '</li><li>', $result['errors'] ) . '</li></ul>';
-			}
-			add_settings_error(
-				'vh360_pwa_options',
-				'generation_error',
-				$error_message,
-				'error'
-			);
 		}
-		
-		// Redirect to icons tab
+
+		$status = ! empty( $result['success'] ) ? 'success' : ( $generated_count > 0 ? 'partial' : 'failure' );
+		$diagnostics = array(
+			'status'               => $status,
+			'generated_at'         => time(),
+			'master_icon_path'    => $master_icon,
+			'master_icon_basename'=> basename( $master_icon ),
+			'master_icon_hash'    => is_readable( $master_icon ) ? md5_file( $master_icon ) : '',
+			'asset_version'       => $new_asset_version,
+			'generated_icon_count'=> $generated_count,
+			'generated_icons'     => $result['generated'] ?? array(),
+			'deleted_old_icon_count' => is_array( $clear_results ) ? absint( $clear_results['deleted'] ?? 0 ) : 0,
+			'clear_results'       => $clear_results,
+			'root_results'        => $root_results,
+			'startup_count'       => is_array( $startup_images ) ? count( $startup_images ) : 0,
+			'startup_images'      => $startup_images,
+			'cache_purge_results' => $purge_results,
+			'errors'              => $result['errors'] ?? ( ! empty( $result['error'] ) ? array( $result['error'] ) : array() ),
+		);
+		update_option( 'vh360_pwa_last_icon_generation', $diagnostics );
+
+		$readiness_checker = new VH360_PWA_Readiness_Checker();
+		$readiness_checker->clear_cache();
+
+		if ( 'success' === $status ) {
+			add_settings_error( 'vh360_pwa_options', 'generation_success', __( 'All icons generated successfully with fresh versioned filenames. PWA assets were regenerated.', 'vh360-pwa-app' ), 'success' );
+		} elseif ( 'partial' === $status ) {
+			add_settings_error( 'vh360_pwa_options', 'generation_partial', __( 'Some icons generated, but one or more required sizes failed. Review diagnostics below.', 'vh360-pwa-app' ), 'warning' );
+		} else {
+			add_settings_error( 'vh360_pwa_options', 'generation_error', __( 'Icon generation failed. Review diagnostics below.', 'vh360-pwa-app' ), 'error' );
+		}
+
+		wp_safe_redirect( admin_url( 'admin.php?page=vh360-pwa-app&tab=icons&settings-updated=1' ) );
+		exit;
+	}
+
+	private function record_icon_generation_failure( string $message, string $master_icon = '' ) : void {
+		update_option( 'vh360_pwa_last_icon_generation', array( 'status' => 'failure', 'generated_at' => time(), 'master_icon_path' => $master_icon, 'errors' => array( $message ) ) );
+		add_settings_error( 'vh360_pwa_options', 'generation_error', $message, 'error' );
+	}
+
+	private function count_generated_icons( array $generated ) : int {
+		$count = 0;
+		foreach ( array( 'ios', 'android', 'maskable' ) as $group ) {
+			$count += ! empty( $generated[ $group ] ) && is_array( $generated[ $group ] ) ? count( $generated[ $group ] ) : 0;
+		}
+		return $count;
+	}
+
+	private function handle_clear_generated_icons() : void {
+		$icon_generator = new VH360_PWA_Icon_Generator();
+		$clear_results = $icon_generator->clear_generated_icons();
+		if ( class_exists( 'VH360_PWA_Root_Files' ) ) {
+			VH360_PWA_Root_Files::ensure_root_files();
+		}
+		update_option( 'vh360_pwa_last_icon_generation', array( 'status' => 'cleared', 'generated_at' => time(), 'clear_results' => $clear_results ) );
+		add_settings_error( 'vh360_pwa_options', 'icons_cleared', __( 'Generated icons were cleared. The master icon was not deleted.', 'vh360-pwa-app' ), 'success' );
 		wp_safe_redirect( admin_url( 'admin.php?page=vh360-pwa-app&tab=icons&settings-updated=1' ) );
 		exit;
 	}
@@ -758,7 +795,7 @@ $manifest_url = esc_url( vh360_pwa_endpoint_url( VH360_PWA_MANIFEST_SLUG ) );
 		// Use the icon generator as the primary icon management interface
 		$icon_generator = new VH360_PWA_Icon_Generator();
 		$requirements = $icon_generator->check_requirements();
-		$generated_icons = $icon_generator->get_generated_icons();
+		$generated_icons = method_exists( $icon_generator, 'get_generated_icon_metadata' ) ? $icon_generator->get_generated_icon_metadata() : $icon_generator->get_generated_icons();
 		$master_icon = get_option( 'vh360_pwa_master_icon_source' );
 		$required_sizes = $icon_generator->get_required_sizes();
 		
