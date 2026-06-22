@@ -350,9 +350,15 @@ function vh360_pwa_draw_startup_title( $image, string $title, int $center_x, int
 	imagedestroy( $tmp );
 }
 
+
+function vh360_pwa_set_startup_image_generation_error( string $reason ) : void {
+	update_option( 'vh360_pwa_ios_startup_images_last_error', $reason );
+}
+
 function vh360_pwa_generate_ios_startup_images() : array {
 	$opts = vh360_pwa_get_options();
-	if ( empty( $opts['splash_enabled'] ) || empty( $opts['splash_logo'] ) ) { return array(); }
+	if ( empty( $opts['splash_enabled'] ) ) { vh360_pwa_set_startup_image_generation_error( 'splash_disabled' ); return array(); }
+	if ( empty( $opts['splash_logo'] ) ) { vh360_pwa_set_startup_image_generation_error( 'missing_splash_logo' ); return array(); }
 	$sizes = array(
 		'iphone-8-portrait'       => array( 750, 1334, '(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)' ),
 		'iphone-11-portrait'      => array( 828, 1792, '(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)' ),
@@ -371,10 +377,12 @@ function vh360_pwa_generate_ios_startup_images() : array {
 	$url = trailingslashit( $uploads['baseurl'] ) . 'vh360-pwa/splash';
 	wp_mkdir_p( $dir );
 	$logo_path = vh360_pwa_url_to_upload_path( $opts['splash_logo'] );
-	if ( '' === $logo_path || ! file_exists( $logo_path ) || ! function_exists( 'imagecreatetruecolor' ) ) { return array(); }
+	if ( ! function_exists( 'imagecreatetruecolor' ) ) { vh360_pwa_set_startup_image_generation_error( 'gd_unavailable' ); return array(); }
+	if ( '' === $logo_path ) { vh360_pwa_set_startup_image_generation_error( 'logo_not_in_uploads' ); return array(); }
+	if ( ! file_exists( $logo_path ) ) { vh360_pwa_set_startup_image_generation_error( 'logo_file_missing' ); return array(); }
 	$logo_data = @file_get_contents( $logo_path );
 	$logo_src = $logo_data ? @imagecreatefromstring( $logo_data ) : false;
-	if ( ! $logo_src ) { return array(); }
+	if ( ! $logo_src ) { vh360_pwa_set_startup_image_generation_error( 'image_load_failed' ); return array(); }
 	$bg = sanitize_hex_color( $opts['splash_background_color'] ?? $opts['background_color'] ) ?: '#0f172a';
 	$title_enabled = ! empty( $opts['splash_title_enabled'] );
 	$title = $title_enabled ? trim( (string) ( $opts['splash_title'] ?? $opts['short_name'] ?? '' ) ) : '';
@@ -399,7 +407,7 @@ function vh360_pwa_generate_ios_startup_images() : array {
 		$file='vh360-startup-' . $key . '-' . $asset_version . '-' . substr( md5($bg . $opts['splash_logo'] . $title . $title_font_size . $title_color . $title_offset), 0, 10 ) . '.png'; imagepng($img, trailingslashit($dir).$file); imagedestroy($img);
 		$out[] = array('href'=>vh360_pwa_version_url( trailingslashit($url).$file, $opts ),'media'=>$media);
 	}
-	imagedestroy($logo_src); update_option('vh360_pwa_ios_startup_images',$out); return $out;
+	imagedestroy($logo_src); update_option('vh360_pwa_ios_startup_images',$out); delete_option( 'vh360_pwa_ios_startup_images_last_error' ); return $out;
 }
 
 /**

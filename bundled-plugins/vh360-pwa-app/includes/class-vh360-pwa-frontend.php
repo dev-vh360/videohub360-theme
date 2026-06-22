@@ -94,7 +94,7 @@ class VH360_PWA_Frontend {
 			'VH360PWA',
 			array(
 				// Use root-level, static files for maximum compatibility across hosts/CDNs.
-				'swUrl'              => home_url( '/' . VH360_PWA_SW_SLUG ),
+				'swUrl'              => function_exists( 'vh360_pwa_version_url' ) ? vh360_pwa_version_url( home_url( '/' . VH360_PWA_SW_SLUG ), $opts ) : home_url( '/' . VH360_PWA_SW_SLUG ),
 				'offlineUrl'         => function_exists( 'vh360_pwa_version_url' ) ? vh360_pwa_version_url( home_url( '/' . VH360_PWA_OFFLINE_SLUG ), $opts ) : home_url( '/' . VH360_PWA_OFFLINE_SLUG ),
 				'showInstallPrompt'  => ! empty( $opts['show_install_prompt'] ) ? 1 : 0,
 				'installPromptText'  => (string) $opts['install_prompt_text'],

@@ -50,23 +50,40 @@ class VH360_PWA_Admin {
 		}
 		check_admin_referer( 'vh360_pwa_regenerate_assets' );
 
-		if ( function_exists( 'vh360_pwa_bump_asset_version' ) ) { vh360_pwa_bump_asset_version(); }
+		$old_opts = vh360_pwa_get_options();
+		$old_version = function_exists( 'vh360_pwa_get_asset_version' ) ? vh360_pwa_get_asset_version( $old_opts ) : 0;
+		$new_version = function_exists( 'vh360_pwa_bump_asset_version' ) ? vh360_pwa_bump_asset_version() : time();
 
 		if ( function_exists( 'vh360_pwa_clear_ios_startup_images' ) ) { vh360_pwa_clear_ios_startup_images(); }
-		if ( function_exists( 'vh360_pwa_generate_ios_startup_images' ) ) { vh360_pwa_generate_ios_startup_images(); }
-		if ( class_exists( 'VH360_PWA_Root_Files' ) ) { VH360_PWA_Root_Files::ensure_root_files(); }
-		$this->purge_common_caches();
+		$startup_images = function_exists( 'vh360_pwa_generate_ios_startup_images' ) ? vh360_pwa_generate_ios_startup_images() : array();
+		$startup_error = get_option( 'vh360_pwa_ios_startup_images_last_error', '' );
+		$root_results = class_exists( 'VH360_PWA_Root_Files' ) ? VH360_PWA_Root_Files::ensure_root_files() : array();
+		$purge_results = $this->purge_common_caches();
+
+		update_option( 'vh360_pwa_last_regeneration', array(
+			'old_version' => $old_version,
+			'new_version' => $new_version,
+			'generated_at' => time(),
+			'startup_count' => is_array( $startup_images ) ? count( $startup_images ) : 0,
+			'startup_images' => $startup_images,
+			'startup_error' => is_string( $startup_error ) ? $startup_error : '',
+			'root_results' => $root_results,
+			'purge_results' => $purge_results,
+		) );
 
 		wp_safe_redirect( admin_url( 'admin.php?page=' . $this->page_slug . '&tab=tools&vh360_pwa_assets_regenerated=1' ) );
 		exit;
 	}
 
-	private function purge_common_caches() : void {
-		if ( has_action( 'litespeed_purge_all' ) ) { do_action( 'litespeed_purge_all' ); }
-		if ( function_exists( 'rocket_clean_domain' ) ) { rocket_clean_domain(); }
-		if ( function_exists( 'w3tc_flush_all' ) ) { w3tc_flush_all(); }
-		if ( function_exists( 'wp_cache_clear_cache' ) ) { wp_cache_clear_cache(); }
-		if ( function_exists( 'wp_cache_flush' ) ) { wp_cache_flush(); }
+	private function purge_common_caches() : array {
+		$results = array();
+		if ( has_action( 'litespeed_purge_all' ) ) { do_action( 'litespeed_purge_all' ); $results['litespeed'] = 'attempted'; }
+		if ( function_exists( 'rocket_clean_domain' ) ) { rocket_clean_domain(); $results['wp_rocket'] = 'attempted'; }
+		if ( function_exists( 'w3tc_flush_all' ) ) { w3tc_flush_all(); $results['w3_total_cache'] = 'attempted'; }
+		if ( function_exists( 'wp_cache_clear_cache' ) ) { wp_cache_clear_cache(); $results['wp_super_cache'] = 'attempted'; }
+		if ( function_exists( 'wp_cache_flush' ) ) { wp_cache_flush(); $results['object_cache'] = 'attempted'; }
+		if ( empty( $results ) ) { $results['none'] = 'no_supported_cache_plugin_detected'; }
+		return $results;
 	}
 
     /**
@@ -85,6 +102,30 @@ class VH360_PWA_Admin {
         if ( ! empty( $_GET['vh360_pwa_assets_regenerated'] ) ) {
             echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'PWA assets regenerated and common caches purged where available.', 'vh360-pwa-app' ) . '</p></div>';
         }
+
+        $asset_version = function_exists( 'vh360_pwa_get_asset_version' ) ? vh360_pwa_get_asset_version( $opts ) : 0;
+        $versioned_manifest = function_exists( 'vh360_pwa_version_url' ) ? vh360_pwa_version_url( home_url( '/' . VH360_PWA_MANIFEST_SLUG ), $opts ) : home_url( '/' . VH360_PWA_MANIFEST_SLUG );
+        $versioned_sw = function_exists( 'vh360_pwa_version_url' ) ? vh360_pwa_version_url( home_url( '/' . VH360_PWA_SW_SLUG ), $opts ) : home_url( '/' . VH360_PWA_SW_SLUG );
+        $versioned_offline = function_exists( 'vh360_pwa_version_url' ) ? vh360_pwa_version_url( home_url( '/' . VH360_PWA_OFFLINE_SLUG ), $opts ) : home_url( '/' . VH360_PWA_OFFLINE_SLUG );
+        $startup_images = function_exists( 'vh360_pwa_get_ios_startup_images' ) ? vh360_pwa_get_ios_startup_images() : array();
+        $first_startup = ! empty( $startup_images[0]['href'] ) ? (string) $startup_images[0]['href'] : '';
+        $last_regen = get_option( 'vh360_pwa_last_regeneration', array() );
+
+        echo '<h2>' . esc_html__( 'Current PWA Asset Diagnostics', 'vh360-pwa-app' ) . '</h2>';
+        echo '<table class="widefat striped" style="max-width:980px"><tbody>';
+        echo '<tr><th>' . esc_html__( 'Asset version', 'vh360-pwa-app' ) . '</th><td><code>' . esc_html( (string) $asset_version ) . '</code></td></tr>';
+        echo '<tr><th>' . esc_html__( 'Manifest URL', 'vh360-pwa-app' ) . '</th><td><a href="' . esc_url( $versioned_manifest ) . '" target="_blank" rel="noopener"><code>' . esc_html( $versioned_manifest ) . '</code></a></td></tr>';
+        echo '<tr><th>' . esc_html__( 'Service worker URL', 'vh360-pwa-app' ) . '</th><td><a href="' . esc_url( $versioned_sw ) . '" target="_blank" rel="noopener"><code>' . esc_html( $versioned_sw ) . '</code></a></td></tr>';
+        echo '<tr><th>' . esc_html__( 'Offline URL', 'vh360-pwa-app' ) . '</th><td><a href="' . esc_url( $versioned_offline ) . '" target="_blank" rel="noopener"><code>' . esc_html( $versioned_offline ) . '</code></a></td></tr>';
+        echo '<tr><th>' . esc_html__( 'Generated iOS startup images', 'vh360-pwa-app' ) . '</th><td>' . esc_html( (string) count( $startup_images ) ) . ( $first_startup ? ' — <a href="' . esc_url( $first_startup ) . '" target="_blank" rel="noopener">' . esc_html__( 'View first image', 'vh360-pwa-app' ) . '</a>' : '' ) . '</td></tr>';
+        echo '<tr><th>' . esc_html__( 'Last regeneration', 'vh360-pwa-app' ) . '</th><td>' . esc_html( ! empty( $last_regen['generated_at'] ) ? date_i18n( 'Y-m-d H:i:s', (int) $last_regen['generated_at'] ) : __( 'Never', 'vh360-pwa-app' ) ) . '</td></tr>';
+        echo '</tbody></table>';
+
+        if ( is_array( $last_regen ) && ! empty( $last_regen ) ) {
+            echo '<h3>' . esc_html__( 'Last Regeneration Results', 'vh360-pwa-app' ) . '</h3>';
+            echo '<pre style="max-width:980px;white-space:pre-wrap;background:#fff;border:1px solid #ccd0d4;padding:12px;">' . esc_html( wp_json_encode( $last_regen, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) ) . '</pre>';
+        }
+        echo '<p class="description" style="max-width:980px;">' . esc_html__( 'Some hosts/CDNs, including server-level cache layers, may require manual purge if the page HTML itself is cached. The versioned URLs above confirm whether VH360 generated fresh PWA assets.', 'vh360-pwa-app' ) . '</p>';
 
         echo '<p>' . esc_html__( 'These tools run in your browser (per device) and can help resolve stale service worker or caching issues during setup and support.', 'vh360-pwa-app' ) . '</p>';
 

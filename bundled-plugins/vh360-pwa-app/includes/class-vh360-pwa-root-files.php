@@ -30,10 +30,10 @@ final class VH360_PWA_Root_Files {
 	/**
 	 * Ensure all required files exist.
 	 */
-	public static function ensure_root_files() : void {
+	public static function ensure_root_files() : array {
 		// Avoid running during install/upgrade steps where ABSPATH may not be stable.
 		if ( ! defined( 'ABSPATH' ) || ! is_string( ABSPATH ) ) {
-			return;
+			return array( 'error' => 'ABSPATH unavailable' );
 		}
 
 		$root = trailingslashit( ABSPATH );
@@ -46,36 +46,44 @@ final class VH360_PWA_Root_Files {
 			WP_Filesystem();
 		}
 
-		self::maybe_write_manifest( $root );
-		self::maybe_write_offline_page( $root );
-		self::maybe_write_vh360_sw( $root );
-		self::maybe_write_onesignal_workers( $root );
+		return self::regenerate_root_files( $root );
 	}
 
-	private static function maybe_write_manifest( string $root ) : void {
+	public static function regenerate_root_files( string $root = '' ) : array {
+		$root = '' !== $root ? trailingslashit( $root ) : trailingslashit( ABSPATH );
+		$results = array();
+		$results['manifest'] = self::maybe_write_manifest( $root );
+		$results['offline'] = self::maybe_write_offline_page( $root );
+		$results['service_worker'] = self::maybe_write_vh360_sw( $root );
+		$results['onesignal'] = self::maybe_write_onesignal_workers( $root );
+		return $results;
+	}
+
+	private static function maybe_write_manifest( string $root ) : array {
 		$path = $root . 'vh360-manifest.json';
 		$manifest = vh360_pwa_build_manifest();
 		$manifest['generated_at'] = gmdate( 'c' );
-		$written = self::write_managed_file( $path, wp_json_encode( $manifest, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT ) . "\n", 'vh360-manifest.json' );
-		update_option( 'vh360_pwa_root_manifest_write_status', array( 'success' => $written, 'path' => $path, 'generated_at' => time() ) );
+		$result = self::write_managed_file( $path, wp_json_encode( $manifest, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT ) . "\n", 'vh360-manifest.json', true );
+		update_option( 'vh360_pwa_root_manifest_write_status', array( 'success' => ! empty( $result['success'] ), 'path' => $path, 'generated_at' => time(), 'reason' => $result['reason'] ?? '' ) );
+		return $result;
 	}
 
-	private static function maybe_write_offline_page( string $root ) : void {
+	private static function maybe_write_offline_page( string $root ) : array {
 		$path = $root . 'vh360-offline.html';
 		$opts = vh360_pwa_get_options();
 		$app = esc_html( (string) $opts['app_name'] );
 		$bg = esc_attr( (string) ( $opts['splash_background_color'] ?: $opts['background_color'] ) );
 		$theme = esc_attr( (string) $opts['theme_color'] );
 		$html = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Offline</title><style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;min-height:100vh;display:grid;place-items:center;padding:40px;background:' . $bg . ';color:#fff}main{max-width:520px;text-align:center}a{color:' . $theme . '}</style></head><body><!-- VH360 Managed File: vh360-offline.html --><main><h1>' . $app . ' is offline</h1><p>Please check your connection and try again.</p><p><a href="/">Return home</a></p></main></body></html>' . "\n";
-		self::write_managed_file( $path, $html, 'vh360-offline.html' );
+		return self::write_managed_file( $path, $html, 'vh360-offline.html', true );
 	}
 
-	private static function maybe_write_vh360_sw( string $root ) : void {
+	private static function maybe_write_vh360_sw( string $root ) : array {
 		$path = $root . 'vh360-sw.js';
-		self::write_managed_file( $path, vh360_pwa_build_sw_script(), 'vh360-sw.js' );
+		return self::write_managed_file( $path, vh360_pwa_build_sw_script(), 'vh360-sw.js', true );
 	}
 
-	private static function maybe_write_onesignal_workers( string $root ) : void {
+	private static function maybe_write_onesignal_workers( string $root ) : array {
 		// OneSignal requires both filenames at the site root. Use a managed wrapper that imports OneSignal's SW
 		// and then imports VH360's SW for offline fallback.
 		// Chrome requires some event handlers (notably 'message') to be registered during initial evaluation.
@@ -89,19 +97,12 @@ final class VH360_PWA_Root_Files {
 			"  importScripts('/vh360-sw.js');\n" .
 			"} catch (e) {}\n";
 
+		$results = array();
 		foreach ( array( 'OneSignalSDKWorker.js', 'OneSignalSDK.sw.js', 'OneSignalSDKUpdaterWorker.js' ) as $file ) {
 			$path = $root . $file;
-
-			if ( ! file_exists( $path ) ) {
-				self::write_file( $path, $wrapper );
-				continue;
-			}
-
-			$existing = @file_get_contents( $path ); // phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.file_ops_file_get_contents
-			if ( is_string( $existing ) && self::is_managed_file_content( $existing ) ) {
-				self::write_file( $path, $wrapper );
-			}
+			$results[ $file ] = self::write_managed_file( $path, $wrapper, $file, false );
 		}
+		return $results;
 	}
 
 	private static function is_managed_file_content( string $existing ) : bool {
@@ -113,17 +114,31 @@ final class VH360_PWA_Root_Files {
 		return false;
 	}
 
-	private static function write_managed_file( string $path, string $contents, string $marker ) : bool {
-		if ( file_exists( $path ) ) {
+	private static function write_managed_file( string $path, string $contents, string $marker, bool $force_vh360_file = false ) : array {
+		$file = basename( $path );
+		$result = array(
+			'file'    => $file,
+			'path'    => $path,
+			'success' => false,
+			'skipped' => false,
+			'reason'  => 'unknown',
+		);
+
+		if ( file_exists( $path ) && ! $force_vh360_file ) {
 			$existing = @file_get_contents( $path );
 			if ( ! is_string( $existing ) || ! self::is_managed_file_content( $existing ) ) {
-				return false;
+				$result['skipped'] = true;
+				$result['reason'] = 'custom_file_protected';
+				return $result;
 			}
 		}
 		if ( 'vh360-manifest.json' !== $marker && false === strpos( $contents, 'VH360 Managed File' ) ) {
 			$contents = '/* VH360 Managed File: ' . $marker . ' */' . "\n" . $contents;
 		}
-		return self::write_file( $path, $contents );
+		$written = self::write_file( $path, $contents );
+		$result['success'] = $written;
+		$result['reason'] = $written ? 'written' : ( is_writable( dirname( $path ) ) ? 'filesystem_error' : 'not_writable' );
+		return $result;
 	}
 
 	private static function write_file( string $path, string $contents ) : bool {
