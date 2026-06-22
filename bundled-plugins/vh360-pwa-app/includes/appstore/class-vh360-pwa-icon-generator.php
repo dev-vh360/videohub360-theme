@@ -11,6 +11,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class VH360_PWA_Icon_Generator {
+	private $asset_version = 0;
+	private $source_hash = '';
+	private $generated_at = 0;
 	
 	/**
 	 * Get the upload directory for generated icons.
@@ -110,6 +113,18 @@ class VH360_PWA_Icon_Generator {
 			);
 		}
 		
+		$hash = is_readable( $source_file ) ? md5_file( $source_file ) : false;
+		if ( false === $hash ) {
+			return array(
+				'success' => false,
+				'error'   => __( 'Unable to hash the source icon file.', 'vh360-pwa-app' ),
+			);
+		}
+
+		$this->asset_version = function_exists( 'vh360_pwa_get_asset_version' ) ? vh360_pwa_get_asset_version() : time();
+		$this->source_hash   = substr( preg_replace( '/[^a-f0-9]/', '', strtolower( $hash ) ), 0, 12 );
+		$this->generated_at  = time();
+
 		$sizes = $this->get_required_sizes();
 		$generated = array();
 		$errors = array();
@@ -118,7 +133,7 @@ class VH360_PWA_Icon_Generator {
 		foreach ( $sizes['ios'] as $size ) {
 			$result = $this->generate_icon( $source_file, $size, 'any' );
 			if ( $result['success'] ) {
-				$generated['ios'][ $size ] = $result['file'];
+				$generated['ios'][ $size ] = $this->build_icon_metadata( 'ios', $size, 'any', $result );
 			} else {
 				$errors[] = sprintf(
 					/* translators: 1: Icon size, 2: Error message */
@@ -133,7 +148,7 @@ class VH360_PWA_Icon_Generator {
 		foreach ( $sizes['android'] as $size ) {
 			$result = $this->generate_icon( $source_file, $size, 'any' );
 			if ( $result['success'] ) {
-				$generated['android'][ $size ] = $result['file'];
+				$generated['android'][ $size ] = $this->build_icon_metadata( 'android', $size, 'any', $result );
 			} else {
 				$errors[] = sprintf(
 					/* translators: 1: Icon size, 2: Error message */
@@ -148,7 +163,7 @@ class VH360_PWA_Icon_Generator {
 		foreach ( $sizes['maskable'] as $size ) {
 			$result = $this->generate_icon( $source_file, $size, 'maskable' );
 			if ( $result['success'] ) {
-				$generated['maskable'][ $size ] = $result['file'];
+				$generated['maskable'][ $size ] = $this->build_icon_metadata( 'maskable', $size, 'maskable', $result );
 			} else {
 				$errors[] = sprintf(
 					/* translators: 1: Icon size, 2: Error message */
@@ -344,10 +359,28 @@ class VH360_PWA_Icon_Generator {
 	 * @return string Filename.
 	 */
 	private function get_icon_filename( int $size, string $purpose ) : string {
-		if ( 'maskable' === $purpose ) {
-			return "icon-maskable-{$size}.png";
-		}
-		return "icon-{$size}.png";
+		$version = $this->asset_version > 0 ? $this->asset_version : ( function_exists( 'vh360_pwa_get_asset_version' ) ? vh360_pwa_get_asset_version() : time() );
+		$hash    = $this->source_hash ? $this->source_hash : 'nohash';
+		$prefix  = 'maskable' === $purpose ? 'vh360-icon-maskable' : 'vh360-icon';
+		return sprintf( '%s-%d-%d-%s.png', $prefix, $size, $version, $hash );
+	}
+
+	private function build_icon_metadata( string $platform, int $size, string $purpose, array $result ) : array {
+		$filename = (string) ( $result['file'] ?? '' );
+		$path     = (string) ( $result['path'] ?? ( $this->get_upload_dir() . '/' . $filename ) );
+		$url      = (string) ( $result['url'] ?? ( $this->get_upload_url() . '/' . $filename ) );
+		return array(
+			'size'          => $size,
+			'platform'      => $platform,
+			'purpose'       => $purpose,
+			'filename'      => $filename,
+			'file'          => $filename,
+			'url'           => esc_url_raw( $url ),
+			'path'          => $path,
+			'asset_version' => $this->asset_version,
+			'source_hash'   => $this->source_hash,
+			'generated_at'  => $this->generated_at,
+		);
 	}
 	
 	/**
@@ -366,7 +399,25 @@ class VH360_PWA_Icon_Generator {
 			);
 		}
 		
-		return $generated;
+		return $this->get_generated_icon_filenames( $generated );
+	}
+
+	public function get_generated_icon_metadata() : array {
+		$generated = get_option( 'vh360_pwa_generated_icons', array() );
+		return is_array( $generated ) ? $generated : array();
+	}
+
+	private function get_generated_icon_filenames( array $generated ) : array {
+		$filenames = array( 'ios' => array(), 'android' => array(), 'maskable' => array() );
+		foreach ( $filenames as $group => $empty ) {
+			if ( empty( $generated[ $group ] ) || ! is_array( $generated[ $group ] ) ) {
+				continue;
+			}
+			foreach ( $generated[ $group ] as $size => $record ) {
+				$filenames[ $group ][ $size ] = is_array( $record ) ? (string) ( $record['filename'] ?? $record['file'] ?? '' ) : (string) $record;
+			}
+		}
+		return $filenames;
 	}
 	
 	/**
@@ -381,26 +432,26 @@ class VH360_PWA_Icon_Generator {
 	/**
 	 * Clear all generated icons.
 	 *
-	 * @return bool True on success.
+	 * @return array Clear results including deleted count and errors.
 	 */
-	public function clear_generated_icons() : bool {
-		$generated = $this->get_generated_icons();
+	public function clear_generated_icons() : array {
 		$upload_dir = $this->get_upload_dir();
-		
-		// Delete physical files
-		foreach ( $generated as $platform => $icons ) {
-			foreach ( $icons as $size => $filename ) {
-				$filepath = $upload_dir . '/' . $filename;
-				if ( file_exists( $filepath ) ) {
-					unlink( $filepath );
+		$deleted = 0;
+		$errors = array();
+		foreach ( array( 'vh360-icon-*.png', 'icon-*.png', 'icon-maskable-*.png' ) as $pattern ) {
+			foreach ( glob( trailingslashit( $upload_dir ) . $pattern ) ?: array() as $filepath ) {
+				if ( ! is_file( $filepath ) ) {
+					continue;
+				}
+				if ( @unlink( $filepath ) ) {
+					$deleted++;
+				} else {
+					$errors[] = basename( $filepath );
 				}
 			}
 		}
-		
-		// Clear options
 		delete_option( 'vh360_pwa_generated_icons' );
 		delete_option( 'vh360_pwa_master_icon' );
-		
-		return true;
+		return array( 'success' => empty( $errors ), 'deleted' => $deleted, 'errors' => $errors );
 	}
 }

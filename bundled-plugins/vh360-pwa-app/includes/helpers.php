@@ -57,8 +57,6 @@ function vh360_pwa_get_options() : array {
 		'install_banner_text'  => 'Install the VH360 App',
 		'install_banner_dismiss_days' => 7,
 		'show_ios_onboarding'  => 1,
-		'show_ios_reinstall_notice' => 0,
-		'ios_reinstall_notice_text' => 'We updated this app’s icon or launch screen. If your iPhone or iPad still shows the old branding, remove the app from your Home Screen and add it again from Safari.',
 
 		'enable_pull_to_refresh' => 1,
 		'splash_enabled'       => 1,
@@ -85,8 +83,8 @@ function vh360_pwa_get_options() : array {
 		$opts = array();
 	}
 	$opts = wp_parse_args( $opts, $defaults );
-	// Remove legacy floating refresh button options; pull-to-refresh is the only app refresh UI.
-	unset( $opts['show_refresh_button'], $opts['refresh_label'] );
+	// Remove legacy floating refresh button and iOS reinstall notice options.
+	unset( $opts['show_refresh_button'], $opts['refresh_label'], $opts['show_ios_reinstall_notice'], $opts['ios_reinstall_notice_text'] );
 	if ( empty( $opts['pwa_asset_version'] ) ) {
 		$opts['pwa_asset_version'] = time();
 		$persisted = get_option( 'vh360_pwa_options', array() );
@@ -558,6 +556,29 @@ function vh360_pwa_get_generated_icon_url_from_record( $record, string $base_url
 	return esc_url_raw( trailingslashit( $base_url ) . ltrim( $record, '/' ) );
 }
 
+
+function vh360_pwa_normalize_generated_icon_record( $record, string $base_url, int $fallback_size = 0, string $fallback_purpose = 'any' ) : array {
+	if ( is_array( $record ) ) {
+		$filename = (string) ( $record['filename'] ?? $record['file'] ?? '' );
+		$url      = ! empty( $record['url'] ) ? esc_url_raw( (string) $record['url'] ) : vh360_pwa_get_generated_icon_url_from_record( $filename, $base_url );
+		return array(
+			'size'     => absint( $record['size'] ?? $fallback_size ),
+			'purpose'  => (string) ( $record['purpose'] ?? $fallback_purpose ),
+			'filename' => $filename,
+			'url'      => $url,
+			'path'     => (string) ( $record['path'] ?? vh360_pwa_url_to_upload_path( $url ) ),
+		);
+	}
+	$url = vh360_pwa_get_generated_icon_url_from_record( $record, $base_url );
+	return array(
+		'size'     => $fallback_size,
+		'purpose'  => $fallback_purpose,
+		'filename' => basename( (string) $record ),
+		'url'      => $url,
+		'path'     => vh360_pwa_url_to_upload_path( $url ),
+	);
+}
+
 /**
  * Return true when generated icon option records point at invalid or missing files.
  */
@@ -579,13 +600,13 @@ function vh360_pwa_has_stale_generated_icons() : bool {
 		if ( empty( $generated[ $group ] ) || ! is_array( $generated[ $group ] ) ) {
 			continue;
 		}
-		foreach ( $generated[ $group ] as $size => $filename ) {
+		foreach ( $generated[ $group ] as $size => $record ) {
 			$has_records = true;
-			$size = absint( $size );
-			if ( $size < 1 || empty( $filename ) ) {
+			$normalized = vh360_pwa_normalize_generated_icon_record( $record, $base_url, absint( $size ), 'maskable' === $group ? 'maskable' : 'any' );
+			if ( $normalized['size'] < 1 || empty( $normalized['filename'] ) ) {
 				return true;
 			}
-			$url = vh360_pwa_get_generated_icon_url_from_record( $filename, $base_url );
+			$url = $normalized['url'];
 			if ( ! wp_http_validate_url( $url ) || ! vh360_pwa_generated_icon_file_exists( $url ) ) {
 				return true;
 			}
@@ -619,13 +640,11 @@ function vh360_pwa_get_manifest_icons() : array {
 			if ( empty( $generated[ $group ] ) || ! is_array( $generated[ $group ] ) ) {
 				continue;
 			}
-			foreach ( $generated[ $group ] as $size => $filename ) {
-				$size = absint( $size );
-				if ( $size < 1 || empty( $filename ) ) {
-					continue;
-				}
-				$url = vh360_pwa_get_generated_icon_url_from_record( $filename, $upload_url );
-				if ( ! vh360_pwa_generated_icon_file_exists( $url ) ) {
+			foreach ( $generated[ $group ] as $size => $record ) {
+				$normalized = vh360_pwa_normalize_generated_icon_record( $record, $upload_url, absint( $size ), 'any' );
+				$size = absint( $normalized['size'] );
+				$url = $normalized['url'];
+				if ( $size < 1 || ! $url || ! vh360_pwa_generated_icon_file_exists( $url ) ) {
 					continue;
 				}
 				vh360_pwa_add_manifest_icon( $icons, $seen, $url, "{$size}x{$size}", 'any' );
@@ -633,13 +652,11 @@ function vh360_pwa_get_manifest_icons() : array {
 		}
 
 		if ( ! empty( $generated['maskable'] ) && is_array( $generated['maskable'] ) ) {
-			foreach ( $generated['maskable'] as $size => $filename ) {
-				$size = absint( $size );
-				if ( $size < 1 || empty( $filename ) ) {
-					continue;
-				}
-				$url = vh360_pwa_get_generated_icon_url_from_record( $filename, $upload_url );
-				if ( ! vh360_pwa_generated_icon_file_exists( $url ) ) {
+			foreach ( $generated['maskable'] as $size => $record ) {
+				$normalized = vh360_pwa_normalize_generated_icon_record( $record, $upload_url, absint( $size ), 'maskable' );
+				$size = absint( $normalized['size'] );
+				$url = $normalized['url'];
+				if ( $size < 1 || ! $url || ! vh360_pwa_generated_icon_file_exists( $url ) ) {
 					continue;
 				}
 				vh360_pwa_add_manifest_icon( $icons, $seen, $url, "{$size}x{$size}", 'maskable' );
@@ -687,7 +704,8 @@ function vh360_pwa_get_apple_touch_icon_url() : string {
 	}
 	foreach ( array( array( 'ios', 180 ), array( 'android', 192 ), array( 'ios', 192 ) ) as $candidate ) {
 		if ( $upload_url && ! empty( $generated[ $candidate[0] ][ $candidate[1] ] ) ) {
-			$url = vh360_pwa_get_generated_icon_url_from_record( $generated[ $candidate[0] ][ $candidate[1] ], $upload_url );
+			$normalized = vh360_pwa_normalize_generated_icon_record( $generated[ $candidate[0] ][ $candidate[1] ], $upload_url, (int) $candidate[1], 'ios' === $candidate[0] ? 'any' : ( 'maskable' === $candidate[0] ? 'maskable' : 'any' ) );
+			$url = $normalized['url'];
 			if ( wp_http_validate_url( $url ) && vh360_pwa_generated_icon_file_exists( $url ) ) {
 				return $url;
 			}
@@ -724,7 +742,8 @@ function vh360_pwa_backfill_legacy_icons_from_generated() : void {
 		if ( empty( $generated[ $source[0] ][ $source[1] ] ) ) {
 			continue;
 		}
-		$url = vh360_pwa_get_generated_icon_url_from_record( $generated[ $source[0] ][ $source[1] ], $base_url );
+		$normalized = vh360_pwa_normalize_generated_icon_record( $generated[ $source[0] ][ $source[1] ], $base_url, (int) $source[1], 'maskable' === $source[0] ? 'maskable' : 'any' );
+		$url = $normalized['url'];
 		if ( $url && wp_http_validate_url( $url ) ) {
 			$updates[ $option_key ] = $url;
 		}
