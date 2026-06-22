@@ -199,12 +199,38 @@ class VH360_Giving_Admin {
             </table>
             <?php submit_button(__('Save Giving Settings', 'videohub360-memberships')); ?>
         </form>
-        <div class="notice notice-info inline"><p><?php esc_html_e('Stripe webhook endpoint: /wp-json/vh360-memberships/v1/stripe-webhook. Recurring Giving requires checkout.session.completed, invoice.paid, invoice.payment_failed, customer.subscription.updated, and customer.subscription.deleted.', 'videohub360-memberships'); ?></p></div>
+        <?php $this->render_stripe_connection_panel(); ?>
         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-top:1rem;">
             <input type="hidden" name="action" value="vh360_repair_giving_database">
             <?php wp_nonce_field('vh360_repair_giving_database'); ?>
             <?php submit_button(__('Repair Giving Database Tables', 'videohub360-memberships'), 'secondary', 'submit', false); ?>
         </form>
+        <?php
+    }
+
+
+    private function render_stripe_connection_panel() {
+        $stripe = class_exists('VH360_Stripe_Bootstrap') ? VH360_Stripe_Bootstrap::get_instance() : null;
+        $mode = ($stripe && $stripe->is_test_mode()) ? __('Test Mode', 'videohub360-memberships') : __('Live Mode', 'videohub360-memberships');
+        $keys_connected = $stripe && method_exists($stripe, 'has_payment_credentials') && $stripe->has_payment_credentials();
+        $webhook_configured = $stripe && '' !== (string) $stripe->get_webhook_secret();
+        $endpoint = home_url('/wp-json/vh360-memberships/v1/stripe-webhook');
+        $stripe_settings_url = admin_url('admin.php?page=vh360-theme-memberships#stripe');
+        $events = array('checkout.session.completed','invoice.paid','invoice.payment_failed','customer.subscription.updated','customer.subscription.deleted');
+        ?>
+        <div class="card vh360-giving-stripe-connection">
+            <h2><?php esc_html_e('Stripe Connection', 'videohub360-memberships'); ?></h2>
+            <table class="widefat striped">
+                <tbody>
+                    <tr><th><?php esc_html_e('Mode', 'videohub360-memberships'); ?></th><td><?php echo esc_html($mode); ?></td></tr>
+                    <tr><th><?php esc_html_e('Payment keys', 'videohub360-memberships'); ?></th><td><?php echo esc_html($keys_connected ? __('Connected', 'videohub360-memberships') : __('Not Connected', 'videohub360-memberships')); ?></td></tr>
+                    <tr><th><?php esc_html_e('Webhook signing secret', 'videohub360-memberships'); ?></th><td><?php echo esc_html($webhook_configured ? __('Configured', 'videohub360-memberships') : __('Missing', 'videohub360-memberships')); ?></td></tr>
+                    <tr><th><?php esc_html_e('Webhook endpoint', 'videohub360-memberships'); ?></th><td><code><?php echo esc_html($endpoint); ?></code></td></tr>
+                    <tr><th><?php esc_html_e('Required webhook events', 'videohub360-memberships'); ?></th><td><ul><?php foreach ($events as $event) : ?><li><code><?php echo esc_html($event); ?></code></li><?php endforeach; ?></ul></td></tr>
+                </tbody>
+            </table>
+            <p><a class="button button-secondary" href="<?php echo esc_url($stripe_settings_url); ?>"><?php esc_html_e('Manage Stripe Settings', 'videohub360-memberships'); ?></a></p>
+        </div>
         <?php
     }
 

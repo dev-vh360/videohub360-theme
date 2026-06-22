@@ -29,8 +29,9 @@ if (!empty($_GET['vh360_giving_success'])) {
         <p><?php esc_html_e('Give securely and review your giving history over time.', 'videohub360-memberships'); ?></p>
     </div>
     <?php if ($notice_message) : ?>
-        <div class="vh360-giving-notice <?php echo esc_attr($notice_class); ?>">
-            <?php echo esc_html($notice_message); ?>
+        <div class="vh360-giving-notice <?php echo esc_attr($notice_class); ?>" data-vh360-giving-return-notice="1">
+            <span class="vh360-giving-notice-message"><?php echo esc_html($notice_message); ?></span>
+            <button type="button" class="vh360-giving-notice-dismiss" aria-label="<?php esc_attr_e('Dismiss notice', 'videohub360-memberships'); ?>">&times;</button>
         </div>
     <?php endif; ?>
     <?php if (!$recurring_table_ready) : ?>
