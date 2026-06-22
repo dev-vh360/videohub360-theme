@@ -448,14 +448,24 @@ $out['scope']     = $normalize_to_path( $scope );
 		$result = $icon_generator->generate_all_icons( $master_icon );
 		
 		if ( $result['success'] ) {
-			if ( function_exists( 'vh360_pwa_bump_asset_version' ) ) { vh360_pwa_bump_asset_version(); }
+			$new_asset_version = function_exists( 'vh360_pwa_bump_asset_version' ) ? vh360_pwa_bump_asset_version() : time();
 			if ( function_exists( 'vh360_pwa_backfill_legacy_icons_from_generated' ) ) {
 				vh360_pwa_backfill_legacy_icons_from_generated();
+			}
+			if ( function_exists( 'vh360_pwa_clear_ios_startup_images' ) ) {
+				vh360_pwa_clear_ios_startup_images();
+			}
+			if ( function_exists( 'vh360_pwa_generate_ios_startup_images' ) ) {
+				vh360_pwa_generate_ios_startup_images();
 			}
 			if ( class_exists( 'VH360_PWA_Root_Files' ) ) {
 				VH360_PWA_Root_Files::ensure_root_files();
 			}
 			update_option( 'vh360_pwa_icons_generated_at', time() );
+			update_option( 'vh360_pwa_last_icon_generation', array(
+				'asset_version' => $new_asset_version,
+				'generated_at'   => time(),
+			) );
 
 			// Clear readiness check cache
 			$readiness_checker = new VH360_PWA_Readiness_Checker();
