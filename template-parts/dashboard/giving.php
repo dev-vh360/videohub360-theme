@@ -79,7 +79,29 @@ if (!empty($_GET['vh360_giving_success'])) {
             <div class="vh360-dashboard-card vh360-giving-recurring-card">
                 <h3><?php esc_html_e('Recurring Giving', 'videohub360-memberships'); ?></h3>
                 <p class="vh360-giving-card-intro"><?php esc_html_e('Manage your active weekly and monthly gifts.', 'videohub360-memberships'); ?></p>
-                <div class="vh360-giving-table-wrap"><table class="vh360-giving-history"><thead><tr><th><?php esc_html_e('Fund','videohub360-memberships'); ?></th><th><?php esc_html_e('Amount','videohub360-memberships'); ?></th><th><?php esc_html_e('Frequency','videohub360-memberships'); ?></th><th><?php esc_html_e('Status','videohub360-memberships'); ?></th><th><?php esc_html_e('Started','videohub360-memberships'); ?></th><th><?php esc_html_e('Current Period End','videohub360-memberships'); ?></th><th><?php esc_html_e('Actions','videohub360-memberships'); ?></th></tr></thead><tbody><?php if ($recurring_gifts) : foreach ($recurring_gifts as $gift) : ?><tr><td data-label="<?php esc_attr_e('Fund','videohub360-memberships'); ?>"><?php echo esc_html($gift->fund_label); ?></td><td data-label="<?php esc_attr_e('Amount','videohub360-memberships'); ?>"><?php echo esc_html(vh360_giving_format_amount($gift->amount, $gift->currency)); ?></td><td data-label="<?php esc_attr_e('Frequency','videohub360-memberships'); ?>"><?php echo esc_html(ucfirst($gift->giving_interval)); ?></td><td data-label="<?php esc_attr_e('Status','videohub360-memberships'); ?>"><?php echo esc_html(ucfirst(str_replace('_',' ', $gift->status))); ?><?php if (!empty($gift->cancel_at_period_end)) : ?> (<?php esc_html_e('canceling', 'videohub360-memberships'); ?>)<?php endif; ?></td><td data-label="<?php esc_attr_e('Started','videohub360-memberships'); ?>"><?php echo esc_html($gift->started_at ?: $gift->created_at); ?></td><td data-label="<?php esc_attr_e('Current Period End','videohub360-memberships'); ?>"><?php echo esc_html($gift->current_period_end ?: '—'); ?></td><td data-label="<?php esc_attr_e('Actions','videohub360-memberships'); ?>"><?php if (!in_array($gift->status, array('canceled'), true) && empty($gift->cancel_at_period_end)) : ?><button type="button" class="button vh360-giving-cancel-recurring" data-recurring-id="<?php echo esc_attr($gift->id); ?>"><?php esc_html_e('Cancel Recurring Gift', 'videohub360-memberships'); ?></button><?php else : ?>—<?php endif; ?></td></tr><?php endforeach; else : ?><tr><td colspan="7"><?php esc_html_e('No recurring gifts yet.', 'videohub360-memberships'); ?></td></tr><?php endif; ?></tbody></table></div>
+                <div class="vh360-giving-recurring-list">
+                    <?php if ($recurring_gifts) : ?>
+                        <?php foreach ($recurring_gifts as $gift) : ?>
+                            <div class="vh360-giving-recurring-item">
+                                <div class="vh360-giving-recurring-item-header">
+                                    <div class="vh360-giving-recurring-item-title"><?php echo esc_html($gift->fund_label); ?></div>
+                                    <div class="vh360-giving-recurring-item-amount"><?php echo esc_html(vh360_giving_format_amount($gift->amount, $gift->currency)); ?></div>
+                                </div>
+                                <dl class="vh360-giving-recurring-meta">
+                                    <div><dt><?php esc_html_e('Frequency', 'videohub360-memberships'); ?></dt><dd><?php echo esc_html(ucfirst($gift->giving_interval)); ?></dd></div>
+                                    <div><dt><?php esc_html_e('Status', 'videohub360-memberships'); ?></dt><dd><?php echo esc_html(ucfirst(str_replace('_',' ', $gift->status))); ?><?php if (!empty($gift->cancel_at_period_end)) : ?> (<?php esc_html_e('canceling', 'videohub360-memberships'); ?>)<?php endif; ?></dd></div>
+                                    <div><dt><?php esc_html_e('Started', 'videohub360-memberships'); ?></dt><dd><?php echo esc_html($gift->started_at ?: $gift->created_at); ?></dd></div>
+                                    <div><dt><?php esc_html_e('Current Period End', 'videohub360-memberships'); ?></dt><dd><?php echo esc_html($gift->current_period_end ?: '—'); ?></dd></div>
+                                </dl>
+                                <?php if (!in_array($gift->status, array('canceled'), true) && empty($gift->cancel_at_period_end)) : ?>
+                                    <div class="vh360-giving-recurring-actions"><button type="button" class="button vh360-giving-cancel-recurring" data-recurring-id="<?php echo esc_attr($gift->id); ?>"><?php esc_html_e('Cancel Recurring Gift', 'videohub360-memberships'); ?></button></div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else : ?>
+                        <p class="vh360-giving-empty"><?php esc_html_e('No recurring gifts yet.', 'videohub360-memberships'); ?></p>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
     </div>
