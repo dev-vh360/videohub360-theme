@@ -523,13 +523,45 @@ $out['scope']     = $normalize_to_path( $scope );
 	private function handle_clear_generated_icons() : void {
 		$icon_generator = new VH360_PWA_Icon_Generator();
 		$clear_results = $icon_generator->clear_generated_icons();
-		if ( class_exists( 'VH360_PWA_Root_Files' ) ) {
-			VH360_PWA_Root_Files::ensure_root_files();
-		}
-		update_option( 'vh360_pwa_last_icon_generation', array( 'status' => 'cleared', 'generated_at' => time(), 'clear_results' => $clear_results ) );
+		$cleared_fields = $this->clear_legacy_generated_icon_fields();
+		$new_asset_version = function_exists( 'vh360_pwa_bump_asset_version' ) ? vh360_pwa_bump_asset_version() : time();
+		$root_results = class_exists( 'VH360_PWA_Root_Files' ) ? VH360_PWA_Root_Files::ensure_root_files() : array();
+		update_option( 'vh360_pwa_last_icon_generation', array(
+			'status'                   => 'cleared',
+			'generated_at'             => time(),
+			'asset_version'            => $new_asset_version,
+			'deleted_old_icon_count'   => is_array( $clear_results ) ? absint( $clear_results['deleted'] ?? 0 ) : 0,
+			'cleared_legacy_fields'    => $cleared_fields,
+			'clear_results'            => $clear_results,
+			'root_results'             => $root_results,
+		) );
 		add_settings_error( 'vh360_pwa_options', 'icons_cleared', __( 'Generated icons were cleared. The master icon was not deleted.', 'vh360-pwa-app' ), 'success' );
 		wp_safe_redirect( admin_url( 'admin.php?page=vh360-pwa-app&tab=icons&settings-updated=1' ) );
 		exit;
+	}
+
+	private function clear_legacy_generated_icon_fields() : array {
+		$opts = vh360_pwa_get_options();
+		$updates = array();
+		foreach ( array( 'icon_192', 'icon_512', 'icon_maskable_192', 'icon_maskable_512' ) as $field ) {
+			$value = isset( $opts[ $field ] ) ? (string) $opts[ $field ] : '';
+			if ( '' !== $value && $this->is_generated_icon_url( $value ) ) {
+				$updates[ $field ] = '';
+			}
+		}
+		if ( ! empty( $updates ) ) {
+			vh360_pwa_update_options( $updates );
+		}
+		return array_keys( $updates );
+	}
+
+	private function is_generated_icon_url( string $url ) : bool {
+		$path = (string) wp_parse_url( $url, PHP_URL_PATH );
+		$basename = basename( $path );
+		if ( false !== strpos( $path, '/vh360-pwa/icons/' ) ) {
+			return true;
+		}
+		return (bool) preg_match( '/^(vh360-icon-(?:maskable-)?\d+-\d+-[a-f0-9]{8,12}|icon-maskable-\d+|icon-\d+)\.png$/i', $basename );
 	}
 
 	public function maybe_flush_rewrite_on_option_update( $old_value, $value, $option ) : void {
