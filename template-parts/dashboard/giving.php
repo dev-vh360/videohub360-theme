@@ -35,14 +35,18 @@ if (!empty($_GET['vh360_giving_success'])) {
     </div>
     <div class="vh360-dashboard-card vh360-giving-form-card">
         <h3><?php esc_html_e('Make a Gift', 'videohub360-memberships'); ?></h3>
-        <form id="vh360-giving-form" class="vh360-giving-form">
-            <label><?php esc_html_e('Fund', 'videohub360-memberships'); ?><select name="fund_id" required><?php foreach ($funds as $fund) : ?><option value="<?php echo esc_attr($fund->id); ?>"><?php echo esc_html($fund->label); ?></option><?php endforeach; ?></select></label>
-            <div class="vh360-giving-amounts"><?php foreach ($suggested as $amount) : ?><button type="button" class="vh360-giving-amount" data-amount="<?php echo esc_attr($amount); ?>"><?php echo esc_html(vh360_giving_format_amount($amount, $currency)); ?></button><?php endforeach; ?></div>
-            <label><?php esc_html_e('Custom Amount', 'videohub360-memberships'); ?><input type="number" min="<?php echo esc_attr($options['minimum_amount']); ?>" step="0.01" name="amount" required></label>
-            <?php if (!empty($options['enable_anonymous'])) : ?><label class="vh360-giving-check"><input type="checkbox" name="anonymous" value="1"> <?php esc_html_e('Give anonymously in public reports', 'videohub360-memberships'); ?></label><?php endif; ?>
-            <?php if (!empty($options['enable_notes'])) : ?><label><?php esc_html_e('Note (optional)', 'videohub360-memberships'); ?><textarea name="note" rows="3"></textarea></label><?php endif; ?>
-            <button type="submit" class="button vh360-button-primary"><?php esc_html_e('Continue to Secure Checkout', 'videohub360-memberships'); ?></button><div class="vh360-giving-message" aria-live="polite"></div>
-        </form>
+        <?php if (empty($funds)) : ?>
+            <p class="vh360-giving-empty"><?php esc_html_e('No giving funds are available yet. Please contact the site administrator.', 'videohub360-memberships'); ?></p>
+        <?php else : ?>
+            <form id="vh360-giving-form" class="vh360-giving-form">
+                <label><?php esc_html_e('Fund', 'videohub360-memberships'); ?><select name="fund_id" required><?php foreach ($funds as $fund) : ?><option value="<?php echo esc_attr($fund->id); ?>"><?php echo esc_html($fund->label); ?></option><?php endforeach; ?></select></label>
+                <div class="vh360-giving-amounts"><?php foreach ($suggested as $amount) : ?><button type="button" class="vh360-giving-amount" data-amount="<?php echo esc_attr($amount); ?>"><?php echo esc_html(vh360_giving_format_amount($amount, $currency)); ?></button><?php endforeach; ?></div>
+                <label><?php esc_html_e('Custom Amount', 'videohub360-memberships'); ?><input type="number" min="<?php echo esc_attr($options['minimum_amount']); ?>" step="0.01" name="amount" required></label>
+                <?php if (!empty($options['enable_anonymous'])) : ?><label class="vh360-giving-check"><input type="checkbox" name="anonymous" value="1"> <?php esc_html_e('Give anonymously in public reports', 'videohub360-memberships'); ?></label><?php endif; ?>
+                <?php if (!empty($options['enable_notes'])) : ?><label><?php esc_html_e('Note (optional)', 'videohub360-memberships'); ?><textarea name="note" rows="3"></textarea></label><?php endif; ?>
+                <button type="submit" class="button vh360-button-primary"><?php esc_html_e('Continue to Secure Checkout', 'videohub360-memberships'); ?></button><div class="vh360-giving-message" aria-live="polite"></div>
+            </form>
+        <?php endif; ?>
     </div>
     <div class="vh360-dashboard-card"><h3><?php esc_html_e('Giving History', 'videohub360-memberships'); ?></h3><table class="vh360-giving-history"><thead><tr><th><?php esc_html_e('Date','videohub360-memberships'); ?></th><th><?php esc_html_e('Fund','videohub360-memberships'); ?></th><th><?php esc_html_e('Amount','videohub360-memberships'); ?></th><th><?php esc_html_e('Status','videohub360-memberships'); ?></th></tr></thead><tbody><?php if ($history) : foreach ($history as $gift) : ?><tr><td><?php echo esc_html($gift->given_at ?: $gift->created_at); ?></td><td><?php echo esc_html($gift->fund_label); ?></td><td><?php echo esc_html(vh360_giving_format_amount($gift->amount, $gift->currency)); ?></td><td><?php echo esc_html(ucfirst($gift->status)); ?></td></tr><?php endforeach; else : ?><tr><td colspan="4"><?php esc_html_e('No giving history yet.', 'videohub360-memberships'); ?></td></tr><?php endif; ?></tbody></table></div>
 </div>

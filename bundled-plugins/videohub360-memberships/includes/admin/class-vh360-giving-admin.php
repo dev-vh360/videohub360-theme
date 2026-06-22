@@ -22,6 +22,7 @@ class VH360_Giving_Admin {
         add_action('admin_menu', array($this, 'menu'), 20);
         add_action('admin_post_vh360_giving_save_settings', array($this, 'save_settings'));
         add_action('admin_post_vh360_giving_save_fund', array($this, 'save_fund'));
+        add_action('admin_post_vh360_giving_delete_fund', array($this, 'delete_fund'));
         add_action('admin_enqueue_scripts', array($this, 'assets'));
     }
 
@@ -69,8 +70,50 @@ class VH360_Giving_Admin {
         check_admin_referer('vh360_giving_fund');
 
         VH360_Giving_Funds::save_fund(wp_unslash($_POST));
+        $this->set_notice('success', __('Giving fund saved.', 'videohub360-memberships'));
         wp_safe_redirect(admin_url('admin.php?page=vh360-theme-giving&tab=funds&updated=1'));
         exit;
+    }
+
+    public function delete_fund() {
+        if (!current_user_can(self::CAP)) {
+            wp_die(esc_html__('You do not have permission to delete Giving funds.', 'videohub360-memberships'));
+        }
+
+        $fund_id = isset($_POST['fund_id']) ? absint($_POST['fund_id']) : 0;
+        check_admin_referer('vh360_giving_delete_fund_' . $fund_id);
+
+        $result = VH360_Giving_Funds::delete_fund($fund_id);
+        if (is_wp_error($result)) {
+            $this->set_notice('error', $result->get_error_message());
+        } elseif ('archived' === $result) {
+            $this->set_notice('success', __('Giving fund archived because it has existing transactions. Historical giving records remain intact.', 'videohub360-memberships'));
+        } else {
+            $this->set_notice('success', __('Giving fund deleted.', 'videohub360-memberships'));
+        }
+
+        wp_safe_redirect(admin_url('admin.php?page=vh360-theme-giving&tab=funds'));
+        exit;
+    }
+
+    private function set_notice($type, $message) {
+        set_transient('vh360_giving_admin_notice', array(
+            'type'    => sanitize_key($type),
+            'message' => wp_kses_post($message),
+        ), 60);
+    }
+
+    private function render_notice() {
+        $notice = get_transient('vh360_giving_admin_notice');
+        if (!$notice) {
+            return;
+        }
+        delete_transient('vh360_giving_admin_notice');
+        $class = 'notice-error';
+        if (!empty($notice['type']) && 'success' === $notice['type']) {
+            $class = 'notice-success';
+        }
+        echo '<div class="notice ' . esc_attr($class) . ' is-dismissible"><p>' . esc_html($notice['message']) . '</p></div>';
     }
 
     public function render() {
@@ -91,6 +134,7 @@ class VH360_Giving_Admin {
                 <?php endforeach; ?>
             </nav>
             <?php
+            $this->render_notice();
             if ('settings' === $tab) {
                 $this->settings();
             } elseif ('funds' === $tab) {
@@ -154,16 +198,26 @@ class VH360_Giving_Admin {
         <table class="widefat striped">
             <thead><tr><th><?php esc_html_e('Order', 'videohub360-memberships'); ?></th><th><?php esc_html_e('Label', 'videohub360-memberships'); ?></th><th><?php esc_html_e('Key', 'videohub360-memberships'); ?></th><th><?php esc_html_e('Suggested', 'videohub360-memberships'); ?></th><th><?php esc_html_e('Enabled', 'videohub360-memberships'); ?></th><th><?php esc_html_e('Actions', 'videohub360-memberships'); ?></th></tr></thead>
             <tbody>
-                <?php foreach ($funds as $fund) : ?>
+                <?php if ($funds) : foreach ($funds as $fund) : ?>
                     <tr>
                         <td><?php echo esc_html($fund->display_order); ?></td>
                         <td><?php echo esc_html($fund->label); ?></td>
                         <td><code><?php echo esc_html($fund->fund_key); ?></code></td>
                         <td><?php echo esc_html($fund->suggested_amounts); ?></td>
                         <td><?php echo esc_html($fund->enabled ? __('Yes', 'videohub360-memberships') : __('No', 'videohub360-memberships')); ?></td>
-                        <td><a class="button button-small" href="<?php echo esc_url(admin_url('admin.php?page=vh360-theme-giving&tab=funds&edit_fund=' . absint($fund->id))); ?>"><?php esc_html_e('Edit', 'videohub360-memberships'); ?></a></td>
+                        <td class="vh360-giving-fund-actions">
+                            <a class="button button-small" href="<?php echo esc_url(admin_url('admin.php?page=vh360-theme-giving&tab=funds&edit_fund=' . absint($fund->id))); ?>"><?php esc_html_e('Edit', 'videohub360-memberships'); ?></a>
+                            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" onsubmit="return confirm('<?php echo esc_js(__('Delete this giving fund? Funds with transactions will be archived so history remains intact.', 'videohub360-memberships')); ?>');">
+                                <input type="hidden" name="action" value="vh360_giving_delete_fund">
+                                <input type="hidden" name="fund_id" value="<?php echo esc_attr($fund->id); ?>">
+                                <?php wp_nonce_field('vh360_giving_delete_fund_' . absint($fund->id)); ?>
+                                <?php submit_button(__('Delete', 'videohub360-memberships'), 'delete small', 'submit', false); ?>
+                            </form>
+                        </td>
                     </tr>
-                <?php endforeach; ?>
+                <?php endforeach; else : ?>
+                    <tr><td colspan="6"><?php esc_html_e('No giving funds have been created yet. Add your first fund to start accepting gifts.', 'videohub360-memberships'); ?></td></tr>
+                <?php endif; ?>
             </tbody>
         </table>
 
