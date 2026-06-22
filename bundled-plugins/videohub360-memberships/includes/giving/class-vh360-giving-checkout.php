@@ -84,6 +84,10 @@ class VH360_Giving_Checkout {
             wp_send_json_error(array('message' => $customer->get_error_message()));
         }
 
+        $dashboard_url = function_exists('vh360_get_dashboard_page_url')
+            ? vh360_get_dashboard_page_url()
+            : home_url('/dashboard/');
+
         $params = array(
             'mode'                                                   => 'payment',
             'customer'                                               => $customer,
@@ -91,8 +95,8 @@ class VH360_Giving_Checkout {
             'line_items[0][price_data][product_data][name]'          => 'VideoHub360 Giving - ' . $fund->label,
             'line_items[0][price_data][unit_amount]'                 => (int) round($amount * 100),
             'line_items[0][quantity]'                                => 1,
-            'success_url'                                            => add_query_arg(array('tab' => 'giving', 'vh360_giving_success' => '1', 'session_id' => '{CHECKOUT_SESSION_ID}'), home_url('/dashboard/')),
-            'cancel_url'                                             => add_query_arg(array('tab' => 'giving', 'vh360_giving_cancel' => '1'), home_url('/dashboard/')),
+            'success_url'                                            => add_query_arg(array('tab' => 'giving', 'vh360_giving_success' => '1', 'session_id' => '{CHECKOUT_SESSION_ID}'), $dashboard_url),
+            'cancel_url'                                             => add_query_arg(array('tab' => 'giving', 'vh360_giving_cancel' => '1'), $dashboard_url),
             'client_reference_id'                                    => $user_id,
             'metadata[type]'                                         => 'giving',
             'metadata[user_id]'                                      => $user_id,

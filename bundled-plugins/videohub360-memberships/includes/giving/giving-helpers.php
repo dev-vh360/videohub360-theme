@@ -14,7 +14,7 @@ add_filter('wp_nav_menu_items', function($items, $args){
     }
     $options = vh360_giving_options();
     $label = !empty($options['dashboard_tab_label']) ? $options['dashboard_tab_label'] : __('My Giving', 'videohub360-memberships');
-    $items .= '<li class="vh360-dashboard-nav-item"><a href="#giving" class="vh360-dashboard-nav-link" data-tab="giving">'
+    $items .= '<li class="vh360-dashboard-nav-item"><a href="#giving" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="giving">'
         . '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21.2l8.8-8.8a5.5 5.5 0 0 0 0-7.8z"></path></svg>'
         . '<span class="vh360-dashboard-nav-label">' . esc_html($label) . '</span></a></li>';
     return $items;
