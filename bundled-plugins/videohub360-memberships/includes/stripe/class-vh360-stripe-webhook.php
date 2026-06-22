@@ -204,6 +204,13 @@ class VH360_Stripe_Webhook {
      * Creates the subscription-backed membership if it doesn't exist yet.
      */
     private function handle_checkout_completed($session, $event_id) {
+        if (class_exists('VH360_Giving_Webhook')) {
+            $giving_result = VH360_Giving_Webhook::maybe_handle_checkout_completed($session, $event_id);
+            if (false !== $giving_result) {
+                return $giving_result;
+            }
+        }
+
         if (empty($session['subscription']) || empty($session['customer'])) {
             return true; // Not a subscription checkout
         }

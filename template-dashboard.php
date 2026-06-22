@@ -177,6 +177,13 @@ get_header();
                     <?php get_template_part('template-parts/dashboard/settings'); ?>
                 </div>
                 
+                <!-- Giving Tab (shown when VideoHub360 Giving is enabled) -->
+                <?php if ( function_exists( 'vh360_giving_is_enabled' ) && vh360_giving_is_enabled() ) : ?>
+                <div id="giving" class="vh360-dashboard-tab-content">
+                    <?php get_template_part('template-parts/dashboard/giving'); ?>
+                </div>
+                <?php endif; ?>
+
                 <!-- Membership Tab (shown when memberships are enabled) -->
                 <?php
                 $vh360_membership_opts = get_option( 'vh360_membership_options', array() );

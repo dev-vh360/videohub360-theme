@@ -27,6 +27,7 @@ define('VH360_MEMBERSHIPS_VERSION', '1.0.0');
 // Load required classes for activation/deactivation hooks
 require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-database.php';
 require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-cron.php';
+require_once VH360_MEMBERSHIPS_DIR . 'includes/giving/class-vh360-giving-database.php';
 
 /**
  * Main plugin class
@@ -83,6 +84,15 @@ class VH360_Memberships {
         require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-frontend.php';
         require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-content-gates.php';
         
+        // Load Giving module
+        require_once VH360_MEMBERSHIPS_DIR . 'includes/giving/class-vh360-giving-database.php';
+        require_once VH360_MEMBERSHIPS_DIR . 'includes/giving/class-vh360-giving-funds.php';
+        require_once VH360_MEMBERSHIPS_DIR . 'includes/giving/class-vh360-giving-transactions.php';
+        require_once VH360_MEMBERSHIPS_DIR . 'includes/giving/class-vh360-giving-checkout.php';
+        require_once VH360_MEMBERSHIPS_DIR . 'includes/giving/class-vh360-giving-webhook.php';
+        require_once VH360_MEMBERSHIPS_DIR . 'includes/giving/giving-helpers.php';
+        require_once VH360_MEMBERSHIPS_DIR . 'includes/admin/class-vh360-giving-admin.php';
+
         // Load Stripe integration classes
         require_once VH360_MEMBERSHIPS_DIR . 'includes/stripe/class-vh360-stripe-bootstrap.php';
         require_once VH360_MEMBERSHIPS_DIR . 'includes/stripe/class-vh360-stripe-checkout.php';
@@ -113,6 +123,12 @@ class VH360_Memberships {
         if (is_admin() && class_exists('VH360_Membership_Members_Admin')) {
             VH360_Membership_Members_Admin::get_instance();
         }
+        if (is_admin() && class_exists('VH360_Giving_Admin')) {
+            VH360_Giving_Admin::get_instance();
+        }
+        if (class_exists('VH360_Giving_Database')) {
+            VH360_Giving_Database::get_instance();
+        }
 
         // Check for WooCommerce
         if (!class_exists('WooCommerce')) {
@@ -138,6 +154,9 @@ class VH360_Memberships {
             VH360_Stripe_Checkout::get_instance();
             VH360_Stripe_Portal::get_instance();
             VH360_Stripe_Sync::get_instance();
+            if (class_exists('VH360_Giving_Checkout')) {
+                VH360_Giving_Checkout::get_instance();
+            }
         }
         
         // Initialize subscription management frontend
@@ -154,6 +173,9 @@ class VH360_Memberships {
      */
     public function create_tables() {
         VH360_Membership_Database::create_tables();
+        if (class_exists('VH360_Giving_Database')) {
+            VH360_Giving_Database::create_tables();
+        }
     }
     
     /**
@@ -171,6 +193,9 @@ class VH360_Memberships {
  */
 function vh360_memberships_activate() {
     VH360_Membership_Database::create_tables();
+    if (class_exists('VH360_Giving_Database')) {
+        VH360_Giving_Database::create_tables();
+    }
     VH360_Membership_Cron::schedule_events();
     flush_rewrite_rules();
 }
