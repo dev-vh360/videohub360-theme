@@ -31,10 +31,10 @@ function shouldBypass(request) {
   const url = new URL(request.url);
   const p = url.pathname || '';
 
-  // Never cache admin/auth/REST/ajax.
+  // Never cache admin/auth/REST/ajax or highly personalized commerce/community areas.
   if (p.startsWith('/wp-admin') || p.startsWith('/wp-login.php')) return true;
-  if (p.includes('/wp-json')) return true;
-  if (p.includes('/admin-ajax.php')) return true;
+  if (p.includes('/wp-json') || p.includes('/admin-ajax.php')) return true;
+  if (/(^|\/)(dashboard|my-account|account|cart|checkout|messages|notifications|login|logout|register|members|settings)(\/|$)/i.test(p)) return true;
 
   // Avoid preview, nonces, actions.
   const qp = url.searchParams;
@@ -60,7 +60,13 @@ self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(STATIC_CACHE);
     const precache = Array.isArray(VH360_PWA.precache) ? VH360_PWA.precache : [];
-    await cache.addAll(precache);
+    await Promise.all(precache.map(async (url) => {
+      try {
+        await cache.add(url);
+      } catch (e) {
+        // Ignore individual precache failures so one bad URL does not abort SW install.
+      }
+    }));
     // Keep updates controllable: we won't skipWaiting automatically.
   })());
 });

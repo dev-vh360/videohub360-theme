@@ -36,7 +36,7 @@ function vh360_pwa_get_options() : array {
 		'short_name'           => get_bloginfo( 'name' ),
 		'description'          => get_bloginfo( 'description' ),
 		'theme_color'          => '#2563eb',
-		'background_color'     => '#ffffff',
+		'background_color'     => '#0f172a',
 		'display'              => 'standalone',
 		// Prefer portrait-primary to avoid upside-down rotation where supported.
 		'orientation'          => 'portrait-primary',
@@ -46,6 +46,7 @@ function vh360_pwa_get_options() : array {
 
 		'cache_strategy'       => 'safe', // safe | balanced | aggressive
 		'cache_version'        => 'v1',
+		'pwa_asset_version'    => 0,
 		'precache_offline'     => 1,
 		'precache_home'        => 0,
 		'precache_urls'        => '',
@@ -56,6 +57,18 @@ function vh360_pwa_get_options() : array {
 		'install_banner_text'  => 'Install the VH360 App',
 		'install_banner_dismiss_days' => 7,
 		'show_ios_onboarding'  => 1,
+		'show_ios_reinstall_notice' => 0,
+		'ios_reinstall_notice_text' => 'We updated this app’s icon or launch screen. If your iPhone or iPad still shows the old branding, remove the app from your Home Screen and add it again from Safari.',
+
+		'enable_pull_to_refresh' => 1,
+		'splash_enabled'       => 1,
+		'splash_background_color' => '#0f172a',
+		'splash_logo'          => '',
+		'splash_title'         => get_bloginfo( 'name' ),
+		'splash_title_enabled' => 1,
+		'splash_title_font_size' => 44,
+		'splash_title_color'   => '#ffffff',
+		'splash_title_offset'  => 80,
 
 		'icon_192'             => '',
 		'icon_512'             => '',
@@ -72,6 +85,17 @@ function vh360_pwa_get_options() : array {
 		$opts = array();
 	}
 	$opts = wp_parse_args( $opts, $defaults );
+	// Remove legacy floating refresh button options; pull-to-refresh is the only app refresh UI.
+	unset( $opts['show_refresh_button'], $opts['refresh_label'] );
+	if ( empty( $opts['pwa_asset_version'] ) ) {
+		$opts['pwa_asset_version'] = time();
+		$persisted = get_option( 'vh360_pwa_options', array() );
+		$persisted = is_array( $persisted ) ? $persisted : array();
+		if ( empty( $persisted['pwa_asset_version'] ) ) {
+			$persisted['pwa_asset_version'] = $opts['pwa_asset_version'];
+			update_option( 'vh360_pwa_options', $persisted );
+		}
+	}
 
 	// Sanity: start_url/scope must be same-origin.
 	$home = home_url( '/' );
@@ -144,6 +168,249 @@ function vh360_pwa_get_precache_urls( array $opts ) : array {
 }
 
 
+
+
+
+function vh360_pwa_bump_asset_version() : int {
+	$opts = get_option( 'vh360_pwa_options', array() );
+	$opts = is_array( $opts ) ? $opts : array();
+	$current = ! empty( $opts['pwa_asset_version'] ) ? absint( $opts['pwa_asset_version'] ) : 0;
+	$version = max( time(), $current + 1 );
+	$opts['pwa_asset_version'] = $version;
+	update_option( 'vh360_pwa_options', $opts );
+	return $version;
+}
+
+function vh360_pwa_get_asset_version( ?array $opts = null ) : int {
+	$opts = is_array( $opts ) ? $opts : vh360_pwa_get_options();
+	$version = isset( $opts['pwa_asset_version'] ) ? absint( $opts['pwa_asset_version'] ) : 0;
+	return $version > 0 ? $version : time();
+}
+
+function vh360_pwa_version_url( string $url, ?array $opts = null ) : string {
+	if ( '' === $url ) {
+		return '';
+	}
+	return esc_url_raw( add_query_arg( 'v', vh360_pwa_get_asset_version( $opts ), $url ) );
+}
+
+function vh360_pwa_version_manifest_icons( array $icons, ?array $opts = null ) : array {
+	foreach ( $icons as &$icon ) {
+		if ( is_array( $icon ) && ! empty( $icon['src'] ) ) {
+			$icon['src'] = vh360_pwa_version_url( (string) $icon['src'], $opts );
+		}
+	}
+	unset( $icon );
+	return $icons;
+}
+
+/**
+ * Build the canonical manifest shared by dynamic endpoint and root file.
+ */
+function vh360_pwa_build_manifest( ?array $opts = null ) : array {
+	$opts = is_array( $opts ) ? $opts : vh360_pwa_get_options();
+	$background = ! empty( $opts['splash_enabled'] ) && ! empty( $opts['splash_background_color'] ) ? (string) $opts['splash_background_color'] : (string) $opts['background_color'];
+	$scope = esc_url_raw( (string) $opts['scope'] );
+	$icons = function_exists( 'vh360_pwa_get_manifest_icons' ) ? vh360_pwa_version_manifest_icons( vh360_pwa_get_manifest_icons(), $opts ) : array();
+	return array(
+		'name'             => (string) $opts['app_name'],
+		'short_name'       => (string) $opts['short_name'],
+		'description'      => (string) $opts['description'],
+		'start_url'        => esc_url_raw( (string) $opts['start_url'] ),
+		'scope'            => $scope,
+		'id'               => $scope ?: '/',
+		'display'          => (string) $opts['display'],
+		'orientation'      => (string) $opts['orientation'],
+		'theme_color'      => (string) $opts['theme_color'],
+		'background_color' => $background,
+		'lang'             => (string) $opts['lang'],
+		'icons'            => $icons,
+		'pwa_asset_version' => vh360_pwa_get_asset_version( $opts ),
+		'generated_by'     => 'VH360 PWA & App plugin',
+		'vh360_managed'    => true,
+	);
+}
+
+/**
+ * Build the canonical service worker payload and script.
+ */
+function vh360_pwa_build_sw_script( ?array $opts = null ) : string {
+	$opts = is_array( $opts ) ? $opts : vh360_pwa_get_options();
+	$cache_version = preg_replace( '/[^a-zA-Z0-9._-]/', '', (string) $opts['cache_version'] );
+	if ( '' === $cache_version ) {
+		$cache_version = 'v1';
+	}
+	$strategy = (string) $opts['cache_strategy'];
+	if ( ! in_array( $strategy, array( 'safe', 'balanced', 'aggressive' ), true ) ) {
+		$strategy = 'safe';
+	}
+	$onesignal = array();
+	$push_settings = get_option( 'vh360_pwa_push_settings', array() );
+	if ( is_array( $push_settings ) ) {
+		$active_provider = (string) ( $push_settings['active_provider'] ?? 'onesignal' );
+		$providers = $push_settings['providers'] ?? array();
+		if ( isset( $providers[ $active_provider ] ) && is_array( $providers[ $active_provider ] ) && ! empty( $providers[ $active_provider ]['app_id'] ) ) {
+			$sdk_version = defined( 'VH360_PWA_ONESIGNAL_SDK_VERSION' ) ? VH360_PWA_ONESIGNAL_SDK_VERSION : 'v16';
+			$onesignal = array( 'importUrl' => 'https://cdn.onesignal.com/sdks/web/' . $sdk_version . '/OneSignalSDK.sw.js' );
+		}
+	}
+	$payload = array(
+		'cacheVersion' => $cache_version,
+		'strategy'     => $strategy,
+		'precache'     => array_map( function( $url ) use ( $opts ) { return vh360_pwa_version_url( (string) $url, $opts ); }, vh360_pwa_get_precache_urls( $opts ) ),
+		'offlineUrl'   => vh360_pwa_version_url( vh360_pwa_endpoint_url( VH360_PWA_OFFLINE_SLUG ), $opts ),
+		'homeOrigin'   => home_url(),
+		'onesignal'    => $onesignal,
+	);
+	$template = file_exists( VH360_PWA_APP_DIR . 'templates/sw-template.js' ) ? file_get_contents( VH360_PWA_APP_DIR . 'templates/sw-template.js' ) : '';
+	return "/* VH360 Managed File: vh360-sw.js */\n// VH360 Service Worker\nconst VH360_PWA = " . wp_json_encode( $payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . ";\n" . $template;
+}
+
+function vh360_pwa_get_ios_startup_images() : array {
+	$opts = vh360_pwa_get_options();
+	if ( empty( $opts['splash_enabled'] ) ) { return array(); }
+	$generated = get_option( 'vh360_pwa_ios_startup_images', array() );
+	return is_array( $generated ) ? $generated : array();
+}
+
+
+function vh360_pwa_clear_ios_startup_images() : void {
+	$uploads = wp_upload_dir();
+	$dir = trailingslashit( $uploads['basedir'] ) . 'vh360-pwa/splash';
+	if ( is_dir( $dir ) ) {
+		foreach ( glob( trailingslashit( $dir ) . 'vh360-startup-*.png' ) ?: array() as $file ) {
+			if ( is_string( $file ) && is_file( $file ) ) {
+				@unlink( $file );
+			}
+		}
+	}
+	delete_option( 'vh360_pwa_ios_startup_images' );
+}
+
+function vh360_pwa_get_startup_image_font_path() : string {
+	$candidates = array(
+		VH360_PWA_APP_DIR . 'assets/fonts/DejaVuSans-Bold.ttf',
+		VH360_PWA_APP_DIR . 'assets/fonts/OpenSans-Bold.ttf',
+		'/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+		'/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf',
+		'/Library/Fonts/Arial Bold.ttf',
+		'C:\\Windows\\Fonts\\arialbd.ttf',
+	);
+	foreach ( $candidates as $candidate ) {
+		if ( is_string( $candidate ) && file_exists( $candidate ) && is_readable( $candidate ) ) {
+			return $candidate;
+		}
+	}
+	return '';
+}
+
+function vh360_pwa_allocate_hex_color( $image, string $hex, array $fallback = array( 255, 255, 255 ) ) : int {
+	$hex = sanitize_hex_color( $hex );
+	if ( ! $hex ) {
+		return imagecolorallocate( $image, $fallback[0], $fallback[1], $fallback[2] );
+	}
+	return imagecolorallocate( $image, hexdec( substr( $hex, 1, 2 ) ), hexdec( substr( $hex, 3, 2 ) ), hexdec( substr( $hex, 5, 2 ) ) );
+}
+
+function vh360_pwa_draw_startup_title( $image, string $title, int $center_x, int $baseline_y, int $font_size, string $color ) : void {
+	$title = trim( $title );
+	if ( '' === $title ) {
+		return;
+	}
+	$text_color = vh360_pwa_allocate_hex_color( $image, $color );
+	$font_path = vh360_pwa_get_startup_image_font_path();
+	if ( $font_path && function_exists( 'imagettfbbox' ) && function_exists( 'imagettftext' ) ) {
+		$box = imagettfbbox( $font_size, 0, $font_path, $title );
+		if ( is_array( $box ) ) {
+			$text_width = abs( (int) $box[2] - (int) $box[0] );
+			$x = (int) max( 0, $center_x - ( $text_width / 2 ) );
+			imagettftext( $image, $font_size, 0, $x, $baseline_y, $text_color, $font_path, $title );
+			return;
+		}
+	}
+
+	// Fallback for hosts without TrueType support: render GD's built-in font to a temporary
+	// layer and scale it up so the admin-configured title size is still respected.
+	$font = 5;
+	$raw_width = imagefontwidth( $font ) * strlen( $title );
+	$raw_height = imagefontheight( $font );
+	if ( $raw_width < 1 || $raw_height < 1 ) {
+		return;
+	}
+	$scale = max( 1, $font_size / 14 );
+	$tmp = imagecreatetruecolor( $raw_width, $raw_height );
+	imagesavealpha( $tmp, true );
+	$transparent = imagecolorallocatealpha( $tmp, 0, 0, 0, 127 );
+	imagefill( $tmp, 0, 0, $transparent );
+	$tmp_color = vh360_pwa_allocate_hex_color( $tmp, $color );
+	imagestring( $tmp, $font, 0, 0, $title, $tmp_color );
+	$scaled_width = (int) ceil( $raw_width * $scale );
+	$scaled_height = (int) ceil( $raw_height * $scale );
+	$x = (int) max( 0, $center_x - ( $scaled_width / 2 ) );
+	$y = (int) max( 0, $baseline_y - $scaled_height );
+	imagecopyresampled( $image, $tmp, $x, $y, 0, 0, $scaled_width, $scaled_height, $raw_width, $raw_height );
+	imagedestroy( $tmp );
+}
+
+
+function vh360_pwa_set_startup_image_generation_error( string $reason ) : void {
+	update_option( 'vh360_pwa_ios_startup_images_last_error', $reason );
+}
+
+function vh360_pwa_generate_ios_startup_images() : array {
+	$opts = vh360_pwa_get_options();
+	if ( empty( $opts['splash_enabled'] ) ) { vh360_pwa_set_startup_image_generation_error( 'splash_disabled' ); return array(); }
+	if ( empty( $opts['splash_logo'] ) ) { vh360_pwa_set_startup_image_generation_error( 'missing_splash_logo' ); return array(); }
+	$sizes = array(
+		'iphone-8-portrait'       => array( 750, 1334, '(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)' ),
+		'iphone-11-portrait'      => array( 828, 1792, '(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)' ),
+		'iphone-x-portrait'       => array( 1125, 2436, '(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)' ),
+		'iphone-12-portrait'      => array( 1170, 2532, '(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)' ),
+		'iphone-14-portrait'      => array( 1179, 2556, '(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)' ),
+		'iphone-pro-max-portrait' => array( 1284, 2778, '(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)' ),
+		'iphone-15-pro-max-portrait' => array( 1290, 2796, '(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)' ),
+		'ipad-portrait'           => array( 1536, 2048, '(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)' ),
+		'ipad-pro-10-5-portrait'  => array( 1668, 2224, '(device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)' ),
+		'ipad-pro-11-portrait'    => array( 1668, 2388, '(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)' ),
+		'ipad-pro-12-9-portrait'  => array( 2048, 2732, '(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)' ),
+	);
+	$uploads = wp_upload_dir();
+	$dir = trailingslashit( $uploads['basedir'] ) . 'vh360-pwa/splash';
+	$url = trailingslashit( $uploads['baseurl'] ) . 'vh360-pwa/splash';
+	wp_mkdir_p( $dir );
+	$logo_path = vh360_pwa_url_to_upload_path( $opts['splash_logo'] );
+	if ( ! function_exists( 'imagecreatetruecolor' ) ) { vh360_pwa_set_startup_image_generation_error( 'gd_unavailable' ); return array(); }
+	if ( '' === $logo_path ) { vh360_pwa_set_startup_image_generation_error( 'logo_not_in_uploads' ); return array(); }
+	if ( ! file_exists( $logo_path ) ) { vh360_pwa_set_startup_image_generation_error( 'logo_file_missing' ); return array(); }
+	$logo_data = @file_get_contents( $logo_path );
+	$logo_src = $logo_data ? @imagecreatefromstring( $logo_data ) : false;
+	if ( ! $logo_src ) { vh360_pwa_set_startup_image_generation_error( 'image_load_failed' ); return array(); }
+	$bg = sanitize_hex_color( $opts['splash_background_color'] ?? $opts['background_color'] ) ?: '#0f172a';
+	$title_enabled = ! empty( $opts['splash_title_enabled'] );
+	$title = $title_enabled ? trim( (string) ( $opts['splash_title'] ?? $opts['short_name'] ?? '' ) ) : '';
+	$title_font_size = max( 18, min( 96, absint( $opts['splash_title_font_size'] ?? 44 ) ) );
+	$title_color = sanitize_hex_color( $opts['splash_title_color'] ?? '#ffffff' ) ?: '#ffffff';
+	$title_offset = max( 20, min( 200, absint( $opts['splash_title_offset'] ?? 80 ) ) );
+	$asset_version = vh360_pwa_get_asset_version( $opts );
+	$r=hexdec(substr($bg,1,2)); $g=hexdec(substr($bg,3,2)); $b=hexdec(substr($bg,5,2));
+	$out = array();
+	foreach ( $sizes as $key => $data ) {
+		list($w,$h,$media) = $data; $img = imagecreatetruecolor($w,$h); $c=imagecolorallocate($img,$r,$g,$b); imagefill($img,0,0,$c);
+		$lw=imagesx($logo_src); $lh=imagesy($logo_src); $target=(int)min($w*.32,$h*.18); $scale=$target/max($lw,$lh); $nw=(int)($lw*$scale); $nh=(int)($lh*$scale);
+		$logo_x = (int) ( ( $w - $nw ) / 2 );
+		$logo_y = (int) ( ( $h - $nh ) / 2 ) - ( '' !== $title ? (int) ( $h * 0.035 ) : 0 );
+		imagecopyresampled($img,$logo_src,$logo_x,$logo_y,0,0,$nw,$nh,$lw,$lh);
+		if ( '' !== $title ) {
+			$max_chars = max( 12, (int) floor( $w / max( 10, $title_font_size * 0.58 ) * 0.82 ) );
+			$render_title = function_exists( 'mb_substr' ) ? mb_substr( $title, 0, $max_chars ) : substr( $title, 0, $max_chars );
+			$text_y = (int) min( $h - 60, $logo_y + $nh + $title_offset );
+			vh360_pwa_draw_startup_title( $img, $render_title, (int) ( $w / 2 ), $text_y, $title_font_size, $title_color );
+		}
+		$file='vh360-startup-' . $key . '-' . $asset_version . '-' . substr( md5($bg . $opts['splash_logo'] . $title . $title_font_size . $title_color . $title_offset), 0, 10 ) . '.png'; imagepng($img, trailingslashit($dir).$file); imagedestroy($img);
+		$out[] = array('href'=>vh360_pwa_version_url( trailingslashit($url).$file, $opts ),'media'=>$media);
+	}
+	imagedestroy($logo_src); update_option('vh360_pwa_ios_startup_images',$out); delete_option( 'vh360_pwa_ios_startup_images_last_error' ); return $out;
+}
 
 /**
  * Validate and normalize a manifest icon entry.

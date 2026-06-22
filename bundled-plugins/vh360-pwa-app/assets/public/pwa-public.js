@@ -45,7 +45,8 @@
   }
 
   function isIOS() {
-    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    var platform = navigator.platform || '';
+    return ((/iPad|iPhone|iPod/.test(navigator.userAgent) || (platform === 'MacIntel' && navigator.maxTouchPoints > 1)) && !window.MSStream);
   }
 
   function isStandalone() {
@@ -53,6 +54,16 @@
     return (window.navigator.standalone === true) ||
       (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
   }
+
+  function updateStandaloneClass() {
+    if (isStandalone()) {
+      document.documentElement.classList.add('vh360-pwa-standalone');
+    } else {
+      document.documentElement.classList.remove('vh360-pwa-standalone');
+    }
+  }
+
+  updateStandaloneClass();
 
   function storageKey() {
     return 'vh360_pwa_install_banner_dismissed_until';
@@ -197,8 +208,108 @@
     // If OneSignal is active, it must own the root scope SW. In that case, our
     // caching/offline logic is imported into the OneSignal worker instead.
     if (CFG && CFG.skipSWRegister) return;
-    navigator.serviceWorker.register(swUrl).catch(function () {
+    navigator.serviceWorker.register(swUrl).then(function (registration) {
+      setupUpdatePrompt(registration);
+    }).catch(function () {
       // silently ignore; install UX still works without SW prompt (browser may not allow install)
+    });
+  }
+
+
+
+  function iosReinstallDismissKey() {
+    return 'vh360_pwa_ios_reinstall_notice_dismissed_' + String(CFG.pwaAssetVersion || '0');
+  }
+
+  function maybeShowIosReinstallNotice() {
+    if (!CFG.showIosReinstallNotice) return;
+    if (!isIOS() || window.navigator.standalone !== true) return;
+    try {
+      if (localStorage.getItem(iosReinstallDismissKey()) === '1') return;
+    } catch (e) {}
+
+    var notice = document.createElement('div');
+    notice.className = 'vh360-pwa-ios-reinstall-notice';
+    notice.setAttribute('role', 'status');
+    notice.innerHTML =
+      '<div class="vh360-pwa-ios-reinstall-notice__text">' +
+        escapeHtml(CFG.iosReinstallNoticeText || 'If this app still shows old launch images or icons, remove it from your Home Screen and add it again from Safari.') +
+      '</div>' +
+      '<button type="button" class="vh360-pwa-ios-reinstall-notice__close" aria-label="Dismiss">×</button>';
+    var close = notice.querySelector('button');
+    close.addEventListener('click', function () {
+      try { localStorage.setItem(iosReinstallDismissKey(), '1'); } catch (e) {}
+      if (notice.parentNode) notice.parentNode.removeChild(notice);
+    });
+    document.body.appendChild(notice);
+  }
+
+  function isIgnoredRefreshTarget(target) {
+    if (!target || !target.closest) return false;
+    return !!target.closest('input,textarea,select,button,a,video,iframe,[role="dialog"],.modal,.vh360-pwa-modal,.vh360-live-room-player,.videohub360-video-player,.vh360-agora,.agora_video_player,.agora-player,[data-vh360-interactive]');
+  }
+
+  function initRefreshControls() {
+    if (!isStandalone()) return;
+    if (!CFG.enablePullToRefresh) return;
+    var indicator = document.createElement('div');
+    indicator.className = 'vh360-pwa-ptr';
+    indicator.textContent = 'Pull to refresh';
+    document.body.appendChild(indicator);
+    var startY = 0, pulling = false, ready = false, threshold = 86;
+    document.addEventListener('touchstart', function (e) {
+      if (!isStandalone() || window.scrollY > 0 || isIgnoredRefreshTarget(e.target)) return;
+      startY = e.touches && e.touches[0] ? e.touches[0].clientY : 0;
+      pulling = true; ready = false;
+    }, { passive: true });
+    document.addEventListener('touchmove', function (e) {
+      if (!pulling || !e.touches || !e.touches[0]) return;
+      var diff = e.touches[0].clientY - startY;
+      if (diff <= 0 || window.scrollY > 0) return;
+      if (e.cancelable) e.preventDefault();
+      ready = diff > threshold;
+      indicator.textContent = ready ? 'Release to refresh' : 'Pull to refresh';
+      indicator.style.transform = 'translate(-50%, ' + Math.min(diff / 2, 70) + 'px)';
+      indicator.classList.add('is-visible');
+    }, { passive: false });
+    document.addEventListener('touchend', function () {
+      if (!pulling) return;
+      pulling = false;
+      if (ready) {
+        indicator.textContent = 'Refreshing…';
+        setTimeout(function () { window.location.reload(); }, 120);
+      } else {
+        indicator.classList.remove('is-visible');
+        indicator.style.transform = '';
+      }
+    }, { passive: true });
+  }
+
+  var reloadingForUpdate = false;
+  function setupUpdatePrompt(registration) {
+    if (!registration) return;
+    function showUpdatePrompt(worker) {
+      if (!worker || document.getElementById('vh360-pwa-update')) return;
+      var prompt = document.createElement('div');
+      prompt.id = 'vh360-pwa-update';
+      prompt.className = 'vh360-pwa-update';
+      prompt.innerHTML = '<span>New version available</span><button type="button">Refresh</button>';
+      prompt.querySelector('button').addEventListener('click', function () {
+        reloadingForUpdate = true;
+        worker.postMessage({ type: 'VH360_PWA_SKIP_WAITING' });
+      });
+      document.body.appendChild(prompt);
+    }
+    if (registration.waiting) showUpdatePrompt(registration.waiting);
+    registration.addEventListener('updatefound', function () {
+      var worker = registration.installing;
+      if (!worker) return;
+      worker.addEventListener('statechange', function () {
+        if (worker.state === 'installed' && navigator.serviceWorker.controller) showUpdatePrompt(worker);
+      });
+    });
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (reloadingForUpdate) window.location.reload();
     });
   }
 
@@ -337,6 +448,7 @@
         history.replaceState({}, document.title, newUrl);
       }
     } catch (e) {}
+    updateStandaloneClass();
     // Modal container
     ensureModal();
     // Default label ("How to install") unless/until the browser provides a native prompt.
@@ -345,6 +457,8 @@
     maybeShowBanner();
     // Ensure any newly injected banner button gets the correct label.
     setInstallButtonsPromptAvailable(!!(deferredPrompt && deferredPrompt.prompt));
+    initRefreshControls();
+    maybeShowIosReinstallNotice();
   });
 
   window.addEventListener('load', function () {

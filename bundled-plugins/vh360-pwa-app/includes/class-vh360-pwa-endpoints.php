@@ -92,21 +92,7 @@ class VH360_PWA_Endpoints {
 			return;
 		}
 
-		$opts = vh360_pwa_get_options();
-		$icons = function_exists( 'vh360_pwa_get_manifest_icons' ) ? vh360_pwa_get_manifest_icons() : array();
-		$manifest = array(
-			'name'             => (string) $opts['app_name'],
-			'short_name'       => (string) $opts['short_name'],
-			'description'      => (string) $opts['description'],
-			'start_url'        => esc_url_raw( $opts['start_url'] ),
-			'scope'            => esc_url_raw( $opts['scope'] ),
-			'display'          => (string) $opts['display'],
-			'orientation'      => (string) $opts['orientation'],
-			'theme_color'      => (string) $opts['theme_color'],
-			'background_color' => (string) $opts['background_color'],
-			'lang'             => (string) $opts['lang'],
-			'icons'            => $icons,
-		);
+		$manifest = vh360_pwa_build_manifest();
 
 		echo wp_json_encode( $manifest, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 	}
@@ -120,51 +106,7 @@ class VH360_PWA_Endpoints {
 			return;
 		}
 
-		$opts = vh360_pwa_get_options();
-		$precache_urls = vh360_pwa_get_precache_urls( $opts );
-
-		// Output SW JS.
-		$cache_version = preg_replace( '/[^a-zA-Z0-9._-]/', '', (string) $opts['cache_version'] );
-		if ( '' === $cache_version ) {
-			$cache_version = 'v1';
-		}
-		$strategy = (string) $opts['cache_strategy'];
-		if ( ! in_array( $strategy, array( 'safe', 'balanced', 'aggressive' ), true ) ) {
-			$strategy = 'safe';
-		}
-
-		// If OneSignal (provider push) is configured, merge OneSignal's SW runtime
-		// into our own service worker to avoid scope conflicts.
-		$onesignal = array();
-		$push_settings = get_option( 'vh360_pwa_push_settings', array() );
-		if ( is_array( $push_settings ) ) {
-			$active_provider = (string) ( $push_settings['active_provider'] ?? 'onesignal' );
-			$providers = $push_settings['providers'] ?? array();
-			if ( isset( $providers[ $active_provider ] ) && is_array( $providers[ $active_provider ] ) ) {
-				$app_id = trim( (string) ( $providers[ $active_provider ]['app_id'] ?? '' ) );
-				if ( $app_id ) {
-					$sdk_version = defined( 'VH360_PWA_ONESIGNAL_SDK_VERSION' ) ? VH360_PWA_ONESIGNAL_SDK_VERSION : 'v16';
-					$onesignal = array(
-						'importUrl' => 'https://cdn.onesignal.com/sdks/web/' . $sdk_version . '/OneSignalSDK.sw.js',
-					);
-				}
-			}
-		}
-
-		$payload = array(
-			'cacheVersion' => $cache_version,
-			'strategy'     => $strategy,
-			'precache'     => $precache_urls,
-			'offlineUrl'   => vh360_pwa_endpoint_url( VH360_PWA_OFFLINE_SLUG ),
-			'homeOrigin'   => home_url(),
-			'onesignal'    => $onesignal,
-		);
-
-		echo "// VH360 Service Worker\n";
-		echo "const VH360_PWA = " . wp_json_encode( $payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . ";\n";
-
-		// Inline service worker implementation.
-		readfile( VH360_PWA_APP_DIR . 'templates/sw-template.js' );
+		echo vh360_pwa_build_sw_script();
 	}
 
 	private function serve_offline( bool $enabled ) : void {

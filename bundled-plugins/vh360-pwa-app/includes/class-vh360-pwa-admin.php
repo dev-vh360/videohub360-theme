@@ -11,6 +11,7 @@ class VH360_PWA_Admin {
 		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action( 'admin_init', array( $this, 'handle_icon_actions' ) );
+		add_action( 'admin_init', array( $this, 'handle_asset_regeneration' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
 		add_action( 'update_option_vh360_pwa_options', array( $this, 'maybe_flush_rewrite_on_option_update' ), 10, 3 );
 		add_action( 'admin_notices', array( $this, 'theme_notice' ) );
@@ -39,6 +40,52 @@ class VH360_PWA_Admin {
 		);
 	}
 
+
+	public function handle_asset_regeneration() : void {
+		if ( empty( $_POST['vh360_pwa_regenerate_assets'] ) ) {
+			return;
+		}
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+		check_admin_referer( 'vh360_pwa_regenerate_assets' );
+
+		$old_opts = vh360_pwa_get_options();
+		$old_version = function_exists( 'vh360_pwa_get_asset_version' ) ? vh360_pwa_get_asset_version( $old_opts ) : 0;
+		$new_version = function_exists( 'vh360_pwa_bump_asset_version' ) ? vh360_pwa_bump_asset_version() : time();
+
+		if ( function_exists( 'vh360_pwa_clear_ios_startup_images' ) ) { vh360_pwa_clear_ios_startup_images(); }
+		$startup_images = function_exists( 'vh360_pwa_generate_ios_startup_images' ) ? vh360_pwa_generate_ios_startup_images() : array();
+		$startup_error = get_option( 'vh360_pwa_ios_startup_images_last_error', '' );
+		$root_results = class_exists( 'VH360_PWA_Root_Files' ) ? VH360_PWA_Root_Files::ensure_root_files() : array();
+		$purge_results = $this->purge_common_caches();
+
+		update_option( 'vh360_pwa_last_regeneration', array(
+			'old_version' => $old_version,
+			'new_version' => $new_version,
+			'generated_at' => time(),
+			'startup_count' => is_array( $startup_images ) ? count( $startup_images ) : 0,
+			'startup_images' => $startup_images,
+			'startup_error' => is_string( $startup_error ) ? $startup_error : '',
+			'root_results' => $root_results,
+			'purge_results' => $purge_results,
+		) );
+
+		wp_safe_redirect( admin_url( 'admin.php?page=' . $this->page_slug . '&tab=tools&vh360_pwa_assets_regenerated=1' ) );
+		exit;
+	}
+
+	private function purge_common_caches() : array {
+		$results = array();
+		if ( has_action( 'litespeed_purge_all' ) ) { do_action( 'litespeed_purge_all' ); $results['litespeed'] = 'attempted'; }
+		if ( function_exists( 'rocket_clean_domain' ) ) { rocket_clean_domain(); $results['wp_rocket'] = 'attempted'; }
+		if ( function_exists( 'w3tc_flush_all' ) ) { w3tc_flush_all(); $results['w3_total_cache'] = 'attempted'; }
+		if ( function_exists( 'wp_cache_clear_cache' ) ) { wp_cache_clear_cache(); $results['wp_super_cache'] = 'attempted'; }
+		if ( function_exists( 'wp_cache_flush' ) ) { wp_cache_flush(); $results['object_cache'] = 'attempted'; }
+		if ( empty( $results ) ) { $results['none'] = 'no_supported_cache_plugin_detected'; }
+		return $results;
+	}
+
     /**
      * Render the Tools tab for resetting the install banner dismissal.
      *
@@ -52,6 +99,34 @@ class VH360_PWA_Admin {
         $url_unreg_sw     = esc_url( add_query_arg( array( 'vh360_pwa_tool' => 'unregister_sw' ), $base ) );
         $url_reset_all    = esc_url( add_query_arg( array( 'vh360_pwa_tool' => 'reset_device' ), $base ) );
 
+        if ( ! empty( $_GET['vh360_pwa_assets_regenerated'] ) ) {
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'PWA assets regenerated and common caches purged where available.', 'vh360-pwa-app' ) . '</p></div>';
+        }
+
+        $asset_version = function_exists( 'vh360_pwa_get_asset_version' ) ? vh360_pwa_get_asset_version( $opts ) : 0;
+        $versioned_manifest = function_exists( 'vh360_pwa_version_url' ) ? vh360_pwa_version_url( home_url( '/' . VH360_PWA_MANIFEST_SLUG ), $opts ) : home_url( '/' . VH360_PWA_MANIFEST_SLUG );
+        $versioned_sw = function_exists( 'vh360_pwa_version_url' ) ? vh360_pwa_version_url( home_url( '/' . VH360_PWA_SW_SLUG ), $opts ) : home_url( '/' . VH360_PWA_SW_SLUG );
+        $versioned_offline = function_exists( 'vh360_pwa_version_url' ) ? vh360_pwa_version_url( home_url( '/' . VH360_PWA_OFFLINE_SLUG ), $opts ) : home_url( '/' . VH360_PWA_OFFLINE_SLUG );
+        $startup_images = function_exists( 'vh360_pwa_get_ios_startup_images' ) ? vh360_pwa_get_ios_startup_images() : array();
+        $first_startup = ! empty( $startup_images[0]['href'] ) ? (string) $startup_images[0]['href'] : '';
+        $last_regen = get_option( 'vh360_pwa_last_regeneration', array() );
+
+        echo '<h2>' . esc_html__( 'Current PWA Asset Diagnostics', 'vh360-pwa-app' ) . '</h2>';
+        echo '<table class="widefat striped" style="max-width:980px"><tbody>';
+        echo '<tr><th>' . esc_html__( 'Asset version', 'vh360-pwa-app' ) . '</th><td><code>' . esc_html( (string) $asset_version ) . '</code></td></tr>';
+        echo '<tr><th>' . esc_html__( 'Manifest URL', 'vh360-pwa-app' ) . '</th><td><a href="' . esc_url( $versioned_manifest ) . '" target="_blank" rel="noopener"><code>' . esc_html( $versioned_manifest ) . '</code></a></td></tr>';
+        echo '<tr><th>' . esc_html__( 'Service worker URL', 'vh360-pwa-app' ) . '</th><td><a href="' . esc_url( $versioned_sw ) . '" target="_blank" rel="noopener"><code>' . esc_html( $versioned_sw ) . '</code></a></td></tr>';
+        echo '<tr><th>' . esc_html__( 'Offline URL', 'vh360-pwa-app' ) . '</th><td><a href="' . esc_url( $versioned_offline ) . '" target="_blank" rel="noopener"><code>' . esc_html( $versioned_offline ) . '</code></a></td></tr>';
+        echo '<tr><th>' . esc_html__( 'Generated iOS startup images', 'vh360-pwa-app' ) . '</th><td>' . esc_html( (string) count( $startup_images ) ) . ( $first_startup ? ' — <a href="' . esc_url( $first_startup ) . '" target="_blank" rel="noopener">' . esc_html__( 'View first image', 'vh360-pwa-app' ) . '</a>' : '' ) . '</td></tr>';
+        echo '<tr><th>' . esc_html__( 'Last regeneration', 'vh360-pwa-app' ) . '</th><td>' . esc_html( ! empty( $last_regen['generated_at'] ) ? date_i18n( 'Y-m-d H:i:s', (int) $last_regen['generated_at'] ) : __( 'Never', 'vh360-pwa-app' ) ) . '</td></tr>';
+        echo '</tbody></table>';
+
+        if ( is_array( $last_regen ) && ! empty( $last_regen ) ) {
+            echo '<h3>' . esc_html__( 'Last Regeneration Results', 'vh360-pwa-app' ) . '</h3>';
+            echo '<pre style="max-width:980px;white-space:pre-wrap;background:#fff;border:1px solid #ccd0d4;padding:12px;">' . esc_html( wp_json_encode( $last_regen, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) ) . '</pre>';
+        }
+        echo '<p class="description" style="max-width:980px;">' . esc_html__( 'Some hosts/CDNs, including server-level cache layers, may require manual purge if the page HTML itself is cached. The versioned URLs above confirm whether VH360 generated fresh PWA assets. If an already-installed iPhone/iPad app still shows old launch assets, remove it from the Home Screen and add it again from Safari.', 'vh360-pwa-app' ) . '</p>';
+
         echo '<p>' . esc_html__( 'These tools run in your browser (per device) and can help resolve stale service worker or caching issues during setup and support.', 'vh360-pwa-app' ) . '</p>';
 
         echo '<div class="vh360-pwa-tools" style="display:flex;flex-wrap:wrap;gap:10px;margin:12px 0;">';
@@ -62,6 +137,13 @@ class VH360_PWA_Admin {
         echo '</div>';
 
         echo '<p class="description" style="max-width:820px;">' . esc_html__( 'Each button opens your site in a new tab with a one-time action. After the action runs, you can close that tab and return here.', 'vh360-pwa-app' ) . '</p>';
+
+        echo '<hr><h2>' . esc_html__( 'PWA Asset Cache Busting', 'vh360-pwa-app' ) . '</h2>';
+        echo '<p>' . esc_html__( 'Use this after changing splash screens, app icons, manifest identity, or launch-screen styling. It bumps PWA asset URLs, regenerates launch images, rewrites root files, and attempts common cache-plugin purges.', 'vh360-pwa-app' ) . '</p>';
+        echo '<form method="post">';
+        wp_nonce_field( 'vh360_pwa_regenerate_assets' );
+        echo '<button type="submit" name="vh360_pwa_regenerate_assets" value="1" class="button button-primary">' . esc_html__( 'Regenerate PWA Assets', 'vh360-pwa-app' ) . '</button>';
+        echo '</form>';
     }
 
 	public function register_settings() : void {
@@ -87,6 +169,16 @@ $out['app_name'] = sanitize_text_field( $input['app_name'] ?? $current['app_name
 
 		$out['theme_color'] = sanitize_hex_color( $input['theme_color'] ?? $current['theme_color'] ) ?: $current['theme_color'];
 		$out['background_color'] = sanitize_hex_color( $input['background_color'] ?? $current['background_color'] ) ?: $current['background_color'];
+		$out['enable_pull_to_refresh'] = vh360_pwa_boolval( $input['enable_pull_to_refresh'] ?? 0 );
+		unset( $out['show_refresh_button'], $out['refresh_label'] );
+		$out['splash_enabled'] = vh360_pwa_boolval( $input['splash_enabled'] ?? 0 );
+		$out['splash_background_color'] = sanitize_hex_color( $input['splash_background_color'] ?? $current['splash_background_color'] ) ?: $out['background_color'];
+		$out['splash_logo'] = ! empty( $input['splash_logo'] ) ? esc_url_raw( (string) $input['splash_logo'] ) : '';
+		$out['splash_title'] = sanitize_text_field( $input['splash_title'] ?? $current['splash_title'] );
+		$out['splash_title_enabled'] = vh360_pwa_boolval( $input['splash_title_enabled'] ?? 0 );
+		$out['splash_title_font_size'] = max( 18, min( 96, absint( $input['splash_title_font_size'] ?? $current['splash_title_font_size'] ) ) );
+		$out['splash_title_color'] = sanitize_hex_color( $input['splash_title_color'] ?? $current['splash_title_color'] ) ?: '#ffffff';
+		$out['splash_title_offset'] = max( 20, min( 200, absint( $input['splash_title_offset'] ?? $current['splash_title_offset'] ) ) );
 		$out['display'] = in_array( (string) ( $input['display'] ?? '' ), array( 'standalone','fullscreen','minimal-ui','browser' ), true ) ? (string) $input['display'] : $current['display'];
 		$out['orientation'] = in_array( (string) ( $input['orientation'] ?? '' ), array( 'any','portrait','portrait-primary','landscape' ), true ) ? (string) $input['orientation'] : $current['orientation'];
 
@@ -134,6 +226,8 @@ $out['scope']     = $normalize_to_path( $scope );
 		$out['install_banner_text'] = sanitize_text_field( $input['install_banner_text'] ?? $current['install_banner_text'] );
 		$out['install_banner_dismiss_days'] = max( 1, min( 365, absint( $input['install_banner_dismiss_days'] ?? $current['install_banner_dismiss_days'] ) ) );
 		$out['show_ios_onboarding'] = vh360_pwa_boolval( $input['show_ios_onboarding'] ?? $current['show_ios_onboarding'] );
+		$out['show_ios_reinstall_notice'] = vh360_pwa_boolval( $input['show_ios_reinstall_notice'] ?? 0 );
+		$out['ios_reinstall_notice_text'] = sanitize_text_field( $input['ios_reinstall_notice_text'] ?? $current['ios_reinstall_notice_text'] );
 
 		$out['debug_mode'] = vh360_pwa_boolval( $input['debug_mode'] ?? $current['debug_mode'] );
 
@@ -143,6 +237,15 @@ $out['scope']     = $normalize_to_path( $scope );
 			$out[ $k ] = $val ? esc_url_raw( $val ) : '';
 		}
 		
+		$out['pwa_asset_version'] = ! empty( $current['pwa_asset_version'] ) ? absint( $current['pwa_asset_version'] ) : time();
+		$asset_keys = array( 'splash_enabled', 'splash_logo', 'splash_background_color', 'splash_title', 'splash_title_enabled', 'splash_title_font_size', 'splash_title_color', 'splash_title_offset', 'icon_192', 'icon_512', 'icon_maskable_192', 'icon_maskable_512', 'app_name', 'short_name', 'theme_color', 'background_color', 'start_url', 'cache_version' );
+		foreach ( $asset_keys as $asset_key ) {
+			if ( ( $current[ $asset_key ] ?? null ) !== ( $out[ $asset_key ] ?? null ) ) {
+				$out['pwa_asset_version'] = max( time(), absint( $out['pwa_asset_version'] ) + 1 );
+				break;
+			}
+		}
+
 		// Push Sender Roles: array of role keys that can send push notifications
 		$out['push_sender_roles'] = array();
 		if ( isset( $input['push_sender_roles'] ) && is_array( $input['push_sender_roles'] ) ) {
@@ -345,6 +448,7 @@ $out['scope']     = $normalize_to_path( $scope );
 		$result = $icon_generator->generate_all_icons( $master_icon );
 		
 		if ( $result['success'] ) {
+			if ( function_exists( 'vh360_pwa_bump_asset_version' ) ) { vh360_pwa_bump_asset_version(); }
 			if ( function_exists( 'vh360_pwa_backfill_legacy_icons_from_generated' ) ) {
 				vh360_pwa_backfill_legacy_icons_from_generated();
 			}
@@ -391,10 +495,21 @@ $out['scope']     = $normalize_to_path( $scope );
 			VH360_PWA_Endpoints::add_rewrite_rules();
 			flush_rewrite_rules();
 		}
-		if ( class_exists( 'VH360_PWA_Root_Files' ) ) {
-			VH360_PWA_Root_Files::ensure_root_files();
-		}
 		update_option( 'vh360_pwa_manifest_generated_at', time() );
+		$splash_keys = array( 'pwa_asset_version', 'splash_enabled', 'splash_logo', 'splash_title', 'splash_title_enabled', 'splash_title_font_size', 'splash_title_color', 'splash_title_offset', 'splash_background_color', 'background_color' );
+		$splash_changed = false;
+		foreach ( $splash_keys as $splash_key ) {
+			$old_setting = is_array( $old_value ) && array_key_exists( $splash_key, $old_value ) ? $old_value[ $splash_key ] : null;
+			$new_setting = is_array( $value ) && array_key_exists( $splash_key, $value ) ? $value[ $splash_key ] : null;
+			if ( $old_setting !== $new_setting ) {
+				$splash_changed = true;
+				break;
+			}
+		}
+		if ( $splash_changed && function_exists( 'vh360_pwa_clear_ios_startup_images' ) ) { vh360_pwa_clear_ios_startup_images(); }
+		if ( function_exists( 'vh360_pwa_generate_ios_startup_images' ) ) { vh360_pwa_generate_ios_startup_images(); }
+		if ( class_exists( 'VH360_PWA_Root_Files' ) ) { VH360_PWA_Root_Files::ensure_root_files(); }
+		if ( $splash_changed ) { $this->purge_common_caches(); }
 	}
 
 	public function render_page() : void {
@@ -493,8 +608,24 @@ $manifest_url = esc_url( vh360_pwa_endpoint_url( VH360_PWA_MANIFEST_SLUG ) );
 		echo '</td></tr>';
 
 		echo '<tr><th scope="row">' . esc_html__( 'Background Color', 'vh360-pwa-app' ) . '</th><td>';
-		echo '<input type="text" class="vh360-color" name="vh360_pwa_options[background_color]" value="' . esc_attr( (string) $opts['background_color'] ) . '" data-default-color="#ffffff">';
+		echo '<input type="text" class="vh360-color" name="vh360_pwa_options[background_color]" value="' . esc_attr( (string) $opts['background_color'] ) . '" data-default-color="#0f172a">';
 		echo '</td></tr>';
+
+		echo '<tr><th scope="row">' . esc_html__( 'App Experience', 'vh360-pwa-app' ) . '</th><td>';
+		echo '<label><input type="checkbox" name="vh360_pwa_options[enable_pull_to_refresh]" value="1" ' . checked( ! empty( $opts['enable_pull_to_refresh'] ), true, false ) . '> ' . esc_html__( 'Enable pull-to-refresh in standalone app mode', 'vh360-pwa-app' ) . '</label>';
+		echo '</td></tr>';
+
+		echo '<tr><th scope="row">' . esc_html__( 'Launch Experience', 'vh360-pwa-app' ) . '</th><td>';
+		echo '<label><input type="checkbox" name="vh360_pwa_options[splash_enabled]" value="1" ' . checked( ! empty( $opts['splash_enabled'] ), true, false ) . '> ' . esc_html__( 'Enable branded splash/launch screens', 'vh360-pwa-app' ) . '</label><br>';
+		echo '<label>' . esc_html__( 'Splash background', 'vh360-pwa-app' ) . '<br><input type="text" class="vh360-color" name="vh360_pwa_options[splash_background_color]" value="' . esc_attr( (string) $opts['splash_background_color'] ) . '" data-default-color="#0f172a"></label><br>';
+		echo '<label>' . esc_html__( 'Splash title', 'vh360-pwa-app' ) . '<br><input type="text" class="regular-text" name="vh360_pwa_options[splash_title]" value="' . esc_attr( (string) $opts['splash_title'] ) . '"></label><br>';
+		echo '<label><input type="checkbox" name="vh360_pwa_options[splash_title_enabled]" value="1" ' . checked( ! empty( $opts['splash_title_enabled'] ), true, false ) . '> ' . esc_html__( 'Show splash title in generated launch images', 'vh360-pwa-app' ) . '</label><br>';
+		echo '<label>' . esc_html__( 'Splash title font size', 'vh360-pwa-app' ) . '<br><input type="number" min="18" max="96" name="vh360_pwa_options[splash_title_font_size]" value="' . esc_attr( (string) $opts['splash_title_font_size'] ) . '" style="width:90px"> px</label><br>';
+		echo '<label>' . esc_html__( 'Splash title color', 'vh360-pwa-app' ) . '<br><input type="text" class="vh360-color" name="vh360_pwa_options[splash_title_color]" value="' . esc_attr( (string) $opts['splash_title_color'] ) . '" data-default-color="#ffffff"></label><br>';
+		echo '<label>' . esc_html__( 'Splash title spacing below logo', 'vh360-pwa-app' ) . '<br><input type="number" min="20" max="200" name="vh360_pwa_options[splash_title_offset]" value="' . esc_attr( (string) $opts['splash_title_offset'] ) . '" style="width:90px"> px</label>';
+		echo '<p class="description" style="max-width:760px;">' . esc_html__( 'PWA launch screens are cached aggressively by iOS and Android. Regenerate PWA Assets refreshes server-side files and URLs for new installs, Android/Chrome, and normal PWA assets, but it cannot force existing iPhone/iPad Home Screen apps to replace installed launch metadata. Existing iOS users may need to remove the app from the Home Screen and add it again from Safari after splash, icon, or app-name changes.', 'vh360-pwa-app' ) . '</p>';
+		echo '</td></tr>';
+		$this->render_media_row( 'splash_logo', __( 'Splash Logo', 'vh360-pwa-app' ), (string) ( $opts['splash_logo'] ?? '' ) );
 
 		echo '<tr><th scope="row">' . esc_html__( 'Display', 'vh360-pwa-app' ) . '</th><td>';
 		$display_opts = array('standalone'=>'standalone','fullscreen'=>'fullscreen','minimal-ui'=>'minimal-ui','browser'=>'browser');
@@ -549,6 +680,12 @@ $manifest_url = esc_url( vh360_pwa_endpoint_url( VH360_PWA_MANIFEST_SLUG ) );
 
 		echo '<tr><th scope="row">' . esc_html__( 'iOS Onboarding', 'vh360-pwa-app' ) . '</th><td>';
 		echo '<label><input type="checkbox" name="vh360_pwa_options[show_ios_onboarding]" value="1" ' . checked( ! empty( $opts['show_ios_onboarding'] ), true, false ) . '> ' . esc_html__( 'Show Add to Home Screen instructions on iOS', 'vh360-pwa-app' ) . '</label>';
+		echo '</td></tr>';
+
+		echo '<tr><th scope="row">' . esc_html__( 'iOS Reinstall Notice', 'vh360-pwa-app' ) . '</th><td>';
+		echo '<label><input type="checkbox" name="vh360_pwa_options[show_ios_reinstall_notice]" value="1" ' . checked( ! empty( $opts['show_ios_reinstall_notice'] ), true, false ) . '> ' . esc_html__( 'Show iOS reinstall notice to app users', 'vh360-pwa-app' ) . '</label><br>';
+		echo '<input type="text" class="large-text" name="vh360_pwa_options[ios_reinstall_notice_text]" value="' . esc_attr( (string) $opts['ios_reinstall_notice_text'] ) . '">';
+		echo '<p class="description">' . esc_html__( 'Shown only once per PWA asset version to users running the installed iOS/iPadOS home-screen app.', 'vh360-pwa-app' ) . '</p>';
 		echo '</td></tr>';
 
 		echo '<tr><th scope="row">' . esc_html__( 'Install Button Text', 'vh360-pwa-app' ) . '</th><td>';
