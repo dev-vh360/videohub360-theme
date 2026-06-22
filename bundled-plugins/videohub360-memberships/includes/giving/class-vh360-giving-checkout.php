@@ -37,7 +37,7 @@ class VH360_Giving_Checkout {
     }
 
     private function create_recurring_checkout($d){
-        $recurring_id=VH360_Giving_Recurring::create(array('user_id'=>$d['user_id'],'fund_id'=>$d['fund']->id,'fund_key'=>$d['fund']->fund_key,'fund_label'=>$d['fund']->label,'amount'=>$d['amount'],'currency'=>$d['currency'],'interval'=>$d['frequency'],'note'=>$d['note'],'anonymous'=>$d['anonymous'],'source'=>'dashboard'));
+        $recurring_id=VH360_Giving_Recurring::create(array('user_id'=>$d['user_id'],'fund_id'=>$d['fund']->id,'fund_key'=>$d['fund']->fund_key,'fund_label'=>$d['fund']->label,'amount'=>$d['amount'],'currency'=>$d['currency'],'giving_interval'=>$d['frequency'],'note'=>$d['note'],'anonymous'=>$d['anonymous'],'source'=>'dashboard'));
         $customer=$this->get_or_create_customer($d['user_id']); if(is_wp_error($customer)){ VH360_Giving_Recurring::update_status($recurring_id,'incomplete'); wp_send_json_error(array('message'=>$customer->get_error_message())); }
         $session=$d['stripe']->api_request('/v1/checkout/sessions',$this->build_session_params($d,$customer,array('mode'=>'subscription','metadata_type'=>'giving_recurring','local_id_key'=>'recurring_id','local_id'=>$recurring_id)));
         if(is_wp_error($session)){ VH360_Giving_Recurring::update_status($recurring_id,'incomplete'); wp_send_json_error(array('message'=>$session->get_error_message())); }

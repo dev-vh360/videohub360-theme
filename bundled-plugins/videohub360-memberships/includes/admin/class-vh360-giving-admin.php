@@ -23,6 +23,7 @@ class VH360_Giving_Admin {
         add_action('admin_post_vh360_giving_save_settings', array($this, 'save_settings'));
         add_action('admin_post_vh360_giving_save_fund', array($this, 'save_fund'));
         add_action('admin_post_vh360_giving_delete_fund', array($this, 'delete_fund'));
+        add_action('admin_post_vh360_repair_giving_database', array($this, 'repair_database'));
         add_action('admin_enqueue_scripts', array($this, 'assets'));
     }
 
@@ -93,6 +94,18 @@ class VH360_Giving_Admin {
         }
 
         wp_safe_redirect(admin_url('admin.php?page=vh360-theme-giving&tab=funds'));
+        exit;
+    }
+
+
+    public function repair_database() {
+        if (!current_user_can(self::CAP)) {
+            wp_die(esc_html__('You do not have permission to repair Giving tables.', 'videohub360-memberships'));
+        }
+        check_admin_referer('vh360_repair_giving_database');
+        VH360_Giving_Database::create_tables();
+        $this->set_notice(VH360_Giving_Database::tables_are_ready() ? 'success' : 'error', VH360_Giving_Database::tables_are_ready() ? __('Giving database tables repaired.', 'videohub360-memberships') : __('Giving database tables could not be fully repaired. Please check database permissions.', 'videohub360-memberships'));
+        wp_safe_redirect(admin_url('admin.php?page=vh360-theme-giving&tab=settings'));
         exit;
     }
 
@@ -187,6 +200,11 @@ class VH360_Giving_Admin {
             <?php submit_button(__('Save Giving Settings', 'videohub360-memberships')); ?>
         </form>
         <div class="notice notice-info inline"><p><?php esc_html_e('Stripe webhook endpoint: /wp-json/vh360-memberships/v1/stripe-webhook. Recurring Giving requires checkout.session.completed, invoice.paid, invoice.payment_failed, customer.subscription.updated, and customer.subscription.deleted.', 'videohub360-memberships'); ?></p></div>
+        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-top:1rem;">
+            <input type="hidden" name="action" value="vh360_repair_giving_database">
+            <?php wp_nonce_field('vh360_repair_giving_database'); ?>
+            <?php submit_button(__('Repair Giving Database Tables', 'videohub360-memberships'), 'secondary', 'submit', false); ?>
+        </form>
         <?php
     }
 

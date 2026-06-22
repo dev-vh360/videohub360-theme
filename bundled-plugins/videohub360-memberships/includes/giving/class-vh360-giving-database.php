@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) exit;
 
 class VH360_Giving_Database {
     private static $instance = null;
-    private $db_version = '1.2.0';
+    private $db_version = '1.3.0';
 
     public static function get_instance() {
         if (null === self::$instance) {
@@ -23,7 +23,7 @@ class VH360_Giving_Database {
     }
 
     public function check_database_version() {
-        if (version_compare(get_option('vh360_giving_db_version', '0'), $this->db_version, '<')) {
+        if (version_compare(get_option('vh360_giving_db_version', '0'), $this->db_version, '<') || !self::tables_are_ready()) {
             self::create_tables();
         }
     }
@@ -117,7 +117,7 @@ class VH360_Giving_Database {
             fund_label varchar(190) NOT NULL,
             amount decimal(12,2) NOT NULL,
             currency varchar(10) NOT NULL DEFAULT 'usd',
-            interval varchar(20) NOT NULL,
+            giving_interval varchar(20) NOT NULL,
             status varchar(30) NOT NULL DEFAULT 'incomplete',
             gateway varchar(50) NOT NULL DEFAULT 'stripe',
             stripe_customer_id varchar(255) DEFAULT NULL,
@@ -146,6 +146,53 @@ class VH360_Giving_Database {
         dbDelta($funds_sql);
         dbDelta($transactions_sql);
         dbDelta($recurring_sql);
-        update_option('vh360_giving_db_version', '1.2.0');
+        self::migrate_reserved_interval_column();
+        update_option('vh360_giving_db_version', '1.3.0');
     }
+
+    public static function table_exists($table) {
+        global $wpdb;
+        return $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table)) === $table;
+    }
+
+    public static function recurring_table_exists() {
+        return self::table_exists(self::get_recurring_table());
+    }
+
+    public static function tables_are_ready() {
+        foreach (array(self::get_funds_table(), self::get_transactions_table(), self::get_recurring_table()) as $table) {
+            if (!self::table_exists($table)) {
+                return false;
+            }
+        }
+        $required = array('giving_interval','stripe_price_id','current_period_start','current_period_end','cancel_at_period_end','canceled_at');
+        $columns = self::get_table_columns(self::get_recurring_table());
+        foreach ($required as $column) {
+            if (!in_array($column, $columns, true)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static function get_table_columns($table) {
+        global $wpdb;
+        if (!self::table_exists($table)) {
+            return array();
+        }
+        return (array) $wpdb->get_col("SHOW COLUMNS FROM {$table}", 0);
+    }
+
+    private static function migrate_reserved_interval_column() {
+        global $wpdb;
+        $table = self::get_recurring_table();
+        if (!self::table_exists($table)) {
+            return;
+        }
+        $columns = self::get_table_columns($table);
+        if (in_array('interval', $columns, true) && in_array('giving_interval', $columns, true)) {
+            $wpdb->query("UPDATE {$table} SET giving_interval = `interval` WHERE (giving_interval IS NULL OR giving_interval = '') AND `interval` IS NOT NULL AND `interval` <> ''");
+        }
+    }
+
 }
