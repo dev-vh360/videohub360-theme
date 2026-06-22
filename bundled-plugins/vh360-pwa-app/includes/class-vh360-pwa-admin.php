@@ -41,7 +41,7 @@ class VH360_PWA_Admin {
 	}
 
 
-	private function handle_asset_regeneration() : void {
+	public function handle_asset_regeneration() : void {
 		if ( empty( $_POST['vh360_pwa_regenerate_assets'] ) ) {
 			return;
 		}
