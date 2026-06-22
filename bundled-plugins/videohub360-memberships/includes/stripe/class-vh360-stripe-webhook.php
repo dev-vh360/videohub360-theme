@@ -173,6 +173,13 @@ class VH360_Stripe_Webhook {
         $object = isset($event['data']['object']) ? $event['data']['object'] : array();
         $event_id = isset($event['id']) ? $event['id'] : '';
         
+        if (class_exists('VH360_Giving_Webhook')) {
+            $giving_result = VH360_Giving_Webhook::maybe_handle_event($event_type, $object, $event_id);
+            if (false !== $giving_result) {
+                return $giving_result;
+            }
+        }
+
         switch ($event_type) {
             case 'checkout.session.completed':
                 return $this->handle_checkout_completed($object, $event_id);
@@ -204,13 +211,6 @@ class VH360_Stripe_Webhook {
      * Creates the subscription-backed membership if it doesn't exist yet.
      */
     private function handle_checkout_completed($session, $event_id) {
-        if (class_exists('VH360_Giving_Webhook')) {
-            $giving_result = VH360_Giving_Webhook::maybe_handle_checkout_completed($session, $event_id);
-            if (false !== $giving_result) {
-                return $giving_result;
-            }
-        }
-
         if (empty($session['subscription']) || empty($session['customer'])) {
             return true; // Not a subscription checkout
         }

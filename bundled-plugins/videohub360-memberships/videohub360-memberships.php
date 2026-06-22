@@ -88,6 +88,7 @@ class VH360_Memberships {
         require_once VH360_MEMBERSHIPS_DIR . 'includes/giving/class-vh360-giving-database.php';
         require_once VH360_MEMBERSHIPS_DIR . 'includes/giving/class-vh360-giving-funds.php';
         require_once VH360_MEMBERSHIPS_DIR . 'includes/giving/class-vh360-giving-transactions.php';
+        require_once VH360_MEMBERSHIPS_DIR . 'includes/giving/class-vh360-giving-recurring.php';
         require_once VH360_MEMBERSHIPS_DIR . 'includes/giving/class-vh360-giving-checkout.php';
         require_once VH360_MEMBERSHIPS_DIR . 'includes/giving/class-vh360-giving-webhook.php';
         require_once VH360_MEMBERSHIPS_DIR . 'includes/giving/giving-helpers.php';

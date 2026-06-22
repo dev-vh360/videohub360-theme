@@ -186,6 +186,7 @@ class VH360_Giving_Admin {
             </table>
             <?php submit_button(__('Save Giving Settings', 'videohub360-memberships')); ?>
         </form>
+        <div class="notice notice-info inline"><p><?php esc_html_e('Stripe webhook endpoint: /wp-json/vh360-memberships/v1/stripe-webhook. Recurring Giving requires checkout.session.completed, invoice.paid, invoice.payment_failed, customer.subscription.updated, and customer.subscription.deleted.', 'videohub360-memberships'); ?></p></div>
         <?php
     }
 

@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) exit;
 
 class VH360_Giving_Database {
     private static $instance = null;
-    private $db_version = '1.1.0';
+    private $db_version = '1.2.0';
 
     public static function get_instance() {
         if (null === self::$instance) {
@@ -38,11 +38,17 @@ class VH360_Giving_Database {
         return $wpdb->prefix . 'vh360_giving_transactions';
     }
 
+    public static function get_recurring_table() {
+        global $wpdb;
+        return $wpdb->prefix . 'vh360_giving_recurring';
+    }
+
     public static function create_tables() {
         global $wpdb;
         $charset_collate = $wpdb->get_charset_collate();
         $funds = self::get_funds_table();
         $transactions = self::get_transactions_table();
+        $recurring = self::get_recurring_table();
 
         $funds_sql = "CREATE TABLE {$funds} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -82,6 +88,8 @@ class VH360_Giving_Database {
             stripe_payment_intent_id varchar(255) DEFAULT NULL,
             stripe_customer_id varchar(255) DEFAULT NULL,
             stripe_event_id varchar(255) DEFAULT NULL,
+            stripe_invoice_id varchar(255) DEFAULT NULL,
+            stripe_subscription_id varchar(255) DEFAULT NULL,
             source varchar(50) NOT NULL DEFAULT 'dashboard',
             anonymous tinyint(1) NOT NULL DEFAULT 0,
             note text DEFAULT NULL,
@@ -96,12 +104,48 @@ class VH360_Giving_Database {
             KEY source (source),
             KEY stripe_checkout_session_id (stripe_checkout_session_id),
             KEY stripe_event_id (stripe_event_id),
+            KEY stripe_invoice_id (stripe_invoice_id),
+            KEY stripe_subscription_id (stripe_subscription_id),
             KEY given_at (given_at)
+        ) {$charset_collate};";
+
+        $recurring_sql = "CREATE TABLE {$recurring} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) unsigned NOT NULL,
+            fund_id bigint(20) unsigned DEFAULT NULL,
+            fund_key varchar(100) NOT NULL,
+            fund_label varchar(190) NOT NULL,
+            amount decimal(12,2) NOT NULL,
+            currency varchar(10) NOT NULL DEFAULT 'usd',
+            interval varchar(20) NOT NULL,
+            status varchar(30) NOT NULL DEFAULT 'incomplete',
+            gateway varchar(50) NOT NULL DEFAULT 'stripe',
+            stripe_customer_id varchar(255) DEFAULT NULL,
+            stripe_subscription_id varchar(255) DEFAULT NULL,
+            stripe_price_id varchar(255) DEFAULT NULL,
+            source varchar(50) NOT NULL DEFAULT 'dashboard',
+            anonymous tinyint(1) NOT NULL DEFAULT 0,
+            note text DEFAULT NULL,
+            started_at datetime DEFAULT NULL,
+            current_period_start datetime DEFAULT NULL,
+            current_period_end datetime DEFAULT NULL,
+            cancel_at_period_end tinyint(1) NOT NULL DEFAULT 0,
+            canceled_at datetime DEFAULT NULL,
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+            PRIMARY KEY (id),
+            KEY user_id (user_id),
+            KEY fund_id (fund_id),
+            KEY fund_key (fund_key),
+            KEY status (status),
+            KEY stripe_subscription_id (stripe_subscription_id),
+            KEY source (source)
         ) {$charset_collate};";
 
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($funds_sql);
         dbDelta($transactions_sql);
-        update_option('vh360_giving_db_version', '1.1.0');
+        dbDelta($recurring_sql);
+        update_option('vh360_giving_db_version', '1.2.0');
     }
 }
