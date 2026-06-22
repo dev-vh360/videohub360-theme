@@ -24,6 +24,9 @@ class VH360_Giving_Admin {
         add_action('admin_post_vh360_giving_save_fund', array($this, 'save_fund'));
         add_action('admin_post_vh360_giving_delete_fund', array($this, 'delete_fund'));
         add_action('admin_post_vh360_repair_giving_database', array($this, 'repair_database'));
+        foreach (array('summary','transactions','fund_totals','recurring') as $report_type) {
+            add_action('admin_post_vh360_giving_export_' . $report_type . '_report', array($this, 'export_' . $report_type . '_report'));
+        }
         add_action('admin_enqueue_scripts', array($this, 'assets'));
     }
 
@@ -354,14 +357,84 @@ class VH360_Giving_Admin {
 
     private function reports() {
         global $wpdb;
-        $table = VH360_Giving_Database::get_transactions_table();
-        $rows  = $wpdb->get_results("SELECT fund_label, SUM(amount) total FROM {$table} WHERE status='paid' GROUP BY fund_label ORDER BY total DESC");
+        $filters = $this->get_report_filters();
+        $funds = VH360_Giving_Funds::get_funds(false);
+        $rows = $this->get_report_fund_totals($filters);
+        $summary = $this->get_report_summary($filters);
         ?>
         <h2><?php esc_html_e('Reports', 'videohub360-memberships'); ?></h2>
-        <p><?php echo esc_html(sprintf(__('Total this year: %1$s | Total this month: %2$s', 'videohub360-memberships'), vh360_giving_format_amount(VH360_Giving_Transactions::total("YEAR(given_at)=YEAR(CURDATE())")), vh360_giving_format_amount(VH360_Giving_Transactions::total("YEAR(given_at)=YEAR(CURDATE()) AND MONTH(given_at)=MONTH(CURDATE())")))); ?></p>
-        <table class="widefat striped"><thead><tr><th><?php esc_html_e('Fund', 'videohub360-memberships'); ?></th><th><?php esc_html_e('Total', 'videohub360-memberships'); ?></th></tr></thead><tbody><?php foreach ($rows as $row) : ?><tr><td><?php echo esc_html($row->fund_label); ?></td><td><?php echo esc_html(vh360_giving_format_amount($row->total)); ?></td></tr><?php endforeach; ?></tbody></table>
+        <form method="get" class="vh360-giving-filters">
+            <input type="hidden" name="page" value="vh360-theme-giving"><input type="hidden" name="tab" value="reports">
+            <input type="date" name="date_from" value="<?php echo esc_attr($filters['date_from']); ?>">
+            <input type="date" name="date_to" value="<?php echo esc_attr($filters['date_to']); ?>">
+            <select name="fund_id"><option value="0"><?php esc_html_e('All funds', 'videohub360-memberships'); ?></option><?php foreach ($funds as $fund) : ?><option value="<?php echo esc_attr($fund->id); ?>" <?php selected($filters['fund_id'], $fund->id); ?>><?php echo esc_html($fund->label); ?></option><?php endforeach; ?></select>
+            <select name="status"><option value=""><?php esc_html_e('All statuses', 'videohub360-memberships'); ?></option><?php foreach (array('pending','paid','failed','refunded') as $status) : ?><option value="<?php echo esc_attr($status); ?>" <?php selected($filters['status'], $status); ?>><?php echo esc_html(ucfirst($status)); ?></option><?php endforeach; ?></select>
+            <select name="gateway"><option value=""><?php esc_html_e('All gateways', 'videohub360-memberships'); ?></option><option value="stripe" <?php selected($filters['gateway'], 'stripe'); ?>>Stripe</option></select>
+            <select name="source"><option value=""><?php esc_html_e('All sources', 'videohub360-memberships'); ?></option><option value="dashboard" <?php selected($filters['source'], 'dashboard'); ?>>Dashboard</option></select>
+            <?php submit_button(__('Filter Reports', 'videohub360-memberships'), 'secondary', '', false); ?>
+            <a class="button" href="<?php echo esc_url(admin_url('admin.php?page=vh360-theme-giving&tab=reports')); ?>"><?php esc_html_e('Reset', 'videohub360-memberships'); ?></a>
+        </form>
+        <p><strong><?php esc_html_e('Total Giving:', 'videohub360-memberships'); ?></strong> <?php echo esc_html(vh360_giving_format_amount($summary['total_giving'])); ?> | <strong><?php esc_html_e('Gifts:', 'videohub360-memberships'); ?></strong> <?php echo esc_html($summary['number_of_gifts']); ?> | <strong><?php esc_html_e('Donors:', 'videohub360-memberships'); ?></strong> <?php echo esc_html($summary['number_of_donors']); ?></p>
+        <p class="vh360-giving-report-downloads">
+            <a class="button" href="<?php echo esc_url($this->report_export_url('summary', $filters)); ?>"><?php esc_html_e('Download Summary Report', 'videohub360-memberships'); ?></a>
+            <a class="button" href="<?php echo esc_url($this->report_export_url('transactions', $filters)); ?>"><?php esc_html_e('Download Transactions Report', 'videohub360-memberships'); ?></a>
+            <a class="button" href="<?php echo esc_url($this->report_export_url('fund_totals', $filters)); ?>"><?php esc_html_e('Download Fund Totals Report', 'videohub360-memberships'); ?></a>
+            <a class="button" href="<?php echo esc_url($this->report_export_url('recurring', $filters)); ?>"><?php esc_html_e('Download Recurring Giving Report', 'videohub360-memberships'); ?></a>
+        </p>
+        <table class="widefat striped"><thead><tr><th><?php esc_html_e('Fund', 'videohub360-memberships'); ?></th><th><?php esc_html_e('Total', 'videohub360-memberships'); ?></th><th><?php esc_html_e('Gifts', 'videohub360-memberships'); ?></th><th><?php esc_html_e('Donors', 'videohub360-memberships'); ?></th></tr></thead><tbody><?php foreach ($rows as $row) : ?><tr><td><?php echo esc_html($row->fund_label); ?></td><td><?php echo esc_html(vh360_giving_format_amount($row->total_amount)); ?></td><td><?php echo esc_html($row->gift_count); ?></td><td><?php echo esc_html($row->donor_count); ?></td></tr><?php endforeach; ?></tbody></table>
         <?php
     }
+
+    private function get_report_filters() {
+        return array(
+            'date_from' => isset($_GET['date_from']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', sanitize_text_field(wp_unslash($_GET['date_from']))) ? sanitize_text_field(wp_unslash($_GET['date_from'])) : '',
+            'date_to'   => isset($_GET['date_to']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', sanitize_text_field(wp_unslash($_GET['date_to']))) ? sanitize_text_field(wp_unslash($_GET['date_to'])) : '',
+            'fund_id'   => isset($_GET['fund_id']) ? absint($_GET['fund_id']) : 0,
+            'status'    => isset($_GET['status']) ? sanitize_key(wp_unslash($_GET['status'])) : '',
+            'gateway'   => isset($_GET['gateway']) ? sanitize_key(wp_unslash($_GET['gateway'])) : '',
+            'source'    => isset($_GET['source']) ? sanitize_key(wp_unslash($_GET['source'])) : '',
+        );
+    }
+
+    private function report_where($filters, $alias = '') {
+        $p = $alias ? $alias . '.' : '';
+        $where = array('1=1'); $params = array();
+        if (!empty($filters['date_from'])) { $where[] = "COALESCE({$p}given_at, {$p}created_at) >= %s"; $params[] = $filters['date_from'] . ' 00:00:00'; }
+        if (!empty($filters['date_to'])) { $where[] = "COALESCE({$p}given_at, {$p}created_at) <= %s"; $params[] = $filters['date_to'] . ' 23:59:59'; }
+        if (!empty($filters['fund_id'])) { $where[] = "{$p}fund_id = %d"; $params[] = $filters['fund_id']; }
+        foreach (array('status','gateway','source') as $key) { if (!empty($filters[$key])) { $where[] = "{$p}{$key} = %s"; $params[] = $filters[$key]; } }
+        return array(implode(' AND ', $where), $params);
+    }
+
+    private function report_export_url($type, $filters) {
+        return wp_nonce_url(add_query_arg(array_merge(array('action' => 'vh360_giving_export_' . $type . '_report'), $filters), admin_url('admin-post.php')), 'vh360_giving_export_' . $type . '_report');
+    }
+
+    private function require_report_export($type) {
+        if (!current_user_can(self::CAP)) wp_die(esc_html__('You do not have permission to export Giving reports.', 'videohub360-memberships'));
+        check_admin_referer('vh360_giving_export_' . $type . '_report');
+        return $this->get_report_filters();
+    }
+
+    private function stream_csv($filename, $headers, $rows) {
+        nocache_headers(); header('Content-Type: text/csv; charset=utf-8'); header('Content-Disposition: attachment; filename=' . $filename); $out = fopen('php://output', 'w'); fputcsv($out, $headers); foreach ($rows as $row) fputcsv($out, $row); fclose($out); exit;
+    }
+
+    private function get_report_transactions($filters) {
+        global $wpdb; $table = VH360_Giving_Database::get_transactions_table(); list($where, $params) = $this->report_where($filters); $sql = "SELECT * FROM {$table} WHERE {$where} ORDER BY COALESCE(given_at, created_at) DESC"; return $params ? $wpdb->get_results($wpdb->prepare($sql, $params)) : $wpdb->get_results($sql);
+    }
+
+    private function get_report_summary($filters) {
+        $rows = $this->get_report_transactions($filters); $donors = array(); $total = $one = $rec = $failed = $refunded = $month = $year = 0; $now_month = gmdate('Y-m'); $now_year = gmdate('Y'); foreach ($rows as $r) { $amount = (float) $r->amount; $date = substr((string)($r->given_at ?: $r->created_at), 0, 10); if ('paid' === $r->status) { $total += $amount; if (0 === strpos($date, $now_month)) $month += $amount; if (0 === strpos($date, $now_year)) $year += $amount; if ('subscription' === $r->gateway_mode) $rec += $amount; else $one += $amount; $donors[(int) $r->user_id] = true; } elseif ('failed' === $r->status) $failed += $amount; elseif ('refunded' === $r->status) $refunded += $amount; } return array('date_range'=>($filters['date_from'] ?: 'All') . ' - ' . ($filters['date_to'] ?: 'All'),'total_giving'=>$total,'total_this_month'=>$month,'total_this_year'=>$year,'one_time'=>$one,'recurring'=>$rec,'failed'=>$failed,'refunded'=>$refunded,'number_of_gifts'=>count($rows),'number_of_donors'=>count($donors),'average_gift'=>count($rows)?$total/count($rows):0); }
+
+    private function get_report_fund_totals($filters) {
+        global $wpdb; $table = VH360_Giving_Database::get_transactions_table(); list($where, $params) = $this->report_where($filters); $sql = "SELECT fund_label, SUM(CASE WHEN status='paid' THEN amount ELSE 0 END) total_amount, COUNT(*) gift_count, COUNT(DISTINCT user_id) donor_count, SUM(CASE WHEN gateway_mode='payment' AND status='paid' THEN amount ELSE 0 END) one_time_total, SUM(CASE WHEN gateway_mode='subscription' AND status='paid' THEN amount ELSE 0 END) recurring_total, AVG(CASE WHEN status='paid' THEN amount ELSE NULL END) average_gift FROM {$table} WHERE {$where} GROUP BY fund_label ORDER BY total_amount DESC"; return $params ? $wpdb->get_results($wpdb->prepare($sql, $params)) : $wpdb->get_results($sql);
+    }
+
+    public function export_summary_report(){ $filters=$this->require_report_export('summary'); $s=$this->get_report_summary($filters); $this->stream_csv('vh360-giving-summary-report.csv', array('Date Range','Total Giving','Total Giving This Month','Total Giving This Year','Total One-Time Giving','Total Recurring Giving','Total Failed','Total Refunded','Number of Gifts','Number of Donors','Average Gift'), array(array($s['date_range'],$s['total_giving'],$s['total_this_month'],$s['total_this_year'],$s['one_time'],$s['recurring'],$s['failed'],$s['refunded'],$s['number_of_gifts'],$s['number_of_donors'],$s['average_gift']))); }
+    public function export_transactions_report(){ $filters=$this->require_report_export('transactions'); $out=array(); foreach($this->get_report_transactions($filters) as $r){ $u=get_userdata($r->user_id); $out[]=array($r->given_at?:$r->created_at,$u?$u->display_name:'',$u?$u->user_email:'',$r->fund_label,$r->amount,strtoupper($r->currency),$r->status,('subscription'===$r->gateway_mode?'Recurring':'One-time'),$r->gateway,$r->source,$r->stripe_payment_intent_id,$r->stripe_invoice_id,$r->stripe_subscription_id?:$r->gateway_subscription_id,$r->anonymous?'Yes':'No',$r->note); } $this->stream_csv('vh360-giving-transactions-report.csv', array('Date','Donor Name','Donor Email','Fund','Amount','Currency','Status','Frequency','Gateway','Source','Stripe Payment Intent ID','Stripe Invoice ID','Stripe Subscription ID','Anonymous','Note'), $out); }
+    public function export_fund_totals_report(){ $filters=$this->require_report_export('fund_totals'); $out=array(); foreach($this->get_report_fund_totals($filters) as $r){ $out[]=array($r->fund_label,$r->total_amount,$r->gift_count,$r->donor_count,$r->one_time_total,$r->recurring_total,$r->average_gift); } $this->stream_csv('vh360-giving-fund-totals-report.csv', array('Fund','Total Amount','Number of Gifts','Number of Donors','One-Time Total','Recurring Total','Average Gift'), $out); }
+    public function export_recurring_report(){ $filters=$this->require_report_export('recurring'); if(!VH360_Giving_Database::recurring_table_exists()){ $this->stream_csv('vh360-giving-recurring-report.csv', array('Message'), array(array('Recurring Giving table is not available. Repair Giving database tables.'))); } global $wpdb; $table=VH360_Giving_Database::get_recurring_table(); $where=array('1=1'); $params=array(); if($filters['fund_id']){$where[]='fund_id=%d';$params[]=$filters['fund_id'];} if($filters['status']){$where[]='status=%s';$params[]=$filters['status'];} if($filters['gateway']){$where[]='gateway=%s';$params[]=$filters['gateway'];} if($filters['source']){$where[]='source=%s';$params[]=$filters['source'];} if($filters['date_from']){$where[]='created_at >= %s';$params[]=$filters['date_from'].' 00:00:00';} if($filters['date_to']){$where[]='created_at <= %s';$params[]=$filters['date_to'].' 23:59:59';} $sql="SELECT * FROM {$table} WHERE ".implode(' AND ',$where).' ORDER BY created_at DESC'; $rows=$params?$wpdb->get_results($wpdb->prepare($sql,$params)):$wpdb->get_results($sql); $out=array(); foreach($rows as $r){$u=get_userdata($r->user_id);$out[]=array($u?$u->display_name:'',$u?$u->user_email:'',$r->fund_label,$r->amount,strtoupper($r->currency),ucfirst($r->giving_interval),$r->status,$r->started_at,$r->current_period_start,$r->current_period_end,$r->cancel_at_period_end?'Yes':'No',$r->canceled_at,$r->stripe_subscription_id);} $this->stream_csv('vh360-giving-recurring-report.csv', array('Donor Name','Donor Email','Fund','Amount','Currency','Frequency','Status','Started Date','Current Period Start','Current Period End','Cancel At Period End','Canceled Date','Stripe Subscription ID'), $out); }
 
     private function find_user_ids($search) {
         if (is_numeric($search)) {
