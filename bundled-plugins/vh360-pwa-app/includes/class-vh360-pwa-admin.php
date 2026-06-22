@@ -226,8 +226,7 @@ $out['scope']     = $normalize_to_path( $scope );
 		$out['install_banner_text'] = sanitize_text_field( $input['install_banner_text'] ?? $current['install_banner_text'] );
 		$out['install_banner_dismiss_days'] = max( 1, min( 365, absint( $input['install_banner_dismiss_days'] ?? $current['install_banner_dismiss_days'] ) ) );
 		$out['show_ios_onboarding'] = vh360_pwa_boolval( $input['show_ios_onboarding'] ?? $current['show_ios_onboarding'] );
-		$out['show_ios_reinstall_notice'] = vh360_pwa_boolval( $input['show_ios_reinstall_notice'] ?? 0 );
-		$out['ios_reinstall_notice_text'] = sanitize_text_field( $input['ios_reinstall_notice_text'] ?? $current['ios_reinstall_notice_text'] );
+		unset( $out['show_ios_reinstall_notice'], $out['ios_reinstall_notice_text'] );
 
 		$out['debug_mode'] = vh360_pwa_boolval( $input['debug_mode'] ?? $current['debug_mode'] );
 
@@ -759,12 +758,6 @@ $manifest_url = esc_url( vh360_pwa_endpoint_url( VH360_PWA_MANIFEST_SLUG ) );
 
 		echo '<tr><th scope="row">' . esc_html__( 'iOS Onboarding', 'vh360-pwa-app' ) . '</th><td>';
 		echo '<label><input type="checkbox" name="vh360_pwa_options[show_ios_onboarding]" value="1" ' . checked( ! empty( $opts['show_ios_onboarding'] ), true, false ) . '> ' . esc_html__( 'Show Add to Home Screen instructions on iOS', 'vh360-pwa-app' ) . '</label>';
-		echo '</td></tr>';
-
-		echo '<tr><th scope="row">' . esc_html__( 'iOS Reinstall Notice', 'vh360-pwa-app' ) . '</th><td>';
-		echo '<label><input type="checkbox" name="vh360_pwa_options[show_ios_reinstall_notice]" value="1" ' . checked( ! empty( $opts['show_ios_reinstall_notice'] ), true, false ) . '> ' . esc_html__( 'Show iOS reinstall notice to app users', 'vh360-pwa-app' ) . '</label><br>';
-		echo '<input type="text" class="large-text" name="vh360_pwa_options[ios_reinstall_notice_text]" value="' . esc_attr( (string) $opts['ios_reinstall_notice_text'] ) . '">';
-		echo '<p class="description">' . esc_html__( 'Shown only once per PWA asset version to users running the installed iOS/iPadOS home-screen app.', 'vh360-pwa-app' ) . '</p>';
 		echo '</td></tr>';
 
 		echo '<tr><th scope="row">' . esc_html__( 'Install Button Text', 'vh360-pwa-app' ) . '</th><td>';

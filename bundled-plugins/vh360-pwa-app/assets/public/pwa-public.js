@@ -217,33 +217,6 @@
 
 
 
-  function iosReinstallDismissKey() {
-    return 'vh360_pwa_ios_reinstall_notice_dismissed_' + String(CFG.pwaAssetVersion || '0');
-  }
-
-  function maybeShowIosReinstallNotice() {
-    if (!CFG.showIosReinstallNotice) return;
-    if (!isIOS() || window.navigator.standalone !== true) return;
-    try {
-      if (localStorage.getItem(iosReinstallDismissKey()) === '1') return;
-    } catch (e) {}
-
-    var notice = document.createElement('div');
-    notice.className = 'vh360-pwa-ios-reinstall-notice';
-    notice.setAttribute('role', 'status');
-    notice.innerHTML =
-      '<div class="vh360-pwa-ios-reinstall-notice__text">' +
-        escapeHtml(CFG.iosReinstallNoticeText || 'If this app still shows old launch images or icons, remove it from your Home Screen and add it again from Safari.') +
-      '</div>' +
-      '<button type="button" class="vh360-pwa-ios-reinstall-notice__close" aria-label="Dismiss">×</button>';
-    var close = notice.querySelector('button');
-    close.addEventListener('click', function () {
-      try { localStorage.setItem(iosReinstallDismissKey(), '1'); } catch (e) {}
-      if (notice.parentNode) notice.parentNode.removeChild(notice);
-    });
-    document.body.appendChild(notice);
-  }
-
   function isIgnoredRefreshTarget(target) {
     if (!target || !target.closest) return false;
     return !!target.closest('input,textarea,select,button,a,video,iframe,[role="dialog"],.modal,.vh360-pwa-modal,.vh360-live-room-player,.videohub360-video-player,.vh360-agora,.agora_video_player,.agora-player,[data-vh360-interactive]');
@@ -458,7 +431,6 @@
     // Ensure any newly injected banner button gets the correct label.
     setInstallButtonsPromptAvailable(!!(deferredPrompt && deferredPrompt.prompt));
     initRefreshControls();
-    maybeShowIosReinstallNotice();
   });
 
   window.addEventListener('load', function () {
