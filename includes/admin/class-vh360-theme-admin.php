@@ -124,6 +124,7 @@ class VH360_Theme_Admin {
      */
     private function __construct() {
         add_action('admin_menu', array($this, 'add_admin_menu'));
+        add_action('admin_menu', array($this, 'add_advanced_submenu'), 999);
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
         add_action('admin_init', array($this, 'register_settings'));
         add_action('admin_init', array($this, 'handle_admin_actions'));
@@ -305,7 +306,12 @@ class VH360_Theme_Admin {
             array($this, 'render_memberships')
         );
         
-        // Advanced submenu
+    }
+
+    /**
+     * Add Advanced submenu after other VH360 Theme submenus.
+     */
+    public function add_advanced_submenu() {
         add_submenu_page(
             'vh360-theme',
             __('Advanced Settings', 'videohub360-theme'),
