@@ -14,10 +14,10 @@
     gap: 0;
     padding: 0;
     margin: 0 0 1.5rem 0;
-    border-bottom: 2px solid #e5e7eb;
+    border-bottom: 2px solid var(--border-1, #e5e7eb);
     position: sticky;
     top: 0;
-    background: #ffffff;
+    background: var(--surface-1, #ffffff);
     z-index: 100;
     backdrop-filter: blur(8px);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
@@ -112,7 +112,7 @@
 .vh360-trending-list li,
 .vh360-recommended-list li {
   padding: 0.5rem 0;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-1, #e2e8f0);
   display: flex;
   align-items: center;
   justify-content: space-between;
