@@ -233,8 +233,8 @@
 }
 
 .videohub360-sidebar-thumbnail {
-    width: 120px;
-    height: 68px;
+    width: 160px;
+    height: 90px;
     object-fit: cover;
     border-radius: 4px;
     flex-shrink: 0;
