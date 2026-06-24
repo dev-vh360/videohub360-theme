@@ -33,7 +33,7 @@ function vh360_output_dynamic_css() {
     $error_color       = get_theme_mod('vh360_error_color', '#ef4444');
     $warning_color     = get_theme_mod('vh360_warning_color', '#f59e0b');
     $info_color        = get_theme_mod('vh360_info_color', '#6366f1');
-    
+
     // Navigation & Header colors
     $hamburger_bg_color         = get_theme_mod('vh360_hamburger_bg_color', '#ffffff');
     $hamburger_text_color       = get_theme_mod('vh360_hamburger_text_color', '#1f2937');
@@ -41,28 +41,41 @@ function vh360_output_dynamic_css() {
     $hamburger_active_color     = get_theme_mod('vh360_hamburger_active_color', '#2563eb');
     $hamburger_icon_color       = get_theme_mod('vh360_hamburger_icon_color', '#1f2937');
     $nav_link_color             = get_theme_mod('vh360_nav_link_color', '#1f2937');
-    
+
     // Community Menu colors
     $community_menu_bg_color        = get_theme_mod('vh360_community_menu_bg_color', '#ffffff');
     $community_menu_text_color      = get_theme_mod('vh360_community_menu_text_color', '#4b5563');
     $community_menu_hover_bg_color  = get_theme_mod('vh360_community_menu_hover_bg_color', '#f3f4f6');
     $community_menu_active_color    = get_theme_mod('vh360_community_menu_active_color', '#2563eb');
     $community_menu_active_bg_color = get_theme_mod('vh360_community_menu_active_bg_color', '#eff6ff');
-    
+
+    // Mobile Bottom Navigation colors
+    $mobile_nav_bg_color                = get_theme_mod('vh360_mobile_nav_bg_color', '#ffffff');
+    $mobile_nav_border_color            = get_theme_mod('vh360_mobile_nav_border_color', '#e5e7eb');
+    $mobile_nav_item_color              = get_theme_mod('vh360_mobile_nav_item_color', '#6b7280');
+    $mobile_nav_active_item_color       = get_theme_mod('vh360_mobile_nav_active_item_color', '#3b82f6');
+    $mobile_nav_badge_bg_color          = get_theme_mod('vh360_mobile_nav_badge_bg_color', '#3b82f6');
+    $mobile_nav_badge_text_color        = get_theme_mod('vh360_mobile_nav_badge_text_color', '#ffffff');
+    $mobile_nav_drawer_bg_color         = get_theme_mod('vh360_mobile_nav_drawer_bg_color', '#ffffff');
+    $mobile_nav_drawer_text_color       = get_theme_mod('vh360_mobile_nav_drawer_text_color', '#111827');
+    $mobile_nav_drawer_muted_text_color = get_theme_mod('vh360_mobile_nav_drawer_muted_text_color', '#6b7280');
+    $mobile_nav_drawer_border_color     = get_theme_mod('vh360_mobile_nav_drawer_border_color', '#e5e7eb');
+    $mobile_nav_overlay_color           = get_theme_mod('vh360_mobile_nav_overlay_color', '#000000');
+
     // Community Menu typography and layout
     $community_menu_font_family = get_theme_mod('vh360_community_menu_font_family', '');
     $community_menu_font_size   = get_theme_mod('vh360_community_menu_font_size', 15);
     $community_menu_font_weight = get_theme_mod('vh360_community_menu_font_weight', 500);
     $community_menu_left_gutter = get_theme_mod('vh360_community_menu_left_gutter', 24);
     $community_menu_width       = get_theme_mod('vh360_community_menu_width', 280);
-    
+
     // Header Menu typography
     $header_menu_font_family = get_theme_mod('vh360_header_menu_font_family', '');
     $header_menu_font_size   = get_theme_mod('vh360_header_menu_font_size', 16);
     $header_menu_font_weight = get_theme_mod('vh360_header_menu_font_weight', 500);
     $header_menu_text_transform = get_theme_mod('vh360_header_menu_text_transform', 'none');
     $header_menu_letter_spacing = get_theme_mod('vh360_header_menu_letter_spacing', 0);
-    
+
     // Header Action Colors
     $header_signin_bg_color                 = get_theme_mod('vh360_header_signin_bg_color', '#2563eb');
     $header_signin_text_color               = get_theme_mod('vh360_header_signin_text_color', '#ffffff');
@@ -122,11 +135,11 @@ function vh360_output_dynamic_css() {
 
     // Additional settings for branding
     $logo_max_width = get_theme_mod('vh360_logo_max_width', 110);
-    
+
     // Calculate header height based on logo size (min 80px, scales with logo)
     // Header height = logo width * 0.6, with 80px minimum for usability
     $header_height = max(80, round($logo_max_width * 0.6));
-    
+
     // Auth Pages Colors (Consolidated - shared by all authentication pages)
     $auth_page_bg_color             = get_theme_mod('vh360_auth_page_bg_color', '#f3f4f6');
     $auth_form_bg_color             = get_theme_mod('vh360_auth_form_bg_color', '#ffffff');
@@ -150,7 +163,7 @@ function vh360_output_dynamic_css() {
     $auth_error_text_color          = get_theme_mod('vh360_auth_error_text_color', '#c00');
     $auth_success_bg_color          = get_theme_mod('vh360_auth_success_bg_color', '#efe');
     $auth_success_text_color        = get_theme_mod('vh360_auth_success_text_color', '#22543d');
-    
+
     // Site title styling
     $site_title_font_size       = absint(get_theme_mod('vh360_site_title_font_size', 24));
     $site_title_color           = get_theme_mod('vh360_site_title_color', '#2563eb');
@@ -167,7 +180,7 @@ function vh360_output_dynamic_css() {
             --primary-color: <?php echo esc_attr($primary_color); ?>;
             --secondary-color: <?php echo esc_attr($secondary_color); ?>;
             --accent-color: <?php echo esc_attr($accent_color); ?>;
-            
+
             /* Text & Background Colors */
             --text-color: <?php echo esc_attr($text_color); ?>;
             --text-light: <?php echo esc_attr($text_light_color); ?>;
@@ -175,7 +188,7 @@ function vh360_output_dynamic_css() {
             --site-header-bg-color: <?php echo esc_attr($site_header_bg); ?>;
             --bg-light: <?php echo esc_attr($bg_light_color); ?>;
             --border-color: <?php echo esc_attr($border_color); ?>;
-            
+
             /* Navigation & Header Colors */
             --header-bg-color: <?php echo esc_attr($header_bg_color); ?>;
             --header-bg-end: <?php echo esc_attr($header_bg_end); ?>;
@@ -186,14 +199,27 @@ function vh360_output_dynamic_css() {
             --hamburger-active-color: <?php echo esc_attr($hamburger_active_color); ?>;
             --hamburger-icon-color: <?php echo esc_attr($hamburger_icon_color); ?>;
             --nav-link-color: <?php echo esc_attr($nav_link_color); ?>;
-            
+
             /* Community Menu Colors */
             --community-menu-bg-color: <?php echo esc_attr($community_menu_bg_color); ?>;
             --community-menu-text-color: <?php echo esc_attr($community_menu_text_color); ?>;
             --community-menu-hover-bg-color: <?php echo esc_attr($community_menu_hover_bg_color); ?>;
             --community-menu-active-color: <?php echo esc_attr($community_menu_active_color); ?>;
             --community-menu-active-bg-color: <?php echo esc_attr($community_menu_active_bg_color); ?>;
-            
+
+            /* Mobile Bottom Navigation Colors */
+            --mobile-nav-bg-color: <?php echo esc_attr($mobile_nav_bg_color); ?>;
+            --mobile-nav-border-color: <?php echo esc_attr($mobile_nav_border_color); ?>;
+            --mobile-nav-item-color: <?php echo esc_attr($mobile_nav_item_color); ?>;
+            --mobile-nav-active-item-color: <?php echo esc_attr($mobile_nav_active_item_color); ?>;
+            --mobile-nav-badge-bg-color: <?php echo esc_attr($mobile_nav_badge_bg_color); ?>;
+            --mobile-nav-badge-text-color: <?php echo esc_attr($mobile_nav_badge_text_color); ?>;
+            --mobile-nav-drawer-bg-color: <?php echo esc_attr($mobile_nav_drawer_bg_color); ?>;
+            --mobile-nav-drawer-text-color: <?php echo esc_attr($mobile_nav_drawer_text_color); ?>;
+            --mobile-nav-drawer-muted-text-color: <?php echo esc_attr($mobile_nav_drawer_muted_text_color); ?>;
+            --mobile-nav-drawer-border-color: <?php echo esc_attr($mobile_nav_drawer_border_color); ?>;
+            --mobile-nav-overlay-color: <?php echo esc_attr($mobile_nav_overlay_color); ?>;
+
             /* Community Menu Layout & Typography */
             --community-menu-left-gutter: <?php echo absint($community_menu_left_gutter); ?>px;
             --community-menu-width: <?php echo absint($community_menu_width); ?>px;
@@ -202,7 +228,7 @@ function vh360_output_dynamic_css() {
             <?php if (!empty($community_menu_font_family)) : ?>
             --community-menu-font-family: <?php echo vh360_get_font_family($community_menu_font_family); ?>;
             <?php endif; ?>
-            
+
             /* Header Menu Typography */
             --header-menu-font-size: <?php echo absint($header_menu_font_size); ?>px;
             --header-menu-font-weight: <?php echo absint($header_menu_font_weight); ?>;
@@ -211,7 +237,7 @@ function vh360_output_dynamic_css() {
             <?php if (!empty($header_menu_font_family)) : ?>
             --header-menu-font-family: <?php echo vh360_get_font_family($header_menu_font_family); ?>;
             <?php endif; ?>
-            
+
             /* Button Colors */
             --button-bg-color: <?php echo esc_attr($button_bg_color); ?>;
             --button-text-color: <?php echo esc_attr($button_text_color); ?>;
@@ -244,7 +270,7 @@ function vh360_output_dynamic_css() {
             --vh360-header-message-badge-bg-color: <?php echo esc_attr($header_message_badge_bg_color); ?>;
             --vh360-header-message-badge-text-color: <?php echo esc_attr($header_message_badge_text_color); ?>;
             --vh360-header-message-badge-border-color: <?php echo esc_attr($header_message_badge_border_color); ?>;
-            
+
             /* Status & Alert Colors */
             --success-color: <?php echo esc_attr($success_color); ?>;
             --error-color: <?php echo esc_attr($error_color); ?>;
@@ -287,7 +313,7 @@ function vh360_output_dynamic_css() {
             /* Branding Variables */
             --logo-max-width: <?php echo esc_attr($logo_max_width); ?>px;
             --header-height: <?php echo esc_attr($header_height); ?>px;
-            
+
             /* Auth Pages Variables (Shared by all authentication pages) */
             --auth-page-bg: <?php echo esc_attr($auth_page_bg_color); ?>;
             --auth-form-bg: <?php echo esc_attr($auth_form_bg_color); ?>;
@@ -311,7 +337,7 @@ function vh360_output_dynamic_css() {
             --auth-error-text: <?php echo esc_attr($auth_error_text_color); ?>;
             --auth-success-bg: <?php echo esc_attr($auth_success_bg_color); ?>;
             --auth-success-text: <?php echo esc_attr($auth_success_text_color); ?>;
-                
+
             /* Site Title Styling Variables */
                 --site-title-font-size: <?php echo $site_title_font_size; ?>px;
                 --site-title-color: <?php echo esc_attr($site_title_color); ?>;
@@ -402,13 +428,13 @@ function vh360_output_dynamic_css() {
         .vh360-auth-form-content {
             background-color: var(--auth-form-bg);
         }
-        
+
         /* Site Title Styling */
         .site-branding {
             display: flex;
             align-items: var(--site-title-vertical-align);
         }
-        
+
         .site-title,
         .site-branding .site-title a {
             font-size: var(--site-title-font-size);
@@ -418,7 +444,7 @@ function vh360_output_dynamic_css() {
             line-height: var(--site-title-line-height);
             margin-bottom: 0;
         }
-        
+
         .site-title a:hover {
             color: var(--site-title-color);
             opacity: 0.8;
@@ -499,11 +525,11 @@ add_action('wp_head', 'vh360_output_dynamic_css', 99);
  */
 function vh360_get_font_family($font) {
     $system_fonts = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif";
-    
+
     if ($font === 'system') {
         return $system_fonts;
     }
-    
+
     // Return Google Font with system fallback
     // Note: Font name is already sanitized by Customizer sanitizer, no escaping needed here
     // This value will be output in CSS context (inside <style> tag), not HTML attribute context

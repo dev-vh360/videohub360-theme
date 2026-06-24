@@ -766,6 +766,32 @@
     });
 
     // =============================================================================
+    // MOBILE BOTTOM NAVIGATION BINDINGS
+    // =============================================================================
+
+    var mobileNavColorBindings = {
+        'vh360_mobile_nav_bg_color': 'mobile-nav-bg-color',
+        'vh360_mobile_nav_border_color': 'mobile-nav-border-color',
+        'vh360_mobile_nav_item_color': 'mobile-nav-item-color',
+        'vh360_mobile_nav_active_item_color': 'mobile-nav-active-item-color',
+        'vh360_mobile_nav_badge_bg_color': 'mobile-nav-badge-bg-color',
+        'vh360_mobile_nav_badge_text_color': 'mobile-nav-badge-text-color',
+        'vh360_mobile_nav_drawer_bg_color': 'mobile-nav-drawer-bg-color',
+        'vh360_mobile_nav_drawer_text_color': 'mobile-nav-drawer-text-color',
+        'vh360_mobile_nav_drawer_muted_text_color': 'mobile-nav-drawer-muted-text-color',
+        'vh360_mobile_nav_drawer_border_color': 'mobile-nav-drawer-border-color',
+        'vh360_mobile_nav_overlay_color': 'mobile-nav-overlay-color'
+    };
+
+    Object.keys(mobileNavColorBindings).forEach(function(settingId) {
+        wp.customize(settingId, function(value) {
+            value.bind(function(newval) {
+                updateCSSVariable(mobileNavColorBindings[settingId], newval);
+            });
+        });
+    });
+
+    // =============================================================================
     // ACTIVITY FEED BINDINGS
     // =============================================================================
 
