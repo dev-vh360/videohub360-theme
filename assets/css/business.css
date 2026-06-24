@@ -37,7 +37,7 @@
             color-mix(in srgb, var(--primary-color, #2563eb) 10%, var(--surface-1, #ffffff)) 0%,
             var(--surface-3, #f8fafc) 100%
         );
-    border: 1px solid var(--vh360-border-color, #e5e7eb);
+    border: 1px solid var(--border-1, #e5e7eb);
 }
 
 .vh360-business-profile-bar {
@@ -128,7 +128,7 @@
 .vh360-business-message-btn:hover,
 .vh360-business-follow-btn:hover,
 .vh360-business-actions .vh360-follow-btn:hover {
-    background: var(--primary-hover, #1d4ed8);
+    background: var(--secondary-color, #1d4ed8);
     transform: translateY(-1px);
     box-shadow: 0 10px 24px rgba(37, 99, 235, 0.24);
     color: #ffffff;
@@ -179,7 +179,7 @@
 /* Business Navigation */
 .vh360-business-navigation {
     background: transparent;
-    border-bottom: 1px solid var(--vh360-border-color, #e5e7eb);
+    border-bottom: 1px solid var(--border-1, #e5e7eb);
     padding: 0;
     margin-bottom: 1.5rem;
 }
@@ -233,7 +233,7 @@
     margin-bottom: 1.5rem;
     padding: 1.25rem;
     background: var(--surface-1, #ffffff);
-    border: 1px solid var(--vh360-border-color, #e5e7eb);
+    border: 1px solid var(--border-1, #e5e7eb);
     border-radius: 16px;
     box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
     transition: all 0.2s ease;
@@ -276,7 +276,7 @@
     position: sticky;
     top: 96px;
     background: var(--surface-1, #ffffff);
-    border: 1px solid var(--vh360-border-color, #e5e7eb);
+    border: 1px solid var(--border-1, #e5e7eb);
     border-radius: 18px;
     padding: 1.25rem;
     box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
@@ -300,7 +300,7 @@
 .vh360-business-booking-owner {
     padding: 1rem;
     background: var(--surface-3, #f8fafc);
-    border: 1px solid var(--vh360-border-color, #e5e7eb);
+    border: 1px solid var(--border-1, #e5e7eb);
     border-radius: 14px;
     text-align: center;
 }
@@ -328,7 +328,7 @@
 }
 
 .vh360-booking-manage-link:hover {
-    background: var(--primary-hover, #1d4ed8);
+    background: var(--secondary-color, #1d4ed8);
     transform: translateY(-1px);
     color: #ffffff;
 }

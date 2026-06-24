@@ -439,7 +439,6 @@
     body.admin-bar .vh360-search-bar-centered.mobile-search-active .vh360-search-bar-centered__mobile-close {
         top: 62px; /* 46px admin bar + 16px spacing */
     }
-    }
     
     /* Improved spacing for mobile results */
     .vh360-search-bar-centered.mobile-search-active .vh360-search-bar-centered__filters {
