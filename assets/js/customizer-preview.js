@@ -783,6 +783,13 @@
         });
     });
 
+    // Activity Feed - Active Tab Underline Color
+    wp.customize('vh360_feed_tab_active_underline_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('feed-tab-active-underline-color', newval);
+        });
+    });
+
     // Activity Feed - Mention Color
     wp.customize('vh360_mention_color', function(value) {
         value.bind(function(newval) {

@@ -103,9 +103,10 @@ function vh360_output_dynamic_css() {
     $footer_link_hover_color = get_theme_mod('vh360_footer_link_hover_color', '#ffffff');
 
     // Activity Feed colors
-    $feed_tab_color       = get_theme_mod('vh360_feed_tab_color', '#65676b');
-    $feed_tab_hover_color = get_theme_mod('vh360_feed_tab_hover_color', '#050505');
-    $mention_color        = get_theme_mod('vh360_mention_color', '#2563eb');
+    $feed_tab_color                   = get_theme_mod('vh360_feed_tab_color', '#65676b');
+    $feed_tab_hover_color             = get_theme_mod('vh360_feed_tab_hover_color', '#050505');
+    $feed_tab_active_underline_color  = get_theme_mod('vh360_feed_tab_active_underline_color', '#2563eb');
+    $mention_color                    = get_theme_mod('vh360_mention_color', '#2563eb');
 
     // Get typography settings
     $heading_font = get_theme_mod('vh360_heading_font', 'system');
@@ -251,6 +252,7 @@ function vh360_output_dynamic_css() {
             /* Activity Feed Colors */
             --feed-tab-color: <?php echo esc_attr($feed_tab_color); ?>;
             --feed-tab-hover-color: <?php echo esc_attr($feed_tab_hover_color); ?>;
+            --feed-tab-active-underline-color: <?php echo esc_attr($feed_tab_active_underline_color); ?>;
             --mention-color: <?php echo esc_attr($mention_color); ?>;
 
             /* Semantic Surface Tokens */

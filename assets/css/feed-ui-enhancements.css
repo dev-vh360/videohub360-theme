@@ -58,7 +58,7 @@
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    background: var(--feed-tab-active-underline-color, #2563eb);
     border-radius: 4px 4px 0 0;
     animation: slideIn 0.3s ease-out;
 }
