@@ -2718,7 +2718,7 @@ html {
     padding: 8px 16px;
     background: var(--surface-3);
     border-radius: 6px;
-    color: #050505;
+    color: var(--text-1, #050505);
     text-decoration: none;
     font-weight: 600;
     font-size: 15px;
@@ -2925,7 +2925,7 @@ body.vh360-modal-open {
 .vh360-comment-author {
     font-size: 13px;
     font-weight: 600;
-    color: #050505;
+    color: var(--text-1, #050505);
     line-height: 1.2;
 }
 
@@ -2941,7 +2941,7 @@ body.vh360-modal-open {
     border: none;
     padding: 4px;
     cursor: pointer;
-    color: #65676b;
+    color: var(--text-2, #65676b);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -2960,7 +2960,7 @@ body.vh360-modal-open {
 .vh360-kebab-dot {
     width: 3px;
     height: 3px;
-    background-color: #65676b;
+    background-color: var(--text-2, #65676b);
     border-radius: 50%;
 }
 
@@ -2990,7 +2990,7 @@ body.vh360-modal-open {
     text-align: left;
     border: none;
     background: none;
-    color: #050505;
+    color: var(--text-1, #050505);
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
@@ -3006,14 +3006,14 @@ body.vh360-modal-open {
 }
 
 .vh360-actions-menu-item.vh360-comment-delete-btn:hover {
-    background-color: #fee;
+    background-color: var(--error-bg-color, #fee);
 }
 
 /* Comment Text */
 .vh360-comment-text {
     font-size: 15px;
     line-height: 1.3333;
-    color: #050505;
+    color: var(--text-1, #050505);
     word-break: break-word;
 }
 
@@ -3025,7 +3025,7 @@ body.vh360-modal-open {
     gap: 8px;
     padding-left: 12px; /* Align with bubble content */
     font-size: 12px;
-    color: #65676b;
+    color: var(--text-2, #65676b);
 }
 
 .vh360-comment-time {
@@ -3034,7 +3034,7 @@ body.vh360-modal-open {
 }
 
 .vh360-action-separator {
-    color: #ccc;
+    color: var(--border-1, #ccc);
     user-select: none;
 }
 
@@ -3045,7 +3045,7 @@ body.vh360-modal-open {
     padding: 0;
     font-size: 12px;
     font-weight: 600;
-    color: #65676b;
+    color: var(--text-2, #65676b);
     cursor: pointer;
     white-space: nowrap;
 }
@@ -3061,7 +3061,7 @@ body.vh360-modal-open {
 
 .vh360-like-count {
     font-size: 11px;
-    color: #65676b;
+    color: var(--text-2, #65676b);
 }
 
 /* Replies Container */
@@ -3081,7 +3081,7 @@ body.vh360-modal-open {
     margin-left: 50px; /* Align with comment text (40px avatar + 10px gap) */
     font-size: 13px;
     font-weight: 600;
-    color: #65676b;
+    color: var(--text-2, #65676b);
     cursor: pointer;
 }
 
