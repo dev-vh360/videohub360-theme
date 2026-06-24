@@ -225,7 +225,7 @@
     display: block;
     padding: 12px 12px;
     border-radius: 12px;
-    background: rgba(0, 0, 0, 0.03);
+    background: var(--surface-3, rgba(0, 0, 0, 0.03));
     text-decoration: none;
     color: var(--mobile-nav-drawer-text-color, #111827);
     font-weight: 600;
