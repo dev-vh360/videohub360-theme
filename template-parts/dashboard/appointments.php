@@ -704,11 +704,7 @@ jQuery(document).ready(function($) {
 }
 
 @media (max-width: 768px) {
-    .vh360-appointment-live-icon {
-    color: var(--success-color, #16a34a);
-}
-
-.vh360-appointment-item {
+    .vh360-appointment-item {
         flex-direction: column;
         align-items: flex-start;
         gap: 1rem;

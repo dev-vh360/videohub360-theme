@@ -1371,7 +1371,7 @@
 }
 
 .vh360-required {
-    color: #e53935;
+    color: var(--error-color, #e53935);
     margin-left: 0.25rem;
 }
 
