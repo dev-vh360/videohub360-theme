@@ -42,12 +42,11 @@
     margin-bottom: 16px;
 }
 
-/* Scrollable chat area when rendered in the sidebar on desktop */
+/* Chat area when rendered in the sidebar on desktop */
 .videohub360-sidebar-chat .videohub360-live-chat {
-    /* Limit height relative to viewport to prevent overly tall sidebars */
-    max-height: 520px;
-    height: 52vh;
-    overflow: auto;
+    max-height: none;
+    height: auto;
+    overflow: visible;
 }
 
 /* On narrower screens where the sidebar stacks below the video, allow
@@ -3092,4 +3091,3 @@ button.videohub360-chat-menu-option:focus-visible {
         width: 100%;
     }
 }
-
