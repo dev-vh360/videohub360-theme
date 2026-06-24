@@ -287,6 +287,86 @@ function videohub360_theme_customize_register($wp_customize) {
         'section'     => 'vh360_community_menu_colors',
     )));
 
+    // Mobile Bottom Navigation Colors
+    $wp_customize->add_section('vh360_mobile_nav_colors', array(
+        'title'       => __('Mobile Bottom Navigation Colors', 'videohub360-theme'),
+        'panel'       => 'vh360_header_navigation',
+        'priority'    => 54,
+        'description' => __('Customize the mobile bottom navigation bar, badges, user drawer, and drawer overlay colors.', 'videohub360-theme'),
+    ));
+
+    $mobile_nav_color_controls = array(
+        'vh360_mobile_nav_bg_color' => array(
+            'default'     => '#ffffff',
+            'label'       => __('Mobile Nav Background Color', 'videohub360-theme'),
+            'description' => __('Background color for the fixed mobile bottom navigation bar.', 'videohub360-theme'),
+        ),
+        'vh360_mobile_nav_border_color' => array(
+            'default'     => '#e5e7eb',
+            'label'       => __('Mobile Nav Border Color', 'videohub360-theme'),
+            'description' => __('Top border color for the fixed mobile bottom navigation bar.', 'videohub360-theme'),
+        ),
+        'vh360_mobile_nav_item_color' => array(
+            'default'     => '#6b7280',
+            'label'       => __('Mobile Nav Item Color', 'videohub360-theme'),
+            'description' => __('Text and icon color for inactive mobile navigation items.', 'videohub360-theme'),
+        ),
+        'vh360_mobile_nav_active_item_color' => array(
+            'default'     => '#3b82f6',
+            'label'       => __('Mobile Nav Active Item Color', 'videohub360-theme'),
+            'description' => __('Text and icon color for active mobile navigation items.', 'videohub360-theme'),
+        ),
+        'vh360_mobile_nav_badge_bg_color' => array(
+            'default'     => '#3b82f6',
+            'label'       => __('Mobile Nav Badge Background Color', 'videohub360-theme'),
+            'description' => __('Background color for mobile navigation badges.', 'videohub360-theme'),
+        ),
+        'vh360_mobile_nav_badge_text_color' => array(
+            'default'     => '#ffffff',
+            'label'       => __('Mobile Nav Badge Text Color', 'videohub360-theme'),
+            'description' => __('Text color for mobile navigation badges.', 'videohub360-theme'),
+        ),
+        'vh360_mobile_nav_drawer_bg_color' => array(
+            'default'     => '#ffffff',
+            'label'       => __('Mobile Drawer Background Color', 'videohub360-theme'),
+            'description' => __('Background color for the mobile user drawer.', 'videohub360-theme'),
+        ),
+        'vh360_mobile_nav_drawer_text_color' => array(
+            'default'     => '#111827',
+            'label'       => __('Mobile Drawer Text Color', 'videohub360-theme'),
+            'description' => __('Primary text color for mobile drawer headings, links, and controls.', 'videohub360-theme'),
+        ),
+        'vh360_mobile_nav_drawer_muted_text_color' => array(
+            'default'     => '#6b7280',
+            'label'       => __('Mobile Drawer Muted Text Color', 'videohub360-theme'),
+            'description' => __('Secondary and muted text color for the mobile drawer.', 'videohub360-theme'),
+        ),
+        'vh360_mobile_nav_drawer_border_color' => array(
+            'default'     => '#e5e7eb',
+            'label'       => __('Mobile Drawer Border Color', 'videohub360-theme'),
+            'description' => __('Divider and avatar border color for the mobile drawer.', 'videohub360-theme'),
+        ),
+        'vh360_mobile_nav_overlay_color' => array(
+            'default'     => '#000000',
+            'label'       => __('Mobile Drawer Overlay Color', 'videohub360-theme'),
+            'description' => __('Base color for the mobile drawer overlay. Overlay opacity is handled in CSS.', 'videohub360-theme'),
+        ),
+    );
+
+    foreach ($mobile_nav_color_controls as $setting_id => $control_args) {
+        $wp_customize->add_setting($setting_id, array(
+            'default'           => $control_args['default'],
+            'sanitize_callback' => 'sanitize_hex_color',
+            'transport'         => 'postMessage',
+        ));
+
+        $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, $setting_id, array(
+            'label'       => $control_args['label'],
+            'description' => $control_args['description'],
+            'section'     => 'vh360_mobile_nav_colors',
+        )));
+    }
+
     // Community Menu Typography - Font family, size, weight
     $wp_customize->add_section('vh360_community_menu_typography', array(
         'title'       => __('Community Menu - Typography', 'videohub360-theme'),
