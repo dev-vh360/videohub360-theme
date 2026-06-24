@@ -151,6 +151,11 @@
             overflow: visible;
         }
 
+        .videohub360-main-wrapper.videohub360-sidebar-layout {
+            width: 95%;
+            max-width: 1760px;
+        }
+
         /* Content area - consolidated properties */
         .videohub360-content-area {
             position: relative;
