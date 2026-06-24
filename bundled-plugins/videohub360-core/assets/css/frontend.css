@@ -220,9 +220,9 @@
                 font-size: 1.1em;
             }
             
-            .videohub360-sidebar-thumbnail {
-                width: 110px;
-                height: 62px;
+            .videohub360-main-wrapper > .videohub360-sidebar .videohub360-sidebar-thumbnail {
+                width: 150px;
+                height: 84px;
             }
             
             .videohub360-sidebar-title {
@@ -251,9 +251,9 @@
                 gap: 12px;
             }
             
-            .videohub360-sidebar-thumbnail {
-                width: 100px;
-                height: 56px;
+            .videohub360-main-wrapper > .videohub360-sidebar .videohub360-sidebar-thumbnail {
+                width: 140px;
+                height: 79px;
             }
             
             .videohub360-sidebar-title {
@@ -282,9 +282,9 @@
                 gap: 10px;
             }
             
-            .videohub360-sidebar-thumbnail {
-                width: 90px;
-                height: 51px;
+            .videohub360-main-wrapper > .videohub360-sidebar .videohub360-sidebar-thumbnail {
+                width: 130px;
+                height: 73px;
             }
             
             .videohub360-sidebar-title {
@@ -320,9 +320,9 @@
                 gap: 8px;
             }
             
-            .videohub360-sidebar-thumbnail {
-                width: 85px;
-                height: 48px;
+            .videohub360-main-wrapper > .videohub360-sidebar .videohub360-sidebar-thumbnail {
+                width: 120px;
+                height: 68px;
             }
             
             .videohub360-sidebar-title {
@@ -1868,8 +1868,8 @@
             align-items: flex-start;
         }
         .videohub360-sidebar-thumbnail {
-            width: 120px;
-            height: 68px;
+            width: 160px;
+            height: 90px;
             background: #ddd;
             border-radius: 6px;
             object-fit: cover;
