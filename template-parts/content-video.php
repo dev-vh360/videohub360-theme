@@ -32,7 +32,7 @@ $show_live_badge = ($is_live === 'yes' && $stream_stopped !== 'yes' && $live_bad
                 'alt' => get_the_title(),
             ));
         } else {
-            echo '<div class="no-thumbnail" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 3rem;">📹</div>';
+            echo '<div class="no-thumbnail" style="background: linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 3rem;">📹</div>';
         }
         ?>
         

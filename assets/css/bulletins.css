@@ -75,17 +75,17 @@
 }
 
 .vh360-bulletin-priority.high {
-    background: #fee2e2;
+    background: color-mix(in srgb, var(--error-color, #ef4444) 12%, var(--surface-1, #ffffff));
     color: var(--error-color);
 }
 
 .vh360-bulletin-priority.medium {
-    background: #fef3c7;
+    background: color-mix(in srgb, var(--warning-color, #f59e0b) 16%, var(--surface-1, #ffffff));
     color: var(--warning-color);
 }
 
 .vh360-bulletin-priority.low {
-    background: #dbeafe;
+    background: color-mix(in srgb, var(--info-color, #6366f1) 12%, var(--surface-1, #ffffff));
     color: var(--primary-color);
 }
 
@@ -130,23 +130,23 @@
 }
 
 .vh360-bulletin-icon.announcement {
-    background: #dbeafe;
+    background: color-mix(in srgb, var(--info-color, #6366f1) 12%, var(--surface-1, #ffffff));
     color: var(--primary-color);
 }
 
 .vh360-bulletin-icon.alert {
-    background: #fee2e2;
+    background: color-mix(in srgb, var(--error-color, #ef4444) 12%, var(--surface-1, #ffffff));
     color: var(--error-color);
 }
 
 .vh360-bulletin-icon.update {
-    background: #d1fae5;
+    background: color-mix(in srgb, var(--success-color, #10b981) 14%, var(--surface-1, #ffffff));
     color: var(--success-color);
 }
 
 .vh360-bulletin-icon.info {
-    background: #e0e7ff;
-    color: #6366f1;
+    background: color-mix(in srgb, var(--primary-color, #6366f1) 14%, var(--surface-1, #ffffff));
+    color: var(--info-color, #6366f1);
 }
 
 .vh360-bulletin-content {
@@ -327,7 +327,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
-    background: white;
+    background: var(--surface-1, #ffffff);
     border: 1px solid var(--border-color, #e5e7eb);
     border-radius: 0.5rem;
     color: var(--text-color, #1f2937);
@@ -349,7 +349,7 @@
 }
 
 .vh360-bulletin-single-header {
-    background: white;
+    background: var(--surface-1, #ffffff);
     padding: 2rem;
     border-radius: 0.75rem;
     margin-bottom: 2rem;
@@ -423,7 +423,7 @@
 .vh360-bulletin-single-thumbnail {
     max-width: 1200px;
     margin: 0 auto 2rem;
-    background: white;
+    background: var(--surface-1, #ffffff);
     border-radius: 0.75rem;
     overflow: hidden;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -439,7 +439,7 @@
 
 /* Content Section */
 .vh360-bulletin-single-content {
-    background: white;
+    background: var(--surface-1, #ffffff);
     padding: 2.5rem;
     border-radius: 0.75rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -490,7 +490,7 @@
 }
 
 .vh360-bulletin-single-content a:hover {
-    color: var(--primary-dark, #2563eb);
+    color: var(--secondary-color, #2563eb);
 }
 
 .vh360-bulletin-single-content blockquote {
@@ -507,7 +507,7 @@
 
 /* Actions Section */
 .vh360-bulletin-single-actions {
-    background: white;
+    background: var(--surface-1, #ffffff);
     padding: 1.5rem 2.5rem;
     border-radius: 0.75rem;
     margin-top: 2rem;
@@ -537,13 +537,13 @@
 }
 
 .vh360-btn-primary:hover {
-    background: var(--primary-dark, #2563eb);
+    background: var(--secondary-color, #2563eb);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 .vh360-btn-secondary {
-    background: white;
+    background: var(--surface-1, #ffffff);
     color: var(--text-color, #1f2937);
     border: 1px solid var(--border-color, #e5e7eb);
 }
@@ -556,7 +556,7 @@
 
 /* Share Section */
 .vh360-bulletin-single-share {
-    background: white;
+    background: var(--surface-1, #ffffff);
     padding: 2rem 2.5rem;
     border-radius: 0.75rem;
     margin-top: 2rem;
@@ -587,7 +587,7 @@
     text-decoration: none;
     transition: all 0.2s;
     border: 1px solid var(--border-color, #e5e7eb);
-    background: white;
+    background: var(--surface-1, #ffffff);
     color: var(--text-color, #1f2937);
 }
 
@@ -858,7 +858,7 @@
 }
 
 .vh360-bulletin-view-link:hover {
-    background: var(--primary-dark, #2563eb);
+    background: var(--secondary-color, #2563eb);
     transform: translateY(-1px);
 }
 
@@ -869,7 +869,7 @@
 }
 
 .vh360-bulletin-edit-link:hover {
-    background: white;
+    background: var(--surface-1, #ffffff);
     border-color: var(--primary-color, #3b82f6);
     color: var(--primary-color, #3b82f6);
 }
@@ -946,8 +946,8 @@
 
 .vh360-bulletin-dismiss:hover {
     background: var(--bg-light, #f3f4f6);
-    border-color: var(--danger-color, #ef4444);
-    color: var(--danger-color, #ef4444);
+    border-color: var(--error-color, #ef4444);
+    color: var(--error-color, #ef4444);
 }
 
 /* Bulletin Footer */

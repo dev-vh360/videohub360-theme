@@ -186,11 +186,11 @@
     height: 20px;
     border-radius: 50%;
     border: 3px solid var(--bg-color);
-    background: #10b981;
+    background: var(--success-color, #10b981);
 }
 
 .vh360-profile-avatar .status-badge.offline {
-    background: #6b7280;
+    background: var(--text-2, #6b7280);
 }
 
 /* ==========================================================================
@@ -618,7 +618,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.75rem 1.5rem;
-    background: #3b82f6;
+    background: var(--primary-color, #3b82f6);
     color: #ffffff;
     border: none;
     border-radius: var(--border-radius);
@@ -632,7 +632,7 @@
 
 .vh360-profile-message-btn:hover,
 .vh360-profile-message-btn:focus {
-    background: #2563eb;
+    background: var(--secondary-color, #2563eb);
     color: #ffffff;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
@@ -678,9 +678,9 @@
 
 .vh360-unfollow-btn:hover,
 .vh360-unfollow-btn:focus {
-    background: #fee2e2;
-    color: #ef4444;
-    border-color: #ef4444;
+    background: color-mix(in srgb, var(--error-color, #ef4444) 12%, var(--surface-1, #ffffff));
+    color: var(--error-color, #ef4444);
+    border-color: var(--error-color, #ef4444);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
 }
@@ -703,7 +703,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.75rem 1.5rem;
-    background: #ef4444;
+    background: var(--error-color, #ef4444);
     color: #ffffff;
     border: none;
     border-radius: var(--border-radius);
@@ -714,7 +714,7 @@
 }
 
 .vh360-subscribe-btn:hover {
-    background: #dc2626;
+    background: color-mix(in srgb, var(--error-color, #ef4444) 85%, #000000);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
@@ -726,8 +726,8 @@
 }
 
 .vh360-subscribe-btn.subscribed:hover {
-    background: #fee2e2;
-    color: #ef4444;
+    background: color-mix(in srgb, var(--error-color, #ef4444) 12%, var(--surface-1, #ffffff));
+    color: var(--error-color, #ef4444);
 }
 
 /* ==========================================================================

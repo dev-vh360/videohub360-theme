@@ -26,7 +26,7 @@
 
 .vh360-latest-post-item {
     padding: 1rem 0;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--border-1, #e5e7eb);
 }
 
 .vh360-latest-post-item:first-child {
@@ -90,7 +90,7 @@
 }
 
 .vh360-latest-post-title a {
-    color: #1f2937;
+    color: var(--text-1, #1f2937);
     text-decoration: none;
     transition: color 0.2s ease;
     display: -webkit-box;
@@ -100,20 +100,20 @@
 }
 
 .vh360-latest-post-title a:hover {
-    color: #3b82f6;
+    color: var(--primary-color, #3b82f6);
 }
 
 .vh360-latest-post-date {
     display: block;
     font-size: 0.8rem;
-    color: #6b7280;
+    color: var(--text-2, #6b7280);
     margin-bottom: 0.5rem;
 }
 
 .vh360-latest-post-excerpt {
     font-size: 0.85rem;
     line-height: 1.5;
-    color: #4b5563;
+    color: var(--text-1, #1f2937);
     margin-top: 0.5rem;
 }
 
@@ -183,23 +183,23 @@
 
 @media (prefers-color-scheme: dark) {
     .vh360-latest-post-item {
-        border-bottom-color: #374151;
+        border-bottom-color: var(--border-1, #374151);
     }
 
     .vh360-latest-post-title a {
-        color: #f9fafb;
+        color: var(--text-1, #f9fafb);
     }
 
     .vh360-latest-post-title a:hover {
-        color: #60a5fa;
+        color: var(--primary-color, #60a5fa);
     }
 
     .vh360-latest-post-date {
-        color: #9ca3af;
+        color: var(--text-2, #9ca3af);
     }
 
     .vh360-latest-post-excerpt {
-        color: #d1d5db;
+        color: var(--border-1, #d1d5db);
     }
 }
 

@@ -32,8 +32,12 @@
     background:
         radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.16), transparent 34%),
         radial-gradient(circle at 82% 18%, rgba(14, 165, 233, 0.12), transparent 28%),
-        linear-gradient(135deg, #eef4ff 0%, #f8fafc 100%);
-    border: 1px solid var(--vh360-border-color, #e5e7eb);
+        linear-gradient(
+            135deg,
+            color-mix(in srgb, var(--primary-color, #2563eb) 10%, var(--surface-1, #ffffff)) 0%,
+            var(--surface-3, #f8fafc) 100%
+        );
+    border: 1px solid var(--border-1, #e5e7eb);
 }
 
 .vh360-business-profile-bar {
@@ -64,12 +68,12 @@
     margin: 0 0 0.5rem 0;
     font-size: 2rem;
     font-weight: 700;
-    color: #1f2937;
+    color: var(--text-1, #1f2937);
     line-height: 1.2;
 }
 
 .vh360-business-type {
-    color: #6b7280;
+    color: var(--text-2, #6b7280);
     margin: 0 0 0.75rem 0;
     font-size: 1rem;
     font-weight: 500;
@@ -79,13 +83,13 @@
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    color: #6b7280;
+    color: var(--text-2, #6b7280);
     font-size: 0.9375rem;
     padding: 0.5rem 0;
 }
 
 .vh360-business-location .dashicons {
-    color: #9ca3af;
+    color: var(--text-2, #6b7280);
 }
 
 /* Business Actions */
@@ -124,14 +128,14 @@
 .vh360-business-message-btn:hover,
 .vh360-business-follow-btn:hover,
 .vh360-business-actions .vh360-follow-btn:hover {
-    background: var(--primary-hover, #1d4ed8);
+    background: var(--secondary-color, #1d4ed8);
     transform: translateY(-1px);
     box-shadow: 0 10px 24px rgba(37, 99, 235, 0.24);
     color: #ffffff;
 }
 
 .vh360-business-message-btn {
-    background: #ffffff;
+    background: var(--surface-1, #ffffff);
     color: var(--primary-color, #2563eb);
     border: 1px solid rgba(37, 99, 235, 0.28);
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
@@ -142,16 +146,16 @@
 }
 
 .vh360-business-actions .vh360-unfollow-btn {
-    background: #ffffff;
-    color: #4b5563;
-    border: 1px solid #e5e7eb;
+    background: var(--surface-1, #ffffff);
+    color: var(--text-1, #1f2937);
+    border: 1px solid var(--border-1, #e5e7eb);
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
 }
 
 .vh360-business-actions .vh360-unfollow-btn:hover {
-    background: #fee2e2;
-    color: #ef4444;
-    border-color: #ef4444;
+    background: color-mix(in srgb, var(--error-color, #ef4444) 12%, var(--surface-1, #ffffff));
+    color: var(--error-color, #ef4444);
+    border-color: var(--error-color, #ef4444);
 }
 
 .vh360-business-message-btn svg,
@@ -175,7 +179,7 @@
 /* Business Navigation */
 .vh360-business-navigation {
     background: transparent;
-    border-bottom: 1px solid var(--vh360-border-color, #e5e7eb);
+    border-bottom: 1px solid var(--border-1, #e5e7eb);
     padding: 0;
     margin-bottom: 1.5rem;
 }
@@ -192,7 +196,7 @@
     display: block;
     padding: 1.25rem 0;
     text-decoration: none;
-    color: #6b7280;
+    color: var(--text-2, #6b7280);
     font-weight: 500;
     font-size: 0.9375rem;
     border-bottom: 3px solid transparent;
@@ -205,7 +209,7 @@
 }
 
 .vh360-business-tabs li a:hover {
-    color: #1f2937;
+    color: var(--text-1, #1f2937);
 }
 
 /* Business Content */
@@ -221,15 +225,15 @@
     margin: 0 0 1.5rem 0;
     font-size: 1.5rem;
     font-weight: 700;
-    color: #1f2937;
+    color: var(--text-1, #1f2937);
 }
 
 .vh360-business-services > div,
 .vh360-contact-item {
     margin-bottom: 1.5rem;
     padding: 1.25rem;
-    background: #ffffff;
-    border: 1px solid var(--vh360-border-color, #e5e7eb);
+    background: var(--surface-1, #ffffff);
+    border: 1px solid var(--border-1, #e5e7eb);
     border-radius: 16px;
     box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
     transition: all 0.2s ease;
@@ -238,7 +242,7 @@
 .vh360-business-services > div:hover,
 .vh360-contact-item:hover {
     box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
-    border-color: #dbe3ef;
+    border-color: var(--border-1, #dbe3ef);
 }
 
 .vh360-business-services h3,
@@ -247,13 +251,13 @@
     margin-bottom: 1rem;
     font-size: 1.125rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--text-1, #1f2937);
 }
 
 .vh360-business-availability ul {
     list-style: disc;
     padding-left: 1.5rem;
-    color: #4b5563;
+    color: var(--text-1, #1f2937);
 }
 
 .vh360-business-availability ul li {
@@ -271,8 +275,8 @@
 .vh360-business-booking-panel {
     position: sticky;
     top: 96px;
-    background: #ffffff;
-    border: 1px solid var(--vh360-border-color, #e5e7eb);
+    background: var(--surface-1, #ffffff);
+    border: 1px solid var(--border-1, #e5e7eb);
     border-radius: 18px;
     padding: 1.25rem;
     box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
@@ -280,7 +284,7 @@
 
 .vh360-business-booking-panel-header h2 {
     margin: 0 0 0.35rem;
-    color: #111827;
+    color: var(--text-1, #1f2937);
     font-size: 1.25rem;
     font-weight: 800;
     line-height: 1.25;
@@ -288,22 +292,22 @@
 
 .vh360-business-booking-panel-header p {
     margin: 0 0 1.25rem;
-    color: #6b7280;
+    color: var(--text-2, #6b7280);
     font-size: 0.9375rem;
 }
 
 /* Owner View */
 .vh360-business-booking-owner {
     padding: 1rem;
-    background: #f8fafc;
-    border: 1px solid var(--vh360-border-color, #e5e7eb);
+    background: var(--surface-3, #f8fafc);
+    border: 1px solid var(--border-1, #e5e7eb);
     border-radius: 14px;
     text-align: center;
 }
 
 .vh360-business-booking-owner p {
     margin: 0;
-    color: #4b5563;
+    color: var(--text-1, #1f2937);
 }
 
 .vh360-booking-manage-link {
@@ -324,7 +328,7 @@
 }
 
 .vh360-booking-manage-link:hover {
-    background: var(--primary-hover, #1d4ed8);
+    background: var(--secondary-color, #1d4ed8);
     transform: translateY(-1px);
     color: #ffffff;
 }
@@ -342,7 +346,7 @@
     display: block;
     font-weight: 700;
     margin-bottom: 0.5rem;
-    color: #374151;
+    color: var(--text-1, #1f2937);
     font-size: 0.875rem;
 }
 
@@ -350,7 +354,7 @@
     width: 100%;
     max-width: none;
     padding: 0.75rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border-1, #e5e7eb);
     border-radius: 0.75rem;
     font-size: 1rem;
     transition: all 0.2s ease;
@@ -370,7 +374,7 @@
 
 .vh360-booking-loading p {
     margin: 0;
-    color: #6b7280;
+    color: var(--text-2, #6b7280);
     font-size: 0.875rem;
 }
 
@@ -419,15 +423,15 @@
 }
 
 .vh360-booking-message-success {
-    background: #d1fae5;
-    color: #065f46;
-    border: 1px solid #6ee7b7;
+    background: color-mix(in srgb, var(--success-color, #10b981) 14%, var(--surface-1, #ffffff));
+    color: var(--success-color, #10b981);
+    border: 1px solid color-mix(in srgb, var(--success-color, #10b981) 35%, var(--surface-1, #ffffff));
 }
 
 .vh360-booking-message-error {
-    background: #fee2e2;
-    color: #991b1b;
-    border: 1px solid #fca5a5;
+    background: color-mix(in srgb, var(--error-color, #ef4444) 12%, var(--surface-1, #ffffff));
+    color: var(--error-color, #ef4444);
+    border: 1px solid var(--error-color, #ef4444);
 }
 
 /* Slots Container */
@@ -440,9 +444,9 @@
 .vh360-booking-error {
     text-align: center;
     padding: 1.25rem;
-    color: #6b7280;
-    background: #f8fafc;
-    border: 1px dashed #d1d5db;
+    color: var(--text-2, #6b7280);
+    background: var(--surface-3, #f8fafc);
+    border: 1px dashed var(--border-1, #d1d5db);
     border-radius: 14px;
 }
 
@@ -454,7 +458,7 @@
     font-size: 0.95rem;
     font-weight: 700;
     margin: 0 0 0.75rem;
-    color: #111827;
+    color: var(--text-1, #1f2937);
     padding: 0;
     border: 0;
 }
@@ -474,7 +478,7 @@
     padding: 0.5rem 0.75rem;
     border-radius: 999px;
     border: 1px solid var(--primary-color, #2563eb);
-    background: #ffffff;
+    background: var(--surface-1, #ffffff);
     color: var(--primary-color, #2563eb);
     font-size: 0.875rem;
     font-weight: 700;
