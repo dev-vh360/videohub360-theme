@@ -151,11 +151,6 @@
             overflow: visible;
         }
 
-        .videohub360-main-wrapper.videohub360-sidebar-layout {
-            width: min(94vw, 1760px);
-            max-width: none;
-        }
-        
         /* Content area - consolidated properties */
         .videohub360-content-area {
             position: relative;
