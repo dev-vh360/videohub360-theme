@@ -47,6 +47,42 @@ function vh360_register_activity_feed_controls($wp_customize) {
         'description' => __('Text color when hovering over feed tabs', 'videohub360-theme'),
     )));
 
+    // Feed Tab Hover Background Color
+    $wp_customize->add_setting('vh360_feed_tab_hover_bg_color', array(
+        'default'           => '#f9fafb',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_feed_tab_hover_bg_color', array(
+        'label'       => __('Feed Tab Hover Background Color', 'videohub360-theme'),
+        'section'     => 'vh360_activity_feed_design',
+        'description' => __('Controls the background color shown when hovering over the My Feed / Explore tabs.', 'videohub360-theme'),
+    )));
+
+    // Feed Active Tab Text Color
+    $wp_customize->add_setting('vh360_feed_tab_active_color', array(
+        'default'           => '#2563eb',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_feed_tab_active_color', array(
+        'label'       => __('Feed Active Tab Text Color', 'videohub360-theme'),
+        'section'     => 'vh360_activity_feed_design',
+        'description' => __('Text color for the active My Feed / Explore tab.', 'videohub360-theme'),
+    )));
+
+    // Feed Active Tab Underline Color
+    $wp_customize->add_setting('vh360_feed_tab_active_underline_color', array(
+        'default'           => '#2563eb',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_feed_tab_active_underline_color', array(
+        'label'       => __('Feed Active Tab Underline Color', 'videohub360-theme'),
+        'section'     => 'vh360_activity_feed_design',
+        'description' => __('Color for the active My Feed / Explore tab underline.', 'videohub360-theme'),
+    )));
+
     // Mention Color
     $wp_customize->add_setting('vh360_mention_color', array(
         'default'           => '#2563eb',

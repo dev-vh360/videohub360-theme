@@ -14,10 +14,10 @@
     gap: 0;
     padding: 0;
     margin: 0 0 1.5rem 0;
-    border-bottom: 2px solid #e5e7eb;
+    border-bottom: 2px solid var(--border-1, #e5e7eb);
     position: sticky;
     top: 0;
-    background: #ffffff;
+    background: var(--surface-1, #ffffff);
     z-index: 100;
     backdrop-filter: blur(8px);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
@@ -31,7 +31,7 @@
     text-align: center;
     font-weight: 700;
     font-size: 0.9375rem;
-    color: #6b7280;
+    color: var(--feed-tab-color, #6b7280);
     text-decoration: none;
     position: relative;
     transition: all 0.2s ease;
@@ -40,13 +40,13 @@
 
 .vh360-feed-tabs a:hover,
 .vh360-feed-tab:hover {
-    color: #1f2937;
-    background: #f9fafb;
+    color: var(--feed-tab-hover-color, #1f2937);
+    background: var(--feed-tab-hover-bg-color, #f9fafb);
 }
 
 .vh360-feed-tabs a.active,
 .vh360-feed-tab.active {
-    color: #2563eb;
+    color: var(--feed-tab-active-color, #2563eb);
 }
 
 /* Active indicator bar */
@@ -58,7 +58,7 @@
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    background: var(--feed-tab-active-underline-color, #2563eb);
     border-radius: 4px 4px 0 0;
     animation: slideIn 0.3s ease-out;
 }
@@ -112,7 +112,7 @@
 .vh360-trending-list li,
 .vh360-recommended-list li {
   padding: 0.5rem 0;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-1, #e2e8f0);
   display: flex;
   align-items: center;
   justify-content: space-between;
