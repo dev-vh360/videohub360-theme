@@ -75,17 +75,17 @@
 }
 
 .vh360-bulletin-priority.high {
-    background: #fee2e2;
+    background: color-mix(in srgb, var(--error-color, #ef4444) 12%, var(--surface-1, #ffffff));
     color: var(--error-color);
 }
 
 .vh360-bulletin-priority.medium {
-    background: #fef3c7;
+    background: color-mix(in srgb, var(--warning-color, #f59e0b) 16%, var(--surface-1, #ffffff));
     color: var(--warning-color);
 }
 
 .vh360-bulletin-priority.low {
-    background: #dbeafe;
+    background: color-mix(in srgb, var(--info-color, #6366f1) 12%, var(--surface-1, #ffffff));
     color: var(--primary-color);
 }
 
@@ -130,23 +130,23 @@
 }
 
 .vh360-bulletin-icon.announcement {
-    background: #dbeafe;
+    background: color-mix(in srgb, var(--info-color, #6366f1) 12%, var(--surface-1, #ffffff));
     color: var(--primary-color);
 }
 
 .vh360-bulletin-icon.alert {
-    background: #fee2e2;
+    background: color-mix(in srgb, var(--error-color, #ef4444) 12%, var(--surface-1, #ffffff));
     color: var(--error-color);
 }
 
 .vh360-bulletin-icon.update {
-    background: #d1fae5;
+    background: color-mix(in srgb, var(--success-color, #10b981) 14%, var(--surface-1, #ffffff));
     color: var(--success-color);
 }
 
 .vh360-bulletin-icon.info {
-    background: #e0e7ff;
-    color: #6366f1;
+    background: color-mix(in srgb, var(--primary-color, #6366f1) 14%, var(--surface-1, #ffffff));
+    color: var(--info-color, #6366f1);
 }
 
 .vh360-bulletin-content {

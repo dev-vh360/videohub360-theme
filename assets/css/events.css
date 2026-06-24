@@ -410,7 +410,7 @@
     grid-template-columns: minmax(0, 1fr) minmax(320px, 460px);
     gap: 2rem;
     align-items: center;
-    background: #fff;
+    background: var(--surface-1, #ffffff);
     border-radius: 1rem;
     padding: 2rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -604,8 +604,8 @@ body.vh360-event-lightbox-open {
     height: 38px;
     border: 0;
     border-radius: 999px;
-    background: #fff;
-    color: #111;
+    background: var(--surface-1, #ffffff);
+    color: var(--text-1, #111111);
     font-size: 28px;
     line-height: 1;
     cursor: pointer;
@@ -614,7 +614,7 @@ body.vh360-event-lightbox-open {
 
 .vh360-event-image-lightbox-close:hover,
 .vh360-event-image-lightbox-close:focus {
-    background: #f3f4f6;
+    background: var(--surface-3, #f3f4f6);
 }
 
 .vh360-event-quick-facts {
@@ -809,7 +809,7 @@ body.vh360-event-lightbox-open {
 }
 
 .vh360-event-rsvp-btn:hover {
-    background: #059669;
+    background: color-mix(in srgb, var(--success-color, #10b981) 85%, #000000);
 }
 
 .vh360-event-rsvp-btn.vh360-event-rsvpd {

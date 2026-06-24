@@ -32,7 +32,11 @@
     background:
         radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.14), transparent 34%),
         radial-gradient(circle at 82% 18%, rgba(14, 165, 233, 0.1), transparent 28%),
-        linear-gradient(135deg, #eef4ff 0%, #f8fafc 100%);
+        linear-gradient(
+            135deg,
+            color-mix(in srgb, var(--primary-color, #2563eb) 10%, var(--surface-1, #ffffff)) 0%,
+            var(--surface-3, #f8fafc) 100%
+        );
     border: 1px solid var(--vh360-border-color, #e5e7eb);
 }
 
@@ -64,12 +68,12 @@
     margin: 0 0 0.5rem 0;
     font-size: 1.75rem;
     font-weight: 700;
-    color: #1f2937;
+    color: var(--text-1, #1f2937);
     line-height: 1.2;
 }
 
 .vh360-client-type {
-    color: #6b7280;
+    color: var(--text-2, #6b7280);
     margin: 0;
     font-size: 1rem;
     font-weight: 500;
@@ -112,16 +116,16 @@
 }
 
 .vh360-client-actions .vh360-unfollow-btn {
-    background: #ffffff;
-    color: #4b5563;
-    border: 1px solid #e5e7eb;
+    background: var(--surface-1, #ffffff);
+    color: var(--text-1, #1f2937);
+    border: 1px solid var(--border-1, #e5e7eb);
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
 }
 
 .vh360-client-actions .vh360-unfollow-btn:hover {
-    background: #fee2e2;
-    color: #ef4444;
-    border-color: #ef4444;
+    background: color-mix(in srgb, var(--error-color, #ef4444) 12%, var(--surface-1, #ffffff));
+    color: var(--error-color, #ef4444);
+    border-color: var(--error-color, #ef4444);
 }
 
 /* Client Navigation */
@@ -144,7 +148,7 @@
     display: block;
     padding: 1.25rem 0;
     text-decoration: none;
-    color: #6b7280;
+    color: var(--text-2, #6b7280);
     font-weight: 500;
     font-size: 0.9375rem;
     border-bottom: 3px solid transparent;
@@ -157,7 +161,7 @@
 }
 
 .vh360-client-tabs li a:hover {
-    color: #1f2937;
+    color: var(--text-1, #1f2937);
 }
 
 /* Client Content */
@@ -171,7 +175,7 @@
     margin: 0 0 1.5rem 0;
     font-size: 1.5rem;
     font-weight: 700;
-    color: #1f2937;
+    color: var(--text-1, #1f2937);
 }
 
 .vh360-client-info-section {
@@ -182,7 +186,7 @@
 .vh360-client-bio,
 .vh360-activity-item {
     padding: 1.25rem;
-    background: #ffffff;
+    background: var(--surface-1, #ffffff);
     border: 1px solid var(--vh360-border-color, #e5e7eb);
     border-radius: 16px;
     box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
@@ -192,7 +196,7 @@
 .vh360-client-info-section:hover,
 .vh360-activity-item:hover {
     box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
-    border-color: #dbe3ef;
+    border-color: var(--border-1, #dbe3ef);
 }
 
 .vh360-client-info-section h3 {
@@ -200,12 +204,12 @@
     margin-bottom: 1rem;
     font-size: 1.125rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--text-1, #1f2937);
 }
 
 .vh360-client-bio {
     margin-top: 1.5rem;
-    color: #4b5563;
+    color: var(--text-1, #1f2937);
     line-height: 1.6;
 }
 
@@ -221,14 +225,14 @@
 }
 
 .vh360-activity-meta {
-    color: #6b7280;
+    color: var(--text-2, #6b7280);
     font-size: 0.875rem;
     margin-bottom: 0.75rem;
     font-weight: 500;
 }
 
 .vh360-activity-content {
-    color: #374151;
+    color: var(--text-1, #1f2937);
     line-height: 1.6;
 }
 
@@ -236,7 +240,7 @@
     margin: 0 0 0.5rem 0;
     font-size: 1.125rem;
     font-weight: 600;
-    color: #1f2937;
+    color: var(--text-1, #1f2937);
 }
 
 .vh360-activity-content p {
@@ -246,8 +250,8 @@
 .vh360-activity-content blockquote {
     margin: 0.75rem 0 0 0;
     padding-left: 1rem;
-    border-left: 3px solid #d1d5db;
-    color: #6b7280;
+    border-left: 3px solid var(--border-1, #d1d5db);
+    color: var(--text-2, #6b7280);
     font-style: italic;
 }
 
@@ -267,7 +271,7 @@
 .vh360-client-empty-state {
     text-align: center;
     padding: 3rem 2rem;
-    color: #6b7280;
+    color: var(--text-2, #6b7280);
 }
 
 .vh360-client-empty-state svg {

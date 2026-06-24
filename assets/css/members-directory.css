@@ -72,15 +72,15 @@
     width: 100%;
     padding: 1rem 3rem 1rem 1.25rem;
     font-size: 1rem;
-    border: 2px solid #e5e7eb;
+    border: 2px solid var(--border-1, #e5e7eb);
     border-radius: 50px;
     transition: all 0.3s ease;
     outline: none;
 }
 
 .vh360-search-input:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: var(--primary-color, #667eea);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color, #667eea) 15%, transparent);
 }
 
 .vh360-search-clear {
@@ -91,7 +91,7 @@
     background: transparent;
     border: none;
     font-size: 1.5rem;
-    color: #6b7280;
+    color: var(--text-2, #6b7280);
     cursor: pointer;
     width: 2rem;
     height: 2rem;
@@ -103,8 +103,8 @@
 }
 
 .vh360-search-clear:hover {
-    background: #f3f4f6;
-    color: #1f2937;
+    background: var(--surface-3, #f3f4f6);
+    color: var(--text-1, #1f2937);
 }
 
 /* Filters Wrapper */
@@ -124,16 +124,16 @@
 .vh360-filter-label {
     font-size: 0.875rem;
     font-weight: 600;
-    color: #4b5563;
+    color: var(--text-1, #1f2937);
     white-space: nowrap;
 }
 
 .vh360-filter-select {
     padding: 0.5rem 2.5rem 0.5rem 0.75rem;
     font-size: 0.875rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border-1, #d1d5db);
     border-radius: 0.5rem;
-    background-color: #ffffff;
+    background-color: var(--surface-1, #ffffff);
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
     background-position: right 0.5rem center;
     background-repeat: no-repeat;
@@ -144,13 +144,13 @@
 }
 
 .vh360-filter-select:hover {
-    border-color: #9ca3af;
+    border-color: var(--border-1, #9ca3af);
 }
 
 .vh360-filter-select:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: var(--primary-color, #667eea);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color, #667eea) 15%, transparent);
 }
 
 /* View Toggle */
@@ -158,7 +158,7 @@
     margin-left: auto;
     display: flex;
     gap: 0.5rem;
-    background: #f3f4f6;
+    background: var(--surface-3, #f3f4f6);
     padding: 0.25rem;
     border-radius: 0.5rem;
 }
@@ -167,7 +167,7 @@
     padding: 0.5rem;
     background: transparent;
     border: none;
-    color: #6b7280;
+    color: var(--text-2, #6b7280);
     cursor: pointer;
     border-radius: 0.375rem;
     transition: all 0.2s ease;
@@ -177,12 +177,12 @@
 }
 
 .vh360-view-btn:hover {
-    color: #1f2937;
+    color: var(--text-1, #1f2937);
 }
 
 .vh360-view-btn.active {
-    background: #ffffff;
-    color: #667eea;
+    background: var(--surface-1, #ffffff);
+    color: var(--primary-color, #667eea);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
@@ -248,8 +248,8 @@
     display: inline-block;
     width: 3rem;
     height: 3rem;
-    border: 4px solid #f3f4f6;
-    border-top-color: #667eea;
+    border: 4px solid var(--surface-3, #f3f4f6);
+    border-top-color: var(--primary-color, #667eea);
     border-radius: 50%;
     animation: vh360-spin 1s linear infinite;
     margin-bottom: 1rem;
@@ -272,19 +272,19 @@
 }
 
 .vh360-empty-icon svg {
-    color: #d1d5db;
+    color: var(--border-1, #d1d5db);
 }
 
 .vh360-empty-title {
     font-size: 1.5rem;
     font-weight: 700;
-    color: #1f2937;
+    color: var(--text-1, #1f2937);
     margin: 0 0 0.5rem;
 }
 
 .vh360-empty-text {
     font-size: 1rem;
-    color: #6b7280;
+    color: var(--text-2, #6b7280);
     margin: 0;
 }
 
@@ -295,7 +295,7 @@
     justify-content: center;
     gap: 1rem;
     padding-top: 2rem;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--border-1, #e5e7eb);
 }
 
 .vh360-pagination-btn {
@@ -303,10 +303,10 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.75rem 1.5rem;
-    background: #ffffff;
-    border: 1px solid #d1d5db;
+    background: var(--surface-1, #ffffff);
+    border: 1px solid var(--border-1, #d1d5db);
     border-radius: 0.5rem;
-    color: #374151;
+    color: var(--text-1, #1f2937);
     font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
@@ -314,9 +314,9 @@
 }
 
 .vh360-pagination-btn:hover:not(:disabled) {
-    background: #f9fafb;
-    border-color: #667eea;
-    color: #667eea;
+    background: var(--surface-3, #f3f4f6);
+    border-color: var(--primary-color, #667eea);
+    color: var(--primary-color, #667eea);
 }
 
 .vh360-pagination-btn:disabled {
@@ -326,12 +326,12 @@
 
 .vh360-pagination-info {
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--text-2, #6b7280);
 }
 
 .vh360-pagination-info span {
     font-weight: 600;
-    color: #1f2937;
+    color: var(--text-1, #1f2937);
 }
 
 /* Responsive Design */
@@ -445,15 +445,15 @@
     width: 100%;
     margin: 0 0 1rem 0;
     padding: 0.9rem 1rem;
-    border: 2px solid #e5e7eb;
+    border: 2px solid var(--border-1, #e5e7eb);
     border-radius: 12px;
-    background: #f9fafb;
+    background: var(--surface-3, #f3f4f6);
     font-weight: 600;
     cursor: pointer;
 }
 
 .vh360-controls-toggle[aria-expanded="true"] {
-    background: #ffffff;
+    background: var(--surface-1, #ffffff);
 }
 
 @media (max-width: 768px) {

@@ -46,13 +46,13 @@
     border: none;
     background: transparent;
     cursor: pointer;
-    color: #1f2937;
+    color: var(--text-1, #1f2937);
     z-index: 10;
     transition: color 0.2s ease;
 }
 
 .vh360-search-bar-centered__mobile-close:hover {
-    color: #0066cc;
+    color: var(--primary-color, #0066cc);
 }
 
 .vh360-search-bar-centered__container {
@@ -65,20 +65,20 @@
     display: flex;
     align-items: center;
     width: 100%;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border-1, #ccc);
     border-radius: 40px;
-    background-color: #fff;
+    background-color: var(--surface-1, #ffffff);
     overflow: hidden;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .vh360-search-bar-centered__input-wrapper:hover {
-    border-color: #0066cc;
+    border-color: var(--primary-color, #0066cc);
 }
 
 .vh360-search-bar-centered__input-wrapper:focus-within {
-    border-color: #0066cc;
-    box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+    border-color: var(--primary-color, #0066cc);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color, #0066cc) 15%, transparent);
 }
 
 /* Search Input */
@@ -89,11 +89,11 @@
     border: none;
     outline: none;
     background: transparent;
-    color: #1f2937;
+    color: var(--text-1, #1f2937);
 }
 
 .vh360-search-bar-centered__input::placeholder {
-    color: #9ca3af;
+    color: var(--text-2, #6b7280);
 }
 
 /* Search Button */
@@ -104,19 +104,19 @@
     width: 64px;
     height: 40px;
     border: none;
-    background-color: #f8f8f8;
+    background-color: var(--surface-3, #f3f4f6);
     cursor: pointer;
     transition: background-color 0.2s ease;
-    border-left: 1px solid #e5e7eb;
+    border-left: 1px solid var(--border-1, #ccc);
     flex-shrink: 0;
 }
 
 .vh360-search-bar-centered__button:hover {
-    background-color: #f0f0f0;
+    background-color: var(--surface-3, #f3f4f6);
 }
 
 .vh360-search-bar-centered__button svg {
-    color: #374151;
+    color: var(--text-1, #1f2937);
 }
 
 /* Results Dropdown */
@@ -125,8 +125,8 @@
     top: calc(100% + 8px);
     left: 0;
     right: 0;
-    background-color: #fff;
-    border: 1px solid #ccc;
+    background-color: var(--surface-1, #ffffff);
+    border: 1px solid var(--border-1, #ccc);
     border-radius: 12px;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
     max-height: 600px;
@@ -144,7 +144,7 @@
     display: flex;
     gap: 8px;
     padding: 12px 16px;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--border-1, #ccc);
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
 }
@@ -154,7 +154,7 @@
 }
 
 .vh360-search-bar-centered__filters::-webkit-scrollbar-thumb {
-    background-color: #d1d5db;
+    background-color: var(--text-2, #6b7280);
     border-radius: 2px;
 }
 
@@ -165,18 +165,18 @@
     border: none;
     border-radius: 20px;
     background-color: transparent;
-    color: #6b7280;
+    color: var(--text-2, #6b7280);
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
 }
 
 .vh360-search-bar-centered__filter-tab:hover {
-    background-color: #f3f4f6;
+    background-color: var(--surface-3, #f3f4f6);
 }
 
 .vh360-search-bar-centered__filter-tab.active {
-    background-color: #1f2937;
+    background-color: var(--text-1, #1f2937);
     color: #fff;
 }
 
@@ -198,7 +198,7 @@
     padding: 8px 16px;
     font-size: 12px;
     font-weight: 600;
-    color: #6b7280;
+    color: var(--text-2, #6b7280);
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
@@ -214,7 +214,7 @@
 }
 
 .vh360-search-bar-centered__result-item:hover {
-    background-color: #f2f2f2;
+    background-color: var(--surface-3, #f3f4f6);
 }
 
 /* Video Results */
@@ -265,7 +265,7 @@
 .vh360-search-bar-centered__result-title {
     font-size: 14px;
     font-weight: 500;
-    color: #1f2937;
+    color: var(--text-1, #1f2937);
     margin: 0 0 4px 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -274,7 +274,7 @@
 
 .vh360-search-bar-centered__result-meta {
     font-size: 12px;
-    color: #606060;
+    color: var(--text-1, #1f2937);
     margin: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -284,7 +284,7 @@
 /* Highlight matched text */
 .vh360-search-bar-centered__highlight {
     font-weight: 700;
-    color: #0066cc;
+    color: var(--primary-color, #0066cc);
 }
 
 /* Loading State */
@@ -294,14 +294,14 @@
     align-items: center;
     justify-content: center;
     padding: 48px 24px;
-    color: #6b7280;
+    color: var(--text-2, #6b7280);
 }
 
 .vh360-search-bar-centered__spinner {
     width: 40px;
     height: 40px;
-    border: 4px solid #f3f4f6;
-    border-top-color: #0066cc;
+    border: 4px solid var(--surface-3, #f3f4f6);
+    border-top-color: var(--primary-color, #0066cc);
     border-radius: 50%;
     animation: vh360-spin 0.8s linear infinite;
     margin-bottom: 16px;
@@ -325,12 +325,12 @@
     align-items: center;
     justify-content: center;
     padding: 48px 24px;
-    color: #6b7280;
+    color: var(--text-2, #6b7280);
     text-align: center;
 }
 
 .vh360-search-bar-centered__empty svg {
-    color: #d1d5db;
+    color: var(--text-2, #6b7280);
     margin-bottom: 16px;
 }
 
@@ -343,7 +343,7 @@
 .vh360-search-bar-centered__error {
     padding: 24px;
     text-align: center;
-    color: #ef4444;
+    color: var(--error-color, #ef4444);
 }
 
 .vh360-search-bar-centered__error p {
@@ -388,7 +388,7 @@
         right: 0;
         bottom: 0;
         z-index: 9999;
-        background: #fff;
+        background: var(--surface-1, #ffffff);
         overflow: hidden;
         padding-top: 60px; /* Space for WordPress admin bar and search positioning */
     }
@@ -445,7 +445,7 @@
     .vh360-search-bar-centered.mobile-search-active .vh360-search-bar-centered__filters {
         padding: 12px 16px;
         gap: 8px;
-        border-bottom: 2px solid #e5e7eb;
+        border-bottom: 2px solid var(--border-1, #ccc);
     }
     
     .vh360-search-bar-centered.mobile-search-active .vh360-search-bar-centered__filter-tab {
@@ -455,7 +455,7 @@
     
     .vh360-search-bar-centered.mobile-search-active .vh360-search-bar-centered__result-item {
         padding: 16px;
-        border-bottom: 1px solid #f3f4f6;
+        border-bottom: 1px solid var(--border-1, #ccc);
     }
     
     .vh360-search-bar-centered.mobile-search-active .vh360-search-bar-centered__result-item--video .vh360-search-bar-centered__result-thumbnail {
