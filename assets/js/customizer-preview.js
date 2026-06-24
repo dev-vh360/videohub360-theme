@@ -783,6 +783,13 @@
         });
     });
 
+    // Activity Feed - Tab Hover Background Color
+    wp.customize('vh360_feed_tab_hover_bg_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('feed-tab-hover-bg-color', newval);
+        });
+    });
+
     // Activity Feed - Active Tab Text Color
     wp.customize('vh360_feed_tab_active_color', function(value) {
         value.bind(function(newval) {

@@ -105,7 +105,7 @@
     flex: 1;
     text-align: center;
     padding: 14px 20px;
-    color: var(--feed-tab-color);
+    color: var(--feed-tab-color, #65676b);
     text-decoration: none;
     font-weight: 600;
     font-size: 15px;
@@ -115,8 +115,8 @@
 }
 
 .vh360-feed-tab:hover {
-    background: var(--surface-3);
-    color: var(--feed-tab-hover-color);
+    background: var(--feed-tab-hover-bg-color, var(--surface-3));
+    color: var(--feed-tab-hover-color, #050505);
 }
 
 .vh360-feed-tab.active {

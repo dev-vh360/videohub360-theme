@@ -31,7 +31,7 @@
     text-align: center;
     font-weight: 700;
     font-size: 0.9375rem;
-    color: #6b7280;
+    color: var(--feed-tab-color, #6b7280);
     text-decoration: none;
     position: relative;
     transition: all 0.2s ease;
@@ -40,8 +40,8 @@
 
 .vh360-feed-tabs a:hover,
 .vh360-feed-tab:hover {
-    color: #1f2937;
-    background: #f9fafb;
+    color: var(--feed-tab-hover-color, #1f2937);
+    background: var(--feed-tab-hover-bg-color, #f9fafb);
 }
 
 .vh360-feed-tabs a.active,
