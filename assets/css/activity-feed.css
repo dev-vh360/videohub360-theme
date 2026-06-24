@@ -120,7 +120,7 @@
 }
 
 .vh360-feed-tab.active {
-    color: var(--primary-color);
+    color: var(--feed-tab-active-color, var(--primary-color));
     border-bottom-color: var(--feed-tab-active-underline-color, var(--primary-color));
 }
 

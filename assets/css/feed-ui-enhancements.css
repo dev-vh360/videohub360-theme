@@ -46,7 +46,7 @@
 
 .vh360-feed-tabs a.active,
 .vh360-feed-tab.active {
-    color: #2563eb;
+    color: var(--feed-tab-active-color, #2563eb);
 }
 
 /* Active indicator bar */
