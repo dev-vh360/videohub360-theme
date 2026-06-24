@@ -147,16 +147,16 @@ $days = array(
 
 .vh360-day-schedule {
     padding: 1rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border-1, #e5e7eb);
     border-radius: 0.5rem;
-    background: #f9fafb;
+    background: var(--surface-3, #f9fafb);
 }
 
 .vh360-day-label {
     font-size: 1rem;
     font-weight: 600;
     margin: 0 0 1rem 0;
-    color: #1f2937;
+    color: var(--text-1, #1f2937);
 }
 
 .vh360-day-slots {
@@ -174,19 +174,19 @@ $days = array(
 
 .vh360-time-input {
     padding: 0.5rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border-1, #d1d5db);
     border-radius: 0.25rem;
     font-size: 0.875rem;
 }
 
 .vh360-time-separator {
-    color: #6b7280;
+    color: var(--text-2, #6b7280);
     font-weight: 500;
 }
 
 .vh360-btn-remove-slot {
     padding: 0.5rem 1rem;
-    background: #ef4444;
+    background: var(--error-color, #ef4444);
     color: white;
     border: none;
     border-radius: 0.25rem;
@@ -195,25 +195,25 @@ $days = array(
 }
 
 .vh360-btn-remove-slot:hover {
-    background: #dc2626;
+    background: color-mix(in srgb, var(--error-color, #ef4444) 85%, #000000);
 }
 
 .vh360-btn-add-slot {
     padding: 0.5rem 1rem;
-    background: #f3f4f6;
-    color: #374151;
-    border: 1px solid #d1d5db;
+    background: var(--surface-3, #f3f4f6);
+    color: var(--text-1, #374151);
+    border: 1px solid var(--border-1, #d1d5db);
     border-radius: 0.25rem;
     font-size: 0.875rem;
     cursor: pointer;
 }
 
 .vh360-btn-add-slot:hover {
-    background: #e5e7eb;
+    background: var(--border-1, #e5e7eb);
 }
 
 .vh360-no-slots {
-    color: #6b7280;
+    color: var(--text-2, #6b7280);
     font-style: italic;
 }
 

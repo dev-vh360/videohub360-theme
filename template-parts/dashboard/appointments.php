@@ -270,7 +270,7 @@ if ($is_professional) {
                         </div>
                         <?php if (!$is_professional && $is_live) : ?>
                             <div class="vh360-appointment-live-notice">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color: #16a34a;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="vh360-appointment-live-icon">
                                     <circle cx="12" cy="12" r="10"></circle>
                                 </svg>
                                 <span><?php esc_html_e('The professional is live now! Click "Join Session" to enter.', 'videohub360-theme'); ?></span>
@@ -545,14 +545,18 @@ jQuery(document).ready(function($) {
     gap: 1rem;
 }
 
+.vh360-appointment-live-icon {
+    color: var(--success-color, #16a34a);
+}
+
 .vh360-appointment-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 1.25rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border-1, #e5e7eb);
     border-radius: 0.5rem;
-    background: #ffffff;
+    background: var(--surface-1, #ffffff);
     transition: box-shadow 0.2s;
 }
 
@@ -575,7 +579,7 @@ jQuery(document).ready(function($) {
     margin: 0;
     font-size: 1.125rem;
     font-weight: 600;
-    color: #1f2937;
+    color: var(--text-1, #1f2937);
 }
 
 .vh360-appointment-status {
@@ -587,26 +591,26 @@ jQuery(document).ready(function($) {
 }
 
 .vh360-status-live {
-    background: #dcfce7;
-    color: #166534;
+    background: color-mix(in srgb, var(--success-color, #16a34a) 14%, var(--surface-1, #ffffff));
+    color: var(--success-color, #16a34a);
 }
 
 .vh360-status-offline {
-    background: #f3f4f6;
-    color: #6b7280;
+    background: var(--surface-3, #f3f4f6);
+    color: var(--text-2, #6b7280);
 }
 
 .vh360-status-ended,
 .vh360-status-past {
-    background: #fee2e2;
-    color: #991b1b;
+    background: color-mix(in srgb, var(--error-color, #dc2626) 12%, var(--surface-1, #ffffff));
+    color: var(--error-color, #dc2626);
 }
 
 .vh360-appointment-meta {
     display: flex;
     gap: 1.5rem;
     align-items: center;
-    color: #6b7280;
+    color: var(--text-2, #6b7280);
     font-size: 0.875rem;
 }
 
@@ -623,9 +627,9 @@ jQuery(document).ready(function($) {
     gap: 0.5rem;
     margin-top: 0.75rem;
     padding: 0.5rem;
-    background: #dcfce7;
+    background: color-mix(in srgb, var(--success-color, #16a34a) 14%, var(--surface-1, #ffffff));
     border-radius: 0.375rem;
-    color: #166534;
+    color: var(--success-color, #16a34a);
     font-size: 0.875rem;
     font-weight: 500;
 }
@@ -651,33 +655,33 @@ jQuery(document).ready(function($) {
 }
 
 .vh360-dashboard-btn-primary {
-    background: #2563eb;
+    background: var(--primary-color, #2563eb);
     color: white;
 }
 
 .vh360-dashboard-btn-primary:hover {
-    background: #1d4ed8;
+    background: var(--secondary-color, #1d4ed8);
     color: white;
 }
 
 .vh360-dashboard-btn-secondary {
-    background: #f3f4f6;
-    color: #374151;
-    border: 1px solid #d1d5db;
+    background: var(--surface-3, #f3f4f6);
+    color: var(--text-1, #374151);
+    border: 1px solid var(--border-1, #d1d5db);
 }
 
 .vh360-dashboard-btn-secondary:hover {
-    background: #e5e7eb;
-    color: #374151;
+    background: var(--border-1, #e5e7eb);
+    color: var(--text-1, #374151);
 }
 
 .vh360-dashboard-btn-danger {
-    background: #dc2626;
+    background: var(--error-color, #dc2626);
     color: white;
 }
 
 .vh360-dashboard-btn-danger:hover {
-    background: #b91c1c;
+    background: color-mix(in srgb, var(--error-color, #dc2626) 85%, #000000);
     color: white;
 }
 
@@ -700,7 +704,11 @@ jQuery(document).ready(function($) {
 }
 
 @media (max-width: 768px) {
-    .vh360-appointment-item {
+    .vh360-appointment-live-icon {
+    color: var(--success-color, #16a34a);
+}
+
+.vh360-appointment-item {
         flex-direction: column;
         align-items: flex-start;
         gap: 1rem;
