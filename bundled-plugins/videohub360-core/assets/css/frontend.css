@@ -216,7 +216,7 @@
             }
             
             /* Scale down sidebar content */
-            .videohub360-sidebar h2 {
+            .videohub360-main-wrapper > .videohub360-sidebar h2 {
                 font-size: 1.1em;
             }
             
@@ -225,11 +225,11 @@
                 height: 84px;
             }
             
-            .videohub360-sidebar-title {
+            .videohub360-main-wrapper > .videohub360-sidebar .videohub360-sidebar-title {
                 font-size: 1.05em;
             }
             
-            .videohub360-sidebar-meta {
+            .videohub360-main-wrapper > .videohub360-sidebar .videohub360-sidebar-meta {
                 font-size: 0.9em;
             }
         }
@@ -241,12 +241,12 @@
             }
             
             /* Further scale down sidebar content */
-            .videohub360-sidebar h2 {
+            .videohub360-main-wrapper > .videohub360-sidebar h2 {
                 font-size: 1.05em;
                 margin-bottom: 14px;
             }
             
-            .videohub360-sidebar li {
+            .videohub360-main-wrapper > .videohub360-sidebar li {
                 margin-bottom: 18px;
                 gap: 12px;
             }
@@ -256,11 +256,11 @@
                 height: 79px;
             }
             
-            .videohub360-sidebar-title {
+            .videohub360-main-wrapper > .videohub360-sidebar .videohub360-sidebar-title {
                 font-size: 1em;
             }
             
-            .videohub360-sidebar-meta {
+            .videohub360-main-wrapper > .videohub360-sidebar .videohub360-sidebar-meta {
                 font-size: 0.88em;
             }
         }
@@ -272,12 +272,12 @@
             }
             
             /* More compact sidebar content */
-            .videohub360-sidebar h2 {
+            .videohub360-main-wrapper > .videohub360-sidebar h2 {
                 font-size: 1em;
                 margin-bottom: 12px;
             }
             
-            .videohub360-sidebar li {
+            .videohub360-main-wrapper > .videohub360-sidebar li {
                 margin-bottom: 16px;
                 gap: 10px;
             }
@@ -287,11 +287,11 @@
                 height: 73px;
             }
             
-            .videohub360-sidebar-title {
+            .videohub360-main-wrapper > .videohub360-sidebar .videohub360-sidebar-title {
                 font-size: 0.95em;
             }
             
-            .videohub360-sidebar-meta {
+            .videohub360-main-wrapper > .videohub360-sidebar .videohub360-sidebar-meta {
                 font-size: 0.85em;
             }
         }
@@ -310,12 +310,12 @@
             }
             
             /* Continue compact scaling */
-            .videohub360-sidebar h2 {
+            .videohub360-main-wrapper > .videohub360-sidebar h2 {
                 font-size: 0.98em;
                 margin-bottom: 10px;
             }
             
-            .videohub360-sidebar li {
+            .videohub360-main-wrapper > .videohub360-sidebar li {
                 margin-bottom: 14px;
                 gap: 8px;
             }
@@ -325,11 +325,11 @@
                 height: 68px;
             }
             
-            .videohub360-sidebar-title {
+            .videohub360-main-wrapper > .videohub360-sidebar .videohub360-sidebar-title {
                 font-size: 0.92em;
             }
             
-            .videohub360-sidebar-meta {
+            .videohub360-main-wrapper > .videohub360-sidebar .videohub360-sidebar-meta {
                 font-size: 0.82em;
             }
         }
@@ -352,6 +352,11 @@
             width: 100%;
             /* Remove top padding to eliminate gap above video */
             padding-top: 0;
+        }
+
+        /* Agora Interactive Mode owns the player aspect ratio in the core plugin. */
+        .videohub360-video-player.vh360-has-agora-interactive {
+            aspect-ratio: 4/3;
         }
         
         /* Improved video responsiveness for all video types */
@@ -504,7 +509,7 @@
                 margin-bottom: 16px;
             }
             
-            .videohub360-sidebar {
+            .videohub360-main-wrapper > .videohub360-sidebar {
                 /* Full width on mobile, positioned below content */
                 flex: none;
                 width: 100%;
@@ -531,7 +536,7 @@
                 margin-bottom: 12px;
             }
             
-            .videohub360-sidebar {
+            .videohub360-main-wrapper > .videohub360-sidebar {
                 padding: 10px 6px;
             }
             
@@ -642,6 +647,7 @@
             }
             
             /* Target Only Agora Interactive Mode on mobile - 2/3 aspect ratio */
+            .videohub360-video-player.vh360-has-agora-interactive,
             .vh360-livestream-iframe.vh360-agora-interactive-container {
                 aspect-ratio: 2/3;
                 min-height: auto;
@@ -1851,23 +1857,23 @@
                 font-size: 0.9em;
             }
         }
-        .videohub360-sidebar h2 {
+        .videohub360-main-wrapper > .videohub360-sidebar h2 {
             font-size: 1.2em;
             margin-bottom: 10px;
             font-weight: 600;
         }
-        .videohub360-sidebar ul {
+        .videohub360-main-wrapper > .videohub360-sidebar ul {
             padding: 0;
             margin: 0;
             list-style: none;
         }
-        .videohub360-sidebar li {
+        .videohub360-main-wrapper > .videohub360-sidebar li {
             margin-bottom: 22px;
             display: flex;
             gap: 16px;
             align-items: flex-start;
         }
-        .videohub360-sidebar-thumbnail {
+        .videohub360-main-wrapper > .videohub360-sidebar .videohub360-sidebar-thumbnail {
             width: 160px;
             height: 90px;
             background: #ddd;
@@ -1875,11 +1881,11 @@
             object-fit: cover;
             flex-shrink: 0;
         }
-        .videohub360-sidebar-info {
+        .videohub360-main-wrapper > .videohub360-sidebar .videohub360-sidebar-info {
             flex: 1 1 0;
             min-width: 0;
         }
-        .videohub360-sidebar-title {
+        .videohub360-main-wrapper > .videohub360-sidebar .videohub360-sidebar-title {
             color: #1a1a1a;
             font-weight: 600;
             font-size: 1.1em;
@@ -1888,10 +1894,10 @@
             margin-bottom: 4px;
             line-height: 1.3;
         }
-        .videohub360-sidebar-title:hover {
+        .videohub360-main-wrapper > .videohub360-sidebar .videohub360-sidebar-title:hover {
             text-decoration: underline;
         }
-        .videohub360-sidebar-meta {
+        .videohub360-main-wrapper > .videohub360-sidebar .videohub360-sidebar-meta {
             font-size: 0.95em;
             color: var(--vh360-color-medium);
             margin-top: 2px;
@@ -2157,7 +2163,7 @@
 }
 
 /* Sidebar & Filters */
-.videohub360-sidebar {
+.videohub360-archive-mainwrap .videohub360-sidebar {
     background: var(--vh360-bg-white);
     border-radius: 14px;
     padding: 30px 26px;
@@ -2172,7 +2178,7 @@
     z-index: 10;
     transition: transform 0.23s cubic-bezier(.4,0,.2,1);
 }
-.videohub360-sidebar h2 {
+.videohub360-archive-mainwrap .videohub360-sidebar h2 {
     font-size: 1.15em;
     margin: 0 0 18px 0;
     font-weight: 700;
@@ -2221,7 +2227,7 @@
     border: 1.5px solid #0063b1;
     background: var(--vh360-bg-white);
 }
-.videohub360-sidebar form button.videohub360-filter-go-btn,
+.videohub360-archive-mainwrap .videohub360-sidebar form button.videohub360-filter-go-btn,
 .videohub360-filter-form button.videohub360-filter-go-btn,
 button.videohub360-filter-go-btn {
     display: inline-block;
@@ -2331,7 +2337,7 @@ button.videohub360-filter-go-btn {
         padding: 0 6px;
         line-height: 1;
     }
-    .videohub360-sidebar h2 {
+    .videohub360-archive-mainwrap .videohub360-sidebar h2 {
         padding-right: 40px;
     }
 }
@@ -2927,7 +2933,7 @@ button.videohub360-search-submit {
     .videohub360-videos-thumb {
         border-radius: 10px;
     }
-    .videohub360-sidebar {
+    .videohub360-archive-mainwrap .videohub360-sidebar {
         padding: 14px 6px;
     }
 }

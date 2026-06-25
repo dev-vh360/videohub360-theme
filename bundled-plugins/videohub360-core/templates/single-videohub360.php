@@ -301,8 +301,19 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
 
                 // User has access, render video
             ?>
+            <?php
+            $vh360_video_player_classes = 'videohub360-video-player';
+            if (
+                $livestream_fields['is_live'] === 'yes'
+                && $livestream_fields['stream_stopped'] !== 'yes'
+                && $livestream_fields['type'] === 'agora'
+                && $livestream_fields['agora_mode'] === 'interactive'
+            ) {
+                $vh360_video_player_classes .= ' vh360-has-agora-interactive';
+            }
+            ?>
             <?php if ($livestream_fields['is_live'] === 'yes' && $livestream_fields['stream_stopped'] !== 'yes'): ?>
-                <div class="videohub360-video-player" id="videohub360-livestream-player-root">
+                <div class="<?php echo esc_attr($vh360_video_player_classes); ?>" id="videohub360-livestream-player-root">
                     <?php echo videohub360_render_livestream($livestream_fields, $chat_enabled, $chat_placement, $is_user_logged_in, $user_avatar, $user_display_name, $user_logout_url); ?>
                 </div>
             <?php elseif ($livestream_fields['is_live'] === 'yes' && $livestream_fields['stream_stopped'] === 'yes'): ?>
