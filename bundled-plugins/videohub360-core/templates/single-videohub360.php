@@ -215,11 +215,11 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                 <div class="videohub360-video-player" id="videohub360-video-player-root">
                     <div class="videohub360-static-poster-wrap" id="videohub360-static-poster-wrap">
                         <?php if ($poster): ?>
-                            <img src="<?php echo esc_url($poster); ?>" alt="Video Poster" class="videohub360-static-poster-img" />
+                            <img src="<?php echo esc_url($poster); ?>" alt="<?php echo esc_attr__('Video Poster', 'videohub360'); ?>" class="videohub360-static-poster-img" />
                         <?php else: ?>
                             <div class="videohub360-static-poster-img vh360-no-poster"></div>
                         <?php endif; ?>
-                        <button class="videohub360-static-play-btn" id="videohub360-static-play-btn" aria-label="Play video">
+                        <button class="videohub360-static-play-btn" id="videohub360-static-play-btn" aria-label="<?php esc_attr_e('Play video', 'videohub360'); ?>">
                             <svg viewBox="0 0 72 72" aria-hidden="true">
                                 <polygon points="28,20 54,36 28,52"/>
                             </svg>
@@ -232,22 +232,22 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                          data-ad-new-tab="<?php echo esc_attr($ad_click_urls['new_tab']); ?>"
                          data-tracking-enabled="<?php echo esc_attr($ad_click_urls['tracking_enabled']); ?>"
                          data-post-id="<?php echo esc_attr(get_the_ID()); ?>">
-                        <div class="videohub360-ad-label" id="videohub360-ad-label">Advertisement</div>
+                        <div class="videohub360-ad-label" id="videohub360-ad-label"><?php esc_html_e('Advertisement', 'videohub360'); ?></div>
                         <span id="videohub360-ad-skip-msg"></span>
-                        <button class="videohub360-ad-skip-btn" id="videohub360-ad-skip-btn" type="button">Skip Ad</button>
+                        <button class="videohub360-ad-skip-btn" id="videohub360-ad-skip-btn" type="button"><?php esc_html_e('Skip Ad', 'videohub360'); ?></button>
                         <?php if (!empty($ad_click_urls['preroll'])): ?>
-                        <div class="videohub360-ad-click-overlay" tabindex="0" role="button" aria-label="Click to visit advertiser">
+                        <div class="videohub360-ad-click-overlay" tabindex="0" role="button" aria-label="<?php esc_attr_e('Click to visit advertiser', 'videohub360'); ?>">
                             <div class="videohub360-ad-click-indicator">
-                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="margin-right: 6px;">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="videohub360-ad-click-icon">
                                     <path d="M8 0C3.6 0 0 3.6 0 8s3.6 8 8 8 8-3.6 8-8-3.6-8-8-8zm1 12H7V7h2v5zm0-6H7V4h2v2z"/>
                                 </svg>
-                                Learn More
+                                <?php esc_html_e('Learn More', 'videohub360'); ?>
                             </div>
                         </div>
                         <?php endif; ?>
                         <video id="videohub360-ad-video" width="100%" height="auto" controls playsinline poster="<?php echo esc_url($poster); ?>">
                             <source src="<?php echo esc_url($ad_video_url); ?>" type="video/mp4">
-                            Your browser does not support the video tag.
+                            <?php esc_html_e('Your browser does not support the video tag.', 'videohub360'); ?>
                         </video>
                     </div>
                     <?php endif; ?>
@@ -261,7 +261,7 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                                 if (current_user_can('unfiltered_html')) {
                                     echo $custom_html;
                                 } else {
-                                    // Allow common embed elements (iframes, scripts, etc.) for video embeds
+                                    // Allow common embed elements (iframes, etc.) for video embeds
                                     $allowed_embed_html = array(
                                         'iframe' => array(
                                             'src' => true,
@@ -279,12 +279,6 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                                             'name' => true,
                                             'scrolling' => true,
                                             'sandbox' => true,
-                                        ),
-                                        'script' => array(
-                                            'src' => true,
-                                            'type' => true,
-                                            'async' => true,
-                                            'defer' => true,
                                         ),
                                         'div' => array(
                                             'class' => true,
@@ -304,6 +298,7 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                                             'target' => true,
                                         ),
                                     );
+                                    $allowed_embed_html = apply_filters('videohub360_allowed_custom_embed_html', $allowed_embed_html, get_the_ID());
                                     echo wp_kses($custom_html, $allowed_embed_html);
                                 }
                                 ?>
@@ -311,7 +306,7 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                         <?php else: ?>
                             <video id="videohub360-main-video" width="100%" height="auto" controls playsinline poster="<?php echo esc_url($poster); ?>">
                                 <source src="<?php echo esc_url($video_url); ?>" type="video/mp4">
-                                Your browser does not support the video tag.
+                                <?php esc_html_e('Your browser does not support the video tag.', 'videohub360'); ?>
                             </video>
                         <?php endif; ?>
                     </div>
@@ -319,7 +314,7 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                 
                 <!-- Hidden ad data for JavaScript - only for regular videos (not custom HTML) and only when ads exist -->
                 <?php if (!$custom_html && $has_any_ads): ?>
-                <div style="display: none;">
+                <div class="videohub360-ad-hidden-data" hidden>
                     <?php if (isset($active_ads['midroll'])): ?>
                     <span id="videohub360-midroll-ad-source"><?php echo esc_url($midroll_ad_url); ?></span>
                     <span id="videohub360-midroll-timing"><?php echo esc_attr($midroll_timing); ?></span>
@@ -372,7 +367,7 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                     <svg viewBox="0 0 24 24" width="20" height="20">
                         <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
                     </svg>
-                    Save
+                    <?php esc_html_e('Save', 'videohub360'); ?>
                 </button>
                 
                 <!-- Share Button -->
@@ -380,7 +375,7 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                     <svg viewBox="0 0 24 24">
                         <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.50-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/>
                     </svg>
-                    Share
+                    <?php esc_html_e('Share', 'videohub360'); ?>
                 </button>
                 
                 <?php if ($chat_enabled && $chat_placement === 'popup'): ?>
@@ -389,7 +384,7 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                     <svg viewBox="0 0 24 24">
                         <path d="M12,3C6.5,3 2,6.58 2,11C2.05,13.15 3.06,15.17 4.75,16.5C4.75,17.1 4.33,18.67 2,21C4.37,20.89 6.64,20 8.47,18.5C9.61,18.83 10.81,19 12,19C17.5,19 22,15.42 22,11C22,6.58 17.5,3 12,3M12,17C7.58,17 4,14.31 4,11C4,7.69 7.58,5 12,5C16.42,5 20,7.69 20,11C20,14.31 16.42,17 12,17Z"/>
                     </svg>
-                    Chat
+                    <?php esc_html_e('Chat', 'videohub360'); ?>
                 </button>
                 <?php endif; ?>
             </div>
@@ -413,19 +408,19 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                                 <?php endif; ?>
                                 <?php if ($livestream_fields['viewer_count'] === 'yes'): ?>
                                     <span class="videohub360-live-viewers">
-                                        <span id="vh360-viewer-count-meta">--</span> watching now
+                                        <span id="vh360-viewer-count-meta">--</span> <?php esc_html_e('watching now', 'videohub360'); ?>
                                     </span>
                                 <?php endif; ?>
                             </div>
                             <div class="videohub360-views-info">
-                                <span class="videohub360-views-count"><?php echo esc_html( $views_display ) . ' views'; ?></span>
+                                <span class="videohub360-views-count"><?php printf(esc_html__('%s views', 'videohub360'), esc_html($views_display)); ?></span>
                                 <?php if (!empty($livestream_fields['live_start_time'])): ?>
                                     <span class="videohub360-stream-duration" id="vh360-stream-started-meta" data-start="<?php echo esc_attr($livestream_fields['live_start_time']); ?>"></span>
                                 <?php endif; ?>
                             </div>
                         <?php elseif ($livestream_fields['is_live'] === 'yes'): ?>
                             <div class="videohub360-views-info">
-                                <span class="videohub360-views-count"><?php echo esc_html( $views_display ) . ' views'; ?></span>
+                                <span class="videohub360-views-count"><?php printf(esc_html__('%s views', 'videohub360'), esc_html($views_display)); ?></span>
                                 <?php if (!empty($livestream_fields['live_start_time'])): ?>
                                     <span class="videohub360-stream-duration" id="vh360-stream-ended-meta" data-start="<?php echo esc_attr($livestream_fields['live_start_time']); ?>"></span>
                                 <?php else: ?>
@@ -434,7 +429,7 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                             </div>
                         <?php else: ?>
                             <div class="videohub360-views-info">
-                                <span class="videohub360-views-count"><?php echo esc_html( $views_display ) . ' views'; ?></span>
+                                <span class="videohub360-views-count"><?php printf(esc_html__('%s views', 'videohub360'), esc_html($views_display)); ?></span>
                                 <span class="videohub360-published-date"><?php echo esc_html( $published_date ); ?></span>
                             </div>
                         <?php endif; ?>
@@ -443,7 +438,7 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                 <div class="videohub360-meta-taxonomies">
                     <?php if (!empty($videohub360_categories) && !is_wp_error($videohub360_categories)): ?>
                         <span>
-                            <strong>Category:</strong>
+                            <strong><?php esc_html_e('Category:', 'videohub360'); ?></strong>
                             <?php
                             $cat_links = array();
                             foreach ($videohub360_categories as $term) {
@@ -479,7 +474,7 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                     <?php endif; ?>
                     <?php if (!empty($videohub360_locations) && !is_wp_error($videohub360_locations)): ?>
                         <span>
-                            <strong>Location:</strong>
+                            <strong><?php esc_html_e('Location:', 'videohub360'); ?></strong>
                             <?php
                             $location_links = array();
                             foreach ($videohub360_locations as $term) {
@@ -594,7 +589,7 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                     if (comments_open() || get_comments_number()) {
                         comments_template();
                     } else {
-                        echo '<p>Comments are closed.</p>';
+                        echo '<p>' . esc_html__('Comments are closed.', 'videohub360') . '</p>';
                     }
                     ?>
                 </div>

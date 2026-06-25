@@ -2047,6 +2047,10 @@
         }
 
         /* Learn More indicator */
+        .videohub360-ad-click-icon {
+            margin-right: 6px;
+        }
+
         .videohub360-ad-click-indicator {
             background: rgba(0, 0, 0, 0.85);
             color: var(--vh360-color-white);
