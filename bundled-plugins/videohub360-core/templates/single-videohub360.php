@@ -601,70 +601,7 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
             <?php endif; ?>
         </div>
         <?php if ($video_layout !== 'full-width'): ?>
-        <aside class="videohub360-sidebar">
-            <?php if ($chat_enabled && $chat_placement === 'sidebar'): ?>
-                <div class="videohub360-sidebar-chat">
-                    <?php echo videohub360_render_chat_container('inline', $is_user_logged_in, $user_avatar, $user_display_name, $user_logout_url, $can_moderate, $livestream_fields); ?>
-                </div>
-            <?php endif; ?>
-            <h2><?php echo videohub360_get_sidebar_title(get_the_ID()); ?></h2>
-            <ul>
-            <?php
-            // Use global helper function for sidebar query
-            $videohub360_query = videohub360_build_sidebar_query(get_the_ID());
-            
-            if ( $videohub360_query->have_posts() ) :
-                while ( $videohub360_query->have_posts() ) : $videohub360_query->the_post();
-                    $sidebar_views = get_post_meta( get_the_ID(), '_videohub360_post_views_count', true );
-                    $sidebar_views = $sidebar_views ? $sidebar_views : 0;
-                    $sidebar_views_display = number_format( $sidebar_views );
-            ?>
-                    <li>
-    <a href="<?php the_permalink(); ?>" style="position:relative;display:block;">
-        <?php 
-        $is_live = get_post_meta(get_the_ID(), '_vh360_is_live', true);
-        $stream_stopped = get_post_meta(get_the_ID(), '_vh360_stream_stopped', true);
-        $live_badge = get_post_meta(get_the_ID(), '_vh360_live_badge', true);
-        $badge_text = get_post_meta(get_the_ID(), '_vh360_badge_text', true) ?: 'LIVE';
-        $badge_color = get_post_meta(get_the_ID(), '_vh360_badge_color', true) ?: '#e53935';
-        $show_live_badge = ($is_live === 'yes' && $stream_stopped !== 'yes' && $live_badge !== 'no');
-
-        if ( has_post_thumbnail() ) {
-            the_post_thumbnail( 'medium', array(
-                'class' => 'videohub360-sidebar-thumbnail',
-                'alt' => get_the_title(),
-            ));
-        } else { ?>
-            <div class="videohub360-sidebar-thumbnail"></div>
-        <?php } 
-        if ($show_live_badge): ?>
-            <span class="videohub360-live-badge videohub360-live-badge-sidebar" data-badge-color="<?php echo esc_attr($badge_color); ?>">
-                <?php echo esc_html($badge_text); ?>
-            </span>
-        <?php endif; ?>
-    </a>
-    <div class="videohub360-sidebar-info">
-        <a href="<?php the_permalink(); ?>" class="videohub360-sidebar-title"><?php the_title(); ?></a>
-        <?php 
-        // videohub360_render_author_badge() handles all escaping internally
-        echo videohub360_render_author_badge(get_the_ID(), array(
-            'variant' => 'name_only',
-            'link' => true,
-        )); 
-        ?>
-        <div class="videohub360-sidebar-meta">
-            <?php echo get_the_date(); ?><br>
-            <?php echo esc_html( videohub360_compact_views( $sidebar_views ) ); ?> views
-        </div>
-    </div>
-</li>
-                <?php endwhile;
-                    wp_reset_postdata();
-                else: ?>
-                    <li>No other VideoHub360 videos found.</li>
-                <?php endif; ?>
-                </ul>
-        </aside>
+            <?php echo videohub360_render_single_video_sidebar(get_the_ID(), $chat_enabled, $chat_placement, $is_user_logged_in, $user_avatar, $user_display_name, $user_logout_url, $can_moderate, $livestream_fields); ?>
         <?php endif; // End if video layout is not full-width ?>
     </div>
 

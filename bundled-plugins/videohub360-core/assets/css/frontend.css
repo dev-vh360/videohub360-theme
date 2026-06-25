@@ -206,6 +206,11 @@
             gap: 16px;
             align-items: flex-start;
         }
+        .videohub360-main-wrapper > .videohub360-sidebar .videohub360-sidebar-thumb-link {
+            position: relative;
+            display: block;
+        }
+
         .videohub360-main-wrapper > .videohub360-sidebar .videohub360-sidebar-thumbnail {
             width: 160px;
             height: 90px;
