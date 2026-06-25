@@ -31,7 +31,13 @@ if (!get_option('users_can_register')) {
 // Handle registration errors
 $registration_error = null;
 if (isset($_GET['registration']) && $_GET['registration'] === 'failed') {
-    $error_code = isset($_GET['error']) ? sanitize_text_field($_GET['error']) : 'unknown';
+    if (isset($_GET['vh360_registration_error'])) {
+        $error_code = sanitize_key(wp_unslash($_GET['vh360_registration_error']));
+    } elseif (isset($_GET['error'])) {
+        $error_code = sanitize_key(wp_unslash($_GET['error']));
+    } else {
+        $error_code = 'unknown';
+    }
     $registration_error = $error_code;
 }
 

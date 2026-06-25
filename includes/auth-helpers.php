@@ -261,7 +261,7 @@ function vh360_handle_registration() {
     // Verify nonce
     if (!wp_verify_nonce($_POST['vh360_register_nonce'], 'vh360_registration')) {
         $error_code = 'nonce_failed';
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
     
@@ -298,48 +298,48 @@ function vh360_handle_registration() {
     // Validate required fields
     if (empty($first_name) || empty($last_name) || empty($username) || empty($email) || empty($password)) {
         $error_code = 'empty_fields';
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
     
     // Validate terms acceptance
     if (!$terms_accepted) {
         $error_code = 'terms_not_accepted';
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
     
     // Validate password length
     if (strlen($password) < 8) {
         $error_code = 'password_too_short';
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
     
     // Validate email
     if (!is_email($email)) {
         $error_code = 'invalid_email';
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
     
     $vh360_invite = vh360_prepare_registration_invite($email, 'general');
     if (is_wp_error($vh360_invite)) {
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $vh360_invite->get_error_code(), 'invite' => isset($_POST['vh360_invite_code']) ? sanitize_text_field(wp_unslash($_POST['vh360_invite_code'])) : ''), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $vh360_invite->get_error_code(), 'invite' => isset($_POST['vh360_invite_code']) ? sanitize_text_field(wp_unslash($_POST['vh360_invite_code'])) : ''), $current_url));
         exit;
     }
 
     // Check if username exists
     if (username_exists($username)) {
         $error_code = 'username_exists';
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
     
     // Check if email exists
     if (email_exists($email)) {
         $error_code = 'email_exists';
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
     
@@ -362,7 +362,7 @@ function vh360_handle_registration() {
     // Check for errors
     if (is_wp_error($user_id)) {
         $error_code = $user_id->get_error_code();
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
 
@@ -370,7 +370,7 @@ function vh360_handle_registration() {
     if (is_wp_error($vh360_invite_acceptance)) {
         require_once ABSPATH . 'wp-admin/includes/user.php';
         wp_delete_user($user_id);
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $vh360_invite_acceptance->get_error_code(), 'invite' => isset($vh360_invite['code']) ? sanitize_text_field($vh360_invite['code']) : ''), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $vh360_invite_acceptance->get_error_code(), 'invite' => isset($vh360_invite['code']) ? sanitize_text_field($vh360_invite['code']) : ''), $current_url));
         exit;
     }
 
@@ -443,7 +443,7 @@ function vh360_handle_account_type_registration() {
     // Verify nonce
     if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['vh360_account_type_register_nonce'])), 'vh360_account_type_register')) {
         $error_code = 'nonce_failed';
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
     
@@ -453,7 +453,7 @@ function vh360_handle_account_type_registration() {
     
     if (!in_array($account_type, $valid_types, true)) {
         $error_code = 'invalid_account_type';
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
     
@@ -468,49 +468,49 @@ function vh360_handle_account_type_registration() {
     // Validate required fields
     if (empty($first_name) || empty($last_name) || empty($username) || empty($email) || empty($password)) {
         $error_code = 'empty_fields';
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
     
     // Validate terms acceptance
     if (!$terms_accepted) {
         $error_code = 'terms_not_accepted';
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
     
     // Validate password length
     if (strlen($password) < 8) {
         $error_code = 'password_too_short';
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
     
     // Validate email
     if (!is_email($email)) {
         $error_code = 'invalid_email';
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
     
     $vh360_registration_context = in_array($account_type, array('client', 'professional'), true) ? $account_type : 'general';
     $vh360_invite = vh360_prepare_registration_invite($email, $vh360_registration_context);
     if (is_wp_error($vh360_invite)) {
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $vh360_invite->get_error_code(), 'invite' => isset($_POST['vh360_invite_code']) ? sanitize_text_field(wp_unslash($_POST['vh360_invite_code'])) : ''), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $vh360_invite->get_error_code(), 'invite' => isset($_POST['vh360_invite_code']) ? sanitize_text_field(wp_unslash($_POST['vh360_invite_code'])) : ''), $current_url));
         exit;
     }
 
     // Check if username exists
     if (username_exists($username)) {
         $error_code = 'username_exists';
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
     
     // Check if email exists
     if (email_exists($email)) {
         $error_code = 'email_exists';
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
     
@@ -549,7 +549,7 @@ function vh360_handle_account_type_registration() {
     // Check for errors
     if (is_wp_error($user_id)) {
         $error_code = $user_id->get_error_code();
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
     
@@ -557,7 +557,7 @@ function vh360_handle_account_type_registration() {
     if (is_wp_error($vh360_invite_acceptance)) {
         require_once ABSPATH . 'wp-admin/includes/user.php';
         wp_delete_user($user_id);
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $vh360_invite_acceptance->get_error_code(), 'invite' => isset($vh360_invite['code']) ? sanitize_text_field($vh360_invite['code']) : ''), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $vh360_invite_acceptance->get_error_code(), 'invite' => isset($vh360_invite['code']) ? sanitize_text_field($vh360_invite['code']) : ''), $current_url));
         exit;
     }
 
@@ -662,7 +662,7 @@ function vh360_handle_instructor_registration() {
     // Verify nonce
     if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['vh360_instructor_register_nonce'])), 'vh360_instructor_register')) {
         $error_code = 'nonce_failed';
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
 
@@ -672,7 +672,7 @@ function vh360_handle_instructor_registration() {
 
     if ('creator' !== $account_type || 'instructor' !== $registration_intent) {
         $error_code = 'invalid_account_type';
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
 
@@ -687,48 +687,48 @@ function vh360_handle_instructor_registration() {
     // Validate required fields
     if (empty($first_name) || empty($last_name) || empty($username) || empty($email) || empty($password)) {
         $error_code = 'empty_fields';
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
 
     // Validate terms acceptance
     if (!$terms_accepted) {
         $error_code = 'terms_not_accepted';
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
 
     // Validate password length
     if (strlen($password) < 8) {
         $error_code = 'password_too_short';
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
 
     // Validate email
     if (!is_email($email)) {
         $error_code = 'invalid_email';
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
 
     $vh360_invite = vh360_prepare_registration_invite($email, 'instructor');
     if (is_wp_error($vh360_invite)) {
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $vh360_invite->get_error_code(), 'invite' => isset($_POST['vh360_invite_code']) ? sanitize_text_field(wp_unslash($_POST['vh360_invite_code'])) : ''), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $vh360_invite->get_error_code(), 'invite' => isset($_POST['vh360_invite_code']) ? sanitize_text_field(wp_unslash($_POST['vh360_invite_code'])) : ''), $current_url));
         exit;
     }
 
     // Check if username exists
     if (username_exists($username)) {
         $error_code = 'username_exists';
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
 
     // Check if email exists
     if (email_exists($email)) {
         $error_code = 'email_exists';
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
 
@@ -753,7 +753,7 @@ function vh360_handle_instructor_registration() {
     // Check for errors
     if (is_wp_error($user_id)) {
         $error_code = $user_id->get_error_code();
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $error_code), $current_url));
         exit;
     }
 
@@ -761,7 +761,7 @@ function vh360_handle_instructor_registration() {
     if (is_wp_error($vh360_invite_acceptance)) {
         require_once ABSPATH . 'wp-admin/includes/user.php';
         wp_delete_user($user_id);
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $vh360_invite_acceptance->get_error_code(), 'invite' => isset($vh360_invite['code']) ? sanitize_text_field($vh360_invite['code']) : ''), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'vh360_registration_error' => $vh360_invite_acceptance->get_error_code(), 'invite' => isset($vh360_invite['code']) ? sanitize_text_field($vh360_invite['code']) : ''), $current_url));
         exit;
     }
 
