@@ -72,6 +72,7 @@ class VideoHub360_Core {
         // Load helper functions
         require_once VIDEOHUB360_INCLUDES_DIR . 'helpers/livestream-messages.php';
         require_once VIDEOHUB360_INCLUDES_DIR . 'helpers/course-access-helpers.php';
+        require_once VIDEOHUB360_INCLUDES_DIR . 'helpers/video-ad-helpers.php';
         
         // Load component classes
         require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-post-types.php';
