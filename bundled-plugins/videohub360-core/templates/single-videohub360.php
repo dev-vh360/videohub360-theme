@@ -238,7 +238,7 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                         <?php if (!empty($ad_click_urls['preroll'])): ?>
                         <div class="videohub360-ad-click-overlay" tabindex="0" role="button" aria-label="<?php esc_attr_e('Click to visit advertiser', 'videohub360'); ?>">
                             <div class="videohub360-ad-click-indicator">
-                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="videohub360-ad-click-icon">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="videohub360-ad-click-icon" aria-hidden="true">
                                     <path d="M8 0C3.6 0 0 3.6 0 8s3.6 8 8 8 8-3.6 8-8-3.6-8-8-8zm1 12H7V7h2v5zm0-6H7V4h2v2z"/>
                                 </svg>
                                 <?php esc_html_e('Learn More', 'videohub360'); ?>
