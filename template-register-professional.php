@@ -112,6 +112,7 @@ get_header();
                             'invite_revoked' => __('This invite has been revoked.', 'videohub360-theme'),
                             'invite_used' => __('This invite has already been used.', 'videohub360-theme'),
                             'invite_email_mismatch' => __('This invite is locked to a different email address.', 'videohub360-theme'),
+                            'invite_not_accepted' => __('Invite acceptance failed. Please request a new invite and try again.', 'videohub360-theme'),
                             'unknown' => __('Registration failed. Please try again.', 'videohub360-theme'),
                         );
                         

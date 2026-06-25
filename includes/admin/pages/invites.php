@@ -2,10 +2,17 @@
 if (!defined('ABSPATH')) { exit; }
 if (isset($_POST['vh360_admin_revoke_invite_submit'])) {
     check_admin_referer('vh360_admin_revoke_invite', 'vh360_admin_invite_nonce');
-    if (function_exists('vh360_revoke_invite')) {
-        vh360_revoke_invite(absint($_POST['invite_id']), get_current_user_id());
+    $revoke_result = function_exists('vh360_revoke_invite')
+        ? vh360_revoke_invite(absint($_POST['invite_id']), get_current_user_id())
+        : new WP_Error('invite_unavailable', __('Invite management is unavailable.', 'videohub360-theme'));
+
+    if (is_wp_error($revoke_result)) {
+        echo '<div class="notice notice-error"><p>' . esc_html($revoke_result->get_error_message()) . '</p></div>';
+    } elseif ($revoke_result) {
+        echo '<div class="notice notice-success"><p>' . esc_html__('Invite revoked.', 'videohub360-theme') . '</p></div>';
+    } else {
+        echo '<div class="notice notice-error"><p>' . esc_html__('Invite could not be revoked.', 'videohub360-theme') . '</p></div>';
     }
-    echo '<div class="notice notice-success"><p>' . esc_html__('Invite revoked.', 'videohub360-theme') . '</p></div>';
 }
 $options = function_exists('vh360_get_invite_options') ? vh360_get_invite_options() : array();
 $status = isset($_GET['status']) ? sanitize_key(wp_unslash($_GET['status'])) : '';
