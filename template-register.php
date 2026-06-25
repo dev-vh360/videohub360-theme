@@ -137,6 +137,12 @@ for ($i = 1; $i <= 2; $i++) {
                             'nonce_failed' => __('Security check failed. Please try again.', 'videohub360-theme'),
                             'password_too_short' => __('Password must be at least 8 characters long.', 'videohub360-theme'),
                             'terms_not_accepted' => __('You must accept the Terms of Service and Privacy Policy.', 'videohub360-theme'),
+                            'invite_missing' => __('Please enter your invite code.', 'videohub360-theme'),
+                            'invite_invalid' => __('Invalid invite code.', 'videohub360-theme'),
+                            'invite_expired' => __('This invite has expired.', 'videohub360-theme'),
+                            'invite_revoked' => __('This invite has been revoked.', 'videohub360-theme'),
+                            'invite_used' => __('This invite has already been used.', 'videohub360-theme'),
+                            'invite_email_mismatch' => __('This invite is locked to a different email address.', 'videohub360-theme'),
                             'unknown' => __('Registration failed. Please try again.', 'videohub360-theme'),
                         );
                         
@@ -240,6 +246,8 @@ for ($i = 1; $i <= 2; $i++) {
                             </small>
                         </div>
                         
+                        <?php get_template_part('template-parts/auth/invite-code-field'); ?>
+
                         <div class="vh360-auth-field vh360-auth-checkbox">
                             <label for="vh360-terms">
                                 <input 

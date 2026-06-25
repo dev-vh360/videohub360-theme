@@ -612,3 +612,9 @@
         height: 48px;
     }
 }
+
+/* Invite-only registration field */
+.vh360-invite-code-field .vh360-auth-hint {
+    display: block;
+    margin-top: 0.35rem;
+}

@@ -172,6 +172,13 @@ get_header();
                     <?php get_template_part('template-parts/dashboard/playlists'); ?>
                 </div>
                 
+                <!-- Invites Tab -->
+                <?php if (function_exists('vh360_user_can_create_invites') && vh360_user_can_create_invites($current_user_id)) : ?>
+                <div id="invites" class="vh360-dashboard-tab-content">
+                    <?php get_template_part('template-parts/dashboard/invites'); ?>
+                </div>
+                <?php endif; ?>
+
                 <!-- Settings Tab -->
                 <div id="settings" class="vh360-dashboard-tab-content">
                     <?php get_template_part('template-parts/dashboard/settings'); ?>

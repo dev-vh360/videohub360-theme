@@ -296,6 +296,16 @@ class VH360_Theme_Admin {
             array($this, 'render_business')
         );
         
+        // Invites submenu
+        add_submenu_page(
+            'vh360-theme',
+            __('Invite Management', 'videohub360-theme'),
+            __('Invites', 'videohub360-theme'),
+            'manage_options',
+            'vh360-theme-invites',
+            array($this, 'render_invites')
+        );
+
         // Membership submenu
         add_submenu_page(
             'vh360-theme',
@@ -386,6 +396,17 @@ class VH360_Theme_Admin {
             ),
         ));
         
+        // Invite settings
+        register_setting('vh360_invite_settings', 'vh360_invite_options', array(
+            'type' => 'array',
+            'sanitize_callback' => array($this, 'sanitize_invite_settings'),
+            'default' => array(
+                'invite_only_registration' => 0,
+                'expiration_days' => 14,
+                'creator_role' => 'members',
+            ),
+        ));
+
         // Profile settings
         register_setting('vh360_profile_settings', 'vh360_profile_options', array(
             'type' => 'array',
@@ -1363,6 +1384,20 @@ class VH360_Theme_Admin {
     }
     
     /**
+     * Sanitize invite settings.
+     */
+    public function sanitize_invite_settings($input) {
+        $input = is_array($input) ? $input : array();
+        $allowed_roles = array('members', 'approved_professionals', 'instructors', 'admins');
+        $creator_role = isset($input['creator_role']) ? sanitize_key($input['creator_role']) : 'members';
+        return array(
+            'invite_only_registration' => !empty($input['invite_only_registration']) ? 1 : 0,
+            'expiration_days' => isset($input['expiration_days']) ? absint($input['expiration_days']) : 14,
+            'creator_role' => in_array($creator_role, $allowed_roles, true) ? $creator_role : 'members',
+        );
+    }
+
+    /**
      * Render dashboard page
      */
     public function render_dashboard() {
@@ -1492,6 +1527,16 @@ class VH360_Theme_Admin {
         include VH360_THEME_DIR . '/includes/admin/pages/business.php';
     }
     
+    /**
+     * Render Invites settings page
+     */
+    public function render_invites() {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You do not have sufficient permissions to access this page.', 'videohub360-theme'));
+        }
+        include VH360_THEME_DIR . '/includes/admin/pages/invites.php';
+    }
+
     /**
      * Render Memberships settings page
      */

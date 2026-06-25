@@ -137,6 +137,37 @@ function vh360_get_registration_bridge_redirect($bridge_args = array()) {
     return '';
 }
 
+
+/**
+ * Read and validate an invite code for registration.
+ *
+ * @param string $email Registering email.
+ * @return array{code:string,invite:mixed}|WP_Error
+ */
+function vh360_prepare_registration_invite($email) {
+    $invite_code = isset($_POST['vh360_invite_code']) ? sanitize_text_field(wp_unslash($_POST['vh360_invite_code'])) : '';
+    if (!function_exists('vh360_validate_invite_for_registration')) {
+        return array('code' => $invite_code, 'invite' => null);
+    }
+    $invite = vh360_validate_invite_for_registration($invite_code, $email);
+    if (is_wp_error($invite)) {
+        return $invite;
+    }
+    return array('code' => $invite_code, 'invite' => $invite);
+}
+
+/**
+ * Mark a prepared invite accepted after user creation.
+ *
+ * @param array $prepared_invite Prepared invite context.
+ * @param int   $user_id New user ID.
+ */
+function vh360_accept_registration_invite($prepared_invite, $user_id) {
+    if (!empty($prepared_invite['code']) && function_exists('vh360_accept_invite')) {
+        vh360_accept_invite($prepared_invite['code'], $user_id);
+    }
+}
+
 /**
  * Handle custom registration form submission
  */
@@ -224,6 +255,12 @@ function vh360_handle_registration() {
         exit;
     }
     
+    $vh360_invite = vh360_prepare_registration_invite($email);
+    if (is_wp_error($vh360_invite)) {
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $vh360_invite->get_error_code(), 'invite' => isset($_POST['vh360_invite_code']) ? sanitize_text_field(wp_unslash($_POST['vh360_invite_code'])) : ''), $current_url));
+        exit;
+    }
+
     // Check if username exists
     if (username_exists($username)) {
         $error_code = 'username_exists';
@@ -260,6 +297,8 @@ function vh360_handle_registration() {
         wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
         exit;
     }
+
+    vh360_accept_registration_invite($vh360_invite, $user_id);
 
     // Store custom field values as user meta
     if (!empty($custom_fields_values)) {
@@ -380,6 +419,12 @@ function vh360_handle_account_type_registration() {
         exit;
     }
     
+    $vh360_invite = vh360_prepare_registration_invite($email);
+    if (is_wp_error($vh360_invite)) {
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $vh360_invite->get_error_code(), 'invite' => isset($_POST['vh360_invite_code']) ? sanitize_text_field(wp_unslash($_POST['vh360_invite_code'])) : ''), $current_url));
+        exit;
+    }
+
     // Check if username exists
     if (username_exists($username)) {
         $error_code = 'username_exists';
@@ -433,6 +478,8 @@ function vh360_handle_account_type_registration() {
         exit;
     }
     
+    vh360_accept_registration_invite($vh360_invite, $user_id);
+
     // Handle professional account setup
     if ($account_type === 'professional') {
         if ($require_approval) {
@@ -584,6 +631,12 @@ function vh360_handle_instructor_registration() {
         exit;
     }
 
+    $vh360_invite = vh360_prepare_registration_invite($email);
+    if (is_wp_error($vh360_invite)) {
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $vh360_invite->get_error_code(), 'invite' => isset($_POST['vh360_invite_code']) ? sanitize_text_field(wp_unslash($_POST['vh360_invite_code'])) : ''), $current_url));
+        exit;
+    }
+
     // Check if username exists
     if (username_exists($username)) {
         $error_code = 'username_exists';
@@ -622,6 +675,8 @@ function vh360_handle_instructor_registration() {
         wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $error_code), $current_url));
         exit;
     }
+
+    vh360_accept_registration_invite($vh360_invite, $user_id);
 
     // If the role is unavailable, grant the minimum instructor capabilities directly.
     if (!get_role('vh360_instructor')) {

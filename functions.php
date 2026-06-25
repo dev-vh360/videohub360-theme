@@ -1094,6 +1094,11 @@ require_once VH360_THEME_DIR . '/includes/navigation/dashboard-tabs.php';
 require_once VH360_THEME_DIR . '/includes/media-helpers.php';
 
 /**
+ * Invite-only registration system
+ */
+require_once VH360_THEME_DIR . '/includes/invites/invite-functions.php';
+
+/**
  * AJAX handlers
  */
 require_once VH360_THEME_DIR . '/includes/ajax-handlers.php';
