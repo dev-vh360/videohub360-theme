@@ -209,7 +209,7 @@
         .videohub360-main-wrapper > .videohub360-sidebar .videohub360-sidebar-thumbnail {
             width: 160px;
             height: 90px;
-            background: var(--vh360-bg-light, #ddd);
+            background: var(--vh360-color-border, #ddd);
             border-radius: 6px;
             object-fit: cover;
             flex-shrink: 0;
@@ -219,7 +219,7 @@
             min-width: 0;
         }
         .videohub360-main-wrapper > .videohub360-sidebar .videohub360-sidebar-title {
-            color: var(--vh360-color-dark, #1a1a1a);
+            color: var(--vh360-color-dark-alt, #1a1a1a);
             font-weight: 600;
             font-size: 1.1em;
             text-decoration: none;
