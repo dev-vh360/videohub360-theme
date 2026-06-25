@@ -1486,6 +1486,15 @@
             padding: 24px;
             text-align: center;
         }
+        .videohub360-shortcode-error {
+            background: var(--vh360-color-warning-bg, #fff3cd);
+            border: 1px solid var(--vh360-color-warning-border, #ffeaa7);
+            padding: 12px;
+            border-radius: var(--vh360-radius-sm, 4px);
+            margin-bottom: 16px;
+            color: var(--vh360-color-warning-text, #856404);
+        }
+
         .videohub360-login-modal-message {
             margin-bottom: 20px;
             color: var(--vh360-color-medium);
