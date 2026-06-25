@@ -103,6 +103,7 @@
 }
 
 .vh360-auth-benefits-title {
+    color: var(--auth-welcome-text);
     font-size: 1.25rem;
     font-weight: 600;
     margin-bottom: 1rem;
