@@ -131,7 +131,9 @@ for ($i = 1; $i <= 2; $i++) {
                     if ($registration_error) {
                         $message = function_exists('vh360_get_registration_error_message')
                             ? vh360_get_registration_error_message($registration_error)
-                            : __('Registration failed. Please try again.', 'videohub360-theme');
+                            : (0 === strpos($registration_error, 'invite_')
+                                ? __('This invite code is not valid. Please check your invite link or contact the person who invited you.', 'videohub360-theme')
+                                : __('Registration failed. Please try again.', 'videohub360-theme'));
                         echo '<div class="vh360-auth-error">' . esc_html($message) . '</div>';
                     }
                     

@@ -152,6 +152,25 @@ function vh360_get_registration_error_message($error_code) {
         return vh360_get_invite_registration_error_message($error_code);
     }
 
+    $invite_error_messages = array(
+        'invite_required' => __('A valid invite is required to create an account.', 'videohub360-theme'),
+        'invite_invalid' => __('This invite code is not valid. Please check your invite link or contact the person who invited you.', 'videohub360-theme'),
+        'invite_expired' => __('This invite has expired. Please ask for a new invite.', 'videohub360-theme'),
+        'invite_revoked' => __('This invite is no longer available. Please ask for a new invite.', 'videohub360-theme'),
+        'invite_used' => __('This invite has already been used.', 'videohub360-theme'),
+        'invite_email_mismatch' => __('This invite is not valid for the email address you entered. Please use the email address that received the invite.', 'videohub360-theme'),
+        'invite_inviter_invalid' => __('This invite is no longer valid. Please ask for a new invite.', 'videohub360-theme'),
+        'invite_acceptance_failed' => __('This invite could not be accepted. Please refresh the page and try again.', 'videohub360-theme'),
+    );
+
+    if (isset($invite_error_messages[$error_code])) {
+        return $invite_error_messages[$error_code];
+    }
+
+    if (0 === strpos($error_code, 'invite_')) {
+        return $invite_error_messages['invite_invalid'];
+    }
+
     $error_messages = array(
         'empty_fields' => __('Please fill in all required fields.', 'videohub360-theme'),
         'invalid_email' => __('Please enter a valid email address.', 'videohub360-theme'),
