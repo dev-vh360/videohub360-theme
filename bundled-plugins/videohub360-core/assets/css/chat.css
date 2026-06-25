@@ -2347,7 +2347,7 @@ body.logged-in.admin-bar .vh360-participant-dropdown {
     }
     
     .vh360-moderation-item[data-source-type="chat"] {
-        border-left: 6px solid var(--vh360-color-black, #000)080;
+        border-left: 6px solid #000080;
     }
     
     .vh360-moderation-item[data-source-type="agora"] {
@@ -2483,7 +2483,7 @@ button.videohub360-chat-menu-option:focus-visible {
 /* Enhanced Emoji Picker Styles - Discord/Slack Inspired */
 .videohub360-emoji-picker {
     position: fixed;
-    background: var(--vh360-color-white, #fff)fff;
+    background: var(--vh360-color-white, #ffffff);
     border: 1px solid #d4d4d8;
     border-radius: var(--vh360-radius-lg);
     box-shadow: 0 16px 32px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08);
@@ -2530,7 +2530,7 @@ button.videohub360-chat-menu-option:focus-visible {
     width: 32px;
     height: 44px;
     border: 1px solid #d4d4d8;
-    background: var(--vh360-color-white, #fff)fff;
+    background: var(--vh360-color-white, #ffffff);
     border-radius: var(--vh360-radius-md);
     cursor: pointer;
     display: flex;
@@ -2562,7 +2562,7 @@ button.videohub360-chat-menu-option:focus-visible {
     outline: none;
     transition: all 0.2s ease;
     box-sizing: border-box;
-    background: var(--vh360-color-white, #fff)fff;
+    background: var(--vh360-color-white, #ffffff);
     color: #374151;
     font-weight: 400;
     line-height: 1.4;
@@ -2576,7 +2576,7 @@ button.videohub360-chat-menu-option:focus-visible {
 .emoji-search-input:focus {
     border-color: #2563eb;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-    background: var(--vh360-color-white, #fff)fff;
+    background: var(--vh360-color-white, #ffffff);
 }
 
 /* Tabs container - Discord style horizontal tabs */
@@ -2641,7 +2641,7 @@ button.videohub360-chat-menu-option:focus-visible {
     flex: 1;
     overflow-y: auto;
     padding: 16px;
-    background: var(--vh360-color-white, #fff)fff;
+    background: var(--vh360-color-white, #ffffff);
 }
 
 /* Custom scrollbar for emoji content */
