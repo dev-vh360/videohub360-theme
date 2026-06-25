@@ -220,7 +220,7 @@ get_header();
                             </small>
                         </div>
                         
-                        <?php get_template_part('template-parts/auth/invite-code-field'); ?>
+                        <?php get_template_part('template-parts/auth/invite-code-field', null, array('context' => 'instructor')); ?>
 
                         <div class="vh360-auth-field vh360-auth-checkbox">
                             <label for="vh360-terms">

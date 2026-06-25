@@ -15,6 +15,7 @@ if (isset($_POST['vh360_admin_revoke_invite_submit'])) {
     }
 }
 $options = function_exists('vh360_get_invite_options') ? vh360_get_invite_options() : array();
+$required_forms = isset($options['required_registration_forms']) && is_array($options['required_registration_forms']) ? $options['required_registration_forms'] : array('general', 'client', 'professional', 'instructor');
 $status = isset($_GET['status']) ? sanitize_key(wp_unslash($_GET['status'])) : '';
 $search = isset($_GET['s']) ? sanitize_text_field(wp_unslash($_GET['s'])) : '';
 global $wpdb;
@@ -31,9 +32,10 @@ $invites = $args ? $wpdb->get_results($wpdb->prepare($sql, $args)) : $wpdb->get_
         <?php settings_fields('vh360_invite_settings'); ?>
         <h2><?php esc_html_e('Invite Settings', 'videohub360-theme'); ?></h2>
         <table class="form-table"><tbody>
-            <tr><th><?php esc_html_e('Invite-only registration', 'videohub360-theme'); ?></th><td><label><input type="checkbox" name="vh360_invite_options[invite_only_registration]" value="1" <?php checked(!empty($options['invite_only_registration'])); ?>> <?php esc_html_e('Require a valid invite code to register.', 'videohub360-theme'); ?></label></td></tr>
+            <tr><th><?php esc_html_e('Invite-only registration', 'videohub360-theme'); ?></th><td><label><input type="checkbox" name="vh360_invite_options[invite_only_registration]" value="1" <?php checked(!empty($options['invite_only_registration'])); ?>> <?php esc_html_e('Enable invite-only registration rules.', 'videohub360-theme'); ?></label></td></tr>
             <tr><th><label for="vh360-invite-expiration-days"><?php esc_html_e('Invite expiration days', 'videohub360-theme'); ?></label></th><td><input id="vh360-invite-expiration-days" type="number" min="0" name="vh360_invite_options[expiration_days]" value="<?php echo esc_attr($options['expiration_days']); ?>"><p class="description"><?php esc_html_e('Use 0 for no expiration.', 'videohub360-theme'); ?></p></td></tr>
             <tr><th><?php esc_html_e('Who can create invites', 'videohub360-theme'); ?></th><td><select name="vh360_invite_options[creator_role]"><?php foreach (array('members'=>__('Logged-in members','videohub360-theme'),'approved_professionals'=>__('Approved professionals','videohub360-theme'),'instructors'=>__('Instructors','videohub360-theme'),'admins'=>__('Administrators only','videohub360-theme')) as $key=>$label) : ?><option value="<?php echo esc_attr($key); ?>" <?php selected($options['creator_role'], $key); ?>><?php echo esc_html($label); ?></option><?php endforeach; ?></select></td></tr>
+            <tr><th><?php esc_html_e('Registration forms requiring invites', 'videohub360-theme'); ?></th><td><p class="description"><?php esc_html_e('Choose which registration forms require a valid email-locked invite code.', 'videohub360-theme'); ?></p><?php foreach (array('general'=>__('General registration','videohub360-theme'),'client'=>__('Client registration','videohub360-theme'),'professional'=>__('Professional registration','videohub360-theme'),'instructor'=>__('Instructor registration','videohub360-theme')) as $key=>$label) : ?><label style="display:block;margin:.35rem 0;"><input type="checkbox" name="vh360_invite_options[required_registration_forms][]" value="<?php echo esc_attr($key); ?>" <?php checked(in_array($key, $required_forms, true)); ?>> <?php echo esc_html($label); ?></label><?php endforeach; ?></td></tr>
         </tbody></table>
         <?php submit_button(); ?>
     </form>

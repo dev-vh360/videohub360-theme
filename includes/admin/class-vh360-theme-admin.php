@@ -404,6 +404,7 @@ class VH360_Theme_Admin {
                 'invite_only_registration' => 0,
                 'expiration_days' => 14,
                 'creator_role' => 'members',
+                'required_registration_forms' => array('general', 'client', 'professional', 'instructor'),
             ),
         ));
 
@@ -1389,11 +1390,23 @@ class VH360_Theme_Admin {
     public function sanitize_invite_settings($input) {
         $input = is_array($input) ? $input : array();
         $allowed_roles = array('members', 'approved_professionals', 'instructors', 'admins');
+        $allowed_forms = array('general', 'client', 'professional', 'instructor');
         $creator_role = isset($input['creator_role']) ? sanitize_key($input['creator_role']) : 'members';
+        $required_forms = array();
+        if (isset($input['required_registration_forms']) && is_array($input['required_registration_forms'])) {
+            foreach ($input['required_registration_forms'] as $form_key) {
+                $form_key = sanitize_key($form_key);
+                if (in_array($form_key, $allowed_forms, true)) {
+                    $required_forms[] = $form_key;
+                }
+            }
+        }
+
         return array(
             'invite_only_registration' => !empty($input['invite_only_registration']) ? 1 : 0,
             'expiration_days' => isset($input['expiration_days']) ? absint($input['expiration_days']) : 14,
             'creator_role' => in_array($creator_role, $allowed_roles, true) ? $creator_role : 'members',
+            'required_registration_forms' => array_values(array_unique($required_forms)),
         );
     }
 

@@ -21,12 +21,33 @@ function vh360_get_invite_options() {
         'invite_only_registration' => 0,
         'expiration_days' => 14,
         'creator_role' => 'members',
+        'required_registration_forms' => array('general', 'client', 'professional', 'instructor'),
     ));
 }
 
 function vh360_invites_enabled() {
     $options = vh360_get_invite_options();
     return !empty($options['invite_only_registration']);
+}
+
+
+function vh360_invite_required_for_registration_context($context = 'general') {
+    if (!vh360_invites_enabled()) {
+        return false;
+    }
+
+    $context = sanitize_key($context ? $context : 'general');
+    $allowed_contexts = array('general', 'client', 'professional', 'instructor');
+    if (!in_array($context, $allowed_contexts, true)) {
+        $context = 'general';
+    }
+
+    $options = vh360_get_invite_options();
+    $required_forms = isset($options['required_registration_forms']) && is_array($options['required_registration_forms'])
+        ? array_map('sanitize_key', $options['required_registration_forms'])
+        : array('general', 'client', 'professional', 'instructor');
+
+    return in_array($context, $required_forms, true);
 }
 
 function vh360_invites_install_table() {
@@ -111,6 +132,9 @@ function vh360_create_invite($inviter_user_id, $invited_email) {
     $invited_email = vh360_normalize_invite_email($invited_email);
     if (!$inviter_user_id || !get_user_by('id', $inviter_user_id) || !is_email($invited_email) || !vh360_user_can_create_invites($inviter_user_id)) {
         return new WP_Error('invalid_invite_request', __('Unable to create invite.', 'videohub360-theme'));
+    }
+    if (email_exists($invited_email)) {
+        return new WP_Error('invite_email_exists', __('This email address already belongs to an existing account.', 'videohub360-theme'));
     }
     $code = vh360_generate_invite_code();
     $inserted = $wpdb->insert(vh360_invites_table_name(), array(

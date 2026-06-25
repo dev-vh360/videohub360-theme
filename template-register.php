@@ -247,7 +247,7 @@ for ($i = 1; $i <= 2; $i++) {
                             </small>
                         </div>
                         
-                        <?php get_template_part('template-parts/auth/invite-code-field'); ?>
+                        <?php get_template_part('template-parts/auth/invite-code-field', null, array('context' => 'general')); ?>
 
                         <div class="vh360-auth-field vh360-auth-checkbox">
                             <label for="vh360-terms">
