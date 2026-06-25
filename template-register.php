@@ -129,25 +129,9 @@ for ($i = 1; $i <= 2; $i++) {
                     <?php
                     // Display registration errors
                     if ($registration_error) {
-                        $error_messages = array(
-                            'empty_fields' => __('Please fill in all required fields.', 'videohub360-theme'),
-                            'invalid_email' => __('Please enter a valid email address.', 'videohub360-theme'),
-                            'username_exists' => __('Username already exists. Please choose another.', 'videohub360-theme'),
-                            'email_exists' => __('Email address is already registered.', 'videohub360-theme'),
-                            'nonce_failed' => __('Security check failed. Please try again.', 'videohub360-theme'),
-                            'password_too_short' => __('Password must be at least 8 characters long.', 'videohub360-theme'),
-                            'terms_not_accepted' => __('You must accept the Terms of Service and Privacy Policy.', 'videohub360-theme'),
-                            'invite_missing' => __('Please enter your invite code.', 'videohub360-theme'),
-                            'invite_invalid' => __('Invalid invite code.', 'videohub360-theme'),
-                            'invite_expired' => __('This invite has expired.', 'videohub360-theme'),
-                            'invite_revoked' => __('This invite has been revoked.', 'videohub360-theme'),
-                            'invite_used' => __('This invite has already been used.', 'videohub360-theme'),
-                            'invite_email_mismatch' => __('This invite is locked to a different email address.', 'videohub360-theme'),
-                            'invite_not_accepted' => __('Invite acceptance failed. Please request a new invite and try again.', 'videohub360-theme'),
-                            'unknown' => __('Registration failed. Please try again.', 'videohub360-theme'),
-                        );
-                        
-                        $message = isset($error_messages[$registration_error]) ? $error_messages[$registration_error] : $error_messages['unknown'];
+                        $message = function_exists('vh360_get_registration_error_message')
+                            ? vh360_get_registration_error_message($registration_error)
+                            : __('Registration failed. Please try again.', 'videohub360-theme');
                         echo '<div class="vh360-auth-error">' . esc_html($message) . '</div>';
                     }
                     

@@ -31,6 +31,23 @@ function vh360_invites_enabled() {
 }
 
 
+
+function vh360_get_invite_registration_error_message($error_code) {
+    $error_code = sanitize_key($error_code);
+    $messages = array(
+        'invite_required' => __('A valid invite is required to create an account.', 'videohub360-theme'),
+        'invite_invalid' => __('This invite code is not valid. Please check your invite link or contact the person who invited you.', 'videohub360-theme'),
+        'invite_expired' => __('This invite has expired. Please ask for a new invite.', 'videohub360-theme'),
+        'invite_revoked' => __('This invite is no longer available. Please ask for a new invite.', 'videohub360-theme'),
+        'invite_used' => __('This invite has already been used.', 'videohub360-theme'),
+        'invite_email_mismatch' => __('This invite is not valid for the email address you entered. Please use the email address that received the invite.', 'videohub360-theme'),
+        'invite_inviter_invalid' => __('This invite is no longer valid. Please ask for a new invite.', 'videohub360-theme'),
+        'invite_acceptance_failed' => __('This invite could not be accepted. Please refresh the page and try again.', 'videohub360-theme'),
+    );
+
+    return isset($messages[$error_code]) ? $messages[$error_code] : __('This invite code is not valid. Please check your invite link or contact the person who invited you.', 'videohub360-theme');
+}
+
 function vh360_invite_required_for_registration_context($context = 'general') {
     if (!vh360_invites_enabled()) {
         return false;
@@ -174,7 +191,7 @@ function vh360_validate_invite_for_registration($code, $email) {
     }
     $code = sanitize_text_field(wp_unslash($code));
     if ('' === $code) {
-        return new WP_Error('invite_missing', __('Please enter your invite code.', 'videohub360-theme'));
+        return new WP_Error('invite_required', __('Please enter your invite code.', 'videohub360-theme'));
     }
     $invite = vh360_get_invite_by_code($code);
     if (!$invite) {
@@ -194,7 +211,7 @@ function vh360_validate_invite_for_registration($code, $email) {
         return new WP_Error('invite_expired', __('This invite has expired.', 'videohub360-theme'));
     }
     if (!get_user_by('id', absint($invite->inviter_user_id))) {
-        return new WP_Error('invite_invalid', __('Invalid invite code.', 'videohub360-theme'));
+        return new WP_Error('invite_inviter_invalid', __('Invalid invite code.', 'videohub360-theme'));
     }
     if (vh360_normalize_invite_email($email) !== vh360_normalize_invite_email($invite->invited_email)) {
         return new WP_Error('invite_email_mismatch', __('This invite is locked to a different email address.', 'videohub360-theme'));
@@ -236,7 +253,7 @@ function vh360_accept_invite($invite_or_id, $new_user_id, $email = '') {
     }
 
     if (!get_user_by('id', absint($fresh_invite->inviter_user_id))) {
-        return new WP_Error('invite_invalid', __('Invalid invite code.', 'videohub360-theme'));
+        return new WP_Error('invite_inviter_invalid', __('Invalid invite code.', 'videohub360-theme'));
     }
 
     $new_user = get_user_by('id', absint($new_user_id));
@@ -256,7 +273,7 @@ function vh360_accept_invite($invite_or_id, $new_user_id, $email = '') {
     ));
 
     if (!$updated) {
-        return new WP_Error('invite_not_accepted', __('Unable to accept invite. Please request a new invite and try again.', 'videohub360-theme'));
+        return new WP_Error('invite_acceptance_failed', __('Unable to accept invite. Please request a new invite and try again.', 'videohub360-theme'));
     }
 
     update_user_meta($new_user_id, '_vh360_invited_by_user_id', absint($fresh_invite->inviter_user_id));

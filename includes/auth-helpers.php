@@ -138,6 +138,36 @@ function vh360_get_registration_bridge_redirect($bridge_args = array()) {
 }
 
 
+
+/**
+ * Get a safe frontend registration error message.
+ *
+ * @param string $error_code Error code from registration redirect.
+ * @return string
+ */
+function vh360_get_registration_error_message($error_code) {
+    $error_code = sanitize_key($error_code ? $error_code : 'unknown');
+
+    if (0 === strpos($error_code, 'invite_') && function_exists('vh360_get_invite_registration_error_message')) {
+        return vh360_get_invite_registration_error_message($error_code);
+    }
+
+    $error_messages = array(
+        'empty_fields' => __('Please fill in all required fields.', 'videohub360-theme'),
+        'invalid_email' => __('Please enter a valid email address.', 'videohub360-theme'),
+        'username_exists' => __('Username already exists. Please choose another.', 'videohub360-theme'),
+        'email_exists' => __('Email address is already registered.', 'videohub360-theme'),
+        'nonce_failed' => __('Security check failed. Please try again.', 'videohub360-theme'),
+        'password_too_short' => __('Password must be at least 8 characters long.', 'videohub360-theme'),
+        'password_mismatch' => __('Passwords do not match. Please try again.', 'videohub360-theme'),
+        'terms_not_accepted' => __('You must accept the Terms of Service and Privacy Policy.', 'videohub360-theme'),
+        'invalid_account_type' => __('Invalid registration type. Please try again.', 'videohub360-theme'),
+        'unknown' => __('Registration failed. Please try again.', 'videohub360-theme'),
+    );
+
+    return isset($error_messages[$error_code]) ? $error_messages[$error_code] : $error_messages['unknown'];
+}
+
 /**
  * Read and validate an invite code for registration.
  *
@@ -180,7 +210,7 @@ function vh360_accept_registration_invite($prepared_invite, $user_id) {
     }
 
     if (!function_exists('vh360_accept_invite')) {
-        return new WP_Error('invite_invalid', __('Invite acceptance is unavailable. Please try again.', 'videohub360-theme'));
+        return new WP_Error('invite_acceptance_failed', __('Invite acceptance is unavailable. Please try again.', 'videohub360-theme'));
     }
 
     $email = isset($prepared_invite['email']) ? $prepared_invite['email'] : '';
@@ -321,7 +351,7 @@ function vh360_handle_registration() {
     if (is_wp_error($vh360_invite_acceptance)) {
         require_once ABSPATH . 'wp-admin/includes/user.php';
         wp_delete_user($user_id);
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $vh360_invite_acceptance->get_error_code()), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $vh360_invite_acceptance->get_error_code(), 'invite' => isset($vh360_invite['code']) ? sanitize_text_field($vh360_invite['code']) : ''), $current_url));
         exit;
     }
 
@@ -508,7 +538,7 @@ function vh360_handle_account_type_registration() {
     if (is_wp_error($vh360_invite_acceptance)) {
         require_once ABSPATH . 'wp-admin/includes/user.php';
         wp_delete_user($user_id);
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $vh360_invite_acceptance->get_error_code()), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $vh360_invite_acceptance->get_error_code(), 'invite' => isset($vh360_invite['code']) ? sanitize_text_field($vh360_invite['code']) : ''), $current_url));
         exit;
     }
 
@@ -712,7 +742,7 @@ function vh360_handle_instructor_registration() {
     if (is_wp_error($vh360_invite_acceptance)) {
         require_once ABSPATH . 'wp-admin/includes/user.php';
         wp_delete_user($user_id);
-        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $vh360_invite_acceptance->get_error_code()), $current_url));
+        wp_safe_redirect(add_query_arg(array('registration' => 'failed', 'error' => $vh360_invite_acceptance->get_error_code(), 'invite' => isset($vh360_invite['code']) ? sanitize_text_field($vh360_invite['code']) : ''), $current_url));
         exit;
     }
 
