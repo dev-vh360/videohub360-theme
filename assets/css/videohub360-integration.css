@@ -22,36 +22,6 @@
 }
 
 /* ==========================================================================
-   Video Player Container
-   ========================================================================== */
-
-.videohub360-video-player {
-    position: relative;
-    width: 100%;
-    background: #000;
-    border-radius: var(--border-radius);
-    overflow: hidden;
-    margin-bottom: 1.5rem;
-    aspect-ratio: 16/9;
-}
-
-/* ==========================================================================
-   Agora Interactive Mode - Aspect Ratio Adaptation
-   ========================================================================== */
-
-/* Desktop: 4:3 aspect ratio for Agora Interactive Mode */
-.videohub360-video-player:has(.vh360-agora-interactive-container) {
-    aspect-ratio: 4/3;
-}
-
-/* Mobile/Tablet: 2:3 aspect ratio for Agora Interactive Mode */
-@media (max-width: 1024px) {
-    .videohub360-video-player:has(.vh360-agora-interactive-container) {
-        aspect-ratio: 2/3;
-    }
-}
-
-/* ==========================================================================
    Video Grid Layout
    ========================================================================== */
 
@@ -197,74 +167,6 @@
 }
 
 /* ==========================================================================
-   Video Sidebar (Related Videos)
-   ========================================================================== */
-
-.videohub360-sidebar {
-    background: var(--bg-light);
-    padding: 1.5rem;
-    border-radius: var(--border-radius);
-}
-
-.videohub360-sidebar h2 {
-    font-size: 1.25rem;
-    margin-bottom: 1rem;
-    color: var(--text-color);
-}
-
-.videohub360-sidebar ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.videohub360-sidebar li {
-    display: flex;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.videohub360-sidebar li:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-    padding-bottom: 0;
-}
-
-.videohub360-sidebar-thumbnail {
-    width: 160px;
-    height: 90px;
-    object-fit: cover;
-    border-radius: 4px;
-    flex-shrink: 0;
-}
-
-.videohub360-sidebar-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.videohub360-sidebar-title {
-    display: block;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text-color);
-    text-decoration: none;
-    line-height: 1.4;
-    margin-bottom: 0.25rem;
-}
-
-.videohub360-sidebar-title:hover {
-    color: var(--primary-color);
-}
-
-.videohub360-sidebar-meta {
-    font-size: 0.75rem;
-    color: var(--text-light);
-}
-
-/* ==========================================================================
    Video Meta Container
    ========================================================================== */
 
@@ -339,11 +241,6 @@
         flex-direction: column;
         align-items: flex-start;
     }
-    
-    .videohub360-sidebar-thumbnail {
-        width: 100px;
-        height: 56px;
-    }
 }
 
 /* ==========================================================================
@@ -373,31 +270,6 @@
         transform: rotate(360deg);
     }
 }
-
-/* ==========================================================================
-   Video Quality Enhancement
-   ========================================================================== */
-
-.videohub360-video-player video,
-.videohub360-video-player iframe,
-.videohub360-video-player embed,
-.videohub360-video-player object {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
-}
-
-/* Ensure video fills container properly */
-.videohub360-custom-embed-container,
-.videohub360-custom-embed-container iframe {
-    width: 100%;
-    height: 100%;
-}
-
 
 /* ==========================================================================
    Live Room Layout (Community Live Rooms)

@@ -102,7 +102,7 @@
     align-items: center;
     gap: 8px;
     padding: 10px 20px;
-    background: #1976d2;
+    background: var(--vh360-color-primary-dark, #1976d2);
     color: white;
     border: none;
     border-radius: var(--vh360-radius-md);
@@ -197,7 +197,7 @@
 .videohub360-chat-indicator {
     width: 8px;
     height: 8px;
-    background: #4CAF50;
+    background: var(--vh360-color-success, #4CAF50);
     border-radius: var(--vh360-radius-full);
     animation: chatPulse 2s infinite;
 }
@@ -328,16 +328,16 @@
     font-style: italic;
     padding: 4px 12px;
     margin: 2px 12px;
-    background: #f9f9f9;
+    background: var(--vh360-bg-light, #f9f9f9);
     border-radius: var(--vh360-radius-sm);
     text-align: center;
 }
 .videohub360-chat-message.system strong {
-    color: #2196F3;
+    color: var(--vh360-color-primary, #2196F3);
     font-weight: bold;
 }
 .videohub360-chat-message.system .vh360-system-amount {
-    color: #4CAF50;
+    color: var(--vh360-color-success, #4CAF50);
     font-weight: bold;
     font-size: 1.2rem;
 }
@@ -358,7 +358,7 @@
     width: 32px;
     height: 32px;
     border: 3px solid rgba(0, 0, 0, 0.1);
-    border-top-color: #1976d2;
+    border-top-color: var(--vh360-color-primary-dark, #1976d2);
     border-radius: 50%;
     animation: vh360-spin 0.8s linear infinite;
 }
@@ -374,7 +374,7 @@
     margin-bottom: 0;
 }
 
-/* Chat avatar styling - MISSING from refactored version */
+/* Chat avatar styling */
 .videohub360-chat-avatar {
     width: 28px;
     height: 28px;
@@ -384,7 +384,7 @@
     margin-right: 8px;
 }
 
-/* Username display styling - MISSING from refactored version */
+/* Username display styling */
 /* High specificity to override aggressive theme styles (e.g., Astra) */
 .videohub360-live-chat .videohub360-chat-messages .videohub360-chat-username-display,
 .videohub360-chat-messages .videohub360-chat-username-display {
@@ -392,7 +392,7 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     margin-right: 4px;
     /* YouTube username colors: green for owner/streamer, blue for others */
-    color: #1976d2;
+    color: var(--vh360-color-primary-dark, #1976d2);
 }
 
 .videohub360-chat-username-display.owner {
@@ -405,7 +405,7 @@
 .videohub360-chat-messages .videohub360-chat-timestamp {
     font-size: 0.75rem;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    color: #909090;
+    color: var(--vh360-color-light-gray, #909090);
     opacity: 0;
     transition: opacity 0.2s;
     margin-left: 8px;
@@ -441,7 +441,7 @@
 }
 .videohub360-chat-badge {
     display: inline-block;
-    background: #e0e0e0;
+    background: var(--vh360-color-border, #e0e0e0);
     color: var(--vh360-color-medium);
     font-size: 0.7rem;
     font-weight: 500;
@@ -456,7 +456,7 @@
     color: var(--vh360-color-white);
 }
 .videohub360-chat-badge.member {
-    background: #4CAF50;
+    background: var(--vh360-color-success, #4CAF50);
     color: var(--vh360-color-white);
 }
 /* Message content with natural text wrapping */
@@ -494,7 +494,7 @@
     transition: background-color 0.1s;
 }
 .videohub360-chat-actions-btn:hover {
-    background: #f0f0f0;
+    background: var(--vh360-bg-dark, #f0f0f0);
     color: var(--vh360-color-dark);
 }
 .videohub360-chat-actions-dropdown {
@@ -524,7 +524,7 @@
     color: var(--vh360-color-dark);
 }
 .videohub360-chat-actions-dropdown button:hover {
-    background: #f5f5f5;
+    background: var(--vh360-bg-medium, #f5f5f5);
 }
 /* Moderation modal */
 .videohub360-moderation-modal {
@@ -556,7 +556,7 @@
 }
 .videohub360-moderation-header {
     padding: 20px;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid var(--vh360-color-border, #e0e0e0);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -572,7 +572,7 @@
 .videohub360-moderation-tabs {
     display: flex;
     margin-bottom: 20px;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid var(--vh360-color-border, #e0e0e0);
 }
 .videohub360-moderation-tab {
     background: none;
@@ -587,12 +587,12 @@
 }
 .videohub360-moderation-tab:hover {
     color: var(--vh360-color-dark);
-    background: #f9f9f9;
+    background: var(--vh360-bg-light, #f9f9f9);
 }
 .videohub360-moderation-tab.active {
     color: #1976D2;
     border-bottom-color: #1976D2;
-    background: #f9f9f9;
+    background: var(--vh360-bg-light, #f9f9f9);
 }
 .videohub360-moderation-panel {
     display: none;
@@ -603,12 +603,12 @@
 .videohub360-moderation-list {
     max-height: 400px;
     overflow-y: auto;
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--vh360-color-border, #e0e0e0);
     border-radius: var(--vh360-radius-sm);
 }
 .videohub360-moderation-item {
     padding: 12px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--vh360-bg-dark, #f0f0f0);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -654,11 +654,11 @@
     background: #C62828;
 }
 .videohub360-moderation-btn.secondary {
-    background: #f0f0f0;
+    background: var(--vh360-bg-dark, #f0f0f0);
     color: var(--vh360-color-medium);
 }
 .videohub360-moderation-btn.secondary:hover {
-    background: #e0e0e0;
+    background: var(--vh360-color-border, #e0e0e0);
     color: var(--vh360-color-dark);
 }
 .videohub360-empty-state {
@@ -676,7 +676,7 @@
 }
 /* Success messages */
 .videohub360-success-message {
-    color: #4CAF50;
+    color: var(--vh360-color-success, #4CAF50);
     background: #f1f8e9;
     padding: 8px 12px;
     border-radius: var(--vh360-radius-sm);
@@ -740,15 +740,15 @@
 /* High contrast mode support */
 @media (prefers-contrast: high) {
     .videohub360-chat-message {
-        border: 1px solid #ccc;
+        border: 1px solid var(--vh360-color-border-light, #ccc);
     }
     
     .videohub360-chat-actions-dropdown {
-        border: 2px solid #333;
+        border: 2px solid var(--vh360-color-dark, #333);
     }
     
     .videohub360-moderation-content {
-        border: 2px solid #333;
+        border: 2px solid var(--vh360-color-dark, #333);
     }
 }
 /* Reduced motion support */
@@ -840,7 +840,7 @@
 .videohub360-chat-login-prompt {
     text-align: center;
     padding: 16px 12px;
-    background: #f8f9fa;
+    background: var(--vh360-bg-lighter, #f8f9fa);
     border: 1px solid #e9ecef;
     border-radius: var(--vh360-radius-md);
     margin-bottom: 8px;
@@ -865,7 +865,7 @@
 }
 
 .videohub360-chat-login-btn:hover {
-    background: #1976d2;
+    background: var(--vh360-color-primary-dark, #1976d2);
 }
 
 /* Chat form layout */
@@ -924,7 +924,7 @@ textarea.videohub360-chat-input::placeholder {
 .videohub360-live-chat .videohub360-chat-form .videohub360-chat-input:disabled,
 #vh360-chat-form .videohub360-chat-input:disabled,
 textarea.videohub360-chat-input:disabled {
-    background: #f5f5f5;
+    background: var(--vh360-bg-medium, #f5f5f5);
     color: var(--vh360-color-light);
     cursor: not-allowed;
 }
@@ -972,7 +972,7 @@ button.videohub360-emoji-btn {
 .videohub360-live-chat .videohub360-chat-form .videohub360-emoji-btn:hover,
 #vh360-chat-form .videohub360-emoji-btn:hover,
 button.videohub360-emoji-btn:hover {
-    background: #f0f0f0;
+    background: var(--vh360-bg-dark, #f0f0f0);
     color: var(--vh360-color-dark);
     border-color: var(--vh360-color-light);
     transform: scale(1.05);
@@ -1017,7 +1017,7 @@ button.videohub360-chat-send-btn {
 .videohub360-live-chat .videohub360-chat-form .videohub360-chat-send-btn:hover,
 #vh360-chat-form .videohub360-chat-send-btn:hover,
 button.videohub360-chat-send-btn:hover {
-    background: #f0f0f0;
+    background: var(--vh360-bg-dark, #f0f0f0);
     color: var(--vh360-color-dark);
     border-color: var(--vh360-color-light);
     transform: scale(1.05);
@@ -1037,7 +1037,7 @@ button.videohub360-chat-send-btn:disabled {
 #vh360-chat-form .videohub360-chat-send-btn:active,
 button.videohub360-chat-send-btn:active {
     transform: scale(0.95);
-    background: #e0e0e0;
+    background: var(--vh360-color-border, #e0e0e0);
 }
 
 /* Chat user info section */
@@ -1046,7 +1046,7 @@ button.videohub360-chat-send-btn:active {
     align-items: center;
     gap: 8px;
     padding: 8px 12px;
-    background: #f8f9fa;
+    background: var(--vh360-bg-lighter, #f8f9fa);
     border-radius: var(--vh360-radius-md);
     font-size: 0.85rem;
     color: var(--vh360-color-medium);
@@ -1072,7 +1072,7 @@ button.videohub360-chat-send-btn:active {
 }
 
 .videohub360-chat-logout-btn {
-    background: #f44336;
+    background: var(--vh360-color-error, #f44336);
     color: var(--vh360-color-white);
     border: none;
     border-radius: var(--vh360-radius-sm);
@@ -1126,7 +1126,7 @@ button.videohub360-chat-send-btn:active {
 
 .videohub360-shortcode-login-form input[type="submit"]:hover,
 .videohub360-shortcode-login-form button[type="submit"]:hover {
-    background: #1976d2;
+    background: var(--vh360-color-primary-dark, #1976d2);
 }
 
 /* Note: Login modal mobile styles are in frontend.css */
@@ -1170,7 +1170,7 @@ button.videohub360-chat-send-btn:active {
 /* Agora-specific styling for moderation panel button */
 #vh360-agora-moderation-panel-btn.videohub360-moderation-panel-btn {
     background: none;
-    border: 1px solid #fff;
+    border: 1px solid var(--vh360-color-white, #fff);
     color: var(--vh360-color-white);
     padding: 6px 12px;
     border-radius: var(--vh360-radius-sm);
@@ -1189,12 +1189,12 @@ button.videohub360-chat-send-btn:active {
 
 #vh360-agora-moderation-panel-btn.videohub360-moderation-panel-btn:hover {
     background: rgba(255,255,255,0.1);
-    border-color: #4CAF50;
+    border-color: var(--vh360-color-success, #4CAF50);
     color: var(--vh360-color-white);
 }
 
 #vh360-agora-moderation-panel-btn.videohub360-moderation-panel-btn:focus {
-    outline: 2px solid #4CAF50;
+    outline: 2px solid var(--vh360-color-success, #4CAF50);
     outline-offset: 2px;
 }
 
@@ -1466,7 +1466,7 @@ button.videohub360-chat-send-btn:active {
 }
 
 .vh360-moderation-retry:hover {
-    background: #1976d2;
+    background: var(--vh360-color-primary-dark, #1976d2);
 }
 
 /* Content Sections */
@@ -1512,7 +1512,7 @@ button.videohub360-chat-send-btn:active {
     color: var(--vh360-color-medium);
     font-style: italic;
     margin: 0;
-    background: #f9f9f9;
+    background: var(--vh360-bg-light, #f9f9f9);
 }
 
 /* Moderation Items */
@@ -1528,7 +1528,7 @@ button.videohub360-chat-send-btn:active {
 }
 
 .vh360-moderation-item:hover {
-    background: #f9f9f9;
+    background: var(--vh360-bg-light, #f9f9f9);
 }
 
 .vh360-moderation-item-header {
@@ -1607,7 +1607,7 @@ button.videohub360-chat-send-btn:active {
 }
 
 .vh360-remove-timeout-btn {
-    background: #ff9800;
+    background: var(--vh360-color-warning, #ff9800);
     color: var(--vh360-color-white);
 }
 
@@ -1657,7 +1657,7 @@ button.videohub360-chat-send-btn:active {
 }
 
 .vh360-moderation-message.error {
-    background: #f44336;
+    background: var(--vh360-color-error, #f44336);
 }
 
 /* Mobile Responsiveness */
@@ -1736,7 +1736,7 @@ button.videohub360-chat-send-btn:active {
 /* High contrast mode support */
 @media (prefers-contrast: high) {
     .vh360-moderation-modal-content {
-        border: 2px solid #000;
+        border: 2px solid var(--vh360-color-black, #000);
     }
     
     .vh360-moderation-item {
@@ -1860,7 +1860,7 @@ button.videohub360-chat-send-btn:active {
 .vh360-participant-dropdown {
     position: fixed;
     background: var(--vh360-bg-white);
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--vh360-color-border, #e0e0e0);
     border-radius: var(--vh360-radius-md);
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     padding: 8px 0;
@@ -1877,7 +1877,7 @@ button.videohub360-chat-send-btn:active {
 #vh360-agora-player:-ms-fullscreen .vh360-participant-dropdown {
     position: fixed;
     background: var(--vh360-bg-white);
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--vh360-color-border, #e0e0e0);
     border-radius: var(--vh360-radius-md);
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     padding: 8px 0;
@@ -1917,7 +1917,7 @@ button.videohub360-chat-send-btn:active {
 
 /* Menu option hover states */
 .vh360-participant-menu-option:hover {
-    background-color: #f5f5f5;
+    background-color: var(--vh360-bg-medium, #f5f5f5);
 }
 
 .vh360-participant-menu-option:active {
@@ -1942,7 +1942,7 @@ button.videohub360-chat-send-btn:active {
 
 /* Modal content container */
 .vh360-moderation-confirm-content {
-    background: #fff;
+    background: var(--vh360-color-white, #fff);
     border-radius: 12px;
     padding: 24px;
     max-width: 400px;
@@ -1960,14 +1960,14 @@ button.videohub360-chat-send-btn:active {
 /* Modal title */
 .vh360-moderation-modal-title {
     margin: 0 0 16px 0;
-    color: #333;
+    color: var(--vh360-color-dark, #333);
     font-size: 18px;
 }
 
 /* Modal message */
 .vh360-moderation-modal-message {
     margin: 0 0 24px 0;
-    color: #666;
+    color: var(--vh360-color-medium, #666);
     line-height: 1.4;
 }
 
@@ -1982,8 +1982,8 @@ button.videohub360-chat-send-btn:active {
 #vh360-confirm-cancel {
     padding: 10px 20px;
     border: 1px solid #ddd;
-    background: #fff;
-    color: #666;
+    background: var(--vh360-color-white, #fff);
+    color: var(--vh360-color-medium, #666);
     border-radius: 6px;
     cursor: pointer;
     font-size: 14px;
@@ -1994,7 +1994,7 @@ button.videohub360-chat-send-btn:active {
 #vh360-confirm-action {
     padding: 10px 20px;
     border: none;
-    color: #fff;
+    color: var(--vh360-color-white, #fff);
     border-radius: 6px;
     cursor: pointer;
     font-size: 14px;
@@ -2008,7 +2008,7 @@ button.videohub360-chat-send-btn:active {
 }
 
 #vh360-confirm-action.vh360-action-ban {
-    background: #f44336;
+    background: var(--vh360-color-error, #f44336);
 }
 
 /* Fullscreen confirmation modal - ensure proper display when inside fullscreen element */
@@ -2030,7 +2030,7 @@ button.videohub360-chat-send-btn:active {
 
 /* Confirmation button hover effects */
 #vh360-confirm-cancel:hover {
-    background: #f5f5f5;
+    background: var(--vh360-bg-medium, #f5f5f5);
     border-color: var(--vh360-color-light);
 }
 
@@ -2101,15 +2101,15 @@ button.videohub360-chat-send-btn:active {
 /* High contrast mode support */
 @media (prefers-contrast: high) {
     .vh360-participant-menu-btn {
-        border: 2px solid #fff;
+        border: 2px solid var(--vh360-color-white, #fff);
     }
     
     .vh360-participant-dropdown {
-        border: 2px solid #000;
+        border: 2px solid var(--vh360-color-black, #000);
     }
     
     .vh360-participant-menu-option {
-        border-bottom: 1px solid #e0e0e0;
+        border-bottom: 1px solid var(--vh360-color-border, #e0e0e0);
     }
     
     .vh360-participant-menu-option:last-child {
@@ -2194,7 +2194,7 @@ body.logged-in.admin-bar .vh360-participant-dropdown {
 .videohub360-main-wrapper.dark-theme .vh360-participant-dropdown {
     background: var(--vh360-bg-dark-theme);
     border-color: var(--vh360-color-border-dark);
-    color: #fff;
+    color: var(--vh360-color-white, #fff);
 }
 
 .videohub360-main-wrapper.dark-theme .vh360-participant-menu-option:hover {
@@ -2212,7 +2212,7 @@ body.logged-in.admin-bar .vh360-participant-dropdown {
 /* Chat moderation sections - blue accent */
 .vh360-moderation-section h4.has-chat-emoji,
 .vh360-moderation-section h4[data-type="chat"] {
-    color: #1976d2;
+    color: var(--vh360-color-primary-dark, #1976d2);
 }
 
 /* Video moderation sections - orange accent */  
@@ -2223,7 +2223,7 @@ body.logged-in.admin-bar .vh360-participant-dropdown {
 
 /* Enhanced moderation item styling for source type distinction */
 .vh360-moderation-item[data-source-type="chat"] {
-    border-left: 4px solid #1976d2;
+    border-left: 4px solid var(--vh360-color-primary-dark, #1976d2);
 }
 
 .vh360-moderation-item[data-source-type="agora"] {
@@ -2296,7 +2296,7 @@ body.logged-in.admin-bar .vh360-participant-dropdown {
 /* Chat count styling */
 #vh360-chat-banned-count,
 #vh360-chat-timeout-count {
-    background: #1976d2;
+    background: var(--vh360-color-primary-dark, #1976d2);
     color: var(--vh360-color-white);
 }
 
@@ -2343,7 +2343,7 @@ body.logged-in.admin-bar .vh360-participant-dropdown {
 /* High contrast mode support */
 @media (prefers-contrast: high) {
     .vh360-moderation-section {
-        border: 2px solid #000;
+        border: 2px solid var(--vh360-color-black, #000);
     }
     
     .vh360-moderation-item[data-source-type="chat"] {
@@ -2430,7 +2430,7 @@ button.videohub360-chat-menu-option {
 .videohub360-chat-message-menu .videohub360-chat-menu-option:focus,
 button.videohub360-chat-menu-option:hover,
 button.videohub360-chat-menu-option:focus {
-    background: #f5f5f5;
+    background: var(--vh360-bg-medium, #f5f5f5);
     outline: none;
 }
 
@@ -2457,7 +2457,7 @@ button.videohub360-chat-menu-option:focus-visible {
 /* High contrast mode support for menu */
 @media (prefers-contrast: high) {
     .videohub360-chat-message-menu {
-        border: 2px solid #000;
+        border: 2px solid var(--vh360-color-black, #000);
     }
     
     .videohub360-live-chat .videohub360-chat-message-menu .videohub360-chat-menu-option:hover,
@@ -2483,7 +2483,7 @@ button.videohub360-chat-menu-option:focus-visible {
 /* Enhanced Emoji Picker Styles - Discord/Slack Inspired */
 .videohub360-emoji-picker {
     position: fixed;
-    background: #ffffff;
+    background: var(--vh360-color-white, #ffffff);
     border: 1px solid #d4d4d8;
     border-radius: var(--vh360-radius-lg);
     box-shadow: 0 16px 32px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08);
@@ -2504,7 +2504,7 @@ button.videohub360-chat-menu-option:focus-visible {
 
 /* Header with tabs - Discord style */
 .emoji-picker-header {
-    background: #f8f9fa;
+    background: var(--vh360-bg-lighter, #f8f9fa);
     border-bottom: 1px solid #e9ecef;
     padding: 16px 16px 0 16px;
 }
@@ -2530,7 +2530,7 @@ button.videohub360-chat-menu-option:focus-visible {
     width: 32px;
     height: 44px;
     border: 1px solid #d4d4d8;
-    background: #ffffff;
+    background: var(--vh360-color-white, #ffffff);
     border-radius: var(--vh360-radius-md);
     cursor: pointer;
     display: flex;
@@ -2562,7 +2562,7 @@ button.videohub360-chat-menu-option:focus-visible {
     outline: none;
     transition: all 0.2s ease;
     box-sizing: border-box;
-    background: #ffffff;
+    background: var(--vh360-color-white, #ffffff);
     color: #374151;
     font-weight: 400;
     line-height: 1.4;
@@ -2576,7 +2576,7 @@ button.videohub360-chat-menu-option:focus-visible {
 .emoji-search-input:focus {
     border-color: #2563eb;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-    background: #ffffff;
+    background: var(--vh360-color-white, #ffffff);
 }
 
 /* Tabs container - Discord style horizontal tabs */
@@ -2641,7 +2641,7 @@ button.videohub360-chat-menu-option:focus-visible {
     flex: 1;
     overflow-y: auto;
     padding: 16px;
-    background: #ffffff;
+    background: var(--vh360-color-white, #ffffff);
 }
 
 /* Custom scrollbar for emoji content */
@@ -2818,7 +2818,7 @@ button.videohub360-chat-menu-option:focus-visible {
 /* High contrast mode support */
 @media (prefers-contrast: high) {
     .videohub360-emoji-picker {
-        border: 2px solid #000;
+        border: 2px solid var(--vh360-color-black, #000);
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
     }
     
@@ -2828,16 +2828,16 @@ button.videohub360-chat-menu-option:focus-visible {
     
     .emoji-tab.active {
         background: var(--vh360-color-black);
-        color: #fff;
+        color: var(--vh360-color-white, #fff);
     }
     
     .emoji-tab.active::after {
-        background: #fff;
+        background: var(--vh360-color-white, #fff);
     }
     
     .emoji-button:hover {
         background: var(--vh360-color-black);
-        color: #fff;
+        color: var(--vh360-color-white, #fff);
     }
     
     .emoji-search-input {
@@ -2954,8 +2954,8 @@ button.videohub360-chat-menu-option:focus-visible {
     justify-content: space-between;
     align-items: center;
     padding: 20px;
-    border-bottom: 1px solid #e0e0e0;
-    background: #f8f9fa;
+    border-bottom: 1px solid var(--vh360-color-border, #e0e0e0);
+    background: var(--vh360-bg-lighter, #f8f9fa);
 }
 
 .private-message-modal-header h3 {
@@ -2998,7 +2998,7 @@ button.videohub360-chat-menu-option:focus-visible {
 
 .private-message-input {
     width: 100%;
-    border: 2px solid #e0e0e0;
+    border: 2px solid var(--vh360-color-border, #e0e0e0);
     border-radius: 6px;
     padding: 12px;
     font-size: 0.95rem;
@@ -3026,8 +3026,8 @@ button.videohub360-chat-menu-option:focus-visible {
     justify-content: flex-end;
     gap: 10px;
     padding: 20px;
-    border-top: 1px solid #e0e0e0;
-    background: #f8f9fa;
+    border-top: 1px solid var(--vh360-color-border, #e0e0e0);
+    background: var(--vh360-bg-lighter, #f8f9fa);
 }
 
 .private-message-cancel-btn,
@@ -3042,7 +3042,7 @@ button.videohub360-chat-menu-option:focus-visible {
 }
 
 .private-message-cancel-btn {
-    background: #e0e0e0;
+    background: var(--vh360-color-border, #e0e0e0);
     color: var(--vh360-color-dark);
 }
 
