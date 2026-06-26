@@ -50,7 +50,7 @@ add_action('admin_init', 'vh360_register_nav_menu_meta_boxes');
  */
 function vh360_get_dashboard_menu_item_definitions() {
     // Use the shared helper with fragment URL format (#tab-id)
-    $definitions = vh360_get_dashboard_surface_item_definitions( 'fragment' );
+    $definitions = vh360_get_dashboard_surface_item_definitions( 'fragment', null, 'menu_builder' );
 
     /**
      * Filter dashboard menu item definitions.

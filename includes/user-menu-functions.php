@@ -559,7 +559,7 @@ function vh360_render_mobile_drawer_menu_meta_box() {
     $_nav_menu_placeholder = 0 > $_nav_menu_placeholder ? $_nav_menu_placeholder - 1 : -1;
     
     // Get drawer menu items from the shared helper (using query URL format)
-    $drawer_menu_items = vh360_get_dashboard_surface_item_definitions( 'query' );
+    $drawer_menu_items = vh360_get_dashboard_surface_item_definitions( 'query', null, 'menu_builder' );
     
     /**
      * Filter mobile drawer items available in meta box
