@@ -240,6 +240,22 @@ function vh360_enqueue_dashboard_assets() {
                 'updating' => $vh360_create_context_is_lesson ? esc_html__('Updating Lesson...', 'videohub360-theme') : esc_html__('Updating Video...', 'videohub360-theme'),
                 'uploadSuccess' => $vh360_create_context_is_lesson ? esc_html__('Lesson video uploaded successfully!', 'videohub360-theme') : esc_html__('Video uploaded successfully!', 'videohub360-theme'),
             ),
+            'tabUrls' => array(
+                'overview'           => function_exists('vh360_get_dashboard_tab_url') ? vh360_get_dashboard_tab_url('overview') : add_query_arg('tab', 'overview'),
+                'videos'             => function_exists('vh360_get_dashboard_tab_url') ? vh360_get_dashboard_tab_url('videos') : add_query_arg('tab', 'videos'),
+                'create-video'       => function_exists('vh360_get_dashboard_tab_url') ? vh360_get_dashboard_tab_url('create-video') : add_query_arg('tab', 'create-video'),
+                'live-rooms'         => function_exists('vh360_get_dashboard_tab_url') ? vh360_get_dashboard_tab_url('live-rooms') : add_query_arg('tab', 'live-rooms'),
+                'create-post'        => function_exists('vh360_get_dashboard_tab_url') ? vh360_get_dashboard_tab_url('create-post') : add_query_arg('tab', 'create-post'),
+                'galleries'          => function_exists('vh360_get_dashboard_tab_url') ? vh360_get_dashboard_tab_url('galleries') : add_query_arg('tab', 'galleries'),
+                'events'             => function_exists('vh360_get_dashboard_tab_url') ? vh360_get_dashboard_tab_url('events') : add_query_arg('tab', 'events'),
+                'bulletins'          => function_exists('vh360_get_dashboard_tab_url') ? vh360_get_dashboard_tab_url('bulletins') : add_query_arg('tab', 'bulletins'),
+                'messages'           => function_exists('vh360_get_dashboard_tab_url') ? vh360_get_dashboard_tab_url('messages') : add_query_arg('tab', 'messages'),
+                'notifications'      => function_exists('vh360_get_dashboard_tab_url') ? vh360_get_dashboard_tab_url('notifications') : add_query_arg('tab', 'notifications'),
+                'push-notifications' => function_exists('vh360_get_dashboard_tab_url') ? vh360_get_dashboard_tab_url('push-notifications') : add_query_arg('tab', 'push-notifications'),
+                'settings'           => function_exists('vh360_get_dashboard_tab_url') ? vh360_get_dashboard_tab_url('settings') : add_query_arg('tab', 'settings'),
+                'giving'             => function_exists('vh360_get_dashboard_tab_url') ? vh360_get_dashboard_tab_url('giving') : add_query_arg('tab', 'giving'),
+                'membership'         => function_exists('vh360_get_dashboard_tab_url') ? vh360_get_dashboard_tab_url('membership') : add_query_arg('tab', 'membership'),
+            ),
             'contentLabels' => array(
                 'isLessonContext' => $vh360_create_context_is_lesson,
                 'deleteConfirm' => $vh360_create_context_is_lesson
@@ -394,14 +410,6 @@ function vh360_enqueue_dashboard_assets() {
                 true
             );
 
-            wp_enqueue_script(
-                'vh360-notification-preferences-script',
-                VH360_THEME_URI . '/assets/js/notification-preferences.js',
-                array('jquery', 'vh360-dashboard-script'),
-                vh360_theme_asset_version('assets/js/notification-preferences.js'),
-                true
-            );
-
             wp_localize_script('vh360-notifications-dashboard-script', 'vh360NotificationsDashboard', array(
                 'ajaxurl' => admin_url('admin-ajax.php'),
                 'nonce' => wp_create_nonce('vh360_notifications'),
@@ -417,6 +425,17 @@ function vh360_enqueue_dashboard_assets() {
                     'confirmClearAll' => esc_html__('Are you sure you want to clear all notifications? This cannot be undone.', 'videohub360-theme'),
                 ),
             ));
+
+        }
+
+        if (vh360_is_dashboard_tab('settings')) {
+            wp_enqueue_script(
+                'vh360-notification-preferences-script',
+                VH360_THEME_URI . '/assets/js/notification-preferences.js',
+                array('jquery', 'vh360-dashboard-script'),
+                vh360_theme_asset_version('assets/js/notification-preferences.js'),
+                true
+            );
 
             wp_localize_script('vh360-notification-preferences-script', 'vh360NotificationPreferences', array(
                 'ajaxurl' => admin_url('admin-ajax.php'),
@@ -448,6 +467,7 @@ function vh360_enqueue_dashboard_assets() {
                     'loadError' => esc_html__('Could not load preferences. Please refresh the page.', 'videohub360-theme'),
                 ),
             ));
+
         }
     }
 }

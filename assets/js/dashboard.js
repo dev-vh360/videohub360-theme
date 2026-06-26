@@ -11,6 +11,44 @@
 (function($) {
     'use strict';
 
+    function getDashboardTabUrl(tabId) {
+        tabId = String(tabId || '').replace(/[^a-zA-Z0-9_-]/g, '');
+
+        if (window.vh360Dashboard && vh360Dashboard.tabUrls && vh360Dashboard.tabUrls[tabId]) {
+            return vh360Dashboard.tabUrls[tabId];
+        }
+
+        var url = new URL(window.location.href);
+        url.hash = '';
+        url.searchParams.set('tab', tabId);
+        return url.toString();
+    }
+
+    function normalizeLegacyDashboardHash() {
+        var hash = window.location.hash ? window.location.hash.replace('#', '') : '';
+
+        if (!hash) {
+            return false;
+        }
+
+        hash = hash.replace(/[^a-zA-Z0-9_-]/g, '');
+        if (!hash) {
+            return false;
+        }
+
+        var params = new URLSearchParams(window.location.search);
+        if (params.has('tab')) {
+            return false;
+        }
+
+        var url = new URL(window.location.href);
+        url.hash = '';
+        url.searchParams.set('tab', hash);
+
+        window.location.replace(url.toString());
+        return true;
+    }
+
     /**
      * Dashboard object
      */
@@ -85,9 +123,8 @@
                 $targetContent.addClass('active');
             }
 
-            // Update URL hash if requested
             if (updateHistory && history.pushState) {
-                history.pushState(null, null, '#' + tabId);
+                history.pushState(null, null, getDashboardTabUrl(tabId));
             }
 
             return true;
@@ -105,7 +142,8 @@
                 var $targetContent = $(document.getElementById(targetId));
 
                 if (!$targetContent.length) {
-                    return true;
+                    window.location.href = getDashboardTabUrl(targetId);
+                    return false;
                 }
 
                 e.preventDefault();
@@ -134,8 +172,7 @@
                 $(document.getElementById(targetId)).addClass('active');
             });
 
-            // Activate tab from URL hash OR query parameter on page load
-            var hash = window.location.hash;
+            // Activate tab from query parameter on page load. Legacy hashes are normalized before init.
             var tabParam = null;
             
             // Get query parameter with fallback for older browsers
@@ -157,9 +194,8 @@
                 }
             }
 
-            // Determine tab ID from hash or query parameter
-            var hashId = hash ? hash.substring(1) : '';
-            var tabId = hashId || tabParam || '';
+            // Determine tab ID from query parameter.
+            var tabId = tabParam || '';
 
             if (tabId) {
                 // Sanitize tabId to only allow alphanumeric, dash, and underscore
@@ -167,13 +203,8 @@
                 
                 // Double-check after sanitization (empty if input contained only invalid chars)
                 if (tabId) {
-                    // Activate the tab without updating history (we're already on this URL)
-                    if (self.activateTab(tabId, false)) {
-                        // Clean up URL if query parameter was used (replace with hash)
-                        if (tabParam && history.replaceState) {
-                            history.replaceState(null, null, '#' + tabId);
-                        }
-                    }
+                    // Activate the tab without updating history (we're already on this URL).
+                    self.activateTab(tabId, false);
                 }
             }
         },
@@ -813,13 +844,9 @@
                             $('#vh360_override_quality').prop('checked', false);
                             $('#vh360-title-count, #vh360-excerpt-count').text('0');
                             
-                            // Redirect to videos tab after short delay
+                            // Redirect to the server-rendered Videos tab after short delay.
                             setTimeout(function() {
-                                self.activateTab('videos', true);
-                                
-                                // Show success notification
-                                var viewLabel = createFormLabels.viewItem || 'View Video';
-                                self.showNotification(response.data.message + ' <a href="' + response.data.permalink + '" target="_blank">' + viewLabel + '</a>', 'success');
+                                window.location.href = getDashboardTabUrl('videos');
                             }, 2000);
                         } else {
                             self.showFormMessage(response.data.message || 'An error occurred. Please try again.', 'error');
@@ -884,9 +911,9 @@
                 
                 // Navigate to create-video tab with edit parameter
                 // Using full page URL with query parameter so PHP can detect edit mode
-                var currentUrl = window.location.pathname;
-                var newUrl = currentUrl + '?tab=create-video&edit=' + videoId;
-                window.location.href = newUrl;
+                var newUrl = new URL(getDashboardTabUrl('create-video'), window.location.origin);
+                newUrl.searchParams.set('edit', videoId);
+                window.location.href = newUrl.toString();
             });
         },
         
@@ -928,16 +955,24 @@
                 var status = $('#vh360-video-status').val() || 'publish';
                 var search = $('#vh360-video-search').val() || '';
                 
-                // Update URL without page reload
-                var newUrl = window.location.pathname + window.location.hash.split('?')[0];
-                if (page > 1 || status !== 'publish' || search) {
-                    var params = [];
-                    if (page > 1) params.push('paged=' + page);
-                    if (status !== 'publish') params.push('video_status=' + encodeURIComponent(status));
-                    if (search) params.push('video_search=' + encodeURIComponent(search));
-                    newUrl += '?' + params.join('&');
+                // Update URL without page reload and preserve the active videos tab.
+                var newUrl = new URL(getDashboardTabUrl('videos'), window.location.origin);
+                if (page > 1) {
+                    newUrl.searchParams.set('paged', page);
+                } else {
+                    newUrl.searchParams.delete('paged');
                 }
-                window.history.pushState({}, '', newUrl);
+                if (status !== 'publish') {
+                    newUrl.searchParams.set('video_status', status);
+                } else {
+                    newUrl.searchParams.delete('video_status');
+                }
+                if (search) {
+                    newUrl.searchParams.set('video_search', search);
+                } else {
+                    newUrl.searchParams.delete('video_search');
+                }
+                window.history.pushState({}, '', newUrl.toString());
                 
                 // Reload videos tab content
                 self.loadVideosTabContent(page, status, search);
@@ -1378,6 +1413,9 @@
 
     // Initialize on document ready
     $(document).ready(function() {
+        if (normalizeLegacyDashboardHash()) {
+            return;
+        }
         VH360Dashboard.init();
         VH360Dashboard.initCreateVideoForm();
     });
