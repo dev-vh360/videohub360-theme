@@ -313,13 +313,15 @@ function videohub360_theme_scripts() {
         vh360_theme_asset_version('assets/css/sidebar-layout.css')
     );
 
-    // Community Menu styles - always enqueue (visibility controlled by body class)
-    wp_enqueue_style(
-        'vh360-community-menu',
-        VH360_THEME_URI . '/assets/css/community-menu.css',
-        array('videohub360-theme-style'),
-        vh360_theme_asset_version('assets/css/community-menu.css')
-    );
+    // Community Menu styles - only load when the community menu is shown.
+    if (function_exists('vh360_show_community_menu') && vh360_show_community_menu()) {
+        wp_enqueue_style(
+            'vh360-community-menu',
+            VH360_THEME_URI . '/assets/css/community-menu.css',
+            array('videohub360-theme-style'),
+            vh360_theme_asset_version('assets/css/community-menu.css')
+        );
+    }
 
     // Mobile-only UX hardening (disable landscape usage overlay, safe areas, etc.)
     // Only enqueue if orientation lock is enabled via Customizer
@@ -350,77 +352,10 @@ function videohub360_theme_scripts() {
         true
     );
 
-    // Enqueue community script for posts and likes
-    wp_enqueue_script(
-        'vh360-community-script',
-        VH360_THEME_URI . '/assets/js/community.js',
-        array('jquery'),
-        vh360_theme_asset_version('assets/js/community.js'),
-        true
-    );
-
-    // Enqueue community uploads CSS (required for lightbox overlay)
-    wp_enqueue_style(
-        'vh360-community-uploads',
-        VH360_THEME_URI . '/assets/css/community-uploads.css',
-        array('videohub360-theme-style'),
-        vh360_theme_asset_version('assets/css/community-uploads.css')
-    );
-
-    wp_enqueue_script(
-        'vh360-mentions-script',
-        VH360_THEME_URI . '/assets/js/vh360-mentions.js',
-        array('jquery'),
-        vh360_theme_asset_version('assets/js/vh360-mentions.js'),
-        true
-    );
-
-    // Localize community script with AJAX data and strings
-    wp_localize_script('vh360-community-script', 'vh360Community', array(
-        'ajaxurl'      => admin_url('admin-ajax.php'),
-        'nonce'        => wp_create_nonce('vh360_like_post'),
-        'shareNonce'   => wp_create_nonce('vh360_share_post'),
-        'commentNonce' => wp_create_nonce('vh360_comment_post'),
-        'mentionNonce' => wp_create_nonce('vh360_user_mentions'),
-        'postActionsNonce'    => wp_create_nonce('vh360_post_actions'),
-        'commentActionsNonce' => wp_create_nonce('vh360_comment_actions'),
-        'currentUserAvatar' => get_avatar_url(get_current_user_id(), array('size' => 28)),
-        'strings'      => array(
-            'error'              => __('An error occurred. Please try again.', 'videohub360-theme'),
-            'shared'             => __('Post shared successfully.', 'videohub360-theme'),
-            'editPostPrompt'     => __('Edit your post:', 'videohub360-theme'),
-            'editCommentPrompt'  => __('Edit your comment:', 'videohub360-theme'),
-            'confirmDeletePost'  => __('Are you sure you want to delete this post?', 'videohub360-theme'),
-            'confirmDeleteComment' => __('Are you sure you want to delete this comment?', 'videohub360-theme'),
-            'photo'              => __('Photo', 'videohub360-theme'),
-            'video'              => __('Video', 'videohub360-theme'),
-            /* translators: 1: file type (Photo or Video), 2: maximum size in MB */
-            'fileTooLarge'       => __('%1$s exceeds maximum size of %2$d MB.', 'videohub360-theme'),
-            'close'              => __('Close', 'videohub360-theme'),
-        ),
-        'i18n' => array(
-            'writeReply' => __('Write a reply...', 'videohub360-theme'),
-            'sendReply'  => __('Send reply', 'videohub360-theme'),
-        ),
-    ));
-
     // Threaded comments script for singular views
     if (is_singular() && comments_open() && get_option('thread_comments')) {
         wp_enqueue_script('comment-reply');
     }
-
-    /*
-     * Additional UI enhancements for the activity feed.
-     *
-     * This stylesheet adds the Explore/My Feed tabs, responsive grid layout for the feed
-     * and sidebar, and styles for the trending topics and recommended profiles widgets.
-     */
-    wp_enqueue_style(
-        'vh360-feed-ui-enhancements',
-        VH360_THEME_URI . '/assets/css/feed-ui-enhancements.css',
-        array(),
-        vh360_theme_asset_version('assets/css/feed-ui-enhancements.css')
-    );
 
     // Live Room stylesheet (conditional - only on Live Room pages)
     global $post;
@@ -436,32 +371,8 @@ function videohub360_theme_scripts() {
         }
     }
 
-    // Profile Fields public display styles (About sections + edit form toggles).
-    wp_enqueue_style(
-        'vh360-profile-fields',
-        VH360_THEME_URI . '/assets/css/profile-fields.css',
-        array('videohub360-theme-style'),
-        vh360_theme_asset_version('assets/css/profile-fields.css')
-    );
-
     // Note: Connections page styles removed - followers/following now integrated into profile mode
     // The separate template-connections.php page is no longer part of core author navigation
-
-    // Enqueue follow system script
-    wp_enqueue_script(
-        'vh360-follow-system',
-        VH360_THEME_URI . '/assets/js/follow-system.js',
-        array('jquery'),
-        vh360_theme_asset_version('assets/js/follow-system.js'),
-        true
-    );
-
-    wp_localize_script('vh360-follow-system', 'vh360Follow', array(
-        'ajaxUrl' => admin_url('admin-ajax.php'),
-        'followText' => __('Follow', 'videohub360-theme'),
-        'unfollowText' => __('Unfollow', 'videohub360-theme'),
-        'errorText' => __('An error occurred. Please try again.', 'videohub360-theme'),
-    ));
 
     // Enqueue notification script for logged-in users
     if (is_user_logged_in()) {
