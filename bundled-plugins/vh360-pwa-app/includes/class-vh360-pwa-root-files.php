@@ -88,13 +88,15 @@ final class VH360_PWA_Root_Files {
 		// and then imports VH360's SW for offline fallback.
 		// Chrome requires some event handlers (notably 'message') to be registered during initial evaluation.
 		// Add a harmless no-op handler before importing OneSignal to avoid warnings.
+		$vh360_sw_url = '/vh360-sw.js?v=' . rawurlencode( (string) vh360_pwa_get_asset_version() );
+
 		$wrapper = "/* VH360 Managed File: OneSignal service worker wrapper */\n" .
 			"self.addEventListener('message', function () {});\n" .
 			"try {\n" .
 			"  importScripts('https://cdn.onesignal.com/sdks/web/" . esc_js( VH360_PWA_ONESIGNAL_SDK_VERSION ) . "/OneSignalSDK.sw.js');\n" .
 			"} catch (e) {}\n" .
 			"try {\n" .
-			"  importScripts('/vh360-sw.js');\n" .
+			"  importScripts('" . esc_js( $vh360_sw_url ) . "');\n" .
 			"} catch (e) {}\n";
 
 		$results = array();

@@ -100,7 +100,7 @@ class VH360_PWA_Admin {
         $url_reset_all    = esc_url( add_query_arg( array( 'vh360_pwa_tool' => 'reset_device' ), $base ) );
 
         if ( ! empty( $_GET['vh360_pwa_assets_regenerated'] ) ) {
-            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'PWA assets regenerated and common caches purged where available.', 'vh360-pwa-app' ) . '</p></div>';
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'PWA assets regenerated, service worker cache version refreshed, root files rewritten, and common caches purged where available.', 'vh360-pwa-app' ) . '</p></div>';
         }
 
         $asset_version = function_exists( 'vh360_pwa_get_asset_version' ) ? vh360_pwa_get_asset_version( $opts ) : 0;
@@ -864,7 +864,7 @@ $manifest_url = esc_url( vh360_pwa_endpoint_url( VH360_PWA_MANIFEST_SLUG ) );
 
 		echo '<tr><th scope="row">' . esc_html__( 'Cache Version', 'vh360-pwa-app' ) . '</th><td>';
 		echo '<input type="text" class="regular-text" name="vh360_pwa_options[cache_version]" value="' . esc_attr( (string) $opts['cache_version'] ) . '">';
-		echo '<p class="description">Bump this when you want to force clients to drop old caches (e.g., change to <code>v2</code>).</p>';
+		echo '<p class="description">Advanced manual cache namespace. Regenerate PWA Assets automatically refreshes the full service worker cache version; change this manually only when you want to force an additional cache reset.</p>';
 		echo '</td></tr>';
 
 		echo '<tr><th scope="row">' . esc_html__( 'Precache Offline Page', 'vh360-pwa-app' ) . '</th><td>';

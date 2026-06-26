@@ -200,6 +200,22 @@ require_once VH360_PWA_APP_DIR . 'includes/appstore/class-vh360-pwa-icon-generat
 require_once VH360_PWA_APP_DIR . 'includes/appstore/class-vh360-pwa-export-package.php';
 require_once VH360_PWA_APP_DIR . 'includes/appstore/class-vh360-pwa-appstore-admin.php';
 
+if ( ! function_exists( 'vh360_pwa_refresh_assets_after_customizer_save' ) ) {
+	/**
+	 * Refresh PWA asset and service worker freshness layers after Customizer saves.
+	 */
+	function vh360_pwa_refresh_assets_after_customizer_save() : void {
+		if ( function_exists( 'vh360_pwa_bump_asset_version' ) ) {
+			vh360_pwa_bump_asset_version();
+		}
+
+		if ( class_exists( 'VH360_PWA_Root_Files' ) ) {
+			VH360_PWA_Root_Files::ensure_root_files();
+		}
+	}
+}
+add_action( 'customize_save_after', 'vh360_pwa_refresh_assets_after_customizer_save' );
+
 if ( ! class_exists( 'VH360_PWA_App' ) ) {
 final class VH360_PWA_App {
 	/** @var VH360_PWA_App */
