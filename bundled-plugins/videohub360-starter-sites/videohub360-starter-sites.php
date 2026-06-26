@@ -34,16 +34,61 @@ define('VH360_STARTER_SITES_ADMIN', VH360_STARTER_SITES_DIR . 'admin/');
  * @param string $relative_path Asset path relative to the plugin root.
  * @return string
  */
-if (!function_exists('vh360_starter_sites_asset_version')) {
-    function vh360_starter_sites_asset_version($relative_path) {
-        $relative_path = ltrim($relative_path, '/');
-        $file_path = VH360_STARTER_SITES_DIR . $relative_path;
+if (!function_exists('vh360_starter_sites_asset_is_debug')) {
+    function vh360_starter_sites_asset_is_debug() {
+        return defined('SCRIPT_DEBUG') && SCRIPT_DEBUG;
+    }
+}
 
-        if (file_exists($file_path)) {
-            return VH360_STARTER_SITES_VERSION . '-' . filemtime($file_path);
+if (!function_exists('vh360_starter_sites_asset_path')) {
+    function vh360_starter_sites_asset_path($relative_path) {
+        $relative_path = ltrim($relative_path, '/');
+        return trailingslashit(VH360_STARTER_SITES_DIR) . $relative_path;
+    }
+}
+
+if (!function_exists('vh360_starter_sites_asset_uri')) {
+    function vh360_starter_sites_asset_uri($relative_path) {
+        $relative_path = ltrim($relative_path, '/');
+        return trailingslashit(VH360_STARTER_SITES_URL) . $relative_path;
+    }
+}
+
+if (!function_exists('vh360_starter_sites_asset_resolve')) {
+    function vh360_starter_sites_asset_resolve($relative_path) {
+        $relative_path = ltrim($relative_path, '/');
+        $selected = $relative_path;
+
+        if (!vh360_starter_sites_asset_is_debug() && preg_match('/\.(css|js)$/', $relative_path)) {
+            $min_relative = preg_replace('/\.(css|js)$/', '.min.$1', $relative_path);
+            if ($min_relative && file_exists(vh360_starter_sites_asset_path($min_relative))) {
+                $selected = $min_relative;
+            }
         }
 
-        return VH360_STARTER_SITES_VERSION;
+        $path = vh360_starter_sites_asset_path($selected);
+        $version = file_exists($path) ? VH360_STARTER_SITES_VERSION . '-' . filemtime($path) : VH360_STARTER_SITES_VERSION;
+
+        return array(
+            'relative_path' => $selected,
+            'path'          => $path,
+            'url'           => vh360_starter_sites_asset_uri($selected),
+            'version'       => $version,
+        );
+    }
+}
+
+if (!function_exists('vh360_starter_sites_asset_url')) {
+    function vh360_starter_sites_asset_url($relative_path) {
+        $asset = vh360_starter_sites_asset_resolve($relative_path);
+        return $asset['url'];
+    }
+}
+
+if (!function_exists('vh360_starter_sites_asset_version')) {
+    function vh360_starter_sites_asset_version($relative_path) {
+        $asset = vh360_starter_sites_asset_resolve($relative_path);
+        return $asset['version'];
     }
 }
 

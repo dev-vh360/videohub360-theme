@@ -34,16 +34,61 @@ define('VIDEOHUB360_VERSION', '1.0.0');
  * @param string $relative_path Asset path relative to the plugin root.
  * @return string
  */
-if (!function_exists('videohub360_asset_version')) {
-    function videohub360_asset_version($relative_path) {
-        $relative_path = ltrim($relative_path, '/');
-        $file_path = VIDEOHUB360_PLUGIN_DIR . $relative_path;
+if (!function_exists('videohub360_asset_is_debug')) {
+    function videohub360_asset_is_debug() {
+        return defined('SCRIPT_DEBUG') && SCRIPT_DEBUG;
+    }
+}
 
-        if (file_exists($file_path)) {
-            return VIDEOHUB360_VERSION . '-' . filemtime($file_path);
+if (!function_exists('videohub360_asset_path')) {
+    function videohub360_asset_path($relative_path) {
+        $relative_path = ltrim($relative_path, '/');
+        return trailingslashit(VIDEOHUB360_PLUGIN_DIR) . $relative_path;
+    }
+}
+
+if (!function_exists('videohub360_asset_uri')) {
+    function videohub360_asset_uri($relative_path) {
+        $relative_path = ltrim($relative_path, '/');
+        return trailingslashit(VIDEOHUB360_PLUGIN_URL) . $relative_path;
+    }
+}
+
+if (!function_exists('videohub360_asset_resolve')) {
+    function videohub360_asset_resolve($relative_path) {
+        $relative_path = ltrim($relative_path, '/');
+        $selected = $relative_path;
+
+        if (!videohub360_asset_is_debug() && preg_match('/\.(css|js)$/', $relative_path)) {
+            $min_relative = preg_replace('/\.(css|js)$/', '.min.$1', $relative_path);
+            if ($min_relative && file_exists(videohub360_asset_path($min_relative))) {
+                $selected = $min_relative;
+            }
         }
 
-        return VIDEOHUB360_VERSION;
+        $path = videohub360_asset_path($selected);
+        $version = file_exists($path) ? VIDEOHUB360_VERSION . '-' . filemtime($path) : VIDEOHUB360_VERSION;
+
+        return array(
+            'relative_path' => $selected,
+            'path'          => $path,
+            'url'           => videohub360_asset_uri($selected),
+            'version'       => $version,
+        );
+    }
+}
+
+if (!function_exists('videohub360_asset_url')) {
+    function videohub360_asset_url($relative_path) {
+        $asset = videohub360_asset_resolve($relative_path);
+        return $asset['url'];
+    }
+}
+
+if (!function_exists('videohub360_asset_version')) {
+    function videohub360_asset_version($relative_path) {
+        $asset = videohub360_asset_resolve($relative_path);
+        return $asset['version'];
     }
 }
 

@@ -1,0 +1,7 @@
+{
+  "scripts": {
+    "build:assets": "node tools/build-min-assets.mjs",
+    "check:assets": "node tools/build-min-assets.mjs --check"
+  },
+  "devDependencies": {}
+}

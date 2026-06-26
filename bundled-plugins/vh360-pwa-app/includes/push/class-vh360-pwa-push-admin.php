@@ -64,14 +64,14 @@ class VH360_PWA_Push_Admin {
 
 		wp_enqueue_style(
 			'vh360-pwa-push-admin',
-			VH360_PWA_APP_URL . 'assets/admin/push-admin.css',
+			vh360_pwa_app_asset_url('assets/admin/push-admin.css'),
 			array(),
 			vh360_pwa_app_asset_version('assets/admin/push-admin.css')
 		);
 
 		wp_enqueue_script(
 			'vh360-pwa-push-admin',
-			VH360_PWA_APP_URL . 'assets/admin/push-admin.js',
+			vh360_pwa_app_asset_url('assets/admin/push-admin.js'),
 			array( 'jquery' ),
 			vh360_pwa_app_asset_version('assets/admin/push-admin.js'),
 			true
@@ -80,14 +80,14 @@ class VH360_PWA_Push_Admin {
 		// Native push admin assets (Phase 2.2)
 		wp_enqueue_style(
 			'vh360-pwa-push-native-admin',
-			VH360_PWA_APP_URL . 'assets/admin/push-native-admin.css',
+			vh360_pwa_app_asset_url('assets/admin/push-native-admin.css'),
 			array( 'vh360-pwa-push-admin' ),
 			vh360_pwa_app_asset_version('assets/admin/push-native-admin.css')
 		);
 
 		wp_enqueue_script(
 			'vh360-pwa-push-native-admin',
-			VH360_PWA_APP_URL . 'assets/admin/push-native-admin.js',
+			vh360_pwa_app_asset_url('assets/admin/push-native-admin.js'),
 			array( 'jquery', 'vh360-pwa-push-admin' ),
 			vh360_pwa_app_asset_version('assets/admin/push-native-admin.js'),
 			true

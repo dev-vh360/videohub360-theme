@@ -50,8 +50,8 @@ class VH360_Membership_Plans {
 
     /** Render dynamic, plan-group-aware pricing toggle from central plans. */
     public function render_pricing_toggle_shortcode($atts = array()) {
-        wp_enqueue_style('vh360-pricing-toggle', VH360_MEMBERSHIPS_URL . 'assets/frontend/pricing-toggle.css', array(), vh360_memberships_asset_version('assets/frontend/pricing-toggle.css'));
-        wp_enqueue_script('vh360-pricing-toggle', VH360_MEMBERSHIPS_URL . 'assets/frontend/pricing-toggle.js', array(), vh360_memberships_asset_version('assets/frontend/pricing-toggle.js'), true);
+        wp_enqueue_style('vh360-pricing-toggle', vh360_memberships_asset_url('assets/frontend/pricing-toggle.css'), array(), vh360_memberships_asset_version('assets/frontend/pricing-toggle.css'));
+        wp_enqueue_script('vh360-pricing-toggle', vh360_memberships_asset_url('assets/frontend/pricing-toggle.js'), array(), vh360_memberships_asset_version('assets/frontend/pricing-toggle.js'), true);
 
         $atts = shortcode_atts(array(
             'interval'      => '',

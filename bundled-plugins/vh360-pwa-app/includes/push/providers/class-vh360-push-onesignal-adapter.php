@@ -124,7 +124,7 @@ class VH360_Push_OneSignal_Adapter implements VH360_PWA_Push_Adapter_Interface {
 		// Our initialization script
 		wp_enqueue_script(
 			'vh360-pwa-push-public',
-			VH360_PWA_APP_URL . 'assets/public/push-public.js',
+			vh360_pwa_app_asset_url('assets/public/push-public.js'),
 			array( 'onesignal-sdk' ),
 			vh360_pwa_app_asset_version('assets/public/push-public.js'),
 			false

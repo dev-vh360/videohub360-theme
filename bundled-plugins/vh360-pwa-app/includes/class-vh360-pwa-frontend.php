@@ -100,21 +100,21 @@ class VH360_PWA_Frontend {
 	private function register_public_assets() : void {
 		wp_register_script(
 			'vh360-pwa-runtime',
-			VH360_PWA_APP_URL . 'assets/public/pwa-runtime.js',
+			vh360_pwa_app_asset_url('assets/public/pwa-runtime.js'),
 			array(),
 			vh360_pwa_app_asset_version( 'assets/public/pwa-runtime.js' ),
 			false
 		);
 		wp_register_script(
 			'vh360-pwa-install-ui',
-			VH360_PWA_APP_URL . 'assets/public/pwa-install-ui.js',
+			vh360_pwa_app_asset_url('assets/public/pwa-install-ui.js'),
 			array(),
 			vh360_pwa_app_asset_version( 'assets/public/pwa-install-ui.js' ),
 			false
 		);
 		wp_register_script(
 			'vh360-pwa-device-tools',
-			VH360_PWA_APP_URL . 'assets/public/pwa-device-tools.js',
+			vh360_pwa_app_asset_url('assets/public/pwa-device-tools.js'),
 			array(),
 			vh360_pwa_app_asset_version( 'assets/public/pwa-device-tools.js' ),
 			false
@@ -122,26 +122,26 @@ class VH360_PWA_Frontend {
 
 		wp_register_style(
 			'vh360-pwa-runtime',
-			VH360_PWA_APP_URL . 'assets/public/pwa-runtime.css',
+			vh360_pwa_app_asset_url('assets/public/pwa-runtime.css'),
 			array(),
 			vh360_pwa_app_asset_version( 'assets/public/pwa-runtime.css' )
 		);
 		wp_register_style(
 			'vh360-pwa-install-ui',
-			VH360_PWA_APP_URL . 'assets/public/pwa-install-ui.css',
+			vh360_pwa_app_asset_url('assets/public/pwa-install-ui.css'),
 			array(),
 			vh360_pwa_app_asset_version( 'assets/public/pwa-install-ui.css' )
 		);
 		wp_register_style(
 			'vh360-push-subscribe',
-			VH360_PWA_APP_URL . 'assets/public/push-subscribe.css',
+			vh360_pwa_app_asset_url('assets/public/push-subscribe.css'),
 			array(),
 			vh360_pwa_app_asset_version( 'assets/public/push-subscribe.css' )
 		);
 
 		// Backward-compatible aliases for code that checks old public handles.
-		wp_register_script( 'vh360-pwa-public', VH360_PWA_APP_URL . 'assets/public/pwa-runtime.js', array(), vh360_pwa_app_asset_version( 'assets/public/pwa-runtime.js' ), false );
-		wp_register_style( 'vh360-pwa-public', VH360_PWA_APP_URL . 'assets/public/pwa-runtime.css', array(), vh360_pwa_app_asset_version( 'assets/public/pwa-runtime.css' ) );
+		wp_register_script( 'vh360-pwa-public', vh360_pwa_app_asset_url('assets/public/pwa-runtime.js'), array(), vh360_pwa_app_asset_version( 'assets/public/pwa-runtime.js' ), false );
+		wp_register_style( 'vh360-pwa-public', vh360_pwa_app_asset_url('assets/public/pwa-runtime.css'), array(), vh360_pwa_app_asset_version( 'assets/public/pwa-runtime.css' ) );
 	}
 
 	private function get_public_config( array $opts ) : array {

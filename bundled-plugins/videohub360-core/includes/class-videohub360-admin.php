@@ -174,7 +174,7 @@ class VideoHub360_Admin {
         // Enqueue admin CSS
         wp_enqueue_style(
             'vh360-admin',
-            VIDEOHUB360_ASSETS_URL . 'css/admin.css',
+            videohub360_asset_url('assets/css/admin.css'),
             array(),
             videohub360_asset_version('assets/css/admin.css')
         );
@@ -184,7 +184,7 @@ class VideoHub360_Admin {
             // Enqueue dashboard-specific CSS
             wp_enqueue_style(
                 'vh360-admin-dashboard',
-                VIDEOHUB360_ASSETS_URL . 'css/admin-dashboard.css',
+                videohub360_asset_url('assets/css/admin-dashboard.css'),
                 array('vh360-admin'),
                 videohub360_asset_version('assets/css/admin-dashboard.css')
             );
@@ -201,7 +201,7 @@ class VideoHub360_Admin {
             // Enqueue dashboard-specific JS
             wp_enqueue_script(
                 'vh360-admin-dashboard',
-                VIDEOHUB360_ASSETS_URL . 'js/admin-dashboard.js',
+                videohub360_asset_url('assets/js/admin-dashboard.js'),
                 array('jquery', 'chartjs'),
                 videohub360_asset_version('assets/js/admin-dashboard.js'),
                 true
@@ -227,7 +227,7 @@ class VideoHub360_Admin {
             // Enqueue shortcodes-specific CSS
             wp_enqueue_style(
                 'vh360-admin-shortcodes',
-                VIDEOHUB360_ASSETS_URL . 'css/admin-shortcodes.css',
+                videohub360_asset_url('assets/css/admin-shortcodes.css'),
                 array('vh360-admin'),
                 videohub360_asset_version('assets/css/admin-shortcodes.css')
             );
@@ -235,7 +235,7 @@ class VideoHub360_Admin {
             // Enqueue original admin JS
             wp_enqueue_script(
                 'vh360-admin',
-                VIDEOHUB360_ASSETS_URL . 'js/admin.js',
+                videohub360_asset_url('assets/js/admin.js'),
                 array('jquery'),
                 videohub360_asset_version('assets/js/admin.js'),
                 true
@@ -244,7 +244,7 @@ class VideoHub360_Admin {
             // Enqueue shortcodes-specific JS
             wp_enqueue_script(
                 'vh360-admin-shortcodes',
-                VIDEOHUB360_ASSETS_URL . 'js/admin-shortcodes.js',
+                videohub360_asset_url('assets/js/admin-shortcodes.js'),
                 array('jquery', 'vh360-admin'),
                 videohub360_asset_version('assets/js/admin-shortcodes.js'),
                 true

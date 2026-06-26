@@ -43,8 +43,8 @@ class VH360_Giving_Admin {
 
     public function assets($hook) {
         if (false !== strpos((string) $hook, 'vh360-theme-giving')) {
-            wp_enqueue_style('vh360-giving-admin', VH360_MEMBERSHIPS_URL . 'assets/admin/giving-admin.css', array(), vh360_memberships_asset_version('assets/admin/giving-admin.css'));
-            wp_enqueue_script('vh360-giving-admin', VH360_MEMBERSHIPS_URL . 'assets/admin/giving-admin.js', array('jquery'), vh360_memberships_asset_version('assets/admin/giving-admin.js'), true);
+            wp_enqueue_style('vh360-giving-admin', vh360_memberships_asset_url('assets/admin/giving-admin.css'), array(), vh360_memberships_asset_version('assets/admin/giving-admin.css'));
+            wp_enqueue_script('vh360-giving-admin', vh360_memberships_asset_url('assets/admin/giving-admin.js'), array('jquery'), vh360_memberships_asset_version('assets/admin/giving-admin.js'), true);
         }
     }
 

@@ -272,13 +272,13 @@ $out['scope']     = $normalize_to_path( $scope );
 		if ( 'vh360-pwa-app-store' === $page ) {
 			wp_enqueue_style(
 				'vh360-pwa-appstore-admin',
-				VH360_PWA_APP_URL . 'assets/admin/appstore-admin.css',
+				vh360_pwa_app_asset_url('assets/admin/appstore-admin.css'),
 				array(),
 				vh360_pwa_app_asset_version( 'assets/admin/appstore-admin.css' )
 			);
 			wp_enqueue_script(
 				'vh360-pwa-appstore-admin',
-				VH360_PWA_APP_URL . 'assets/admin/appstore-admin.js',
+				vh360_pwa_app_asset_url('assets/admin/appstore-admin.js'),
 				array( 'jquery' ),
 				vh360_pwa_app_asset_version( 'assets/admin/appstore-admin.js' ),
 				true
@@ -303,13 +303,13 @@ $out['scope']     = $normalize_to_path( $scope );
 
 		wp_enqueue_style(
 			'vh360-pwa-admin',
-			VH360_PWA_APP_URL . 'assets/admin/pwa-admin.css',
+			vh360_pwa_app_asset_url('assets/admin/pwa-admin.css'),
 			$admin_style_deps,
 			vh360_pwa_app_asset_version( 'assets/admin/pwa-admin.css' )
 		);
 		wp_enqueue_script(
 			'vh360-pwa-admin',
-			VH360_PWA_APP_URL . 'assets/admin/pwa-admin.js',
+			vh360_pwa_app_asset_url('assets/admin/pwa-admin.js'),
 			$admin_script_deps,
 			vh360_pwa_app_asset_version( 'assets/admin/pwa-admin.js' ),
 			true

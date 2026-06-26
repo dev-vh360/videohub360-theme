@@ -350,7 +350,7 @@ class VH360_Theme_Admin {
         // Enqueue admin CSS
         wp_enqueue_style(
             'vh360-theme-admin',
-            VH360_THEME_URI . '/assets/admin/css/theme-admin.css',
+            vh360_theme_asset_url('assets/admin/css/theme-admin.css'),
             array(),
             vh360_theme_asset_version('assets/admin/css/theme-admin.css')
         );
@@ -358,7 +358,7 @@ class VH360_Theme_Admin {
         // Enqueue admin JS
         wp_enqueue_script(
             'vh360-theme-admin',
-            VH360_THEME_URI . '/assets/admin/js/theme-admin.js',
+            vh360_theme_asset_url('assets/admin/js/theme-admin.js'),
             array('jquery'),
             vh360_theme_asset_version('assets/admin/js/theme-admin.js'),
             true

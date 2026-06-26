@@ -34,16 +34,61 @@ define('VH360_THEME_URI', get_template_directory_uri());
  * @param string $relative_path Asset path relative to the theme root.
  * @return string
  */
-if (!function_exists('vh360_theme_asset_version')) {
-    function vh360_theme_asset_version($relative_path) {
-        $relative_path = ltrim($relative_path, '/');
-        $file_path = trailingslashit(get_template_directory()) . $relative_path;
+if (!function_exists('vh360_theme_asset_is_debug')) {
+    function vh360_theme_asset_is_debug() {
+        return defined('SCRIPT_DEBUG') && SCRIPT_DEBUG;
+    }
+}
 
-        if (file_exists($file_path)) {
-            return VH360_THEME_VERSION . '-' . filemtime($file_path);
+if (!function_exists('vh360_theme_asset_path')) {
+    function vh360_theme_asset_path($relative_path) {
+        $relative_path = ltrim($relative_path, '/');
+        return trailingslashit(get_template_directory()) . $relative_path;
+    }
+}
+
+if (!function_exists('vh360_theme_asset_uri')) {
+    function vh360_theme_asset_uri($relative_path) {
+        $relative_path = ltrim($relative_path, '/');
+        return trailingslashit(VH360_THEME_URI) . $relative_path;
+    }
+}
+
+if (!function_exists('vh360_theme_asset_resolve')) {
+    function vh360_theme_asset_resolve($relative_path) {
+        $relative_path = ltrim($relative_path, '/');
+        $selected = $relative_path;
+
+        if (!vh360_theme_asset_is_debug() && preg_match('/\.(css|js)$/', $relative_path)) {
+            $min_relative = preg_replace('/\.(css|js)$/', '.min.$1', $relative_path);
+            if ($min_relative && file_exists(vh360_theme_asset_path($min_relative))) {
+                $selected = $min_relative;
+            }
         }
 
-        return VH360_THEME_VERSION;
+        $path = vh360_theme_asset_path($selected);
+        $version = file_exists($path) ? VH360_THEME_VERSION . '-' . filemtime($path) : VH360_THEME_VERSION;
+
+        return array(
+            'relative_path' => $selected,
+            'path'          => $path,
+            'url'           => vh360_theme_asset_uri($selected),
+            'version'       => $version,
+        );
+    }
+}
+
+if (!function_exists('vh360_theme_asset_url')) {
+    function vh360_theme_asset_url($relative_path) {
+        $asset = vh360_theme_asset_resolve($relative_path);
+        return $asset['url'];
+    }
+}
+
+if (!function_exists('vh360_theme_asset_version')) {
+    function vh360_theme_asset_version($relative_path) {
+        $asset = vh360_theme_asset_resolve($relative_path);
+        return $asset['version'];
     }
 }
 
@@ -300,7 +345,7 @@ function videohub360_theme_scripts() {
     // Enqueue main stylesheet
     wp_enqueue_style(
         'videohub360-theme-style',
-        get_stylesheet_uri(),
+        vh360_theme_asset_url('style.css'),
         array(),
         vh360_theme_asset_version('style.css')
     );
@@ -308,7 +353,7 @@ function videohub360_theme_scripts() {
     // Sidebar layout styles
     wp_enqueue_style(
         'vh360-sidebar-layout',
-        VH360_THEME_URI . '/assets/css/sidebar-layout.css',
+        vh360_theme_asset_url('assets/css/sidebar-layout.css'),
         array('videohub360-theme-style'),
         vh360_theme_asset_version('assets/css/sidebar-layout.css')
     );
@@ -317,7 +362,7 @@ function videohub360_theme_scripts() {
     if (function_exists('vh360_show_community_menu') && vh360_show_community_menu()) {
         wp_enqueue_style(
             'vh360-community-menu',
-            VH360_THEME_URI . '/assets/css/community-menu.css',
+            vh360_theme_asset_url('assets/css/community-menu.css'),
             array('videohub360-theme-style'),
             vh360_theme_asset_version('assets/css/community-menu.css')
         );
@@ -329,7 +374,7 @@ function videohub360_theme_scripts() {
     if ($vh360_enable_orientation_lock) {
         wp_enqueue_style(
             'vh360-mobile-orientation-lock',
-            VH360_THEME_URI . '/assets/css/mobile-orientation-lock.css',
+            vh360_theme_asset_url('assets/css/mobile-orientation-lock.css'),
             array('videohub360-theme-style'),
             vh360_theme_asset_version('assets/css/mobile-orientation-lock.css')
         );
@@ -338,7 +383,7 @@ function videohub360_theme_scripts() {
     // Utility classes for JavaScript-generated UI elements
     wp_enqueue_style(
         'vh360-utilities',
-        VH360_THEME_URI . '/assets/css/utilities.css',
+        vh360_theme_asset_url('assets/css/utilities.css'),
         array('videohub360-theme-style'),
         vh360_theme_asset_version('assets/css/utilities.css')
     );
@@ -346,7 +391,7 @@ function videohub360_theme_scripts() {
     // Enqueue custom scripts
     wp_enqueue_script(
         'videohub360-theme-script',
-        VH360_THEME_URI . '/assets/js/theme.js',
+        vh360_theme_asset_url('assets/js/theme.js'),
         array(),
         vh360_theme_asset_version('assets/js/theme.js'),
         true
@@ -364,7 +409,7 @@ function videohub360_theme_scripts() {
         if ($context === 'live_room') {
             wp_enqueue_style(
                 'vh360-live-room',
-                VH360_THEME_URI . '/assets/css/live-room.css',
+                vh360_theme_asset_url('assets/css/live-room.css'),
                 array('videohub360-theme-style'),
                 vh360_theme_asset_version('assets/css/live-room.css')
             );
@@ -378,14 +423,14 @@ function videohub360_theme_scripts() {
         // Mobile bottom navigation + user drawer (logged-in only)
         wp_enqueue_style(
             'vh360-mobile-bottom-nav',
-            VH360_THEME_URI . '/assets/css/mobile-bottom-nav.css',
+            vh360_theme_asset_url('assets/css/mobile-bottom-nav.css'),
             array('videohub360-theme-style'),
             vh360_theme_asset_version('assets/css/mobile-bottom-nav.css')
         );
 
         wp_enqueue_script(
             'vh360-mobile-bottom-nav',
-            VH360_THEME_URI . '/assets/js/mobile-bottom-nav.js',
+            vh360_theme_asset_url('assets/js/mobile-bottom-nav.js'),
             array(),
             vh360_theme_asset_version('assets/js/mobile-bottom-nav.js'),
             true
@@ -393,14 +438,14 @@ function videohub360_theme_scripts() {
 
         wp_enqueue_style(
             'vh360-notifications',
-            VH360_THEME_URI . '/assets/css/notifications.css',
+            vh360_theme_asset_url('assets/css/notifications.css'),
             array('videohub360-theme-style'),
             vh360_theme_asset_version('assets/css/notifications.css')
         );
 
         wp_enqueue_script(
             'vh360-notifications',
-            VH360_THEME_URI . '/assets/js/notifications.js',
+            vh360_theme_asset_url('assets/js/notifications.js'),
             array('jquery'),
             vh360_theme_asset_version('assets/js/notifications.js'),
             true
@@ -423,14 +468,14 @@ function videohub360_theme_scripts() {
         if (is_page_template('template-dashboard.php') && function_exists('vh360_is_dashboard_tab') && vh360_is_dashboard_tab('messages')) {
             wp_enqueue_style(
                 'vh360-direct-messages',
-                VH360_THEME_URI . '/assets/css/direct-messages.css',
+                vh360_theme_asset_url('assets/css/direct-messages.css'),
                 array('videohub360-theme-style'),
                 vh360_theme_asset_version('assets/css/direct-messages.css')
             );
 
             wp_enqueue_script(
                 'vh360-direct-messages',
-                VH360_THEME_URI . '/assets/js/direct-messages.js',
+                vh360_theme_asset_url('assets/js/direct-messages.js'),
                 array('jquery'),
                 vh360_theme_asset_version('assets/js/direct-messages.js'),
                 true
@@ -463,7 +508,7 @@ function videohub360_theme_scripts() {
         if (is_page_template('template-dashboard.php') && function_exists('vh360_is_dashboard_tab') && vh360_is_dashboard_tab('push-notifications') && current_user_can( 'vh360_send_push' ) ) {
             wp_enqueue_script(
                 'vh360-push-notifications',
-                VH360_THEME_URI . '/assets/js/push-notifications.js',
+                vh360_theme_asset_url('assets/js/push-notifications.js'),
                 array('jquery'),
                 vh360_theme_asset_version('assets/js/push-notifications.js'),
                 true
@@ -529,7 +574,7 @@ function vh360_enqueue_header_assets() {
     // Enqueue header layout CSS
     wp_enqueue_style(
         'vh360-header-layout',
-        VH360_THEME_URI . '/assets/css/header-layout.css',
+        vh360_theme_asset_url('assets/css/header-layout.css'),
         array('videohub360-theme-style'),
         vh360_theme_asset_version('assets/css/header-layout.css')
     );
@@ -537,7 +582,7 @@ function vh360_enqueue_header_assets() {
     // Enqueue header navigation JavaScript
     wp_enqueue_script(
         'vh360-header-navigation',
-        VH360_THEME_URI . '/assets/js/header-navigation.js',
+        vh360_theme_asset_url('assets/js/header-navigation.js'),
         array('jquery'),
         vh360_theme_asset_version('assets/js/header-navigation.js'),
         true
@@ -548,14 +593,14 @@ function vh360_enqueue_header_assets() {
     if ($show_search) {
         wp_enqueue_style(
             'vh360-search-bar-centered',
-            VH360_THEME_URI . '/assets/css/search-bar-centered.css',
+            vh360_theme_asset_url('assets/css/search-bar-centered.css'),
             array('videohub360-theme-style'),
             vh360_theme_asset_version('assets/css/search-bar-centered.css')
         );
 
         wp_enqueue_script(
             'vh360-search-bar-centered',
-            VH360_THEME_URI . '/assets/js/search-bar-centered.js',
+            vh360_theme_asset_url('assets/js/search-bar-centered.js'),
             array('jquery'),
             vh360_theme_asset_version('assets/js/search-bar-centered.js'),
             true
@@ -600,7 +645,7 @@ function vh360_enqueue_community_menu_toggle() {
 
     wp_enqueue_script(
         'vh360-community-menu-toggle',
-        VH360_THEME_URI . '/assets/js/community-menu-toggle.js',
+        vh360_theme_asset_url('assets/js/community-menu-toggle.js'),
         array('jquery'),
         vh360_theme_asset_version('assets/js/community-menu-toggle.js'),
         true
@@ -623,7 +668,7 @@ function vh360_register_gallery_assets() {
     // Register gallery CSS
     wp_register_style(
         'vh360-gallery',
-        VH360_THEME_URI . '/assets/css/gallery.css',
+        vh360_theme_asset_url('assets/css/gallery.css'),
         array(),
         vh360_theme_asset_version('assets/css/gallery.css')
     );
@@ -631,7 +676,7 @@ function vh360_register_gallery_assets() {
     // Register gallery dashboard CSS
     wp_register_style(
         'vh360-gallery-dashboard',
-        VH360_THEME_URI . '/assets/css/gallery-dashboard.css',
+        vh360_theme_asset_url('assets/css/gallery-dashboard.css'),
         array(),
         vh360_theme_asset_version('assets/css/gallery-dashboard.css')
     );
@@ -664,7 +709,7 @@ function vh360_register_gallery_assets() {
     // Register main gallery script (for frontend gallery display)
     wp_register_script(
         'vh360-gallery-script',
-        VH360_THEME_URI . '/assets/js/gallery.js',
+        vh360_theme_asset_url('assets/js/gallery.js'),
         array('jquery'),
         vh360_theme_asset_version('assets/js/gallery.js'),
         true
@@ -673,7 +718,7 @@ function vh360_register_gallery_assets() {
     // Register gallery lightbox integration (custom lightbox, no external dependencies)
     wp_register_script(
         'vh360-gallery-photoswipe',
-        VH360_THEME_URI . '/assets/js/gallery-photoswipe.js',
+        vh360_theme_asset_url('assets/js/gallery-photoswipe.js'),
         array('jquery'),
         vh360_theme_asset_version('assets/js/gallery-photoswipe.js'),
         true
@@ -682,7 +727,7 @@ function vh360_register_gallery_assets() {
     // Register gallery dashboard script
     wp_register_script(
         'vh360-gallery-dashboard',
-        VH360_THEME_URI . '/assets/js/gallery-dashboard.js',
+        vh360_theme_asset_url('assets/js/gallery-dashboard.js'),
         array('jquery', 'dropzone', 'sortablejs'),
         vh360_theme_asset_version('assets/js/gallery-dashboard.js'),
         true
@@ -1289,7 +1334,7 @@ if (class_exists('WooCommerce')) {
         if ( is_woocommerce() || is_cart() || is_checkout() || is_account_page() ) {
             wp_enqueue_style(
                 'vh360-woocommerce',
-                VH360_THEME_URI . '/assets/css/woocommerce.css',
+                vh360_theme_asset_url('assets/css/woocommerce.css'),
                 array( 'videohub360-theme-style' ),
                 vh360_theme_asset_version('assets/css/woocommerce.css')
             );
@@ -1554,7 +1599,7 @@ function videohub360_theme_video_styles() {
 
         wp_enqueue_style(
             'videohub360-theme-video',
-            VH360_THEME_URI . '/assets/css/videohub360-integration.css',
+            vh360_theme_asset_url('assets/css/videohub360-integration.css'),
             $deps,
             vh360_theme_asset_version('assets/css/videohub360-integration.css')
         );
@@ -1569,7 +1614,7 @@ function vh360_enqueue_widget_styles() {
     if (is_active_widget(false, false, 'vh360_latest_posts_widget')) {
         wp_enqueue_style(
             'vh360-widgets',
-            VH360_THEME_URI . '/assets/css/widgets.css',
+            vh360_theme_asset_url('assets/css/widgets.css'),
             array(),
             vh360_theme_asset_version('assets/css/widgets.css')
         );

@@ -91,7 +91,7 @@ class VideoHub360_Course_Foundation {
 
         wp_enqueue_script(
             'vh360-course-term-media',
-            VIDEOHUB360_ASSETS_URL . 'js/course-term-media.js',
+            videohub360_asset_url('assets/js/course-term-media.js'),
             array( 'jquery' ),
             videohub360_asset_version('assets/js/course-term-media.js'),
             true
@@ -99,14 +99,14 @@ class VideoHub360_Course_Foundation {
 
         wp_enqueue_style(
             'vh360-course-admin',
-            VIDEOHUB360_ASSETS_URL . 'css/course-admin.css',
+            videohub360_asset_url('assets/css/course-admin.css'),
             array(),
             videohub360_asset_version('assets/css/course-admin.css')
         );
 
         wp_enqueue_script(
             'vh360-course-admin',
-            VIDEOHUB360_ASSETS_URL . 'js/course-admin.js',
+            videohub360_asset_url('assets/js/course-admin.js'),
             array( 'jquery' ),
             videohub360_asset_version('assets/js/course-admin.js'),
             true

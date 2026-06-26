@@ -61,14 +61,14 @@ class VH360_Membership_Frontend {
     private function register_assets() {
         wp_register_style(
             'vh360-membership-gate',
-            VH360_MEMBERSHIPS_URL . 'assets/css/membership-gate.css',
+            vh360_memberships_asset_url('assets/css/membership-gate.css'),
             array(),
             vh360_memberships_asset_version('assets/css/membership-gate.css')
         );
 
         wp_register_style(
             'vh360-membership-dashboard',
-            VH360_MEMBERSHIPS_URL . 'assets/css/membership-dashboard.css',
+            vh360_memberships_asset_url('assets/css/membership-dashboard.css'),
             array(),
             vh360_memberships_asset_version('assets/css/membership-dashboard.css')
         );
@@ -76,7 +76,7 @@ class VH360_Membership_Frontend {
         // Backward-compatible alias for integrations that check the old handle.
         wp_register_style(
             'vh360-memberships',
-            VH360_MEMBERSHIPS_URL . 'assets/css/membership-gate.css',
+            vh360_memberships_asset_url('assets/css/membership-gate.css'),
             array(),
             vh360_memberships_asset_version('assets/css/membership-gate.css')
         );

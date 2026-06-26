@@ -64,7 +64,7 @@ class VH360_Membership_Subscription_Management {
         
         wp_enqueue_script(
             'vh360-membership-manage',
-            VH360_MEMBERSHIPS_URL . 'assets/js/membership-manage.js',
+            vh360_memberships_asset_url('assets/js/membership-manage.js'),
             array('jquery'),
             vh360_memberships_asset_version('assets/js/membership-manage.js'),
             true

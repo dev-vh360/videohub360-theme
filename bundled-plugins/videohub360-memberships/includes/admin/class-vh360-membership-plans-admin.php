@@ -60,8 +60,8 @@ class VH360_Membership_Plans_Admin {
         if (!$is_paid_memberships_page || 'membership-plans' !== $current_tab) {
             return;
         }
-        wp_enqueue_style('vh360-membership-plans-admin', VH360_MEMBERSHIPS_URL . 'assets/admin/membership-plans.css', array(), vh360_memberships_asset_version('assets/admin/membership-plans.css'));
-        wp_enqueue_script('vh360-membership-plans-admin', VH360_MEMBERSHIPS_URL . 'assets/admin/membership-plans.js', array(), vh360_memberships_asset_version('assets/admin/membership-plans.js'), true);
+        wp_enqueue_style('vh360-membership-plans-admin', vh360_memberships_asset_url('assets/admin/membership-plans.css'), array(), vh360_memberships_asset_version('assets/admin/membership-plans.css'));
+        wp_enqueue_script('vh360-membership-plans-admin', vh360_memberships_asset_url('assets/admin/membership-plans.js'), array(), vh360_memberships_asset_version('assets/admin/membership-plans.js'), true);
     }
 
     public function handle_delete() {

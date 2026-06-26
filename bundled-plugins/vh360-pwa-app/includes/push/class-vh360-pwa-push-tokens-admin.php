@@ -465,14 +465,14 @@ class VH360_Push_Tokens_Admin {
 
 		wp_enqueue_style(
 			'vh360-pwa-push-tokens',
-			VH360_PWA_APP_URL . 'assets/admin/push-tokens.css',
+			vh360_pwa_app_asset_url('assets/admin/push-tokens.css'),
 			array(),
 			vh360_pwa_app_asset_version('assets/admin/push-tokens.css')
 		);
 
 		wp_enqueue_script(
 			'vh360-pwa-push-tokens',
-			VH360_PWA_APP_URL . 'assets/admin/push-tokens.js',
+			vh360_pwa_app_asset_url('assets/admin/push-tokens.js'),
 			array( 'jquery' ),
 			vh360_pwa_app_asset_version('assets/admin/push-tokens.js'),
 			true

@@ -98,7 +98,7 @@ class VH360_Gallery_Post_Type {
 		// Enqueue gallery admin script.
 		wp_enqueue_script(
 			'vh360-gallery-admin',
-			VH360_THEME_URI . '/assets/js/admin/gallery-admin.js',
+			vh360_theme_asset_url('assets/js/admin/gallery-admin.js'),
 			array( 'jquery', 'jquery-ui-sortable' ),
 			vh360_theme_asset_version('assets/js/admin/gallery-admin.js'),
 			true

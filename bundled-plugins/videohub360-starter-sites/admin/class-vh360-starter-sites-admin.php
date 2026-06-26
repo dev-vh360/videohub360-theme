@@ -67,7 +67,7 @@ class VH360_Starter_Sites_Admin {
         // Enqueue CSS
         wp_enqueue_style(
             'vh360-starter-sites-admin',
-            VH360_STARTER_SITES_URL . 'admin/assets/css/starter-sites-admin.css',
+            vh360_starter_sites_asset_url('admin/assets/css/starter-sites-admin.css'),
             array(),
             vh360_starter_sites_asset_version('admin/assets/css/starter-sites-admin.css')
         );
@@ -75,7 +75,7 @@ class VH360_Starter_Sites_Admin {
         // Enqueue JavaScript
         wp_enqueue_script(
             'vh360-starter-sites-admin',
-            VH360_STARTER_SITES_URL . 'admin/assets/js/starter-sites-admin.js',
+            vh360_starter_sites_asset_url('admin/assets/js/starter-sites-admin.js'),
             array('jquery'),
             vh360_starter_sites_asset_version('admin/assets/js/starter-sites-admin.js'),
             true
