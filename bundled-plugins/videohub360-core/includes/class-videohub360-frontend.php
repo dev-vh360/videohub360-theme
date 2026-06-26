@@ -37,210 +37,155 @@ class VideoHub360_Frontend {
      * Enqueue frontend assets with conditional loading
      */
     public function enqueue_frontend_assets() {
-        // Only load on VideoHub360 pages or when shortcode is present
         if (!$this->is_videohub360_page() && !$this->has_videohub360_shortcode()) {
             return;
         }
-        
-        global $post;
-        $current_user = wp_get_current_user();
-        $is_single = is_singular('videohub360') && $post;
-        
+
         try {
-            // Core styles always loaded on VideoHub360 pages
-            $this->enqueue_core_styles();
-            
-            // Core JavaScript always loaded on VideoHub360 pages  
-            $this->enqueue_core_scripts();
-            
-            if ($is_single && $post) {
-                // Video player (always on single pages)
-                $this->enqueue_video_player_assets();
-                
-                // Conditional loading based on post meta and features
-                if ($this->is_live_post($post->ID) || $this->is_agora_post($post->ID)) {
-                    $this->enqueue_livestream_assets();
-                    // Enqueue moderation styles for Agora/live posts (ensures UI elements are styled)
-                    $this->enqueue_moderation_styles();
-                }
-                
-                // Load chat assets if chat is enabled for this video
-                if ($this->is_chat_enabled($post->ID)) {
-                    $this->enqueue_chat_assets();
-                }
-                
-                if ($this->user_can_moderate($post->ID)) {
-                    $this->enqueue_moderation_assets();
-                }
+            $this->register_frontend_assets();
+
+            if (is_post_type_archive('videohub360') || is_tax('videohub360_series') || $this->has_video_grid_shortcode_or_widget()) {
+                $this->enqueue_archive_assets();
             }
-            
-            // Admin styles for logged-in users with admin bar
+
+            if (is_singular('videohub360')) {
+                $this->enqueue_single_video_assets(get_queried_object_id());
+            }
+
             if (is_admin_bar_showing()) {
                 $this->enqueue_admin_assets();
             }
-            
         } catch (Exception $e) {
             videohub360_debug_log('VideoHub360 Error in ' . __METHOD__ . ': ' . $e->getMessage());
         }
     }
-    
+
     /**
-     * Enqueue core styles and scripts
+     * Get a cache-busting asset version.
      */
-    private function enqueue_core_styles() {
-        // Enqueue variables.css first - contains all CSS custom properties
-        $variables_css_path = VIDEOHUB360_PLUGIN_DIR . 'assets/css/variables.css';
-        $variables_css_url = VIDEOHUB360_ASSETS_URL . 'css/variables.css';
-        $variables_css_version = file_exists($variables_css_path) ? filemtime($variables_css_path) : VIDEOHUB360_VERSION;
-        
-        wp_enqueue_style(
-            'vh360-variables',
-            $variables_css_url,
-            array(),
-            $variables_css_version
-        );
-        
-        // Enqueue frontend CSS - depends on variables
-        $css_path = VIDEOHUB360_PLUGIN_DIR . 'assets/css/frontend.css';
-        $css_url = VIDEOHUB360_ASSETS_URL . 'css/frontend.css';
-        $css_version = file_exists($css_path) ? filemtime($css_path) : VIDEOHUB360_VERSION;
-        
-        wp_enqueue_style(
-            'vh360-frontend',
-            $css_url,
-            array('vh360-variables'),
-            $css_version
-        );
-        
-        // Enqueue new multi-view layouts CSS
-        $multiview_css_path = VIDEOHUB360_PLUGIN_DIR . 'assets/css/multi-view-layouts.css';
-        $multiview_css_url = VIDEOHUB360_ASSETS_URL . 'css/multi-view-layouts.css';
-        $multiview_css_version = file_exists($multiview_css_path) ? filemtime($multiview_css_path) : VIDEOHUB360_VERSION;
-        
-        wp_enqueue_style(
-            'vh360-multi-view-layouts',
-            $multiview_css_url,
-            array('vh360-variables'),
-            $multiview_css_version
-        );
-        
-        // Enqueue simplified mobile controls CSS
-        $mobile_css_path = VIDEOHUB360_PLUGIN_DIR . 'assets/css/simplified-mobile-controls.css';
-        $mobile_css_url = VIDEOHUB360_ASSETS_URL . 'css/simplified-mobile-controls.css';
-        $mobile_css_version = file_exists($mobile_css_path) ? filemtime($mobile_css_path) : VIDEOHUB360_VERSION;
-        
-        wp_enqueue_style(
-            'vh360-simplified-mobile-controls',
-            $mobile_css_url,
-            array('vh360-multi-view-layouts'),
-            $mobile_css_version
-        );
+    private function asset_version($relative_path) {
+        $path = VIDEOHUB360_PLUGIN_DIR . ltrim($relative_path, '/');
+        return file_exists($path) ? filemtime($path) : VIDEOHUB360_VERSION;
     }
-    
+
     /**
-     * Enqueue core scripts
+     * Register frontend assets without enqueueing them.
      */
-    private function enqueue_core_scripts() {
-        $js_path = VIDEOHUB360_PLUGIN_DIR . 'assets/js/frontend.js';
-        $js_url = VIDEOHUB360_ASSETS_URL . 'js/frontend.js';
-        $js_version = file_exists($js_path) ? filemtime($js_path) : VIDEOHUB360_VERSION;
-        
-        // Enqueue simplified mobile controls first
-        $mobile_js_path = VIDEOHUB360_PLUGIN_DIR . 'assets/js/simplified-mobile-controls.js';
-        $mobile_js_url = VIDEOHUB360_ASSETS_URL . 'js/simplified-mobile-controls.js';
-        $mobile_js_version = file_exists($mobile_js_path) ? filemtime($mobile_js_path) : VIDEOHUB360_VERSION;
-        
-        wp_enqueue_script(
-            'vh360-simplified-mobile-controls',
-            $mobile_js_url,
-            array(),
-            $mobile_js_version,
-            true
-        );
-        
-        // Enqueue view layout manager module
-        $view_layout_js_path = VIDEOHUB360_PLUGIN_DIR . 'assets/js/view-layout-manager.js';
-        $view_layout_js_url = VIDEOHUB360_ASSETS_URL . 'js/view-layout-manager.js';
-        $view_layout_js_version = file_exists($view_layout_js_path) ? filemtime($view_layout_js_path) : VIDEOHUB360_VERSION;
-        
-        wp_enqueue_script(
-            'vh360-view-layout-manager',
-            $view_layout_js_url,
-            array('vh360-simplified-mobile-controls'),
-            $view_layout_js_version,
-            true
-        );
-        
-        // Enqueue frontend-core.js for core functionality (live viewer count, archive filters)
-        $frontend_core_js_path = VIDEOHUB360_PLUGIN_DIR . 'assets/js/frontend-core.js';
-        $frontend_core_js_url = VIDEOHUB360_ASSETS_URL . 'js/frontend-core.js';
-        $frontend_core_js_version = file_exists($frontend_core_js_path) ? filemtime($frontend_core_js_path) : VIDEOHUB360_VERSION;
-        
-        wp_enqueue_script(
-            'vh360-frontend-core',
-            $frontend_core_js_url,
-            array('jquery', 'vh360-view-layout-manager'),
-            $frontend_core_js_version,
-            true
-        );
-        
-        wp_enqueue_script(
-            'vh360-frontend',
-            $js_url,
-            array('vh360-frontend-core'),
-            $js_version,
-            true
-        );
-        
-        // Enqueue video quality manager
-        $quality_js_path = VIDEOHUB360_PLUGIN_DIR . 'assets/js/video-quality-manager.js';
-        $quality_js_url = VIDEOHUB360_ASSETS_URL . 'js/video-quality-manager.js';
-        $quality_js_version = file_exists($quality_js_path) ? filemtime($quality_js_path) : VIDEOHUB360_VERSION;
-        
-        wp_enqueue_script(
-            'vh360-video-quality-manager',
-            $quality_js_url,
-            array('vh360-frontend'),
-            $quality_js_version,
-            true
-        );
-        
-        // Enqueue unified settings manager
-        $unified_js_path = VIDEOHUB360_PLUGIN_DIR . 'assets/js/unified-settings-manager.js';
-        $unified_js_url = VIDEOHUB360_ASSETS_URL . 'js/unified-settings-manager.js';
-        $unified_js_version = file_exists($unified_js_path) ? filemtime($unified_js_path) : VIDEOHUB360_VERSION;
-        
-        wp_enqueue_script(
-            'vh360-unified-settings-manager',
-            $unified_js_url,
-            array('vh360-video-quality-manager'),
-            $unified_js_version,
-            true
-        );
-        
-        // Localize video quality configuration
+    private function register_frontend_assets() {
+        wp_register_style('vh360-variables', VIDEOHUB360_ASSETS_URL . 'css/variables.css', array(), $this->asset_version('assets/css/variables.css'));
+        wp_register_style('vh360-frontend', VIDEOHUB360_ASSETS_URL . 'css/frontend.css', array('vh360-variables'), $this->asset_version('assets/css/frontend.css'));
+        wp_register_style('vh360-single-video', VIDEOHUB360_ASSETS_URL . 'css/single-video.css', array('vh360-variables'), $this->asset_version('assets/css/single-video.css'));
+        wp_register_style('vh360-live-player', VIDEOHUB360_ASSETS_URL . 'css/live-player.css', array('vh360-single-video'), $this->asset_version('assets/css/live-player.css'));
+        wp_register_style('vh360-reactions-playlists', VIDEOHUB360_ASSETS_URL . 'css/reactions-playlists.css', array('vh360-single-video'), $this->asset_version('assets/css/reactions-playlists.css'));
+        wp_register_style('vh360-multi-view-layouts', VIDEOHUB360_ASSETS_URL . 'css/multi-view-layouts.css', array('vh360-variables'), $this->asset_version('assets/css/multi-view-layouts.css'));
+        wp_register_style('vh360-simplified-mobile-controls', VIDEOHUB360_ASSETS_URL . 'css/simplified-mobile-controls.css', array('vh360-multi-view-layouts'), $this->asset_version('assets/css/simplified-mobile-controls.css'));
+
+        wp_register_script('vh360-frontend', VIDEOHUB360_ASSETS_URL . 'js/runtime.js', array(), $this->asset_version('assets/js/runtime.js'), true);
+        wp_register_script('vh360-runtime', VIDEOHUB360_ASSETS_URL . 'js/runtime.js', array(), $this->asset_version('assets/js/runtime.js'), true);
+        wp_register_script('vh360-frontend-core', VIDEOHUB360_ASSETS_URL . 'js/frontend-core.js', array('jquery'), $this->asset_version('assets/js/frontend-core.js'), true);
+        wp_register_script('vh360-archive', VIDEOHUB360_ASSETS_URL . 'js/archive.js', array('jquery'), $this->asset_version('assets/js/archive.js'), true);
+        wp_register_script('vh360-single-actions', VIDEOHUB360_ASSETS_URL . 'js/single-actions.js', array('vh360-frontend'), $this->asset_version('assets/js/single-actions.js'), true);
+        wp_register_script('vh360-agora-player', VIDEOHUB360_ASSETS_URL . 'js/agora-player.js', array('agora-rtc-sdk', 'vh360-frontend'), $this->asset_version('assets/js/agora-player.js'), true);
+        wp_register_script('vh360-reactions', VIDEOHUB360_ASSETS_URL . 'js/reactions.js', array('vh360-frontend'), $this->asset_version('assets/js/reactions.js'), true);
+        wp_register_script('vh360-playlists', VIDEOHUB360_ASSETS_URL . 'js/playlists.js', array('vh360-frontend'), $this->asset_version('assets/js/playlists.js'), true);
+        wp_register_script('vh360-simplified-mobile-controls', VIDEOHUB360_ASSETS_URL . 'js/simplified-mobile-controls.js', array(), $this->asset_version('assets/js/simplified-mobile-controls.js'), true);
+        wp_register_script('vh360-view-layout-manager', VIDEOHUB360_ASSETS_URL . 'js/view-layout-manager.js', array('vh360-simplified-mobile-controls'), $this->asset_version('assets/js/view-layout-manager.js'), true);
+        wp_register_script('vh360-video-quality-manager', VIDEOHUB360_ASSETS_URL . 'js/video-quality-manager.js', array('vh360-frontend'), $this->asset_version('assets/js/video-quality-manager.js'), true);
+        wp_register_script('vh360-unified-settings-manager', VIDEOHUB360_ASSETS_URL . 'js/unified-settings-manager.js', array('vh360-video-quality-manager'), $this->asset_version('assets/js/unified-settings-manager.js'), true);
+    }
+
+    /**
+     * Enqueue archive/grid/widget assets only.
+     */
+    private function enqueue_archive_assets() {
+        wp_enqueue_style('vh360-variables');
+        wp_enqueue_style('vh360-frontend');
+        wp_enqueue_script('vh360-frontend-core');
+        wp_enqueue_script('vh360-archive');
+        wp_localize_script('vh360-frontend-core', 'vh360Data', $this->get_localized_data());
+        wp_localize_script('vh360-archive', 'vh360Data', $this->get_localized_data());
+    }
+
+    /**
+     * Enqueue a single video page by feature/media context.
+     */
+    private function enqueue_single_video_assets($post_id) {
+        if (!$post_id) {
+            return;
+        }
+
+        wp_enqueue_style('vh360-variables');
+        wp_enqueue_style('vh360-single-video');
+        wp_enqueue_style('vh360-reactions-playlists');
+        wp_enqueue_script('vh360-frontend');
+        wp_enqueue_script('vh360-single-actions');
+        wp_enqueue_script('vh360-reactions');
+        wp_enqueue_script('vh360-playlists');
+
+        $localized_data = $this->get_localized_data();
+        foreach (array('vh360-frontend', 'vh360-single-actions', 'vh360-reactions', 'vh360-playlists') as $handle) {
+            wp_localize_script($handle, 'vh360Data', $localized_data);
+        }
+        wp_add_inline_script('vh360-frontend', 'window.__VH360_DEBUG = ' . ((defined('WP_DEBUG') && WP_DEBUG) ? 'true' : 'false') . ';', 'before');
+
+        $is_live = $this->is_live_post($post_id);
+        $is_agora = $this->is_agora_post($post_id);
+
+        if ($is_live || $is_agora) {
+            wp_enqueue_style('vh360-live-player');
+            $this->enqueue_moderation_styles();
+        }
+
+        if ($is_agora) {
+            $this->enqueue_livestream_assets();
+            $this->enqueue_quality_assets($post_id);
+        } elseif (!$is_live && $this->single_video_needs_videojs($post_id)) {
+            $this->enqueue_video_player_assets();
+        } else {
+            wp_enqueue_style('vh360-live-player');
+        }
+
+        if ($this->is_chat_enabled($post_id)) {
+            $this->enqueue_chat_assets();
+        }
+
+        if ($this->user_can_moderate($post_id)) {
+            $this->enqueue_moderation_assets();
+        }
+    }
+
+
+    /**
+     * Check whether the single template needs the bundled Video.js player runtime.
+     */
+    private function single_video_needs_videojs($post_id) {
+        if (!$post_id) {
+            return false;
+        }
+
+        $custom_html = get_post_meta($post_id, 'videohub360_custom_html', true);
+        if (!empty($custom_html)) {
+            return false;
+        }
+
+        return (bool) get_post_meta($post_id, 'video_url', true);
+    }
+
+    /**
+     * Enqueue Agora quality/settings assets.
+     */
+    private function enqueue_quality_assets($post_id) {
+        wp_enqueue_script('vh360-video-quality-manager');
+        wp_enqueue_script('vh360-unified-settings-manager');
         wp_localize_script('vh360-video-quality-manager', 'vh360QualityConfig', $this->get_quality_config());
-        
-        // Enable unified settings mode - localize to both scripts to ensure proper detection
-        $post_id = $this->get_current_post_id();
         $unified_settings_config = array(
             'enabled' => true,
-            'canModerate' => $this->user_can_moderate($post_id)
+            'canModerate' => $this->user_can_moderate($post_id),
         );
         wp_localize_script('vh360-video-quality-manager', 'vh360UnifiedSettingsConfig', $unified_settings_config);
         wp_localize_script('vh360-unified-settings-manager', 'vh360UnifiedSettingsConfig', $unified_settings_config);
-        
-        // Localize core data for frontend-core.js (needed for live viewer count, etc.)
-        wp_localize_script('vh360-frontend-core', 'vh360Data', $this->get_localized_data());
-        
-        // Also localize for frontend.js (needed for share functionality, etc.)
-        wp_localize_script('vh360-frontend', 'vh360Data', $this->get_localized_data());
-        
-        // Set debug flag globally for JS console logging control
-        $debug_enabled = defined('WP_DEBUG') && WP_DEBUG;
-        wp_add_inline_script('vh360-frontend', 'window.__VH360_DEBUG = ' . ($debug_enabled ? 'true' : 'false') . ';', 'before');
     }
-    
+
     /**
      * Register hero banner assets for conditional loading
      */
@@ -362,9 +307,16 @@ class VideoHub360_Frontend {
      * Enqueue livestream assets
      */
     private function enqueue_livestream_assets() {
+        wp_enqueue_style('vh360-live-player');
+        wp_enqueue_style('vh360-multi-view-layouts');
+        wp_enqueue_style('vh360-simplified-mobile-controls');
+
         // Agora SDK
         wp_enqueue_script('agora-rtc-sdk', 'https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js', array(), '4.20.0', true);
-        
+        wp_enqueue_script('vh360-simplified-mobile-controls');
+        wp_enqueue_script('vh360-view-layout-manager');
+        wp_enqueue_script('vh360-agora-player');
+
         // Livestream JS
         $js_path = VIDEOHUB360_PLUGIN_DIR . 'assets/js/livestream.js';
         $js_url = VIDEOHUB360_ASSETS_URL . 'js/livestream.js';
@@ -373,7 +325,7 @@ class VideoHub360_Frontend {
         wp_enqueue_script(
             'vh360-livestream',
             $js_url,
-            array('agora-rtc-sdk', 'vh360-frontend'),
+            array('agora-rtc-sdk', 'vh360-agora-player'),
             $js_version,
             true
         );
@@ -700,42 +652,54 @@ class VideoHub360_Frontend {
      * Check if current page has VideoHub360 shortcode OR Elementor widget usage
      */
     private function has_videohub360_shortcode() {
+        return $this->has_video_grid_shortcode_or_widget() || $this->has_videohub360_player_shortcode();
+    }
+
+    /**
+     * Check whether current content uses video grid/archive shortcodes or widgets.
+     */
+    private function has_video_grid_shortcode_or_widget() {
         global $post;
 
         if (!$post) {
             return false;
         }
 
-        // Classic editor / block content
         if (!empty($post->post_content)) {
-            if (
-                has_shortcode($post->post_content, 'videohub360_videos') ||
-                has_shortcode($post->post_content, 'videohub360_hero') ||
-                has_shortcode($post->post_content, 'videohub360')
-            ) {
+            if (has_shortcode($post->post_content, 'videohub360_videos') ||
+                has_shortcode($post->post_content, 'vh360_course_catalog') ||
+                has_shortcode($post->post_content, 'videohub360_categories')) {
                 return true;
             }
         }
 
-        // Elementor pages store layout in post meta, not post_content
         $elementor_data = get_post_meta($post->ID, '_elementor_data', true);
         if (is_string($elementor_data) && $elementor_data !== '') {
-            // Your Elementor widgets are named:
-            // - videohub360_videos
-            // - videohub360_hero
-            // Also catches shortcode widgets containing [videohub360...]
-            if (
-                strpos($elementor_data, 'videohub360_videos') !== false ||
-                strpos($elementor_data, 'videohub360_hero') !== false ||
-                strpos($elementor_data, '[videohub360') !== false
-            ) {
+            if (strpos($elementor_data, 'videohub360_videos') !== false ||
+                strpos($elementor_data, 'videohub360_course_catalog') !== false ||
+                strpos($elementor_data, 'videohub360_categories') !== false ||
+                strpos($elementor_data, '[vh360_course_catalog') !== false ||
+                strpos($elementor_data, '[videohub360_categories') !== false) {
                 return true;
             }
         }
 
         return false;
     }
-    
+
+    /**
+     * Check for a direct VideoHub360 player shortcode without treating hero-only pages as full frontend pages.
+     */
+    private function has_videohub360_player_shortcode() {
+        global $post;
+
+        if (!$post || empty($post->post_content)) {
+            return false;
+        }
+
+        return has_shortcode($post->post_content, 'videohub360');
+    }
+
     /**
      * Check if post is a live post
      */
