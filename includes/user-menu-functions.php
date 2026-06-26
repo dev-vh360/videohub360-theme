@@ -450,7 +450,7 @@ function vh360_render_user_menu_meta_box() {
                     function_exists( 'vh360_get_lesson_label' ) ? vh360_get_lesson_label( true ) : __( 'Lessons', 'videohub360-theme' )
                 )
                 : __('My Videos', 'videohub360-theme'),
-            'url' => home_url('/dashboard/#videos'),
+            'url' => function_exists( 'vh360_get_dashboard_tab_url' ) ? vh360_get_dashboard_tab_url( 'videos' ) : home_url('/dashboard/?tab=videos'),
             'icon' => 'videos',
         ),
         array(
@@ -465,7 +465,7 @@ function vh360_render_user_menu_meta_box() {
         ),
         array(
             'title' => __('Settings', 'videohub360-theme'),
-            'url' => home_url('/dashboard/#settings'),
+            'url' => function_exists( 'vh360_get_dashboard_tab_url' ) ? vh360_get_dashboard_tab_url( 'settings' ) : home_url('/dashboard/?tab=settings'),
             'icon' => 'settings',
         ),
         array(

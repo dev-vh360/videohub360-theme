@@ -411,11 +411,11 @@ function vh360_sanitize_embed_code($html) {
 }
 
 
-function vh360_get_dashboard_tab_url( $tab = 'profile' ) {
+function vh360_get_dashboard_tab_url( $tab = 'overview' ) {
     $tab = sanitize_key( $tab );
 
-    $dashboard_url = function_exists( 'vh360_get_dashboard_url' )
-        ? vh360_get_dashboard_url()
+    $dashboard_url = function_exists( 'vh360_get_dashboard_page_url' )
+        ? vh360_get_dashboard_page_url()
         : home_url( '/dashboard/' );
 
     return add_query_arg( 'tab', $tab, $dashboard_url );
