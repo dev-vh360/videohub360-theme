@@ -81,19 +81,21 @@ body.community-menu-compact {
     gap: 8px;
     padding: 12px 16px;
     margin: 0 8px 16px;
-    border: 1px solid var(--border-1);
+    border: 1px solid var(--community-menu-toggle-border-color, var(--border-1, #e5e7eb));
     border-radius: 8px;
-    background-color: var(--surface-1, #ffffff);
-    color: var(--text-1);
+    background-color: var(--community-menu-toggle-bg-color, var(--community-menu-bg-color, #ffffff));
+    color: var(--community-menu-toggle-text-color, var(--community-menu-text-color, #4b5563));
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
-.vh360-community-menu__toggle:hover {
-    background-color: var(--surface-2, #f9fafb);
-    border-color: var(--border-2);
+.vh360-community-menu__toggle:hover,
+.vh360-community-menu__toggle:focus {
+    background-color: var(--community-menu-toggle-hover-bg-color, var(--community-menu-hover-bg-color, #f3f4f6));
+    color: var(--community-menu-toggle-hover-text-color, var(--community-menu-toggle-text-color, var(--community-menu-text-color, #4b5563)));
+    border-color: var(--community-menu-toggle-hover-border-color, var(--community-menu-toggle-border-color, var(--border-2, #d1d5db)));
 }
 
 .vh360-community-menu__toggle:focus {

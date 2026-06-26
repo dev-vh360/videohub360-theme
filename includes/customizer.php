@@ -287,6 +287,53 @@ function videohub360_theme_customize_register($wp_customize) {
         'section'     => 'vh360_community_menu_colors',
     )));
 
+    $community_menu_toggle_color_controls = array(
+        'vh360_community_menu_toggle_bg_color' => array(
+            'default'     => '#ffffff',
+            'label'       => __('Compact Toggle Background Color', 'videohub360-theme'),
+            'description' => __('Background color for the compact Community Menu toggle.', 'videohub360-theme'),
+        ),
+        'vh360_community_menu_toggle_text_color' => array(
+            'default'     => '#1f2937',
+            'label'       => __('Compact Toggle Text/Icon Color', 'videohub360-theme'),
+            'description' => __('Text and icon color for the compact Community Menu toggle.', 'videohub360-theme'),
+        ),
+        'vh360_community_menu_toggle_border_color' => array(
+            'default'     => '#e5e7eb',
+            'label'       => __('Compact Toggle Border Color', 'videohub360-theme'),
+            'description' => __('Border color for the compact Community Menu toggle.', 'videohub360-theme'),
+        ),
+        'vh360_community_menu_toggle_hover_bg_color' => array(
+            'default'     => '#f9fafb',
+            'label'       => __('Compact Toggle Hover Background Color', 'videohub360-theme'),
+            'description' => __('Background color when hovering or focusing the compact Community Menu toggle.', 'videohub360-theme'),
+        ),
+        'vh360_community_menu_toggle_hover_text_color' => array(
+            'default'     => '#1f2937',
+            'label'       => __('Compact Toggle Hover Text/Icon Color', 'videohub360-theme'),
+            'description' => __('Text and icon color when hovering or focusing the compact Community Menu toggle.', 'videohub360-theme'),
+        ),
+        'vh360_community_menu_toggle_hover_border_color' => array(
+            'default'     => '#d1d5db',
+            'label'       => __('Compact Toggle Hover Border Color', 'videohub360-theme'),
+            'description' => __('Border color when hovering or focusing the compact Community Menu toggle.', 'videohub360-theme'),
+        ),
+    );
+
+    foreach ($community_menu_toggle_color_controls as $setting_id => $control_args) {
+        $wp_customize->add_setting($setting_id, array(
+            'default'           => $control_args['default'],
+            'sanitize_callback' => 'sanitize_hex_color',
+            'transport'         => 'postMessage',
+        ));
+
+        $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, $setting_id, array(
+            'label'       => $control_args['label'],
+            'description' => $control_args['description'],
+            'section'     => 'vh360_community_menu_colors',
+        )));
+    }
+
     // Mobile Bottom Navigation Colors
     $wp_customize->add_section('vh360_mobile_nav_colors', array(
         'title'       => __('Mobile Bottom Navigation Colors', 'videohub360-theme'),

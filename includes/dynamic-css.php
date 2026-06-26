@@ -43,11 +43,17 @@ function vh360_output_dynamic_css() {
     $nav_link_color             = get_theme_mod('vh360_nav_link_color', '#1f2937');
 
     // Community Menu colors
-    $community_menu_bg_color        = get_theme_mod('vh360_community_menu_bg_color', '#ffffff');
-    $community_menu_text_color      = get_theme_mod('vh360_community_menu_text_color', '#4b5563');
-    $community_menu_hover_bg_color  = get_theme_mod('vh360_community_menu_hover_bg_color', '#f3f4f6');
-    $community_menu_active_color    = get_theme_mod('vh360_community_menu_active_color', '#2563eb');
-    $community_menu_active_bg_color = get_theme_mod('vh360_community_menu_active_bg_color', '#eff6ff');
+    $community_menu_bg_color                  = get_theme_mod('vh360_community_menu_bg_color', '#ffffff');
+    $community_menu_text_color                = get_theme_mod('vh360_community_menu_text_color', '#4b5563');
+    $community_menu_hover_bg_color            = get_theme_mod('vh360_community_menu_hover_bg_color', '#f3f4f6');
+    $community_menu_active_color              = get_theme_mod('vh360_community_menu_active_color', '#2563eb');
+    $community_menu_active_bg_color           = get_theme_mod('vh360_community_menu_active_bg_color', '#eff6ff');
+    $community_menu_toggle_bg_color           = get_theme_mod('vh360_community_menu_toggle_bg_color', '#ffffff');
+    $community_menu_toggle_text_color         = get_theme_mod('vh360_community_menu_toggle_text_color', '#1f2937');
+    $community_menu_toggle_border_color       = get_theme_mod('vh360_community_menu_toggle_border_color', '#e5e7eb');
+    $community_menu_toggle_hover_bg_color     = get_theme_mod('vh360_community_menu_toggle_hover_bg_color', '#f9fafb');
+    $community_menu_toggle_hover_text_color   = get_theme_mod('vh360_community_menu_toggle_hover_text_color', '#1f2937');
+    $community_menu_toggle_hover_border_color = get_theme_mod('vh360_community_menu_toggle_hover_border_color', '#d1d5db');
 
     // Mobile Bottom Navigation colors
     $mobile_nav_bg_color                = get_theme_mod('vh360_mobile_nav_bg_color', '#ffffff');
@@ -206,6 +212,12 @@ function vh360_output_dynamic_css() {
             --community-menu-hover-bg-color: <?php echo esc_attr($community_menu_hover_bg_color); ?>;
             --community-menu-active-color: <?php echo esc_attr($community_menu_active_color); ?>;
             --community-menu-active-bg-color: <?php echo esc_attr($community_menu_active_bg_color); ?>;
+            --community-menu-toggle-bg-color: <?php echo esc_attr($community_menu_toggle_bg_color); ?>;
+            --community-menu-toggle-text-color: <?php echo esc_attr($community_menu_toggle_text_color); ?>;
+            --community-menu-toggle-border-color: <?php echo esc_attr($community_menu_toggle_border_color); ?>;
+            --community-menu-toggle-hover-bg-color: <?php echo esc_attr($community_menu_toggle_hover_bg_color); ?>;
+            --community-menu-toggle-hover-text-color: <?php echo esc_attr($community_menu_toggle_hover_text_color); ?>;
+            --community-menu-toggle-hover-border-color: <?php echo esc_attr($community_menu_toggle_hover_border_color); ?>;
 
             /* Mobile Bottom Navigation Colors */
             --mobile-nav-bg-color: <?php echo esc_attr($mobile_nav_bg_color); ?>;

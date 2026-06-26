@@ -721,6 +721,23 @@
         });
     });
 
+    const communityMenuToggleColorBindings = {
+        vh360_community_menu_toggle_bg_color: 'community-menu-toggle-bg-color',
+        vh360_community_menu_toggle_text_color: 'community-menu-toggle-text-color',
+        vh360_community_menu_toggle_border_color: 'community-menu-toggle-border-color',
+        vh360_community_menu_toggle_hover_bg_color: 'community-menu-toggle-hover-bg-color',
+        vh360_community_menu_toggle_hover_text_color: 'community-menu-toggle-hover-text-color',
+        vh360_community_menu_toggle_hover_border_color: 'community-menu-toggle-hover-border-color'
+    };
+
+    Object.keys(communityMenuToggleColorBindings).forEach(function(settingId) {
+        wp.customize(settingId, function(value) {
+            value.bind(function(newval) {
+                updateCSSVariable(communityMenuToggleColorBindings[settingId], newval);
+            });
+        });
+    });
+
     // Community Menu - Font Family
     wp.customize('vh360_community_menu_font_family', function(value) {
         value.bind(function(newval) {
