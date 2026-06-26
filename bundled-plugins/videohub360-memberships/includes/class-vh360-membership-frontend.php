@@ -44,12 +44,97 @@ class VH360_Membership_Frontend {
      * Enqueue frontend assets
      */
     public function enqueue_assets() {
-        wp_enqueue_style(
-            'vh360-memberships',
-            VH360_MEMBERSHIPS_URL . 'assets/css/memberships.css',
+        $this->register_assets();
+
+        if ($this->current_page_needs_membership_gate_assets()) {
+            wp_enqueue_style('vh360-membership-gate');
+        }
+
+        if ($this->current_page_needs_membership_dashboard_assets()) {
+            wp_enqueue_style('vh360-membership-dashboard');
+        }
+    }
+
+    /**
+     * Register frontend membership assets without enqueueing them globally.
+     */
+    private function register_assets() {
+        wp_register_style(
+            'vh360-membership-gate',
+            VH360_MEMBERSHIPS_URL . 'assets/css/membership-gate.css',
             array(),
-            vh360_memberships_asset_version('assets/css/memberships.css')
+            vh360_memberships_asset_version('assets/css/membership-gate.css')
         );
+
+        wp_register_style(
+            'vh360-membership-dashboard',
+            VH360_MEMBERSHIPS_URL . 'assets/css/membership-dashboard.css',
+            array(),
+            vh360_memberships_asset_version('assets/css/membership-dashboard.css')
+        );
+
+        // Backward-compatible alias for integrations that check the old handle.
+        wp_register_style(
+            'vh360-memberships',
+            VH360_MEMBERSHIPS_URL . 'assets/css/membership-gate.css',
+            array(),
+            vh360_memberships_asset_version('assets/css/membership-gate.css')
+        );
+    }
+
+    /**
+     * Determine whether the current request can render a membership gate.
+     */
+    private function current_page_needs_membership_gate_assets() {
+        $options = get_option('vh360_membership_options', array());
+
+        if (is_page_template('template-activity-feed.php') && !empty($options['gate_activity_feed'])) {
+            return true;
+        }
+
+        if (is_page_template('template-members-directory.php') && !empty($options['gate_members_directory'])) {
+            return true;
+        }
+
+        if (is_singular()) {
+            $post_id = get_queried_object_id();
+            if ($post_id && function_exists('vh360_post_requires_membership') && vh360_post_requires_membership($post_id)) {
+                return true;
+            }
+
+            if (
+                $post_id
+                && 'videohub360' === get_post_type($post_id)
+                && function_exists('videohub360_course_features_enabled')
+                && videohub360_course_features_enabled()
+                && has_term('', 'videohub360_series', $post_id)
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Determine whether membership account/dashboard UI assets are needed.
+     */
+    private function current_page_needs_membership_dashboard_assets() {
+        return $this->current_dashboard_tab_is_membership() || $this->current_page_has_membership_manage_shortcode();
+    }
+
+    private function current_dashboard_tab_is_membership() {
+        return is_page_template('template-dashboard.php')
+            && function_exists('vh360_is_dashboard_tab')
+            && vh360_is_dashboard_tab('membership');
+    }
+
+    private function current_page_has_membership_manage_shortcode() {
+        if (!is_singular()) {
+            return false;
+        }
+
+        return has_shortcode((string) get_post_field('post_content', get_queried_object_id()), 'vh360_membership_manage');
     }
     
     /**

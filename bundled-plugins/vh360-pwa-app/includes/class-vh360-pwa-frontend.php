@@ -74,52 +74,131 @@ class VH360_PWA_Frontend {
 		}
 
 		$opts = vh360_pwa_get_options();
+		$this->register_public_assets();
 
-		wp_enqueue_script(
-			'vh360-pwa-public',
-			VH360_PWA_APP_URL . 'assets/public/pwa-public.js',
+		wp_enqueue_script( 'vh360-pwa-runtime' );
+		wp_enqueue_style( 'vh360-pwa-runtime' );
+
+		wp_localize_script( 'vh360-pwa-runtime', 'VH360PWA', $this->get_public_config( $opts ) );
+
+		if ( $this->current_page_needs_install_ui_assets( $opts ) ) {
+			wp_enqueue_script( 'vh360-pwa-install-ui' );
+			wp_enqueue_style( 'vh360-pwa-install-ui' );
+			wp_localize_script( 'vh360-pwa-install-ui', 'VH360PWA', $this->get_public_config( $opts ) );
+		}
+
+		if ( $this->current_page_needs_device_tools_assets() ) {
+			wp_enqueue_script( 'vh360-pwa-device-tools' );
+			wp_enqueue_style( 'vh360-pwa-install-ui' );
+			wp_localize_script( 'vh360-pwa-device-tools', 'VH360PWA', $this->get_public_config( $opts ) );
+		}
+
+		// Enqueue push notification scripts only when push UI or auto-prompt behavior needs them.
+		$this->maybe_enqueue_push_scripts();
+	}
+
+	private function register_public_assets() : void {
+		wp_register_script(
+			'vh360-pwa-runtime',
+			VH360_PWA_APP_URL . 'assets/public/pwa-runtime.js',
 			array(),
-			vh360_pwa_app_asset_version('assets/public/pwa-public.js'),
+			vh360_pwa_app_asset_version( 'assets/public/pwa-runtime.js' ),
 			false
 		);
-		wp_enqueue_style(
-			'vh360-pwa-public',
-			VH360_PWA_APP_URL . 'assets/public/pwa-public.css',
+		wp_register_script(
+			'vh360-pwa-install-ui',
+			VH360_PWA_APP_URL . 'assets/public/pwa-install-ui.js',
 			array(),
-			vh360_pwa_app_asset_version('assets/public/pwa-public.css')
+			vh360_pwa_app_asset_version( 'assets/public/pwa-install-ui.js' ),
+			false
+		);
+		wp_register_script(
+			'vh360-pwa-device-tools',
+			VH360_PWA_APP_URL . 'assets/public/pwa-device-tools.js',
+			array(),
+			vh360_pwa_app_asset_version( 'assets/public/pwa-device-tools.js' ),
+			false
 		);
 
-		wp_localize_script(
-			'vh360-pwa-public',
-			'VH360PWA',
-			array(
-				// Use root-level, static files for maximum compatibility across hosts/CDNs.
-				'swUrl'              => function_exists( 'vh360_pwa_version_url' ) ? vh360_pwa_version_url( home_url( '/' . VH360_PWA_SW_SLUG ), $opts ) : home_url( '/' . VH360_PWA_SW_SLUG ),
-				'offlineUrl'         => function_exists( 'vh360_pwa_version_url' ) ? vh360_pwa_version_url( home_url( '/' . VH360_PWA_OFFLINE_SLUG ), $opts ) : home_url( '/' . VH360_PWA_OFFLINE_SLUG ),
-				'showInstallPrompt'  => ! empty( $opts['show_install_prompt'] ) ? 1 : 0,
-				'installPromptText'  => (string) $opts['install_prompt_text'],
-				'showInstallBanner'  => ! empty( $opts['show_install_banner'] ) ? 1 : 0,
-				'installBannerText'  => (string) $opts['install_banner_text'],
-				'bannerDismissDays'  => (int) $opts['install_banner_dismiss_days'],
-				'showIosOnboarding' => ! empty( $opts['show_ios_onboarding'] ) ? 1 : 0,
-				'debugMode' => ! empty( $opts['debug_mode'] ) ? 1 : 0,
-				'isAdmin'   => current_user_can( 'manage_options' ) ? 1 : 0,
-				// If OneSignal is active, it must own the root scope service worker.
-				'skipSWRegister'     => $this->should_skip_sw_registration() ? 1 : 0,
-				'appShortName'       => ! empty( $opts['short_name'] ) ? (string) $opts['short_name'] : get_bloginfo( 'name' ),
-				'enablePullToRefresh' => ! empty( $opts['enable_pull_to_refresh'] ) ? 1 : 0,
-				'pwaAssetVersion' => function_exists( 'vh360_pwa_get_asset_version' ) ? vh360_pwa_get_asset_version( $opts ) : 0,
-			)
+		wp_register_style(
+			'vh360-pwa-runtime',
+			VH360_PWA_APP_URL . 'assets/public/pwa-runtime.css',
+			array(),
+			vh360_pwa_app_asset_version( 'assets/public/pwa-runtime.css' )
+		);
+		wp_register_style(
+			'vh360-pwa-install-ui',
+			VH360_PWA_APP_URL . 'assets/public/pwa-install-ui.css',
+			array(),
+			vh360_pwa_app_asset_version( 'assets/public/pwa-install-ui.css' )
+		);
+		wp_register_style(
+			'vh360-push-subscribe',
+			VH360_PWA_APP_URL . 'assets/public/push-subscribe.css',
+			array(),
+			vh360_pwa_app_asset_version( 'assets/public/push-subscribe.css' )
 		);
 
-		// Enqueue push notification scripts if configured
-		$this->maybe_enqueue_push_scripts();
+		// Backward-compatible aliases for code that checks old public handles.
+		wp_register_script( 'vh360-pwa-public', VH360_PWA_APP_URL . 'assets/public/pwa-runtime.js', array(), vh360_pwa_app_asset_version( 'assets/public/pwa-runtime.js' ), false );
+		wp_register_style( 'vh360-pwa-public', VH360_PWA_APP_URL . 'assets/public/pwa-runtime.css', array(), vh360_pwa_app_asset_version( 'assets/public/pwa-runtime.css' ) );
+	}
+
+	private function get_public_config( array $opts ) : array {
+		return array(
+			'swUrl'              => function_exists( 'vh360_pwa_version_url' ) ? vh360_pwa_version_url( home_url( '/' . VH360_PWA_SW_SLUG ), $opts ) : home_url( '/' . VH360_PWA_SW_SLUG ),
+			'offlineUrl'         => function_exists( 'vh360_pwa_version_url' ) ? vh360_pwa_version_url( home_url( '/' . VH360_PWA_OFFLINE_SLUG ), $opts ) : home_url( '/' . VH360_PWA_OFFLINE_SLUG ),
+			'showInstallPrompt'  => ! empty( $opts['show_install_prompt'] ) ? 1 : 0,
+			'installPromptText'  => (string) $opts['install_prompt_text'],
+			'showInstallBanner'  => ! empty( $opts['show_install_banner'] ) ? 1 : 0,
+			'installBannerText'  => (string) $opts['install_banner_text'],
+			'bannerDismissDays'  => (int) $opts['install_banner_dismiss_days'],
+			'showIosOnboarding'  => ! empty( $opts['show_ios_onboarding'] ) ? 1 : 0,
+			'debugMode'          => ! empty( $opts['debug_mode'] ) ? 1 : 0,
+			'isAdmin'            => current_user_can( 'manage_options' ) ? 1 : 0,
+			'skipSWRegister'     => $this->should_skip_sw_registration() ? 1 : 0,
+			'appShortName'       => ! empty( $opts['short_name'] ) ? (string) $opts['short_name'] : get_bloginfo( 'name' ),
+			'enablePullToRefresh' => ! empty( $opts['enable_pull_to_refresh'] ) ? 1 : 0,
+			'pwaAssetVersion'    => function_exists( 'vh360_pwa_get_asset_version' ) ? vh360_pwa_get_asset_version( $opts ) : 0,
+		);
+	}
+
+	private function current_page_needs_install_ui_assets( array $opts ) : bool {
+		if ( ! empty( $opts['show_install_banner'] ) ) {
+			return true;
+		}
+		return $this->current_singular_content_has_shortcode( array( 'vh360_pwa_install_button', 'vh360_pwa_status' ) );
+	}
+
+	private function current_page_needs_device_tools_assets() : bool {
+		if ( isset( $_GET['vh360_pwa_reset'] ) && '1' === (string) wp_unslash( $_GET['vh360_pwa_reset'] ) ) {
+			return true;
+		}
+		$tool = isset( $_GET['vh360_pwa_tool'] ) ? sanitize_key( wp_unslash( $_GET['vh360_pwa_tool'] ) ) : '';
+		return in_array( $tool, array( 'clear_caches', 'unregister_sw', 'reset_device' ), true );
+	}
+
+	private function current_singular_content_has_shortcode( array $shortcodes ) : bool {
+		if ( ! is_singular() ) {
+			return false;
+		}
+		$content = (string) get_post_field( 'post_content', get_queried_object_id() );
+		foreach ( $shortcodes as $shortcode ) {
+			if ( has_shortcode( $content, $shortcode ) ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
 	 * Maybe enqueue push notification scripts
 	 */
 	private function maybe_enqueue_push_scripts() : void {
+		if ( ! $this->current_page_needs_push_public_assets() ) {
+			return;
+		}
+
 		$push_manager = VH360_PWA_App::instance()->push_manager;
 		if ( ! $push_manager ) {
 			return;
@@ -148,6 +227,8 @@ class VH360_PWA_Frontend {
 			return;
 		}
 
+		wp_enqueue_style( 'vh360-push-subscribe' );
+
 		// Enqueue provider SDK
 		$adapter->enqueue_frontend_sdk( $provider_settings );
 
@@ -159,6 +240,29 @@ class VH360_PWA_Frontend {
 			'VH360Push',
 			$push_config
 		);
+	}
+
+
+	private function current_page_needs_push_public_assets() : bool {
+		if ( $this->current_singular_content_has_shortcode( array( 'vh360_push_subscribe' ) ) ) {
+			return true;
+		}
+		if ( is_page_template( 'template-dashboard.php' ) && function_exists( 'vh360_is_dashboard_tab' ) && vh360_is_dashboard_tab( array( 'settings', 'push-notifications' ) ) ) {
+			return true;
+		}
+
+		$push_manager = VH360_PWA_App::instance()->push_manager;
+		if ( ! $push_manager ) {
+			return false;
+		}
+		$settings = $push_manager->get_settings();
+		$mode = $settings['mode'] ?? '';
+		if ( 'provider' !== $mode && 'hybrid' !== $mode ) {
+			return false;
+		}
+		$active_provider = $settings['active_provider'] ?? '';
+		$provider_settings = $settings['providers'][ $active_provider ] ?? array();
+		return ! empty( $provider_settings['auto_prompt'] ) || ! empty( $provider_settings['auto_prompt_scroll'] ) || ! empty( $provider_settings['auto_prompt_login'] );
 	}
 
 	/**
@@ -212,6 +316,10 @@ class VH360_PWA_Frontend {
 		);
 
 		$opts = vh360_pwa_get_options();
+		if ( wp_script_is( 'vh360-pwa-install-ui', 'registered' ) ) {
+			wp_enqueue_script( 'vh360-pwa-install-ui' );
+			wp_enqueue_style( 'vh360-pwa-install-ui' );
+		}
 		$text = $atts['text'] ? (string) $atts['text'] : (string) $opts['install_prompt_text'];
 		$text = esc_html( $text ? $text : 'Install app' );
 		$class = esc_attr( (string) $atts['class'] );
@@ -222,6 +330,10 @@ class VH360_PWA_Frontend {
 	public function shortcode_status() : string {
 		if ( ! vh360_pwa_is_enabled() ) {
 			return '';
+		}
+		if ( wp_script_is( 'vh360-pwa-install-ui', 'registered' ) ) {
+			wp_enqueue_script( 'vh360-pwa-install-ui' );
+			wp_enqueue_style( 'vh360-pwa-install-ui' );
 		}
 		return '<div class="vh360-pwa-status" data-vh360-pwa-status="1"></div>';
 	}
@@ -256,6 +368,10 @@ class VH360_PWA_Frontend {
 		$errors = $adapter->validate_settings( $provider_settings );
 		if ( ! empty( $errors ) ) {
 			return '';
+		}
+
+		if ( wp_style_is( 'vh360-push-subscribe', 'registered' ) ) {
+			wp_enqueue_style( 'vh360-push-subscribe' );
 		}
 
 		$atts = shortcode_atts(

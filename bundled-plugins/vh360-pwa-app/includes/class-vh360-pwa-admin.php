@@ -266,25 +266,52 @@ $out['scope']     = $normalize_to_path( $scope );
 	}
 
 	public function enqueue_admin_assets( string $hook ) : void {
-		if ( false === strpos( $hook, $this->page_slug ) && false === strpos( $hook, 'vh360-pwa-app-store' ) ) {
+		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+		$tab  = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'general';
+
+		if ( 'vh360-pwa-app-store' === $page ) {
+			wp_enqueue_style(
+				'vh360-pwa-appstore-admin',
+				VH360_PWA_APP_URL . 'assets/admin/appstore-admin.css',
+				array(),
+				vh360_pwa_app_asset_version( 'assets/admin/appstore-admin.css' )
+			);
+			wp_enqueue_script(
+				'vh360-pwa-appstore-admin',
+				VH360_PWA_APP_URL . 'assets/admin/appstore-admin.js',
+				array( 'jquery' ),
+				vh360_pwa_app_asset_version( 'assets/admin/appstore-admin.js' ),
+				true
+			);
 			return;
 		}
 
-		// WP color picker for color fields.
-		wp_enqueue_style( 'wp-color-picker' );
-		wp_enqueue_script( 'wp-color-picker' );
+		if ( $this->page_slug !== $page ) {
+			return;
+		}
+
+		$admin_style_deps = array();
+		$admin_script_deps = array( 'jquery' );
+
+		if ( 'general' === $tab ) {
+			wp_enqueue_style( 'wp-color-picker' );
+			wp_enqueue_script( 'wp-color-picker' );
+			wp_enqueue_media();
+			$admin_style_deps[] = 'wp-color-picker';
+			$admin_script_deps[] = 'wp-color-picker';
+		}
 
 		wp_enqueue_style(
 			'vh360-pwa-admin',
 			VH360_PWA_APP_URL . 'assets/admin/pwa-admin.css',
-			array( 'wp-color-picker' ),
-			vh360_pwa_app_asset_version('assets/admin/pwa-admin.css')
+			$admin_style_deps,
+			vh360_pwa_app_asset_version( 'assets/admin/pwa-admin.css' )
 		);
 		wp_enqueue_script(
 			'vh360-pwa-admin',
 			VH360_PWA_APP_URL . 'assets/admin/pwa-admin.js',
-			array( 'jquery', 'wp-color-picker' ),
-			vh360_pwa_app_asset_version('assets/admin/pwa-admin.js'),
+			$admin_script_deps,
+			vh360_pwa_app_asset_version( 'assets/admin/pwa-admin.js' ),
 			true
 		);
 		wp_localize_script(
@@ -295,24 +322,6 @@ $out['scope']     = $normalize_to_path( $scope );
 				'nonce'   => wp_create_nonce( 'vh360_pwa_admin' ),
 			)
 		);
-		wp_enqueue_media();
-		
-		// Enqueue App Store admin assets on the App Store page
-		if ( false !== strpos( $hook, 'vh360-pwa-app-store' ) ) {
-			wp_enqueue_style(
-				'vh360-pwa-appstore-admin',
-				VH360_PWA_APP_URL . 'assets/admin/appstore-admin.css',
-				array(),
-				vh360_pwa_app_asset_version('assets/admin/appstore-admin.css')
-			);
-			wp_enqueue_script(
-				'vh360-pwa-appstore-admin',
-				VH360_PWA_APP_URL . 'assets/admin/appstore-admin.js',
-				array( 'jquery' ),
-				vh360_pwa_app_asset_version('assets/admin/appstore-admin.js'),
-				true
-			);
-		}
 	}
 
 	public function theme_notice() : void {

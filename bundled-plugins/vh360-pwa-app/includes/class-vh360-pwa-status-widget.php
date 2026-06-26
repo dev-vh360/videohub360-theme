@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Simple widget that prints a PWA status indicator.
  *
- * The JS in assets/public/pwa-public.js will populate this element.
+ * The JS in assets/public/pwa-install-ui.js will populate this element.
  */
 class VH360_PWA_Status_Widget extends WP_Widget {
 	public function __construct() {

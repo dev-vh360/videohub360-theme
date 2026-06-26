@@ -1,0 +1,8 @@
+/* VH360 Push Subscribe Widget */
+.vh360-push-subscribe{padding:20px;background:#f9f9f9;border:1px solid #ddd;border-radius:8px;max-width:400px;margin:20px 0}
+.vh360-push-subscribe-btn{display:inline-block;padding:12px 24px;background:#2271b1;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:16px;font-weight:500;transition:background .2s}
+.vh360-push-subscribe-btn:hover{background:#135e96}
+.vh360-push-success{color:#46b450;font-weight:bold;font-size:14px}
+.vh360-push-error{color:#dc3232;font-size:14px}
+.vh360-push-state{animation:fadeIn .3s}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}

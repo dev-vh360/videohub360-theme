@@ -51,9 +51,14 @@ class VH360_Membership_Subscription_Management {
      * Enqueue frontend scripts
      */
     public function enqueue_scripts() {
-        // Only enqueue on pages that need it.
+        // Only enqueue where the membership management UI is rendered.
         $has_manage_shortcode = is_singular() && has_shortcode((string) get_post_field('post_content', get_queried_object_id()), 'vh360_membership_manage');
-        if (!is_user_logged_in() && !$has_manage_shortcode) {
+        $is_membership_dashboard = is_page_template('template-dashboard.php')
+            && function_exists('vh360_is_dashboard_tab')
+            && vh360_is_dashboard_tab('membership');
+        $is_auto_checkout = $has_manage_shortcode && !empty($_GET['vh360_start_checkout']);
+
+        if (!$has_manage_shortcode && !$is_membership_dashboard && !$is_auto_checkout) {
             return;
         }
         
