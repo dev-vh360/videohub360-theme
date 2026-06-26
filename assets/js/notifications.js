@@ -22,6 +22,12 @@
             this.badge = $('.vh360-notification-badge');
             this.notificationList = $('#vh360-notification-list');
             this.markAllReadBtn = $('#vh360-mark-all-read');
+            this.pollingTimer = null;
+            this.countRequestInFlight = false;
+            
+            if (!this.bellBtn.length || !this.dropdown.length) {
+                return;
+            }
             
             this.bindEvents();
             this.startPolling();
@@ -69,6 +75,17 @@
                     self.closeDropdown();
                     self.bellBtn.focus();
                 }
+            });
+            
+            // Pause polling while the tab is hidden and resume cleanly when visible.
+            $(document).on('visibilitychange', function() {
+                if (document.hidden) {
+                    self.stopPolling();
+                    return;
+                }
+                
+                self.updateCount();
+                self.startPolling();
             });
         },
         
@@ -195,6 +212,12 @@
         updateCount: function() {
             const self = this;
             
+            if (document.hidden || this.countRequestInFlight) {
+                return;
+            }
+            
+            this.countRequestInFlight = true;
+            
             $.ajax({
                 url: vh360Notifications.ajaxUrl,
                 type: 'POST',
@@ -209,6 +232,9 @@
                 },
                 error: function() {
                     console.error('Failed to update notification count');
+                },
+                complete: function() {
+                    self.countRequestInFlight = false;
                 }
             });
         },
@@ -286,11 +312,27 @@
          */
         startPolling: function() {
             const self = this;
-            const interval = vh360Notifications.pollInterval || 30000; // Default 30 seconds
+            const interval = vh360Notifications.pollInterval || 60000; // Default 60 seconds
             
-            setInterval(function() {
+            if (document.hidden || this.pollingTimer) {
+                return;
+            }
+            
+            this.pollingTimer = window.setTimeout(function pollNotifications() {
+                self.pollingTimer = null;
                 self.updateCount();
+                self.startPolling();
             }, interval);
+        },
+        
+        /**
+         * Stop polling for new notifications
+         */
+        stopPolling: function() {
+            if (this.pollingTimer) {
+                window.clearTimeout(this.pollingTimer);
+                this.pollingTimer = null;
+            }
         }
     };
     

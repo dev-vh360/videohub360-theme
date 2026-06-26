@@ -294,6 +294,36 @@ require_once VH360_THEME_DIR . '/includes/wp-login-redirect.php';
 
 
 /**
+ * Determine whether the header notification bell assets should be enqueued.
+ *
+ * Mirrors the header bell rendering conditions so logged-in users only load the
+ * bell CSS/JS on pages where the bell can appear.
+ *
+ * @return bool True when the header notification bell assets should load.
+ */
+function vh360_should_enqueue_notification_bell_assets() {
+    if (!is_user_logged_in()) {
+        return false;
+    }
+
+    if (!get_theme_mod('vh360_show_notifications_icon', true)) {
+        return false;
+    }
+
+    $icon_order = get_theme_mod('vh360_icon_order', 'search,cart,messages,notifications,user');
+    $icon_order_array = array_map('trim', explode(',', $icon_order));
+    if (!in_array('notifications', $icon_order_array, true)) {
+        return false;
+    }
+
+    if (function_exists('vh360_is_auth_page') && vh360_is_auth_page() && get_theme_mod('vh360_hide_header_on_auth_pages', 1)) {
+        return false;
+    }
+
+    return true;
+}
+
+/**
  * Enqueue scripts and styles
  */
 function videohub360_theme_scripts() {
@@ -391,33 +421,35 @@ function videohub360_theme_scripts() {
             true
         );
 
-        wp_enqueue_style(
-            'vh360-notifications',
-            VH360_THEME_URI . '/assets/css/notifications.css',
-            array('videohub360-theme-style'),
-            vh360_theme_asset_version('assets/css/notifications.css')
-        );
+        if (vh360_should_enqueue_notification_bell_assets()) {
+            wp_enqueue_style(
+                'vh360-notifications',
+                VH360_THEME_URI . '/assets/css/notifications.css',
+                array('videohub360-theme-style'),
+                vh360_theme_asset_version('assets/css/notifications.css')
+            );
 
-        wp_enqueue_script(
-            'vh360-notifications',
-            VH360_THEME_URI . '/assets/js/notifications.js',
-            array('jquery'),
-            vh360_theme_asset_version('assets/js/notifications.js'),
-            true
-        );
+            wp_enqueue_script(
+                'vh360-notifications',
+                VH360_THEME_URI . '/assets/js/notifications.js',
+                array('jquery'),
+                vh360_theme_asset_version('assets/js/notifications.js'),
+                true
+            );
 
-        wp_localize_script('vh360-notifications', 'vh360Notifications', array(
-            'ajaxUrl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('vh360_notifications'),
-            'pollInterval' => 30000, // 30 seconds
-            'i18n' => array(
-                'markAllRead' => __('Mark all as read', 'videohub360-theme'),
-                'viewAll' => __('View all notifications', 'videohub360-theme'),
-                'noNotifications' => __('No notifications yet', 'videohub360-theme'),
-                'error' => __('An error occurred. Please try again.', 'videohub360-theme'),
-                'ago' => __('ago', 'videohub360-theme'),
-            ),
-        ));
+            wp_localize_script('vh360-notifications', 'vh360Notifications', array(
+                'ajaxUrl' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('vh360_notifications'),
+                'pollInterval' => 60000, // 60 seconds
+                'i18n' => array(
+                    'markAllRead' => __('Mark all as read', 'videohub360-theme'),
+                    'viewAll' => __('View all notifications', 'videohub360-theme'),
+                    'noNotifications' => __('No notifications yet', 'videohub360-theme'),
+                    'error' => __('An error occurred. Please try again.', 'videohub360-theme'),
+                    'ago' => __('ago', 'videohub360-theme'),
+                ),
+            ));
+        }
 
         // Enqueue direct messages on dashboard page
         if (is_page_template('template-dashboard.php') && function_exists('vh360_is_dashboard_tab') && vh360_is_dashboard_tab('messages')) {
