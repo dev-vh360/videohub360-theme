@@ -2443,7 +2443,7 @@ add_filter('nav_menu_link_attributes', function ($atts, $item, $args, $depth) {
 add_action('wp_enqueue_scripts', function () {
     wp_register_script(
         'vh360-pwa-link-same-window',
-        get_template_directory_uri() . '/assets/js/vh360-pwa-link-same-window.js',
+        vh360_theme_asset_url('assets/js/vh360-pwa-link-same-window.js'),
         array(),
         vh360_theme_asset_version('assets/js/vh360-pwa-link-same-window.js'),
         true

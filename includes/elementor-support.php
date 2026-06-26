@@ -126,7 +126,7 @@ function videohub360_theme_elementor_preview_styles() {
     if (did_action('elementor/loaded') && \Elementor\Plugin::$instance->preview->is_preview_mode()) {
         wp_enqueue_style(
             'videohub360-theme-elementor-preview',
-            get_template_directory_uri() . '/assets/css/elementor-preview.css',
+            vh360_theme_asset_url('assets/css/elementor-preview.css'),
             array(),
             vh360_theme_asset_version('assets/css/elementor-preview.css')
         );

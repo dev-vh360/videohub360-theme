@@ -3,5 +3,7 @@
     "build:assets": "node tools/build-min-assets.mjs",
     "check:assets": "node tools/build-min-assets.mjs --check"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "terser": "^5.43.1"
+  }
 }

@@ -671,10 +671,10 @@ function videohub360_theme_customize_partial_blogdescription() {
  * Binds JS handlers to make Theme Customizer preview reload changes asynchronously.
  */
 function videohub360_theme_customize_preview_js() {
-    wp_enqueue_script('videohub360-theme-customizer', get_template_directory_uri() . '/assets/js/customizer.js', array('customize-preview'), vh360_theme_asset_version('assets/js/customizer.js'), true);
+    wp_enqueue_script('videohub360-theme-customizer', vh360_theme_asset_url('assets/js/customizer.js'), array('customize-preview'), vh360_theme_asset_version('assets/js/customizer.js'), true);
     
     // Enqueue new customizer preview script
-    wp_enqueue_script('vh360-customizer-preview', get_template_directory_uri() . '/assets/js/customizer-preview.js', array('customize-preview', 'jquery'), vh360_theme_asset_version('assets/js/customizer-preview.js'), true);
+    wp_enqueue_script('vh360-customizer-preview', vh360_theme_asset_url('assets/js/customizer-preview.js'), array('customize-preview', 'jquery'), vh360_theme_asset_version('assets/js/customizer-preview.js'), true);
 }
 add_action('customize_preview_init', 'videohub360_theme_customize_preview_js');
 

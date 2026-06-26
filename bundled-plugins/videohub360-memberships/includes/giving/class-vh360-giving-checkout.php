@@ -14,8 +14,8 @@ class VH360_Giving_Checkout {
             && vh360_is_dashboard_tab('giving')
             && vh360_giving_is_enabled()
         ){
-            wp_enqueue_style('vh360-giving',VH360_MEMBERSHIPS_URL.'assets/frontend/giving.css',array(),vh360_memberships_asset_version('assets/frontend/giving.css'));
-            wp_enqueue_script('vh360-giving',VH360_MEMBERSHIPS_URL.'assets/frontend/giving.js',array('jquery'),vh360_memberships_asset_version('assets/frontend/giving.js'),true);
+            wp_enqueue_style('vh360-giving',vh360_memberships_asset_url('assets/frontend/giving.css'),array(),vh360_memberships_asset_version('assets/frontend/giving.css'));
+            wp_enqueue_script('vh360-giving',vh360_memberships_asset_url('assets/frontend/giving.js'),array('jquery'),vh360_memberships_asset_version('assets/frontend/giving.js'),true);
             wp_localize_script('vh360-giving','vh360Giving',array('ajaxUrl'=>admin_url('admin-ajax.php'),'nonce'=>wp_create_nonce('vh360_giving_checkout')));
         }
     }

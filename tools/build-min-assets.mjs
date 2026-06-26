@@ -1,10 +1,13 @@
 import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { readFile, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
 const checkMode = process.argv.includes('--check');
+const execFileAsync = promisify(execFile);
+let terserMinifyPromise;
 
 const cssSources = [
   "assets/admin/css/theme-admin.css",
@@ -164,54 +167,12 @@ function minPath(source) {
   return source.replace(/\.(css|js)$/u, '.min.$1');
 }
 
-function stripJsComments(input) {
-  let output = '';
-  let i = 0;
-  let state = 'normal';
-  while (i < input.length) {
-    const ch = input[i];
-    const next = input[i + 1];
-    if (state === 'normal') {
-      if (ch === '/' && next === '*') { state = 'block'; i += 2; continue; }
-      if (ch === '/' && next === '/') { state = 'line'; i += 2; continue; }
-      output += ch;
-      if (ch === '"') state = 'double';
-      else if (ch === "'") state = 'single';
-      else if (ch === '`') state = 'template';
-      i += 1;
-      continue;
-    }
-    if (state === 'block') {
-      if (ch === '*' && next === '/') { state = 'normal'; i += 2; } else { i += 1; }
-      continue;
-    }
-    if (state === 'line') {
-      if (ch === '\n' || ch === '\r') { output += ch; state = 'normal'; }
-      i += 1;
-      continue;
-    }
-    output += ch;
-    if (ch === '\\') { output += next || ''; i += 2; continue; }
-    if ((state === 'double' && ch === '"') || (state === 'single' && ch === "'") || (state === 'template' && ch === '`')) state = 'normal';
-    i += 1;
-  }
-  return output;
-}
-
-function collapseJsWhitespace(input) {
-  return input
-    .split(/\r?\n/u)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .join('\n');
-}
-
 function minifyCssText(input) {
   return input
     .replace(/\/\*[\s\S]*?\*\//gu, '')
     .replace(/\s+/gu, ' ')
     .replace(/\s*([{}:;,>+~])\s*/gu, '$1')
-    .replace(/;\}/gu, '}')
+    .replace(/;\}\s*/gu, '}')
     .trim();
 }
 
@@ -219,8 +180,50 @@ async function minifyCss(source) {
   return minifyCssText(await readFile(source, 'utf8'));
 }
 
+async function loadTerserMinify() {
+  if (!terserMinifyPromise) {
+    terserMinifyPromise = import('terser')
+      .then((module) => module.minify)
+      .catch(() => null);
+  }
+
+  return terserMinifyPromise;
+}
+
+function preserveJsSource(input) {
+  return input
+    .split(/\r?\n/u)
+    .map((line) => line.trimEnd())
+    .join('\n')
+    .trim();
+}
+
 async function minifyJs(source) {
-  return collapseJsWhitespace(stripJsComments(await readFile(source, 'utf8')));
+  const code = await readFile(source, 'utf8');
+  const terserMinify = await loadTerserMinify();
+
+  if (!terserMinify) {
+    console.warn(`Terser is not installed; preserving readable JS for ${source}. Run npm install before release builds.`);
+    return preserveJsSource(code);
+  }
+
+  const result = await terserMinify(code, {
+    compress: false,
+    mangle: false,
+    format: {
+      comments: false,
+    },
+  });
+
+  if (!result.code) {
+    throw new Error(`Terser produced empty output for ${source}`);
+  }
+
+  return result.code;
+}
+
+async function validateJsSyntax(file) {
+  await execFileAsync(process.execPath, ['--check', file]);
 }
 
 async function handleSource(source, minifier) {
@@ -235,10 +238,12 @@ async function handleSource(source, minifier) {
     const [current, sourceStat, targetStat] = await Promise.all([readFile(target, 'utf8'), stat(source), stat(target)]);
     if (targetStat.mtimeMs + 1 < sourceStat.mtimeMs) throw new Error(`Stale minified asset: ${target}`);
     if (current !== output) throw new Error(`Outdated minified asset: ${target}`);
+    if (target.endsWith('.min.js')) await validateJsSyntax(target);
     return { checked: true, source, target };
   }
 
   await writeFile(target, output);
+  if (target.endsWith('.min.js')) await validateJsSyntax(target);
   return { generated: true, source, target };
 }
 

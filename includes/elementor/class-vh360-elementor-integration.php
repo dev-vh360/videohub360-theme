@@ -101,7 +101,7 @@ class VH360_Elementor_Integration {
 		// Enqueue posts widget styles.
 		wp_enqueue_style(
 			'vh360-elementor-posts-widget',
-			get_template_directory_uri() . '/assets/css/elementor-posts-widget.css',
+			vh360_theme_asset_url('assets/css/elementor-posts-widget.css'),
 			array(),
 			vh360_theme_asset_version( 'assets/css/elementor-posts-widget.css' )
 		);
