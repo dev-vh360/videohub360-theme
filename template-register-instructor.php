@@ -31,7 +31,13 @@ if (!get_option('users_can_register')) {
 // Handle registration errors
 $registration_error = null;
 if (isset($_GET['registration']) && $_GET['registration'] === 'failed') {
-    $error_code = isset($_GET['error']) ? sanitize_text_field($_GET['error']) : 'unknown';
+    if (isset($_GET['vh360_registration_error'])) {
+        $error_code = sanitize_key(wp_unslash($_GET['vh360_registration_error']));
+    } elseif (isset($_GET['error'])) {
+        $error_code = sanitize_key(wp_unslash($_GET['error']));
+    } else {
+        $error_code = 'unknown';
+    }
     $registration_error = $error_code;
 }
 
@@ -98,19 +104,11 @@ get_header();
                     <?php
                     // Display registration errors
                     if ($registration_error) {
-                        $error_messages = array(
-                            'empty_fields' => __('Please fill in all required fields.', 'videohub360-theme'),
-                            'invalid_email' => __('Please enter a valid email address.', 'videohub360-theme'),
-                            'username_exists' => __('Username already exists. Please choose another.', 'videohub360-theme'),
-                            'email_exists' => __('Email address is already registered.', 'videohub360-theme'),
-                            'nonce_failed' => __('Security check failed. Please try again.', 'videohub360-theme'),
-                            'invalid_account_type' => __('Invalid registration type. Please try again.', 'videohub360-theme'),
-                            'password_too_short' => __('Password must be at least 8 characters long.', 'videohub360-theme'),
-                            'terms_not_accepted' => __('You must accept the Terms of Service and Privacy Policy.', 'videohub360-theme'),
-                            'unknown' => __('Registration failed. Please try again.', 'videohub360-theme'),
-                        );
-                        
-                        $message = isset($error_messages[$registration_error]) ? $error_messages[$registration_error] : $error_messages['unknown'];
+                        $message = function_exists('vh360_get_registration_error_message')
+                            ? vh360_get_registration_error_message($registration_error)
+                            : (0 === strpos($registration_error, 'invite_')
+                                ? __('This invite code is not valid. Please check your invite link or contact the person who invited you.', 'videohub360-theme')
+                                : __('Registration failed. Please try again.', 'videohub360-theme'));
                         echo '<div class="vh360-auth-error">' . esc_html($message) . '</div>';
                     }
                     
@@ -213,6 +211,8 @@ get_header();
                             </small>
                         </div>
                         
+                        <?php get_template_part('template-parts/auth/invite-code-field', null, array('context' => 'instructor')); ?>
+
                         <div class="vh360-auth-field vh360-auth-checkbox">
                             <label for="vh360-terms">
                                 <input 

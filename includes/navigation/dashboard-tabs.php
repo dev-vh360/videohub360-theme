@@ -209,6 +209,14 @@ function vh360_get_dashboard_tabs_registry( $user_id = null ) {
             'show_callback' => '__return_true',
             'icon_svg' => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>',
         ),
+        'invites' => array(
+            'label' => __( 'Invites', 'videohub360-theme' ),
+            'label_callback' => null,
+            'show_callback' => function( $user_id ) {
+                return function_exists( 'vh360_user_can_create_invites' ) && vh360_user_can_create_invites( $user_id );
+            },
+            'icon_svg' => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"></path><path d="M22 6l-10 7L2 6"></path></svg>',
+        ),
         'settings' => array(
             'label' => __( 'Settings', 'videohub360-theme' ),
             'label_callback' => null,

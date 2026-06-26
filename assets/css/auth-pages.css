@@ -103,6 +103,7 @@
 }
 
 .vh360-auth-benefits-title {
+    color: var(--auth-welcome-text);
     font-size: 1.25rem;
     font-weight: 600;
     margin-bottom: 1rem;
@@ -611,4 +612,10 @@
         width: 48px;
         height: 48px;
     }
+}
+
+/* Invite-only registration field */
+.vh360-invite-code-field .vh360-auth-hint {
+    display: block;
+    margin-top: 0.35rem;
 }
