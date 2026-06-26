@@ -34,15 +34,17 @@ define('VH360_THEME_URI', get_template_directory_uri());
  * @param string $relative_path Asset path relative to the theme root.
  * @return string
  */
-function vh360_theme_asset_version($relative_path) {
-    $relative_path = ltrim($relative_path, '/');
-    $file_path = trailingslashit(get_template_directory()) . $relative_path;
+if (!function_exists('vh360_theme_asset_version')) {
+    function vh360_theme_asset_version($relative_path) {
+        $relative_path = ltrim($relative_path, '/');
+        $file_path = trailingslashit(get_template_directory()) . $relative_path;
 
-    if (file_exists($file_path)) {
-        return VH360_THEME_VERSION . '-' . filemtime($file_path);
+        if (file_exists($file_path)) {
+            return VH360_THEME_VERSION . '-' . filemtime($file_path);
+        }
+
+        return VH360_THEME_VERSION;
     }
-
-    return VH360_THEME_VERSION;
 }
 
 /**
@@ -2620,6 +2622,5 @@ function vh360_render_menu_admin_notice( $location_slug, $location_name ) {
     </div>
     <?php
 }
-
 
 

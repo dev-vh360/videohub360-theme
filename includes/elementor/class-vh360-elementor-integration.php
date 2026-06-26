@@ -103,7 +103,7 @@ class VH360_Elementor_Integration {
 			'vh360-elementor-posts-widget',
 			get_template_directory_uri() . '/assets/css/elementor-posts-widget.css',
 			array(),
-			wp_get_theme()->get( 'Version' )
+			vh360_theme_asset_version( 'assets/css/elementor-posts-widget.css' )
 		);
 	}
 }

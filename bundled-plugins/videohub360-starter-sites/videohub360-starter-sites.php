@@ -34,15 +34,17 @@ define('VH360_STARTER_SITES_ADMIN', VH360_STARTER_SITES_DIR . 'admin/');
  * @param string $relative_path Asset path relative to the plugin root.
  * @return string
  */
-function vh360_starter_sites_asset_version($relative_path) {
-    $relative_path = ltrim($relative_path, '/');
-    $file_path = VH360_STARTER_SITES_DIR . $relative_path;
+if (!function_exists('vh360_starter_sites_asset_version')) {
+    function vh360_starter_sites_asset_version($relative_path) {
+        $relative_path = ltrim($relative_path, '/');
+        $file_path = VH360_STARTER_SITES_DIR . $relative_path;
 
-    if (file_exists($file_path)) {
-        return VH360_STARTER_SITES_VERSION . '-' . filemtime($file_path);
+        if (file_exists($file_path)) {
+            return VH360_STARTER_SITES_VERSION . '-' . filemtime($file_path);
+        }
+
+        return VH360_STARTER_SITES_VERSION;
     }
-
-    return VH360_STARTER_SITES_VERSION;
 }
 
 /**

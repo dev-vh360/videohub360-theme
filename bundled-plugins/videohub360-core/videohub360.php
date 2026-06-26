@@ -34,15 +34,17 @@ define('VIDEOHUB360_VERSION', '1.0.0');
  * @param string $relative_path Asset path relative to the plugin root.
  * @return string
  */
-function videohub360_asset_version($relative_path) {
-    $relative_path = ltrim($relative_path, '/');
-    $file_path = VIDEOHUB360_PLUGIN_DIR . $relative_path;
+if (!function_exists('videohub360_asset_version')) {
+    function videohub360_asset_version($relative_path) {
+        $relative_path = ltrim($relative_path, '/');
+        $file_path = VIDEOHUB360_PLUGIN_DIR . $relative_path;
 
-    if (file_exists($file_path)) {
-        return VIDEOHUB360_VERSION . '-' . filemtime($file_path);
+        if (file_exists($file_path)) {
+            return VIDEOHUB360_VERSION . '-' . filemtime($file_path);
+        }
+
+        return VIDEOHUB360_VERSION;
     }
-
-    return VIDEOHUB360_VERSION;
 }
 
 // Load renderer functions
