@@ -371,8 +371,7 @@ function videohub360_theme_scripts() {
         }
     }
 
-    // Note: Connections page styles removed - followers/following now integrated into profile mode
-    // The separate template-connections.php page is no longer part of core author navigation
+    // Note: Connections page styles removed - followers/following now integrated into profile mode.
 
     // Enqueue notification script for logged-in users
     if (is_user_logged_in()) {

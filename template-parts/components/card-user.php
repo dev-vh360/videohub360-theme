@@ -2,7 +2,7 @@
 /**
  * User Card Component
  *
- * Simplified user card for connections page displaying avatar,
+ * Simplified user card for follower/following lists displaying avatar,
  * username, bio excerpt, and follow button.
  *
  * @package Videohub360_Theme
