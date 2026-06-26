@@ -1,0 +1,666 @@
+/**
+ * VH360 Theme Admin Styles
+ *
+ * @package Videohub360_Theme
+ * @since 1.0.0
+ */
+
+/* ==========================================================================
+   Admin Page Layout
+   ========================================================================== */
+
+.vh360-admin-wrap {
+    margin: 20px 20px 20px 0;
+}
+
+.vh360-admin-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 23px;
+    font-weight: 400;
+    margin: 0 0 20px;
+    padding: 9px 0 4px;
+    line-height: 1.3;
+}
+
+.vh360-admin-title .dashicons {
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+    color: #2271b1;
+}
+
+.vh360-admin-content {
+    margin-top: 20px;
+}
+
+/* ==========================================================================
+   Admin Cards
+   ========================================================================== */
+
+.vh360-admin-card {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.vh360-admin-card h2 {
+    margin-top: 0;
+    font-size: 18px;
+    font-weight: 600;
+    border-bottom: 1px solid #dcdcde;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.vh360-admin-card h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 20px 0 10px;
+}
+
+.vh360-admin-card p {
+    margin: 0 0 15px;
+}
+
+/* ==========================================================================
+   Statistics Cards
+   ========================================================================== */
+
+.vh360-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.vh360-stats-card {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.vh360-stats-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.vh360-stats-card a.vh360-stats-link {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    text-decoration: none;
+    color: inherit;
+}
+
+.vh360-stats-icon {
+    flex-shrink: 0;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f0f0f1;
+}
+
+.vh360-stats-icon .dashicons {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+}
+
+.vh360-stats-content {
+    flex: 1;
+}
+
+.vh360-stats-value {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 5px;
+    color: #1d2327;
+}
+
+.vh360-stats-label {
+    font-size: 13px;
+    color: #646970;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Stats Card Colors */
+.vh360-stats-success .vh360-stats-icon {
+    background: #d7f2e6;
+}
+
+.vh360-stats-success .dashicons {
+    color: #00a32a;
+}
+
+.vh360-stats-info .vh360-stats-icon {
+    background: #d5e5f7;
+}
+
+.vh360-stats-info .dashicons {
+    color: #2271b1;
+}
+
+.vh360-stats-warning .vh360-stats-icon {
+    background: #fcf3cf;
+}
+
+.vh360-stats-warning .dashicons {
+    color: #dba617;
+}
+
+.vh360-stats-default .vh360-stats-icon {
+    background: #f0f0f1;
+}
+
+.vh360-stats-default .dashicons {
+    color: #646970;
+}
+
+/* ==========================================================================
+   Two Column Layout
+   ========================================================================== */
+
+.vh360-admin-cols {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+}
+
+@media (max-width: 1280px) {
+    .vh360-admin-cols {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ==========================================================================
+   System Status
+   ========================================================================== */
+
+.vh360-status-list {
+    margin: 0;
+}
+
+.vh360-status-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 0;
+    border-bottom: 1px solid #f0f0f1;
+}
+
+.vh360-status-item:last-child {
+    border-bottom: none;
+}
+
+.vh360-status-item .dashicons {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    font-size: 20px;
+}
+
+.vh360-status-label {
+    flex: 1;
+    font-weight: 500;
+}
+
+.vh360-status-value {
+    color: #646970;
+    font-size: 13px;
+}
+
+.vh360-status-item.status-ok .dashicons {
+    color: #00a32a;
+}
+
+.vh360-status-item.status-warning .dashicons {
+    color: #dba617;
+}
+
+.vh360-status-item.status-error .dashicons {
+    color: #d63638;
+}
+
+/* ==========================================================================
+   Quick Actions
+   ========================================================================== */
+
+.vh360-quick-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+}
+
+.vh360-quick-actions .button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 16px;
+    height: auto;
+    white-space: normal;
+    text-align: center;
+}
+
+.vh360-quick-actions .dashicons {
+    flex-shrink: 0;
+}
+
+/* ==========================================================================
+   Activity Feed
+   ========================================================================== */
+
+.vh360-activity-feed {
+    margin: 0;
+}
+
+.vh360-activity-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid #f0f0f1;
+}
+
+.vh360-activity-item:last-child {
+    border-bottom: none;
+}
+
+.vh360-activity-item .dashicons {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    font-size: 20px;
+    color: #2271b1;
+    margin-top: 2px;
+}
+
+.vh360-activity-content {
+    flex: 1;
+}
+
+.vh360-activity-user {
+    font-weight: 600;
+    margin-bottom: 3px;
+}
+
+.vh360-activity-action {
+    color: #646970;
+    font-size: 13px;
+    margin-bottom: 3px;
+}
+
+.vh360-activity-time {
+    color: #a7aaad;
+    font-size: 12px;
+}
+
+/* ==========================================================================
+   Documentation Links
+   ========================================================================== */
+
+.vh360-links-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.vh360-links-list li {
+    margin-bottom: 8px;
+}
+
+.vh360-links-list a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    text-decoration: none;
+    color: #2271b1;
+    border-radius: 2px;
+    transition: background 0.2s ease;
+}
+
+.vh360-links-list a:hover {
+    background: #f6f7f7;
+}
+
+.vh360-links-list .dashicons {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    font-size: 20px;
+}
+
+/* ==========================================================================
+   Template Cards
+   ========================================================================== */
+
+.vh360-template-card {
+    position: relative;
+}
+
+.vh360-template-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.vh360-template-header .dashicons {
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+    color: #2271b1;
+}
+
+.vh360-template-header h3 {
+    margin: 0;
+    flex: 1;
+    font-size: 18px;
+}
+
+.vh360-template-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.vh360-status-active {
+    background: #d7f2e6;
+    color: #00a32a;
+}
+
+.vh360-status-missing {
+    background: #fcf3cf;
+    color: #996800;
+}
+
+.vh360-template-body {
+    padding-left: 44px;
+}
+
+.vh360-template-body code {
+    background: #f6f7f7;
+    padding: 2px 6px;
+    border-radius: 2px;
+    font-size: 13px;
+}
+
+.vh360-template-setup {
+    background: #f6f7f7;
+    padding: 15px;
+    border-radius: 4px;
+    margin: 15px 0;
+}
+
+.vh360-template-setup h4 {
+    margin: 0 0 10px;
+    font-size: 14px;
+}
+
+.vh360-template-setup ol {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.vh360-template-setup li {
+    margin-bottom: 5px;
+}
+
+.vh360-template-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+/* ==========================================================================
+   Shortcodes Table
+   ========================================================================== */
+
+.vh360-shortcodes-table {
+    margin-top: 15px;
+}
+
+.vh360-shortcodes-table th {
+    font-weight: 600;
+    text-align: left;
+}
+
+.vh360-shortcodes-table td {
+    padding: 12px;
+}
+
+.vh360-shortcodes-table code {
+    background: #f6f7f7;
+    padding: 4px 8px;
+    border-radius: 2px;
+    font-size: 13px;
+}
+
+/* ==========================================================================
+   Danger Zone
+   ========================================================================== */
+
+.vh360-danger-zone {
+    border-color: #d63638;
+    background: #fff5f5;
+}
+
+.vh360-danger-zone h2 {
+    color: #d63638;
+}
+
+.button-danger {
+    background: #d63638;
+    border-color: #d63638;
+    color: #fff;
+}
+
+.button-danger:hover,
+.button-danger:focus {
+    background: #b32d2e;
+    border-color: #b32d2e;
+    color: #fff;
+}
+
+/* ==========================================================================
+   Welcome Section
+   ========================================================================== */
+
+.vh360-welcome-section {
+    background: linear-gradient(135deg, #2271b1 0%, #135e96 100%);
+    color: #fff;
+    padding: 30px;
+    border-radius: 4px;
+    margin-bottom: 30px;
+}
+
+.vh360-welcome-section h2 {
+    color: #fff;
+    margin: 0 0 10px;
+    font-size: 24px;
+    border: none;
+    padding: 0;
+}
+
+.vh360-welcome-section p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 15px;
+}
+
+/* ==========================================================================
+   Footer
+   ========================================================================== */
+
+.vh360-admin-footer {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #c3c4c7;
+    text-align: center;
+    color: #646970;
+    font-size: 13px;
+}
+
+.vh360-admin-footer a {
+    color: #2271b1;
+    text-decoration: none;
+}
+
+.vh360-admin-footer a:hover {
+    text-decoration: underline;
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+
+@media (max-width: 782px) {
+    .vh360-admin-title {
+        font-size: 20px;
+    }
+    
+    .vh360-stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .vh360-quick-actions {
+        grid-template-columns: 1fr;
+    }
+    
+    .vh360-template-body {
+        padding-left: 0;
+    }
+    
+    .vh360-template-actions {
+        flex-direction: column;
+    }
+}
+
+/* ==========================================================================
+   Color Preset Cards
+   ========================================================================== */
+
+.vh360-preset-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.vh360-preset-card {
+    background: #fff;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.vh360-preset-card:hover {
+    border-color: #2271b1;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.vh360-preset-card.active {
+    border-color: #10b981;
+    background-color: #f0fdf4;
+}
+
+.vh360-preset-colors {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.vh360-preset-color {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.vh360-preset-name {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 12px;
+    color: #1f2937;
+}
+
+.vh360-preset-apply {
+    width: 100%;
+    padding: 8px 12px;
+}
+
+.vh360-preset-active-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    background-color: #10b981;
+    color: #fff;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+@media (max-width: 782px) {
+    .vh360-preset-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 15px;
+    }
+    
+    .vh360-preset-card {
+        padding: 15px;
+    }
+    
+    .vh360-preset-color {
+        width: 35px;
+        height: 35px;
+    }
+}
+
+/* ==========================================================================
+   Profile Data Viewer
+   ========================================================================== */
+
+.vh360-account-type-badge,
+.vh360-visibility-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.vh360-account-type-creator      { background: #d5e5f7; color: #2271b1; }
+.vh360-account-type-client        { background: #fcf3cf; color: #996800; }
+.vh360-account-type-professional  { background: #d7f2e6; color: #00a32a; }
+.vh360-account-type-organization  { background: #f3d9fa; color: #6f42c1; }
+
+.vh360-visibility-public  { background: #d7f2e6; color: #00a32a; }
+.vh360-visibility-private { background: #fde8e8; color: #d63638; }

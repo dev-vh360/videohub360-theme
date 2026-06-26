@@ -1,0 +1,579 @@
+/**
+ * Business Profile Styles
+ *
+ * Styles for business/professional/organization author pages
+ *
+ * @package Videohub360_Theme
+ * @since 1.0.0
+ */
+
+/* Business Profile Wrapper */
+.vh360-business-profile-wrapper {
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+    margin-bottom: 3rem;
+}
+
+/* Business Profile Header */
+.vh360-business-header {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    margin-bottom: 2rem;
+    overflow: visible;
+}
+
+.vh360-business-cover {
+    min-height: 180px;
+    border-radius: 24px;
+    background:
+        radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.16), transparent 34%),
+        radial-gradient(circle at 82% 18%, rgba(14, 165, 233, 0.12), transparent 28%),
+        linear-gradient(
+            135deg,
+            color-mix(in srgb, var(--primary-color, #2563eb) 10%, var(--surface-1, #ffffff)) 0%,
+            var(--surface-3, #f8fafc) 100%
+        );
+    border: 1px solid var(--border-1, #e5e7eb);
+}
+
+.vh360-business-profile-bar {
+    display: flex;
+    align-items: flex-end;
+    gap: 1.5rem;
+    padding: 0 2rem;
+    margin-top: -56px;
+}
+
+.vh360-business-avatar {
+    flex-shrink: 0;
+}
+
+.vh360-business-avatar img {
+    border-radius: 50%;
+    border: 5px solid #ffffff;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.16);
+}
+
+.vh360-business-info {
+    flex: 1;
+    min-width: 0;
+    padding-bottom: 0.5rem;
+}
+
+.vh360-business-name {
+    margin: 0 0 0.5rem 0;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-1, #1f2937);
+    line-height: 1.2;
+}
+
+.vh360-business-type {
+    color: var(--text-2, #6b7280);
+    margin: 0 0 0.75rem 0;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.vh360-business-location {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-2, #6b7280);
+    font-size: 0.9375rem;
+    padding: 0.5rem 0;
+}
+
+.vh360-business-location .dashicons {
+    color: var(--text-2, #6b7280);
+}
+
+/* Business Actions */
+.vh360-business-actions {
+    margin-top: 0;
+    padding-bottom: 0.75rem;
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.vh360-business-book-cta,
+.vh360-business-message-btn,
+.vh360-business-follow-btn,
+.vh360-business-actions .vh360-follow-btn,
+.vh360-business-actions .vh360-unfollow-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: var(--primary-color, #2563eb);
+    color: #ffffff;
+    text-decoration: none;
+    border: none;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.9375rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
+    cursor: pointer;
+}
+
+.vh360-business-book-cta:hover,
+.vh360-business-message-btn:hover,
+.vh360-business-follow-btn:hover,
+.vh360-business-actions .vh360-follow-btn:hover {
+    background: var(--secondary-color, #1d4ed8);
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.24);
+    color: #ffffff;
+}
+
+.vh360-business-message-btn {
+    background: var(--surface-1, #ffffff);
+    color: var(--primary-color, #2563eb);
+    border: 1px solid rgba(37, 99, 235, 0.28);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+}
+
+.vh360-business-message-btn:hover {
+    color: #ffffff;
+}
+
+.vh360-business-actions .vh360-unfollow-btn {
+    background: var(--surface-1, #ffffff);
+    color: var(--text-1, #1f2937);
+    border: 1px solid var(--border-1, #e5e7eb);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+}
+
+.vh360-business-actions .vh360-unfollow-btn:hover {
+    background: color-mix(in srgb, var(--error-color, #ef4444) 12%, var(--surface-1, #ffffff));
+    color: var(--error-color, #ef4444);
+    border-color: var(--error-color, #ef4444);
+}
+
+.vh360-business-message-btn svg,
+.vh360-business-book-cta svg {
+    flex-shrink: 0;
+}
+
+/* Business Profile Body */
+.vh360-business-profile-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 2rem;
+    align-items: start;
+}
+
+.vh360-business-main,
+.vh360-business-sidebar {
+    min-width: 0;
+}
+
+/* Business Navigation */
+.vh360-business-navigation {
+    background: transparent;
+    border-bottom: 1px solid var(--border-1, #e5e7eb);
+    padding: 0;
+    margin-bottom: 1.5rem;
+}
+
+.vh360-business-tabs {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 2.5rem;
+}
+
+.vh360-business-tabs li a {
+    display: block;
+    padding: 1.25rem 0;
+    text-decoration: none;
+    color: var(--text-2, #6b7280);
+    font-weight: 500;
+    font-size: 0.9375rem;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.vh360-business-tabs li.active a {
+    color: var(--primary-color, #2563eb);
+    border-bottom-color: var(--primary-color, #2563eb);
+}
+
+.vh360-business-tabs li a:hover {
+    color: var(--text-1, #1f2937);
+}
+
+/* Business Content */
+.vh360-business-content {
+    background: transparent;
+    padding: 0;
+}
+
+.vh360-business-services h2,
+.vh360-business-about h2,
+.vh360-business-content h2,
+.vh360-business-contact h2 {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-1, #1f2937);
+}
+
+.vh360-business-services > div,
+.vh360-contact-item {
+    margin-bottom: 1.5rem;
+    padding: 1.25rem;
+    background: var(--surface-1, #ffffff);
+    border: 1px solid var(--border-1, #e5e7eb);
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+    transition: all 0.2s ease;
+}
+
+.vh360-business-services > div:hover,
+.vh360-contact-item:hover {
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+    border-color: var(--border-1, #dbe3ef);
+}
+
+.vh360-business-services h3,
+.vh360-contact-item h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-1, #1f2937);
+}
+
+.vh360-business-availability ul {
+    list-style: disc;
+    padding-left: 1.5rem;
+    color: var(--text-1, #1f2937);
+}
+
+.vh360-business-availability ul li {
+    margin-bottom: 0.5rem;
+}
+
+.vh360-content-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+/* Compact Booking Panel */
+.vh360-business-booking-panel {
+    position: sticky;
+    top: 96px;
+    background: var(--surface-1, #ffffff);
+    border: 1px solid var(--border-1, #e5e7eb);
+    border-radius: 18px;
+    padding: 1.25rem;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+.vh360-business-booking-panel-header h2 {
+    margin: 0 0 0.35rem;
+    color: var(--text-1, #1f2937);
+    font-size: 1.25rem;
+    font-weight: 800;
+    line-height: 1.25;
+}
+
+.vh360-business-booking-panel-header p {
+    margin: 0 0 1.25rem;
+    color: var(--text-2, #6b7280);
+    font-size: 0.9375rem;
+}
+
+/* Owner View */
+.vh360-business-booking-owner {
+    padding: 1rem;
+    background: var(--surface-3, #f8fafc);
+    border: 1px solid var(--border-1, #e5e7eb);
+    border-radius: 14px;
+    text-align: center;
+}
+
+.vh360-business-booking-owner p {
+    margin: 0;
+    color: var(--text-1, #1f2937);
+}
+
+.vh360-booking-manage-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--primary-color, #2563eb);
+    color: #ffffff;
+    text-decoration: none;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.9375rem;
+    margin-top: 1rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
+}
+
+.vh360-booking-manage-link:hover {
+    background: var(--secondary-color, #1d4ed8);
+    transform: translateY(-1px);
+    color: #ffffff;
+}
+
+.vh360-booking-manage-link svg {
+    flex-shrink: 0;
+}
+
+/* Date Picker */
+.vh360-booking-date-picker-wrapper {
+    margin-bottom: 1rem;
+}
+
+.vh360-booking-date-picker-wrapper label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--text-1, #1f2937);
+    font-size: 0.875rem;
+}
+
+.vh360-booking-date-input {
+    width: 100%;
+    max-width: none;
+    padding: 0.75rem;
+    border: 1px solid var(--border-1, #e5e7eb);
+    border-radius: 0.75rem;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+}
+
+.vh360-booking-date-input:focus {
+    outline: none;
+    border-color: var(--primary-color, #2563eb);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Loading State */
+.vh360-booking-loading {
+    text-align: center;
+    padding: 1.5rem 1rem;
+}
+
+.vh360-booking-loading p {
+    margin: 0;
+    color: var(--text-2, #6b7280);
+    font-size: 0.875rem;
+}
+
+.vh360-spinner {
+    animation: rotate 2s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+.vh360-spinner .path {
+    stroke: var(--primary-color, #2563eb);
+    stroke-linecap: round;
+    animation: dash 1.5s ease-in-out infinite;
+}
+
+@keyframes rotate {
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes dash {
+    0% {
+        stroke-dasharray: 1, 150;
+        stroke-dashoffset: 0;
+    }
+    50% {
+        stroke-dasharray: 90, 150;
+        stroke-dashoffset: -35;
+    }
+    100% {
+        stroke-dasharray: 90, 150;
+        stroke-dashoffset: -124;
+    }
+}
+
+/* Messages */
+.vh360-booking-messages {
+    margin-bottom: 1rem;
+}
+
+.vh360-booking-message {
+    padding: 0.875rem;
+    border-radius: 0.75rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.vh360-booking-message-success {
+    background: color-mix(in srgb, var(--success-color, #10b981) 14%, var(--surface-1, #ffffff));
+    color: var(--success-color, #10b981);
+    border: 1px solid color-mix(in srgb, var(--success-color, #10b981) 35%, var(--surface-1, #ffffff));
+}
+
+.vh360-booking-message-error {
+    background: color-mix(in srgb, var(--error-color, #ef4444) 12%, var(--surface-1, #ffffff));
+    color: var(--error-color, #ef4444);
+    border: 1px solid var(--error-color, #ef4444);
+}
+
+/* Slots Container */
+.vh360-booking-slots-container {
+    margin-top: 1rem;
+    min-height: 0;
+}
+
+.vh360-booking-no-slots,
+.vh360-booking-error {
+    text-align: center;
+    padding: 1.25rem;
+    color: var(--text-2, #6b7280);
+    background: var(--surface-3, #f8fafc);
+    border: 1px dashed var(--border-1, #d1d5db);
+    border-radius: 14px;
+}
+
+.vh360-booking-date-group {
+    margin-bottom: 0;
+}
+
+.vh360-booking-date-header {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0 0 0.75rem;
+    color: var(--text-1, #1f2937);
+    padding: 0;
+    border: 0;
+}
+
+.vh360-booking-time-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.vh360-booking-time-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    min-height: 38px;
+    padding: 0.5rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid var(--primary-color, #2563eb);
+    background: var(--surface-1, #ffffff);
+    color: var(--primary-color, #2563eb);
+    font-size: 0.875rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.vh360-booking-time-chip:hover,
+.vh360-booking-time-chip:focus {
+    background: var(--primary-color, #2563eb);
+    color: #ffffff;
+}
+
+.vh360-booking-time-chip.vh360-slot-booked,
+.vh360-booking-time-chip:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .vh360-business-profile-body {
+        grid-template-columns: 1fr;
+    }
+
+    .vh360-business-sidebar {
+        order: 2;
+    }
+
+    .vh360-business-booking-panel {
+        position: static;
+    }
+}
+
+@media (max-width: 768px) {
+    .vh360-business-cover {
+        min-height: 150px;
+        border-radius: 20px;
+    }
+
+    .vh360-business-profile-bar {
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+        padding: 0 1rem;
+        margin-top: -48px;
+        text-align: center;
+    }
+
+    .vh360-business-info {
+        padding-bottom: 0;
+    }
+
+    .vh360-business-name {
+        font-size: 1.75rem;
+    }
+
+    .vh360-business-actions {
+        justify-content: center;
+        padding-bottom: 0;
+    }
+
+    .vh360-business-tabs {
+        gap: 1.5rem;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .vh360-business-tabs li {
+        flex-shrink: 0;
+    }
+
+    .vh360-content-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .vh360-business-profile-body {
+        gap: 1.5rem;
+    }
+
+    .vh360-business-book-cta,
+    .vh360-business-message-btn,
+    .vh360-business-follow-btn,
+    .vh360-business-actions .vh360-follow-btn,
+    .vh360-business-actions .vh360-unfollow-btn {
+        width: 100%;
+    }
+
+    .vh360-business-booking-panel,
+    .vh360-business-services > div,
+    .vh360-contact-item {
+        padding: 1rem;
+    }
+}

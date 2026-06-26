@@ -1,0 +1,277 @@
+/**
+ * Live Room Page Styles
+ * 
+ * Dedicated stylesheet for the Live Room page template (videohub360-live-room.php)
+ * Provides stage-first layout with full-width video player and popup-only chat
+ * 
+ * @package Videohub360_Theme
+ * @since 1.0.0
+ */
+
+/* Hide inline chat on Live Room pages - only popup chat should be visible */
+.vh360-is-live-room #vh360-chat-inline,
+.vh360-is-live-room .vh360-chat-inline,
+.vh360-is-live-room .videohub360-chat-section {
+    display: none !important;
+}
+
+/* Chat Popup Visibility Fallback - Critical Safety Rules */
+/* These rules ensure popup chat never appears inline, even if core plugin assets don't load */
+.vh360-chat-popup.is-hidden {
+    display: none !important;
+}
+
+.vh360-chat-popup.is-open {
+    display: flex !important;
+}
+
+/* Live Room Container */
+.vh360-is-live-room .vh360-live-room-area {
+    background: var(--vh360-bg-secondary, #f9fafb);
+}
+
+.vh360-is-live-room .vh360-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* Live Room Player - Full Width Theater Style */
+.vh360-live-room-player {
+    margin-bottom: 24px;
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
+    width: 100%;
+}
+
+.vh360-live-room-player .videohub360-video-player,
+.vh360-live-room-player .vh360-offline-wrapper {
+    position: relative;
+    width: 100%;
+    min-height: 500px;
+}
+
+/* Video player with proper aspect ratio */
+.vh360-live-room-player .videohub360-video-player > *:not(.vh360-offline-wrapper) {
+    width: 100%;
+    height: auto;
+    min-height: 500px;
+}
+
+/* Ensure Agora player is full width */
+.vh360-live-room-player .vh360-agora-player {
+    width: 100% !important;
+    min-height: 500px;
+}
+
+/* Livestream player wrap */
+.vh360-live-room-player .vh360-livestream-player-wrap {
+    width: 100%;
+}
+
+.vh360-live-room-player .vh360-livestream-iframe {
+    width: 100%;
+    min-height: 500px;
+}
+
+/* Offline Message */
+.vh360-live-room-player .vh360-offline-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 500px;
+    width: 100%;
+    background: #000000;
+}
+
+.vh360-live-room-player .vh360-offline-message {
+    text-align: center;
+    color: #fff;
+    padding: 40px;
+    width: 100%;
+}
+
+.vh360-live-room-player .vh360-offline-message h3 {
+    font-size: 24px;
+    margin: 0;
+}
+
+/* Live Room Header (Title, Meta, Chat Button) */
+.vh360-live-room-header {
+    margin-bottom: 24px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--vh360-color-border, #e5e7eb);
+}
+
+.vh360-live-room-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.vh360-live-room-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0;
+    color: var(--vh360-color-text-primary, #1f2937);
+}
+
+.vh360-live-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.vh360-live-room-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.vh360-live-viewers,
+.vh360-live-start-time {
+    font-size: 14px;
+    color: var(--vh360-color-text-secondary, #6b7280);
+}
+
+.vh360-live-viewers {
+    font-weight: 600;
+}
+
+/* Chat Button in Meta Row */
+.vh360-live-room-meta .videohub360-open-chat-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: var(--vh360-color-primary, #3b82f6);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.vh360-live-room-meta .videohub360-open-chat-btn:hover {
+    background: var(--vh360-color-primary-dark, #2563eb);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.vh360-live-room-meta .videohub360-open-chat-btn:active {
+    transform: translateY(0);
+}
+
+.vh360-live-room-meta .videohub360-open-chat-btn.active {
+    background: var(--vh360-color-success, #10b981);
+}
+
+/* Host Section */
+.vh360-live-room-host {
+    margin-bottom: 24px;
+    padding: 16px;
+    background: var(--vh360-bg-white, #fff);
+    border-radius: 8px;
+    border: 1px solid var(--vh360-color-border, #e5e7eb);
+}
+
+.vh360-host-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: inherit;
+    transition: opacity 0.2s;
+}
+
+.vh360-host-link:hover {
+    opacity: 0.8;
+}
+
+.vh360-host-avatar img {
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+}
+
+.vh360-host-name-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.vh360-host-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--vh360-color-text-primary, #1f2937);
+}
+
+.vh360-host-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: var(--vh360-color-accent, #f59e0b);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+
+/* Description Section */
+.vh360-live-room-description {
+    margin-bottom: 40px;
+    padding: 20px;
+    background: var(--vh360-bg-white, #fff);
+    border-radius: 8px;
+    border: 1px solid var(--vh360-color-border, #e5e7eb);
+    line-height: 1.6;
+}
+
+.vh360-live-room-description p {
+    margin-bottom: 12px;
+}
+
+.vh360-live-room-description p:last-child {
+    margin-bottom: 0;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .vh360-live-room-title {
+        font-size: 22px;
+    }
+    
+    .vh360-live-room-title-wrap {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .vh360-live-room-meta {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .vh360-host-name {
+        font-size: 14px;
+    }
+}
+
+/* Tablet Responsive */
+@media (max-width: 1024px) {
+    .vh360-container {
+        padding: 0 16px;
+    }
+}

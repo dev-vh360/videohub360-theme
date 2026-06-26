@@ -1,0 +1,685 @@
+/**
+ * Direct Messages JavaScript
+ *
+ * Handles all client-side functionality for the direct messaging system.
+ *
+ * @package Videohub360_Theme
+ * @since 1.0.0
+ */
+
+(function($) {
+    'use strict';
+
+    // State management
+    const DMState = {
+        activeConversationUserId: null,
+        lastCheckTime: null,
+        pollInterval: null,
+        isPolling: false,
+        conversations: [],
+    };
+
+    /**
+     * Initialize direct messages
+     */
+    function initDirectMessages() {
+        if (!window.vh360DirectMessages) {
+            return;
+        }
+
+        // Set initial last check time
+        DMState.lastCheckTime = getCurrentTime();
+
+        // Load conversation list
+        loadConversations();
+
+        // Set up event listeners
+        setupEventListeners();
+
+        // Check for user parameter in URL to open specific conversation
+        const urlParams = new URLSearchParams(window.location.search);
+        const userId = urlParams.get('user');
+        if (userId) {
+            setTimeout(function() {
+                openConversation(parseInt(userId));
+            }, 500);
+        }
+
+        // Start polling for new messages
+        startPolling();
+
+        // Stop polling when tab is not active
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                stopPolling();
+            } else {
+                startPolling();
+            }
+        });
+    }
+
+    /**
+     * Set up event listeners
+     */
+    function setupEventListeners() {
+        // New conversation button
+        $('.vh360-dm-new-conversation-btn').on('click', function(e) {
+            e.preventDefault();
+            showSearchUsers();
+        });
+
+        // Back button from search
+        $('.vh360-dm-back-btn').on('click', function(e) {
+            e.preventDefault();
+            hideSearchUsers();
+        });
+
+        // Search users input
+        let searchTimeout;
+        $('.vh360-dm-search-input').on('input', function() {
+            const searchTerm = $(this).val();
+            clearTimeout(searchTimeout);
+            
+            if (searchTerm.length < 2) {
+                $('.vh360-dm-search-results').empty();
+                return;
+            }
+
+            searchTimeout = setTimeout(function() {
+                searchUsers(searchTerm);
+            }, 300);
+        });
+
+        // Send message button
+        $('.vh360-dm-send-btn').on('click', function(e) {
+            e.preventDefault();
+            sendMessage();
+        });
+
+        // Message input
+        $('.vh360-dm-message-input').on('input', function() {
+            updateCharCounter();
+            autoResizeTextarea(this);
+            toggleSendButton();
+        });
+
+        // Send on Enter (without Shift)
+        $('.vh360-dm-message-input').on('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Delete conversation button
+        $('.vh360-dm-delete-conversation-btn').on('click', function(e) {
+            e.preventDefault();
+            deleteConversation();
+        });
+    }
+
+    /**
+     * Load conversation list
+     */
+    function loadConversations() {
+        const $list = $('.vh360-dm-conversation-list');
+        
+        $.ajax({
+            url: vh360DirectMessages.ajaxUrl,
+            type: 'POST',
+            data: {
+                action: 'vh360_load_conversations',
+                nonce: vh360DirectMessages.nonce,
+            },
+            success: function(response) {
+                if (response.success) {
+                    DMState.conversations = response.data.conversations;
+                    renderConversationList(response.data.conversations);
+                    updateUnreadBadges(response.data.total_unread);
+                } else {
+                    showConversationListError(response.data.message);
+                }
+            },
+            error: function() {
+                showConversationListError(vh360DirectMessages.i18n.error);
+            }
+        });
+    }
+
+    /**
+     * Render conversation list
+     */
+    function renderConversationList(conversations) {
+        const $list = $('.vh360-dm-conversation-list');
+        $list.empty();
+
+        if (conversations.length === 0) {
+            $list.html('<div class="vh360-dm-empty-conversations">' +
+                '<p>' + vh360DirectMessages.i18n.noConversations + '</p>' +
+                '<p class="vh360-ui-muted" style="font-size: 0.875rem;">' + vh360DirectMessages.i18n.startConversation + '</p>' +
+                '</div>');
+            return;
+        }
+
+        conversations.forEach(function(conv) {
+            const isUnread = conv.unread_count > 0;
+            const timeAgo = formatTimeAgo(conv.last_message_time);
+            
+            const $item = $('<div>')
+                .addClass('vh360-dm-conversation-item')
+                .attr('data-user-id', conv.user_id)
+                .toggleClass('unread', isUnread)
+                .html(
+                    '<img class="vh360-dm-conversation-avatar" src="' + conv.avatar_url + '" alt="' + conv.display_name + '">' +
+                    '<div class="vh360-dm-conversation-details">' +
+                        '<div class="vh360-dm-conversation-header-row">' +
+                            '<span class="vh360-dm-conversation-username">' + escapeHtml(conv.display_name) + '</span>' +
+                            '<span class="vh360-dm-conversation-time">' + timeAgo + '</span>' +
+                        '</div>' +
+                        '<div class="vh360-dm-conversation-preview">' + escapeHtml(conv.last_message) + '</div>' +
+                    '</div>' +
+                    (isUnread ? '<span class="vh360-dm-unread-badge">' + conv.unread_count + '</span>' : '')
+                );
+
+            $item.on('click', function() {
+                openConversation(conv.user_id);
+            });
+
+            $list.append($item);
+        });
+    }
+
+    /**
+     * Show conversation list error
+     */
+    function showConversationListError(message) {
+        $('.vh360-dm-conversation-list').html(
+            '<div class="vh360-dm-error">' +
+            '<p>' + escapeHtml(message) + '</p>' +
+            '</div>'
+        );
+    }
+
+    /**
+     * Open conversation with specific user
+     */
+    function openConversation(userId) {
+        DMState.activeConversationUserId = userId;
+
+        // Update active state in list
+        $('.vh360-dm-conversation-item').removeClass('active');
+        $('.vh360-dm-conversation-item[data-user-id="' + userId + '"]').addClass('active').removeClass('unread');
+
+        // Show conversation container
+        $('.vh360-dm-empty-state').hide();
+        $('.vh360-dm-conversation-container').show();
+
+        // Show loading
+        $('.vh360-dm-messages-loading').show();
+        $('.vh360-dm-messages').empty();
+
+        // Load conversation
+        $.ajax({
+            url: vh360DirectMessages.ajaxUrl,
+            type: 'POST',
+            data: {
+                action: 'vh360_load_conversation',
+                nonce: vh360DirectMessages.nonce,
+                user_id: userId,
+            },
+            success: function(response) {
+                $('.vh360-dm-messages-loading').hide();
+                
+                if (response.success) {
+                    const data = response.data;
+                    
+                    // Update header
+                    $('.vh360-dm-conversation-avatar').attr('src', data.other_user.avatar_url);
+                    $('.vh360-dm-conversation-name').text(data.other_user.display_name);
+
+                    // Render messages
+                    renderMessages(data.messages);
+
+                    // Enable/disable compose area
+                    if (data.can_send) {
+                        $('.vh360-dm-compose-area').show();
+                        $('.vh360-dm-message-input').focus();
+                    } else {
+                        $('.vh360-dm-compose-area').hide();
+                    }
+
+                    // Scroll to bottom
+                    scrollToBottom();
+
+                    // Reload conversation list to update unread counts
+                    loadConversations();
+                } else {
+                    showError(response.data.message);
+                }
+            },
+            error: function() {
+                $('.vh360-dm-messages-loading').hide();
+                showError(vh360DirectMessages.i18n.error);
+            }
+        });
+
+        // Mobile: hide sidebar
+        if ($(window).width() <= 768) {
+            $('.vh360-dm-sidebar').addClass('has-active-conversation');
+            $('.vh360-dm-main').addClass('active');
+        }
+    }
+
+    /**
+     * Render messages
+     */
+    function renderMessages(messages) {
+        const $container = $('.vh360-dm-messages');
+        $container.empty();
+
+        if (messages.length === 0) {
+            $container.html('<div class="vh360-dm-no-messages">' +
+                '<p>' + vh360DirectMessages.i18n.noMessages + '</p>' +
+                '</div>');
+            return;
+        }
+
+        messages.forEach(function(msg) {
+            const $message = createMessageElement(msg);
+            $container.append($message);
+        });
+    }
+
+    /**
+     * Create message element
+     */
+    function createMessageElement(msg) {
+        const isSent = msg.is_sender;
+        const avatarUrl = isSent ? 
+            $('.vh360-dm-conversation-header .vh360-dm-conversation-avatar').attr('src') :
+            $('.vh360-dm-conversation-item[data-user-id="' + DMState.activeConversationUserId + '"] .vh360-dm-conversation-avatar').attr('src');
+        
+        const timeAgo = formatTimeAgo(msg.created_at);
+
+        return $('<div>')
+            .addClass('vh360-dm-message')
+            .toggleClass('sent', isSent)
+            .html(
+                '<img class="vh360-dm-message-avatar" src="' + avatarUrl + '" alt="">' +
+                '<div class="vh360-dm-message-content">' +
+                    '<p class="vh360-dm-message-text">' + msg.message_content + '</p>' +
+                    '<div class="vh360-dm-message-time">' + timeAgo + '</div>' +
+                '</div>'
+            );
+    }
+
+    /**
+     * Send message
+     */
+    function sendMessage() {
+        if (!DMState.activeConversationUserId) {
+            return;
+        }
+
+        const $input = $('.vh360-dm-message-input');
+        const message = $input.val().trim();
+
+        if (!message) {
+            return;
+        }
+
+        const $button = $('.vh360-dm-send-btn');
+        $button.prop('disabled', true).find('span').text(vh360DirectMessages.i18n.sending);
+
+        $.ajax({
+            url: vh360DirectMessages.ajaxUrl,
+            type: 'POST',
+            data: {
+                action: 'vh360_send_dm',
+                nonce: vh360DirectMessages.nonce,
+                recipient_id: DMState.activeConversationUserId,
+                message: message,
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Clear input
+                    $input.val('');
+                    updateCharCounter();
+                    autoResizeTextarea($input[0]);
+                    
+                    // Add message to conversation
+                    const $message = createMessageElement(response.data.message_data);
+                    $('.vh360-dm-messages').append($message);
+                    scrollToBottom();
+
+                    // Reload conversation list
+                    loadConversations();
+                } else {
+                    showError(response.data.message);
+                }
+            },
+            error: function() {
+                showError(vh360DirectMessages.i18n.error);
+            },
+            complete: function() {
+                $button.prop('disabled', false).find('span').text(vh360DirectMessages.i18n.send);
+                toggleSendButton();
+            }
+        });
+    }
+
+    /**
+     * Delete conversation
+     */
+    function deleteConversation() {
+        if (!DMState.activeConversationUserId) {
+            return;
+        }
+
+        if (!confirm(vh360DirectMessages.i18n.deleteConfirm)) {
+            return;
+        }
+
+        $.ajax({
+            url: vh360DirectMessages.ajaxUrl,
+            type: 'POST',
+            data: {
+                action: 'vh360_delete_conversation',
+                nonce: vh360DirectMessages.nonce,
+                user_id: DMState.activeConversationUserId,
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Close conversation
+                    closeConversation();
+                    
+                    // Reload conversation list
+                    loadConversations();
+                } else {
+                    showError(response.data.message);
+                }
+            },
+            error: function() {
+                showError(vh360DirectMessages.i18n.error);
+            }
+        });
+    }
+
+    /**
+     * Close conversation
+     */
+    function closeConversation() {
+        DMState.activeConversationUserId = null;
+        $('.vh360-dm-conversation-container').hide();
+        $('.vh360-dm-empty-state').show();
+        $('.vh360-dm-conversation-item').removeClass('active');
+
+        // Mobile: show sidebar
+        if ($(window).width() <= 768) {
+            $('.vh360-dm-sidebar').removeClass('has-active-conversation');
+            $('.vh360-dm-main').removeClass('active');
+        }
+    }
+
+    /**
+     * Show/hide search users
+     */
+    function showSearchUsers() {
+        $('.vh360-dm-conversation-list').hide();
+        $('.vh360-dm-search-container').show();
+        $('.vh360-dm-search-input').focus();
+    }
+
+    function hideSearchUsers() {
+        $('.vh360-dm-search-container').hide();
+        $('.vh360-dm-search-input').val('');
+        $('.vh360-dm-search-results').empty();
+        $('.vh360-dm-conversation-list').show();
+    }
+
+    /**
+     * Search users
+     */
+    function searchUsers(searchTerm) {
+        $.ajax({
+            url: vh360DirectMessages.ajaxUrl,
+            type: 'POST',
+            data: {
+                action: 'vh360_search_users_dm',
+                nonce: vh360DirectMessages.nonce,
+                search: searchTerm,
+            },
+            success: function(response) {
+                if (response.success) {
+                    renderSearchResults(response.data.users);
+                }
+            }
+        });
+    }
+
+    /**
+     * Render search results
+     */
+    function renderSearchResults(users) {
+        const $results = $('.vh360-dm-search-results');
+        $results.empty();
+
+        if (users.length === 0) {
+            $results.html('<div class="vh360-dm-no-results"><p>No users found</p></div>');
+            return;
+        }
+
+        users.forEach(function(user) {
+            const $item = $('<div>')
+                .addClass('vh360-dm-conversation-item')
+                .html(
+                    '<img class="vh360-dm-conversation-avatar" src="' + user.avatar_url + '" alt="' + user.display_name + '">' +
+                    '<div class="vh360-dm-conversation-details">' +
+                        '<div class="vh360-dm-conversation-username">' + escapeHtml(user.display_name) + '</div>' +
+                        '<div class="vh360-dm-conversation-preview">@' + escapeHtml(user.username) + '</div>' +
+                    '</div>'
+                );
+
+            $item.on('click', function() {
+                hideSearchUsers();
+                openConversation(user.id);
+            });
+
+            $results.append($item);
+        });
+    }
+
+    /**
+     * Check for new messages
+     */
+    function checkNewMessages() {
+        if (!DMState.lastCheckTime || DMState.isPolling) {
+            return;
+        }
+
+        DMState.isPolling = true;
+
+        $.ajax({
+            url: vh360DirectMessages.ajaxUrl,
+            type: 'POST',
+            data: {
+                action: 'vh360_check_new_dm',
+                nonce: vh360DirectMessages.nonce,
+                last_check: DMState.lastCheckTime,
+            },
+            success: function(response) {
+                if (response.success) {
+                    const data = response.data;
+                    
+                    // Update unread count
+                    updateUnreadBadges(data.unread_count);
+
+                    // If we have new messages and conversation is active, reload it
+                    if (data.new_messages.length > 0 && DMState.activeConversationUserId) {
+                        const hasNewInActive = data.new_messages.some(function(msg) {
+                            return msg.sender_id == DMState.activeConversationUserId;
+                        });
+
+                        if (hasNewInActive) {
+                            openConversation(DMState.activeConversationUserId);
+                        }
+                    }
+
+                    // Update last check time
+                    DMState.lastCheckTime = getCurrentTime();
+                }
+            },
+            complete: function() {
+                DMState.isPolling = false;
+            }
+        });
+    }
+
+    /**
+     * Start polling for new messages
+     */
+    function startPolling() {
+        if (DMState.pollInterval) {
+            return;
+        }
+
+        DMState.pollInterval = setInterval(function() {
+            checkNewMessages();
+        }, vh360DirectMessages.pollInterval);
+    }
+
+    /**
+     * Stop polling
+     */
+    function stopPolling() {
+        if (DMState.pollInterval) {
+            clearInterval(DMState.pollInterval);
+            DMState.pollInterval = null;
+        }
+    }
+
+    /**
+     * Update character counter
+     */
+    function updateCharCounter() {
+        const $input = $('.vh360-dm-message-input');
+        const $counter = $('.vh360-dm-char-count');
+        const $counterContainer = $('.vh360-dm-char-counter');
+        const length = $input.val().length;
+        const maxLength = parseInt($input.attr('maxlength'));
+
+        $counter.text(length);
+
+        $counterContainer.removeClass('warning error');
+        if (length > maxLength * 0.9) {
+            $counterContainer.addClass('error');
+        } else if (length > maxLength * 0.75) {
+            $counterContainer.addClass('warning');
+        }
+    }
+
+    /**
+     * Auto-resize textarea
+     */
+    function autoResizeTextarea(element) {
+        element.style.height = 'auto';
+        element.style.height = Math.min(element.scrollHeight, 120) + 'px';
+    }
+
+    /**
+     * Toggle send button state
+     */
+    function toggleSendButton() {
+        const $input = $('.vh360-dm-message-input');
+        const $button = $('.vh360-dm-send-btn');
+        const hasContent = $input.val().trim().length > 0;
+        $button.prop('disabled', !hasContent);
+    }
+
+    /**
+     * Update unread badges
+     */
+    function updateUnreadBadges(count) {
+        const $badge = $('.vh360-dm-unread-badge-nav');
+        
+        if (count > 0) {
+            if ($badge.length) {
+                $badge.text(count);
+            } else {
+                $('.vh360-dashboard-nav-link[data-tab="messages"]').append(
+                    '<span class="vh360-dashboard-nav-badge vh360-dm-unread-badge-nav">' + count + '</span>'
+                );
+            }
+        } else {
+            $badge.remove();
+        }
+    }
+
+    /**
+     * Scroll messages to bottom
+     */
+    function scrollToBottom() {
+        const $area = $('.vh360-dm-messages-area');
+        $area.scrollTop($area[0].scrollHeight);
+    }
+
+    /**
+     * Show error message
+     */
+    function showError(message) {
+        // Simple alert for now - could be enhanced with a toast notification
+        alert(message);
+    }
+
+    /**
+     * Get current time in MySQL format
+     */
+    function getCurrentTime() {
+        const now = new Date();
+        return now.getFullYear() + '-' +
+            String(now.getMonth() + 1).padStart(2, '0') + '-' +
+            String(now.getDate()).padStart(2, '0') + ' ' +
+            String(now.getHours()).padStart(2, '0') + ':' +
+            String(now.getMinutes()).padStart(2, '0') + ':' +
+            String(now.getSeconds()).padStart(2, '0');
+    }
+
+    /**
+     * Format time ago
+     */
+    function formatTimeAgo(datetime) {
+        const date = new Date(datetime);
+        const now = new Date();
+        const seconds = Math.floor((now - date) / 1000);
+
+        if (seconds < 60) return 'Just now';
+        if (seconds < 3600) return Math.floor(seconds / 60) + 'm';
+        if (seconds < 86400) return Math.floor(seconds / 3600) + 'h';
+        if (seconds < 604800) return Math.floor(seconds / 86400) + 'd';
+        
+        return date.toLocaleDateString();
+    }
+
+    /**
+     * Escape HTML
+     */
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
+
+    // Initialize on document ready
+    $(document).ready(function() {
+        // Only initialize on dashboard page with messages tab
+        if ($('.vh360-dm-container').length) {
+            initDirectMessages();
+        }
+    });
+
+})(jQuery);
