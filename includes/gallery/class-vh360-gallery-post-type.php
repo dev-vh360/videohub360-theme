@@ -100,7 +100,7 @@ class VH360_Gallery_Post_Type {
 			'vh360-gallery-admin',
 			VH360_THEME_URI . '/assets/js/admin/gallery-admin.js',
 			array( 'jquery', 'jquery-ui-sortable' ),
-			VH360_THEME_VERSION,
+			vh360_theme_asset_version('assets/js/admin/gallery-admin.js'),
 			true
 		);
 

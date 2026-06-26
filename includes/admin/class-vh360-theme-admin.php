@@ -352,7 +352,7 @@ class VH360_Theme_Admin {
             'vh360-theme-admin',
             VH360_THEME_URI . '/assets/admin/css/theme-admin.css',
             array(),
-            VH360_THEME_VERSION
+            vh360_theme_asset_version('assets/admin/css/theme-admin.css')
         );
         
         // Enqueue admin JS
@@ -360,7 +360,7 @@ class VH360_Theme_Admin {
             'vh360-theme-admin',
             VH360_THEME_URI . '/assets/admin/js/theme-admin.js',
             array('jquery'),
-            VH360_THEME_VERSION,
+            vh360_theme_asset_version('assets/admin/js/theme-admin.js'),
             true
         );
         

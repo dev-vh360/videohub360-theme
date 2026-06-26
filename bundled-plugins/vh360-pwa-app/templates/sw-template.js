@@ -67,7 +67,8 @@ self.addEventListener('install', (event) => {
         // Ignore individual precache failures so one bad URL does not abort SW install.
       }
     }));
-    // Keep updates controllable: we won't skipWaiting automatically.
+    // Activate updated service workers immediately so versioned CSS/JS is not held behind an old worker.
+    await self.skipWaiting();
   })());
 });
 
@@ -86,7 +87,7 @@ self.addEventListener('activate', (event) => {
 
 async function cacheFirst(request) {
   const cache = await caches.open(STATIC_CACHE);
-  const cached = await cache.match(request, { ignoreSearch: true });
+  const cached = await cache.match(request);
   if (cached) return cached;
   const res = await fetch(request);
   if (res && res.ok) {

@@ -38,8 +38,8 @@ class VH360_Membership_Members_Admin {
     public function enqueue_assets($hook) {
         $page = isset($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : '';
         if ('vh360-theme-memberships' !== $page) return;
-        wp_enqueue_style('vh360-membership-members-admin', VH360_MEMBERSHIPS_URL . 'assets/admin/membership-members.css', array(), VH360_MEMBERSHIPS_VERSION);
-        wp_enqueue_script('vh360-membership-members-admin', VH360_MEMBERSHIPS_URL . 'assets/admin/membership-members.js', array(), VH360_MEMBERSHIPS_VERSION, true);
+        wp_enqueue_style('vh360-membership-members-admin', VH360_MEMBERSHIPS_URL . 'assets/admin/membership-members.css', array(), vh360_memberships_asset_version('assets/admin/membership-members.css'));
+        wp_enqueue_script('vh360-membership-members-admin', VH360_MEMBERSHIPS_URL . 'assets/admin/membership-members.js', array(), vh360_memberships_asset_version('assets/admin/membership-members.js'), true);
     }
 
     public function render_manager($wrap = true) {

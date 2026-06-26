@@ -27,6 +27,26 @@ define( 'VH360_PWA_APP_FILE', __FILE__ );
 define( 'VH360_PWA_APP_DIR', plugin_dir_path( __FILE__ ) );
 define( 'VH360_PWA_APP_URL', plugin_dir_url( __FILE__ ) );
 
+
+/**
+ * Get a cache-busting version for a plugin-owned asset.
+ *
+ * @param string $relative_path Asset path relative to the plugin root.
+ * @return string
+ */
+if (!function_exists('vh360_pwa_app_asset_version')) {
+    function vh360_pwa_app_asset_version($relative_path) {
+        $relative_path = ltrim($relative_path, '/');
+        $file_path = VH360_PWA_APP_DIR . $relative_path;
+
+        if (file_exists($file_path)) {
+            return VH360_PWA_APP_VERSION . '-' . filemtime($file_path);
+        }
+
+        return VH360_PWA_APP_VERSION;
+    }
+}
+
 /**
  * License gate helpers
  */
@@ -179,6 +199,22 @@ require_once VH360_PWA_APP_DIR . 'includes/appstore/class-vh360-pwa-manifest-enh
 require_once VH360_PWA_APP_DIR . 'includes/appstore/class-vh360-pwa-icon-generator.php';
 require_once VH360_PWA_APP_DIR . 'includes/appstore/class-vh360-pwa-export-package.php';
 require_once VH360_PWA_APP_DIR . 'includes/appstore/class-vh360-pwa-appstore-admin.php';
+
+if ( ! function_exists( 'vh360_pwa_refresh_assets_after_customizer_save' ) ) {
+	/**
+	 * Refresh PWA asset and service worker freshness layers after Customizer saves.
+	 */
+	function vh360_pwa_refresh_assets_after_customizer_save() : void {
+		if ( function_exists( 'vh360_pwa_bump_asset_version' ) ) {
+			vh360_pwa_bump_asset_version();
+		}
+
+		if ( class_exists( 'VH360_PWA_Root_Files' ) ) {
+			VH360_PWA_Root_Files::ensure_root_files();
+		}
+	}
+}
+add_action( 'customize_save_after', 'vh360_pwa_refresh_assets_after_customizer_save' );
 
 if ( ! class_exists( 'VH360_PWA_App' ) ) {
 final class VH360_PWA_App {

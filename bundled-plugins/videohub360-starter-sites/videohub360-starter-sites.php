@@ -27,6 +27,26 @@ define('VH360_STARTER_SITES_URL', plugin_dir_url(__FILE__));
 define('VH360_STARTER_SITES_INCLUDES', VH360_STARTER_SITES_DIR . 'includes/');
 define('VH360_STARTER_SITES_ADMIN', VH360_STARTER_SITES_DIR . 'admin/');
 
+
+/**
+ * Get a cache-busting version for a plugin-owned asset.
+ *
+ * @param string $relative_path Asset path relative to the plugin root.
+ * @return string
+ */
+if (!function_exists('vh360_starter_sites_asset_version')) {
+    function vh360_starter_sites_asset_version($relative_path) {
+        $relative_path = ltrim($relative_path, '/');
+        $file_path = VH360_STARTER_SITES_DIR . $relative_path;
+
+        if (file_exists($file_path)) {
+            return VH360_STARTER_SITES_VERSION . '-' . filemtime($file_path);
+        }
+
+        return VH360_STARTER_SITES_VERSION;
+    }
+}
+
 /**
  * Check if VideoHub360 theme is active
  */

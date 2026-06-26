@@ -615,7 +615,7 @@ class VideoHub360_Widgets {
                 'vh360-hero',
                 VIDEOHUB360_ASSETS_URL . 'css/hero.css',
                 array(),
-                VIDEOHUB360_VERSION
+                videohub360_asset_version('assets/css/hero.css')
             );
         }
         
@@ -625,7 +625,7 @@ class VideoHub360_Widgets {
                 'vh360-hero',
                 VIDEOHUB360_ASSETS_URL . 'js/hero.js',
                 array(),
-                VIDEOHUB360_VERSION,
+                videohub360_asset_version('assets/js/hero.js'),
                 true
             );
         }

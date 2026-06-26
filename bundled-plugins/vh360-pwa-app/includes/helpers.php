@@ -238,6 +238,8 @@ function vh360_pwa_build_sw_script( ?array $opts = null ) : string {
 	if ( '' === $cache_version ) {
 		$cache_version = 'v1';
 	}
+	$asset_version = vh360_pwa_get_asset_version( $opts );
+	$effective_cache_version = $cache_version . '-' . $asset_version;
 	$strategy = (string) $opts['cache_strategy'];
 	if ( ! in_array( $strategy, array( 'safe', 'balanced', 'aggressive' ), true ) ) {
 		$strategy = 'safe';
@@ -253,7 +255,7 @@ function vh360_pwa_build_sw_script( ?array $opts = null ) : string {
 		}
 	}
 	$payload = array(
-		'cacheVersion' => $cache_version,
+		'cacheVersion' => $effective_cache_version,
 		'strategy'     => $strategy,
 		'precache'     => array_map( function( $url ) use ( $opts ) { return vh360_pwa_version_url( (string) $url, $opts ); }, vh360_pwa_get_precache_urls( $opts ) ),
 		'offlineUrl'   => vh360_pwa_version_url( vh360_pwa_endpoint_url( VH360_PWA_OFFLINE_SLUG ), $opts ),
