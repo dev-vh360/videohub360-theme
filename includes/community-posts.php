@@ -54,6 +54,28 @@ function vh360_register_community_post_type() {
 add_action('init', 'vh360_register_community_post_type');
 
 /**
+ * Safely refresh rewrite rules after community post rewrite changes.
+ *
+ * The community post type must already be registered before flushing, and the
+ * stored version prevents an expensive rewrite flush on every request.
+ */
+function vh360_maybe_flush_community_post_rewrites() {
+    $rewrite_version = '2026_06_community_post_single_routes';
+
+    if (get_option('vh360_community_post_rewrite_version') === $rewrite_version) {
+        return;
+    }
+
+    if (!post_type_exists('vh360_post')) {
+        return;
+    }
+
+    flush_rewrite_rules(false);
+    update_option('vh360_community_post_rewrite_version', $rewrite_version, false);
+}
+add_action('init', 'vh360_maybe_flush_community_post_rewrites', 20);
+
+/**
  * Fire custom action when native WordPress comments are added.
  *
  * This bridges the native comment_post hook to our custom vh360_comment_created

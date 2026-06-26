@@ -1386,7 +1386,7 @@ add_filter('query_vars', 'vh360_register_feed_query_var');
 /**
  * Modify the main query for the community feed based on feed type.
  *
- * When the post type is `vh360-community-post` and the feed type is
+ * When the post type is `vh360_post` and the feed type is
  * anything other than `explore`, we restrict the authors shown to the
  * current user and the users they follow.
  *
@@ -1394,6 +1394,13 @@ add_filter('query_vars', 'vh360_register_feed_query_var');
  */
 function vh360_filter_community_feed(WP_Query $query) {
     if (is_admin() || !$query->is_main_query()) {
+        return;
+    }
+
+    // Never apply feed/archive visibility filtering to single content views.
+    // Notification links to a single community post must resolve directly to
+    // the single-vh360_post.php template without author restrictions.
+    if ($query->is_singular('vh360_post') || $query->is_singular()) {
         return;
     }
 

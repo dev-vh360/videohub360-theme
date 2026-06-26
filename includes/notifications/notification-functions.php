@@ -101,6 +101,74 @@ function vh360_delete_notification($notification_id) {
 }
 
 /**
+ * Get the best target URL for a notification.
+ *
+ * Comment, reply, and mention notifications may store either a post ID or a
+ * comment ID depending on the trigger path. Resolve both shapes defensively so
+ * notification clicks land on the single community post page, with a comment
+ * anchor when a concrete comment target is available.
+ *
+ * @param object $notification Notification object.
+ * @return string Target URL or # when no target can be resolved.
+ */
+function vh360_get_notification_target_url($notification) {
+    if (!$notification || empty($notification->type)) {
+        return '#';
+    }
+
+    $object_id = isset($notification->object_id) ? absint($notification->object_id) : 0;
+    $object_type = isset($notification->object_type) ? sanitize_key($notification->object_type) : '';
+
+    switch ($notification->type) {
+        case 'follow':
+            if (empty($notification->actor_id)) {
+                return '#';
+            }
+
+            if (function_exists('vh360_get_profile_url')) {
+                return vh360_get_profile_url(absint($notification->actor_id));
+            }
+
+            return get_author_posts_url(absint($notification->actor_id));
+
+        case 'like':
+            $post = $object_id ? get_post($object_id) : null;
+            return $post ? get_permalink($post->ID) : '#';
+
+        case 'comment':
+            if (in_array($object_type, array('', 'post', 'vh360_post'), true)) {
+                $post = $object_id ? get_post($object_id) : null;
+                if ($post) {
+                    return get_permalink($post->ID);
+                }
+            }
+
+            $comment = $object_id ? get_comment($object_id) : null;
+            return $comment ? get_comment_link($comment) : '#';
+
+        case 'reply':
+            $comment = $object_id ? get_comment($object_id) : null;
+            return $comment ? get_comment_link($comment) : '#';
+
+        case 'mention':
+            if ('post' === $object_type || 'vh360_post' === $object_type) {
+                $post = $object_id ? get_post($object_id) : null;
+                return $post ? get_permalink($post->ID) : '#';
+            }
+
+            if ('comment' === $object_type) {
+                $comment = $object_id ? get_comment($object_id) : null;
+                return $comment ? get_comment_link($comment) : '#';
+            }
+
+            return '#';
+
+        default:
+            return '#';
+    }
+}
+
+/**
  * Format notification for display
  *
  * @param object $notification Notification object
@@ -127,7 +195,8 @@ function vh360_format_notification($notification) {
     
     // Build notification message and link based on type
     $message = '';
-    $link = '#';
+    $link = vh360_get_notification_target_url($notification);
+    $object_type = isset($notification->object_type) ? sanitize_key($notification->object_type) : '';
     
     switch ($notification->type) {
         case 'follow':
@@ -136,66 +205,55 @@ function vh360_format_notification($notification) {
                 __('%s started following you', 'videohub360-theme'),
                 '<strong>' . esc_html($actor_name) . '</strong>'
             );
-            $link = $actor_url;
             break;
             
         case 'like':
-            $post = get_post($notification->object_id);
-            if ($post) {
+            if ('#' !== $link) {
                 $message = sprintf(
                     /* translators: %s: actor name */
                     __('%s liked your post', 'videohub360-theme'),
                     '<strong>' . esc_html($actor_name) . '</strong>'
                 );
-                $link = get_permalink($post->ID);
             }
             break;
             
         case 'comment':
-            $post = get_post($notification->object_id);
-            if ($post) {
+            if ('#' !== $link) {
                 $message = sprintf(
                     /* translators: %s: actor name */
                     __('%s commented on your post', 'videohub360-theme'),
                     '<strong>' . esc_html($actor_name) . '</strong>'
                 );
-                $link = get_permalink($post->ID);
             }
             break;
             
         case 'mention':
-            if ($notification->object_type === 'post') {
-                $post = get_post($notification->object_id);
-                if ($post) {
+            if ('post' === $object_type || 'vh360_post' === $object_type) {
+                if ('#' !== $link) {
                     $message = sprintf(
                         /* translators: %s: actor name */
                         __('%s mentioned you in a post', 'videohub360-theme'),
                         '<strong>' . esc_html($actor_name) . '</strong>'
                     );
-                    $link = get_permalink($post->ID);
                 }
-            } elseif ($notification->object_type === 'comment') {
-                $comment = get_comment($notification->object_id);
-                if ($comment) {
+            } elseif ('comment' === $object_type) {
+                if ('#' !== $link) {
                     $message = sprintf(
                         /* translators: %s: actor name */
                         __('%s mentioned you in a comment', 'videohub360-theme'),
                         '<strong>' . esc_html($actor_name) . '</strong>'
                     );
-                    $link = get_permalink($comment->comment_post_ID);
                 }
             }
             break;
             
         case 'reply':
-            $comment = get_comment($notification->object_id);
-            if ($comment) {
+            if ('#' !== $link) {
                 $message = sprintf(
                     /* translators: %s: actor name */
                     __('%s replied to your comment', 'videohub360-theme'),
                     '<strong>' . esc_html($actor_name) . '</strong>'
                 );
-                $link = get_permalink($comment->comment_post_ID);
             }
             break;
             
