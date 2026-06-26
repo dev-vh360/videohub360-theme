@@ -43,6 +43,7 @@ function vh360_memberships_gate_dashboard_tabs($tabs) {
         },
         'show_in_menu_builder' => true,
         'menu_builder_callback' => '__return_true',
+        'menu_builder_menu_title' => __('Membership', 'videohub360-memberships'),
         'menu_builder_label_callback' => function() {
             $options = get_option('vh360_membership_options', array());
 

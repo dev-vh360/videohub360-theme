@@ -579,6 +579,7 @@ function vh360_render_mobile_drawer_menu_meta_box() {
                 foreach ($drawer_menu_items as $drawer_item) : 
                     $item_id = $_nav_menu_placeholder;
                     $_nav_menu_placeholder--;
+                    $menu_title = isset($drawer_item['menu_title']) ? $drawer_item['menu_title'] : $drawer_item['title'];
                 ?>
                 <li>
                     <label class="menu-item-title">
@@ -592,7 +593,7 @@ function vh360_render_mobile_drawer_menu_meta_box() {
                            value="custom" />
                     <input type="hidden" class="menu-item-title" 
                            name="menu-item[<?php echo esc_attr($item_id); ?>][menu-item-title]" 
-                           value="<?php echo esc_attr($drawer_item['title']); ?>" />
+                           value="<?php echo esc_attr($menu_title); ?>" />
                     <input type="hidden" class="menu-item-url" 
                            name="menu-item[<?php echo esc_attr($item_id); ?>][menu-item-url]" 
                            value="<?php echo esc_url($drawer_item['url']); ?>" />

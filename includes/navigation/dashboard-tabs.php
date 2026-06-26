@@ -250,7 +250,7 @@ function vh360_get_dashboard_tabs_registry( $user_id = null ) {
  * @param string   $url_format How to format URLs: 'fragment' for #tab-id, 'query' for ?tab=tab-id.
  * @param int|null $user_id    User ID for context-sensitive visibility and labels. Defaults to current user.
  * @param string   $context    Visibility context: 'frontend' or 'menu_builder'. Defaults to 'frontend'.
- * @return array Array of menu item definitions with id, title, and url.
+ * @return array Array of menu item definitions with id, title, menu_title, and url.
  * @since 1.0.0
  */
 function vh360_get_dashboard_surface_item_definitions( $url_format = 'fragment', $user_id = null, $context = 'frontend' ) {
@@ -291,13 +291,29 @@ function vh360_get_dashboard_surface_item_definitions( $url_format = 'fragment',
             }
         }
 
-        // Get label (use context-aware label callbacks if available, otherwise use default label)
+        // Get display label (use context-aware label callbacks if available, otherwise use default label)
         if ( $is_menu_builder && ! empty( $tab_config['menu_builder_label_callback'] ) && is_callable( $tab_config['menu_builder_label_callback'] ) ) {
             $label = call_user_func( $tab_config['menu_builder_label_callback'], $user_id );
         } elseif ( ! empty( $tab_config['label_callback'] ) && is_callable( $tab_config['label_callback'] ) ) {
             $label = call_user_func( $tab_config['label_callback'], $user_id );
         } else {
             $label = $tab_config['label'];
+        }
+
+        // Get the clean title saved to WordPress menu items. This may differ from
+        // the menu-builder display label, which can include admin-only notes.
+        if ( $is_menu_builder && ! empty( $tab_config['menu_builder_menu_title_callback'] ) && is_callable( $tab_config['menu_builder_menu_title_callback'] ) ) {
+            $menu_title = call_user_func( $tab_config['menu_builder_menu_title_callback'], $user_id );
+        } elseif ( $is_menu_builder && isset( $tab_config['menu_builder_menu_title'] ) ) {
+            $menu_title = $tab_config['menu_builder_menu_title'];
+        } elseif ( ! empty( $tab_config['menu_title_callback'] ) && is_callable( $tab_config['menu_title_callback'] ) ) {
+            $menu_title = call_user_func( $tab_config['menu_title_callback'], $user_id );
+        } elseif ( isset( $tab_config['menu_title'] ) ) {
+            $menu_title = $tab_config['menu_title'];
+        } elseif ( ! empty( $tab_config['label_callback'] ) && is_callable( $tab_config['label_callback'] ) ) {
+            $menu_title = call_user_func( $tab_config['label_callback'], $user_id );
+        } else {
+            $menu_title = $tab_config['label'];
         }
 
         // Build URL based on format
@@ -311,8 +327,9 @@ function vh360_get_dashboard_surface_item_definitions( $url_format = 'fragment',
 
         $definitions[] = array(
             'id'    => 'vh360-dashboard-' . $tab_id,
-            'title' => $label,
-            'url'   => $url,
+            'title'      => $label,
+            'menu_title' => $menu_title,
+            'url'        => $url,
             'tab'   => $tab_id, // Include tab ID for compatibility
         );
     }
