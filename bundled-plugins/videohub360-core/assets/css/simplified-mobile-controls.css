@@ -1,0 +1,274 @@
+/* 
+ * Simplified Mobile Controls CSS for Agora VideoHub360
+ * 
+ * Clean, single-container implementation that replaces the complex 
+ * two-container system. Significantly reduces CSS complexity while
+ * preserving all visual functionality.
+ */
+
+@media (max-width: 768px) {
+    /* Main simplified mobile controls container - full width and compact */
+    body #vh360-agora-controls.vh360-mobile-controls-simple,
+    .vh360-speaker-view #vh360-agora-controls.vh360-mobile-controls-simple,
+    .vh360-multi-view-container #vh360-agora-controls.vh360-mobile-controls-simple,
+    .vh360-agora-broadcast #vh360-agora-controls.vh360-mobile-controls-simple {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        top: auto;
+        transform: none;
+        display: flex;
+        gap: 6px;
+        padding: 8px;
+        background: rgba(0,0,0,0.9);
+        border-radius: 0;
+        max-width: none;
+        width: 100%;
+        overflow-x: auto;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE/Edge */
+        z-index: var(--vh360-z-ui-high);
+        flex-wrap: nowrap; /* Prevent wrapping for horizontal scroll */
+        justify-content: flex-start;
+        align-items: center;
+        box-shadow: 0 -2px 8px rgba(0,0,0,0.3);
+        margin: 0;
+        order: initial;
+        border: none;
+        border-top: none;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+    
+    /* Position controls inside the video for broadcast mode on mobile to avoid clipping */
+    .vh360-agora-broadcast #vh360-agora-controls.vh360-mobile-controls-simple {
+        bottom: 8px;
+        left: 8px;
+        right: 8px;
+        width: auto;
+        border-radius: var(--vh360-radius-md);
+    }
+
+    /* Hide scrollbar for webkit browsers */
+    body #vh360-agora-controls.vh360-mobile-controls-simple::-webkit-scrollbar,
+    .vh360-speaker-view #vh360-agora-controls.vh360-mobile-controls-simple::-webkit-scrollbar,
+    .vh360-multi-view-container #vh360-agora-controls.vh360-mobile-controls-simple::-webkit-scrollbar,
+    .vh360-agora-broadcast #vh360-agora-controls.vh360-mobile-controls-simple::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Mobile button styling - Compact zoom-style vertical layout with highest specificity */
+    body #vh360-agora-controls.vh360-mobile-controls-simple button,
+    .vh360-speaker-view #vh360-agora-controls.vh360-mobile-controls-simple button,
+    .vh360-multi-view-container #vh360-agora-controls.vh360-mobile-controls-simple button {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background: rgba(255,255,255,0.15);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: var(--vh360-color-white);
+        padding: 6px 4px;
+        border-radius: 6px;
+        min-width: 40px;
+        min-height: 40px;
+        cursor: pointer;
+        flex-shrink: 0;
+        font-size: 9px;
+        text-align: center;
+        transition: all var(--vh360-transition-normal);
+    }
+
+
+
+    /* Structured Agora media controls: icon-only mic/camera, text-preserving Views button. */
+    #vh360-agora-controls.vh360-mobile-controls-simple #vh360-agora-mute-audio .vh360-agora-control-label,
+    #vh360-agora-controls.vh360-mobile-controls-simple #vh360-agora-mute-video .vh360-agora-control-label {
+        display: none;
+    }
+
+    #vh360-agora-controls.vh360-mobile-controls-simple #vh360-agora-mute-audio,
+    #vh360-agora-controls.vh360-mobile-controls-simple #vh360-agora-mute-video {
+        width: 44px;
+        min-width: 44px;
+        max-width: 44px;
+        height: 44px;
+        min-height: 44px;
+        padding: 0;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+        flex: 0 0 44px;
+    }
+
+    #vh360-agora-controls.vh360-mobile-controls-simple #vh360-agora-mute-audio .vh360-agora-control-icon,
+    #vh360-agora-controls.vh360-mobile-controls-simple #vh360-agora-mute-video .vh360-agora-control-icon {
+        margin: 0;
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+
+    #vh360-agora-controls.vh360-mobile-controls-simple .vh360-agora-views-btn,
+    #vh360-agora-controls.vh360-mobile-controls-simple #vh360-view-selector .vh360-view-dropdown-toggle {
+        width: auto;
+        min-width: auto;
+        max-width: none;
+        padding-left: 10px;
+        padding-right: 10px;
+        white-space: nowrap;
+        flex: 0 0 auto;
+    }
+
+    /* Button hover effects */
+    body #vh360-agora-controls.vh360-mobile-controls-simple button:hover,
+    .vh360-speaker-view #vh360-agora-controls.vh360-mobile-controls-simple button:hover,
+    .vh360-multi-view-container #vh360-agora-controls.vh360-mobile-controls-simple button:hover {
+        background: rgba(255,255,255,0.25);
+        border-color: rgba(255,255,255,0.5);
+        transform: translateY(-1px);
+    }
+
+    /* Active button state */
+    body #vh360-agora-controls.vh360-mobile-controls-simple button.active,
+    .vh360-speaker-view #vh360-agora-controls.vh360-mobile-controls-simple button.active,
+    .vh360-multi-view-container #vh360-agora-controls.vh360-mobile-controls-simple button.active {
+        background: rgba(229, 57, 53, 0.9);
+        border-color: #e53935;
+    }
+
+    /* Horizontal scroll indicators - only show when content overflows */
+    body #vh360-agora-controls.vh360-mobile-controls-simple::before,
+    body #vh360-agora-controls.vh360-mobile-controls-simple::after,
+    .vh360-speaker-view #vh360-agora-controls.vh360-mobile-controls-simple::before,
+    .vh360-speaker-view #vh360-agora-controls.vh360-mobile-controls-simple::after,
+    .vh360-multi-view-container #vh360-agora-controls.vh360-mobile-controls-simple::before,
+    .vh360-multi-view-container #vh360-agora-controls.vh360-mobile-controls-simple::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 10px;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        z-index: 1;
+    }
+
+    body #vh360-agora-controls.vh360-mobile-controls-simple::before,
+    .vh360-speaker-view #vh360-agora-controls.vh360-mobile-controls-simple::before,
+    .vh360-multi-view-container #vh360-agora-controls.vh360-mobile-controls-simple::before {
+        left: 0;
+        background: linear-gradient(to right, rgba(0,0,0,0.4), transparent);
+    }
+
+    body #vh360-agora-controls.vh360-mobile-controls-simple::after,
+    .vh360-speaker-view #vh360-agora-controls.vh360-mobile-controls-simple::after,
+    .vh360-multi-view-container #vh360-agora-controls.vh360-mobile-controls-simple::after {
+        right: 0;
+        background: linear-gradient(to left, rgba(0,0,0,0.4), transparent);
+    }
+
+    /* Show scroll indicators when content overflows */
+    body #vh360-agora-controls.vh360-mobile-controls-simple.vh360-has-scroll::before,
+    body #vh360-agora-controls.vh360-mobile-controls-simple.vh360-has-scroll::after,
+    .vh360-speaker-view #vh360-agora-controls.vh360-mobile-controls-simple.vh360-has-scroll::before,
+    .vh360-speaker-view #vh360-agora-controls.vh360-mobile-controls-simple.vh360-has-scroll::after,
+    .vh360-multi-view-container #vh360-agora-controls.vh360-mobile-controls-simple.vh360-has-scroll::before,
+    .vh360-multi-view-container #vh360-agora-controls.vh360-mobile-controls-simple.vh360-has-scroll::after {
+        opacity: 1;
+    }
+
+    /* Mobile view selector dropdown */
+    body #vh360-agora-controls.vh360-mobile-controls-simple .vh360-mobile-view-selector,
+    .vh360-speaker-view #vh360-agora-controls.vh360-mobile-controls-simple .vh360-mobile-view-selector,
+    .vh360-multi-view-container #vh360-agora-controls.vh360-mobile-controls-simple .vh360-mobile-view-selector {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+    }
+    
+    body #vh360-agora-controls.vh360-mobile-controls-simple .vh360-mobile-view-dropdown,
+    .vh360-speaker-view #vh360-agora-controls.vh360-mobile-controls-simple .vh360-mobile-view-dropdown,
+    .vh360-multi-view-container #vh360-agora-controls.vh360-mobile-controls-simple .vh360-mobile-view-dropdown {
+        background: rgba(255,255,255,0.15);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: var(--vh360-color-white);
+        padding: 6px 4px;
+        border-radius: 6px;
+        min-width: 100px;
+        height: 40px; /* Use fixed height for consistency */
+        cursor: pointer;
+        flex-shrink: 0;
+        font-size: 11px;
+        font-weight: 500;
+        text-align: left;
+        line-height: 1.2;
+        vertical-align: middle;
+        transition: all var(--vh360-transition-normal);
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        background-image: url("data:image/svg+xml;charset=US-ASCII,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'><path fill='white' d='M2 0L0 2h4zm0 5L0 3h4z'/></svg>");
+        background-repeat: no-repeat;
+        background-position: right 8px center;
+        background-size: 8px 10px;
+        padding-right: 24px;
+        display: flex;
+        align-items: center;
+        box-sizing: border-box;
+    }
+    
+    body #vh360-agora-controls.vh360-mobile-controls-simple .vh360-mobile-view-dropdown:hover,
+    .vh360-speaker-view #vh360-agora-controls.vh360-mobile-controls-simple .vh360-mobile-view-dropdown:hover,
+    .vh360-multi-view-container #vh360-agora-controls.vh360-mobile-controls-simple .vh360-mobile-view-dropdown:hover {
+        background: rgba(255,255,255,0.25);
+        border-color: rgba(255,255,255,0.5);
+        transform: translateY(-1px);
+    }
+    
+    body #vh360-agora-controls.vh360-mobile-controls-simple .vh360-mobile-view-dropdown:focus,
+    .vh360-speaker-view #vh360-agora-controls.vh360-mobile-controls-simple .vh360-mobile-view-dropdown:focus,
+    .vh360-multi-view-container #vh360-agora-controls.vh360-mobile-controls-simple .vh360-mobile-view-dropdown:focus {
+        outline: none;
+        background: rgba(255,255,255,0.25);
+        border-color: rgba(76, 175, 80, 0.8);
+    }
+    
+    /* Style dropdown options for mobile */
+    body #vh360-agora-controls.vh360-mobile-controls-simple .vh360-mobile-view-dropdown option,
+    .vh360-speaker-view #vh360-agora-controls.vh360-mobile-controls-simple .vh360-mobile-view-dropdown option,
+    .vh360-multi-view-container #vh360-agora-controls.vh360-mobile-controls-simple .vh360-mobile-view-dropdown option {
+        background: #333;
+        color: var(--vh360-color-white);
+        padding: 8px;
+    }
+
+    /* Ensure child containers don't interfere with single-container layout */
+    body #vh360-agora-controls.vh360-mobile-controls-simple > div,
+    .vh360-speaker-view #vh360-agora-controls.vh360-mobile-controls-simple > div,
+    .vh360-multi-view-container #vh360-agora-controls.vh360-mobile-controls-simple > div {
+        display: contents; /* Make child divs transparent to layout */
+    }
+
+    /* Override any existing styles that might conflict */
+    #vh360-agora-controls.vh360-mobile-controls-simple * {
+        box-sizing: border-box;
+    }
+}
+
+
+/* Preserve Views text in iOS immersive landscape where generic mobile button rules force square buttons. */
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-fullscreen)
+#vh360-agora-controls.vh360-mobile-controls-simple .vh360-agora-views-btn,
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-ios-immersive-landscape:not(.vh360-broadcast-fullscreen)
+#vh360-agora-controls.vh360-mobile-controls-simple #vh360-view-selector .vh360-view-dropdown-toggle {
+    width: auto !important;
+    min-width: auto !important;
+    max-width: none !important;
+    flex: 0 0 auto !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    white-space: nowrap !important;
+}
