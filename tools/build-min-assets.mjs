@@ -184,28 +184,17 @@ async function loadTerserMinify() {
   if (!terserMinifyPromise) {
     terserMinifyPromise = import('terser')
       .then((module) => module.minify)
-      .catch(() => null);
+      .catch(() => {
+        throw new Error('Terser is required. Run npm install before building production assets.');
+      });
   }
 
   return terserMinifyPromise;
 }
 
-function preserveJsSource(input) {
-  return input
-    .split(/\r?\n/u)
-    .map((line) => line.trimEnd())
-    .join('\n')
-    .trim();
-}
-
 async function minifyJs(source) {
   const code = await readFile(source, 'utf8');
   const terserMinify = await loadTerserMinify();
-
-  if (!terserMinify) {
-    console.warn(`Terser is not installed; preserving readable JS for ${source}. Run npm install before release builds.`);
-    return preserveJsSource(code);
-  }
 
   const result = await terserMinify(code, {
     compress: false,
