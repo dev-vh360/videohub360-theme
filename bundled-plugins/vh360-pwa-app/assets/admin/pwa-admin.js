@@ -1,15 +1,27 @@
 (function($){
   function initColorPickers(){
-    $('.vh360-color').wpColorPicker();
+    if ($.fn.wpColorPicker) {
+      $('.vh360-color').wpColorPicker();
+    }
   }
 
   function bindMediaButtons(){
     let frame;
     $('.vh360-media-upload').on('click', function(e){
       e.preventDefault();
+
+      if (typeof wp === 'undefined' || !wp.media) {
+        return;
+      }
+
       const key = $(this).data('target');
       const $input = $(`input[name="vh360_pwa_options[${key}]"]`);
-      if (frame) frame.open();
+
+      if (frame) {
+        frame.open();
+        return;
+      }
+
       frame = wp.media({
         title: 'Select an image',
         button: { text: 'Use this image' },
