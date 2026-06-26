@@ -49,7 +49,7 @@ document.addEventListener("DOMContentLoaded", function() {
             if (playerElement) {
                 playerElement.innerHTML = "<div class=\"vh360-loading-message\">Loading...</div>";
             }
-            // Retry after a short delay to allow frontend.js to load
+            // Retry after a short delay to allow agora-player.js to load
             setTimeout(function() {
                 if (typeof window.initializeAgoraPlayer === "function") {
                     window.initializeAgoraPlayer(window.config);

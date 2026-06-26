@@ -1,9 +1,50 @@
 /**
- * VideoHub360 lightweight frontend/archive styles.
- * Single-video, live-player, reactions/playlist, Agora, and fullscreen styles
- * are loaded from context-specific stylesheets.
+ * VideoHub360 lightweight archive/card/widget styles
+ *
+ * Split from the legacy frontend bundle so page contexts only load
+ * the selectors they need.
  */
 
+/* === Enhanced VideoHub360 Shortcode Styles === */
+
+/* Pagination styles for shortcode */
+.videohub360-pagination {
+    margin: 20px 0;
+    text-align: center;
+    clear: both;
+}
+
+.videohub360-pagination .page-numbers {
+    display: inline-block;
+    padding: 8px 12px;
+    margin: 0 4px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    color: #0073aa;
+    text-decoration: none;
+    border-radius: var(--vh360-radius-sm);
+    transition: all 0.2s ease;
+}
+
+.videohub360-pagination .page-numbers:hover,
+.videohub360-pagination .page-numbers.current {
+    background: #0073aa;
+    color: var(--vh360-color-white);
+    border-color: #0073aa;
+}
+
+.videohub360-pagination .page-numbers.dots {
+    background: none;
+    border: none;
+    color: var(--vh360-color-medium);
+    cursor: default;
+}
+
+/* Grid responsiveness removed - now using semantic classes below */
+
+/* === VideoHub360 Archive Page Styles === */
+
+/* Archive Header */
 .videohub360-archive-header {
     background-image: linear-gradient(to right, #00335e, #005694);
     background-size: cover;
@@ -907,304 +948,247 @@ button.videohub360-search-submit {
     flex: 1;
 }
 
-/* ========================================================================
-   AGORA CONTROL BUTTONS - Common Styles
-   ======================================================================== */
+/* ========================================
+   Author Badge Styles
+   ======================================== */
 
-/* Base control button styles */
-.vh360-agora-control-btn {
-    background: none;
-    border: 1px solid #fff;
-    color: var(--vh360-color-white);
-    padding: 8px;
-    border-radius: var(--vh360-radius-sm);
-    cursor: pointer;
+/* Base Author Row */
+.vh360-author-row {
     display: flex;
     align-items: center;
-    justify-content: center;
-    min-height: 32px;
-    min-width: 32px;
-    font-family: inherit;
+    gap: 10px;
+    text-decoration: none;
+    margin: 8px 0;
+    transition: opacity 0.2s ease;
+}
+
+.vh360-author-row:hover {
+    opacity: 0.8;
+}
+
+/* Author Avatar */
+.vh360-author-avatar {
+    border-radius: 50% !important;
+    flex-shrink: 0;
+    object-fit: cover;
+    background: #e0e0e0;
+    overflow: hidden;
+    display: block;
+}
+
+/* Author Info Container */
+.vh360-author-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+/* Author Name */
+.vh360-author-name {
     font-size: 14px;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-}
-
-.vh360-agora-control-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: var(--vh360-color-border-light);
-}
-
-.vh360-agora-control-btn:active {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-.vh360-agora-control-btn svg {
-    flex-shrink: 0;
-}
-
-/* Text button variant */
-.vh360-agora-control-btn-text {
-    padding: 6px 12px;
-    gap: 4px;
+    font-weight: 500;
+    color: #030303;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-/* Icon-only button variant */
-.vh360-agora-control-btn-icon {
-    padding: 8px;
-    min-height: 32px;
-    min-width: 32px;
+a.vh360-author-row:hover .vh360-author-name {
+    color: #000;
 }
 
-/* Special button variants */
-.vh360-agora-btn-leave {
-    background: #666;
-    border-color: var(--vh360-color-medium);
+/* Author Username */
+.vh360-author-username {
+    font-size: 12px;
+    color: #606060;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.vh360-agora-btn-end {
-    background: #e53935;
-    border-color: #e53935;
-}
-
-/* Fullscreen button specific styles */
-#vh360-agora-fullscreen-btn svg {
-    flex-shrink: 0;
-}
-
-/* Hide text on smaller screens to save space */
-@media (max-width: 480px) {
-    .vh360-agora-control-btn-text {
-        padding: 4px;
-        min-width: 24px;
-        justify-content: center;
-        font-size: 11px;
-    }
-}
-
-/* Fullscreen mode optimizations */
-#vh360-agora-player:fullscreen,
-#vh360-agora-player:-webkit-full-screen,
-#vh360-agora-player:-moz-full-screen,
-#vh360-agora-player:-ms-fullscreen {
-    width: 100vw;
-    height: 100vh;
-    background: #000;
-}
-
-/* Temporary class to show fullscreen is being attempted */
-.vh360-entering-fullscreen {
-    transition: all 0.3s ease;
-    border: 2px solid #4CAF50;
-}
-
-/* Ensure controls remain visible and properly positioned in fullscreen */
-#vh360-agora-player:fullscreen #vh360-agora-controls,
-#vh360-agora-player:-webkit-full-screen #vh360-agora-controls,
-#vh360-agora-player:-moz-full-screen #vh360-agora-controls,
-#vh360-agora-player:-ms-fullscreen #vh360-agora-controls {
-    position: fixed;
-    bottom: 20px;
-    left: 20px;
-    right: 20px;
-    z-index: 999999;
-}
-
-/* Ensure remote players are properly positioned in fullscreen - overrides multi-view layouts */
-#vh360-agora-player:fullscreen #vh360-agora-remote-players,
-#vh360-agora-player:-webkit-full-screen #vh360-agora-remote-players,
-#vh360-agora-player:-moz-full-screen #vh360-agora-remote-players,
-#vh360-agora-player:-ms-fullscreen #vh360-agora-remote-players {
-    position: fixed;
-    top: 60px;
-    right: 20px;
-    z-index: 999998;
-    max-width: 250px;
-    display: flex;
-    flex-direction: column;
-}
-
-/* Local player fills fullscreen space */
-#vh360-agora-player:fullscreen #vh360-agora-local-player,
-#vh360-agora-player:-webkit-full-screen #vh360-agora-local-player,
-#vh360-agora-player:-moz-full-screen #vh360-agora-local-player,
-#vh360-agora-player:-ms-fullscreen #vh360-agora-local-player {
-    width: 100%;
-    height: 100%;
-    position: relative;
-}
-
-/* Mobile fullscreen optimizations - only apply when actually in fullscreen */
-@media (max-width: 768px) {
-    #vh360-agora-player:fullscreen #vh360-agora-controls,
-    #vh360-agora-player:-webkit-full-screen #vh360-agora-controls,
-    #vh360-agora-player:-moz-full-screen #vh360-agora-controls,
-    #vh360-agora-player:-ms-fullscreen #vh360-agora-controls {
-        bottom: 10px;
-        left: 10px;
-        right: 10px;
-        flex-wrap: wrap;
-        gap: 8px;
-        /* Reset mobile-specific positioning when in fullscreen */
-        transform: none;
-        width: auto;
-        max-width: calc(100% - 20px);
-    }
-
-    #vh360-agora-player:fullscreen #vh360-agora-remote-players,
-    #vh360-agora-player:-webkit-full-screen #vh360-agora-remote-players,
-    #vh360-agora-player:-moz-full-screen #vh360-agora-remote-players,
-    #vh360-agora-player:-ms-fullscreen #vh360-agora-remote-players {
-        top: 50px;
-        right: 10px;
-        max-width: 180px;
-        display: flex;
-        flex-direction: column;
-    }
-}
-
-/* ========================================================================
-   VIDEO QUALITY CONTROLS & MIRROR SETTINGS
-   ======================================================================== */
-
-/* Video Quality Controls Container */
-.vh360-quality-controls {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: var(--vh360-z-ui-high);
-    display: flex;
+/* Compact Variant - Smaller for cards */
+.vh360-author-row--compact {
+    margin: 6px 0;
     gap: 8px;
-    align-items: center;
-    pointer-events: none; /* Allow clicks to pass through container */
 }
 
-.vh360-quality-controls > * {
-    pointer-events: auto; /* Re-enable clicks on children */
+.vh360-author-row--compact .vh360-author-avatar {
+    width: 32px;
+    height: 32px;
 }
 
-/* Quality Badge */
-.vh360-quality-badge {
-    background: rgba(0, 0, 0, 0.8);
-    color: var(--vh360-color-white);
+.vh360-author-row--compact .vh360-author-name {
+    font-size: 13px;
+}
+
+.vh360-author-row--compact .vh360-author-username {
+    font-size: 11px;
+}
+
+/* Name Only Variant - No avatar or username */
+.vh360-author-row--name_only {
+    margin: 4px 0;
+    gap: 0;
+}
+
+.vh360-author-row--name_only .vh360-author-name {
+    font-size: 12px;
+    font-weight: 400;
+    color: #606060;
+}
+
+.vh360-author-row--name_only:hover .vh360-author-name {
+    color: #030303;
+}
+
+/* Integration with video cards */
+.videohub360-videos-content .vh360-author-row {
+    margin-top: 6px;
+    margin-bottom: 4px;
+}
+
+/* Integration with sidebar */
+.videohub360-sidebar-info .vh360-author-row {
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+/* Integration with single video page */
+.videohub360-meta-container > .vh360-author-row {
+    margin: 16px 0;
+}
+
+.videohub360-meta-container > .vh360-author-row .vh360-author-avatar {
+    width: 56px;
+    height: 56px;
+}
+
+.videohub360-meta-container > .vh360-author-row .vh360-author-name {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.videohub360-meta-container > .vh360-author-row .vh360-author-username {
+    font-size: 14px;
+}
+
+/* Dark theme support */
+.videohub360-dark-theme .vh360-author-name {
+    color: #f1f1f1;
+}
+
+.videohub360-dark-theme a.vh360-author-row:hover .vh360-author-name {
+    color: #fff;
+}
+
+.videohub360-dark-theme .vh360-author-username {
+    color: #aaa;
+}
+
+.videohub360-dark-theme .vh360-author-row--name_only .vh360-author-name {
+    color: #aaa;
+}
+
+.videohub360-dark-theme .vh360-author-row--name_only:hover .vh360-author-name {
+    color: #f1f1f1;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .videohub360-meta-container > .vh360-author-row .vh360-author-avatar {
+        width: 48px;
+        height: 48px;
+    }
+
+    .videohub360-meta-container > .vh360-author-row .vh360-author-name {
+        font-size: 15px;
+    }
+
+    .videohub360-meta-container > .vh360-author-row .vh360-author-username {
+        font-size: 13px;
+    }
+}
+
+/* Live viewers badge */
+.vh360-live-viewers-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 10;
     padding: 4px 8px;
     border-radius: var(--vh360-radius-sm);
     font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    cursor: default;
-    backdrop-filter: blur(4px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Settings Button */
-.vh360-settings-button {
-    background: rgba(0, 0, 0, 0.8);
+    font-weight: 500;
     color: var(--vh360-color-white);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 8px;
-    border-radius: var(--vh360-radius-sm);
-    cursor: pointer;
-    font-size: 14px;
-    transition: all 0.2s ease;
-    backdrop-filter: blur(4px);
-    width: 32px;
-    height: 32px;
+    background-color: rgba(0, 0, 0, 0.7);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 4px;
 }
 
-.vh360-settings-button:hover {
-    background: rgba(0, 0, 0, 0.9);
-    transform: scale(1.05);
-}
-
-.vh360-settings-button:focus {
-    outline: 2px solid rgba(33, 150, 243, 0.5);
-    outline-offset: 2px;
-}
-
-/* Quality Menu */
-.vh360-quality-menu {
-    position: absolute;
-    top: calc(100% + 4px);
-    right: 0;
-    background: rgba(0, 0, 0, 0.95);
-    border-radius: var(--vh360-radius-md);
-    padding: 12px;
-    min-width: 200px;
-    max-width: 280px;
-    display: none;
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-}
-
-.vh360-quality-menu.show {
-    display: block;
-    animation: vh360FadeIn 0.2s ease;
-}
-
-@keyframes vh360FadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Menu Sections */
-.vh360-menu-section {
-    margin-bottom: 16px;
-}
-
-.vh360-menu-section:last-child {
-    margin-bottom: 0;
-}
-
-.vh360-menu-title {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 11px;
-    text-transform: uppercase;
-    margin-bottom: 8px;
+.vh360-live-viewers-badge .vh360-viewer-count {
     font-weight: 600;
-    letter-spacing: 0.5px;
 }
 
-/* Menu Items */
-.vh360-menu-item {
-    display: block;
-    color: var(--vh360-color-white);
-    text-decoration: none;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 13px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    border: none;
-    background: none;
-    width: 100%;
-    text-align: left;
-    margin-bottom: 2px;
-    position: relative;
-}
-
-.vh360-menu-item:hover {
-    background: rgba(255, 255, 255, 0.1);
-    transform: translateX(2px);
-}
-
-.vh360-menu-item.active {
-    background: rgba(33, 150, 243, 0.8);
-    color: var(--vh360-color-white);
-}
-
-.vh360-menu-item.active::after {
-    content: '✓';
+/* Continue watching progress bar */
+.vh360-progress-bar {
     position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background-color: rgba(0, 0, 0, 0.3);
+    z-index: 8;
+}
+
+.vh360-progress-fill {
+    height: 100%;
+    background-color: var(--vh360-color-primary, #0063b1);
+    transition: width 0.3s ease;
+}
+
+/* ==========================================================================
+   Video Card Hover Animations
+   ========================================================================== */
+
+/* YouTube-style hover: no card lift or shadow; subtle thumbnail zoom */
+.videohub360-videos-item {
+    transition: none;
+}
+
+.videohub360-videos-item:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+/* Thumbnail zoom on hover */
+.videohub360-videos-thumb {
+    transition: transform 0.3s ease;
+}
+
+.videohub360-videos-item:hover .videohub360-videos-thumb {
+    transform: scale(1.03);
+}
+
+/* Play button scale on hover — keep translate so it stays centered */
+.videohub360-videos-play-btn {
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.videohub360-videos-item:hover .videohub360-videos-play-btn {
+    transform: translate(-50%, -50%) scale(1.05);
+    opacity: 1;
+}
+
+/* Title color transition on hover */
+.videohub360-videos-title {
+    transition: color 0.2s ease;
+}
+
+.videohub360-videos-item:hover .videohub360-videos-title {
+    color: var(--vh360-color-primary, #0063b1);
+}

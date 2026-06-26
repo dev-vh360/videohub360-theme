@@ -243,7 +243,7 @@ function initializeSimplifiedMobileControls(config) {
     return window.vh360SimplifiedMobileControls.init();
 }
 
-// Export for use in frontend.js
+// Export for use in the Agora player runtime
 window.initializeSimplifiedMobileControls = initializeSimplifiedMobileControls;
 
 /* Namespacing compatibility: copy any existing window.* functions into window.vh360 (non-destructive) */

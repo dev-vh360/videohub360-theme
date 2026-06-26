@@ -8,7 +8,7 @@ if (typeof window !== 'undefined') {
  * 
  * Contains core frontend functionality including live stats and archive filtering
  * 
- * Note: Share modal logic has been moved to frontend.js to avoid duplication
+ * Note: Share modal logic has been moved to single-actions.js to avoid duplication
  * and is handled there with proper initialization guards.
  */
 

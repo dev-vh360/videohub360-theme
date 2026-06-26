@@ -1936,7 +1936,7 @@ window.initializeAgoraPlayer = function(config) {
     // Data stream for audience/host requests
     let dataStream = null;
 
-    // Fix for frontend.js data stream error
+    // Fix for legacy combined-runtime data stream error
     async function initDataStream() {
         // Check for client object
         if (!client) {

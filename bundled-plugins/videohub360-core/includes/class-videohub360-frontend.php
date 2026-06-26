@@ -83,7 +83,6 @@ class VideoHub360_Frontend {
         wp_register_script('vh360-frontend', VIDEOHUB360_ASSETS_URL . 'js/runtime.js', array(), $this->asset_version('assets/js/runtime.js'), true);
         wp_register_script('vh360-runtime', VIDEOHUB360_ASSETS_URL . 'js/runtime.js', array(), $this->asset_version('assets/js/runtime.js'), true);
         wp_register_script('vh360-frontend-core', VIDEOHUB360_ASSETS_URL . 'js/frontend-core.js', array('jquery'), $this->asset_version('assets/js/frontend-core.js'), true);
-        wp_register_script('vh360-archive', VIDEOHUB360_ASSETS_URL . 'js/archive.js', array('jquery'), $this->asset_version('assets/js/archive.js'), true);
         wp_register_script('vh360-single-actions', VIDEOHUB360_ASSETS_URL . 'js/single-actions.js', array('vh360-frontend'), $this->asset_version('assets/js/single-actions.js'), true);
         wp_register_script('vh360-agora-player', VIDEOHUB360_ASSETS_URL . 'js/agora-player.js', array('agora-rtc-sdk', 'vh360-frontend'), $this->asset_version('assets/js/agora-player.js'), true);
         wp_register_script('vh360-reactions', VIDEOHUB360_ASSETS_URL . 'js/reactions.js', array('vh360-frontend'), $this->asset_version('assets/js/reactions.js'), true);
@@ -101,9 +100,7 @@ class VideoHub360_Frontend {
         wp_enqueue_style('vh360-variables');
         wp_enqueue_style('vh360-frontend');
         wp_enqueue_script('vh360-frontend-core');
-        wp_enqueue_script('vh360-archive');
         wp_localize_script('vh360-frontend-core', 'vh360Data', $this->get_localized_data());
-        wp_localize_script('vh360-archive', 'vh360Data', $this->get_localized_data());
     }
 
     /**
@@ -139,9 +136,12 @@ class VideoHub360_Frontend {
         if ($is_agora) {
             $this->enqueue_livestream_assets();
             $this->enqueue_quality_assets($post_id);
-        } elseif (!$is_live && $this->single_video_needs_videojs($post_id)) {
+        } elseif ($this->single_video_needs_videojs($post_id)) {
+            if ($is_live) {
+                wp_enqueue_style('vh360-live-player');
+            }
             $this->enqueue_video_player_assets();
-        } else {
+        } elseif ($is_live) {
             wp_enqueue_style('vh360-live-player');
         }
 
@@ -160,6 +160,15 @@ class VideoHub360_Frontend {
      */
     private function single_video_needs_videojs($post_id) {
         if (!$post_id) {
+            return false;
+        }
+
+        $type = get_post_meta($post_id, '_vh360_type', true);
+        if (in_array($type, array('selfhosted', 'api'), true)) {
+            return true;
+        }
+
+        if (in_array($type, array('embed', 'agora'), true)) {
             return false;
         }
 

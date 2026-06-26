@@ -8,7 +8,7 @@ if (typeof window !== 'undefined') {
  * VideoHub360 View Layout Manager
  * 
  * Modular view management system for Speaker and Gallery View
- * Extracted from frontend.js for better maintainability and reduced complexity
+ * Split into the Agora-only bundle for better maintainability and reduced complexity
  * 
  * @since 2.0.1
  */
@@ -486,7 +486,7 @@ class ViewLayoutManager {
         // hide the button. However, on iOS devices running in Agora broadcast
         // mode we still show the button because we will use the native video
         // fullscreen methods instead. To detect iOS we replicate the helper
-        // logic from frontend.js here (cannot rely on vh360IsIOSDevice in this
+        // logic here (cannot rely on vh360IsIOSDevice in this
         // scope).
         if (!this.isFullscreenSupported()) {
             const ua = navigator.userAgent || navigator.vendor || window.opera;

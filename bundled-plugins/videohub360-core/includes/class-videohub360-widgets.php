@@ -173,32 +173,6 @@ class VideoHub360_Widgets {
      * This ensures scripts load correctly when widgets are used standalone.
      */
     public function register_elementor_scripts() {
-        // Register simplified mobile controls
-        $mobile_js_path = VIDEOHUB360_PLUGIN_DIR . 'assets/js/simplified-mobile-controls.js';
-        $mobile_js_url = VIDEOHUB360_ASSETS_URL . 'js/simplified-mobile-controls.js';
-        $mobile_js_ver = file_exists($mobile_js_path) ? filemtime($mobile_js_path) : VIDEOHUB360_VERSION;
-        
-        wp_register_script(
-            'vh360-simplified-mobile-controls',
-            $mobile_js_url,
-            array(),
-            $mobile_js_ver,
-            true
-        );
-        
-        // Register view layout manager
-        $view_layout_js_path = VIDEOHUB360_PLUGIN_DIR . 'assets/js/view-layout-manager.js';
-        $view_layout_js_url = VIDEOHUB360_ASSETS_URL . 'js/view-layout-manager.js';
-        $view_layout_js_ver = file_exists($view_layout_js_path) ? filemtime($view_layout_js_path) : VIDEOHUB360_VERSION;
-        
-        wp_register_script(
-            'vh360-view-layout-manager',
-            $view_layout_js_url,
-            array('vh360-simplified-mobile-controls'),
-            $view_layout_js_ver,
-            true
-        );
-        
         // Register frontend-core.js (contains batch live viewer update functionality)
         $frontend_core_js_path = VIDEOHUB360_PLUGIN_DIR . 'assets/js/frontend-core.js';
         $frontend_core_js_url = VIDEOHUB360_ASSETS_URL . 'js/frontend-core.js';
@@ -207,7 +181,7 @@ class VideoHub360_Widgets {
         wp_register_script(
             'vh360-frontend-core',
             $frontend_core_js_url,
-            array('jquery', 'vh360-view-layout-manager'),
+            array('jquery'),
             $frontend_core_js_ver,
             true
         );

@@ -7,7 +7,7 @@ if (typeof window !== 'undefined') {
  * VideoHub360 Video Player Component
  * 
  * Handles video playback with ad integration (preroll, midroll, postroll)
- * Extracted from main frontend.js for better organization
+ * Video.js player behavior split from the legacy combined frontend bundle
  */
 
 // Video Player Ad and Main Video Logic
