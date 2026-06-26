@@ -333,6 +333,29 @@
         });
     });
 
+    const headerMobileSearchToggleColorBindings = {
+        vh360_header_mobile_search_toggle_icon_color: 'header-mobile-search-toggle-icon-color',
+        vh360_header_mobile_search_toggle_icon_hover_color: 'header-mobile-search-toggle-icon-hover-color',
+        vh360_header_mobile_search_toggle_bg_color: 'header-mobile-search-toggle-bg-color',
+        vh360_header_mobile_search_toggle_bg_hover_color: 'header-mobile-search-toggle-bg-hover-color',
+        vh360_header_mobile_search_toggle_border_color: 'header-mobile-search-toggle-border-color',
+        vh360_header_mobile_search_toggle_border_hover_color: 'header-mobile-search-toggle-border-hover-color'
+    };
+
+    Object.keys(headerMobileSearchToggleColorBindings).forEach(function(settingId) {
+        wp.customize(settingId, function(value) {
+            value.bind(function(newval) {
+                const variable = '--' + headerMobileSearchToggleColorBindings[settingId];
+
+                if (newval) {
+                    document.documentElement.style.setProperty(variable, newval);
+                } else {
+                    document.documentElement.style.removeProperty(variable);
+                }
+            });
+        });
+    });
+
     wp.customize('vh360_header_notification_badge_bg_color', function(value) {
         value.bind(function(newval) {
             updateCSSVariable('vh360-header-notification-badge-bg-color', newval);
@@ -718,6 +741,23 @@
     wp.customize('vh360_community_menu_active_bg_color', function(value) {
         value.bind(function(newval) {
             updateCSSVariable('community-menu-active-bg-color', newval);
+        });
+    });
+
+    const communityMenuToggleColorBindings = {
+        vh360_community_menu_toggle_bg_color: 'community-menu-toggle-bg-color',
+        vh360_community_menu_toggle_text_color: 'community-menu-toggle-text-color',
+        vh360_community_menu_toggle_border_color: 'community-menu-toggle-border-color',
+        vh360_community_menu_toggle_hover_bg_color: 'community-menu-toggle-hover-bg-color',
+        vh360_community_menu_toggle_hover_text_color: 'community-menu-toggle-hover-text-color',
+        vh360_community_menu_toggle_hover_border_color: 'community-menu-toggle-hover-border-color'
+    };
+
+    Object.keys(communityMenuToggleColorBindings).forEach(function(settingId) {
+        wp.customize(settingId, function(value) {
+            value.bind(function(newval) {
+                updateCSSVariable(communityMenuToggleColorBindings[settingId], newval);
+            });
         });
     });
 

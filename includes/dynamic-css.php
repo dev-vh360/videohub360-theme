@@ -43,11 +43,17 @@ function vh360_output_dynamic_css() {
     $nav_link_color             = get_theme_mod('vh360_nav_link_color', '#1f2937');
 
     // Community Menu colors
-    $community_menu_bg_color        = get_theme_mod('vh360_community_menu_bg_color', '#ffffff');
-    $community_menu_text_color      = get_theme_mod('vh360_community_menu_text_color', '#4b5563');
-    $community_menu_hover_bg_color  = get_theme_mod('vh360_community_menu_hover_bg_color', '#f3f4f6');
-    $community_menu_active_color    = get_theme_mod('vh360_community_menu_active_color', '#2563eb');
-    $community_menu_active_bg_color = get_theme_mod('vh360_community_menu_active_bg_color', '#eff6ff');
+    $community_menu_bg_color                  = get_theme_mod('vh360_community_menu_bg_color', '#ffffff');
+    $community_menu_text_color                = get_theme_mod('vh360_community_menu_text_color', '#4b5563');
+    $community_menu_hover_bg_color            = get_theme_mod('vh360_community_menu_hover_bg_color', '#f3f4f6');
+    $community_menu_active_color              = get_theme_mod('vh360_community_menu_active_color', '#2563eb');
+    $community_menu_active_bg_color           = get_theme_mod('vh360_community_menu_active_bg_color', '#eff6ff');
+    $community_menu_toggle_bg_color           = get_theme_mod('vh360_community_menu_toggle_bg_color', '#ffffff');
+    $community_menu_toggle_text_color         = get_theme_mod('vh360_community_menu_toggle_text_color', '#1f2937');
+    $community_menu_toggle_border_color       = get_theme_mod('vh360_community_menu_toggle_border_color', '#e5e7eb');
+    $community_menu_toggle_hover_bg_color     = get_theme_mod('vh360_community_menu_toggle_hover_bg_color', '#f9fafb');
+    $community_menu_toggle_hover_text_color   = get_theme_mod('vh360_community_menu_toggle_hover_text_color', '#1f2937');
+    $community_menu_toggle_hover_border_color = get_theme_mod('vh360_community_menu_toggle_hover_border_color', '#d1d5db');
 
     // Mobile Bottom Navigation colors
     $mobile_nav_bg_color                = get_theme_mod('vh360_mobile_nav_bg_color', '#ffffff');
@@ -90,6 +96,13 @@ function vh360_output_dynamic_css() {
     $header_icon_color                      = get_theme_mod('vh360_header_icon_color', '#1f2937');
     $header_icon_hover_color                = get_theme_mod('vh360_header_icon_hover_color', '#2563eb');
     $header_icon_hover_bg_color             = get_theme_mod('vh360_header_icon_hover_bg_color', '#f9fafb');
+
+    $header_mobile_search_toggle_icon_color         = get_theme_mod('vh360_header_mobile_search_toggle_icon_color', '');
+    $header_mobile_search_toggle_icon_hover_color   = get_theme_mod('vh360_header_mobile_search_toggle_icon_hover_color', '');
+    $header_mobile_search_toggle_bg_color           = get_theme_mod('vh360_header_mobile_search_toggle_bg_color', '');
+    $header_mobile_search_toggle_bg_hover_color     = get_theme_mod('vh360_header_mobile_search_toggle_bg_hover_color', '');
+    $header_mobile_search_toggle_border_color       = get_theme_mod('vh360_header_mobile_search_toggle_border_color', '');
+    $header_mobile_search_toggle_border_hover_color = get_theme_mod('vh360_header_mobile_search_toggle_border_hover_color', '');
 
     $header_notification_badge_bg_color     = get_theme_mod('vh360_header_notification_badge_bg_color', '#ef4444');
     $header_notification_badge_text_color   = get_theme_mod('vh360_header_notification_badge_text_color', '#ffffff');
@@ -206,6 +219,12 @@ function vh360_output_dynamic_css() {
             --community-menu-hover-bg-color: <?php echo esc_attr($community_menu_hover_bg_color); ?>;
             --community-menu-active-color: <?php echo esc_attr($community_menu_active_color); ?>;
             --community-menu-active-bg-color: <?php echo esc_attr($community_menu_active_bg_color); ?>;
+            --community-menu-toggle-bg-color: <?php echo esc_attr($community_menu_toggle_bg_color); ?>;
+            --community-menu-toggle-text-color: <?php echo esc_attr($community_menu_toggle_text_color); ?>;
+            --community-menu-toggle-border-color: <?php echo esc_attr($community_menu_toggle_border_color); ?>;
+            --community-menu-toggle-hover-bg-color: <?php echo esc_attr($community_menu_toggle_hover_bg_color); ?>;
+            --community-menu-toggle-hover-text-color: <?php echo esc_attr($community_menu_toggle_hover_text_color); ?>;
+            --community-menu-toggle-hover-border-color: <?php echo esc_attr($community_menu_toggle_hover_border_color); ?>;
 
             /* Mobile Bottom Navigation Colors */
             --mobile-nav-bg-color: <?php echo esc_attr($mobile_nav_bg_color); ?>;
@@ -258,6 +277,25 @@ function vh360_output_dynamic_css() {
             --vh360-header-icon-color: <?php echo esc_attr($header_icon_color); ?>;
             --vh360-header-icon-hover-color: <?php echo esc_attr($header_icon_hover_color); ?>;
             --vh360-header-icon-hover-bg-color: <?php echo esc_attr($header_icon_hover_bg_color); ?>;
+
+            <?php if (!empty($header_mobile_search_toggle_icon_color)) : ?>
+            --header-mobile-search-toggle-icon-color: <?php echo esc_attr($header_mobile_search_toggle_icon_color); ?>;
+            <?php endif; ?>
+            <?php if (!empty($header_mobile_search_toggle_icon_hover_color)) : ?>
+            --header-mobile-search-toggle-icon-hover-color: <?php echo esc_attr($header_mobile_search_toggle_icon_hover_color); ?>;
+            <?php endif; ?>
+            <?php if (!empty($header_mobile_search_toggle_bg_color)) : ?>
+            --header-mobile-search-toggle-bg-color: <?php echo esc_attr($header_mobile_search_toggle_bg_color); ?>;
+            <?php endif; ?>
+            <?php if (!empty($header_mobile_search_toggle_bg_hover_color)) : ?>
+            --header-mobile-search-toggle-bg-hover-color: <?php echo esc_attr($header_mobile_search_toggle_bg_hover_color); ?>;
+            <?php endif; ?>
+            <?php if (!empty($header_mobile_search_toggle_border_color)) : ?>
+            --header-mobile-search-toggle-border-color: <?php echo esc_attr($header_mobile_search_toggle_border_color); ?>;
+            <?php endif; ?>
+            <?php if (!empty($header_mobile_search_toggle_border_hover_color)) : ?>
+            --header-mobile-search-toggle-border-hover-color: <?php echo esc_attr($header_mobile_search_toggle_border_hover_color); ?>;
+            <?php endif; ?>
 
             --vh360-header-notification-badge-bg-color: <?php echo esc_attr($header_notification_badge_bg_color); ?>;
             --vh360-header-notification-badge-text-color: <?php echo esc_attr($header_notification_badge_text_color); ?>;
