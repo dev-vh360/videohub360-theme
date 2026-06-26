@@ -136,6 +136,18 @@ function vh360_output_dynamic_css() {
     $feed_tab_active_underline_color  = get_theme_mod('vh360_feed_tab_active_underline_color', '#2563eb');
     $mention_color                    = get_theme_mod('vh360_mention_color', '#2563eb');
 
+    // Single video engagement button colors
+    $reaction_container_bg            = get_theme_mod('vh360_reaction_container_bg', '#f5f5f5');
+    $reaction_container_border        = get_theme_mod('vh360_reaction_container_border', '#e5e7eb');
+    $reaction_text_color              = get_theme_mod('vh360_reaction_text_color', '#1f2937');
+    $reaction_hover_bg                = get_theme_mod('vh360_reaction_hover_bg', 'rgba(0, 0, 0, 0.06)');
+    $reaction_like_active_bg          = get_theme_mod('vh360_reaction_like_active_bg', '#2563eb');
+    $reaction_like_active_hover_bg    = get_theme_mod('vh360_reaction_like_active_hover_bg', '#1e40af');
+    $reaction_dislike_active_bg       = get_theme_mod('vh360_reaction_dislike_active_bg', '#374151');
+    $reaction_dislike_active_hover_bg = get_theme_mod('vh360_reaction_dislike_active_hover_bg', '#1f2937');
+    $reaction_active_text_color       = get_theme_mod('vh360_reaction_active_text_color', '#ffffff');
+    $reaction_focus_color             = get_theme_mod('vh360_reaction_focus_color', '#2563eb');
+
     // Get typography settings
     $heading_font = get_theme_mod('vh360_heading_font', 'system');
     $body_font    = get_theme_mod('vh360_body_font', 'system');
@@ -238,6 +250,18 @@ function vh360_output_dynamic_css() {
             --mobile-nav-drawer-muted-text-color: <?php echo esc_attr($mobile_nav_drawer_muted_text_color); ?>;
             --mobile-nav-drawer-border-color: <?php echo esc_attr($mobile_nav_drawer_border_color); ?>;
             --mobile-nav-overlay-color: <?php echo esc_attr($mobile_nav_overlay_color); ?>;
+
+            /* Single Video Engagement Buttons */
+            --vh360-reaction-container-bg: <?php echo esc_attr($reaction_container_bg); ?>;
+            --vh360-reaction-container-border: <?php echo esc_attr($reaction_container_border); ?>;
+            --vh360-reaction-text-color: <?php echo esc_attr($reaction_text_color); ?>;
+            --vh360-reaction-hover-bg: <?php echo esc_attr($reaction_hover_bg); ?>;
+            --vh360-reaction-like-active-bg: <?php echo esc_attr($reaction_like_active_bg); ?>;
+            --vh360-reaction-like-active-hover-bg: <?php echo esc_attr($reaction_like_active_hover_bg); ?>;
+            --vh360-reaction-dislike-active-bg: <?php echo esc_attr($reaction_dislike_active_bg); ?>;
+            --vh360-reaction-dislike-active-hover-bg: <?php echo esc_attr($reaction_dislike_active_hover_bg); ?>;
+            --vh360-reaction-active-text-color: <?php echo esc_attr($reaction_active_text_color); ?>;
+            --vh360-reaction-focus-color: <?php echo esc_attr($reaction_focus_color); ?>;
 
             /* Community Menu Layout & Typography */
             --community-menu-left-gutter: <?php echo absint($community_menu_left_gutter); ?>px;
