@@ -3640,31 +3640,44 @@ a.vh360-author-row:hover .vh360-author-name {
    ============================================ */
 
 .vh360-reactions-container {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 4px;
-    background: var(--bg-light, #f5f5f5);
-    border-radius: 20px;
-    padding: 2px;
+    gap: 3px;
+    max-width: 100%;
+    background: var(--vh360-reaction-container-bg, var(--bg-light, #f5f5f5));
+    border: 1px solid var(--vh360-reaction-container-border, var(--border-color, #e5e7eb));
+    border-radius: 999px;
+    padding: 3px;
+    box-shadow: var(--vh360-reaction-container-shadow, 0 1px 2px rgba(15, 23, 42, 0.06));
 }
 
 .vh360-reaction-btn {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 6px;
+    justify-content: center;
+    gap: 7px;
+    min-height: 36px;
+    min-width: 54px;
     padding: 8px 14px;
     background: transparent;
     border: none;
-    border-radius: 18px;
+    border-radius: 999px;
     cursor: pointer;
     font-size: 14px;
-    font-weight: 500;
-    color: var(--text-color, #333);
-    transition: background-color 0.2s ease, color 0.2s ease;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--vh360-reaction-text-color, var(--text-color, #333));
+    transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .vh360-reaction-btn:hover {
-    background: rgba(0, 0, 0, 0.05);
+    background: var(--vh360-reaction-hover-bg, rgba(0, 0, 0, 0.06));
+}
+
+.vh360-reaction-btn:focus-visible {
+    outline: 2px solid var(--vh360-reaction-focus-color, var(--primary-color, #2563eb));
+    outline-offset: 2px;
 }
 
 .vh360-reaction-btn:disabled {
@@ -3673,21 +3686,37 @@ a.vh360-author-row:hover .vh360-author-name {
 }
 
 .vh360-reaction-btn svg {
+    flex: 0 0 auto;
     fill: currentColor;
 }
 
-.vh360-reaction-btn.active {
-    background: var(--primary-color, #007bff);
-    color: white;
+.vh360-like-btn.active {
+    background: var(--vh360-reaction-like-active-bg, var(--primary-color, #2563eb));
+    color: var(--vh360-reaction-active-text-color, #ffffff);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.22);
 }
 
-.vh360-reaction-btn.active:hover {
-    background: var(--primary-hover, #0056b3);
+.vh360-like-btn.active:hover {
+    background: var(--vh360-reaction-like-active-hover-bg, var(--vh360-reaction-like-active-bg, var(--primary-color, #2563eb)));
+}
+
+.vh360-dislike-btn.active {
+    background: var(--vh360-reaction-dislike-active-bg, #374151);
+    color: var(--vh360-reaction-active-text-color, #ffffff);
+    box-shadow: 0 2px 8px rgba(55, 65, 81, 0.22);
+}
+
+.vh360-dislike-btn.active:hover {
+    background: var(--vh360-reaction-dislike-active-hover-bg, #1f2937);
 }
 
 .vh360-reaction-count {
+    display: inline-block;
+    min-width: 1ch;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.01em;
 }
 
 /* Save to Playlist Button */
@@ -3923,15 +3952,16 @@ a.vh360-author-row:hover .vh360-author-name {
 
 /* Dark theme support */
 .videohub360-dark-theme .vh360-reactions-container {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--vh360-reaction-container-bg, rgba(255, 255, 255, 0.1));
+    border-color: var(--vh360-reaction-container-border, rgba(255, 255, 255, 0.14));
 }
 
 .videohub360-dark-theme .vh360-reaction-btn {
-    color: #f1f1f1;
+    color: var(--vh360-reaction-text-color, #f1f1f1);
 }
 
 .videohub360-dark-theme .vh360-reaction-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--vh360-reaction-hover-bg, rgba(255, 255, 255, 0.1));
 }
 
 .videohub360-dark-theme .vh360-save-btn {
@@ -3986,11 +4016,12 @@ a.vh360-author-row:hover .vh360-author-name {
 @media (max-width: 768px) {
     .vh360-reactions-container {
         gap: 2px;
+        padding: 2px;
     }
 
     .vh360-reaction-btn,
     .vh360-save-btn {
-        padding: 6px 10px;
+        padding: 7px 10px;
         font-size: 13px;
     }
 

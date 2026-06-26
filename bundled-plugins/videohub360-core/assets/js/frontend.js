@@ -6514,6 +6514,7 @@ window.addEventListener('resize', function() {
             } else {
                 likeBtn.classList.remove('active');
             }
+            likeBtn.setAttribute('aria-pressed', userReaction === 'like' ? 'true' : 'false');
         }
 
         // Update dislike button
@@ -6528,6 +6529,7 @@ window.addEventListener('resize', function() {
             } else {
                 dislikeBtn.classList.remove('active');
             }
+            dislikeBtn.setAttribute('aria-pressed', userReaction === 'dislike' ? 'true' : 'false');
         }
     }
 
