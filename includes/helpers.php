@@ -421,6 +421,52 @@ function vh360_get_dashboard_tab_url( $tab = 'profile' ) {
     return add_query_arg( 'tab', $tab, $dashboard_url );
 }
 
+
+if ( ! function_exists( 'vh360_get_current_dashboard_tab' ) ) {
+    /**
+     * Get the current validated dashboard tab from the request.
+     *
+     * @return string Active dashboard tab ID.
+     */
+    function vh360_get_current_dashboard_tab() {
+        $tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'overview';
+
+        if ( ! $tab ) {
+            $tab = 'overview';
+        }
+
+        $registry = function_exists( 'vh360_get_dashboard_tabs_registry' )
+            ? vh360_get_dashboard_tabs_registry( get_current_user_id() )
+            : array();
+
+        if ( ! isset( $registry[ $tab ] ) ) {
+            return 'overview';
+        }
+
+        $show_callback = isset( $registry[ $tab ]['show_callback'] ) ? $registry[ $tab ]['show_callback'] : null;
+        if ( $show_callback && is_callable( $show_callback ) && ! call_user_func( $show_callback, get_current_user_id() ) ) {
+            return 'overview';
+        }
+
+        return $tab;
+    }
+}
+
+if ( ! function_exists( 'vh360_is_dashboard_tab' ) ) {
+    /**
+     * Check whether the current dashboard tab is one of the provided tab IDs.
+     *
+     * @param string|array $tabs Dashboard tab ID or IDs.
+     * @return bool
+     */
+    function vh360_is_dashboard_tab( $tabs ) {
+        $tabs = (array) $tabs;
+
+        return function_exists( 'vh360_get_current_dashboard_tab' )
+            && in_array( vh360_get_current_dashboard_tab(), $tabs, true );
+    }
+}
+
 function vh360_get_profile_edit_url( $user_id = 0 ) {
     $user_id = $user_id ? absint( $user_id ) : absint( get_current_user_id() );
 

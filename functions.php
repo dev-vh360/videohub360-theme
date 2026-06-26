@@ -420,7 +420,7 @@ function videohub360_theme_scripts() {
         ));
 
         // Enqueue direct messages on dashboard page
-        if (is_page_template('template-dashboard.php')) {
+        if (is_page_template('template-dashboard.php') && function_exists('vh360_is_dashboard_tab') && vh360_is_dashboard_tab('messages')) {
             wp_enqueue_style(
                 'vh360-direct-messages',
                 VH360_THEME_URI . '/assets/css/direct-messages.css',
@@ -458,27 +458,26 @@ function videohub360_theme_scripts() {
                 ),
             ));
 
-            // Push Notifications (requires VH360 PWA & App plugin capability)
-            if ( current_user_can( 'vh360_send_push' ) ) {
+        }
+        // Push Notifications (requires VH360 PWA & App plugin capability)
+        if (is_page_template('template-dashboard.php') && function_exists('vh360_is_dashboard_tab') && vh360_is_dashboard_tab('push-notifications') && current_user_can( 'vh360_send_push' ) ) {
+            wp_enqueue_script(
+                'vh360-push-notifications',
+                VH360_THEME_URI . '/assets/js/push-notifications.js',
+                array('jquery'),
+                vh360_theme_asset_version('assets/js/push-notifications.js'),
+                true
+            );
 
-                wp_enqueue_script(
-                    'vh360-push-notifications',
-                    VH360_THEME_URI . '/assets/js/push-notifications.js',
-                    array('jquery'),
-                    vh360_theme_asset_version('assets/js/push-notifications.js'),
-                    true
-                );
-
-                wp_localize_script('vh360-push-notifications', 'vh360PushNotifications', array(
-                    'ajaxUrl' => admin_url('admin-ajax.php'),
-                    'nonce' => wp_create_nonce('vh360_pwa_push_frontend'),
-                    'i18n' => array(
-                        'sending' => __('Sending...', 'videohub360-theme'),
-                        'sent' => __('Notification sent!', 'videohub360-theme'),
-                        'error' => __('An error occurred. Please try again.', 'videohub360-theme'),
-                    ),
-                ));
-            }
+            wp_localize_script('vh360-push-notifications', 'vh360PushNotifications', array(
+                'ajaxUrl' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('vh360_pwa_push_frontend'),
+                'i18n' => array(
+                    'sending' => __('Sending...', 'videohub360-theme'),
+                    'sent' => __('Notification sent!', 'videohub360-theme'),
+                    'error' => __('An error occurred. Please try again.', 'videohub360-theme'),
+                ),
+            ));
         }
     }
 }
@@ -502,14 +501,20 @@ function vh360_append_push_notifications_to_dashboard_menu( $items, $args ) {
     }
 
     /* If already present (manually added), don't duplicate. */
-    if ( stripos( $items, '#push-notifications' ) !== false || stripos( $items, 'data-tab="push-notifications"' ) !== false ) {
+    if ( stripos( $items, 'tab=push-notifications' ) !== false || stripos( $items, 'data-tab="push-notifications"' ) !== false ) {
         return $items;
     }
 
     $label = esc_html__( 'Push Notifications', 'videohub360-theme' );
     $icon  = '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"></path><path d="M22 2L15 22l-4-9-9-4 20-7z"></path></svg>';
 
-    $items .= '<li class="vh360-dashboard-nav-item"><a href="#push-notifications" class="vh360-dashboard-nav-link vh360-dashboard-tab" data-tab="push-notifications">' . $icon . '<span class="vh360-dashboard-nav-text">' . $label . '</span></a></li>';
+    $push_url = function_exists( 'vh360_get_dashboard_tab_url' )
+        ? vh360_get_dashboard_tab_url( 'push-notifications' )
+        : add_query_arg( 'tab', 'push-notifications', home_url( '/dashboard/' ) );
+
+    $active_class = function_exists( 'vh360_is_dashboard_tab' ) && vh360_is_dashboard_tab( 'push-notifications' ) ? ' active' : '';
+
+    $items .= '<li class="vh360-dashboard-nav-item"><a href="' . esc_url( $push_url ) . '" class="vh360-dashboard-nav-link vh360-dashboard-tab' . esc_attr( $active_class ) . '" data-tab="push-notifications">' . $icon . '<span class="vh360-dashboard-nav-text">' . $label . '</span></a></li>';
 
     return $items;
 }
@@ -715,7 +720,7 @@ add_action('wp_enqueue_scripts', 'vh360_register_gallery_assets', 5);
  * Enqueue gallery dashboard assets on dashboard page
  */
 function vh360_enqueue_gallery_dashboard_assets() {
-    if (is_page_template('template-dashboard.php')) {
+    if (is_page_template('template-dashboard.php') && function_exists('vh360_is_dashboard_tab') && vh360_is_dashboard_tab('galleries')) {
         wp_enqueue_style('dropzone');
         wp_enqueue_style('vh360-gallery-dashboard');
         wp_enqueue_script('dropzone');
@@ -2290,6 +2295,14 @@ class VH360_Dashboard_Menu_Walker extends Walker_Nav_Menu {
 
         if ( preg_match( '~#([a-z0-9\-]+)~i', $url, $m ) ) {
             $tab = strtolower( $m[1] );
+        } else {
+            $url_parts = wp_parse_url( $url );
+            if ( ! empty( $url_parts['query'] ) ) {
+                parse_str( $url_parts['query'], $query_vars );
+                if ( ! empty( $query_vars['tab'] ) ) {
+                    $tab = sanitize_key( $query_vars['tab'] );
+                }
+            }
         }
 
         // Check if tab exists in registry
@@ -2314,11 +2327,15 @@ class VH360_Dashboard_Menu_Walker extends Walker_Nav_Menu {
 
         $href = $url;
         if ( $tab && function_exists( 'is_page_template' ) && is_page_template( 'template-dashboard.php' ) ) {
-            $href = '#' . $tab;
+            $href = function_exists( 'vh360_get_dashboard_tab_url' )
+                ? vh360_get_dashboard_tab_url( $tab )
+                : add_query_arg( 'tab', $tab, home_url( '/dashboard/' ) );
         }
 
+        $active_tab = function_exists( 'vh360_get_current_dashboard_tab' ) ? vh360_get_current_dashboard_tab() : 'overview';
+
         $output .= '<li class="vh360-dashboard-nav-item">';
-        $output .= '<a href="' . esc_url( $href ) . '" class="vh360-dashboard-nav-link vh360-dashboard-tab' . ( $tab === 'overview' ? ' active' : '' ) . '"';
+        $output .= '<a href="' . esc_url( $href ) . '" class="vh360-dashboard-nav-link vh360-dashboard-tab' . ( $tab === $active_tab ? ' active' : '' ) . '"';
         if ( $tab ) {
             $output .= ' data-tab="' . esc_attr( $tab ) . '"';
         }

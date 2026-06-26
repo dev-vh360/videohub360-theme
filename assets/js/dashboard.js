@@ -100,12 +100,15 @@
             var self = this;
 
             $('.vh360-dashboard-tab').on('click', function(e) {
-                e.preventDefault();
-                
                 var $tab = $(this);
                 var targetId = $tab.data('tab');
+                var $targetContent = $(document.getElementById(targetId));
 
-                // Activate the tab and update history
+                if (!$targetContent.length) {
+                    return true;
+                }
+
+                e.preventDefault();
                 self.activateTab(targetId, true);
             });
 
@@ -882,7 +885,7 @@
                 // Navigate to create-video tab with edit parameter
                 // Using full page URL with query parameter so PHP can detect edit mode
                 var currentUrl = window.location.pathname;
-                var newUrl = currentUrl + '?edit=' + videoId + '#create-video';
+                var newUrl = currentUrl + '?tab=create-video&edit=' + videoId;
                 window.location.href = newUrl;
             });
         },
