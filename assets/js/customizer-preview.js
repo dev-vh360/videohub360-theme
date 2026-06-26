@@ -333,6 +333,29 @@
         });
     });
 
+    const headerMobileSearchToggleColorBindings = {
+        vh360_header_mobile_search_toggle_icon_color: 'header-mobile-search-toggle-icon-color',
+        vh360_header_mobile_search_toggle_icon_hover_color: 'header-mobile-search-toggle-icon-hover-color',
+        vh360_header_mobile_search_toggle_bg_color: 'header-mobile-search-toggle-bg-color',
+        vh360_header_mobile_search_toggle_bg_hover_color: 'header-mobile-search-toggle-bg-hover-color',
+        vh360_header_mobile_search_toggle_border_color: 'header-mobile-search-toggle-border-color',
+        vh360_header_mobile_search_toggle_border_hover_color: 'header-mobile-search-toggle-border-hover-color'
+    };
+
+    Object.keys(headerMobileSearchToggleColorBindings).forEach(function(settingId) {
+        wp.customize(settingId, function(value) {
+            value.bind(function(newval) {
+                const variable = '--' + headerMobileSearchToggleColorBindings[settingId];
+
+                if (newval) {
+                    document.documentElement.style.setProperty(variable, newval);
+                } else {
+                    document.documentElement.style.removeProperty(variable);
+                }
+            });
+        });
+    });
+
     wp.customize('vh360_header_notification_badge_bg_color', function(value) {
         value.bind(function(newval) {
             updateCSSVariable('vh360-header-notification-badge-bg-color', newval);

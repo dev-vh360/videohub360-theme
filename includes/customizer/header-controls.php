@@ -552,6 +552,32 @@ function vh360_register_header_controls($wp_customize) {
         )
     ));
 
+    /* --- Mobile Search Toggle --- */
+    $header_mobile_search_toggle_color_controls = array(
+        'vh360_header_mobile_search_toggle_icon_color' => __('Mobile Search Toggle Icon Color', 'videohub360-theme'),
+        'vh360_header_mobile_search_toggle_icon_hover_color' => __('Mobile Search Toggle Icon Hover Color', 'videohub360-theme'),
+        'vh360_header_mobile_search_toggle_bg_color' => __('Mobile Search Toggle Background Color', 'videohub360-theme'),
+        'vh360_header_mobile_search_toggle_bg_hover_color' => __('Mobile Search Toggle Background Hover Color', 'videohub360-theme'),
+        'vh360_header_mobile_search_toggle_border_color' => __('Mobile Search Toggle Border Color', 'videohub360-theme'),
+        'vh360_header_mobile_search_toggle_border_hover_color' => __('Mobile Search Toggle Border Hover Color', 'videohub360-theme'),
+    );
+
+    foreach ($header_mobile_search_toggle_color_controls as $setting_id => $label) {
+        $wp_customize->add_setting($setting_id, array(
+            'default'           => '',
+            'sanitize_callback' => 'sanitize_hex_color',
+            'transport'         => 'postMessage',
+        ));
+        $wp_customize->add_control(new WP_Customize_Color_Control(
+            $wp_customize,
+            $setting_id,
+            array(
+                'label'   => $label,
+                'section' => 'vh360_header_action_colors',
+            )
+        ));
+    }
+
     /* --- Notification Badge --- */
     $wp_customize->add_setting('vh360_header_notification_badge_bg_color', array(
         'default'           => '#ef4444',

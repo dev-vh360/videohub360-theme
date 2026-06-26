@@ -97,6 +97,13 @@ function vh360_output_dynamic_css() {
     $header_icon_hover_color                = get_theme_mod('vh360_header_icon_hover_color', '#2563eb');
     $header_icon_hover_bg_color             = get_theme_mod('vh360_header_icon_hover_bg_color', '#f9fafb');
 
+    $header_mobile_search_toggle_icon_color         = get_theme_mod('vh360_header_mobile_search_toggle_icon_color', '');
+    $header_mobile_search_toggle_icon_hover_color   = get_theme_mod('vh360_header_mobile_search_toggle_icon_hover_color', '');
+    $header_mobile_search_toggle_bg_color           = get_theme_mod('vh360_header_mobile_search_toggle_bg_color', '');
+    $header_mobile_search_toggle_bg_hover_color     = get_theme_mod('vh360_header_mobile_search_toggle_bg_hover_color', '');
+    $header_mobile_search_toggle_border_color       = get_theme_mod('vh360_header_mobile_search_toggle_border_color', '');
+    $header_mobile_search_toggle_border_hover_color = get_theme_mod('vh360_header_mobile_search_toggle_border_hover_color', '');
+
     $header_notification_badge_bg_color     = get_theme_mod('vh360_header_notification_badge_bg_color', '#ef4444');
     $header_notification_badge_text_color   = get_theme_mod('vh360_header_notification_badge_text_color', '#ffffff');
     $header_notification_badge_border_color = get_theme_mod('vh360_header_notification_badge_border_color', '#ffffff');
@@ -270,6 +277,25 @@ function vh360_output_dynamic_css() {
             --vh360-header-icon-color: <?php echo esc_attr($header_icon_color); ?>;
             --vh360-header-icon-hover-color: <?php echo esc_attr($header_icon_hover_color); ?>;
             --vh360-header-icon-hover-bg-color: <?php echo esc_attr($header_icon_hover_bg_color); ?>;
+
+            <?php if (!empty($header_mobile_search_toggle_icon_color)) : ?>
+            --header-mobile-search-toggle-icon-color: <?php echo esc_attr($header_mobile_search_toggle_icon_color); ?>;
+            <?php endif; ?>
+            <?php if (!empty($header_mobile_search_toggle_icon_hover_color)) : ?>
+            --header-mobile-search-toggle-icon-hover-color: <?php echo esc_attr($header_mobile_search_toggle_icon_hover_color); ?>;
+            <?php endif; ?>
+            <?php if (!empty($header_mobile_search_toggle_bg_color)) : ?>
+            --header-mobile-search-toggle-bg-color: <?php echo esc_attr($header_mobile_search_toggle_bg_color); ?>;
+            <?php endif; ?>
+            <?php if (!empty($header_mobile_search_toggle_bg_hover_color)) : ?>
+            --header-mobile-search-toggle-bg-hover-color: <?php echo esc_attr($header_mobile_search_toggle_bg_hover_color); ?>;
+            <?php endif; ?>
+            <?php if (!empty($header_mobile_search_toggle_border_color)) : ?>
+            --header-mobile-search-toggle-border-color: <?php echo esc_attr($header_mobile_search_toggle_border_color); ?>;
+            <?php endif; ?>
+            <?php if (!empty($header_mobile_search_toggle_border_hover_color)) : ?>
+            --header-mobile-search-toggle-border-hover-color: <?php echo esc_attr($header_mobile_search_toggle_border_hover_color); ?>;
+            <?php endif; ?>
 
             --vh360-header-notification-badge-bg-color: <?php echo esc_attr($header_notification_badge_bg_color); ?>;
             --vh360-header-notification-badge-text-color: <?php echo esc_attr($header_notification_badge_text_color); ?>;

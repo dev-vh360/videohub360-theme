@@ -24,15 +24,19 @@
     justify-content: center;
     width: 40px;
     height: 40px;
-    border: none;
-    background: transparent;
+    box-sizing: border-box;
+    border: 1px solid var(--header-mobile-search-toggle-border-color, transparent);
+    background-color: var(--header-mobile-search-toggle-bg-color, transparent);
     cursor: pointer;
-    color: var(--text-color, #1f2937);
-    transition: color 0.2s ease;
+    color: var(--header-mobile-search-toggle-icon-color, var(--text-color, #1f2937));
+    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
 }
 
-.vh360-search-bar-centered__mobile-toggle:hover {
-    color: var(--primary-color, #0066cc);
+.vh360-search-bar-centered__mobile-toggle:hover,
+.vh360-search-bar-centered__mobile-toggle:focus {
+    color: var(--header-mobile-search-toggle-icon-hover-color, var(--primary-color, #0066cc));
+    background-color: var(--header-mobile-search-toggle-bg-hover-color, var(--header-mobile-search-toggle-bg-color, transparent));
+    border-color: var(--header-mobile-search-toggle-border-hover-color, var(--header-mobile-search-toggle-border-color, transparent));
 }
 
 /* Mobile Close Button - Hidden by default */
