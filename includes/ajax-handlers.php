@@ -1602,7 +1602,7 @@ class VH360_Ajax_Handlers {
                         
                         <!-- Video Actions -->
                         <div class="vh360-video-actions">
-                            <a href="#create-video" class="vh360-video-action vh360-edit-video" data-video-id="<?php the_ID(); ?>" title="<?php esc_attr_e('Edit', 'videohub360-theme'); ?>">
+                            <a href="<?php echo esc_url( add_query_arg( array( 'tab' => 'create-video', 'edit' => get_the_ID() ), function_exists( 'vh360_get_dashboard_tab_url' ) ? vh360_get_dashboard_tab_url( 'create-video' ) : home_url( '/dashboard/' ) ) ); ?>" class="vh360-video-action vh360-edit-video" data-video-id="<?php the_ID(); ?>" title="<?php esc_attr_e('Edit', 'videohub360-theme'); ?>">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>

@@ -577,7 +577,7 @@ class VH360_Theme_Admin {
             'type' => 'array',
             'sanitize_callback' => array($this, 'sanitize_membership_settings'),
             'default' => array_merge(array(
-                'enable_memberships' => true,
+                'enable_memberships' => 0,
                 'pricing_page_url' => '',
                 'support_url' => '',
                 'contact_url' => '',

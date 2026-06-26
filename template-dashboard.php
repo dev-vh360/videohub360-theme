@@ -57,149 +57,62 @@ get_header();
                 </div>
                 <?php endif; ?>
                 
-                <!-- Overview Tab -->
-                <div id="overview" class="vh360-dashboard-tab-content active">
-                    <?php get_template_part('template-parts/dashboard/overview'); ?>
-                </div>
-                
-                <!-- Create Video Tab -->
-                <div id="create-video" class="vh360-dashboard-tab-content">
-                    <?php get_template_part('template-parts/dashboard/create-video'); ?>
-                </div>
-                
-                <!-- Videos Tab -->
-                <div id="videos" class="vh360-dashboard-tab-content">
-                    <?php get_template_part('template-parts/dashboard/videos'); ?>
-                </div>
-                
-                <!-- My Courses Tab -->
                 <?php
-                $vh360_course_features_enabled = function_exists('videohub360_course_features_enabled') && videohub360_course_features_enabled();
-                $vh360_can_manage_courses = $vh360_course_features_enabled && (
-                    function_exists('vh360_user_can_create_videos')
-                        ? vh360_user_can_create_videos($current_user_id)
-                        : (current_user_can('manage_options') || current_user_can('vh360_create_videos'))
+                $active_tab = function_exists('vh360_get_current_dashboard_tab')
+                    ? vh360_get_current_dashboard_tab()
+                    : 'overview';
+
+                $dashboard_tab_templates = array(
+                    'overview'           => 'overview',
+                    'create-video'       => 'create-video',
+                    'videos'             => 'videos',
+                    'courses'            => 'courses',
+                    'learning'           => 'learning',
+                    'live-rooms'         => 'live-rooms',
+                    'create-post'        => 'create-post',
+                    'profile'            => 'profile',
+                    'business-profile'   => 'business-profile',
+                    'galleries'          => 'gallery',
+                    'events'             => 'events',
+                    'appointments'       => 'appointments',
+                    'availability'       => 'availability',
+                    'bulletins'          => 'bulletins',
+                    'messages'           => 'messages',
+                    'notifications'      => 'notifications',
+                    'push-notifications' => 'push-notifications',
+                    'liked-videos'       => 'liked-videos',
+                    'playlists'          => 'playlists',
+                    'invites'            => 'invites',
+                    'settings'           => 'settings',
+                    'giving'             => 'giving',
+                    'membership'         => 'membership',
                 );
 
-                if ( $vh360_can_manage_courses ) :
+                $dashboard_tabs_registry = function_exists('vh360_get_dashboard_tabs_registry')
+                    ? vh360_get_dashboard_tabs_registry($current_user_id)
+                    : array();
+
+                if (!isset($dashboard_tabs_registry[$active_tab]) && !isset($dashboard_tab_templates[$active_tab])) {
+                    $active_tab = 'overview';
+                }
+
+                $active_tab_config = isset($dashboard_tabs_registry[$active_tab]) ? $dashboard_tabs_registry[$active_tab] : array();
+                if (empty($active_tab_config['content_callback']) && !isset($dashboard_tab_templates[$active_tab])) {
+                    $active_tab = 'overview';
+                    $active_tab_config = isset($dashboard_tabs_registry[$active_tab]) ? $dashboard_tabs_registry[$active_tab] : array();
+                }
                 ?>
-                <div id="courses" class="vh360-dashboard-tab-content">
-                    <?php get_template_part('template-parts/dashboard/courses'); ?>
+                <div id="<?php echo esc_attr($active_tab); ?>" class="vh360-dashboard-tab-content active">
+                    <?php
+                    if (!empty($active_tab_config['content_callback']) && is_callable($active_tab_config['content_callback'])) {
+                        call_user_func($active_tab_config['content_callback'], $current_user_id);
+                    } elseif (isset($dashboard_tab_templates[$active_tab])) {
+                        get_template_part('template-parts/dashboard/' . $dashboard_tab_templates[$active_tab]);
+                    } else {
+                        get_template_part('template-parts/dashboard/overview');
+                    }
+                    ?>
                 </div>
-                <?php endif; ?>
-
-                <!-- My Learning Tab -->
-                <?php if ( $vh360_course_features_enabled ) : ?>
-                <div id="learning" class="vh360-dashboard-tab-content">
-                    <?php get_template_part('template-parts/dashboard/learning'); ?>
-                </div>
-                <?php endif; ?>
-                
-                <!-- Live Rooms Tab -->
-                <div id="live-rooms" class="vh360-dashboard-tab-content">
-                    <?php get_template_part('template-parts/dashboard/live-rooms'); ?>
-                </div>
-
-                <!-- Create Post Tab -->
-                <div id="create-post" class="vh360-dashboard-tab-content">
-                    <?php get_template_part('template-parts/dashboard/create-post'); ?>
-                </div>
-
-                <!-- Profile Tab -->
-                <div id="profile" class="vh360-dashboard-tab-content">
-                    <?php get_template_part('template-parts/dashboard/profile'); ?>
-                </div>
-                
-                <!-- Business Profile Tab (for professionals/organizations only) -->
-                <?php
-                $user_account_type = function_exists('vh360_get_user_account_type') ? vh360_get_user_account_type($current_user_id) : 'creator';
-                if (in_array($user_account_type, array('professional', 'organization'), true)) :
-                ?>
-                <div id="business-profile" class="vh360-dashboard-tab-content">
-                    <?php get_template_part('template-parts/dashboard/business-profile'); ?>
-                </div>
-                <?php endif; ?>
-                
-                <!-- Galleries Tab -->
-                <div id="galleries" class="vh360-dashboard-tab-content">
-                    <?php get_template_part('template-parts/dashboard/gallery'); ?>
-                </div>
-                
-                <!-- Events Tab -->
-                <div id="events" class="vh360-dashboard-tab-content">
-                    <?php get_template_part('template-parts/dashboard/events'); ?>
-                </div>
-                
-                <!-- My Appointments Tab -->
-                <div id="appointments" class="vh360-dashboard-tab-content">
-                    <?php get_template_part('template-parts/dashboard/appointments'); ?>
-                </div>
-                
-                <!-- Availability Tab -->
-                <div id="availability" class="vh360-dashboard-tab-content">
-                    <?php get_template_part('template-parts/dashboard/availability'); ?>
-                </div>
-                
-                <!-- Bulletins Tab -->
-                <div id="bulletins" class="vh360-dashboard-tab-content">
-                    <?php get_template_part('template-parts/dashboard/bulletins'); ?>
-                </div>
-                
-                <!-- Messages Tab -->
-                <div id="messages" class="vh360-dashboard-tab-content">
-                    <?php get_template_part('template-parts/dashboard/messages'); ?>
-                </div>
-                
-                <!-- Notifications Tab -->
-                <div id="notifications" class="vh360-dashboard-tab-content">
-                    <?php get_template_part('template-parts/dashboard/notifications'); ?>
-                </div>
-
-                <!-- Push Notifications Tab (PWA App) -->
-                <?php if ( current_user_can( 'vh360_send_push' ) ) : ?>
-                    <div id="push-notifications" class="vh360-dashboard-tab-content">
-                        <?php get_template_part('template-parts/dashboard/push-notifications'); ?>
-                    </div>
-                <?php endif; ?>
-                
-                <!-- Liked Videos Tab -->
-                <div id="liked-videos" class="vh360-dashboard-tab-content">
-                    <?php get_template_part('template-parts/dashboard/liked-videos'); ?>
-                </div>
-                
-                <!-- Playlists Tab -->
-                <div id="playlists" class="vh360-dashboard-tab-content">
-                    <?php get_template_part('template-parts/dashboard/playlists'); ?>
-                </div>
-                
-                <!-- Invites Tab -->
-                <?php if (function_exists('vh360_user_can_create_invites') && vh360_user_can_create_invites($current_user_id)) : ?>
-                <div id="invites" class="vh360-dashboard-tab-content">
-                    <?php get_template_part('template-parts/dashboard/invites'); ?>
-                </div>
-                <?php endif; ?>
-
-                <!-- Settings Tab -->
-                <div id="settings" class="vh360-dashboard-tab-content">
-                    <?php get_template_part('template-parts/dashboard/settings'); ?>
-                </div>
-                
-                <!-- Giving Tab (shown when VideoHub360 Giving is enabled) -->
-                <?php if ( function_exists( 'vh360_giving_is_enabled' ) && vh360_giving_is_enabled() ) : ?>
-                <div id="giving" class="vh360-dashboard-tab-content">
-                    <?php get_template_part('template-parts/dashboard/giving'); ?>
-                </div>
-                <?php endif; ?>
-
-                <!-- Membership Tab (shown when memberships are enabled) -->
-                <?php
-                $vh360_membership_opts = get_option( 'vh360_membership_options', array() );
-                if ( ! empty( $vh360_membership_opts['enable_memberships'] ) ) :
-                ?>
-                <div id="membership" class="vh360-dashboard-tab-content">
-                    <?php get_template_part('template-parts/dashboard/membership'); ?>
-                </div>
-                <?php endif; ?>
                 
             </div><!-- .vh360-dashboard-content -->
             

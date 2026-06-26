@@ -41,6 +41,18 @@ function vh360_memberships_gate_dashboard_tabs($tabs) {
             $options = get_option('vh360_membership_options', array());
             return !empty($options['enable_memberships']);
         },
+        'show_in_menu_builder' => true,
+        'menu_builder_callback' => '__return_true',
+        'menu_builder_menu_title' => __('Membership', 'videohub360-memberships'),
+        'menu_builder_label_callback' => function() {
+            $options = get_option('vh360_membership_options', array());
+
+            if (empty($options['enable_memberships'])) {
+                return __('Membership — enable Paid Memberships to activate this tab', 'videohub360-memberships');
+            }
+
+            return __('Membership', 'videohub360-memberships');
+        },
         'icon_svg' => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>',
         'content_callback' => function() {
             if (class_exists('VH360_Membership_Subscription_Management')) {

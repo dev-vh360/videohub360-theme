@@ -1216,13 +1216,12 @@ $locations = get_terms(array(
                 <?php echo esc_html($vh360_is_published_edit ? $vh360_create_labels['move_to_draft_button'] : $vh360_create_labels['save_draft_button']); ?>
             </button>
 
-            <button 
-                type="button" 
-                class="vh360-dashboard-btn vh360-btn-cancel vh360-dashboard-tab" 
-                data-tab="videos"
+            <a
+                href="<?php echo esc_url( function_exists( 'vh360_get_dashboard_tab_url' ) ? vh360_get_dashboard_tab_url( 'videos' ) : add_query_arg( 'tab', 'videos' ) ); ?>"
+                class="vh360-dashboard-btn vh360-btn-cancel"
             >
                 <?php esc_html_e('Cancel', 'videohub360-theme'); ?>
-            </button>
+            </a>
         </div>
 
         <!-- Success/Error Messages -->

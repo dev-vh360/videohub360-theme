@@ -70,7 +70,51 @@ function vh360_remove_wp_version() {
 add_action('init', 'vh360_remove_wp_version');
 
 /**
- * Defer non-critical scripts for faster page load
+ * Get handles for theme scripts that can be deferred on the frontend.
+ *
+ * @return array Script handles eligible for defer.
+ */
+if (!function_exists('vh360_get_deferred_script_handles')) {
+    function vh360_get_deferred_script_handles() {
+        return apply_filters('vh360_deferred_script_handles', array(
+            'videohub360-theme-script',
+            'vh360-header-navigation',
+            'vh360-search-bar-centered',
+            'vh360-community-menu-toggle',
+            'vh360-mobile-bottom-nav',
+            'vh360-notifications',
+            'vh360-direct-messages',
+            'vh360-push-notifications',
+            'vh360-pwa-link-same-window',
+            'vh360-business-booking',
+            'vh360-profile-js',
+            'vh360-dashboard-script',
+            'vh360-live-rooms-script',
+            'vh360-create-post-script',
+            'vh360-events-dashboard-script',
+            'vh360-bulletin-dashboard-script',
+            'vh360-notifications-dashboard-script',
+            'vh360-notification-preferences-script',
+            'vh360-bulletins-js',
+            'vh360-gallery-script',
+            'vh360-gallery-photoswipe',
+            'vh360-gallery-dashboard',
+            'vh360-members-directory-js',
+            'vh360-community-script',
+            'vh360-mentions-script',
+            'vh360-activity-feed-js',
+            'vh360-follow-system',
+            'vh360-events',
+            'vh360-user-menu',
+            'vh360-avatar-cropper',
+            'vh360-wp-comments-handler',
+            'vh360-blog-archive',
+        ));
+    }
+}
+
+/**
+ * Defer non-critical frontend theme scripts for faster page load.
  *
  * @param string $tag    The script tag.
  * @param string $handle The script handle.
@@ -78,37 +122,36 @@ add_action('init', 'vh360_remove_wp_version');
  * @return string Modified script tag.
  */
 function vh360_defer_scripts($tag, $handle, $src) {
-    // List of scripts to defer
-    $defer_scripts = array(
-        'videohub360-theme-script',
-        'dashboard-script',
-        'gallery-script',
-    );
-    
-    // Don't defer jQuery or admin scripts
-    if (is_admin() || in_array($handle, array('jquery', 'jquery-core', 'jquery-migrate'))) {
+    if (is_admin()) {
         return $tag;
     }
-    
-    if (in_array($handle, $defer_scripts)) {
-        return str_replace(' src', ' defer src', $tag);
-    }
-    
-    return $tag;
-}
-add_filter('script_loader_tag', 'vh360_defer_scripts', 10, 3);
 
-/**
- * Preload critical resources
- */
-function vh360_preload_resources() {
-    // Preload critical CSS
-    echo '<link rel="preload" href="' . esc_url(get_stylesheet_uri()) . '" as="style" />' . "\n";
-    
-    // Preload theme script
-    echo '<link rel="preload" href="' . esc_url(VH360_THEME_URI . '/assets/js/theme.js') . '" as="script" />' . "\n";
+    $excluded_handles = array(
+        'jquery',
+        'jquery-core',
+        'jquery-migrate',
+        'comment-reply',
+        'dropzone',
+        'sortablejs',
+        'cropperjs',
+        'wp-color-picker',
+    );
+
+    if (in_array($handle, $excluded_handles, true)) {
+        return $tag;
+    }
+
+    if (!in_array($handle, vh360_get_deferred_script_handles(), true)) {
+        return $tag;
+    }
+
+    if (false !== strpos($tag, ' defer') || false !== strpos($tag, ' async')) {
+        return $tag;
+    }
+
+    return str_replace(' src', ' defer src', $tag);
 }
-add_action('wp_head', 'vh360_preload_resources', 1);
+add_filter('script_loader_tag', 'vh360_defer_scripts', 20, 3);
 
 /**
  * Add lazy loading attribute to images
@@ -130,32 +173,16 @@ function vh360_add_lazy_loading($attr) {
 add_filter('wp_get_attachment_image_attributes', 'vh360_add_lazy_loading', 10, 1);
 
 /**
- * Remove query strings from static resources
- *
- * @param string $src The source URL.
- * @return string The source URL without query string.
- */
-function vh360_remove_query_strings($src) {
-    // Only remove query strings from our theme assets
-    if (strpos($src, VH360_THEME_URI) !== false) {
-        $parts = explode('?', $src);
-        return $parts[0];
-    }
-    return $src;
-}
-add_filter('style_loader_src', 'vh360_remove_query_strings', 10, 1);
-add_filter('script_loader_src', 'vh360_remove_query_strings', 10, 1);
-
-/**
  * Disable embed scripts if not needed
  */
 function vh360_disable_embeds() {
     // Only disable on archive pages and front page where embeds are unlikely
     if (is_archive() || is_home() || is_search()) {
+        wp_dequeue_script('wp-embed');
         wp_deregister_script('wp-embed');
     }
 }
-add_action('wp_footer', 'vh360_disable_embeds');
+add_action('wp_enqueue_scripts', 'vh360_disable_embeds', 100);
 
 /**
  * Optimize WP head

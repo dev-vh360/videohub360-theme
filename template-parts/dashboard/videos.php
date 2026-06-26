@@ -64,12 +64,14 @@ $vh360_status_filter_labels = array(
     ),
 );
 
-$vh360_videos_base_url = remove_query_arg( array( 'video_status', 'paged' ) );
+$vh360_videos_base_url = function_exists( 'vh360_get_dashboard_tab_url' )
+    ? vh360_get_dashboard_tab_url( 'videos' )
+    : add_query_arg( 'tab', 'videos', remove_query_arg( array( 'video_status', 'paged' ) ) );
 
 $vh360_status_filter_urls = array(
-    'publish' => add_query_arg( 'video_status', 'publish', $vh360_videos_base_url ) . '#videos',
-    'draft'   => add_query_arg( 'video_status', 'draft', $vh360_videos_base_url ) . '#videos',
-    'all'     => add_query_arg( 'video_status', 'all', $vh360_videos_base_url ) . '#videos',
+    'publish' => add_query_arg( 'video_status', 'publish', $vh360_videos_base_url ),
+    'draft'   => add_query_arg( 'video_status', 'draft', $vh360_videos_base_url ),
+    'all'     => add_query_arg( 'video_status', 'all', $vh360_videos_base_url ),
 );
 
 // Build query args
@@ -200,7 +202,7 @@ $videos_query = new WP_Query($args);
                         
                         <!-- Video Actions -->
                         <div class="vh360-video-actions">
-                            <a href="#create-video" class="vh360-video-action vh360-edit-video" data-video-id="<?php the_ID(); ?>" title="<?php esc_attr_e('Edit', 'videohub360-theme'); ?>">
+                            <a href="<?php echo esc_url( function_exists( 'vh360_get_dashboard_tab_url' ) ? vh360_get_dashboard_tab_url( 'create-video' ) : add_query_arg( 'tab', 'create-video' ) ); ?>" class="vh360-video-action vh360-edit-video" data-video-id="<?php the_ID(); ?>" title="<?php esc_attr_e('Edit', 'videohub360-theme'); ?>">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -299,7 +301,7 @@ $videos_query = new WP_Query($args);
                 ?>
             </p>
             <?php if (empty($search)) : ?>
-                <a href="#create-video" class="vh360-dashboard-btn vh360-dashboard-tab <?php echo !$vh360_is_licensed ? 'vh360-locked' : ''; ?>" data-tab="create-video" aria-disabled="<?php echo !$vh360_is_licensed ? 'true' : 'false'; ?>" title="<?php echo !$vh360_is_licensed ? esc_attr( $vh360_is_lesson_context ? __( 'Activate your license to create lessons.', 'videohub360-theme' ) : __( 'Activate your license to upload new videos.', 'videohub360-theme' ) ) : ''; ?>">
+                <a href="<?php echo esc_url( function_exists( 'vh360_get_dashboard_tab_url' ) ? vh360_get_dashboard_tab_url( 'create-video' ) : add_query_arg( 'tab', 'create-video' ) ); ?>" class="vh360-dashboard-btn vh360-dashboard-tab <?php echo !$vh360_is_licensed ? 'vh360-locked' : ''; ?>" data-tab="create-video" aria-disabled="<?php echo !$vh360_is_licensed ? 'true' : 'false'; ?>" title="<?php echo !$vh360_is_licensed ? esc_attr( $vh360_is_lesson_context ? __( 'Activate your license to create lessons.', 'videohub360-theme' ) : __( 'Activate your license to upload new videos.', 'videohub360-theme' ) ) : ''; ?>">
                     <?php echo esc_html(
                         $vh360_is_lesson_context
                             ? __( 'Create Lesson', 'videohub360-theme' )

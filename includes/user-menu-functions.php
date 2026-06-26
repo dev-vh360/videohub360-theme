@@ -450,7 +450,7 @@ function vh360_render_user_menu_meta_box() {
                     function_exists( 'vh360_get_lesson_label' ) ? vh360_get_lesson_label( true ) : __( 'Lessons', 'videohub360-theme' )
                 )
                 : __('My Videos', 'videohub360-theme'),
-            'url' => home_url('/dashboard/#videos'),
+            'url' => function_exists( 'vh360_get_dashboard_tab_url' ) ? vh360_get_dashboard_tab_url( 'videos' ) : home_url('/dashboard/?tab=videos'),
             'icon' => 'videos',
         ),
         array(
@@ -465,7 +465,7 @@ function vh360_render_user_menu_meta_box() {
         ),
         array(
             'title' => __('Settings', 'videohub360-theme'),
-            'url' => home_url('/dashboard/#settings'),
+            'url' => function_exists( 'vh360_get_dashboard_tab_url' ) ? vh360_get_dashboard_tab_url( 'settings' ) : home_url('/dashboard/?tab=settings'),
             'icon' => 'settings',
         ),
         array(
@@ -559,7 +559,7 @@ function vh360_render_mobile_drawer_menu_meta_box() {
     $_nav_menu_placeholder = 0 > $_nav_menu_placeholder ? $_nav_menu_placeholder - 1 : -1;
     
     // Get drawer menu items from the shared helper (using query URL format)
-    $drawer_menu_items = vh360_get_dashboard_surface_item_definitions( 'query' );
+    $drawer_menu_items = vh360_get_dashboard_surface_item_definitions( 'query', null, 'menu_builder' );
     
     /**
      * Filter mobile drawer items available in meta box
@@ -579,6 +579,7 @@ function vh360_render_mobile_drawer_menu_meta_box() {
                 foreach ($drawer_menu_items as $drawer_item) : 
                     $item_id = $_nav_menu_placeholder;
                     $_nav_menu_placeholder--;
+                    $menu_title = isset($drawer_item['menu_title']) ? $drawer_item['menu_title'] : $drawer_item['title'];
                 ?>
                 <li>
                     <label class="menu-item-title">
@@ -592,7 +593,7 @@ function vh360_render_mobile_drawer_menu_meta_box() {
                            value="custom" />
                     <input type="hidden" class="menu-item-title" 
                            name="menu-item[<?php echo esc_attr($item_id); ?>][menu-item-title]" 
-                           value="<?php echo esc_attr($drawer_item['title']); ?>" />
+                           value="<?php echo esc_attr($menu_title); ?>" />
                     <input type="hidden" class="menu-item-url" 
                            name="menu-item[<?php echo esc_attr($item_id); ?>][menu-item-url]" 
                            value="<?php echo esc_url($drawer_item['url']); ?>" />

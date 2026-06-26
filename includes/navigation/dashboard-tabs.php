@@ -243,12 +243,17 @@ function vh360_get_dashboard_tabs_registry( $user_id = null ) {
  * Shared helper that builds menu item definitions from the dashboard tabs registry.
  * Used by both Dashboard Menu Items and Mobile Drawer meta boxes to maintain consistency.
  *
+ * Frontend context respects runtime show_callback visibility. Menu-builder context can
+ * include admin-addable items that may not currently be frontend-enabled when a tab
+ * explicitly opts in with show_in_menu_builder or menu_builder_callback.
+ *
  * @param string   $url_format How to format URLs: 'fragment' for #tab-id, 'query' for ?tab=tab-id.
  * @param int|null $user_id    User ID for context-sensitive visibility and labels. Defaults to current user.
- * @return array Array of menu item definitions with id, title, and url.
+ * @param string   $context    Visibility context: 'frontend' or 'menu_builder'. Defaults to 'frontend'.
+ * @return array Array of menu item definitions with id, title, menu_title, and url.
  * @since 1.0.0
  */
-function vh360_get_dashboard_surface_item_definitions( $url_format = 'fragment', $user_id = null ) {
+function vh360_get_dashboard_surface_item_definitions( $url_format = 'fragment', $user_id = null, $context = 'frontend' ) {
     if ( ! $user_id ) {
         $user_id = get_current_user_id();
     }
@@ -263,19 +268,52 @@ function vh360_get_dashboard_surface_item_definitions( $url_format = 'fragment',
 
     $definitions = array();
 
+    $is_menu_builder = ( 'menu_builder' === $context );
+
     foreach ( $registry as $tab_id => $tab_config ) {
-        // Check visibility - skip if show_callback returns false
-        $show_callback = $tab_config['show_callback'];
-        if ( $show_callback && is_callable( $show_callback ) ) {
-            if ( ! call_user_func( $show_callback, $user_id ) ) {
-                continue; // Skip this item if visibility check fails
+        if ( $is_menu_builder ) {
+            if ( isset( $tab_config['menu_builder_callback'] ) && is_callable( $tab_config['menu_builder_callback'] ) ) {
+                if ( ! call_user_func( $tab_config['menu_builder_callback'], $user_id ) ) {
+                    continue;
+                }
+            } elseif ( empty( $tab_config['show_in_menu_builder'] ) ) {
+                $show_callback = isset( $tab_config['show_callback'] ) ? $tab_config['show_callback'] : null;
+
+                if ( $show_callback && is_callable( $show_callback ) && ! call_user_func( $show_callback, $user_id ) ) {
+                    continue;
+                }
+            }
+        } else {
+            $show_callback = isset( $tab_config['show_callback'] ) ? $tab_config['show_callback'] : null;
+
+            if ( $show_callback && is_callable( $show_callback ) && ! call_user_func( $show_callback, $user_id ) ) {
+                continue;
             }
         }
 
-        // Get label (use label_callback if available, otherwise use default label)
-        $label = $tab_config['label'];
-        if ( $tab_config['label_callback'] && is_callable( $tab_config['label_callback'] ) ) {
+        // Get display label (use context-aware label callbacks if available, otherwise use default label)
+        if ( $is_menu_builder && ! empty( $tab_config['menu_builder_label_callback'] ) && is_callable( $tab_config['menu_builder_label_callback'] ) ) {
+            $label = call_user_func( $tab_config['menu_builder_label_callback'], $user_id );
+        } elseif ( ! empty( $tab_config['label_callback'] ) && is_callable( $tab_config['label_callback'] ) ) {
             $label = call_user_func( $tab_config['label_callback'], $user_id );
+        } else {
+            $label = $tab_config['label'];
+        }
+
+        // Get the clean title saved to WordPress menu items. This may differ from
+        // the menu-builder display label, which can include admin-only notes.
+        if ( $is_menu_builder && ! empty( $tab_config['menu_builder_menu_title_callback'] ) && is_callable( $tab_config['menu_builder_menu_title_callback'] ) ) {
+            $menu_title = call_user_func( $tab_config['menu_builder_menu_title_callback'], $user_id );
+        } elseif ( $is_menu_builder && isset( $tab_config['menu_builder_menu_title'] ) ) {
+            $menu_title = $tab_config['menu_builder_menu_title'];
+        } elseif ( ! empty( $tab_config['menu_title_callback'] ) && is_callable( $tab_config['menu_title_callback'] ) ) {
+            $menu_title = call_user_func( $tab_config['menu_title_callback'], $user_id );
+        } elseif ( isset( $tab_config['menu_title'] ) ) {
+            $menu_title = $tab_config['menu_title'];
+        } elseif ( ! empty( $tab_config['label_callback'] ) && is_callable( $tab_config['label_callback'] ) ) {
+            $menu_title = call_user_func( $tab_config['label_callback'], $user_id );
+        } else {
+            $menu_title = $tab_config['label'];
         }
 
         // Build URL based on format
@@ -289,8 +327,9 @@ function vh360_get_dashboard_surface_item_definitions( $url_format = 'fragment',
 
         $definitions[] = array(
             'id'    => 'vh360-dashboard-' . $tab_id,
-            'title' => $label,
-            'url'   => $url,
+            'title'      => $label,
+            'menu_title' => $menu_title,
+            'url'        => $url,
             'tab'   => $tab_id, // Include tab ID for compatibility
         );
     }
@@ -303,7 +342,8 @@ function vh360_get_dashboard_surface_item_definitions( $url_format = 'fragment',
      * @param array  $definitions Array of menu item definitions.
      * @param string $url_format  The URL format being used.
      * @param int    $user_id     User ID for context.
+     * @param string $context     Visibility context.
      * @since 1.0.0
      */
-    return apply_filters( 'vh360_dashboard_surface_item_definitions', $definitions, $url_format, $user_id );
+    return apply_filters( 'vh360_dashboard_surface_item_definitions', $definitions, $url_format, $user_id, $context );
 }

@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
 $dashboard_style_defaults = VH360_Theme_Admin::get_membership_dashboard_card_style_defaults();
 $pricing_style_defaults = VH360_Theme_Admin::get_membership_pricing_card_style_defaults();
 $membership_option_defaults = array_merge(array(
-    'enable_memberships' => true,
+    'enable_memberships' => 0,
     'pricing_page_url' => '',
     'support_url' => '',
     'contact_url' => '',

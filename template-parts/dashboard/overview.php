@@ -111,7 +111,7 @@ if (function_exists('vh360_get_user_activities')) {
         <div class="vh360-dashboard-card">
             <div class="vh360-dashboard-card-header">
                 <h2 class="vh360-dashboard-card-title"><?php esc_html_e('Recent Content', 'videohub360-theme'); ?></h2>
-                <a href="#videos" class="vh360-dashboard-tab" data-tab="videos"><?php esc_html_e('View All', 'videohub360-theme'); ?></a>
+                <a href="<?php echo esc_url( function_exists( 'vh360_get_dashboard_tab_url' ) ? vh360_get_dashboard_tab_url( 'videos' ) : add_query_arg( 'tab', 'videos' ) ); ?>" class="vh360-dashboard-tab" data-tab="videos"><?php esc_html_e('View All', 'videohub360-theme'); ?></a>
             </div>
             <div class="vh360-dashboard-card-body">
                 <?php if ($recent_content->have_posts()) : ?>

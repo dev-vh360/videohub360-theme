@@ -50,7 +50,7 @@ add_action('admin_init', 'vh360_register_nav_menu_meta_boxes');
  */
 function vh360_get_dashboard_menu_item_definitions() {
     // Use the shared helper with fragment URL format (#tab-id)
-    $definitions = vh360_get_dashboard_surface_item_definitions( 'fragment' );
+    $definitions = vh360_get_dashboard_surface_item_definitions( 'fragment', null, 'menu_builder' );
 
     /**
      * Filter dashboard menu item definitions.
@@ -144,6 +144,7 @@ function vh360_render_dashboard_menu_items_meta_box() {
                     <?php
                     $item_id = $_nav_menu_placeholder;
                     $_nav_menu_placeholder--;
+                    $menu_title = isset( $item['menu_title'] ) ? $item['menu_title'] : $item['title'];
                     ?>
                     <li>
                         <label class="menu-item-title">
@@ -151,7 +152,7 @@ function vh360_render_dashboard_menu_items_meta_box() {
                             <?php echo esc_html( $item['title'] ); ?>
                         </label>
                         <input type="hidden" class="menu-item-type" name="menu-item[<?php echo esc_attr( $item_id ); ?>][menu-item-type]" value="custom" />
-                        <input type="hidden" class="menu-item-title" name="menu-item[<?php echo esc_attr( $item_id ); ?>][menu-item-title]" value="<?php echo esc_attr( $item['title'] ); ?>" />
+                        <input type="hidden" class="menu-item-title" name="menu-item[<?php echo esc_attr( $item_id ); ?>][menu-item-title]" value="<?php echo esc_attr( $menu_title ); ?>" />
                         <input type="hidden" class="menu-item-url" name="menu-item[<?php echo esc_attr( $item_id ); ?>][menu-item-url]" value="<?php echo esc_url( $item['url'] ); ?>" />
                         <input type="hidden" class="menu-item-classes" name="menu-item[<?php echo esc_attr( $item_id ); ?>][menu-item-classes]" value="" />
                     </li>
