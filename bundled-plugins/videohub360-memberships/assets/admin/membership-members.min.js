@@ -1,1 +1,0 @@
-(function(){document.addEventListener('click',function(e){var c=e.target.closest('.vh360-confirm');if(c&&!window.confirm(c.getAttribute('data-confirm')||'Continue?'))e.preventDefault();var copy=e.target.closest('.vh360-copyable');if(copy&&navigator.clipboard){navigator.clipboard.writeText(copy.textContent.trim());}});})();
