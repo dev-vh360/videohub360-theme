@@ -207,7 +207,7 @@ class VideoHub360_Widgets {
         wp_register_script(
             'vh360-frontend-core',
             $frontend_core_js_url,
-            array('jquery', 'vh360-view-layout-manager'),
+            array('jquery'),
             $frontend_core_js_ver,
             true
         );
