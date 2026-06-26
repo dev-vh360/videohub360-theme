@@ -79,14 +79,14 @@ class VH360_PWA_Frontend {
 			'vh360-pwa-public',
 			VH360_PWA_APP_URL . 'assets/public/pwa-public.js',
 			array(),
-			VH360_PWA_APP_VERSION,
+			vh360_pwa_app_asset_version('assets/public/pwa-public.js'),
 			false
 		);
 		wp_enqueue_style(
 			'vh360-pwa-public',
 			VH360_PWA_APP_URL . 'assets/public/pwa-public.css',
 			array(),
-			VH360_PWA_APP_VERSION
+			vh360_pwa_app_asset_version('assets/public/pwa-public.css')
 		);
 
 		wp_localize_script(

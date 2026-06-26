@@ -27,6 +27,24 @@ define( 'VH360_PWA_APP_FILE', __FILE__ );
 define( 'VH360_PWA_APP_DIR', plugin_dir_path( __FILE__ ) );
 define( 'VH360_PWA_APP_URL', plugin_dir_url( __FILE__ ) );
 
+
+/**
+ * Get a cache-busting version for a plugin-owned asset.
+ *
+ * @param string $relative_path Asset path relative to the plugin root.
+ * @return string
+ */
+function vh360_pwa_app_asset_version($relative_path) {
+    $relative_path = ltrim($relative_path, '/');
+    $file_path = VH360_PWA_APP_DIR . $relative_path;
+
+    if (file_exists($file_path)) {
+        return VH360_PWA_APP_VERSION . '-' . filemtime($file_path);
+    }
+
+    return VH360_PWA_APP_VERSION;
+}
+
 /**
  * License gate helpers
  */

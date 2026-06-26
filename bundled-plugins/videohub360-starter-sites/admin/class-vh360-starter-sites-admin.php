@@ -69,7 +69,7 @@ class VH360_Starter_Sites_Admin {
             'vh360-starter-sites-admin',
             VH360_STARTER_SITES_URL . 'admin/assets/css/starter-sites-admin.css',
             array(),
-            VH360_STARTER_SITES_VERSION
+            vh360_starter_sites_asset_version('admin/assets/css/starter-sites-admin.css')
         );
         
         // Enqueue JavaScript
@@ -77,7 +77,7 @@ class VH360_Starter_Sites_Admin {
             'vh360-starter-sites-admin',
             VH360_STARTER_SITES_URL . 'admin/assets/js/starter-sites-admin.js',
             array('jquery'),
-            VH360_STARTER_SITES_VERSION,
+            vh360_starter_sites_asset_version('admin/assets/js/starter-sites-admin.js'),
             true
         );
         

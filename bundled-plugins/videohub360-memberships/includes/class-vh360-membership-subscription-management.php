@@ -61,7 +61,7 @@ class VH360_Membership_Subscription_Management {
             'vh360-membership-manage',
             VH360_MEMBERSHIPS_URL . 'assets/js/membership-manage.js',
             array('jquery'),
-            VH360_MEMBERSHIPS_VERSION,
+            vh360_memberships_asset_version('assets/js/membership-manage.js'),
             true
         );
         

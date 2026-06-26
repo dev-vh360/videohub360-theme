@@ -278,13 +278,13 @@ $out['scope']     = $normalize_to_path( $scope );
 			'vh360-pwa-admin',
 			VH360_PWA_APP_URL . 'assets/admin/pwa-admin.css',
 			array( 'wp-color-picker' ),
-			VH360_PWA_APP_VERSION
+			vh360_pwa_app_asset_version('assets/admin/pwa-admin.css')
 		);
 		wp_enqueue_script(
 			'vh360-pwa-admin',
 			VH360_PWA_APP_URL . 'assets/admin/pwa-admin.js',
 			array( 'jquery', 'wp-color-picker' ),
-			VH360_PWA_APP_VERSION,
+			vh360_pwa_app_asset_version('assets/admin/pwa-admin.js'),
 			true
 		);
 		wp_localize_script(
@@ -303,13 +303,13 @@ $out['scope']     = $normalize_to_path( $scope );
 				'vh360-pwa-appstore-admin',
 				VH360_PWA_APP_URL . 'assets/admin/appstore-admin.css',
 				array(),
-				VH360_PWA_APP_VERSION
+				vh360_pwa_app_asset_version('assets/admin/appstore-admin.css')
 			);
 			wp_enqueue_script(
 				'vh360-pwa-appstore-admin',
 				VH360_PWA_APP_URL . 'assets/admin/appstore-admin.js',
 				array( 'jquery' ),
-				VH360_PWA_APP_VERSION,
+				vh360_pwa_app_asset_version('assets/admin/appstore-admin.js'),
 				true
 			);
 		}

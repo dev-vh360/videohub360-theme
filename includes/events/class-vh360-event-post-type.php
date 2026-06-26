@@ -707,14 +707,14 @@ class VH360_Event_Post_Type {
             'vh360-event-gallery-admin',
             get_template_directory_uri() . '/assets/css/admin/event-gallery-admin.css',
             array(),
-            VH360_THEME_VERSION
+            vh360_theme_asset_version('assets/css/admin/event-gallery-admin.css')
         );
 
         wp_enqueue_script(
             'vh360-event-gallery-admin',
             get_template_directory_uri() . '/assets/js/admin/event-gallery-admin.js',
             array('jquery', 'media-upload', 'media-views'),
-            VH360_THEME_VERSION,
+            vh360_theme_asset_version('assets/js/admin/event-gallery-admin.js'),
             true
         );
 

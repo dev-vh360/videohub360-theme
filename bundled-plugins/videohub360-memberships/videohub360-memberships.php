@@ -24,6 +24,24 @@ define('VH360_MEMBERSHIPS_DIR', plugin_dir_path(__FILE__));
 define('VH360_MEMBERSHIPS_URL', plugin_dir_url(__FILE__));
 define('VH360_MEMBERSHIPS_VERSION', '1.0.0');
 
+
+/**
+ * Get a cache-busting version for a plugin-owned asset.
+ *
+ * @param string $relative_path Asset path relative to the plugin root.
+ * @return string
+ */
+function vh360_memberships_asset_version($relative_path) {
+    $relative_path = ltrim($relative_path, '/');
+    $file_path = VH360_MEMBERSHIPS_DIR . $relative_path;
+
+    if (file_exists($file_path)) {
+        return VH360_MEMBERSHIPS_VERSION . '-' . filemtime($file_path);
+    }
+
+    return VH360_MEMBERSHIPS_VERSION;
+}
+
 // Load required classes for activation/deactivation hooks
 require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-database.php';
 require_once VH360_MEMBERSHIPS_DIR . 'includes/class-vh360-membership-cron.php';

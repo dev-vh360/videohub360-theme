@@ -176,7 +176,7 @@ class VideoHub360_Admin {
             'vh360-admin',
             VIDEOHUB360_ASSETS_URL . 'css/admin.css',
             array(),
-            VIDEOHUB360_VERSION
+            videohub360_asset_version('assets/css/admin.css')
         );
         
         // Enqueue dashboard-specific assets
@@ -186,7 +186,7 @@ class VideoHub360_Admin {
                 'vh360-admin-dashboard',
                 VIDEOHUB360_ASSETS_URL . 'css/admin-dashboard.css',
                 array('vh360-admin'),
-                VIDEOHUB360_VERSION
+                videohub360_asset_version('assets/css/admin-dashboard.css')
             );
             
             // Enqueue Chart.js for statistics visualization
@@ -203,7 +203,7 @@ class VideoHub360_Admin {
                 'vh360-admin-dashboard',
                 VIDEOHUB360_ASSETS_URL . 'js/admin-dashboard.js',
                 array('jquery', 'chartjs'),
-                VIDEOHUB360_VERSION,
+                videohub360_asset_version('assets/js/admin-dashboard.js'),
                 true
             );
             
@@ -229,7 +229,7 @@ class VideoHub360_Admin {
                 'vh360-admin-shortcodes',
                 VIDEOHUB360_ASSETS_URL . 'css/admin-shortcodes.css',
                 array('vh360-admin'),
-                VIDEOHUB360_VERSION
+                videohub360_asset_version('assets/css/admin-shortcodes.css')
             );
             
             // Enqueue original admin JS
@@ -237,7 +237,7 @@ class VideoHub360_Admin {
                 'vh360-admin',
                 VIDEOHUB360_ASSETS_URL . 'js/admin.js',
                 array('jquery'),
-                VIDEOHUB360_VERSION,
+                videohub360_asset_version('assets/js/admin.js'),
                 true
             );
             
@@ -246,7 +246,7 @@ class VideoHub360_Admin {
                 'vh360-admin-shortcodes',
                 VIDEOHUB360_ASSETS_URL . 'js/admin-shortcodes.js',
                 array('jquery', 'vh360-admin'),
-                VIDEOHUB360_VERSION,
+                videohub360_asset_version('assets/js/admin-shortcodes.js'),
                 true
             );
             

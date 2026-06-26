@@ -48,7 +48,7 @@ class VH360_Membership_Frontend {
             'vh360-memberships',
             VH360_MEMBERSHIPS_URL . 'assets/css/memberships.css',
             array(),
-            VH360_MEMBERSHIPS_VERSION
+            vh360_memberships_asset_version('assets/css/memberships.css')
         );
     }
     
