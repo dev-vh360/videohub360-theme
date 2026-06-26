@@ -51,9 +51,7 @@ class VH360_Membership_Subscription_Management {
      * Enqueue frontend scripts
      */
     public function enqueue_scripts() {
-        // Only enqueue on pages that need it.
-        $has_manage_shortcode = is_singular() && has_shortcode((string) get_post_field('post_content', get_queried_object_id()), 'vh360_membership_manage');
-        if (!is_user_logged_in() && !$has_manage_shortcode) {
+        if (!$this->should_enqueue_manage_script()) {
             return;
         }
         
@@ -88,6 +86,51 @@ class VH360_Membership_Subscription_Management {
         ));
     }
     
+    /**
+     * Determine whether the membership management script is needed.
+     *
+     * @return bool
+     */
+    private function should_enqueue_manage_script() {
+        return $this->is_membership_dashboard_tab()
+            || $this->current_post_has_shortcode('vh360_membership_manage');
+    }
+
+    /**
+     * Check whether the current request is the dashboard membership tab.
+     *
+     * @return bool
+     */
+    private function is_membership_dashboard_tab() {
+        return (is_page_template('template-dashboard.php') || is_page_template('templates/dashboard.php'))
+            && function_exists('vh360_is_dashboard_tab')
+            && vh360_is_dashboard_tab('membership');
+    }
+
+    /**
+     * Check whether the queried singular post contains a shortcode.
+     *
+     * @param string $shortcode Shortcode tag.
+     * @return bool
+     */
+    private function current_post_has_shortcode($shortcode) {
+        if (!is_singular()) {
+            return false;
+        }
+
+        $post_id = get_queried_object_id();
+        if (!$post_id) {
+            return false;
+        }
+
+        $content = get_post_field('post_content', $post_id);
+        if (!is_string($content) || '' === $content) {
+            return false;
+        }
+
+        return has_shortcode($content, $shortcode);
+    }
+
     /**
      * AJAX: Get current user's membership data
      */

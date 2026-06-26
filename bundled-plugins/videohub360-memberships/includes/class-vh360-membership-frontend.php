@@ -44,12 +44,117 @@ class VH360_Membership_Frontend {
      * Enqueue frontend assets
      */
     public function enqueue_assets() {
+        if (!$this->should_enqueue_membership_styles()) {
+            return;
+        }
+
         wp_enqueue_style(
             'vh360-memberships',
             VH360_MEMBERSHIPS_URL . 'assets/css/memberships.css',
             array(),
             vh360_memberships_asset_version('assets/css/memberships.css')
         );
+    }
+
+    /**
+     * Determine whether frontend membership styles are needed for the current surface.
+     *
+     * @return bool
+     */
+    private function should_enqueue_membership_styles() {
+        if (is_admin()) {
+            return false;
+        }
+
+        if ($this->is_membership_dashboard_tab()) {
+            return true;
+        }
+
+        if ($this->current_post_has_shortcode('vh360_membership_manage')) {
+            return true;
+        }
+
+        if (is_singular()) {
+            $post_id = get_queried_object_id();
+
+            if ($post_id && function_exists('vh360_post_requires_membership') && vh360_post_requires_membership($post_id)) {
+                return true;
+            }
+
+            if ($post_id && 'videohub360' === get_post_type($post_id) && $this->can_video_membership_gate_render($post_id)) {
+                return true;
+            }
+        }
+
+        if (is_page_template('template-activity-feed.php') && $this->can_feature_gate_render('activity_feed')) {
+            return true;
+        }
+
+        if (is_page_template('template-members-directory.php') && $this->can_feature_gate_render('members_directory')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Check whether the current request is the dashboard membership tab.
+     *
+     * @return bool
+     */
+    private function is_membership_dashboard_tab() {
+        return (is_page_template('template-dashboard.php') || is_page_template('templates/dashboard.php'))
+            && function_exists('vh360_is_dashboard_tab')
+            && vh360_is_dashboard_tab('membership');
+    }
+
+    /**
+     * Check whether the queried singular post contains a shortcode.
+     *
+     * @param string $shortcode Shortcode tag.
+     * @return bool
+     */
+    private function current_post_has_shortcode($shortcode) {
+        if (!is_singular()) {
+            return false;
+        }
+
+        $post_id = get_queried_object_id();
+        if (!$post_id) {
+            return false;
+        }
+
+        $content = get_post_field('post_content', $post_id);
+        if (!is_string($content) || '' === $content) {
+            return false;
+        }
+
+        return has_shortcode($content, $shortcode);
+    }
+
+    /**
+     * Check whether a VideoHub360 single can render a membership/course access gate.
+     *
+     * @param int $post_id Post ID.
+     * @return bool
+     */
+    private function can_video_membership_gate_render($post_id) {
+        if (function_exists('videohub360_course_features_enabled') && videohub360_course_features_enabled() && function_exists('videohub360_user_can_access_lesson')) {
+            return !videohub360_user_can_access_lesson($post_id, get_current_user_id());
+        }
+
+        return function_exists('vh360_post_requires_membership') && (bool) vh360_post_requires_membership($post_id);
+    }
+
+    /**
+     * Check whether a feature-level membership gate can render for the current user.
+     *
+     * @param string $feature_key Feature identifier.
+     * @return bool
+     */
+    private function can_feature_gate_render($feature_key) {
+        return function_exists('vh360_can_access_membership_feature')
+            && !vh360_can_access_membership_feature($feature_key, get_current_user_id());
     }
     
     /**
