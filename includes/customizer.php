@@ -935,7 +935,8 @@ function vh360_register_gallery_archive_customizer_controls( $wp_customize ) {
 		'vh360_gallery_archive_description' => array( __( 'Gallery Archive Description', 'videohub360-theme' ), __( 'Browse photo galleries from the community.', 'videohub360-theme' ), 'textarea', 30 ),
 	);
 	foreach ( $text_controls as $setting_id => $control ) {
-		$wp_customize->add_setting( $setting_id, array( 'default' => $control[1], 'sanitize_callback' => 'sanitize_text_field', 'transport' => 'postMessage' ) );
+		$sanitize_callback = 'vh360_gallery_archive_description' === $setting_id ? 'sanitize_textarea_field' : 'sanitize_text_field';
+		$wp_customize->add_setting( $setting_id, array( 'default' => $control[1], 'sanitize_callback' => $sanitize_callback, 'transport' => 'postMessage' ) );
 		$wp_customize->add_control( $setting_id, array( 'label' => $control[0], 'section' => 'vh360_gallery_archive_design', 'type' => $control[2], 'priority' => $control[3] ) );
 	}
 

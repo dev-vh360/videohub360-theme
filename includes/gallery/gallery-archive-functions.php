@@ -81,10 +81,5 @@ function vh360_get_gallery_archive_query( $filters = array() ) {
 }
 
 function vh360_get_gallery_archive_base_url() {
-	if ( is_tax( array( 'vh360_gallery_category', 'vh360_gallery_tag' ) ) ) {
-		$term_link = get_term_link( get_queried_object() );
-		return is_wp_error( $term_link ) ? get_post_type_archive_link( 'vh360_gallery' ) : $term_link;
-	}
-
 	return get_post_type_archive_link( 'vh360_gallery' );
 }
