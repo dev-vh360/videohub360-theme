@@ -985,5 +985,38 @@ function vh360_register_header_controls($wp_customize) {
         'section' => 'vh360_header_settings',
         'type'    => 'text',
     ));
+
+
+    /* Gallery Archive header settings */
+    $wp_customize->add_setting('vh360_show_gallery_archive_header', array(
+        'default'           => 1,
+        'sanitize_callback' => 'vh360_sanitize_checkbox',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_show_gallery_archive_header', array(
+        'label'    => __('Show Gallery Archive Header', 'videohub360-theme'),
+        'section'  => 'vh360_header_settings',
+        'type'     => 'checkbox',
+    ));
+    $wp_customize->add_setting('vh360_gallery_archive_header_title', array(
+        'default'           => __('Galleries', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_text_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_gallery_archive_header_title', array(
+        'label'    => __('Gallery Archive Header Title', 'videohub360-theme'),
+        'section'  => 'vh360_header_settings',
+        'type'     => 'text',
+    ));
+    $wp_customize->add_setting('vh360_gallery_archive_header_description', array(
+        'default'           => __('Browse photo galleries from the community.', 'videohub360-theme'),
+        'sanitize_callback' => 'sanitize_textarea_field',
+        'transport'         => 'postMessage',
+    ));
+    $wp_customize->add_control('vh360_gallery_archive_header_description', array(
+        'label'    => __('Gallery Archive Header Description', 'videohub360-theme'),
+        'section'  => 'vh360_header_settings',
+        'type'     => 'textarea',
+    ));
 }
 add_action('customize_register', 'vh360_register_header_controls');

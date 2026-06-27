@@ -29,6 +29,7 @@
             this.masonryGrid();
             this.imageUpload();
             this.filterGallery();
+            this.archiveControlsAutoSubmit();
             this.viewToggle();
             this.deleteImage();
         },
@@ -238,6 +239,15 @@
                     $('.vh360-gallery-item').hide();
                     $('.vh360-gallery-item[data-category="' + filter + '"]').show();
                 }
+            });
+        },
+
+        /**
+         * Auto-submit Gallery Archive dropdown controls.
+         */
+        archiveControlsAutoSubmit: function() {
+            $('.vh360-gallery-controls-form').on('change', 'select[name="gallery_category"], select[name="gallery_tag"], select[name="gallery_sort"]', function() {
+                $(this).closest('.vh360-gallery-controls-form').trigger('submit');
             });
         },
 

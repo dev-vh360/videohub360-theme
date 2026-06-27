@@ -1486,122 +1486,219 @@ body.vh360-lightbox-open {
 }
 
 /* ==========================================================================
-   Gallery Archive Styles
+   First-Class Gallery Archive (scoped)
    ========================================================================== */
 
 .vh360-gallery-archive {
-    padding: 2rem 0;
+    background: var(--bg-color, #f9fafb);
+    min-height: 100vh;
+    padding: 0 0 4rem;
 }
 
-.vh360-gallery-archive-header {
-    margin-bottom: 2rem;
-    padding-bottom: 1.5rem;
-    border-bottom: 1px solid var(--border-1);
+.vh360-gallery-archive.vh360-template-header-off {
+    padding-top: 50px;
 }
 
-.vh360-gallery-archive-title {
-    font-size: 2rem;
-    font-weight: 700;
-    margin: 0 0 1.5rem;
-    color: var(--text-1);
+.vh360-gallery-archive .vh360-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
 }
 
-.vh360-gallery-archive-filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-}
-
-.vh360-gallery-archive-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-.vh360-gallery-card-meta {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.8125rem;
-    color: var(--text-2);
-    margin-top: 0.25rem;
-}
-
-.vh360-gallery-pagination {
+.vh360-gallery-archive .vh360-gallery-archive-header {
+    background: linear-gradient(135deg, var(--header-bg-color, #667eea) 0%, var(--header-bg-end, #764ba2) 100%);
+    border-bottom: 0;
+    color: var(--page-header-text-color, #ffffff);
+    margin: 0 0 2rem;
+    padding: 3rem 0 2rem;
     text-align: center;
-    margin-top: 2rem;
 }
 
-.vh360-gallery-pagination ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: inline-flex;
+.vh360-gallery-archive .vh360-gallery-archive-title {
+    color: var(--page-header-text-color, #ffffff);
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem;
+}
+
+.vh360-gallery-archive .vh360-gallery-archive-description {
+    color: var(--page-header-text-color, #ffffff);
+    font-size: 1.125rem;
+    line-height: 1.6;
+    margin: 0 auto;
+    max-width: 700px;
+}
+
+.vh360-gallery-archive .vh360-gallery-archive-description p { margin: 0; }
+
+.vh360-gallery-archive .vh360-blog-controls.vh360-gallery-controls {
+    background: transparent;
+    margin-bottom: 2rem;
+    padding: 1.5rem 0;
+}
+
+.vh360-gallery-archive .vh360-blog-controls-row.vh360-gallery-controls-row {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr;
+    margin-bottom: 1rem;
+}
+
+@media (min-width: 768px) {
+    .vh360-gallery-archive .vh360-blog-controls-row.vh360-gallery-controls-row {
+        align-items: end;
+        grid-template-columns: 2fr 1fr 1fr 1fr;
+    }
+}
+
+.vh360-gallery-archive .vh360-gallery-filter {
+    display: flex;
+    flex-direction: column;
     gap: 0.5rem;
 }
 
-.vh360-gallery-pagination li {
+.vh360-gallery-archive .vh360-gallery-filter-label {
+    color: var(--text-1, #1f2937);
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.vh360-gallery-archive .vh360-gallery-search-input,
+.vh360-gallery-archive .vh360-gallery-select {
+    background-color: var(--surface-1, #ffffff);
+    border: 1px solid var(--border-1, #e5e7eb);
+    border-radius: 0.5rem;
+    color: var(--text-1, #1f2937);
+    font-size: 1rem;
+    padding: 0.75rem 1rem;
+    transition: all 0.2s ease;
+    width: 100%;
+}
+
+.vh360-gallery-archive .vh360-gallery-search-input:focus,
+.vh360-gallery-archive .vh360-gallery-select:focus {
+    border-color: var(--primary-color, #2563eb);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color, #2563eb) 15%, transparent);
+    outline: none;
+}
+
+.vh360-gallery-archive .vh360-gallery-controls-form noscript {
+    display: block;
+    margin-top: 1rem;
+}
+
+.vh360-gallery-archive .vh360-gallery-controls-submit {
+    background: var(--primary-color, #2563eb);
+    border: 1px solid var(--primary-color, #2563eb);
+    border-radius: 0.5rem;
+    color: #fff;
+    cursor: pointer;
+    font-weight: 600;
+    padding: 0.75rem 1.25rem;
+}
+
+.vh360-gallery-archive .vh360-gallery-results-count {
+    color: var(--text-2, #6b7280);
+    font-size: 0.875rem;
+    padding-top: 0.5rem;
+}
+
+.vh360-gallery-archive .vh360-gallery-archive-grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    margin-bottom: 2rem;
+}
+
+.vh360-gallery-archive .vh360-gallery-card {
+    background: var(--surface-1, #ffffff);
+    border: 1px solid var(--border-1, #e5e7eb);
+    border-radius: 1rem;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+    overflow: hidden;
+    transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
+}
+
+.vh360-gallery-archive .vh360-gallery-card:hover {
+    border-color: color-mix(in srgb, var(--primary-color, #2563eb) 35%, var(--border-1, #e5e7eb));
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+    transform: translateY(-4px);
+}
+
+.vh360-gallery-archive .vh360-gallery-card-title {
+    color: var(--text-1, #111827);
+    font-size: 1.125rem;
+    font-weight: 700;
+    line-height: 1.35;
     margin: 0;
 }
 
-.vh360-gallery-pagination a,
-.vh360-gallery-pagination span {
-    display: block;
-    padding: 0.5rem 1rem;
-    border: 1px solid var(--border-1);
-    border-radius: var(--border-radius, 0.5rem);
-    text-decoration: none;
-    color: var(--text-1);
-    transition: var(--transition, all 0.2s ease);
-}
-
-.vh360-gallery-pagination a:hover {
-    background: var(--surface-3);
-    border-color: var(--primary-color, #2563eb);
+.vh360-gallery-archive .vh360-gallery-card:hover .vh360-gallery-card-title {
     color: var(--primary-color, #2563eb);
 }
 
-.vh360-gallery-pagination .current {
-    background: var(--primary-color, #2563eb);
-    border-color: var(--primary-color, #2563eb);
+.vh360-gallery-archive .vh360-gallery-card-meta {
+    color: var(--text-2, #6b7280);
+    display: flex;
+    font-size: 0.8125rem;
+    gap: 0.75rem;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+}
+
+.vh360-gallery-archive .vh360-gallery-card-count {
+    background: rgba(0, 0, 0, 0.75);
     color: #fff;
 }
 
-.vh360-gallery-empty {
+.vh360-gallery-archive .vh360-gallery-card-placeholder {
+    color: var(--text-2, #6b7280);
+}
+
+.vh360-gallery-archive .vh360-gallery-pagination {
+    margin-top: 2rem;
     text-align: center;
-    padding: 4rem 2rem;
-    color: var(--text-2);
 }
 
-.vh360-gallery-empty-icon {
-    margin-bottom: 1.5rem;
-}
-
-.vh360-gallery-empty h2 {
-    margin: 0 0 0.5rem;
-    font-size: 1.5rem;
-    color: var(--text-1);
-}
-
-.vh360-gallery-empty p {
+.vh360-gallery-archive .vh360-gallery-pagination ul {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    list-style: none;
     margin: 0;
+    padding: 0;
 }
 
-/* Archive Responsive Styles */
-@media (max-width: 768px) {
-    .vh360-gallery-archive-title {
-        font-size: 1.5rem;
-    }
-
-    .vh360-gallery-archive-grid {
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-        gap: 1rem;
-    }
-
-    .vh360-gallery-archive-filters {
-        overflow-x: auto;
-        flex-wrap: nowrap;
-        -webkit-overflow-scrolling: touch;
-        padding-bottom: 0.5rem;
-    }
+.vh360-gallery-archive .vh360-gallery-pagination a,
+.vh360-gallery-archive .vh360-gallery-pagination span {
+    background: var(--surface-1, #ffffff);
+    border: 1px solid var(--border-1, #e5e7eb);
+    border-radius: 0.5rem;
+    color: var(--text-1, #1f2937);
+    display: block;
+    padding: 0.625rem 1rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
 }
+
+.vh360-gallery-archive .vh360-gallery-pagination a:hover {
+    background: var(--surface-3, #f3f4f6);
+    color: var(--primary-color, #2563eb);
+}
+
+.vh360-gallery-archive .vh360-gallery-pagination .current {
+    background: var(--primary-color, #2563eb);
+    color: #fff;
+}
+
+.vh360-gallery-archive .vh360-gallery-empty {
+    background: var(--surface-1, #ffffff);
+    border: 1px solid var(--border-1, #e5e7eb);
+    border-radius: 1rem;
+    color: var(--text-2, #6b7280);
+    padding: 4rem 2rem;
+    text-align: center;
+}
+
+.vh360-gallery-archive .vh360-gallery-empty-icon { color: var(--text-2, #6b7280); }
+.vh360-gallery-archive .vh360-gallery-empty h2 { color: var(--text-1, #111827); margin: 1rem 0 0.5rem; }
