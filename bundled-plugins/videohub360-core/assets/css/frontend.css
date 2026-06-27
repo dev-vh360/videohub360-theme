@@ -2285,6 +2285,11 @@
 }
 
 /* Responsive filter sidebar/overlay */
+.videohub360-filter-toggle-btn,
+#videohub360-filter-overlay {
+    display: none;
+}
+
 @media (max-width: 900px) {
     .videohub360-archive-mainwrap {
         flex-direction: column;
@@ -2304,12 +2309,18 @@
         padding: 7px 14px 7px 11px;
     }
     #videohub360-filter-overlay {
-        display: block;
+        display: none;
         position: fixed;
         z-index: 1000;
-        background: rgba(0,0,0,0.38);
-        left: 0; top: 0; width: 100vw; height: 100vh;
+        background: var(--vh360-archive-mobile-overlay-bg, rgba(0, 0, 0, 0.38));
+        left: 0;
+        top: 0;
+        width: 100vw;
+        height: 100vh;
         transition: opacity 0.17s;
+    }
+    #videohub360-filter-overlay.videohub360-show {
+        display: block;
     }
     .videohub360-archive-mainwrap .videohub360-sidebar {
         position: fixed;
@@ -2326,13 +2337,11 @@
         border-radius: 0 20px 20px 0;
         z-index: 1001;
     }
-    .videohub360-archive-mainwrap .videohub360-sidebar.videohub360-show {
+    .videohub360-archive-mainwrap .videohub360-sidebar.videohub360-show,
+    .videohub360-archive-mainwrap .videohub360-sidebar.videohub360-open {
         transform: translateX(0);
         opacity: 1;
         visibility: visible;
-    }
-    #videohub360-filter-overlay.videohub360-show {
-        display: block;
     }
     body.videohub360-filter-open {
         overflow: hidden;
@@ -2346,7 +2355,7 @@
         background: none;
         border: none;
         font-size: 2.1em;
-        color: #888;
+        color: var(--vh360-archive-card-meta-color, var(--vh360-text-muted, #888));
         z-index: 1200;
         cursor: pointer;
         padding: 0 6px;
@@ -2564,7 +2573,7 @@
     aspect-ratio: 16 / 9;
     overflow: hidden;
     border-radius: 12px;
-    background: #f1f1f1;
+    background: var(--vh360-video-thumb-fallback-bg-color, var(--vh360-bg-light, #f1f1f1));
     display: block;
 }
 .videohub360-videos-thumb {
@@ -2676,9 +2685,13 @@
 }
 
 .videohub360-videos-thumb-fallback {
-    background: var(--vh360-archive-empty-state-bg-color, var(--vh360-bg-light, #f1f1f1));
+    background: var(--vh360-video-thumb-fallback-bg-color, var(--vh360-bg-light, #f1f1f1));
     width: 100%;
     height: 100%;
+}
+
+.videohub360-archive-mainwrap .videohub360-videos-thumb-fallback {
+    background: var(--vh360-archive-empty-state-bg-color, var(--vh360-video-thumb-fallback-bg-color, var(--vh360-bg-light, #f1f1f1)));
 }
 
 .videohub360-archive-mainwrap .videohub360-videos-main-content {
@@ -2927,7 +2940,7 @@
         aspect-ratio: 16/9;
         border-radius: 12px;
         margin: 0;
-        background: #f1f1f1;
+        background: var(--vh360-video-thumb-fallback-bg-color, var(--vh360-bg-light, #f1f1f1));
         box-sizing: border-box;
         display: block;
         overflow: hidden;
@@ -2982,36 +2995,6 @@
     }
     .videohub360-archive-mainwrap .videohub360-sidebar {
         padding: 14px 6px;
-    }
-}
-
-/* --- Fix: Only show "Show Filters" button on mobile, and overlay only when sidebar is open --- */
-.videohub360-filter-toggle-btn {
-    display: none;
-}
-#videohub360-filter-overlay {
-    display: none;
-}
-@media (max-width: 900px) {
-    .videohub360-filter-toggle-btn {
-        display: block;
-        position: relative;
-        left: auto;
-        top: auto;
-        width: 92%;
-        max-width: 320px;
-        margin: 0 auto 18px auto;
-        z-index: 30;
-        font-size: 0.98em;
-        padding: 7px 14px 7px 11px;
-    }
-    #videohub360-filter-overlay.videohub360-show {
-        display: block;
-        position: fixed;
-        z-index: 1000;
-        background: rgba(0,0,0,0.38);
-        left: 0; top: 0; width: 100vw; height: 100vh;
-        transition: opacity 0.17s;
     }
 }
 
