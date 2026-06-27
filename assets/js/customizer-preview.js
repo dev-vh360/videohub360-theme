@@ -1496,6 +1496,44 @@
         });
     });
 
+
+    // =============================================================================
+    // VIDEOHUB360 ARCHIVE COLOR BINDINGS
+    // =============================================================================
+
+    var archiveColorBindings = {
+        'vh360_archive_sidebar_bg_color': 'vh360-archive-sidebar-bg-color',
+        'vh360_archive_sidebar_heading_color': 'vh360-archive-sidebar-heading-color',
+        'vh360_archive_filter_label_color': 'vh360-archive-filter-label-color',
+        'vh360_archive_field_bg_color': 'vh360-archive-field-bg-color',
+        'vh360_archive_field_text_color': 'vh360-archive-field-text-color',
+        'vh360_archive_field_border_color': 'vh360-archive-field-border-color',
+        'vh360_archive_field_focus_border_color': 'vh360-archive-field-focus-border-color',
+        'vh360_archive_button_bg_color': 'vh360-archive-button-bg-color',
+        'vh360_archive_button_hover_bg_color': 'vh360-archive-button-hover-bg-color',
+        'vh360_archive_button_text_color': 'vh360-archive-button-text-color',
+        'vh360_archive_filter_status_bg_color': 'vh360-archive-filter-status-bg-color',
+        'vh360_archive_filter_status_text_color': 'vh360-archive-filter-status-text-color',
+        'vh360_archive_filter_status_link_color': 'vh360-archive-filter-status-link-color',
+        'vh360_archive_card_title_color': 'vh360-archive-card-title-color',
+        'vh360_archive_card_title_hover_color': 'vh360-archive-card-title-hover-color',
+        'vh360_archive_card_author_color': 'vh360-archive-card-author-color',
+        'vh360_archive_card_author_hover_color': 'vh360-archive-card-author-hover-color',
+        'vh360_archive_card_meta_color': 'vh360-archive-card-meta-color',
+        'vh360_archive_empty_state_bg_color': 'vh360-archive-empty-state-bg-color',
+        'vh360_archive_empty_state_text_color': 'vh360-archive-empty-state-text-color',
+        'vh360_archive_live_badge_bg_color': 'vh360-archive-live-badge-bg-color',
+        'vh360_archive_live_badge_text_color': 'vh360-archive-live-badge-text-color'
+    };
+
+    Object.keys(archiveColorBindings).forEach(function(settingId) {
+        wp.customize(settingId, function(value) {
+            value.bind(function(newval) {
+                updateCSSVariable(archiveColorBindings[settingId], newval);
+            });
+        });
+    });
+
     // =============================================================================
     // HELPER FUNCTIONS FOR GOOGLE FONTS
     // =============================================================================

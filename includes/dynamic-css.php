@@ -127,6 +127,30 @@ function vh360_output_dynamic_css() {
     $button_hover_bg_color      = get_theme_mod('vh360_button_hover_bg_color', '#1e40af');
     $button_hover_text_color    = get_theme_mod('vh360_button_hover_text_color', '#ffffff');
 
+    // VideoHub360 Archive colors
+    $archive_sidebar_bg_color         = get_theme_mod('vh360_archive_sidebar_bg_color', '#ffffff');
+    $archive_sidebar_heading_color    = get_theme_mod('vh360_archive_sidebar_heading_color', '#1a1a1a');
+    $archive_filter_label_color       = get_theme_mod('vh360_archive_filter_label_color', '#1f2937');
+    $archive_field_bg_color           = get_theme_mod('vh360_archive_field_bg_color', '#f8fafc');
+    $archive_field_text_color         = get_theme_mod('vh360_archive_field_text_color', '#1f2937');
+    $archive_field_border_color       = get_theme_mod('vh360_archive_field_border_color', '#ccccdd');
+    $archive_field_focus_border_color = get_theme_mod('vh360_archive_field_focus_border_color', '#0063b1');
+    $archive_button_bg_color          = get_theme_mod('vh360_archive_button_bg_color', '#0063b1');
+    $archive_button_hover_bg_color    = get_theme_mod('vh360_archive_button_hover_bg_color', '#004e92');
+    $archive_button_text_color        = get_theme_mod('vh360_archive_button_text_color', '#ffffff');
+    $archive_filter_status_bg_color   = get_theme_mod('vh360_archive_filter_status_bg_color', '#f0f5fa');
+    $archive_filter_status_text_color = get_theme_mod('vh360_archive_filter_status_text_color', '#444444');
+    $archive_filter_status_link_color = get_theme_mod('vh360_archive_filter_status_link_color', '#0063b1');
+    $archive_card_title_color         = get_theme_mod('vh360_archive_card_title_color', '#0f0f0f');
+    $archive_card_title_hover_color   = get_theme_mod('vh360_archive_card_title_hover_color', '#0f0f0f');
+    $archive_card_author_color        = get_theme_mod('vh360_archive_card_author_color', '#606060');
+    $archive_card_author_hover_color  = get_theme_mod('vh360_archive_card_author_hover_color', '#0f0f0f');
+    $archive_card_meta_color          = get_theme_mod('vh360_archive_card_meta_color', '#606060');
+    $archive_empty_state_bg_color     = get_theme_mod('vh360_archive_empty_state_bg_color', '#f8f9fa');
+    $archive_empty_state_text_color   = get_theme_mod('vh360_archive_empty_state_text_color', '#6b7280');
+    $archive_live_badge_bg_color      = get_theme_mod('vh360_archive_live_badge_bg_color', '#e53935');
+    $archive_live_badge_text_color    = get_theme_mod('vh360_archive_live_badge_text_color', '#ffffff');
+
     // Get footer settings
     $footer_bg_color         = get_theme_mod('vh360_footer_bg_color', '#1f2937');
     $footer_text_color       = get_theme_mod('vh360_footer_text_color', '#f9fafb');
@@ -290,6 +314,30 @@ function vh360_output_dynamic_css() {
             <?php if (!empty($header_menu_font_family)) : ?>
             --header-menu-font-family: <?php echo vh360_get_font_family($header_menu_font_family); ?>;
             <?php endif; ?>
+
+            /* VideoHub360 Archive Colors */
+            --vh360-archive-sidebar-bg-color: <?php echo esc_attr($archive_sidebar_bg_color); ?>;
+            --vh360-archive-sidebar-heading-color: <?php echo esc_attr($archive_sidebar_heading_color); ?>;
+            --vh360-archive-filter-label-color: <?php echo esc_attr($archive_filter_label_color); ?>;
+            --vh360-archive-field-bg-color: <?php echo esc_attr($archive_field_bg_color); ?>;
+            --vh360-archive-field-text-color: <?php echo esc_attr($archive_field_text_color); ?>;
+            --vh360-archive-field-border-color: <?php echo esc_attr($archive_field_border_color); ?>;
+            --vh360-archive-field-focus-border-color: <?php echo esc_attr($archive_field_focus_border_color); ?>;
+            --vh360-archive-button-bg-color: <?php echo esc_attr($archive_button_bg_color); ?>;
+            --vh360-archive-button-hover-bg-color: <?php echo esc_attr($archive_button_hover_bg_color); ?>;
+            --vh360-archive-button-text-color: <?php echo esc_attr($archive_button_text_color); ?>;
+            --vh360-archive-filter-status-bg-color: <?php echo esc_attr($archive_filter_status_bg_color); ?>;
+            --vh360-archive-filter-status-text-color: <?php echo esc_attr($archive_filter_status_text_color); ?>;
+            --vh360-archive-filter-status-link-color: <?php echo esc_attr($archive_filter_status_link_color); ?>;
+            --vh360-archive-card-title-color: <?php echo esc_attr($archive_card_title_color); ?>;
+            --vh360-archive-card-title-hover-color: <?php echo esc_attr($archive_card_title_hover_color); ?>;
+            --vh360-archive-card-author-color: <?php echo esc_attr($archive_card_author_color); ?>;
+            --vh360-archive-card-author-hover-color: <?php echo esc_attr($archive_card_author_hover_color); ?>;
+            --vh360-archive-card-meta-color: <?php echo esc_attr($archive_card_meta_color); ?>;
+            --vh360-archive-empty-state-bg-color: <?php echo esc_attr($archive_empty_state_bg_color); ?>;
+            --vh360-archive-empty-state-text-color: <?php echo esc_attr($archive_empty_state_text_color); ?>;
+            --vh360-archive-live-badge-bg-color: <?php echo esc_attr($archive_live_badge_bg_color); ?>;
+            --vh360-archive-live-badge-text-color: <?php echo esc_attr($archive_live_badge_text_color); ?>;
 
             /* Button Colors */
             --button-bg-color: <?php echo esc_attr($button_bg_color); ?>;

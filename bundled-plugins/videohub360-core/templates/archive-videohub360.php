@@ -123,10 +123,13 @@ $is_astra = function_exists('videohub360_is_astra_theme') && videohub360_is_astr
 <div class="videohub360-archive-mainwrap<?php echo !$show_header ? ' videohub360-no-header' : ''; ?>">
     <?php if (videohub360_show_category_filter() || videohub360_show_series_filter() || videohub360_show_location_filter()): ?>
     <!-- .videohub360-sidebar (desktop) -->
-    <aside class="videohub360-sidebar" id="videohub360-sidebar" aria-label="Filter videos" tabindex="-1">
-        <button class="videohub360-filter-close-btn" id="videohub360-filter-close-btn" aria-label="Close filter" type="button">&times;</button>
+    <aside class="videohub360-sidebar" id="videohub360-sidebar" aria-label="<?php echo esc_attr__('Filter videos', 'videohub360'); ?>" tabindex="-1">
+        <button class="videohub360-filter-close-btn" id="videohub360-filter-close-btn" aria-label="<?php echo esc_attr__('Close filter', 'videohub360'); ?>" type="button">&times;</button>
         <h2><?php echo esc_html__('Filter', 'videohub360'); ?></h2>
         <form method="get" action="<?php echo esc_url(get_post_type_archive_link('videohub360')); ?>" class="videohub360-filter-form" id="videohub360-filter-form">
+            <?php if ($search_term): ?>
+                <input type="hidden" name="videohub360_search" value="<?php echo esc_attr($search_term); ?>">
+            <?php endif; ?>
             <?php if (videohub360_show_category_filter()): ?>
             <div class="videohub360-filter-group">
                 <label for="videohub360_cat" class="videohub360-filter-label"><?php echo esc_html(videohub360_get_category_filter_label()); ?></label>
@@ -155,7 +158,7 @@ $is_astra = function_exists('videohub360_is_astra_theme') && videohub360_is_astr
             <div class="videohub360-filter-group">
                 <label for="videohub360_series" class="videohub360-filter-label"><?php echo esc_html(videohub360_get_series_filter_label()); ?></label>
                 <select name="videohub360_series" id="videohub360_series" class="videohub360-filter-select">
-                    <option value="">All <?php echo esc_html(videohub360_get_series_filter_label()); ?></option>
+                    <option value=""><?php printf(esc_html__('All %s', 'videohub360'), esc_html(videohub360_get_series_filter_label())); ?></option>
                     <?php foreach ($videohub360_series as $series): ?>
                         <option value="<?php echo $series->term_id; ?>" <?php selected($selected_series, $series->term_id); ?>>
                             <?php echo esc_html($series->name); ?>
@@ -168,7 +171,7 @@ $is_astra = function_exists('videohub360_is_astra_theme') && videohub360_is_astr
             <div class="videohub360-filter-group">
                 <label for="videohub360_location" class="videohub360-filter-label"><?php echo esc_html(videohub360_get_location_filter_label()); ?></label>
                 <select name="videohub360_location" id="videohub360_location" class="videohub360-filter-select">
-                    <option value="">All <?php echo esc_html(videohub360_get_location_filter_label()); ?>s</option>
+                    <option value=""><?php printf(esc_html__('All %ss', 'videohub360'), esc_html(videohub360_get_location_filter_label())); ?></option>
                     <?php foreach ($videohub360_locations as $location): ?>
                         <option value="<?php echo $location->term_id; ?>" <?php selected($selected_location, $location->term_id); ?>>
                             <?php echo esc_html($location->name); ?>
@@ -178,26 +181,26 @@ $is_astra = function_exists('videohub360_is_astra_theme') && videohub360_is_astr
             </div>
             <?php endif; ?>
             <div class="videohub360-filter-go-row">
-                <button type="submit" class="videohub360-filter-go-btn" id="videohub360-filter-go-btn">Go</button>
+                <button type="submit" class="videohub360-filter-go-btn" id="videohub360-filter-go-btn"><?php echo esc_html__('Go', 'videohub360'); ?></button>
             </div>
         </form>
     </aside>
     <?php endif; ?>
-    <div class="videohub360-videos-main-content" style="flex:1 1 0; min-width:0;">
+    <div class="videohub360-videos-main-content">
         <!-- Unified search bar -->
         <div class="videohub360-search-bar-wrap">
             <form method="get" action="<?php echo esc_url(get_post_type_archive_link('videohub360')); ?>" class="videohub360-search-bar-form" role="search">
-                <label for="videohub360_search" class="vh360-visually-hidden">Search videos</label>
+                <label for="videohub360_search" class="vh360-visually-hidden"><?php echo esc_html__('Search videos', 'videohub360'); ?></label>
                 <div class="videohub360-search-field">
                     <input
                         type="search"
                         name="videohub360_search"
                         id="videohub360_search"
                         value="<?php echo esc_attr($search_term); ?>"
-                        placeholder="Search videos..."
+                        placeholder="<?php echo esc_attr__('Search videos...', 'videohub360'); ?>"
                         autocomplete="off"
                     >
-                    <button type="submit" class="videohub360-search-submit" aria-label="Search">
+                    <button type="submit" class="videohub360-search-submit" aria-label="<?php echo esc_attr__('Search', 'videohub360'); ?>">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M21 21L16.514 16.506L21 21ZM19 10.5C19 15.194 15.194 19 10.5 19C5.806 19 2 15.194 2 10.5C2 5.806 5.806 2 10.5 2C15.194 2 19 5.806 19 10.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
@@ -220,7 +223,7 @@ $is_astra = function_exists('videohub360_is_astra_theme') && videohub360_is_astr
                 $active_filters = array();
                 
                 if ($search_term) {
-                    $active_filters[] = 'Search: "' . esc_html($search_term) . '"';
+                    $active_filters[] = sprintf(esc_html__('Search: "%s"', 'videohub360'), esc_html($search_term));
                 }
                 
                 if ($selected_cat) {
@@ -259,14 +262,14 @@ $is_astra = function_exists('videohub360_is_astra_theme') && videohub360_is_astr
                 echo esc_html__('Filters:', 'videohub360') . ' ' . implode(' | ', $active_filters);
                 ?>
             </div>
-            <a href="<?php echo esc_url(get_post_type_archive_link('videohub360')); ?>">Clear All Filters</a>
+            <a href="<?php echo esc_url(get_post_type_archive_link('videohub360')); ?>"><?php echo esc_html__('Clear All Filters', 'videohub360'); ?></a>
         </div>
         <?php endif; ?>
         
         <!-- Responsive Filter Toggle Button (mobile only, right above grid) -->
         <?php if (videohub360_show_category_filter() || videohub360_show_series_filter() || videohub360_show_location_filter()): ?>
         <button class="videohub360-filter-toggle-btn" id="videohub360-filter-toggle-btn" aria-controls="videohub360-sidebar" aria-expanded="false" type="button">
-            &#9776; Show Filters
+            <?php echo esc_html__('☰ Show Filters', 'videohub360'); ?>
         </button>
         <div id="videohub360-filter-overlay"></div>
         <?php endif; ?>
@@ -285,6 +288,7 @@ $is_astra = function_exists('videohub360_is_astra_theme') && videohub360_is_astr
                         'show_excerpt'      => 'no',
                         'show_live_badge'   => 'yes',
                         'show_live_viewers' => 'yes',
+                        'use_archive_live_badge_vars' => true,
                     ));
                 }
             endwhile;
@@ -302,7 +306,7 @@ $is_astra = function_exists('videohub360_is_astra_theme') && videohub360_is_astr
         )) . '</div>';
         else: ?>
             <div class="videohub360-no-videos-message">
-                <p>No videos found.</p>
+                <p><?php echo esc_html__('No videos found.', 'videohub360'); ?></p>
             </div>
         <?php
         endif;

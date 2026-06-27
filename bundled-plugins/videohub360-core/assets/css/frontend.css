@@ -2179,7 +2179,7 @@
 
 /* Sidebar & Filters */
 .videohub360-archive-mainwrap .videohub360-sidebar {
-    background: var(--vh360-bg-white);
+    background: var(--vh360-archive-sidebar-bg-color, var(--vh360-bg-white, #fff));
     border-radius: 14px;
     padding: 30px 26px;
     min-width: 250px;
@@ -2197,7 +2197,7 @@
     font-size: 1.15em;
     margin: 0 0 18px 0;
     font-weight: 700;
-    color: #1a1a1a;
+    color: var(--vh360-archive-sidebar-heading-color, #1a1a1a);
     letter-spacing: 0.1px;
 }
 .videohub360-filter-form {
@@ -2210,22 +2210,22 @@
     flex-direction: column;
     gap: 6px;
 }
-.videohub360-filter-label {
+.videohub360-archive-mainwrap .videohub360-filter-label {
     font-size: 1em;
-    color: var(--vh360-color-darker);
+    color: var(--vh360-archive-filter-label-color, var(--vh360-color-darker, #1f2937));
     font-weight: 500;
     margin-bottom: 1px;
 }
-.videohub360-filter-select {
+.videohub360-archive-mainwrap .videohub360-filter-select {
     width: 100%;
     min-width: 0;
     padding: 0 14px;
-    border: 1.5px solid #ccd;
+    border: 1.5px solid var(--vh360-archive-field-border-color, #ccd);
     border-radius: 22px;
-    background: #f8fafc;
+    background: var(--vh360-archive-field-bg-color, #f8fafc);
     font-size: 1em;
     height: 38px;
-    color: var(--vh360-color-darker);
+    color: var(--vh360-archive-field-text-color, var(--vh360-color-darker, #1f2937));
     font-weight: 400;
     box-sizing: border-box;
     appearance: none;
@@ -2238,20 +2238,20 @@
     background-position: right 12px center;
     background-size: 18px 18px;
 }
-.videohub360-filter-select:focus {
-    border: 1.5px solid #0063b1;
-    background: var(--vh360-bg-white);
+.videohub360-archive-mainwrap .videohub360-filter-select:focus {
+    border: 1.5px solid var(--vh360-archive-field-focus-border-color, #0063b1);
+    background: var(--vh360-archive-sidebar-bg-color, var(--vh360-bg-white, #fff));
 }
 .videohub360-archive-mainwrap .videohub360-sidebar form button.videohub360-filter-go-btn,
-.videohub360-filter-form button.videohub360-filter-go-btn,
-button.videohub360-filter-go-btn {
+.videohub360-archive-mainwrap .videohub360-filter-form button.videohub360-filter-go-btn,
+.videohub360-archive-mainwrap button.videohub360-filter-go-btn {
     display: inline-block;
     width: 56px;
     height: 38px;
     min-width: 56px;
     min-height: 38px;
-    background: #0063b1;
-    color: var(--vh360-color-white);
+    background: var(--vh360-archive-button-bg-color, #0063b1);
+    color: var(--vh360-archive-button-text-color, var(--vh360-color-white, #fff));
     border: none;
     border-radius: 22px;
     font-size: 1em;
@@ -2270,8 +2270,8 @@ button.videohub360-filter-go-btn {
     font-family: inherit;
     box-sizing: border-box;
 }
-.videohub360-filter-go-btn:hover, .videohub360-filter-go-btn:focus {
-    background: #004e92;
+.videohub360-archive-mainwrap .videohub360-filter-go-btn:hover, .videohub360-archive-mainwrap .videohub360-filter-go-btn:focus {
+    background: var(--vh360-archive-button-hover-bg-color, #004e92);
 }
 .videohub360-filter-go-row {
     display: flex;
@@ -2374,23 +2374,23 @@ button.videohub360-filter-go-btn {
 }
 
 /* Unified search field container */
-.videohub360-search-field {
+.videohub360-archive-mainwrap .videohub360-search-field {
     position: relative;
     display: flex;
     align-items: center;
     width: 100%;
     height: 40px;
-    border: 1.5px solid #ccd;
+    border: 1.5px solid var(--vh360-archive-field-border-color, #ccd);
     border-radius: 22px;
-    background: #f8fafc;
+    background: var(--vh360-archive-field-bg-color, #f8fafc);
     overflow: hidden;
     transition: border 0.2s;
 }
-.videohub360-search-field:focus-within {
-    border: 1.5px solid #0063b1;
-    background: var(--vh360-bg-white);
+.videohub360-archive-mainwrap .videohub360-search-field:focus-within {
+    border: 1.5px solid var(--vh360-archive-field-focus-border-color, #0063b1);
+    background: var(--vh360-archive-sidebar-bg-color, var(--vh360-bg-white, #fff));
 }
-.videohub360-search-field input[type="search"] {
+.videohub360-archive-mainwrap .videohub360-search-field input[type="search"] {
     flex: 1;
     padding: 0 16px;
     height: 100%;
@@ -2398,22 +2398,22 @@ button.videohub360-filter-go-btn {
     line-height: 1;
     border: none;
     background: transparent;
-    color: var(--vh360-color-darker);
+    color: var(--vh360-archive-field-text-color, var(--vh360-color-darker, #1f2937));
     font-weight: 400;
     box-sizing: border-box;
     outline: none;
     margin: 0;
     vertical-align: middle;
 }
-.videohub360-search-bar-form button.videohub360-search-submit,
-.videohub360-search-field button.videohub360-search-submit,
-button.videohub360-search-submit {
+.videohub360-archive-mainwrap .videohub360-search-bar-form button.videohub360-search-submit,
+.videohub360-archive-mainwrap .videohub360-search-field button.videohub360-search-submit,
+.videohub360-archive-mainwrap button.videohub360-search-submit {
     padding: 0 16px;
     height: 100%;
     min-height: 40px;
     border: none;
-    background: #0063b1;
-    color: var(--vh360-color-white);
+    background: var(--vh360-archive-button-bg-color, #0063b1);
+    color: var(--vh360-archive-button-text-color, var(--vh360-color-white, #fff));
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -2428,10 +2428,10 @@ button.videohub360-search-submit {
     font-size: 1em;
     font-weight: 400;
 }
-.videohub360-search-submit:hover,
-.videohub360-search-submit:focus {
-    background: #004e92;
-    outline: 2px solid #004e92;
+.videohub360-archive-mainwrap .videohub360-search-submit:hover,
+.videohub360-archive-mainwrap .videohub360-search-submit:focus {
+    background: var(--vh360-archive-button-hover-bg-color, #004e92);
+    outline: 2px solid var(--vh360-archive-button-hover-bg-color, #004e92);
     outline-offset: 2px;
 }
 
@@ -2675,6 +2675,38 @@ button.videohub360-search-submit {
     color: #606060;
 }
 
+.videohub360-videos-thumb-fallback {
+    background: var(--vh360-archive-empty-state-bg-color, var(--vh360-bg-light, #f1f1f1));
+    width: 100%;
+    height: 100%;
+}
+
+.videohub360-archive-mainwrap .videohub360-videos-main-content {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.videohub360-archive-mainwrap .videohub360-videos-title {
+    color: var(--vh360-archive-card-title-color, #0f0f0f);
+}
+.videohub360-archive-mainwrap .videohub360-videos-title:hover {
+    color: var(--vh360-archive-card-title-hover-color, #0f0f0f);
+}
+.videohub360-archive-mainwrap .videohub360-videos-channel {
+    color: var(--vh360-archive-card-author-color, #606060);
+}
+.videohub360-archive-mainwrap .videohub360-videos-channel:hover {
+    color: var(--vh360-archive-card-author-hover-color, #0f0f0f);
+}
+.videohub360-archive-mainwrap .videohub360-videos-meta,
+.videohub360-archive-mainwrap .videohub360-meta-separator {
+    color: var(--vh360-archive-card-meta-color, #606060);
+}
+.videohub360-archive-mainwrap .videohub360-live-badge {
+    background-color: var(--vh360-archive-live-badge-bg-color, #e53935);
+    color: var(--vh360-archive-live-badge-text-color, var(--vh360-color-white, #fff));
+}
+
 /* Live badge */
 .videohub360-live-badge {
     position: absolute;
@@ -2706,10 +2738,10 @@ button.videohub360-search-submit {
 .videohub360-no-videos-message {
     text-align: center;
     padding: 60px 20px;
-    background: #f8f9fa;
+    background: var(--vh360-archive-empty-state-bg-color, #f8f9fa);
     border-radius: var(--vh360-radius-md);
     font-size: 1.2em;
-    color: var(--vh360-color-medium);
+    color: var(--vh360-archive-empty-state-text-color, var(--vh360-color-medium, #6b7280));
     margin: 40px 0 120px 0;
     min-height: 400px;
     max-height: 60vh;
@@ -2841,23 +2873,23 @@ button.videohub360-search-submit {
    ================================================ */
 
 /* Filter info section */
-.videohub360-filter-status {
-    background: #f0f5fa;
+.videohub360-archive-mainwrap .videohub360-filter-status {
+    background: var(--vh360-archive-filter-status-bg-color, #f0f5fa);
     border-radius: var(--vh360-radius-md);
     padding: 12px 18px;
     margin-bottom: 20px;
     font-size: 0.95em;
-    color: #444;
+    color: var(--vh360-archive-filter-status-text-color, #444);
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
-.videohub360-filter-status a {
-    color: #0063b1;
+.videohub360-archive-mainwrap .videohub360-filter-status a {
+    color: var(--vh360-archive-filter-status-link-color, #0063b1);
     text-decoration: none;
     font-weight: 500;
 }
-.videohub360-filter-status a:hover {
+.videohub360-archive-mainwrap .videohub360-filter-status a:hover {
     text-decoration: underline;
 }
 /* Responsive adjustments */
@@ -2921,11 +2953,11 @@ button.videohub360-search-submit {
         padding: 0 1vw;
         justify-content: center;
     }
-    .videohub360-search-field {
+    .videohub360-archive-mainwrap .videohub360-search-field {
         border-radius: 20px;
         height: 44px;
     }
-    .videohub360-search-field input[type="search"] {
+    .videohub360-archive-mainwrap .videohub360-search-field input[type="search"] {
         padding: 0 12px;
         height: 100%;
         font-size: 16px; /* Prevent zoom on iOS */
