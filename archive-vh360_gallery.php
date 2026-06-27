@@ -18,7 +18,8 @@ $vh360_gallery_archive_context = array(
 	'filters' => $vh360_gallery_archive_filters,
 	'paged'   => max( 1, absint( get_query_var( 'paged' ) ? get_query_var( 'paged' ) : get_query_var( 'page' ) ) ),
 );
-$vh360_gallery_archive_classes = get_theme_mod( 'vh360_gallery_archive_show_header', true ) ? 'vh360-gallery-archive' : 'vh360-gallery-archive vh360-template-header-off';
+$vh360_gallery_archive_show_header = get_theme_mod( 'vh360_show_gallery_archive_header', get_theme_mod( 'vh360_gallery_archive_show_header', 1 ) );
+$vh360_gallery_archive_classes     = ( is_tax( array( 'vh360_gallery_category', 'vh360_gallery_tag' ) ) || $vh360_gallery_archive_show_header ) ? 'vh360-gallery-archive' : 'vh360-gallery-archive vh360-template-header-off';
 ?>
 
 <main id="primary" class="<?php echo esc_attr( $vh360_gallery_archive_classes ); ?>">

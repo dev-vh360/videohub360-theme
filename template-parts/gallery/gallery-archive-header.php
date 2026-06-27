@@ -15,12 +15,20 @@ if ( $show_term_header && 'vh360_gallery_category' === $queried_term->taxonomy )
 	$show_term_header = ( '' === $filter_tag || $queried_term->slug === $filter_tag ) && '' === $filter_cat;
 }
 
-if ( ! $is_tax && ! get_theme_mod( 'vh360_gallery_archive_show_header', true ) ) {
+$show_header = get_theme_mod( 'vh360_show_gallery_archive_header', get_theme_mod( 'vh360_gallery_archive_show_header', 1 ) );
+
+if ( ! $is_tax && ! $show_header ) {
 	return;
 }
 
-$title       = get_theme_mod( 'vh360_gallery_archive_title', __( 'Galleries', 'videohub360-theme' ) );
-$description = get_theme_mod( 'vh360_gallery_archive_description', __( 'Browse photo galleries from the community.', 'videohub360-theme' ) );
+$title = get_theme_mod(
+	'vh360_gallery_archive_header_title',
+	get_theme_mod( 'vh360_gallery_archive_title', __( 'Galleries', 'videohub360-theme' ) )
+);
+$description = get_theme_mod(
+	'vh360_gallery_archive_header_description',
+	get_theme_mod( 'vh360_gallery_archive_description', __( 'Browse photo galleries from the community.', 'videohub360-theme' ) )
+);
 
 if ( $show_term_header ) {
 	$title       = single_term_title( '', false );
