@@ -104,6 +104,53 @@ function videohub360_theme_customize_register($wp_customize) {
         ),
     ));
 
+
+    // VideoHub360 Archive visual controls.
+    $wp_customize->add_section('vh360_archive_design', array(
+        'title'       => __('VideoHub360 Archive', 'videohub360-theme'),
+        'panel'       => 'vh360_global_design',
+        'priority'    => 32,
+        'description' => __('Customize public VideoHub360 archive template colors.', 'videohub360-theme'),
+    ));
+
+    $vh360_archive_color_controls = array(
+        'vh360_archive_sidebar_bg_color'            => array(__('Archive Sidebar Background', 'videohub360-theme'), '#ffffff'),
+        'vh360_archive_sidebar_heading_color'       => array(__('Archive Sidebar Heading Color', 'videohub360-theme'), '#1a1a1a'),
+        'vh360_archive_filter_label_color'          => array(__('Archive Filter Label Color', 'videohub360-theme'), '#1f2937'),
+        'vh360_archive_field_bg_color'              => array(__('Archive Field Background', 'videohub360-theme'), '#f8fafc'),
+        'vh360_archive_field_text_color'            => array(__('Archive Field Text Color', 'videohub360-theme'), '#1f2937'),
+        'vh360_archive_field_border_color'          => array(__('Archive Field Border Color', 'videohub360-theme'), '#ccccdd'),
+        'vh360_archive_field_focus_border_color'    => array(__('Archive Field Focus Border Color', 'videohub360-theme'), '#0063b1'),
+        'vh360_archive_button_bg_color'             => array(__('Archive Button Background', 'videohub360-theme'), '#0063b1'),
+        'vh360_archive_button_hover_bg_color'       => array(__('Archive Button Hover Background', 'videohub360-theme'), '#004e92'),
+        'vh360_archive_button_text_color'           => array(__('Archive Button Text Color', 'videohub360-theme'), '#ffffff'),
+        'vh360_archive_filter_status_bg_color'      => array(__('Archive Filter Status Background', 'videohub360-theme'), '#f0f5fa'),
+        'vh360_archive_filter_status_text_color'    => array(__('Archive Filter Status Text Color', 'videohub360-theme'), '#444444'),
+        'vh360_archive_filter_status_link_color'    => array(__('Archive Filter Status Link Color', 'videohub360-theme'), '#0063b1'),
+        'vh360_archive_card_title_color'            => array(__('Archive Card Title Color', 'videohub360-theme'), '#0f0f0f'),
+        'vh360_archive_card_title_hover_color'      => array(__('Archive Card Title Hover Color', 'videohub360-theme'), '#0f0f0f'),
+        'vh360_archive_card_author_color'           => array(__('Archive Card Author Color', 'videohub360-theme'), '#606060'),
+        'vh360_archive_card_author_hover_color'     => array(__('Archive Card Author Hover Color', 'videohub360-theme'), '#0f0f0f'),
+        'vh360_archive_card_meta_color'             => array(__('Archive Card Meta Color', 'videohub360-theme'), '#606060'),
+        'vh360_archive_empty_state_bg_color'        => array(__('Archive Empty State Background', 'videohub360-theme'), '#f8f9fa'),
+        'vh360_archive_empty_state_text_color'      => array(__('Archive Empty State Text Color', 'videohub360-theme'), '#6b7280'),
+        'vh360_archive_live_badge_bg_color'         => array(__('Archive Live Badge Background', 'videohub360-theme'), '#e53935'),
+        'vh360_archive_live_badge_text_color'       => array(__('Archive Live Badge Text Color', 'videohub360-theme'), '#ffffff'),
+    );
+
+    foreach ($vh360_archive_color_controls as $setting_id => $control_args) {
+        $wp_customize->add_setting($setting_id, array(
+            'default'           => $control_args[1],
+            'sanitize_callback' => 'sanitize_hex_color',
+            'transport'         => 'postMessage',
+        ));
+
+        $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, $setting_id, array(
+            'label'   => $control_args[0],
+            'section' => 'vh360_archive_design',
+        )));
+    }
+
     // ==========================================
     // COMMUNITY MENU - Split into multiple sections
     // ==========================================

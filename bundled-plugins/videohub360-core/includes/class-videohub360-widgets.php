@@ -652,6 +652,7 @@ class VideoHub360_Widgets {
             'badge_text' => esc_html__('LIVE', 'videohub360'),
             'badge_color' => '#e53935',
             'progress_percent' => 0, // For continue watching
+            'use_archive_live_badge_vars' => false,
         );
         
         $args = wp_parse_args($args, $defaults);
@@ -702,10 +703,11 @@ class VideoHub360_Widgets {
                 <?php if (has_post_thumbnail()) {
                     the_post_thumbnail('medium', array('class' => 'videohub360-videos-thumb', 'alt' => get_the_title()));
                 } else { ?>
-                    <div class="videohub360-videos-thumb" style="background:#ccc; width:100%; height:100%;"></div>
+                    <div class="videohub360-videos-thumb videohub360-videos-thumb-fallback"></div>
                 <?php } ?>
                 <?php if ($show_live_badge): ?>
-                    <span class="videohub360-live-badge" style="background-color: <?php echo esc_attr($badge_color); ?>;">
+                    <?php $live_badge_style = empty($args['use_archive_live_badge_vars']) ? ' style="background-color: ' . esc_attr($badge_color) . ';"' : ''; ?>
+                    <span class="videohub360-live-badge"<?php echo $live_badge_style; ?>>
                         <?php echo esc_html($badge_text); ?>
                     </span>
                 <?php endif; ?>
