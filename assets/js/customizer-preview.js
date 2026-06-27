@@ -1534,6 +1534,33 @@
         });
     });
 
+
+    // Gallery Archive Header live preview bindings.
+    wp.customize('vh360_gallery_archive_header_title', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-gallery-archive .vh360-gallery-archive-title').text(newval);
+        });
+    });
+
+    wp.customize('vh360_gallery_archive_header_description', function(value) {
+        value.bind(function(newval) {
+            var $description = $('.vh360-gallery-archive .vh360-gallery-archive-description');
+
+            $description.empty();
+
+            if (newval) {
+                $('<p />').text(newval).appendTo($description);
+            }
+        });
+    });
+
+    wp.customize('vh360_show_gallery_archive_header', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-gallery-archive .vh360-gallery-archive-header').toggle(!!newval);
+            $('.vh360-gallery-archive').toggleClass('vh360-template-header-off', !newval);
+        });
+    });
+
     // =============================================================================
     // HELPER FUNCTIONS FOR GOOGLE FONTS
     // =============================================================================

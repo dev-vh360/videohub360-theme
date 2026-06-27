@@ -243,6 +243,7 @@ function vh360_output_dynamic_css() {
             --bg-light: <?php echo esc_attr($bg_light_color); ?>;
             --border-color: <?php echo esc_attr($border_color); ?>;
 
+
             /* Navigation & Header Colors */
             --header-bg-color: <?php echo esc_attr($header_bg_color); ?>;
             --header-bg-end: <?php echo esc_attr($header_bg_end); ?>;
@@ -474,6 +475,7 @@ function vh360_output_dynamic_css() {
         .vh360-bulletins-header,
         .vh360-events-header,
         .vh360-blog-header,
+        .vh360-gallery-archive-header,
         .vh360-course-catalog-template-header,
         .videohub360-archive-header {
             background: linear-gradient(135deg, var(--header-bg-color) 0%, var(--header-bg-end) 100%);
@@ -495,6 +497,8 @@ function vh360_output_dynamic_css() {
         .vh360-events-header *,
         .vh360-blog-header,
         .vh360-blog-header *,
+        .vh360-gallery-archive-header,
+        .vh360-gallery-archive-header *,
         .vh360-course-catalog-template-header,
         .vh360-course-catalog-template-header *,
         .videohub360-archive-header,
@@ -506,6 +510,7 @@ function vh360_output_dynamic_css() {
         .vh360-bulletins-archive.vh360-template-header-off,
         .vh360-events-archive.vh360-template-header-off,
         .vh360-blog-archive.vh360-template-header-off,
+        .vh360-gallery-archive.vh360-template-header-off,
         .vh360-course-catalog-template-wrap.vh360-template-header-off {
             padding-top: 50px;
         }
@@ -585,6 +590,9 @@ function vh360_output_dynamic_css() {
         <?php endif; ?>
         <?php if (!get_theme_mod('vh360_show_blog_header', 1)) : ?>
         .vh360-blog-header { display: none; }
+        <?php endif; ?>
+        <?php if (!get_theme_mod('vh360_show_gallery_archive_header', get_theme_mod('vh360_gallery_archive_show_header', 1))) : ?>
+        .vh360-gallery-archive-header { display: none; }
         <?php endif; ?>
         <?php if (!get_theme_mod('vh360_show_archive_header', 1)) : ?>
         .videohub360-archive-header { display: none; }
