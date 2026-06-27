@@ -913,3 +913,67 @@ function vh360_sanitize_header_menu_letter_spacing($input) {
     // Clamp to reasonable range
     return max(-2, min(5, $value));
 }
+
+/**
+ * Register Gallery Archive Customizer controls.
+ *
+ * @param WP_Customize_Manager $wp_customize Theme Customizer object.
+ */
+function vh360_register_gallery_archive_customizer_controls( $wp_customize ) {
+	$wp_customize->add_section( 'vh360_gallery_archive_design', array(
+		'title'       => __( 'Gallery Archive', 'videohub360-theme' ),
+		'description' => __( 'Customize the public gallery archive header, controls, cards, pagination, and empty state.', 'videohub360-theme' ),
+		'panel'       => 'vh360_global_design',
+		'priority'    => 30,
+	) );
+
+	$wp_customize->add_setting( 'vh360_gallery_archive_show_header', array( 'default' => true, 'sanitize_callback' => 'vh360_sanitize_checkbox', 'transport' => 'refresh' ) );
+	$wp_customize->add_control( 'vh360_gallery_archive_show_header', array( 'label' => __( 'Show Gallery Archive Header', 'videohub360-theme' ), 'section' => 'vh360_gallery_archive_design', 'type' => 'checkbox', 'priority' => 10 ) );
+
+	$text_controls = array(
+		'vh360_gallery_archive_title'       => array( __( 'Gallery Archive Title', 'videohub360-theme' ), __( 'Galleries', 'videohub360-theme' ), 'text', 20 ),
+		'vh360_gallery_archive_description' => array( __( 'Gallery Archive Description', 'videohub360-theme' ), __( 'Browse photo galleries from the community.', 'videohub360-theme' ), 'textarea', 30 ),
+	);
+	foreach ( $text_controls as $setting_id => $control ) {
+		$wp_customize->add_setting( $setting_id, array( 'default' => $control[1], 'sanitize_callback' => 'sanitize_text_field', 'transport' => 'postMessage' ) );
+		$wp_customize->add_control( $setting_id, array( 'label' => $control[0], 'section' => 'vh360_gallery_archive_design', 'type' => $control[2], 'priority' => $control[3] ) );
+	}
+
+	$colors = array(
+		'vh360_gallery_archive_bg_color' => array( '#f9fafb', __( 'Gallery Archive Background', 'videohub360-theme' ) ),
+		'vh360_gallery_archive_header_bg_color' => array( '#ffffff', __( 'Gallery Header Background', 'videohub360-theme' ) ),
+		'vh360_gallery_archive_header_title_color' => array( '#111827', __( 'Gallery Header Title Color', 'videohub360-theme' ) ),
+		'vh360_gallery_archive_header_description_color' => array( '#6b7280', __( 'Gallery Header Description Color', 'videohub360-theme' ) ),
+		'vh360_gallery_archive_header_border_color' => array( '#e5e7eb', __( 'Gallery Header Border Color', 'videohub360-theme' ) ),
+		'vh360_gallery_controls_bg_color' => array( '#f9fafb', __( 'Gallery Controls Background', 'videohub360-theme' ) ),
+		'vh360_gallery_control_label_color' => array( '#111827', __( 'Gallery Control Label Color', 'videohub360-theme' ) ),
+		'vh360_gallery_field_bg_color' => array( '#ffffff', __( 'Gallery Field Background', 'videohub360-theme' ) ),
+		'vh360_gallery_field_text_color' => array( '#111827', __( 'Gallery Field Text Color', 'videohub360-theme' ) ),
+		'vh360_gallery_field_border_color' => array( '#d1d5db', __( 'Gallery Field Border Color', 'videohub360-theme' ) ),
+		'vh360_gallery_field_focus_border_color' => array( '#2563eb', __( 'Gallery Field Focus Border Color', 'videohub360-theme' ) ),
+		'vh360_gallery_card_bg_color' => array( '#ffffff', __( 'Gallery Card Background', 'videohub360-theme' ) ),
+		'vh360_gallery_card_border_color' => array( '#e5e7eb', __( 'Gallery Card Border Color', 'videohub360-theme' ) ),
+		'vh360_gallery_card_title_color' => array( '#111827', __( 'Gallery Card Title Color', 'videohub360-theme' ) ),
+		'vh360_gallery_card_title_hover_color' => array( '#2563eb', __( 'Gallery Card Title Hover Color', 'videohub360-theme' ) ),
+		'vh360_gallery_card_meta_color' => array( '#6b7280', __( 'Gallery Card Meta Color', 'videohub360-theme' ) ),
+		'vh360_gallery_count_badge_bg_color' => array( '#111827', __( 'Gallery Count Badge Background', 'videohub360-theme' ) ),
+		'vh360_gallery_count_badge_text_color' => array( '#ffffff', __( 'Gallery Count Badge Text Color', 'videohub360-theme' ) ),
+		'vh360_gallery_pagination_bg_color' => array( '#ffffff', __( 'Gallery Pagination Background', 'videohub360-theme' ) ),
+		'vh360_gallery_pagination_text_color' => array( '#111827', __( 'Gallery Pagination Text Color', 'videohub360-theme' ) ),
+		'vh360_gallery_pagination_border_color' => array( '#e5e7eb', __( 'Gallery Pagination Border Color', 'videohub360-theme' ) ),
+		'vh360_gallery_pagination_hover_bg_color' => array( '#f3f4f6', __( 'Gallery Pagination Hover Background', 'videohub360-theme' ) ),
+		'vh360_gallery_pagination_hover_text_color' => array( '#2563eb', __( 'Gallery Pagination Hover Text Color', 'videohub360-theme' ) ),
+		'vh360_gallery_pagination_active_bg_color' => array( '#2563eb', __( 'Gallery Pagination Active Background', 'videohub360-theme' ) ),
+		'vh360_gallery_pagination_active_text_color' => array( '#ffffff', __( 'Gallery Pagination Active Text Color', 'videohub360-theme' ) ),
+		'vh360_gallery_empty_state_bg_color' => array( '#ffffff', __( 'Gallery Empty State Background', 'videohub360-theme' ) ),
+		'vh360_gallery_empty_state_text_color' => array( '#6b7280', __( 'Gallery Empty State Text Color', 'videohub360-theme' ) ),
+		'vh360_gallery_empty_state_icon_color' => array( '#9ca3af', __( 'Gallery Empty State Icon Color', 'videohub360-theme' ) ),
+	);
+	$priority = 40;
+	foreach ( $colors as $setting_id => $data ) {
+		$wp_customize->add_setting( $setting_id, array( 'default' => $data[0], 'sanitize_callback' => 'sanitize_text_field', 'transport' => 'postMessage' ) );
+		$wp_customize->add_control( new WP_Customize_Color_Control( $wp_customize, $setting_id, array( 'label' => $data[1], 'section' => 'vh360_gallery_archive_design', 'priority' => $priority ) ) );
+		$priority += 10;
+	}
+}
+add_action( 'customize_register', 'vh360_register_gallery_archive_customizer_controls', 16 );

@@ -243,6 +243,37 @@ function vh360_output_dynamic_css() {
             --bg-light: <?php echo esc_attr($bg_light_color); ?>;
             --border-color: <?php echo esc_attr($border_color); ?>;
 
+
+            /* Gallery Archive Colors */
+            --vh360-gallery-archive-bg-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_archive_bg_color', '#f9fafb' ) ); ?>;
+            --vh360-gallery-archive-header-bg-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_archive_header_bg_color', '#ffffff' ) ); ?>;
+            --vh360-gallery-archive-header-title-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_archive_header_title_color', '#111827' ) ); ?>;
+            --vh360-gallery-archive-header-description-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_archive_header_description_color', '#6b7280' ) ); ?>;
+            --vh360-gallery-archive-header-border-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_archive_header_border_color', '#e5e7eb' ) ); ?>;
+            --vh360-gallery-controls-bg-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_controls_bg_color', '#f9fafb' ) ); ?>;
+            --vh360-gallery-control-label-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_control_label_color', '#111827' ) ); ?>;
+            --vh360-gallery-field-bg-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_field_bg_color', '#ffffff' ) ); ?>;
+            --vh360-gallery-field-text-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_field_text_color', '#111827' ) ); ?>;
+            --vh360-gallery-field-border-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_field_border_color', '#d1d5db' ) ); ?>;
+            --vh360-gallery-field-focus-border-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_field_focus_border_color', '#2563eb' ) ); ?>;
+            --vh360-gallery-card-bg-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_card_bg_color', '#ffffff' ) ); ?>;
+            --vh360-gallery-card-border-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_card_border_color', '#e5e7eb' ) ); ?>;
+            --vh360-gallery-card-title-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_card_title_color', '#111827' ) ); ?>;
+            --vh360-gallery-card-title-hover-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_card_title_hover_color', '#2563eb' ) ); ?>;
+            --vh360-gallery-card-meta-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_card_meta_color', '#6b7280' ) ); ?>;
+            --vh360-gallery-count-badge-bg-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_count_badge_bg_color', '#111827' ) ); ?>;
+            --vh360-gallery-count-badge-text-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_count_badge_text_color', '#ffffff' ) ); ?>;
+            --vh360-gallery-pagination-bg-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_pagination_bg_color', '#ffffff' ) ); ?>;
+            --vh360-gallery-pagination-text-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_pagination_text_color', '#111827' ) ); ?>;
+            --vh360-gallery-pagination-border-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_pagination_border_color', '#e5e7eb' ) ); ?>;
+            --vh360-gallery-pagination-hover-bg-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_pagination_hover_bg_color', '#f3f4f6' ) ); ?>;
+            --vh360-gallery-pagination-hover-text-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_pagination_hover_text_color', '#2563eb' ) ); ?>;
+            --vh360-gallery-pagination-active-bg-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_pagination_active_bg_color', '#2563eb' ) ); ?>;
+            --vh360-gallery-pagination-active-text-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_pagination_active_text_color', '#ffffff' ) ); ?>;
+            --vh360-gallery-empty-state-bg-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_empty_state_bg_color', '#ffffff' ) ); ?>;
+            --vh360-gallery-empty-state-text-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_empty_state_text_color', '#6b7280' ) ); ?>;
+            --vh360-gallery-empty-state-icon-color: <?php echo esc_attr( get_theme_mod( 'vh360_gallery_empty_state_icon_color', '#9ca3af' ) ); ?>;
+
             /* Navigation & Header Colors */
             --header-bg-color: <?php echo esc_attr($header_bg_color); ?>;
             --header-bg-end: <?php echo esc_attr($header_bg_end); ?>;

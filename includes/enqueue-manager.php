@@ -544,9 +544,7 @@ add_action('wp_enqueue_scripts', 'vh360_enqueue_bulletin_assets', 20);
  */
 function vh360_enqueue_gallery_assets() {
     // Load on gallery pages including taxonomy pages
-    if (is_page_template('template-gallery.php') ||
-        is_page_template('templates/gallery.php') ||
-        is_singular('vh360_gallery') ||
+    if (is_singular('vh360_gallery') ||
         is_post_type_archive('vh360_gallery') ||
         is_tax('vh360_gallery_category') ||
         is_tax('vh360_gallery_tag')) {

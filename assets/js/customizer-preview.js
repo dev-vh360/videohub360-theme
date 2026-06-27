@@ -1534,6 +1534,59 @@
         });
     });
 
+
+    // Gallery Archive live preview bindings.
+    var galleryArchiveColorBindings = {
+        'vh360_gallery_archive_bg_color': 'vh360-gallery-archive-bg-color',
+        'vh360_gallery_archive_header_bg_color': 'vh360-gallery-archive-header-bg-color',
+        'vh360_gallery_archive_header_title_color': 'vh360-gallery-archive-header-title-color',
+        'vh360_gallery_archive_header_description_color': 'vh360-gallery-archive-header-description-color',
+        'vh360_gallery_archive_header_border_color': 'vh360-gallery-archive-header-border-color',
+        'vh360_gallery_controls_bg_color': 'vh360-gallery-controls-bg-color',
+        'vh360_gallery_control_label_color': 'vh360-gallery-control-label-color',
+        'vh360_gallery_field_bg_color': 'vh360-gallery-field-bg-color',
+        'vh360_gallery_field_text_color': 'vh360-gallery-field-text-color',
+        'vh360_gallery_field_border_color': 'vh360-gallery-field-border-color',
+        'vh360_gallery_field_focus_border_color': 'vh360-gallery-field-focus-border-color',
+        'vh360_gallery_card_bg_color': 'vh360-gallery-card-bg-color',
+        'vh360_gallery_card_border_color': 'vh360-gallery-card-border-color',
+        'vh360_gallery_card_title_color': 'vh360-gallery-card-title-color',
+        'vh360_gallery_card_title_hover_color': 'vh360-gallery-card-title-hover-color',
+        'vh360_gallery_card_meta_color': 'vh360-gallery-card-meta-color',
+        'vh360_gallery_count_badge_bg_color': 'vh360-gallery-count-badge-bg-color',
+        'vh360_gallery_count_badge_text_color': 'vh360-gallery-count-badge-text-color',
+        'vh360_gallery_pagination_bg_color': 'vh360-gallery-pagination-bg-color',
+        'vh360_gallery_pagination_text_color': 'vh360-gallery-pagination-text-color',
+        'vh360_gallery_pagination_border_color': 'vh360-gallery-pagination-border-color',
+        'vh360_gallery_pagination_hover_bg_color': 'vh360-gallery-pagination-hover-bg-color',
+        'vh360_gallery_pagination_hover_text_color': 'vh360-gallery-pagination-hover-text-color',
+        'vh360_gallery_pagination_active_bg_color': 'vh360-gallery-pagination-active-bg-color',
+        'vh360_gallery_pagination_active_text_color': 'vh360-gallery-pagination-active-text-color',
+        'vh360_gallery_empty_state_bg_color': 'vh360-gallery-empty-state-bg-color',
+        'vh360_gallery_empty_state_text_color': 'vh360-gallery-empty-state-text-color',
+        'vh360_gallery_empty_state_icon_color': 'vh360-gallery-empty-state-icon-color'
+    };
+
+    Object.keys(galleryArchiveColorBindings).forEach(function(settingId) {
+        wp.customize(settingId, function(value) {
+            value.bind(function(newval) {
+                updateCSSVariable(galleryArchiveColorBindings[settingId], newval);
+            });
+        });
+    });
+
+    wp.customize('vh360_gallery_archive_title', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-gallery-archive .vh360-gallery-archive-title').text(newval);
+        });
+    });
+
+    wp.customize('vh360_gallery_archive_description', function(value) {
+        value.bind(function(newval) {
+            $('.vh360-gallery-archive .vh360-gallery-archive-description').html(newval ? '<p>' + newval + '</p>' : '');
+        });
+    });
+
     // =============================================================================
     // HELPER FUNCTIONS FOR GOOGLE FONTS
     // =============================================================================
