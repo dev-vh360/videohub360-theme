@@ -45,7 +45,9 @@ function vh360_output_dynamic_css() {
     // Community Menu colors
     $community_menu_bg_color                  = get_theme_mod('vh360_community_menu_bg_color', '#ffffff');
     $community_menu_text_color                = get_theme_mod('vh360_community_menu_text_color', '#4b5563');
+    $community_menu_border_color              = get_theme_mod('vh360_community_menu_border_color', '#e5e7eb');
     $community_menu_hover_bg_color            = get_theme_mod('vh360_community_menu_hover_bg_color', '#f3f4f6');
+    $community_menu_hover_text_color          = get_theme_mod('vh360_community_menu_hover_text_color', '#1f2937');
     $community_menu_active_color              = get_theme_mod('vh360_community_menu_active_color', '#2563eb');
     $community_menu_active_bg_color           = get_theme_mod('vh360_community_menu_active_bg_color', '#eff6ff');
     $community_menu_toggle_bg_color           = get_theme_mod('vh360_community_menu_toggle_bg_color', '#ffffff');
@@ -231,7 +233,9 @@ function vh360_output_dynamic_css() {
             /* Community Menu Colors */
             --community-menu-bg-color: <?php echo esc_attr($community_menu_bg_color); ?>;
             --community-menu-text-color: <?php echo esc_attr($community_menu_text_color); ?>;
+            --community-menu-border-color: <?php echo esc_attr($community_menu_border_color); ?>;
             --community-menu-hover-bg-color: <?php echo esc_attr($community_menu_hover_bg_color); ?>;
+            --community-menu-hover-text-color: <?php echo esc_attr($community_menu_hover_text_color); ?>;
             --community-menu-active-color: <?php echo esc_attr($community_menu_active_color); ?>;
             --community-menu-active-bg-color: <?php echo esc_attr($community_menu_active_bg_color); ?>;
             --community-menu-toggle-bg-color: <?php echo esc_attr($community_menu_toggle_bg_color); ?>;

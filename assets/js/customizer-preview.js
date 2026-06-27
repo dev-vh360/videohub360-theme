@@ -723,6 +723,20 @@
         });
     });
 
+    // Community Menu - Border / Divider Color
+    wp.customize('vh360_community_menu_border_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('community-menu-border-color', newval);
+        });
+    });
+
+    // Community Menu - Hover Text Color
+    wp.customize('vh360_community_menu_hover_text_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('community-menu-hover-text-color', newval);
+        });
+    });
+
     // Community Menu - Hover Background Color
     wp.customize('vh360_community_menu_hover_bg_color', function(value) {
         value.bind(function(newval) {

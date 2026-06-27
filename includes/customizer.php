@@ -268,6 +268,20 @@ function videohub360_theme_customize_register($wp_customize) {
         'section'     => 'vh360_community_menu_colors',
     )));
 
+
+    // Border / Divider Color
+    $wp_customize->add_setting('vh360_community_menu_border_color', array(
+        'default'           => '#e5e7eb',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'postMessage',
+    ));
+
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_community_menu_border_color', array(
+        'label'       => __('Border / Divider Color', 'videohub360-theme'),
+        'description' => __('Border color for the Community Menu right edge and profile divider.', 'videohub360-theme'),
+        'section'     => 'vh360_community_menu_colors',
+    )));
+
     // Hover Background Color
     $wp_customize->add_setting('vh360_community_menu_hover_bg_color', array(
         'default'           => '#f3f4f6',
@@ -278,6 +292,20 @@ function videohub360_theme_customize_register($wp_customize) {
     $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_community_menu_hover_bg_color', array(
         'label'       => __('Hover Background Color', 'videohub360-theme'),
         'description' => __('Background color when hovering over menu items.', 'videohub360-theme'),
+        'section'     => 'vh360_community_menu_colors',
+    )));
+
+
+    // Hover Text Color
+    $wp_customize->add_setting('vh360_community_menu_hover_text_color', array(
+        'default'           => '#1f2937',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'postMessage',
+    ));
+
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_community_menu_hover_text_color', array(
+        'label'       => __('Hover Text Color', 'videohub360-theme'),
+        'description' => __('Text color when hovering over Community Menu links.', 'videohub360-theme'),
         'section'     => 'vh360_community_menu_colors',
     )));
 

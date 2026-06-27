@@ -43,7 +43,7 @@ body.has-community-menu .vh360-community-menu {
     flex-shrink: 0;
     overflow-y: auto;
     background-color: var(--community-menu-bg-color, #ffffff);
-    border-right: 1px solid var(--border-1);
+    border-right: 1px solid var(--community-menu-border-color, var(--border-1, #e5e7eb));
     z-index: 100;
 }
 
@@ -212,7 +212,7 @@ body.community-menu-compact .vh360-community-menu__toggle {
 
 .vh360-community-menu__profile-card {
     padding: 0 16px 20px;
-    border-bottom: 1px solid var(--border-1);
+    border-bottom: 1px solid var(--community-menu-border-color, var(--border-1, #e5e7eb));
     margin-bottom: 20px;
 }
 
@@ -313,7 +313,7 @@ body.community-menu-compact .vh360-community-menu__list li {
 
 .vh360-community-menu__list a:hover {
     background: var(--community-menu-hover-bg-color, #f3f4f6);
-    color: var(--text-color, #1f2937);
+    color: var(--community-menu-hover-text-color, var(--community-menu-text-color, #1f2937));
 }
 
 .vh360-community-menu__list a:focus {
@@ -408,22 +408,22 @@ body.community-menu-compact .vh360-cm-icon {
 }
 
 .vh360-community-menu::-webkit-scrollbar-track {
-    background: var(--surface-3);
+    background: var(--community-menu-bg-color, var(--surface-3, #ffffff));
 }
 
 .vh360-community-menu::-webkit-scrollbar-thumb {
-    background: var(--border-1);
+    background: var(--community-menu-border-color, var(--border-1, #e5e7eb));
     border-radius: 4px;
 }
 
 .vh360-community-menu::-webkit-scrollbar-thumb:hover {
-    background: var(--text-2);
+    background: var(--community-menu-text-color, var(--text-2, #6b7280));
 }
 
 /* Firefox scrollbar */
 .vh360-community-menu {
     scrollbar-width: thin;
-    scrollbar-color: var(--border-1) var(--surface-3);
+    scrollbar-color: var(--community-menu-border-color, var(--border-1, #e5e7eb)) var(--community-menu-bg-color, var(--surface-3, #ffffff));
 }
 
 /* ============================================
@@ -445,52 +445,5 @@ body.community-menu-compact .vh360-cm-icon {
         background-color: rgba(0, 0, 0, 0.5);
         z-index: 999; /* Below menu overlay (1000) but above content */
         cursor: pointer;
-    }
-}
-
-/* ============================================
-   Dark Mode Support (Optional)
-   ============================================ */
-
-@media (prefers-color-scheme: dark) {
-    body.has-community-menu .vh360-community-menu {
-        background-color: #1f2937;
-        border-right-color: #374151;
-    }
-    
-    .vh360-community-menu__profile-card {
-        border-bottom-color: #374151;
-    }
-    
-    .vh360-community-menu__list a {
-        color: #d1d5db;
-    }
-    
-    .vh360-community-menu__list a:hover {
-        background-color: #374151;
-        color: #f9fafb;
-    }
-    
-    .vh360-community-menu__list .current-menu-item > a,
-    .vh360-community-menu__list .current_page_item > a,
-    .vh360-community-menu__list .current-menu-ancestor > a {
-        background-color: #1e3a8a;
-        color: #93c5fd;
-    }
-    
-    .vh360-community-menu::-webkit-scrollbar-track {
-        background: #111827;
-    }
-    
-    .vh360-community-menu::-webkit-scrollbar-thumb {
-        background: #4b5563;
-    }
-    
-    .vh360-community-menu::-webkit-scrollbar-thumb:hover {
-        background: #6b7280;
-    }
-    
-    .vh360-community-menu {
-        scrollbar-color: #4b5563 #111827;
     }
 }
