@@ -1583,7 +1583,13 @@
 
     wp.customize('vh360_gallery_archive_description', function(value) {
         value.bind(function(newval) {
-            $('.vh360-gallery-archive .vh360-gallery-archive-description').html(newval ? '<p>' + newval + '</p>' : '');
+            var $description = $('.vh360-gallery-archive .vh360-gallery-archive-description');
+
+            $description.empty();
+
+            if (newval) {
+                $('<p />').text(newval).appendTo($description);
+            }
         });
     });
 
