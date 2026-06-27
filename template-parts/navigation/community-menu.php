@@ -20,6 +20,8 @@ if (!vh360_show_community_menu()) {
 $current_user = wp_get_current_user();
 $is_compact = (bool) get_theme_mod('vh360_community_menu_compact', 0) || vh360_force_compact_community_menu();
 $is_forced_compact = vh360_force_compact_community_menu();
+$avatar_size = absint(get_theme_mod('vh360_community_menu_avatar_size', 32));
+$avatar_size = min(64, max(24, $avatar_size));
 $menu_classes = array('vh360-community-menu');
 
 if ($is_compact) {
@@ -50,7 +52,7 @@ if ($is_compact) {
             <!-- User Profile Card -->
             <div class="vh360-community-menu__profile-card">
                 <a href="<?php echo esc_url(get_author_posts_url($current_user->ID)); ?>" class="vh360-community-menu__profile-link">
-                    <?php echo get_avatar($current_user->ID, 48, '', '', array('class' => 'vh360-community-menu__avatar')); ?>
+                    <?php echo get_avatar($current_user->ID, $avatar_size, '', '', array('class' => 'vh360-community-menu__avatar')); ?>
                     <div class="vh360-community-menu__profile-info">
                         <span class="vh360-community-menu__profile-name"><?php echo esc_html($current_user->display_name); ?></span>
                         <span class="vh360-community-menu__profile-username">@<?php echo esc_html($current_user->user_login); ?></span>

@@ -54,6 +54,8 @@ function vh360_output_dynamic_css() {
     $community_menu_toggle_hover_bg_color     = get_theme_mod('vh360_community_menu_toggle_hover_bg_color', '#f9fafb');
     $community_menu_toggle_hover_text_color   = get_theme_mod('vh360_community_menu_toggle_hover_text_color', '#1f2937');
     $community_menu_toggle_hover_border_color = get_theme_mod('vh360_community_menu_toggle_hover_border_color', '#d1d5db');
+    $community_menu_profile_name_color       = get_theme_mod('vh360_community_menu_profile_name_color', '#1f2937');
+    $community_menu_profile_username_color   = get_theme_mod('vh360_community_menu_profile_username_color', '#6b7280');
 
     // Mobile Bottom Navigation colors
     $mobile_nav_bg_color                = get_theme_mod('vh360_mobile_nav_bg_color', '#ffffff');
@@ -74,6 +76,7 @@ function vh360_output_dynamic_css() {
     $community_menu_font_weight = get_theme_mod('vh360_community_menu_font_weight', 500);
     $community_menu_left_gutter = get_theme_mod('vh360_community_menu_left_gutter', 24);
     $community_menu_width       = get_theme_mod('vh360_community_menu_width', 280);
+    $community_menu_avatar_size = min(64, max(24, absint(get_theme_mod('vh360_community_menu_avatar_size', 32))));
 
     // Header Menu typography
     $header_menu_font_family = get_theme_mod('vh360_header_menu_font_family', '');
@@ -237,6 +240,8 @@ function vh360_output_dynamic_css() {
             --community-menu-toggle-hover-bg-color: <?php echo esc_attr($community_menu_toggle_hover_bg_color); ?>;
             --community-menu-toggle-hover-text-color: <?php echo esc_attr($community_menu_toggle_hover_text_color); ?>;
             --community-menu-toggle-hover-border-color: <?php echo esc_attr($community_menu_toggle_hover_border_color); ?>;
+            --community-menu-profile-name-color: <?php echo esc_attr($community_menu_profile_name_color); ?>;
+            --community-menu-profile-username-color: <?php echo esc_attr($community_menu_profile_username_color); ?>;
 
             /* Mobile Bottom Navigation Colors */
             --mobile-nav-bg-color: <?php echo esc_attr($mobile_nav_bg_color); ?>;
@@ -266,6 +271,7 @@ function vh360_output_dynamic_css() {
             /* Community Menu Layout & Typography */
             --community-menu-left-gutter: <?php echo absint($community_menu_left_gutter); ?>px;
             --community-menu-width: <?php echo absint($community_menu_width); ?>px;
+            --community-menu-avatar-size: <?php echo absint($community_menu_avatar_size); ?>px;
             --community-menu-font-size: <?php echo absint($community_menu_font_size); ?>px;
             --community-menu-font-weight: <?php echo absint($community_menu_font_weight); ?>;
             <?php if (!empty($community_menu_font_family)) : ?>
