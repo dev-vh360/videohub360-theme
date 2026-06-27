@@ -215,6 +215,19 @@ function videohub360_theme_customize_register($wp_customize) {
         'type'        => 'checkbox',
     ));
 
+    // Activity Feed Full Menu Override
+    $wp_customize->add_setting('vh360_community_menu_default_on_activity', array(
+        'default'           => 0,
+        'sanitize_callback' => 'absint',
+    ));
+
+    $wp_customize->add_control('vh360_community_menu_default_on_activity', array(
+        'label'       => __('Use Full Community Menu on Activity Feed', 'videohub360-theme'),
+        'description' => __('When Compact Mode is enabled, show the full Community Menu on the Activity Feed template.', 'videohub360-theme'),
+        'section'     => 'vh360_community_menu_behavior',
+        'type'        => 'checkbox',
+    ));
+
     // Community Menu Layout - Width and spacing
     $wp_customize->add_section('vh360_community_menu_layout', array(
         'title'       => __('Community Menu - Layout', 'videohub360-theme'),

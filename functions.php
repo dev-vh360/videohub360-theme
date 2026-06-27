@@ -238,8 +238,8 @@ function vh360_community_menu_body_class($classes) {
     if (vh360_show_community_menu()) {
         $classes[] = 'has-community-menu';
 
-        // Add compact mode class if enabled globally OR forced for specific pages
-        if (get_theme_mod('vh360_community_menu_compact', 0) || vh360_force_compact_community_menu()) {
+        // Add compact mode class when the centralized compact-mode rules apply.
+        if (vh360_should_compact_community_menu()) {
             $classes[] = 'community-menu-compact';
         }
     }
@@ -619,14 +619,12 @@ add_action('wp_enqueue_scripts', 'vh360_enqueue_header_assets');
  * Enqueue Community Menu toggle script on compact mode pages
  */
 function vh360_enqueue_community_menu_toggle() {
-    // Only enqueue if Community Menu is shown AND compact mode is active (either forced or via Customizer)
+    // Only enqueue if Community Menu is shown AND compact mode is active.
     if (!vh360_show_community_menu()) {
         return;
     }
 
-    $is_compact = (bool) get_theme_mod('vh360_community_menu_compact', 0) || vh360_force_compact_community_menu();
-
-    if (!$is_compact) {
+    if (!vh360_should_compact_community_menu()) {
         return;
     }
 
