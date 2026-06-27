@@ -233,7 +233,7 @@
 .vh360-wp-comment-edit-btn,
 .vh360-wp-comment-delete-btn,
 .vh360-wp-toggle-replies {
-    /* Inherits styles from activity-feed.css */
+    /* Base styles provided by comments-shared.css. */
 }
 
 /* Toggle replies icon animation */

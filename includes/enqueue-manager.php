@@ -165,11 +165,18 @@ function vh360_enqueue_profile_assets() {
                 vh360_theme_asset_version('assets/css/profiles.css')
             );
 
-            // Also load activity feed styles for community posts on profile
+            // Also load shared comment and activity feed styles for community posts on profile
+            wp_enqueue_style(
+                'vh360-comments-shared',
+                VH360_THEME_URI . '/assets/css/comments-shared.css',
+                array('videohub360-theme-style'),
+                vh360_theme_asset_version('assets/css/comments-shared.css')
+            );
+
             wp_enqueue_style(
                 'vh360-activity-feed',
                 VH360_THEME_URI . '/assets/css/activity-feed.css',
-                array('videohub360-theme-style'),
+                array('videohub360-theme-style', 'vh360-comments-shared'),
                 vh360_theme_asset_version('assets/css/activity-feed.css')
             );
 
@@ -619,11 +626,19 @@ add_action('wp_enqueue_scripts', 'vh360_enqueue_members_directory_assets', 20);
 function vh360_enqueue_activity_feed_assets() {
     // Load on activity feed template, author/profile pages, or single community posts (where community posts appear)
     if (vh360_is_community_post_surface()) {
+        // Enqueue shared comment UI CSS before Activity Feed styles.
+        wp_enqueue_style(
+            'vh360-comments-shared',
+            VH360_THEME_URI . '/assets/css/comments-shared.css',
+            array('videohub360-theme-style'),
+            vh360_theme_asset_version('assets/css/comments-shared.css')
+        );
+
         // Enqueue activity feed CSS on ALL pages where community posts appear (not just activity feed template)
         wp_enqueue_style(
             'vh360-activity-feed',
             VH360_THEME_URI . '/assets/css/activity-feed.css',
-            array('videohub360-theme-style'),
+            array('videohub360-theme-style', 'vh360-comments-shared'),
             vh360_theme_asset_version('assets/css/activity-feed.css')
         );
 
@@ -949,20 +964,20 @@ function vh360_enqueue_wp_comments_assets() {
         return;
     }
 
-    // Enqueue YouTube-style comments CSS
+    // Enqueue shared comment UI CSS used by native comments and Activity Feed/community surfaces.
+    wp_enqueue_style(
+        'vh360-comments-shared',
+        VH360_THEME_URI . '/assets/css/comments-shared.css',
+        array('videohub360-theme-style'),
+        vh360_theme_asset_version('assets/css/comments-shared.css')
+    );
+
+    // Enqueue YouTube-style WordPress comments CSS.
     wp_enqueue_style(
         'vh360-wp-comments',
         VH360_THEME_URI . '/assets/css/comments-youtube-style.css',
-        array('videohub360-theme-style'),
+        array('videohub360-theme-style', 'vh360-comments-shared'),
         vh360_theme_asset_version('assets/css/comments-youtube-style.css')
-    );
-
-    // Enqueue activity feed CSS for comment styling (reuse existing styles)
-    wp_enqueue_style(
-        'vh360-activity-feed',
-        VH360_THEME_URI . '/assets/css/activity-feed.css',
-        array('videohub360-theme-style'),
-        vh360_theme_asset_version('assets/css/activity-feed.css')
     );
 
     // Enqueue WordPress comments handler JavaScript

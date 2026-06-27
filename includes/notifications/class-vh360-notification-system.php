@@ -29,7 +29,7 @@ class VH360_Notification_System {
      *
      * @var string
      */
-    private $db_version = '1.0.0';
+    private $db_version = '1.1.0';
     
     /**
      * Singleton instance
@@ -59,6 +59,9 @@ class VH360_Notification_System {
         
         // Hook to create table on theme activation
         add_action('after_switch_theme', array($this, 'create_table'));
+
+        // Safely upgrade existing installs when the notification schema version changes.
+        add_action('init', array($this, 'maybe_upgrade_table'));
         
         // Schedule cleanup cron job
         add_action('after_switch_theme', array($this, 'schedule_cleanup'));
@@ -90,7 +93,11 @@ class VH360_Notification_System {
             PRIMARY KEY  (id),
             KEY user_id (user_id),
             KEY is_read (is_read),
-            KEY created_at (created_at)
+            KEY created_at (created_at),
+            KEY user_created (user_id, created_at),
+            KEY user_read_created (user_id, is_read, created_at),
+            KEY user_type_created (user_id, type, created_at),
+            KEY duplicate_lookup (user_id, type, actor_id, object_id, object_type, created_at)
         ) $charset_collate;";
         
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -100,6 +107,23 @@ class VH360_Notification_System {
         update_option('vh360_notifications_db_version', $this->db_version);
     }
     
+    /**
+     * Upgrade notification table when the stored schema version is older.
+     *
+     * Runs dbDelta only after a version bump so existing sites receive new
+     * indexes without requiring a theme switch and without doing index work on
+     * every request.
+     */
+    public function maybe_upgrade_table() {
+        $stored_version = get_option('vh360_notifications_db_version');
+
+        if ($stored_version && version_compare($stored_version, $this->db_version, '>=')) {
+            return;
+        }
+
+        $this->create_table();
+    }
+
     /**
      * Get table name
      *

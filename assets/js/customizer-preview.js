@@ -723,6 +723,20 @@
         });
     });
 
+    // Community Menu - Border / Divider Color
+    wp.customize('vh360_community_menu_border_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('community-menu-border-color', newval);
+        });
+    });
+
+    // Community Menu - Hover Text Color
+    wp.customize('vh360_community_menu_hover_text_color', function(value) {
+        value.bind(function(newval) {
+            updateCSSVariable('community-menu-hover-text-color', newval);
+        });
+    });
+
     // Community Menu - Hover Background Color
     wp.customize('vh360_community_menu_hover_bg_color', function(value) {
         value.bind(function(newval) {
@@ -750,7 +764,9 @@
         vh360_community_menu_toggle_border_color: 'community-menu-toggle-border-color',
         vh360_community_menu_toggle_hover_bg_color: 'community-menu-toggle-hover-bg-color',
         vh360_community_menu_toggle_hover_text_color: 'community-menu-toggle-hover-text-color',
-        vh360_community_menu_toggle_hover_border_color: 'community-menu-toggle-hover-border-color'
+        vh360_community_menu_toggle_hover_border_color: 'community-menu-toggle-hover-border-color',
+        vh360_community_menu_profile_name_color: 'community-menu-profile-name-color',
+        vh360_community_menu_profile_username_color: 'community-menu-profile-username-color'
     };
 
     Object.keys(communityMenuToggleColorBindings).forEach(function(settingId) {
@@ -802,6 +818,18 @@
     wp.customize('vh360_community_menu_width', function(value) {
         value.bind(function(newval) {
             updateCSSVariable('community-menu-width', newval + 'px');
+        });
+    });
+
+    // Community Menu - Profile Avatar Size
+    wp.customize('vh360_community_menu_avatar_size', function(value) {
+        value.bind(function(newval) {
+            var size = parseInt(newval, 10);
+            if (isNaN(size)) {
+                size = 32;
+            }
+            size = Math.min(64, Math.max(24, size));
+            updateCSSVariable('community-menu-avatar-size', size + 'px');
         });
     });
 

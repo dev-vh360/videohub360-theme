@@ -54,6 +54,56 @@ function vh360_register_community_post_type() {
 add_action('init', 'vh360_register_community_post_type');
 
 /**
+ * Safely refresh rewrite rules after community post rewrite changes.
+ *
+ * The community post type must already be registered before flushing, and the
+ * stored version prevents an expensive rewrite flush on every request.
+ */
+function vh360_maybe_flush_community_post_rewrites() {
+    $rewrite_version = '2026_06_community_post_single_routes';
+
+    if (get_option('vh360_community_post_rewrite_version') === $rewrite_version) {
+        return;
+    }
+
+    if (!post_type_exists('vh360_post')) {
+        return;
+    }
+
+    flush_rewrite_rules(false);
+    update_option('vh360_community_post_rewrite_version', $rewrite_version, false);
+}
+add_action('init', 'vh360_maybe_flush_community_post_rewrites', 20);
+
+/**
+ * Keep published community posts commentable on single views.
+ *
+ * Older Activity Feed-created posts may have a closed comment_status because
+ * the AJAX feed UI did not depend on WordPress' comments_open() check. Native
+ * comments on single-vh360_post.php do use that check, so treat published,
+ * non-password-protected community posts as open without affecting any other
+ * post type or non-public post status.
+ *
+ * @param bool $open Whether comments are open for the post.
+ * @param int  $post_id Post ID.
+ * @return bool
+ */
+function vh360_community_post_comments_open($open, $post_id) {
+    $post = get_post($post_id);
+
+    if (!$post || 'vh360_post' !== $post->post_type) {
+        return $open;
+    }
+
+    if ('publish' !== $post->post_status || !empty($post->post_password)) {
+        return $open;
+    }
+
+    return true;
+}
+add_filter('comments_open', 'vh360_community_post_comments_open', 10, 2);
+
+/**
  * Fire custom action when native WordPress comments are added.
  *
  * This bridges the native comment_post hook to our custom vh360_comment_created
@@ -227,11 +277,12 @@ function vh360_handle_post_creation() {
 
     // Insert the post
     $post_args = array(
-        'post_type'    => 'vh360_post',
-        'post_title'   => !empty($post_content) ? wp_trim_words($post_content, 10, '') : __('Media Post', 'videohub360-theme'),
-        'post_content' => $post_content,
-        'post_status'  => 'publish',
-        'post_author'  => $user_id,
+        'post_type'      => 'vh360_post',
+        'post_title'     => !empty($post_content) ? wp_trim_words($post_content, 10, '') : __('Media Post', 'videohub360-theme'),
+        'post_content'   => $post_content,
+        'post_status'    => 'publish',
+        'post_author'    => $user_id,
+        'comment_status' => 'open',
     );
     $post_id = wp_insert_post($post_args);
 
@@ -407,11 +458,12 @@ function vh360_ajax_share_post() {
         : __('Shared a post', 'videohub360-theme');
         
     $new_post_args = array(
-        'post_type'    => 'vh360_post',
-        'post_status'  => 'publish',
-        'post_author'  => $user_id,
-        'post_title'   => $post_title,
-        'post_content' => $share_comment, // User's comment, not original content
+        'post_type'      => 'vh360_post',
+        'post_status'    => 'publish',
+        'post_author'    => $user_id,
+        'post_title'     => $post_title,
+        'post_content'   => $share_comment, // User's comment, not original content
+        'comment_status' => 'open',
     );
     $new_post_id = wp_insert_post($new_post_args);
     if (!$new_post_id) {
@@ -493,6 +545,7 @@ function vh360_get_community_posts($args = array()) {
         'paged'          => (int) $args['paged'],
         'orderby'        => 'date',
         'order'          => 'DESC',
+        'no_found_rows' => true,
     );
 
     // If the feed should show only posts from authors the current user follows,

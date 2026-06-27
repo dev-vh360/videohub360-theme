@@ -59,14 +59,8 @@ get_header();
                 // Check if vh360_render_community_post function exists
                 if (function_exists('vh360_render_community_post')) {
                     
-                    // Use activity feed rendering function but skip its comments section
-                    // We'll use native WordPress comments instead
-                    vh360_render_community_post($post, true, true);
-                    
-                    // Now render native WordPress comments
-                    if (comments_open() || get_comments_number()) {
-                        comments_template();
-                    }
+                    // Use the Activity Feed renderer with its AJAX comment UI on single community posts.
+                    vh360_render_community_post($post, true, false);
                     
                 } else {
                     
@@ -109,14 +103,45 @@ get_header();
                         }
                         ?>
                         
+                        <?php if (function_exists('vh360_render_activity_comments')) : ?>
+                            <div id="vh360-comments-section-<?php echo esc_attr($post_id); ?>" class="vh360-comments-section" data-post-id="<?php echo esc_attr($post_id); ?>">
+                                <div class="vh360-comments-list" data-post-id="<?php echo esc_attr($post_id); ?>">
+                                    <?php vh360_render_activity_comments($post_id); ?>
+                                </div>
+
+                                <?php if (is_user_logged_in()) : ?>
+                                    <form class="vh360-comment-form" data-post-id="<?php echo esc_attr($post_id); ?>">
+                                        <div class="vh360-comment-avatar">
+                                            <?php echo get_avatar(get_current_user_id(), 32); ?>
+                                        </div>
+                                        <div class="vh360-comment-input-wrapper">
+                                            <textarea class="vh360-comment-textarea"
+                                                      name="comment"
+                                                      rows="1"
+                                                      placeholder="<?php esc_attr_e('Write a comment...', 'videohub360-theme'); ?>"
+                                                      aria-label="<?php esc_attr_e('Write a comment', 'videohub360-theme'); ?>"></textarea>
+                                            <input type="hidden" name="parent_id" value="0" />
+                                            <button type="button"
+                                                    class="vh360-comment-send-btn"
+                                                    disabled
+                                                    aria-label="<?php esc_attr_e('Send comment', 'videohub360-theme'); ?>">
+                                                <span class="vh360-btn-text">
+                                                    <svg class="vh360-comment-send-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                                        <path d="M2,21L23,12L2,3V10L17,12L2,14V21Z"/>
+                                                    </svg>
+                                                </span>
+                                                <span class="vh360-btn-spinner" aria-hidden="true"></span>
+                                            </button>
+                                        </div>
+                                    </form>
+                                <?php else : ?>
+                                    <p class="vh360-comments-login-hint">
+                                        <?php esc_html_e('Please log in to comment.', 'videohub360-theme'); ?>
+                                    </p>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
                     </div>
-                    
-                    <!-- Comments Section (using native WordPress comments) -->
-                    <?php
-                    if (comments_open() || get_comments_number()) {
-                        comments_template();
-                    }
-                    ?>
                     <?php
                 }
                 

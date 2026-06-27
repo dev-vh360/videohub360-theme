@@ -214,6 +214,26 @@ function videohub360_theme_customize_register($wp_customize) {
         ),
     ));
 
+
+    // Layout - Profile Avatar Size
+    $wp_customize->add_setting('vh360_community_menu_avatar_size', array(
+        'default'           => 32,
+        'sanitize_callback' => 'vh360_sanitize_community_menu_avatar_size',
+        'transport'         => 'postMessage',
+    ));
+
+    $wp_customize->add_control('vh360_community_menu_avatar_size', array(
+        'label'       => __('Profile Avatar Size (px)', 'videohub360-theme'),
+        'description' => __('Avatar size for the Community Menu profile card.', 'videohub360-theme'),
+        'section'     => 'vh360_community_menu_layout',
+        'type'        => 'number',
+        'input_attrs' => array(
+            'min'  => 24,
+            'max'  => 64,
+            'step' => 2,
+        ),
+    ));
+
     // Community Menu Colors - Background, hover, active states
     $wp_customize->add_section('vh360_community_menu_colors', array(
         'title'       => __('Community Menu - Colors', 'videohub360-theme'),
@@ -248,6 +268,20 @@ function videohub360_theme_customize_register($wp_customize) {
         'section'     => 'vh360_community_menu_colors',
     )));
 
+
+    // Border / Divider Color
+    $wp_customize->add_setting('vh360_community_menu_border_color', array(
+        'default'           => '#e5e7eb',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'postMessage',
+    ));
+
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_community_menu_border_color', array(
+        'label'       => __('Border / Divider Color', 'videohub360-theme'),
+        'description' => __('Border color for the Community Menu right edge and profile divider.', 'videohub360-theme'),
+        'section'     => 'vh360_community_menu_colors',
+    )));
+
     // Hover Background Color
     $wp_customize->add_setting('vh360_community_menu_hover_bg_color', array(
         'default'           => '#f3f4f6',
@@ -258,6 +292,20 @@ function videohub360_theme_customize_register($wp_customize) {
     $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_community_menu_hover_bg_color', array(
         'label'       => __('Hover Background Color', 'videohub360-theme'),
         'description' => __('Background color when hovering over menu items.', 'videohub360-theme'),
+        'section'     => 'vh360_community_menu_colors',
+    )));
+
+
+    // Hover Text Color
+    $wp_customize->add_setting('vh360_community_menu_hover_text_color', array(
+        'default'           => '#1f2937',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'postMessage',
+    ));
+
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_community_menu_hover_text_color', array(
+        'label'       => __('Hover Text Color', 'videohub360-theme'),
+        'description' => __('Text color when hovering over Community Menu links.', 'videohub360-theme'),
         'section'     => 'vh360_community_menu_colors',
     )));
 
@@ -284,6 +332,33 @@ function videohub360_theme_customize_register($wp_customize) {
     $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_community_menu_active_bg_color', array(
         'label'       => __('Active Background Color', 'videohub360-theme'),
         'description' => __('Background color for the active/current menu item.', 'videohub360-theme'),
+        'section'     => 'vh360_community_menu_colors',
+    )));
+
+
+    // Profile Name Color
+    $wp_customize->add_setting('vh360_community_menu_profile_name_color', array(
+        'default'           => '#1f2937',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'postMessage',
+    ));
+
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_community_menu_profile_name_color', array(
+        'label'       => __('Profile Name Color', 'videohub360-theme'),
+        'description' => __('Text color for the Community Menu profile display name.', 'videohub360-theme'),
+        'section'     => 'vh360_community_menu_colors',
+    )));
+
+    // Profile Username Color
+    $wp_customize->add_setting('vh360_community_menu_profile_username_color', array(
+        'default'           => '#6b7280',
+        'sanitize_callback' => 'sanitize_hex_color',
+        'transport'         => 'postMessage',
+    ));
+
+    $wp_customize->add_control(new WP_Customize_Color_Control($wp_customize, 'vh360_community_menu_profile_username_color', array(
+        'label'       => __('Profile Username Color', 'videohub360-theme'),
+        'description' => __('Text color for the Community Menu profile username.', 'videohub360-theme'),
         'section'     => 'vh360_community_menu_colors',
     )));
 
@@ -704,6 +779,21 @@ add_action('wp_head', 'videohub360_theme_customizer_css');
  * @param string $input Font family value.
  * @return string Sanitized font family.
  */
+
+function vh360_sanitize_community_menu_avatar_size($input) {
+    $size = absint($input);
+
+    if ($size < 24) {
+        return 24;
+    }
+
+    if ($size > 64) {
+        return 64;
+    }
+
+    return $size;
+}
+
 function vh360_sanitize_community_menu_font_family($input) {
     // Allow empty string (inherit)
     if ($input === '') {

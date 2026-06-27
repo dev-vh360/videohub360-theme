@@ -39,6 +39,7 @@ function vh360_get_trending_posts($limit = 3) {
         // an array (vh360_likes) so we cannot sort by like count directly.
         'orderby'        => 'comment_count',
         'order'          => 'DESC',
+        'no_found_rows' => true,
     ];
     $query = new WP_Query($args);
     return $query->posts;
@@ -109,8 +110,9 @@ function vh360_get_trending_authors($limit = 3) {
         'orderby'    => 'meta_value_num',
         'meta_key'   => 'vh360_followers_count',
         'order'      => 'DESC',
-        'fields'     => 'all',
-        'meta_query' => [
+        'fields'      => 'all',
+        'count_total' => false,
+        'meta_query'  => [
             [
                 'key'     => 'vh360_followers_count',
                 'value'   => 0,
