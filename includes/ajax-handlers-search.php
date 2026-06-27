@@ -141,6 +141,8 @@ function vh360_search_videos($query) {
         'posts_per_page' => 5,
         's' => $query,
         'orderby' => 'relevance',
+        'no_found_rows' => true,
+        'update_post_term_cache' => false,
     );
     
     $query_obj = new WP_Query($args);
@@ -189,6 +191,7 @@ function vh360_search_members($query) {
         'number' => 5,
         'orderby' => 'display_name',
         'order' => 'ASC',
+        'count_total' => false,
     );
     
     $user_query = new WP_User_Query($args);
@@ -226,6 +229,8 @@ function vh360_search_events($query) {
         'posts_per_page' => 5,
         's' => $query,
         'orderby' => 'relevance',
+        'no_found_rows' => true,
+        'update_post_term_cache' => false,
     );
     
     $query_obj = new WP_Query($args);
@@ -275,6 +280,8 @@ function vh360_search_galleries($query) {
         's' => $query,
         'orderby' => 'date',
         'order' => 'DESC',
+        'no_found_rows' => true,
+        'update_post_term_cache' => false,
     );
     
     $query_obj = new WP_Query($args);
@@ -325,6 +332,8 @@ function vh360_search_bulletins($query) {
         's' => $query,
         'orderby' => 'date',
         'order' => 'DESC',
+        'no_found_rows' => true,
+        'update_post_term_cache' => false,
     );
     
     $query_obj = new WP_Query($args);
@@ -374,6 +383,8 @@ function vh360_search_community_posts($query) {
         's' => $query,
         'orderby' => 'date',
         'order' => 'DESC',
+        'no_found_rows' => true,
+        'update_post_term_cache' => false,
     );
     
     $query_obj = new WP_Query($args);

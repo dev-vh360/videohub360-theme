@@ -119,11 +119,6 @@ $vh360_header_desc       = get_theme_mod('vh360_activity_header_description', __
             }
             $community_posts = vh360_get_community_posts( $feed_args );
 
-            // Retrieve data for the sidebar widgets. These helper functions
-            // provide trending topics, trending posts and people to follow.
-            $trending_topics  = function_exists( 'vh360_get_trending_topics' )    ? vh360_get_trending_topics( 5 )    : array();
-            $trending_posts   = function_exists( 'vh360_get_trending_posts' )     ? vh360_get_trending_posts( 5 )     : array();
-            $recommended_users = function_exists( 'vh360_get_recommended_profiles' ) ? vh360_get_recommended_profiles( 5 ) : array();
             ?>
 
             <div class="vh360-activity-layout">

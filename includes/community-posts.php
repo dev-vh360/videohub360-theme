@@ -545,6 +545,7 @@ function vh360_get_community_posts($args = array()) {
         'paged'          => (int) $args['paged'],
         'orderby'        => 'date',
         'order'          => 'DESC',
+        'no_found_rows' => true,
     );
 
     // If the feed should show only posts from authors the current user follows,
