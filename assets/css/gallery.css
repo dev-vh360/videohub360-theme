@@ -1581,9 +1581,9 @@ body.vh360-lightbox-open {
     outline: none;
 }
 
-.vh360-gallery-archive .vh360-gallery-controls-actions {
-    display: flex;
-    justify-content: flex-end;
+.vh360-gallery-archive .vh360-gallery-controls-form noscript {
+    display: block;
+    margin-top: 1rem;
 }
 
 .vh360-gallery-archive .vh360-gallery-controls-submit {
