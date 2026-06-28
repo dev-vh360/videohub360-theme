@@ -18,8 +18,7 @@ if (!vh360_show_community_menu()) {
 }
 
 $current_user = wp_get_current_user();
-$is_compact = (bool) get_theme_mod('vh360_community_menu_compact', 0) || vh360_force_compact_community_menu();
-$is_forced_compact = vh360_force_compact_community_menu();
+$is_compact = vh360_should_compact_community_menu();
 $avatar_size = absint(get_theme_mod('vh360_community_menu_avatar_size', 32));
 $avatar_size = min(64, max(24, $avatar_size));
 $menu_classes = array('vh360-community-menu');

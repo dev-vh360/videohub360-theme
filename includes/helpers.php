@@ -2125,6 +2125,34 @@ function vh360_force_compact_community_menu() {
 }
 
 /**
+ * Determine whether the Community Menu should render in compact mode.
+ *
+ * Forced compact contexts, such as single video pages, always take priority over
+ * Customizer overrides. When global compact mode is enabled, site owners can
+ * optionally keep the Activity Feed template in the full/default menu state.
+ *
+ * @return bool True if the Community Menu should be compact, false otherwise.
+ * @since 1.0.0
+ */
+function vh360_should_compact_community_menu() {
+    if (vh360_force_compact_community_menu()) {
+        return true;
+    }
+
+    $global_compact = (bool) get_theme_mod('vh360_community_menu_compact', 0);
+
+    if (
+        $global_compact
+        && get_theme_mod('vh360_community_menu_default_on_activity', 0)
+        && is_page_template('template-activity-feed.php')
+    ) {
+        return false;
+    }
+
+    return $global_compact;
+}
+
+/**
  * Get Dashboard Page URL
  *
  * Discovers the actual dashboard page by querying for template-dashboard.php.
