@@ -24,7 +24,7 @@
 
 /* Crop Modal Content */
 .vh360-crop-modal-content {
-    background: #fff;
+    background: var(--surface-1, #ffffff);
     border-radius: 8px;
     max-width: 900px;
     width: 100%;

@@ -1107,7 +1107,7 @@ button[type="submit"]:hover,
 }
 
 .vh360-join-live-button:hover {
-    background: #ffffff;
+    background: var(--surface-1, #ffffff);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     color: #ff0844;
@@ -1122,7 +1122,7 @@ button[type="submit"]:hover,
 
 .vh360-ended-badge {
     font-size: 13px;
-    color: #666;
+    color: var(--text-light, #6b7280);
     font-weight: 500;
 }
 
@@ -1163,7 +1163,7 @@ button[type="submit"]:hover,
 }
 
 .vh360-profile-join-button:hover {
-    background: #ffffff;
+    background: var(--surface-1, #ffffff);
     transform: scale(1.05);
     color: #ff0844;
 }
