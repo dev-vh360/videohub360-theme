@@ -40,7 +40,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 1.25rem 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
 }
 
 .vh360-crop-modal-header h3 {
@@ -68,7 +68,7 @@
 }
 
 .vh360-crop-modal-close:hover {
-    background: #f3f4f6;
+    background: var(--surface-3, #f3f4f6);
     color: #111827;
 }
 
@@ -85,7 +85,7 @@
 .vh360-crop-container {
     flex: 1;
     max-height: 500px;
-    background: #f9fafb;
+    background: var(--bg-light, #f9fafb);
     border-radius: 8px;
     overflow: hidden;
     position: relative;
@@ -118,8 +118,8 @@
     height: 150px;
     border-radius: 50%;
     overflow: hidden;
-    border: 3px solid #e5e7eb;
-    background: #f9fafb;
+    border: 3px solid var(--border-color, #e5e7eb);
+    background: var(--bg-light, #f9fafb);
 }
 
 /* Crop Modal Footer */
@@ -128,7 +128,7 @@
     justify-content: flex-end;
     gap: 0.75rem;
     padding: 1.25rem 1.5rem;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--border-color, #e5e7eb);
 }
 
 .vh360-crop-cancel,
@@ -143,21 +143,21 @@
 }
 
 .vh360-crop-cancel {
-    background: #f3f4f6;
+    background: var(--surface-3, #f3f4f6);
     color: #374151;
 }
 
 .vh360-crop-cancel:hover {
-    background: #e5e7eb;
+    background: var(--border-color, #e5e7eb);
 }
 
 .vh360-crop-apply {
-    background: #2563eb;
+    background: var(--primary-color, #2563eb);
     color: #fff;
 }
 
 .vh360-crop-apply:hover {
-    background: #1d4ed8;
+    background: var(--primary-hover, #1d4ed8);
 }
 
 /* Responsive Design */

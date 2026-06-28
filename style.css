@@ -1116,7 +1116,7 @@ button[type="submit"]:hover,
 .vh360-live-ended-container {
     padding: 8px 12px;
     margin-bottom: 12px;
-    background: #f5f5f5;
+    background: var(--bg-light, #f5f5f5);
     border-radius: 6px;
 }
 
@@ -1305,11 +1305,11 @@ body.is-auth-page.vh360-auth-hide-header.vh360-auth-hide-footer .vh360-auth-page
 
 /* Missing / disabled notice */
 .vh360-course-catalog-missing {
-    background: #fff8e1;
-    border-left: 4px solid #f9a825;
+    background: color-mix(in srgb, var(--warning-color, #f59e0b) 14%, var(--surface-1, #ffffff));
+    border-left: 4px solid var(--warning-color, #f59e0b);
     padding: 1.25rem 1.5rem;
     border-radius: 6px;
-    color: #555;
+    color: var(--text-color, #1f2937);
     font-size: 0.9rem;
 }
 
