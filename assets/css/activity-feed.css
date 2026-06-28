@@ -2555,7 +2555,7 @@ html {
    ======================================== */
 
 .vh360-single-post-page {
-    background: var(--surface-3);
+    background: var(--surface-1);
     min-height: calc(100vh - 200px);
     padding-bottom: 40px;
 }
