@@ -56,7 +56,7 @@
 }
 
 .vh360-dashboard-event-card {
-    background: white;
+    background: var(--surface-1, #ffffff);
     border-radius: 0.75rem;
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
     overflow: hidden;
@@ -232,7 +232,7 @@
     border-bottom: 1px solid var(--border-color, #e5e7eb);
     position: sticky;
     top: 0;
-    background: white;
+    background: var(--surface-1, #ffffff);
     z-index: 10;
 }
 
@@ -317,7 +317,7 @@
     border-radius: 0.375rem;
     font-size: 0.9375rem;
     color: var(--text-color, #1f2937);
-    background: white;
+    background: var(--surface-1, #ffffff);
     transition: all 0.2s;
 }
 

@@ -500,7 +500,7 @@ $locations = get_terms(array(
             </h3>
             <div class="vh360-section-content">
                 
-                <div class="vh360-form-help" style="background: #e7f3ff; padding: 12px; border-radius: 4px; border-left: 4px solid #2196F3; margin-bottom: 15px;">
+                <div class="vh360-form-help" style="background: color-mix(in srgb, var(--info-color, #3b82f6) 12%, var(--surface-1, #ffffff)); padding: 12px; border-radius: 4px; border-left: 4px solid var(--info-color, #3b82f6); margin-bottom: 15px;">
                     <strong>💡 Quick Setup Guide:</strong><br>
                     1. Set "Currently Live Status" to "Yes" to enable livestream mode<br>
                     2. Choose your "Stream Source Type" (Agora.io recommended for interactive streaming)<br>
@@ -642,8 +642,8 @@ $locations = get_terms(array(
                             </p>
                         </div>
 
-                        <div class="vh360-form-field" style="border-left: 3px solid #0073aa; padding-left: 15px; margin-left: 10px;">
-                            <h4 style="margin: 0 0 10px 0; color: #0073aa;"><?php esc_html_e('Access Control', 'videohub360-theme'); ?></h4>
+                        <div class="vh360-form-field" style="border-left: 3px solid var(--info-color, #3b82f6); padding-left: 15px; margin-left: 10px;">
+                            <h4 style="margin: 0 0 10px 0; color: var(--info-color, #3b82f6);"><?php esc_html_e('Access Control', 'videohub360-theme'); ?></h4>
                             <label class="vh360-checkbox-label">
                                 <input 
                                     type="checkbox" 

@@ -174,7 +174,7 @@ $dismissible = get_post_meta($bulletin_id, '_vh360_bulletin_dismissible', true);
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 1.5rem;
-    background: white;
+    background: var(--surface-1, #ffffff);
     color: #dc2626;
     font-weight: 600;
     font-size: 0.875rem;

@@ -313,7 +313,7 @@
    ========================================================================== */
 
 .vh360-single-bulletin-page {
-    background: var(--bg-light, #f9fafb);
+    background: var(--bg-color, #ffffff);
 }
 
 .vh360-bulletin-back {

@@ -212,7 +212,7 @@ $bulletins_query = new WP_Query($args);
 .vh360-bulletins-filters {
     display: flex;
     gap: 0.5rem;
-    background: white;
+    background: var(--bg-color, #ffffff);
     padding: 0.25rem;
     border-radius: 0.5rem;
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
@@ -252,7 +252,7 @@ $bulletins_query = new WP_Query($args);
     border: 1px solid var(--border-color, #e5e7eb);
     border-radius: 0.5rem;
     font-size: 0.875rem;
-    background: white;
+    background: var(--bg-color, #ffffff);
     transition: all 0.2s;
 }
 
@@ -264,7 +264,7 @@ $bulletins_query = new WP_Query($args);
 
 .vh360-btn-secondary {
     padding: 0.75rem 1.5rem;
-    background: white;
+    background: var(--bg-color, #ffffff);
     border: 1px solid var(--border-color, #e5e7eb);
     border-radius: 0.5rem;
     font-weight: 600;
@@ -306,7 +306,7 @@ $bulletins_query = new WP_Query($args);
 .vh360-bulletins-pagination span {
     display: block;
     padding: 0.5rem 1rem;
-    background: white;
+    background: var(--bg-color, #ffffff);
     border: 1px solid var(--border-color, #e5e7eb);
     border-radius: 0.375rem;
     color: var(--text-color, #1f2937);
@@ -329,7 +329,7 @@ $bulletins_query = new WP_Query($args);
 .vh360-bulletins-empty {
     text-align: center;
     padding: 4rem 2rem;
-    background: white;
+    background: var(--bg-color, #ffffff);
     border-radius: 0.75rem;
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
 }

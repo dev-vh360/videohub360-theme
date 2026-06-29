@@ -173,7 +173,7 @@
 }
 
 .vh360-gallery-action:hover {
-    background: #fff;
+    background: var(--surface-1, #ffffff);
     transform: scale(1.1);
 }
 
@@ -469,7 +469,7 @@
 }
 
 .vh360-preview-cover:hover {
-    background: #fff;
+    background: var(--surface-1, #ffffff);
     color: var(--warning-color);
 }
 
