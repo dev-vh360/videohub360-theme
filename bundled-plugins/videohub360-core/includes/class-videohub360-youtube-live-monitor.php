@@ -246,19 +246,27 @@ class VideoHub360_YouTube_Live_Monitor {
         $timezone = wp_timezone();
         $now = new DateTimeImmutable('now', $timezone);
         $now_ts = $now->getTimestamp();
-        $day = strtolower($now->format('l'));
+        $candidate_days = array(
+            $now,
+            $now->modify('-1 day'),
+        );
 
         foreach (self::sanitize_schedules(get_option('vh360_youtube_schedules', array())) as $schedule) {
-            if (empty($schedule['enabled']) || $schedule['day'] !== $day) continue;
+            if (empty($schedule['enabled'])) continue;
 
             list($hour, $minute) = array_map('intval', explode(':', $schedule['start_time']));
-            $start = $now->setTime($hour, $minute, 0);
-            $start_ts = $start->getTimestamp();
-            $from_ts = $start_ts - $schedule['precheck_minutes'] * MINUTE_IN_SECONDS;
-            $to_ts = $start_ts + ($schedule['expected_duration_minutes'] + $schedule['grace_minutes']) * MINUTE_IN_SECONDS;
 
-            if ($now_ts >= $from_ts && $now_ts <= $to_ts) {
-                return array('inside'=>true,'phase'=>($now_ts < $start_ts ? 'precheck' : 'live'),'schedule'=>$schedule);
+            foreach ($candidate_days as $candidate_day) {
+                if ($schedule['day'] !== strtolower($candidate_day->format('l'))) continue;
+
+                $start = $candidate_day->setTime($hour, $minute, 0);
+                $start_ts = $start->getTimestamp();
+                $from_ts = $start_ts - $schedule['precheck_minutes'] * MINUTE_IN_SECONDS;
+                $to_ts = $start_ts + ($schedule['expected_duration_minutes'] + $schedule['grace_minutes']) * MINUTE_IN_SECONDS;
+
+                if ($now_ts >= $from_ts && $now_ts <= $to_ts) {
+                    return array('inside'=>true,'phase'=>($now_ts < $start_ts ? 'precheck' : 'live'),'schedule'=>$schedule);
+                }
             }
         }
 

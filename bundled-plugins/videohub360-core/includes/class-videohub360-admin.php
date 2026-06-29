@@ -497,7 +497,16 @@ class VideoHub360_Admin {
         $youtube_replay_behavior = get_option('vh360_youtube_replay_behavior', 'mark_ended');
         $youtube_schedules = get_option('vh360_youtube_schedules', array());
         if (empty($youtube_schedules) || !is_array($youtube_schedules)) {
-            $youtube_schedules = array(array('enabled'=>1,'day'=>'sunday','start_time'=>'10:00','expected_duration_minutes'=>120,'precheck_minutes'=>30,'grace_minutes'=>20,'title_prefix'=>'Sunday Service','category'=>0));
+            $youtube_schedules = array(array(
+                'enabled' => 1,
+                'day' => 'sunday',
+                'start_time' => '10:00',
+                'expected_duration_minutes' => absint(get_option('vh360_youtube_expected_duration_minutes', 120)) ?: 120,
+                'precheck_minutes' => absint(get_option('vh360_youtube_precheck_minutes', 30)),
+                'grace_minutes' => absint(get_option('vh360_youtube_grace_minutes', 20)) ?: 20,
+                'title_prefix' => '',
+                'category' => 0,
+            ));
         }
         $youtube_next_cron = wp_next_scheduled('vh360_youtube_live_check');
         $youtube_cron_disabled = (defined('DISABLE_WP_CRON') && DISABLE_WP_CRON) ? 'Yes' : 'No';
@@ -797,7 +806,7 @@ class VideoHub360_Admin {
                         <th scope="row">Recurring Schedules</th>
                         <td>
                             <?php foreach ($youtube_schedules as $i => $schedule) : ?>
-                                <div style="margin-bottom:10px;padding:10px;border:1px solid #ccd0d4;max-width:760px;">
+                                <div class="vh360-youtube-schedule-row" data-index="<?php echo esc_attr($i); ?>" style="margin-bottom:10px;padding:10px;border:1px solid #ccd0d4;max-width:760px;">
                                     <label><input type="checkbox" name="vh360_youtube_schedules[<?php echo esc_attr($i); ?>][enabled]" value="1" <?php checked(!empty($schedule['enabled'])); ?> /> Enabled</label>
                                     <select name="vh360_youtube_schedules[<?php echo esc_attr($i); ?>][day]">
                                         <?php foreach (array('sunday','monday','tuesday','wednesday','thursday','friday','saturday') as $day) : ?>
@@ -812,7 +821,44 @@ class VideoHub360_Admin {
                                     <label>Category ID <input type="number" min="0" name="vh360_youtube_schedules[<?php echo esc_attr($i); ?>][category]" value="<?php echo esc_attr($schedule['category'] ?? 0); ?>" style="width:90px;" /></label>
                                 </div>
                             <?php endforeach; ?>
-                            <p class="description">Add more schedule rows by saving, then duplicating a row in this option array via custom code if needed. Detection runs from precheck before start through duration plus grace.</p>
+                            <p><button type="button" class="button" id="vh360-add-youtube-schedule">Add schedule row</button></p>
+                            <p class="description">Add one or more expected YouTube live windows. The monitor checks from precheck before the start time through the expected duration plus grace period.</p>
+                            <script>
+                            jQuery(function($){
+                                var nextScheduleIndex = <?php echo absint(count($youtube_schedules)); ?>;
+                                $('#vh360-add-youtube-schedule').on('click', function(e){
+                                    e.preventDefault();
+                                    var $rows = $('.vh360-youtube-schedule-row');
+                                    var $clone = $rows.first().clone(false);
+                                    var oldIndex = $clone.data('index');
+                                    $clone.attr('data-index', nextScheduleIndex);
+                                    $clone.find(':input').each(function(){
+                                        var $field = $(this);
+                                        var name = $field.attr('name');
+                                        if (name) {
+                                            $field.attr('name', name.replace('[' + oldIndex + ']', '[' + nextScheduleIndex + ']'));
+                                        }
+                                        if ($field.is(':checkbox')) {
+                                            $field.prop('checked', true);
+                                        } else if ($field.attr('type') === 'time') {
+                                            $field.val('10:00');
+                                        } else if ($field.attr('name') && $field.attr('name').indexOf('[expected_duration_minutes]') !== -1) {
+                                            $field.val('<?php echo esc_js(absint(get_option('vh360_youtube_expected_duration_minutes', 120)) ?: 120); ?>');
+                                        } else if ($field.attr('name') && $field.attr('name').indexOf('[precheck_minutes]') !== -1) {
+                                            $field.val('<?php echo esc_js(absint(get_option('vh360_youtube_precheck_minutes', 30))); ?>');
+                                        } else if ($field.attr('name') && $field.attr('name').indexOf('[grace_minutes]') !== -1) {
+                                            $field.val('<?php echo esc_js(absint(get_option('vh360_youtube_grace_minutes', 20)) ?: 20); ?>');
+                                        } else if ($field.is('select')) {
+                                            $field.val('sunday');
+                                        } else {
+                                            $field.val('');
+                                        }
+                                    });
+                                    $rows.last().after($clone);
+                                    nextScheduleIndex++;
+                                });
+                            });
+                            </script>
                         </td>
                     </tr>
                     <tr>
