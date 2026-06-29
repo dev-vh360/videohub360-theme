@@ -223,15 +223,23 @@ class VideoHub360_YouTube_Live_Monitor {
             }
             if ($last_seen_ts && (time() - $last_seen_ts) < $grace * MINUTE_IN_SECONDS) continue;
             $behavior = $this->sanitize_choice(get_option('vh360_youtube_replay_behavior', 'mark_ended'), $this->replay_behaviors, 'mark_ended');
-            if ('convert_replay_embed' === $behavior || 'keep_replay' === $behavior) {
-                update_post_meta($post_id, '_vh360_is_live', 'no');
-                update_post_meta($post_id, '_vh360_stream_stopped', 'yes');
-                update_post_meta($post_id, 'videohub360_custom_html', get_post_meta($post_id, '_vh360_embed_code', true));
-                update_post_meta($post_id, '_vh360_youtube_status', 'replay');
-            } else {
-                update_post_meta($post_id, '_vh360_stream_stopped', 'yes');
-                update_post_meta($post_id, '_vh360_youtube_status', 'ended');
-            }
+            $this->mark_youtube_stream_ended($post_id, $behavior);
+        }
+    }
+
+    private function mark_youtube_stream_ended($post_id, $behavior) {
+        $status = in_array($behavior, array('convert_replay_embed', 'keep_replay'), true) ? 'replay' : 'ended';
+        $embed_code = get_post_meta($post_id, '_vh360_embed_code', true);
+
+        update_post_meta($post_id, '_vh360_is_live', 'no');
+        update_post_meta($post_id, '_vh360_stream_stopped', 'no');
+        update_post_meta($post_id, '_vh360_live_badge', 'no');
+        update_post_meta($post_id, '_vh360_youtube_status', $status);
+        update_post_meta($post_id, '_vh360_youtube_ended_at', current_time('mysql'));
+        update_post_meta($post_id, '_vh360_youtube_ended_ts', time());
+
+        if (!empty($embed_code)) {
+            update_post_meta($post_id, 'videohub360_custom_html', $embed_code);
         }
     }
 

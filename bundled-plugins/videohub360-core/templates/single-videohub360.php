@@ -35,6 +35,8 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
     $video_layout = videohub360_get_single_video_layout(get_the_ID());
 
     // Livestream fields
+    $is_youtube_auto_managed = get_post_meta(get_the_ID(), '_vh360_youtube_auto_managed', true) === 'yes';
+
     $livestream_fields = [
         'is_live' => get_post_meta(get_the_ID(), '_vh360_is_live', true) ?: 'no',
         'type' => get_post_meta(get_the_ID(), '_vh360_type', true) ?: 'embed',
@@ -197,7 +199,7 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                 <div class="<?php echo esc_attr($vh360_video_player_classes); ?>" id="videohub360-livestream-player-root">
                     <?php echo videohub360_render_livestream($livestream_fields, $chat_enabled, $chat_placement, $is_user_logged_in, $user_avatar, $user_display_name, $user_logout_url); ?>
                 </div>
-            <?php elseif ($livestream_fields['is_live'] === 'yes' && $livestream_fields['stream_stopped'] === 'yes'): ?>
+            <?php elseif ($livestream_fields['is_live'] === 'yes' && $livestream_fields['stream_stopped'] === 'yes' && !$is_youtube_auto_managed): ?>
                 <div class="videohub360-video-player">
                     <div class="vh360-offline-wrapper">
                         <?php if (!empty($livestream_fields['offline_message'])) : ?>
