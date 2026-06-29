@@ -178,6 +178,16 @@ class VideoHub360_Admin {
             array(),
             videohub360_asset_version('assets/css/admin.css')
         );
+
+        if (isset($_GET['page']) && sanitize_text_field($_GET['page']) === 'videohub360-settings') {
+            wp_enqueue_script(
+                'vh360-admin-settings',
+                VIDEOHUB360_ASSETS_URL . 'js/admin-settings.js',
+                array('jquery'),
+                videohub360_asset_version('assets/js/admin-settings.js'),
+                true
+            );
+        }
         
         // Enqueue dashboard-specific assets
         if (isset($_GET['page']) && sanitize_text_field($_GET['page']) === 'videohub360-dashboard') {
@@ -368,6 +378,24 @@ class VideoHub360_Admin {
             update_option('vh360_agora_app_certificate', sanitize_text_field($_POST['vh360_agora_app_certificate']));
             update_option('vh360_agora_require_tokens', isset($_POST['vh360_agora_require_tokens']) ? 1 : 0);
             
+            // Update YouTube Live Auto-Broadcast settings
+            update_option('vh360_youtube_live_enabled', isset($_POST['vh360_youtube_live_enabled']) ? 1 : 0);
+            update_option('vh360_youtube_api_key', sanitize_text_field($_POST['vh360_youtube_api_key'] ?? ''));
+            update_option('vh360_youtube_channel_id', sanitize_text_field($_POST['vh360_youtube_channel_id'] ?? ''));
+            update_option('vh360_youtube_detection_mode', VideoHub360_YouTube_Live_Monitor::sanitize_option_choice($_POST['vh360_youtube_detection_mode'] ?? 'scheduled', array('scheduled', 'always', 'manual'), 'scheduled'));
+            update_option('vh360_youtube_post_behavior', VideoHub360_YouTube_Live_Monitor::sanitize_option_choice($_POST['vh360_youtube_post_behavior'] ?? 'auto_create', array('update_selected', 'auto_create'), 'auto_create'));
+            update_option('vh360_youtube_target_post_id', absint($_POST['vh360_youtube_target_post_id'] ?? 0));
+            update_option('vh360_youtube_default_author_id', absint($_POST['vh360_youtube_default_author_id'] ?? get_current_user_id()));
+            update_option('vh360_youtube_default_category', absint($_POST['vh360_youtube_default_category'] ?? 0));
+            update_option('vh360_youtube_featured_image_behavior', VideoHub360_YouTube_Live_Monitor::sanitize_option_choice($_POST['vh360_youtube_featured_image_behavior'] ?? 'youtube_if_empty', array('keep_manual', 'youtube_if_empty', 'youtube_always', 'default_image'), 'youtube_if_empty'));
+            update_option('vh360_youtube_default_featured_image_id', absint($_POST['vh360_youtube_default_featured_image_id'] ?? 0));
+            update_option('vh360_youtube_replay_behavior', VideoHub360_YouTube_Live_Monitor::sanitize_option_choice($_POST['vh360_youtube_replay_behavior'] ?? 'mark_ended', array('mark_ended', 'convert_replay_embed', 'keep_replay'), 'mark_ended'));
+            update_option('vh360_youtube_precheck_minutes', max(0, min(240, absint($_POST['vh360_youtube_precheck_minutes'] ?? 30))));
+            update_option('vh360_youtube_expected_duration_minutes', max(1, min(720, absint($_POST['vh360_youtube_expected_duration_minutes'] ?? 120))));
+            update_option('vh360_youtube_grace_minutes', max(1, min(240, absint($_POST['vh360_youtube_grace_minutes'] ?? 20))));
+            update_option('vh360_youtube_schedules', VideoHub360_YouTube_Live_Monitor::sanitize_schedules($_POST['vh360_youtube_schedules'] ?? array()));
+            do_action('vh360_youtube_live_settings_saved');
+
             // Update interactive livestream settings
             update_option('videohub360_force_login_everyone_host', isset($_POST['videohub360_force_login_everyone_host']) ? 1 : 0);
             
@@ -471,6 +499,29 @@ class VideoHub360_Admin {
         $enable_4k_streaming = get_option('videohub360_enable_4k_streaming', 0);
         $show_quality_badge = get_option('videohub360_show_quality_badge', 1);
         
+        // YouTube Live Auto-Broadcast settings
+        $youtube_enabled = get_option('vh360_youtube_live_enabled', 0);
+        $youtube_detection_mode = get_option('vh360_youtube_detection_mode', 'scheduled');
+        $youtube_post_behavior = get_option('vh360_youtube_post_behavior', 'auto_create');
+        $youtube_featured_image_behavior = get_option('vh360_youtube_featured_image_behavior', 'youtube_if_empty');
+        $youtube_replay_behavior = get_option('vh360_youtube_replay_behavior', 'mark_ended');
+        $youtube_schedules = get_option('vh360_youtube_schedules', array());
+        if (empty($youtube_schedules) || !is_array($youtube_schedules)) {
+            $youtube_schedules = array(array(
+                'enabled' => 1,
+                'day' => 'sunday',
+                'start_time' => '10:00',
+                'expected_duration_minutes' => absint(get_option('vh360_youtube_expected_duration_minutes', 120)) ?: 120,
+                'precheck_minutes' => absint(get_option('vh360_youtube_precheck_minutes', 30)),
+                'grace_minutes' => absint(get_option('vh360_youtube_grace_minutes', 20)) ?: 20,
+                'title_prefix' => '',
+                'category' => 0,
+            ));
+        }
+        $youtube_next_cron = wp_next_scheduled('vh360_youtube_live_check');
+        $youtube_cron_disabled = (defined('DISABLE_WP_CRON') && DISABLE_WP_CRON) ? 'Yes' : 'No';
+        $youtube_nonce = wp_create_nonce('vh360_youtube_check_now');
+
         // Livestream offline/ended message settings
         $default_stream_ended_html = get_option('vh360_default_stream_ended_html', '');
         $default_live_room_offline_html = get_option('vh360_default_live_room_offline_html', '');
@@ -480,40 +531,44 @@ class VideoHub360_Admin {
         $default_live_room_offline_icon = get_option('vh360_default_live_room_offline_icon', '🔴');
         
         ?>
-        <div class="wrap">
+        <div class="wrap vh360-core-settings-page">
             <h1>VideoHub360 Settings</h1>
+            <p class="vh360-settings-intro">Configure VideoHub360 playback, livestream, archive, chat, and automation settings from one organized admin screen.</p>
             <form method="post" action="">
                 <?php wp_nonce_field('videohub360_settings', 'videohub360_settings_nonce'); ?>
                 
-                <table class="form-table">
-                    <tr>
-                        <th scope="row" colspan="2"><h3 style="margin: 20px 0 10px 0;">Global Ad Settings</h3></th>
-                    </tr>
+<div class="vh360-settings-card">
+                    <div class="vh360-settings-card__header">
+                        <h2>Global Ad Settings</h2>
+                            <p>Configure the default pre-roll, mid-roll, and post-roll advertising assets used across VideoHub360 videos.</p>
+                    </div>
+                    <table class="form-table vh360-settings-card__table">
+                        <tbody>
                     <tr>
                         <th scope="row">Global Pre-roll Ad URL</th>
                         <td>
-                            <input type="url" name="videohub360_global_ad_url" value="<?php echo esc_attr($global_ad_url); ?>" style="width: 400px;" />
+                            <input type="url" name="videohub360_global_ad_url" value="<?php echo esc_attr($global_ad_url); ?>" class="vh360-field-wide" />
                             <p class="description">This will be used for all videos unless overridden individually</p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row">Global Mid-roll Ad URL</th>
                         <td>
-                            <input type="url" name="videohub360_global_midroll_ad_url" value="<?php echo esc_attr($global_midroll_ad_url); ?>" style="width: 400px;" />
+                            <input type="url" name="videohub360_global_midroll_ad_url" value="<?php echo esc_attr($global_midroll_ad_url); ?>" class="vh360-field-wide" />
                             <p class="description">Global mid-roll ad URL for all videos</p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row">Global Mid-roll Timing</th>
                         <td>
-                            <input type="text" name="videohub360_global_midroll_timing" value="<?php echo esc_attr($global_midroll_timing); ?>" style="width: 200px;" />
+                            <input type="text" name="videohub360_global_midroll_timing" value="<?php echo esc_attr($global_midroll_timing); ?>" class="vh360-field-medium" />
                             <p class="description">Comma-separated seconds (e.g., "30,60,120")</p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row">Global Post-roll Ad URL</th>
                         <td>
-                            <input type="url" name="videohub360_global_postroll_ad_url" value="<?php echo esc_attr($global_postroll_ad_url); ?>" style="width: 400px;" />
+                            <input type="url" name="videohub360_global_postroll_ad_url" value="<?php echo esc_attr($global_postroll_ad_url); ?>" class="vh360-field-wide" />
                             <p class="description">Global post-roll ad URL for all videos</p>
                         </td>
                     </tr>
@@ -527,13 +582,20 @@ class VideoHub360_Admin {
                         </td>
                     </tr>
                     
-                    <tr>
-                        <th scope="row" colspan="2"><h3 style="margin: 20px 0 10px 0;">Ad Click-Through Settings</h3></th>
-                    </tr>
+                    </tbody>
+                    </table>
+                </div>
+                <div class="vh360-settings-card">
+                    <div class="vh360-settings-card__header">
+                        <h2>Ad Click-Through Settings</h2>
+                            <p>Set the default destination and analytics behavior for video ad clicks.</p>
+                    </div>
+                    <table class="form-table vh360-settings-card__table">
+                        <tbody>
                     <tr>
                         <th scope="row">Global Ad Click-Through URL</th>
                         <td>
-                            <input type="url" name="vh360_global_ad_click_url" value="<?php echo esc_attr($global_ad_click_url); ?>" style="width: 400px;" placeholder="https://videohub360.com/advertiser-page" />
+                            <input type="url" name="vh360_global_ad_click_url" value="<?php echo esc_attr($global_ad_click_url); ?>" class="vh360-field-wide" placeholder="https://videohub360.com/advertiser-page" />
                             <p class="description">Default click-through URL for all video ads. This will be used unless overridden on individual videos. Leave blank to disable ad clicks globally.</p>
                         </td>
                     </tr>
@@ -558,42 +620,54 @@ class VideoHub360_Admin {
                         </td>
                     </tr>
                     
-                    <tr>
-                        <th scope="row" colspan="2"><h3 style="margin: 20px 0 10px 0;">URL Slug Settings</h3></th>
-                    </tr>
+                    </tbody>
+                    </table>
+                </div>
+                <div class="vh360-settings-card">
+                    <div class="vh360-settings-card__header">
+                        <h2>URL Slug Settings</h2>
+                            <p>Control the public URL slugs used for VideoHub360 videos and taxonomies.</p>
+                    </div>
+                    <table class="form-table vh360-settings-card__table">
+                        <tbody>
                     <tr>
                         <th scope="row">Video Post Slug</th>
                         <td>
-                            <input type="text" name="videohub360_post_slug" value="<?php echo esc_attr($post_slug); ?>" style="width: 200px;" />
+                            <input type="text" name="videohub360_post_slug" value="<?php echo esc_attr($post_slug); ?>" class="vh360-field-medium" />
                             <p class="description">URL slug for individual videos</p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row">Category Slug</th>
                         <td>
-                            <input type="text" name="videohub360_category_slug" value="<?php echo esc_attr($category_slug); ?>" style="width: 200px;" />
+                            <input type="text" name="videohub360_category_slug" value="<?php echo esc_attr($category_slug); ?>" class="vh360-field-medium" />
                             <p class="description">URL slug for video categories</p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row">Location Slug</th>
                         <td>
-                            <input type="text" name="videohub360_location_slug" value="<?php echo esc_attr($location_slug); ?>" style="width: 200px;" />
+                            <input type="text" name="videohub360_location_slug" value="<?php echo esc_attr($location_slug); ?>" class="vh360-field-medium" />
                             <p class="description">URL slug for video locations</p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row">Series Slug</th>
                         <td>
-                            <input type="text" name="videohub360_series_slug" value="<?php echo esc_attr($series_slug); ?>" style="width: 200px;" />
+                            <input type="text" name="videohub360_series_slug" value="<?php echo esc_attr($series_slug); ?>" class="vh360-field-medium" />
                             <p class="description">URL slug for video series</p>
                         </td>
                     </tr>
-                    <tr>
-                        
-                    <tr>
-                        <th scope="row" colspan="2"><h3 style="margin: 20px 0 10px 0;">Archive Page Header</h3></th>
-                    </tr>
+                    </tbody>
+                    </table>
+                </div>
+                <div class="vh360-settings-card">
+                    <div class="vh360-settings-card__header">
+                        <h2>Archive Page Header</h2>
+                            <p>Choose whether to show a banner header and title on the VideoHub360 archive page.</p>
+                    </div>
+                    <table class="form-table vh360-settings-card__table">
+                        <tbody>
                     <tr>
                         <th scope="row">Show Header Banner</th>
                         <td>
@@ -607,12 +681,20 @@ class VideoHub360_Admin {
                     <tr>
                         <th scope="row">Header Title</th>
                         <td>
-                            <input type="text" name="videohub360_archive_title" value="<?php echo esc_attr($archive_title); ?>" style="width:300px;" />
+                            <input type="text" name="videohub360_archive_title" value="<?php echo esc_attr($archive_title); ?>" class="vh360-field-medium" />
                             <p class="description">Defaults to “Archive”.</p>
                         </td>
                     </tr>
-    <th scope="row" colspan="2"><h3 style="margin: 20px 0 10px 0;">Archive Page Filters</h3></th>
-                    </tr>
+                    </tbody>
+                    </table>
+                </div>
+                <div class="vh360-settings-card">
+                    <div class="vh360-settings-card__header">
+                        <h2>Archive Page Filters</h2>
+                            <p>Enable and label the filters shown on VideoHub360 archive views.</p>
+                    </div>
+                    <table class="form-table vh360-settings-card__table">
+                        <tbody>
                     <tr>
                         <th scope="row">Category Filter</th>
                         <td>
@@ -622,7 +704,7 @@ class VideoHub360_Admin {
                             </label>
                             <br><br>
                             <label for="videohub360_category_label">Filter Label:</label>
-                            <input type="text" name="videohub360_category_label" id="videohub360_category_label" value="<?php echo esc_attr($category_label); ?>" style="width: 200px;" />
+                            <input type="text" name="videohub360_category_label" id="videohub360_category_label" value="<?php echo esc_attr($category_label); ?>" class="vh360-field-medium" />
                             <p class="description">Label displayed for the category filter dropdown</p>
                         </td>
                     </tr>
@@ -635,7 +717,7 @@ class VideoHub360_Admin {
                             </label>
                             <br><br>
                             <label for="videohub360_series_label">Filter Label:</label>
-                            <input type="text" name="videohub360_series_label" id="videohub360_series_label" value="<?php echo esc_attr($series_label); ?>" style="width: 200px;" />
+                            <input type="text" name="videohub360_series_label" id="videohub360_series_label" value="<?php echo esc_attr($series_label); ?>" class="vh360-field-medium" />
                             <p class="description">Label displayed for the series filter dropdown</p>
                         </td>
                     </tr>
@@ -648,13 +730,20 @@ class VideoHub360_Admin {
                             </label>
                             <br><br>
                             <label for="videohub360_location_label">Filter Label:</label>
-                            <input type="text" name="videohub360_location_label" id="videohub360_location_label" value="<?php echo esc_attr($location_label); ?>" style="width: 200px;" />
+                            <input type="text" name="videohub360_location_label" id="videohub360_location_label" value="<?php echo esc_attr($location_label); ?>" class="vh360-field-medium" />
                             <p class="description">Label displayed for the location filter dropdown</p>
                         </td>
                     </tr>
-                    <tr>
-                        <th scope="row" colspan="2"><h3 style="margin: 20px 0 10px 0;">VideoHub360 Single Video Layout</h3></th>
-                    </tr>
+                    </tbody>
+                    </table>
+                </div>
+                <div class="vh360-settings-card">
+                    <div class="vh360-settings-card__header">
+                        <h2>Single Video Layout Defaults</h2>
+                            <p>Set default layouts for standard videos, course lessons, and livestream pages.</p>
+                    </div>
+                    <table class="form-table vh360-settings-card__table">
+                        <tbody>
                     <tr>
                         <td colspan="2">
                             <p class="description">Controls the default layout for VideoHub360 single video pages. Individual videos can override this setting from the Sidebar Configuration panel. Course lessons and livestream videos can use separate defaults for a more focused viewing or teaching experience.</p>
@@ -693,19 +782,20 @@ class VideoHub360_Admin {
                         </td>
                     </tr>
 
-                    <tr>
-                        <th scope="row" colspan="2">
-                            <h3 style="margin: 20px 0 10px 0;">Agora.io Settings</h3>
-                            <p style="margin: 0 0 15px 0; color: #666; font-size: 0.95em;">
-                                <strong>🚀 Scenario 2: Multi-site, per-site credentials</strong><br>
-                                Configure global Agora credentials once for all livestreams on this site. Each video uses its own channel name for secure, isolated streaming.
-                            </p>
-                        </th>
-                    </tr>
+                    </tbody>
+                    </table>
+                </div>
+                <div class="vh360-settings-card">
+                    <div class="vh360-settings-card__header">
+                        <h2>Agora Settings</h2>
+                            <p>Configure global Agora credentials once for interactive livestream workflows. Each video still uses its own channel name for isolation.</p>
+                    </div>
+                    <table class="form-table vh360-settings-card__table">
+                        <tbody>
                     <tr>
                         <th scope="row">Agora App ID</th>
                         <td>
-                            <input type="text" name="vh360_agora_app_id" value="<?php echo esc_attr(get_option('vh360_agora_app_id', '')); ?>" style="width: 400px;" placeholder="Enter your Agora App ID" />
+                            <input type="text" name="vh360_agora_app_id" value="<?php echo esc_attr(get_option('vh360_agora_app_id', '')); ?>" class="vh360-field-wide" placeholder="Enter your Agora App ID" />
                             <p class="description">
                                 <strong>Global App ID for all livestreams on this site.</strong><br>
                                 Get this from your <a href="https://console.agora.io/" target="_blank">Agora Console</a> → Project Settings → App ID.<br>
@@ -716,7 +806,7 @@ class VideoHub360_Admin {
                     <tr>
                         <th scope="row">Agora App Certificate</th>
                         <td>
-                            <input type="password" name="vh360_agora_app_certificate" value="<?php echo esc_attr(get_option('vh360_agora_app_certificate', '')); ?>" style="width: 400px;" placeholder="Enter your Agora App Certificate" />
+                            <input type="password" name="vh360_agora_app_certificate" value="<?php echo esc_attr(get_option('vh360_agora_app_certificate', '')); ?>" class="vh360-field-wide" placeholder="Enter your Agora App Certificate" />
                             <p class="description">
                                 <strong>Required for secure token generation.</strong><br>
                                 Get this from your <a href="https://console.agora.io/" target="_blank">Agora Console</a> → Project Settings → App Certificate.<br>
@@ -736,15 +826,115 @@ class VideoHub360_Admin {
                                 Disabling this is for local testing only. When disabled, users can join Agora channels without a server-issued token.
                             </p>
                             <?php if (!get_option('vh360_agora_require_tokens', 1)) : ?>
-                                <p style="color: #c00; font-weight: bold; margin-top: 8px;">
+                                <p class="vh360-settings-warning">
                                     ⚠️ Warning: Tokenless Agora access is not recommended for production. Enable this option before going live.
                                 </p>
                             <?php endif; ?>
                         </td>
                     </tr>
+                    </tbody>
+                    </table>
+                </div>
+                <div class="vh360-settings-card">
+                    <div class="vh360-settings-card__header">
+                        <h2>YouTube Live Auto-Broadcast</h2>
+                            <p>Automatically monitor a YouTube channel and create or update a VideoHub360 live post when the channel goes live.</p>
+                    </div>
+                    <table class="form-table vh360-settings-card__table">
+                        <tbody>
                     <tr>
-                        <th scope="row" colspan="2"><h3 style="margin: 20px 0 10px 0;">Chat Settings</h3></th>
+                        <th scope="row">Enable Auto-Broadcast</th>
+                        <td><label><input type="checkbox" name="vh360_youtube_live_enabled" value="1" <?php checked($youtube_enabled, 1); ?> /> Automatically monitor YouTube livestreams</label></td>
                     </tr>
+                    <tr>
+                        <th scope="row">YouTube API Key</th>
+                        <td><input type="password" name="vh360_youtube_api_key" value="<?php echo esc_attr(get_option('vh360_youtube_api_key', '')); ?>" class="vh360-field-wide" autocomplete="new-password" /><p class="description">Stored securely as a WordPress option. The key is not shown in status output.</p></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">YouTube Channel ID</th>
+                        <td><input type="text" name="vh360_youtube_channel_id" value="<?php echo esc_attr(get_option('vh360_youtube_channel_id', '')); ?>" class="vh360-field-wide" /></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Detection Mode</th>
+                        <td><select name="vh360_youtube_detection_mode"><option value="scheduled" <?php selected($youtube_detection_mode, 'scheduled'); ?>>Scheduled windows only</option><option value="always" <?php selected($youtube_detection_mode, 'always'); ?>>Always check</option><option value="manual" <?php selected($youtube_detection_mode, 'manual'); ?>>Manual check only</option></select></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Recurring Schedules</th>
+                        <td>
+                            <?php foreach ($youtube_schedules as $i => $schedule) : ?>
+                                <div class="vh360-youtube-schedule-row" data-index="<?php echo esc_attr($i); ?>">
+                                    <div class="vh360-youtube-schedule-row__header">
+                                        <strong><?php echo esc_html__('Schedule Window', 'videohub360'); ?></strong>
+                                        <button type="button" class="button-link-delete vh360-youtube-remove-schedule"><?php echo esc_html__('Remove', 'videohub360'); ?></button>
+                                    </div>
+                                    <div class="vh360-youtube-schedule-grid">
+                                        <label class="vh360-checkbox-label vh360-youtube-schedule-enabled"><input type="checkbox" name="vh360_youtube_schedules[<?php echo esc_attr($i); ?>][enabled]" value="1" <?php checked(!empty($schedule['enabled'])); ?> /><span><?php echo esc_html__('Enabled', 'videohub360'); ?></span></label>
+                                        <label><span><?php echo esc_html__('Day', 'videohub360'); ?></span><select name="vh360_youtube_schedules[<?php echo esc_attr($i); ?>][day]">
+                                            <?php foreach (array('sunday','monday','tuesday','wednesday','thursday','friday','saturday') as $day) : ?>
+                                                <option value="<?php echo esc_attr($day); ?>" <?php selected($schedule['day'] ?? 'sunday', $day); ?>><?php echo esc_html(ucfirst($day)); ?></option>
+                                            <?php endforeach; ?>
+                                        </select></label>
+                                        <label><span><?php echo esc_html__('Start Time', 'videohub360'); ?></span><input type="time" name="vh360_youtube_schedules[<?php echo esc_attr($i); ?>][start_time]" value="<?php echo esc_attr($schedule['start_time'] ?? '10:00'); ?>" /></label>
+                                        <label><span><?php echo esc_html__('Duration', 'videohub360'); ?></span><input type="number" min="1" max="720" name="vh360_youtube_schedules[<?php echo esc_attr($i); ?>][expected_duration_minutes]" value="<?php echo esc_attr($schedule['expected_duration_minutes'] ?? 120); ?>" /> <em>min</em></label>
+                                        <label><span><?php echo esc_html__('Precheck', 'videohub360'); ?></span><input type="number" min="0" max="240" name="vh360_youtube_schedules[<?php echo esc_attr($i); ?>][precheck_minutes]" value="<?php echo esc_attr($schedule['precheck_minutes'] ?? 30); ?>" /> <em>min</em></label>
+                                        <label><span><?php echo esc_html__('Grace', 'videohub360'); ?></span><input type="number" min="1" max="240" name="vh360_youtube_schedules[<?php echo esc_attr($i); ?>][grace_minutes]" value="<?php echo esc_attr($schedule['grace_minutes'] ?? 20); ?>" /> <em>min</em></label>
+                                        <label class="vh360-youtube-schedule-wide"><span><?php echo esc_html__('Title Prefix', 'videohub360'); ?></span><input type="text" name="vh360_youtube_schedules[<?php echo esc_attr($i); ?>][title_prefix]" value="<?php echo esc_attr($schedule['title_prefix'] ?? ''); ?>" /></label>
+                                        <label><span><?php echo esc_html__('Category ID', 'videohub360'); ?></span><input type="number" min="0" name="vh360_youtube_schedules[<?php echo esc_attr($i); ?>][category]" value="<?php echo esc_attr($schedule['category'] ?? 0); ?>" /></label>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                            <p><button type="button" class="button button-secondary" id="vh360-add-youtube-schedule" data-next-index="<?php echo esc_attr(count($youtube_schedules)); ?>" data-duration-default="<?php echo esc_attr(absint(get_option('vh360_youtube_expected_duration_minutes', 120)) ?: 120); ?>" data-precheck-default="<?php echo esc_attr(absint(get_option('vh360_youtube_precheck_minutes', 30))); ?>" data-grace-default="<?php echo esc_attr(absint(get_option('vh360_youtube_grace_minutes', 20)) ?: 20); ?>">Add schedule row</button></p>
+                            <p class="description">Add one or more expected YouTube live windows. The monitor checks from precheck before the start time through the expected duration plus grace period.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Post Behavior</th>
+                        <td><select name="vh360_youtube_post_behavior"><option value="auto_create" <?php selected($youtube_post_behavior, 'auto_create'); ?>>Auto-create one post per YouTube live video</option><option value="update_selected" <?php selected($youtube_post_behavior, 'update_selected'); ?>>Update selected VideoHub360 post</option></select> Target Post ID <input type="number" min="0" name="vh360_youtube_target_post_id" value="<?php echo esc_attr(get_option('vh360_youtube_target_post_id', 0)); ?>" class="vh360-field-small" /></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Defaults</th>
+                        <td>Author ID <input type="number" min="1" name="vh360_youtube_default_author_id" value="<?php echo esc_attr(get_option('vh360_youtube_default_author_id', get_current_user_id())); ?>" class="vh360-field-small" /> Category ID <input type="number" min="0" name="vh360_youtube_default_category" value="<?php echo esc_attr(get_option('vh360_youtube_default_category', 0)); ?>" class="vh360-field-small" /></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Featured Image Behavior</th>
+                        <td><select name="vh360_youtube_featured_image_behavior"><option value="youtube_if_empty" <?php selected($youtube_featured_image_behavior, 'youtube_if_empty'); ?>>Use YouTube thumbnail only if empty</option><option value="keep_manual" <?php selected($youtube_featured_image_behavior, 'keep_manual'); ?>>Keep manual featured image</option><option value="youtube_always" <?php selected($youtube_featured_image_behavior, 'youtube_always'); ?>>Always replace with YouTube thumbnail</option><option value="default_image" <?php selected($youtube_featured_image_behavior, 'default_image'); ?>>Use default live image</option></select> Default Image Attachment ID <input type="number" min="0" name="vh360_youtube_default_featured_image_id" value="<?php echo esc_attr(get_option('vh360_youtube_default_featured_image_id', 0)); ?>" class="vh360-field-small" /></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Replay Behavior</th>
+                        <td><select name="vh360_youtube_replay_behavior"><option value="mark_ended" <?php selected($youtube_replay_behavior, 'mark_ended'); ?>>Mark stream ended</option><option value="convert_replay_embed" <?php selected($youtube_replay_behavior, 'convert_replay_embed'); ?>>Convert to replay embed</option><option value="keep_replay" <?php selected($youtube_replay_behavior, 'keep_replay'); ?>>Keep as normal video replay</option></select></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Fallback Window Defaults</th>
+                        <td><div class="vh360-field-row"><label>Precheck <input class="vh360-field-small" type="number" min="0" max="240" name="vh360_youtube_precheck_minutes" value="<?php echo esc_attr(get_option('vh360_youtube_precheck_minutes', 30)); ?>" /> min</label><label>Expected duration <input class="vh360-field-small" type="number" min="1" max="720" name="vh360_youtube_expected_duration_minutes" value="<?php echo esc_attr(get_option('vh360_youtube_expected_duration_minutes', 120)); ?>" /> min</label><label>Grace <input class="vh360-field-small" type="number" min="1" max="240" name="vh360_youtube_grace_minutes" value="<?php echo esc_attr(get_option('vh360_youtube_grace_minutes', 20)); ?>" /> min</label></div></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Cron Status</th>
+                        <td>
+                            <div class="vh360-youtube-status-grid">
+                                <div><strong>Recommended server cron command</strong><code>curl -s "<?php echo esc_url(site_url('wp-cron.php?doing_wp_cron')); ?>"</code></div>
+                                <div><strong>Recommended interval</strong><span>Every 5 minutes</span></div>
+                                <div><strong>WP-Cron disabled</strong><span><?php echo esc_html($youtube_cron_disabled); ?></span></div>
+                                <div><strong>Next scheduled WordPress cron</strong><span><?php echo $youtube_next_cron ? esc_html(date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $youtube_next_cron)) : 'None'; ?></span></div>
+                                <div><strong>Last cron heartbeat</strong><span><?php echo esc_html(get_option('vh360_youtube_last_heartbeat_at', 'Never')); ?></span></div>
+                                <div><strong>Last YouTube check</strong><span><?php echo esc_html(get_option('vh360_youtube_last_check_at', 'Never')); ?></span></div>
+                                <div><strong>Last detected YouTube video</strong><span><?php echo esc_html(get_option('vh360_youtube_last_detected_video_id', 'none') ?: 'none'); ?></span></div>
+                                <div><strong>Last result</strong><span><?php echo esc_html(get_option('vh360_youtube_last_result', 'none')); ?> <?php if (get_option('vh360_youtube_last_error', '')) : ?>(<?php echo esc_html(get_option('vh360_youtube_last_error')); ?>)<?php endif; ?></span></div>
+                            </div>
+                            <button type="button" class="button button-secondary" id="vh360-youtube-check-now" data-nonce="<?php echo esc_attr($youtube_nonce); ?>">Check YouTube Now</button>
+                            <div id="vh360-youtube-check-result" class="vh360-youtube-check-result" aria-live="polite"></div>
+                        </td>
+                    </tr>
+
+                    </tbody>
+                    </table>
+                </div>
+                <div class="vh360-settings-card">
+                    <div class="vh360-settings-card__header">
+                        <h2>Chat Settings</h2>
+                            <p>Configure live chat availability, placement, retention, rate limits, and message length.</p>
+                    </div>
+                    <table class="form-table vh360-settings-card__table">
+                        <tbody>
                     <tr>
                         <th scope="row">Enable Chat</th>
                         <td>
@@ -757,7 +947,7 @@ class VideoHub360_Admin {
                     <tr>
                         <th scope="row">Chat Placement</th>
                         <td>
-                            <select name="videohub360_chat_placement" style="width: 300px;">
+                            <select name="videohub360_chat_placement" class="vh360-field-medium">
                                 <option value="inline"  <?php selected($chat_placement, 'inline'); ?>>Inline (replaces comments)</option>
                                 <option value="popup"   <?php selected($chat_placement, 'popup'); ?>>Popup (button opens overlay)</option>
                                 <option value="sidebar" <?php selected($chat_placement, 'sidebar'); ?>>Sidebar (YouTube-style)</option>
@@ -774,28 +964,35 @@ class VideoHub360_Admin {
                     <tr>
                         <th scope="row">Chat Cleanup Days</th>
                         <td>
-                            <input type="number" name="videohub360_chat_cleanup_days" value="<?php echo esc_attr($chat_cleanup_days); ?>" min="1" style="width: 100px;" />
+                            <input type="number" name="videohub360_chat_cleanup_days" value="<?php echo esc_attr($chat_cleanup_days); ?>" min="1" class="vh360-field-small" />
                             <p class="description">Delete chat messages older than this many days</p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row">Rate Limit (messages/minute)</th>
                         <td>
-                            <input type="number" name="videohub360_chat_rate_limit" value="<?php echo esc_attr($chat_rate_limit); ?>" min="1" style="width: 100px;" />
+                            <input type="number" name="videohub360_chat_rate_limit" value="<?php echo esc_attr($chat_rate_limit); ?>" min="1" class="vh360-field-small" />
                             <p class="description">Maximum messages per user per minute</p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row">Message Character Limit</th>
                         <td>
-                            <input type="number" name="videohub360_chat_message_limit" value="<?php echo esc_attr($chat_message_limit); ?>" min="10" style="width: 100px;" />
+                            <input type="number" name="videohub360_chat_message_limit" value="<?php echo esc_attr($chat_message_limit); ?>" min="10" class="vh360-field-small" />
                             <p class="description">Maximum characters per chat message</p>
                         </td>
                     </tr>
                     
-                    <tr>
-                        <th scope="row" colspan="2"><h3 style="margin: 20px 0 10px 0;">Interactive Livestream Settings</h3></th>
-                    </tr>
+                    </tbody>
+                    </table>
+                </div>
+                <div class="vh360-settings-card">
+                    <div class="vh360-settings-card__header">
+                        <h2>Interactive Livestream Settings</h2>
+                            <p>Control interactive livestream login requirements for everyone-is-host mode.</p>
+                    </div>
+                    <table class="form-table vh360-settings-card__table">
+                        <tbody>
                     <tr>
                         <th scope="row">Login Requirement for Everyone-Is-Host Mode</th>
                         <td>
@@ -807,14 +1004,21 @@ class VideoHub360_Admin {
                         </td>
                     </tr>
                     
-                    <tr>
-                        <th scope="row" colspan="2"><h3 style="margin: 20px 0 10px 0;">Login Modal Settings</h3></th>
-                    </tr>
+                    </tbody>
+                    </table>
+                </div>
+                <div class="vh360-settings-card">
+                    <div class="vh360-settings-card__header">
+                        <h2>Login Modal Settings</h2>
+                            <p>Choose how VideoHub360 prompts viewers to log in when access is required.</p>
+                    </div>
+                    <table class="form-table vh360-settings-card__table">
+                        <tbody>
                     <tr>
                         <th scope="row">Login Modal Type</th>
                         <td>
                             <?php $login_modal_type = get_option('videohub360_login_modal_type', 'default'); ?>
-                            <select name="videohub360_login_modal_type" style="width: 200px;">
+                            <select name="videohub360_login_modal_type" class="vh360-field-medium">
                                 <option value="default" <?php selected($login_modal_type, 'default'); ?>>Default WordPress Login</option>
                                 <option value="shortcode" <?php selected($login_modal_type, 'shortcode'); ?>>Custom Shortcode</option>
                                 <option value="redirect" <?php selected($login_modal_type, 'redirect'); ?>>Redirect to URL</option>
@@ -827,32 +1031,39 @@ class VideoHub360_Admin {
                     <tr>
                         <th scope="row">Custom Shortcode</th>
                         <td>
-                            <input type="text" name="videohub360_login_modal_shortcode" value="<?php echo esc_attr(get_option('videohub360_login_modal_shortcode', '')); ?>" style="width: 400px;" placeholder="[your_login_form]" />
+                            <input type="text" name="videohub360_login_modal_shortcode" value="<?php echo esc_attr(get_option('videohub360_login_modal_shortcode', '')); ?>" class="vh360-field-wide" placeholder="[your_login_form]" />
                             <p class="description">Used when "Custom Shortcode" is selected</p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row">Redirect URL</th>
                         <td>
-                            <input type="url" name="videohub360_login_modal_redirect_url" value="<?php echo esc_attr(get_option('videohub360_login_modal_redirect_url', '')); ?>" style="width: 400px;" placeholder="https://yoursite.com/login" />
+                            <input type="url" name="videohub360_login_modal_redirect_url" value="<?php echo esc_attr(get_option('videohub360_login_modal_redirect_url', '')); ?>" class="vh360-field-wide" placeholder="https://yoursite.com/login" />
                             <p class="description">Used when "Redirect to URL" is selected</p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row">JavaScript Function</th>
                         <td>
-                            <input type="text" name="videohub360_login_modal_js_function" value="<?php echo esc_attr(get_option('videohub360_login_modal_js_function', '')); ?>" style="width: 400px;" placeholder="myCustomLoginFunction" />
+                            <input type="text" name="videohub360_login_modal_js_function" value="<?php echo esc_attr(get_option('videohub360_login_modal_js_function', '')); ?>" class="vh360-field-wide" placeholder="myCustomLoginFunction" />
                             <p class="description">Function name to call when "Custom JavaScript Function" is selected</p>
                         </td>
                     </tr>
                     
-                    <tr>
-                        <th scope="row" colspan="2"><h3 style="margin: 20px 0 10px 0;">🎬 Video Quality & Streaming Settings</h3></th>
-                    </tr>
+                    </tbody>
+                    </table>
+                </div>
+                <div class="vh360-settings-card">
+                    <div class="vh360-settings-card__header">
+                        <h2>Video Quality & Streaming Settings</h2>
+                            <p>Set global playback quality, mirror controls, badges, and 4K streaming options.</p>
+                    </div>
+                    <table class="form-table vh360-settings-card__table">
+                        <tbody>
                     <tr>
                         <th scope="row">Default Video Quality</th>
                         <td>
-                            <select name="videohub360_default_quality" style="width: 300px;">
+                            <select name="videohub360_default_quality" class="vh360-field-medium">
                                 <?php 
                                 $quality_options = VideoHub360_Video_Quality::get_quality_options();
                                 foreach ($quality_options as $key => $label) {
@@ -866,7 +1077,7 @@ class VideoHub360_Admin {
                     <tr>
                         <th scope="row">Default Mirror Setting</th>
                         <td>
-                            <select name="videohub360_default_mirror" style="width: 300px;">
+                            <select name="videohub360_default_mirror" class="vh360-field-medium">
                                 <?php 
                                 $mirror_options = VideoHub360_Video_Quality::get_mirror_options();
                                 foreach ($mirror_options as $key => $label) {
@@ -894,55 +1105,69 @@ class VideoHub360_Admin {
                         </td>
                     </tr>
                     
-                    <tr>
-                        <th scope="row" colspan="2"><h3 style="margin: 20px 0 10px 0;">Livestream Offline / Ended Messages</h3></th>
-                    </tr>
+                    </tbody>
+                    </table>
+                </div>
+                <div class="vh360-settings-card">
+                    <div class="vh360-settings-card__header">
+                        <h2>Livestream Offline / Ended Messages</h2>
+                            <p>Customize the messages shown when manual, Agora, API, or live-room streams are offline or ended.</p>
+                    </div>
+                    <table class="form-table vh360-settings-card__table">
+                        <tbody>
                     <tr>
                         <th scope="row">Default Stream Ended HTML</th>
                         <td>
-                            <textarea name="vh360_default_stream_ended_html" rows="5" style="width: 100%; max-width: 600px; font-family: monospace;"><?php echo esc_textarea($default_stream_ended_html); ?></textarea>
+                            <textarea name="vh360_default_stream_ended_html" rows="5" class="vh360-field-code"><?php echo esc_textarea($default_stream_ended_html); ?></textarea>
                             <p class="description">HTML allowed. Leave empty to use icon + default text. Use classes like vh360-offline-message for consistent styling.</p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row">Default Stream Ended Icon</th>
                         <td>
-                            <input type="text" name="vh360_default_stream_ended_icon" value="<?php echo esc_attr($default_stream_ended_icon); ?>" style="width: 100px;" />
+                            <input type="text" name="vh360_default_stream_ended_icon" value="<?php echo esc_attr($default_stream_ended_icon); ?>" class="vh360-field-small" />
                             <p class="description">Emoji or icon character. Used when HTML field is empty.</p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row">Default Live Room Offline HTML</th>
                         <td>
-                            <textarea name="vh360_default_live_room_offline_html" rows="5" style="width: 100%; max-width: 600px; font-family: monospace;"><?php echo esc_textarea($default_live_room_offline_html); ?></textarea>
+                            <textarea name="vh360_default_live_room_offline_html" rows="5" class="vh360-field-code"><?php echo esc_textarea($default_live_room_offline_html); ?></textarea>
                             <p class="description">HTML allowed. Leave empty to use icon + default text.</p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row">Default Live Room Offline Icon</th>
                         <td>
-                            <input type="text" name="vh360_default_live_room_offline_icon" value="<?php echo esc_attr($default_live_room_offline_icon); ?>" style="width: 100px;" />
+                            <input type="text" name="vh360_default_live_room_offline_icon" value="<?php echo esc_attr($default_live_room_offline_icon); ?>" class="vh360-field-small" />
                             <p class="description">Emoji or icon character. Used when HTML field is empty.</p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row">Stream Ended by Moderator HTML</th>
                         <td>
-                            <textarea name="vh360_stream_ended_by_moderator_html" rows="5" style="width: 100%; max-width: 600px; font-family: monospace;"><?php echo esc_textarea($stream_ended_by_moderator_html); ?></textarea>
+                            <textarea name="vh360_stream_ended_by_moderator_html" rows="5" class="vh360-field-code"><?php echo esc_textarea($stream_ended_by_moderator_html); ?></textarea>
                             <p class="description">HTML allowed. Shown when a moderator manually ends the stream.</p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row">Stream Ended / Host Needs Restart HTML</th>
                         <td>
-                            <textarea name="vh360_stream_ended_needs_restart_html" rows="5" style="width: 100%; max-width: 600px; font-family: monospace;"><?php echo esc_textarea($stream_ended_needs_restart_html); ?></textarea>
+                            <textarea name="vh360_stream_ended_needs_restart_html" rows="5" class="vh360-field-code"><?php echo esc_textarea($stream_ended_needs_restart_html); ?></textarea>
                             <p class="description">HTML allowed. Shown when the host needs to restart the stream.</p>
                         </td>
                     </tr>
                     
-                    <tr>
-                        <th scope="row" colspan="2"><h3 style="margin: 20px 0 10px 0;">Course / Lesson Features</h3></th>
-                    </tr>
+                    </tbody>
+                    </table>
+                </div>
+                <div class="vh360-settings-card">
+                    <div class="vh360-settings-card__header">
+                        <h2>Course / Lesson Features</h2>
+                            <p>Enable course and lesson presentation features that build on existing VideoHub360 videos and series.</p>
+                    </div>
+                    <table class="form-table vh360-settings-card__table">
+                        <tbody>
                     <tr>
                         <th scope="row">Enable Course / Lesson Features</th>
                         <td>
@@ -954,8 +1179,10 @@ class VideoHub360_Admin {
                         </td>
                     </tr>
                     
-                </table>
-                
+                    </tbody>
+                    </table>
+                </div>
+
                 <?php submit_button(); ?>
             </form>
         </div>
