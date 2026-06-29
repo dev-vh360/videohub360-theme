@@ -383,9 +383,8 @@ class VideoHub360_Admin {
             update_option('vh360_youtube_precheck_minutes', max(0, min(240, absint($_POST['vh360_youtube_precheck_minutes'] ?? 30))));
             update_option('vh360_youtube_expected_duration_minutes', max(1, min(720, absint($_POST['vh360_youtube_expected_duration_minutes'] ?? 120))));
             update_option('vh360_youtube_grace_minutes', max(1, min(240, absint($_POST['vh360_youtube_grace_minutes'] ?? 20))));
-            $youtube_monitor = new VideoHub360_YouTube_Live_Monitor();
-            update_option('vh360_youtube_schedules', $youtube_monitor->sanitize_schedules($_POST['vh360_youtube_schedules'] ?? array()));
-            $youtube_monitor->reschedule();
+            update_option('vh360_youtube_schedules', VideoHub360_YouTube_Live_Monitor::sanitize_schedules($_POST['vh360_youtube_schedules'] ?? array()));
+            do_action('vh360_youtube_live_settings_saved');
 
             // Update interactive livestream settings
             update_option('videohub360_force_login_everyone_host', isset($_POST['videohub360_force_login_everyone_host']) ? 1 : 0);

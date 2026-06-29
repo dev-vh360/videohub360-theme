@@ -24,6 +24,7 @@ class VideoHub360_YouTube_Live_Monitor {
         add_action(self::CRON_HOOK, array($this, 'cron_check'));
         add_action('admin_init', array($this, 'maybe_reschedule'));
         add_action('update_option_vh360_youtube_live_enabled', array($this, 'reschedule'), 10, 0);
+        add_action('vh360_youtube_live_settings_saved', array($this, 'reschedule'));
         add_action('wp_ajax_vh360_youtube_check_now', array($this, 'ajax_check_now'));
     }
 
@@ -164,6 +165,7 @@ class VideoHub360_YouTube_Live_Monitor {
             update_post_meta($post_id, '_vh360_live_badge', 'yes');
             update_post_meta($post_id, '_vh360_badge_text', 'LIVE');
             update_post_meta($post_id, '_vh360_youtube_last_seen_live_at', current_time('mysql'));
+            update_post_meta($post_id, '_vh360_youtube_last_seen_live_ts', time());
         } else {
             update_post_meta($post_id, '_vh360_is_live', 'no');
             update_post_meta($post_id, '_vh360_youtube_scheduled_start', $video['published_at']);
@@ -215,8 +217,11 @@ class VideoHub360_YouTube_Live_Monitor {
         $grace = max(1, min(240, absint(get_option('vh360_youtube_grace_minutes', 20))));
         $posts = get_posts(array('post_type'=>'videohub360','posts_per_page'=>20,'fields'=>'ids','meta_query'=>array(array('key'=>'_vh360_youtube_auto_managed','value'=>'yes'),array('key'=>'_vh360_youtube_status','value'=>'live'))));
         foreach ($posts as $post_id) {
-            $last = get_post_meta($post_id, '_vh360_youtube_last_seen_live_at', true);
-            if ($last && (current_time('timestamp') - strtotime($last)) < $grace * MINUTE_IN_SECONDS) continue;
+            $last_seen_ts = absint(get_post_meta($post_id, '_vh360_youtube_last_seen_live_ts', true));
+            if (!$last_seen_ts) {
+                $last_seen_ts = $this->get_local_mysql_timestamp(get_post_meta($post_id, '_vh360_youtube_last_seen_live_at', true));
+            }
+            if ($last_seen_ts && (time() - $last_seen_ts) < $grace * MINUTE_IN_SECONDS) continue;
             $behavior = $this->sanitize_choice(get_option('vh360_youtube_replay_behavior', 'mark_ended'), $this->replay_behaviors, 'mark_ended');
             if ('convert_replay_embed' === $behavior || 'keep_replay' === $behavior) {
                 update_post_meta($post_id, '_vh360_is_live', 'no');
@@ -237,16 +242,38 @@ class VideoHub360_YouTube_Live_Monitor {
 
     private function get_active_window() {
         if ('always' === get_option('vh360_youtube_detection_mode', 'scheduled')) return array('inside'=>true,'phase'=>'live','schedule'=>array());
-        $now = current_time('timestamp'); $day = strtolower(wp_date('l', $now));
-        foreach ($this->sanitize_schedules(get_option('vh360_youtube_schedules', array())) as $schedule) {
+
+        $timezone = wp_timezone();
+        $now = new DateTimeImmutable('now', $timezone);
+        $now_ts = $now->getTimestamp();
+        $day = strtolower($now->format('l'));
+
+        foreach (self::sanitize_schedules(get_option('vh360_youtube_schedules', array())) as $schedule) {
             if (empty($schedule['enabled']) || $schedule['day'] !== $day) continue;
-            list($h, $m) = array_map('intval', explode(':', $schedule['start_time']));
-            $start = strtotime(wp_date('Y-m-d', $now) . sprintf(' %02d:%02d:00', $h, $m));
-            $from = $start - $schedule['precheck_minutes'] * MINUTE_IN_SECONDS;
-            $to = $start + ($schedule['expected_duration_minutes'] + $schedule['grace_minutes']) * MINUTE_IN_SECONDS;
-            if ($now >= $from && $now <= $to) return array('inside'=>true,'phase'=>($now < $start ? 'precheck' : 'live'),'schedule'=>$schedule);
+
+            list($hour, $minute) = array_map('intval', explode(':', $schedule['start_time']));
+            $start = $now->setTime($hour, $minute, 0);
+            $start_ts = $start->getTimestamp();
+            $from_ts = $start_ts - $schedule['precheck_minutes'] * MINUTE_IN_SECONDS;
+            $to_ts = $start_ts + ($schedule['expected_duration_minutes'] + $schedule['grace_minutes']) * MINUTE_IN_SECONDS;
+
+            if ($now_ts >= $from_ts && $now_ts <= $to_ts) {
+                return array('inside'=>true,'phase'=>($now_ts < $start_ts ? 'precheck' : 'live'),'schedule'=>$schedule);
+            }
         }
+
         return array('inside'=>false,'phase'=>'none','schedule'=>array());
+    }
+
+    private function get_local_mysql_timestamp($mysql_datetime) {
+        if (empty($mysql_datetime)) return 0;
+
+        try {
+            $date = new DateTimeImmutable($mysql_datetime, wp_timezone());
+            return $date->getTimestamp();
+        } catch (Exception $e) {
+            return 0;
+        }
     }
 
     private function status($result, $video_id, $post_id, $featured_image_result, $error) {
@@ -256,13 +283,14 @@ class VideoHub360_YouTube_Live_Monitor {
         return array('checked'=>true,'active_live_found'=>('success' === $result),'video_id'=>$video_id ?: '','post_id'=>absint($post_id),'featured_image_result'=>$featured_image_result,'result'=>$result,'error_message'=>$error);
     }
 
-    public function sanitize_schedules($schedules) {
+    public static function sanitize_schedules($schedules) {
         if (!is_array($schedules)) return array();
         $clean = array();
         foreach ($schedules as $schedule) {
             $day = isset($schedule['day']) ? strtolower(sanitize_text_field($schedule['day'])) : 'sunday';
             $time = isset($schedule['start_time']) && preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $schedule['start_time']) ? $schedule['start_time'] : '10:00';
-            if (!in_array($day, $this->days, true)) $day = 'sunday';
+            $allowed_days = array('sunday','monday','tuesday','wednesday','thursday','friday','saturday');
+            if (!in_array($day, $allowed_days, true)) $day = 'sunday';
             $clean[] = array(
                 'enabled' => empty($schedule['enabled']) ? 0 : 1,
                 'day' => $day,
