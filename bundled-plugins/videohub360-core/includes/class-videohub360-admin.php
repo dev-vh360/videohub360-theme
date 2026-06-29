@@ -368,6 +368,25 @@ class VideoHub360_Admin {
             update_option('vh360_agora_app_certificate', sanitize_text_field($_POST['vh360_agora_app_certificate']));
             update_option('vh360_agora_require_tokens', isset($_POST['vh360_agora_require_tokens']) ? 1 : 0);
             
+            // Update YouTube Live Auto-Broadcast settings
+            update_option('vh360_youtube_live_enabled', isset($_POST['vh360_youtube_live_enabled']) ? 1 : 0);
+            update_option('vh360_youtube_api_key', sanitize_text_field($_POST['vh360_youtube_api_key'] ?? ''));
+            update_option('vh360_youtube_channel_id', sanitize_text_field($_POST['vh360_youtube_channel_id'] ?? ''));
+            update_option('vh360_youtube_detection_mode', VideoHub360_YouTube_Live_Monitor::sanitize_option_choice($_POST['vh360_youtube_detection_mode'] ?? 'scheduled', array('scheduled', 'always', 'manual'), 'scheduled'));
+            update_option('vh360_youtube_post_behavior', VideoHub360_YouTube_Live_Monitor::sanitize_option_choice($_POST['vh360_youtube_post_behavior'] ?? 'auto_create', array('update_selected', 'auto_create'), 'auto_create'));
+            update_option('vh360_youtube_target_post_id', absint($_POST['vh360_youtube_target_post_id'] ?? 0));
+            update_option('vh360_youtube_default_author_id', absint($_POST['vh360_youtube_default_author_id'] ?? get_current_user_id()));
+            update_option('vh360_youtube_default_category', absint($_POST['vh360_youtube_default_category'] ?? 0));
+            update_option('vh360_youtube_featured_image_behavior', VideoHub360_YouTube_Live_Monitor::sanitize_option_choice($_POST['vh360_youtube_featured_image_behavior'] ?? 'youtube_if_empty', array('keep_manual', 'youtube_if_empty', 'youtube_always', 'default_image'), 'youtube_if_empty'));
+            update_option('vh360_youtube_default_featured_image_id', absint($_POST['vh360_youtube_default_featured_image_id'] ?? 0));
+            update_option('vh360_youtube_replay_behavior', VideoHub360_YouTube_Live_Monitor::sanitize_option_choice($_POST['vh360_youtube_replay_behavior'] ?? 'mark_ended', array('mark_ended', 'convert_replay_embed', 'keep_replay'), 'mark_ended'));
+            update_option('vh360_youtube_precheck_minutes', max(0, min(240, absint($_POST['vh360_youtube_precheck_minutes'] ?? 30))));
+            update_option('vh360_youtube_expected_duration_minutes', max(1, min(720, absint($_POST['vh360_youtube_expected_duration_minutes'] ?? 120))));
+            update_option('vh360_youtube_grace_minutes', max(1, min(240, absint($_POST['vh360_youtube_grace_minutes'] ?? 20))));
+            $youtube_monitor = new VideoHub360_YouTube_Live_Monitor();
+            update_option('vh360_youtube_schedules', $youtube_monitor->sanitize_schedules($_POST['vh360_youtube_schedules'] ?? array()));
+            $youtube_monitor->reschedule();
+
             // Update interactive livestream settings
             update_option('videohub360_force_login_everyone_host', isset($_POST['videohub360_force_login_everyone_host']) ? 1 : 0);
             
@@ -471,6 +490,20 @@ class VideoHub360_Admin {
         $enable_4k_streaming = get_option('videohub360_enable_4k_streaming', 0);
         $show_quality_badge = get_option('videohub360_show_quality_badge', 1);
         
+        // YouTube Live Auto-Broadcast settings
+        $youtube_enabled = get_option('vh360_youtube_live_enabled', 0);
+        $youtube_detection_mode = get_option('vh360_youtube_detection_mode', 'scheduled');
+        $youtube_post_behavior = get_option('vh360_youtube_post_behavior', 'auto_create');
+        $youtube_featured_image_behavior = get_option('vh360_youtube_featured_image_behavior', 'youtube_if_empty');
+        $youtube_replay_behavior = get_option('vh360_youtube_replay_behavior', 'mark_ended');
+        $youtube_schedules = get_option('vh360_youtube_schedules', array());
+        if (empty($youtube_schedules) || !is_array($youtube_schedules)) {
+            $youtube_schedules = array(array('enabled'=>1,'day'=>'sunday','start_time'=>'10:00','expected_duration_minutes'=>120,'precheck_minutes'=>30,'grace_minutes'=>20,'title_prefix'=>'Sunday Service','category'=>0));
+        }
+        $youtube_next_cron = wp_next_scheduled('vh360_youtube_live_check');
+        $youtube_cron_disabled = (defined('DISABLE_WP_CRON') && DISABLE_WP_CRON) ? 'Yes' : 'No';
+        $youtube_nonce = wp_create_nonce('vh360_youtube_check_now');
+
         // Livestream offline/ended message settings
         $default_stream_ended_html = get_option('vh360_default_stream_ended_html', '');
         $default_live_room_offline_html = get_option('vh360_default_live_room_offline_html', '');
@@ -742,6 +775,85 @@ class VideoHub360_Admin {
                             <?php endif; ?>
                         </td>
                     </tr>
+                    <tr>
+                        <th scope="row" colspan="2"><h3 style="margin: 20px 0 10px 0;">YouTube Live Auto-Broadcast</h3></th>
+                    </tr>
+                    <tr>
+                        <th scope="row">Enable Auto-Broadcast</th>
+                        <td><label><input type="checkbox" name="vh360_youtube_live_enabled" value="1" <?php checked($youtube_enabled, 1); ?> /> Automatically monitor YouTube livestreams</label></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">YouTube API Key</th>
+                        <td><input type="password" name="vh360_youtube_api_key" value="<?php echo esc_attr(get_option('vh360_youtube_api_key', '')); ?>" style="width:400px;" autocomplete="new-password" /><p class="description">Stored securely as a WordPress option. The key is not shown in status output.</p></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">YouTube Channel ID</th>
+                        <td><input type="text" name="vh360_youtube_channel_id" value="<?php echo esc_attr(get_option('vh360_youtube_channel_id', '')); ?>" style="width:400px;" /></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Detection Mode</th>
+                        <td><select name="vh360_youtube_detection_mode"><option value="scheduled" <?php selected($youtube_detection_mode, 'scheduled'); ?>>Scheduled windows only</option><option value="always" <?php selected($youtube_detection_mode, 'always'); ?>>Always check</option><option value="manual" <?php selected($youtube_detection_mode, 'manual'); ?>>Manual check only</option></select></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Recurring Schedules</th>
+                        <td>
+                            <?php foreach ($youtube_schedules as $i => $schedule) : ?>
+                                <div style="margin-bottom:10px;padding:10px;border:1px solid #ccd0d4;max-width:760px;">
+                                    <label><input type="checkbox" name="vh360_youtube_schedules[<?php echo esc_attr($i); ?>][enabled]" value="1" <?php checked(!empty($schedule['enabled'])); ?> /> Enabled</label>
+                                    <select name="vh360_youtube_schedules[<?php echo esc_attr($i); ?>][day]">
+                                        <?php foreach (array('sunday','monday','tuesday','wednesday','thursday','friday','saturday') as $day) : ?>
+                                            <option value="<?php echo esc_attr($day); ?>" <?php selected($schedule['day'] ?? 'sunday', $day); ?>><?php echo esc_html(ucfirst($day)); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <input type="time" name="vh360_youtube_schedules[<?php echo esc_attr($i); ?>][start_time]" value="<?php echo esc_attr($schedule['start_time'] ?? '10:00'); ?>" />
+                                    <label>Duration <input type="number" min="1" max="720" name="vh360_youtube_schedules[<?php echo esc_attr($i); ?>][expected_duration_minutes]" value="<?php echo esc_attr($schedule['expected_duration_minutes'] ?? 120); ?>" style="width:80px;" /> min</label>
+                                    <label>Precheck <input type="number" min="0" max="240" name="vh360_youtube_schedules[<?php echo esc_attr($i); ?>][precheck_minutes]" value="<?php echo esc_attr($schedule['precheck_minutes'] ?? 30); ?>" style="width:80px;" /> min</label>
+                                    <label>Grace <input type="number" min="1" max="240" name="vh360_youtube_schedules[<?php echo esc_attr($i); ?>][grace_minutes]" value="<?php echo esc_attr($schedule['grace_minutes'] ?? 20); ?>" style="width:80px;" /> min</label><br />
+                                    <label>Title Prefix <input type="text" name="vh360_youtube_schedules[<?php echo esc_attr($i); ?>][title_prefix]" value="<?php echo esc_attr($schedule['title_prefix'] ?? ''); ?>" style="width:220px;" /></label>
+                                    <label>Category ID <input type="number" min="0" name="vh360_youtube_schedules[<?php echo esc_attr($i); ?>][category]" value="<?php echo esc_attr($schedule['category'] ?? 0); ?>" style="width:90px;" /></label>
+                                </div>
+                            <?php endforeach; ?>
+                            <p class="description">Add more schedule rows by saving, then duplicating a row in this option array via custom code if needed. Detection runs from precheck before start through duration plus grace.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Post Behavior</th>
+                        <td><select name="vh360_youtube_post_behavior"><option value="auto_create" <?php selected($youtube_post_behavior, 'auto_create'); ?>>Auto-create one post per YouTube live video</option><option value="update_selected" <?php selected($youtube_post_behavior, 'update_selected'); ?>>Update selected VideoHub360 post</option></select> Target Post ID <input type="number" min="0" name="vh360_youtube_target_post_id" value="<?php echo esc_attr(get_option('vh360_youtube_target_post_id', 0)); ?>" style="width:90px;" /></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Defaults</th>
+                        <td>Author ID <input type="number" min="1" name="vh360_youtube_default_author_id" value="<?php echo esc_attr(get_option('vh360_youtube_default_author_id', get_current_user_id())); ?>" style="width:90px;" /> Category ID <input type="number" min="0" name="vh360_youtube_default_category" value="<?php echo esc_attr(get_option('vh360_youtube_default_category', 0)); ?>" style="width:90px;" /></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Featured Image Behavior</th>
+                        <td><select name="vh360_youtube_featured_image_behavior"><option value="youtube_if_empty" <?php selected($youtube_featured_image_behavior, 'youtube_if_empty'); ?>>Use YouTube thumbnail only if empty</option><option value="keep_manual" <?php selected($youtube_featured_image_behavior, 'keep_manual'); ?>>Keep manual featured image</option><option value="youtube_always" <?php selected($youtube_featured_image_behavior, 'youtube_always'); ?>>Always replace with YouTube thumbnail</option><option value="default_image" <?php selected($youtube_featured_image_behavior, 'default_image'); ?>>Use default live image</option></select> Default Image Attachment ID <input type="number" min="0" name="vh360_youtube_default_featured_image_id" value="<?php echo esc_attr(get_option('vh360_youtube_default_featured_image_id', 0)); ?>" style="width:90px;" /></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Replay Behavior</th>
+                        <td><select name="vh360_youtube_replay_behavior"><option value="mark_ended" <?php selected($youtube_replay_behavior, 'mark_ended'); ?>>Mark stream ended</option><option value="convert_replay_embed" <?php selected($youtube_replay_behavior, 'convert_replay_embed'); ?>>Convert to replay embed</option><option value="keep_replay" <?php selected($youtube_replay_behavior, 'keep_replay'); ?>>Keep as normal video replay</option></select></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Fallback Window Defaults</th>
+                        <td>Precheck <input type="number" min="0" max="240" name="vh360_youtube_precheck_minutes" value="<?php echo esc_attr(get_option('vh360_youtube_precheck_minutes', 30)); ?>" style="width:80px;" /> Expected duration <input type="number" min="1" max="720" name="vh360_youtube_expected_duration_minutes" value="<?php echo esc_attr(get_option('vh360_youtube_expected_duration_minutes', 120)); ?>" style="width:80px;" /> Grace <input type="number" min="1" max="240" name="vh360_youtube_grace_minutes" value="<?php echo esc_attr(get_option('vh360_youtube_grace_minutes', 20)); ?>" style="width:80px;" /> minutes</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Cron Status</th>
+                        <td>
+                            <p><strong>Recommended Hostinger cron command:</strong><br><code>curl -s "<?php echo esc_url(site_url('wp-cron.php?doing_wp_cron')); ?>"</code></p>
+                            <p><strong>Recommended interval:</strong> Every 5 minutes</p>
+                            <p><strong>WP-Cron disabled:</strong> <?php echo esc_html($youtube_cron_disabled); ?></p>
+                            <p><strong>Next scheduled WordPress cron:</strong> <?php echo $youtube_next_cron ? esc_html(date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $youtube_next_cron)) : 'None'; ?></p>
+                            <p><strong>Last cron heartbeat:</strong> <?php echo esc_html(get_option('vh360_youtube_last_heartbeat_at', 'Never')); ?></p>
+                            <p><strong>Last YouTube check:</strong> <?php echo esc_html(get_option('vh360_youtube_last_check_at', 'Never')); ?></p>
+                            <p><strong>Last detected YouTube video:</strong> <?php echo esc_html(get_option('vh360_youtube_last_detected_video_id', 'none') ?: 'none'); ?></p>
+                            <p><strong>Last result:</strong> <?php echo esc_html(get_option('vh360_youtube_last_result', 'none')); ?> <?php if (get_option('vh360_youtube_last_error', '')) : ?><span style="color:#b32d2e;">(<?php echo esc_html(get_option('vh360_youtube_last_error')); ?>)</span><?php endif; ?></p>
+                            <button type="button" class="button" id="vh360-youtube-check-now">Check YouTube Now</button> <span id="vh360-youtube-check-result"></span>
+                            <script>
+                            jQuery(function($){$('#vh360-youtube-check-now').on('click', function(){var $r=$('#vh360-youtube-check-result').text('Checking...'); $.post(ajaxurl,{action:'vh360_youtube_check_now',nonce:'<?php echo esc_js($youtube_nonce); ?>'}).done(function(resp){$r.text(resp.success ? JSON.stringify(resp.data) : 'Check failed');}).fail(function(xhr){$r.text('Check failed: '+xhr.status);});});});
+                            </script>
+                        </td>
+                    </tr>
+
                     <tr>
                         <th scope="row" colspan="2"><h3 style="margin: 20px 0 10px 0;">Chat Settings</h3></th>
                     </tr>

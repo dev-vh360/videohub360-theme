@@ -86,6 +86,7 @@ class VideoHub360_Core {
         require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-import-export.php';
         require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-video-reactions.php';
         require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-playlists.php';
+        require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-youtube-live-monitor.php';
         // Course / Lesson Foundation
         require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-course-foundation.php';
         // Learner Enrollment Model
@@ -110,6 +111,7 @@ class VideoHub360_Core {
         $this->components['license'] = new VideoHub360_License();
         $this->components['course_foundation'] = new VideoHub360_Course_Foundation();
         $this->components['course_enrollments'] = VideoHub360_Course_Enrollments::get_instance();
+        $this->components['youtube_live_monitor'] = new VideoHub360_YouTube_Live_Monitor();
     }
     
     /**
@@ -531,6 +533,8 @@ class VideoHub360_Core {
      * Plugin deactivation
      */
     public static function deactivate() {
+        wp_clear_scheduled_hook('vh360_youtube_live_check');
+
         // Flush rewrite rules
         flush_rewrite_rules();
     }
