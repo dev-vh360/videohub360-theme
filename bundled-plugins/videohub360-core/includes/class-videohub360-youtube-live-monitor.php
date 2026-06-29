@@ -247,9 +247,11 @@ class VideoHub360_YouTube_Live_Monitor {
         $now = new DateTimeImmutable('now', $timezone);
         $now_ts = $now->getTimestamp();
         $candidate_days = array(
-            $now,
             $now->modify('-1 day'),
+            $now,
+            $now->modify('+1 day'),
         );
+        $active_matches = array();
 
         foreach (self::sanitize_schedules(get_option('vh360_youtube_schedules', array())) as $schedule) {
             if (empty($schedule['enabled'])) continue;
@@ -265,9 +267,25 @@ class VideoHub360_YouTube_Live_Monitor {
                 $to_ts = $start_ts + ($schedule['expected_duration_minutes'] + $schedule['grace_minutes']) * MINUTE_IN_SECONDS;
 
                 if ($now_ts >= $from_ts && $now_ts <= $to_ts) {
-                    return array('inside'=>true,'phase'=>($now_ts < $start_ts ? 'precheck' : 'live'),'schedule'=>$schedule);
+                    $phase = $now_ts < $start_ts ? 'precheck' : 'live';
+                    $active_matches[] = array(
+                        'phase' => $phase,
+                        'schedule' => $schedule,
+                        'start_delta' => abs($start_ts - $now_ts),
+                    );
                 }
             }
+        }
+
+        if (!empty($active_matches)) {
+            usort($active_matches, function($a, $b) {
+                if ($a['phase'] !== $b['phase']) {
+                    return 'live' === $a['phase'] ? -1 : 1;
+                }
+                return $a['start_delta'] <=> $b['start_delta'];
+            });
+
+            return array('inside'=>true,'phase'=>$active_matches[0]['phase'],'schedule'=>$active_matches[0]['schedule']);
         }
 
         return array('inside'=>false,'phase'=>'none','schedule'=>array());
