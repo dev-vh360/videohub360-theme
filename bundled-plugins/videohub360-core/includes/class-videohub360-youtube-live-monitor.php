@@ -177,7 +177,7 @@ class VideoHub360_YouTube_Live_Monitor {
     }
 
     private function build_iframe($video_id) {
-        $embed_url = sprintf('https://www.youtube-nocookie.com/embed/%s?autoplay=1&enablejsapi=1&origin=%s', rawurlencode($video_id), rawurlencode(home_url()));
+        $embed_url = sprintf('https://www.youtube-nocookie.com/embed/%s?autoplay=0&enablejsapi=1&origin=%s', rawurlencode($video_id), rawurlencode(home_url()));
         return '<iframe src="' . esc_url($embed_url) . '" width="1280" height="720" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>';
     }
 
