@@ -204,7 +204,7 @@ class VH360_Memberships {
      */
     public function woocommerce_missing_notice() {
         echo '<div class="notice notice-error"><p>';
-        echo esc_html__('VideoHub360 Memberships requires WooCommerce to be installed and activated.', 'videohub360-memberships');
+        echo esc_html__('WooCommerce is required for WooCommerce-based memberships, course purchases, and checkout features. Install and activate WooCommerce if you plan to use those features.', 'videohub360-memberships');
         echo '</p></div>';
     }
 }
