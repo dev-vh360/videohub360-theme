@@ -398,3 +398,282 @@ body.admin-bar .videohub360-main-wrapper {
         text-align: center;
     }
 }
+
+/* VideoHub360 core settings polish */
+.vh360-core-settings-page {
+    max-width: 1180px;
+}
+
+.vh360-core-settings-page .vh360-settings-intro {
+    max-width: 820px;
+    color: #50575e;
+    font-size: 14px;
+    margin: 8px 0 20px;
+}
+
+.vh360-core-settings-page form {
+    display: block;
+}
+
+.vh360-core-settings-page .form-table {
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    margin-top: 16px;
+    overflow: hidden;
+}
+
+.vh360-core-settings-page .form-table th,
+.vh360-core-settings-page .form-table td {
+    padding: 18px 22px;
+}
+
+.vh360-core-settings-page .form-table th[scope="row"] {
+    width: 240px;
+    color: #1d2327;
+}
+
+.vh360-core-settings-page .form-table th[colspan="2"] {
+    background: #f6f7f7;
+    border-top: 1px solid #dcdcde;
+    border-bottom: 1px solid #dcdcde;
+    padding: 20px 22px 14px;
+}
+
+.vh360-core-settings-page .form-table tr:first-child th[colspan="2"] {
+    border-top: 0;
+}
+
+.vh360-core-settings-page .form-table h3 {
+    margin: 0 !important;
+    font-size: 16px;
+    line-height: 1.35;
+    color: #1d2327;
+}
+
+.vh360-settings-card__description {
+    margin: 6px 0 0;
+    color: #646970;
+    font-size: 13px;
+    font-weight: 400;
+}
+
+.vh360-field-wide {
+    width: min(100%, 460px);
+}
+
+.vh360-field-medium {
+    width: min(100%, 300px);
+}
+
+.vh360-field-small {
+    width: 88px;
+}
+
+.vh360-field-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 18px;
+    align-items: center;
+}
+
+.vh360-field-row label,
+.vh360-field-inline {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.vh360-youtube-section-start th {
+    border-left: 4px solid #2271b1;
+}
+
+.vh360-youtube-schedule-row {
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 10px;
+    padding: 16px;
+    margin: 0 0 14px;
+    max-width: 920px;
+}
+
+.vh360-youtube-schedule-row__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f0f0f1;
+}
+
+.vh360-youtube-remove-schedule.is-disabled,
+.vh360-youtube-remove-schedule:disabled {
+    color: #a7aaad;
+    cursor: default;
+    text-decoration: none;
+}
+
+.vh360-youtube-schedule-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(130px, 1fr));
+    gap: 14px;
+}
+
+.vh360-youtube-schedule-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+    color: #1d2327;
+    font-weight: 600;
+}
+
+.vh360-youtube-schedule-grid label span {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: #646970;
+}
+
+.vh360-youtube-schedule-grid input,
+.vh360-youtube-schedule-grid select {
+    width: 100%;
+    min-height: 36px;
+}
+
+.vh360-youtube-schedule-grid em {
+    color: #646970;
+    font-style: normal;
+    font-weight: 400;
+}
+
+.vh360-youtube-schedule-wide {
+    grid-column: span 2;
+}
+
+.vh360-field-checkbox {
+    justify-content: flex-end;
+}
+
+.vh360-field-checkbox input[type="checkbox"] {
+    width: auto;
+    min-height: 0;
+}
+
+.vh360-youtube-status-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    gap: 12px;
+    max-width: 920px;
+    margin-bottom: 14px;
+}
+
+.vh360-youtube-status-grid > div {
+    background: #f6f7f7;
+    border: 1px solid #dcdcde;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.vh360-youtube-status-grid strong,
+.vh360-youtube-status-grid span,
+.vh360-youtube-status-grid code {
+    display: block;
+}
+
+.vh360-youtube-status-grid strong {
+    margin-bottom: 6px;
+    color: #1d2327;
+}
+
+.vh360-youtube-status-grid code {
+    white-space: normal;
+    word-break: break-word;
+}
+
+.vh360-youtube-check-result {
+    margin-top: 10px;
+    max-width: 920px;
+    color: #50575e;
+}
+
+.vh360-youtube-check-result.is-loading {
+    color: #646970;
+}
+
+.vh360-youtube-check-result.is-success {
+    color: #008a20;
+}
+
+.vh360-youtube-check-result.is-error {
+    color: #b32d2e;
+}
+
+@media (max-width: 960px) {
+    .vh360-youtube-schedule-grid,
+    .vh360-youtube-status-grid {
+        grid-template-columns: repeat(2, minmax(180px, 1fr));
+    }
+
+    .vh360-core-settings-page .form-table th[scope="row"] {
+        width: 200px;
+    }
+}
+
+@media (max-width: 782px) {
+    .vh360-core-settings-page .form-table,
+    .vh360-core-settings-page .form-table tbody,
+    .vh360-core-settings-page .form-table tr,
+    .vh360-core-settings-page .form-table th,
+    .vh360-core-settings-page .form-table td {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .vh360-core-settings-page .form-table th,
+    .vh360-core-settings-page .form-table td {
+        padding: 14px 16px;
+    }
+
+    .vh360-core-settings-page .form-table th[scope="row"] {
+        padding-bottom: 4px;
+    }
+
+    .vh360-core-settings-page input[type="text"],
+    .vh360-core-settings-page input[type="url"],
+    .vh360-core-settings-page input[type="password"],
+    .vh360-core-settings-page input[type="number"],
+    .vh360-core-settings-page input[type="time"],
+    .vh360-core-settings-page select,
+    .vh360-core-settings-page textarea,
+    .vh360-field-wide,
+    .vh360-field-medium,
+    .vh360-field-small {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .vh360-field-row,
+    .vh360-field-row label {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+    }
+
+    .vh360-youtube-schedule-row {
+        padding: 14px;
+    }
+
+    .vh360-youtube-schedule-grid,
+    .vh360-youtube-status-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .vh360-youtube-schedule-wide {
+        grid-column: auto;
+    }
+}
