@@ -31,7 +31,7 @@ function vh360_register_required_plugins() {
         array(
             'name'               => 'WooCommerce',
             'slug'               => 'woocommerce',
-            'required'           => true,
+            'required'           => false,
             'version'            => '5.0.0',
             'force_activation'   => false,
             'force_deactivation' => false,
@@ -92,7 +92,7 @@ function vh360_register_required_plugins() {
         'has_notices'  => true,
         'dismissable'  => false,   // Do not allow dismissing when plugins are required.
         'dismiss_msg'  => '',
-        'is_automatic' => true,    // Automatically activate plugins after installation.
+        'is_automatic' => false,   // Do not automatically activate plugins after installation.
         'message'      => '',
     );
 
