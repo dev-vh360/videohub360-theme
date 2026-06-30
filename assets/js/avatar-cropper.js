@@ -22,6 +22,7 @@
      */
     $(document).ready(function() {
         initAvatarCropper();
+        initCoverImagePreview();
     });
 
     /**
@@ -305,32 +306,83 @@
             imageSmoothingQuality: 'high',
         });
 
-        // Update preview in the form
-        canvas.toBlob(function(blob) {
-            if (blob) {
-                const previewURL = URL.createObjectURL(blob);
+        const updatePreviewAndClose = function(previewURL) {
+            if (previewURL) {
                 updateAvatarPreview(previewURL);
             }
             closeCropModal();
-        }, 'image/jpeg', (vh360AvatarCropper.quality || 90) / 100);
+        };
+
+        // Update preview in the form. Use toDataURL as a fallback for browsers
+        // where canvas.toBlob is unavailable or returns null.
+        if (canvas && typeof canvas.toBlob === 'function') {
+            canvas.toBlob(function(blob) {
+                if (blob) {
+                    updatePreviewAndClose(URL.createObjectURL(blob));
+                    return;
+                }
+
+                updatePreviewAndClose(canvas.toDataURL('image/jpeg', (vh360AvatarCropper.quality || 90) / 100));
+            }, 'image/jpeg', (vh360AvatarCropper.quality || 90) / 100);
+        } else if (canvas && typeof canvas.toDataURL === 'function') {
+            updatePreviewAndClose(canvas.toDataURL('image/jpeg', (vh360AvatarCropper.quality || 90) / 100));
+        } else {
+            closeCropModal();
+        }
     }
 
     /**
      * Update avatar preview in the form
      */
     function updateAvatarPreview(imageURL) {
-        // Find avatar preview elements
-        let $preview = $('.vh360-avatar-preview img, .vh360-avatar-upload img').first();
-        
-        if ($preview.length === 0) {
-            // Create preview if it doesn't exist
-            const $container = $('.vh360-avatar-upload, .vh360-avatar-preview').first();
-            if ($container.length > 0) {
-                $container.html(`<img src="${imageURL}" alt="${vh360AvatarCropper.i18n.previewAlt || 'Avatar preview'}" style="max-width: 150px; border-radius: 50%;">`);
-            }
-        } else {
-            $preview.attr('src', imageURL);
+        const $form = $('#profile_picture, input[name="profile_picture"]').closest('form');
+        let $container = $form.find('.vh360-avatar-preview').first();
+
+        if ($container.length === 0) {
+            $container = $('.vh360-profile-form .vh360-avatar-preview').first();
         }
+
+        if ($container.length === 0) {
+            return;
+        }
+
+        $container
+            .removeClass('vh360-avatar-placeholder')
+            .empty()
+            .append($('<img>', {
+                src: imageURL,
+                alt: vh360AvatarCropper.i18n.previewAlt || 'Avatar preview',
+                class: 'vh360-avatar-preview-img'
+            }));
+    }
+
+    /**
+     * Initialize immediate cover image preview on the edit profile form
+     */
+    function initCoverImagePreview() {
+        $(document).on('change', '.vh360-profile-form #cover_image', function() {
+            const file = this.files && this.files[0];
+
+            if (!file || !file.type || !file.type.match(/^image\//)) {
+                return;
+            }
+
+            const reader = new FileReader();
+            const $coverPreview = $(this).closest('.vh360-profile-form').find('.vh360-cover-preview').first();
+
+            if ($coverPreview.length === 0) {
+                return;
+            }
+
+            reader.onload = function(event) {
+                $coverPreview
+                    .css('background-image', `url(${event.target.result})`)
+                    .find('.vh360-cover-placeholder')
+                    .hide();
+            };
+
+            reader.readAsDataURL(file);
+        });
     }
 
     /**
