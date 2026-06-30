@@ -1447,8 +1447,8 @@ html {
 /* Activity layout: 2-column layout (main feed + right sidebar) */
 .vh360-activity-layout {
     display: grid;
-    grid-template-columns: 1fr 250px;
-    gap: 2.5rem;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
+    gap: clamp(1rem, 2vw, 2.5rem);
     align-items: flex-start;
     max-width: 1400px;
     margin: 0 auto;
@@ -1464,7 +1464,10 @@ html {
 
 /* Right sidebar specific styles */
 .vh360-activity-sidebar--right {
-    width: 320px;
+    width: 100%;
+    max-width: 320px;
+    min-width: 0;
+    justify-self: stretch;
 }
 
 .vh360-activity-main {
@@ -1480,8 +1483,9 @@ html {
 
 /* Feed main content wrapper - constrain width for readability */
 .vh360-feed-main {
-    width: 100%;
+    min-width: 0;
     max-width: 880px;
+    width: 100%;
     margin: 0 auto;
 }
 
@@ -1490,6 +1494,22 @@ html {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+}
+
+.vh360-activity-sidebar--right,
+.vh360-sidebar-widgets,
+.vh360-sidebar-widget,
+.vh360-widget-content {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.vh360-activity-sidebar--right img,
+.vh360-activity-sidebar--right iframe,
+.vh360-activity-sidebar--right embed,
+.vh360-activity-sidebar--right object,
+.vh360-activity-sidebar--right video {
+    max-width: 100%;
 }
 
 .vh360-sidebar-widget {
@@ -1762,29 +1782,39 @@ html {
 /* Laptop (1024px - 1200px): Narrower right sidebar */
 @media (max-width: 1200px) {
     .vh360-activity-layout {
-        grid-template-columns: 1fr 280px;
+        grid-template-columns: minmax(0, 1fr) minmax(240px, 280px);
         gap: 1.5rem;
     }
-    
+
     .vh360-activity-sidebar--right {
-        width: 280px;
+        max-width: 280px;
     }
 }
 
-/* Tablet (768px - 1024px): Keep 2-column */
+/* Community menu narrow desktop: prioritize the feed when the left rail is present */
+@media (max-width: 1180px) {
+    body.has-community-menu .vh360-activity-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    body.has-community-menu .vh360-activity-sidebar--right {
+        display: none;
+    }
+}
+
+/* Tablet (768px - 1024px): Keep 2-column when no community menu is present */
 @media (max-width: 1024px) {
     .vh360-activity-layout {
-        grid-template-columns: 1fr 280px;
+        grid-template-columns: minmax(0, 1fr) minmax(240px, 280px);
     }
-    
+
     .vh360-activity-main {
         border-left: none;
         padding-left: 0;
     }
-    
+
     .vh360-activity-sidebar--right {
         position: sticky;
-        width: 280px;
     }
 }
 
@@ -1796,7 +1826,7 @@ html {
     }
     
     .vh360-activity-layout {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
         gap: 0;
     }
     
