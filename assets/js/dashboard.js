@@ -694,7 +694,7 @@
             // Image upload preview (scoped to create-video form only)
             $('#vh360-create-video-form').on('click', '#vh360-upload-trigger', function(e) {
                 e.preventDefault();
-                $('#vh360_featured_image').click();
+                $('#vh360_featured_image').val('').trigger('click');
             });
 
             $('#vh360-create-video-form').on('change', '#vh360_featured_image', function() {
@@ -1042,7 +1042,7 @@
             // Upload button trigger
             $(document).on('click', '#vh360-video-upload-trigger', function(e) {
                 e.preventDefault();
-                $('#vh360_video_file').click();
+                $('#vh360_video_file').val('').trigger('click');
             });
             
             // File selection handler

@@ -13,6 +13,9 @@
     // Avatar cropper instance
     let cropperInstance = null;
     let currentImageURL = null;
+    let cropWasApplied = false;
+    let pendingCropData = null;
+    let pendingImageData = null;
 
     /**
      * Initialize avatar cropper on page load
@@ -31,8 +34,20 @@
             return;
         }
 
+        // Reset an unapplied file selection before opening the picker so choosing
+        // the same file after a canceled crop still fires the change event.
+        $fileInput.on('click', function() {
+            if (!cropWasApplied) {
+                this.value = '';
+            }
+        });
+
         // Listen for file selection
         $fileInput.on('change', function(e) {
+            cropWasApplied = false;
+            pendingCropData = null;
+            pendingImageData = null;
+
             const file = e.target.files[0];
             
             if (!file) {
@@ -86,14 +101,7 @@
             ];
 
             if (heicMimeTypes.includes(fileType) || heicExtensions.test(fileName)) {
-                ensureCropFields();
-
-                $('input[name="avatar_crop_x"]').val('');
-                $('input[name="avatar_crop_y"]').val('');
-                $('input[name="avatar_crop_width"]').val('');
-                $('input[name="avatar_crop_height"]').val('');
-                $('input[name="avatar_source_width"]').val('');
-                $('input[name="avatar_source_height"]').val('');
+                clearCropFields();
 
                 return;
             }
@@ -126,7 +134,7 @@
         $cropImage.attr('src', currentImageURL);
 
         // Show modal
-        $modal.fadeIn(200);
+        $modal.stop(true, true).fadeIn(200);
 
         // Initialize cropper after image loads
         $cropImage.off('load').on('load', function() {
@@ -211,8 +219,10 @@
             minContainerHeight: 300,
             preview: $preview[0], // Use Cropper.js built-in preview
             crop: function(event) {
-                // Update hidden fields with crop data
-                updateCropFields(event.detail);
+                // Keep live crop changes in memory only. Hidden form fields are
+                // committed only after the user explicitly applies the crop.
+                pendingCropData = event.detail;
+                pendingImageData = cropperInstance ? cropperInstance.getImageData() : null;
             }
         });
     }
@@ -229,6 +239,20 @@
         $('input[name="avatar_crop_y"]').val(Math.round(cropData.y));
         $('input[name="avatar_crop_width"]').val(Math.round(cropData.width));
         $('input[name="avatar_crop_height"]').val(Math.round(cropData.height));
+    }
+
+    /**
+     * Clear hidden crop coordinate and source dimension fields
+     */
+    function clearCropFields() {
+        ensureCropFields();
+
+        $('input[name="avatar_crop_x"]').val('');
+        $('input[name="avatar_crop_y"]').val('');
+        $('input[name="avatar_crop_width"]').val('');
+        $('input[name="avatar_crop_height"]').val('');
+        $('input[name="avatar_source_width"]').val('');
+        $('input[name="avatar_source_height"]').val('');
     }
 
     /**
@@ -260,16 +284,19 @@
             return;
         }
 
-        // Get crop data
+        // Get final crop data and commit it only after explicit confirmation.
         const cropData = cropperInstance.getData(true); // true = rounded values
         const imageData = cropperInstance.getImageData();
+        pendingCropData = cropData;
+        pendingImageData = imageData;
 
         // Update hidden fields
         updateCropFields(cropData);
-        
+
         // Update source dimensions (naturalWidth/Height are already integers)
         $('input[name="avatar_source_width"]').val(imageData.naturalWidth);
         $('input[name="avatar_source_height"]').val(imageData.naturalHeight);
+        cropWasApplied = true;
 
         // Get cropped canvas and convert to blob
         const canvas = cropperInstance.getCroppedCanvas({
@@ -311,18 +338,21 @@
      */
     function closeCropModal() {
         const $modal = $('#vh360-avatar-crop-modal');
-        
-        // Fade out modal
-        $modal.fadeOut(200, function() {
-            // Destroy cropper instance
-            if (cropperInstance) {
-                cropperInstance.destroy();
-                cropperInstance = null;
-            }
+        const shouldResetSelection = !cropWasApplied;
 
-            // Clear image source
-            $modal.find('#vh360-crop-image').attr('src', '');
-        });
+        $modal.stop(true, true);
+
+        // Destroy cropper synchronously so a queued fade callback cannot destroy
+        // a newly opened cropper if the user immediately reopens the picker.
+        if (cropperInstance) {
+            cropperInstance.destroy();
+            cropperInstance = null;
+        }
+
+        // Clear modal image source and in-memory pending crop state.
+        $modal.find('#vh360-crop-image').attr('src', '');
+        pendingCropData = null;
+        pendingImageData = null;
 
         // Revoke object URL to free memory
         if (currentImageURL) {
@@ -330,10 +360,13 @@
             currentImageURL = null;
         }
 
-        // Reset file input only if crop was cancelled (no crop data)
-        if (!$('input[name="avatar_crop_x"]').val()) {
+        if (shouldResetSelection) {
             $('#profile_picture, input[name="profile_picture"]').val('');
+            clearCropFields();
         }
+
+        // Fade out modal after cleanup.
+        $modal.fadeOut(200);
     }
 
 })(jQuery);

@@ -178,7 +178,7 @@
                 // Always trigger the manual file input for reliable behavior
                 var $fileInput = $('#vh360-gallery-file-input');
                 if ($fileInput.length) {
-                    $fileInput.trigger('click');
+                    $fileInput.val('').trigger('click');
                 }
             });
             

@@ -31,7 +31,7 @@
             // Handle upload button click to trigger file input
             $(document).on('click', '.vh360-live-room-form #vh360-upload-trigger', function(e) {
                 e.preventDefault();
-                $('.vh360-live-room-form #vh360_featured_image').trigger('click');
+                $('.vh360-live-room-form #vh360_featured_image').val('').trigger('click');
             });
 
             // Handle file input change for image preview
