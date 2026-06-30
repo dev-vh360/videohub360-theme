@@ -2880,7 +2880,7 @@ body.vh360-modal-open {
 /* ============================================
    Activity Feed — Wider layout in compact mode
    ============================================ */
-@media (min-width: 1024px) {
+@media (min-width: 1201px) {
 
   /* Expand outer container */
   body.community-menu-compact.page-template-template-activity-feed-php
@@ -2894,7 +2894,7 @@ body.vh360-modal-open {
   body.community-menu-compact.page-template-template-activity-feed-php
   .vh360-activity-layout {
     max-width: 1800px;
-    grid-template-columns: minmax(0, 1fr) 340px;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
     gap: 3rem;
   }
 
