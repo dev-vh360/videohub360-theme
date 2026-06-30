@@ -7,6 +7,14 @@
  * @since 1.0.0
  */
 
+.vh360-profile-form .vh360-avatar-preview-img {
+    display: block;
+    width: 150px;
+    height: 150px;
+    max-width: 100%;
+    object-fit: cover;
+}
+
 /* Crop Modal Overlay */
 .vh360-crop-modal {
     position: fixed;
@@ -132,6 +140,7 @@
 }
 
 .vh360-crop-cancel,
+.vh360-crop-skip,
 .vh360-crop-apply {
     padding: 0.625rem 1.25rem;
     border-radius: 6px;
@@ -142,12 +151,14 @@
     transition: all 0.2s;
 }
 
-.vh360-crop-cancel {
+.vh360-crop-cancel,
+.vh360-crop-skip {
     background: var(--surface-3, #f3f4f6);
     color: #374151;
 }
 
-.vh360-crop-cancel:hover {
+.vh360-crop-cancel:hover,
+.vh360-crop-skip:hover {
     background: var(--border-color, #e5e7eb);
 }
 
@@ -216,12 +227,14 @@
         border-top-color: #374151;
     }
 
-    .vh360-crop-cancel {
+    .vh360-crop-cancel,
+    .vh360-crop-skip {
         background: #374151;
         color: #d1d5db;
     }
 
-    .vh360-crop-cancel:hover {
+    .vh360-crop-cancel:hover,
+    .vh360-crop-skip:hover {
         background: #4b5563;
     }
 }

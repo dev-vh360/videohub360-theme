@@ -13,6 +13,7 @@
     // Avatar cropper instance
     let cropperInstance = null;
     let currentImageURL = null;
+    let selectedAvatarFile = null;
     let cropWasApplied = false;
     let pendingCropData = null;
     let pendingImageData = null;
@@ -48,6 +49,7 @@
             cropWasApplied = false;
             pendingCropData = null;
             pendingImageData = null;
+            selectedAvatarFile = null;
 
             const file = e.target.files[0];
             
@@ -89,6 +91,8 @@
                 e.target.value = '';
                 return;
             }
+
+            selectedAvatarFile = file;
 
             // HEIC/HEIF files cannot be previewed by most browsers inside an <img> tag.
             // Skip the cropper and submit directly to the backend, which will convert
@@ -147,6 +151,11 @@
             closeCropModal();
         });
 
+        // Handle crop skip
+        $modal.find('.vh360-crop-skip').off('click').on('click', function() {
+            skipCrop();
+        });
+
         // Handle crop confirmation
         $modal.find('.vh360-crop-apply').off('click').on('click', function() {
             applyCrop();
@@ -182,6 +191,7 @@
                     </div>
                     <div class="vh360-crop-modal-footer">
                         <button type="button" class="vh360-crop-cancel vh360-btn-secondary">${vh360AvatarCropper.i18n.cancel || 'Cancel'}</button>
+                        <button type="button" class="vh360-crop-skip vh360-btn-secondary">${vh360AvatarCropper.i18n.skipCrop || 'Skip Crop'}</button>
                         <button type="button" class="vh360-crop-apply vh360-btn-primary">${vh360AvatarCropper.i18n.apply || 'Apply Crop'}</button>
                     </div>
                 </div>
@@ -332,6 +342,28 @@
     }
 
     /**
+     * Use the selected image without manually applying crop coordinates
+     */
+    function skipCrop() {
+        cropWasApplied = true;
+        clearCropFields();
+
+        if (selectedAvatarFile) {
+            const reader = new FileReader();
+
+            reader.onload = function(event) {
+                updateAvatarPreview(event.target.result);
+                closeCropModal();
+            };
+
+            reader.readAsDataURL(selectedAvatarFile);
+            return;
+        }
+
+        closeCropModal();
+    }
+
+    /**
      * Update avatar preview in the form
      */
     function updateAvatarPreview(imageURL) {
@@ -414,6 +446,7 @@
 
         if (shouldResetSelection) {
             $('#profile_picture, input[name="profile_picture"]').val('');
+            selectedAvatarFile = null;
             clearCropFields();
         }
 

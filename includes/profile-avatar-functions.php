@@ -233,15 +233,19 @@ function vh360_process_profile_avatar_upload($file, $user_id, $crop_data = array
         );
     }
 
-    // Process crop coordinates if provided
-    // Note: Empty crop data (from hidden fields with empty values) will trigger
-    // the fallback auto-center-crop logic below, maintaining backward compatibility
-    if (!empty($crop_data) && isset($crop_data['x'], $crop_data['y'], $crop_data['width'], $crop_data['height'])) {
+    // Process crop coordinates only when a valid manual crop area is provided.
+    // Empty or invalid crop data falls back to the automatic centered square crop.
+    $has_valid_manual_crop = !empty($crop_data)
+        && isset($crop_data['width'], $crop_data['height'])
+        && (float) $crop_data['width'] > 0
+        && (float) $crop_data['height'] > 0;
+
+    if ($has_valid_manual_crop) {
         // Validate crop coordinates
-        $crop_x = max(0, (float) $crop_data['x']);
-        $crop_y = max(0, (float) $crop_data['y']);
-        $crop_width = max(1, (float) $crop_data['width']);
-        $crop_height = max(1, (float) $crop_data['height']);
+        $crop_x = isset($crop_data['x']) ? max(0, (float) $crop_data['x']) : 0;
+        $crop_y = isset($crop_data['y']) ? max(0, (float) $crop_data['y']) : 0;
+        $crop_width = (float) $crop_data['width'];
+        $crop_height = (float) $crop_data['height'];
 
         // Ensure crop area doesn't exceed image bounds
         $crop_x = min($crop_x, $size['width'] - 1);

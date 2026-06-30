@@ -926,6 +926,7 @@ function vh360_enqueue_avatar_cropper_assets() {
             'previewLabel'    => __('Preview', 'videohub360-theme'),
             'apply'           => __('Apply Crop', 'videohub360-theme'),
             'cancel'          => __('Cancel', 'videohub360-theme'),
+            'skipCrop'        => __('Skip Crop', 'videohub360-theme'),
             'close'           => __('Close', 'videohub360-theme'),
             'cropImageAlt'    => __('Image to crop', 'videohub360-theme'),
             'previewAlt'      => __('Avatar preview', 'videohub360-theme'),
