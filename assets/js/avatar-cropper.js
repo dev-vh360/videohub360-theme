@@ -13,12 +13,17 @@
     // Avatar cropper instance
     let cropperInstance = null;
     let currentImageURL = null;
+    let selectedAvatarFile = null;
+    let cropWasApplied = false;
+    let pendingCropData = null;
+    let pendingImageData = null;
 
     /**
      * Initialize avatar cropper on page load
      */
     $(document).ready(function() {
         initAvatarCropper();
+        initCoverImagePreview();
     });
 
     /**
@@ -31,8 +36,21 @@
             return;
         }
 
+        // Reset an unapplied file selection before opening the picker so choosing
+        // the same file after a canceled crop still fires the change event.
+        $fileInput.on('click', function() {
+            if (!cropWasApplied) {
+                this.value = '';
+            }
+        });
+
         // Listen for file selection
         $fileInput.on('change', function(e) {
+            cropWasApplied = false;
+            pendingCropData = null;
+            pendingImageData = null;
+            selectedAvatarFile = null;
+
             const file = e.target.files[0];
             
             if (!file) {
@@ -74,6 +92,8 @@
                 return;
             }
 
+            selectedAvatarFile = file;
+
             // HEIC/HEIF files cannot be previewed by most browsers inside an <img> tag.
             // Skip the cropper and submit directly to the backend, which will convert
             // the image to JPEG and apply a server-side center crop as the fallback.
@@ -86,14 +106,7 @@
             ];
 
             if (heicMimeTypes.includes(fileType) || heicExtensions.test(fileName)) {
-                ensureCropFields();
-
-                $('input[name="avatar_crop_x"]').val('');
-                $('input[name="avatar_crop_y"]').val('');
-                $('input[name="avatar_crop_width"]').val('');
-                $('input[name="avatar_crop_height"]').val('');
-                $('input[name="avatar_source_width"]').val('');
-                $('input[name="avatar_source_height"]').val('');
+                clearCropFields();
 
                 return;
             }
@@ -126,7 +139,7 @@
         $cropImage.attr('src', currentImageURL);
 
         // Show modal
-        $modal.fadeIn(200);
+        $modal.stop(true, true).fadeIn(200);
 
         // Initialize cropper after image loads
         $cropImage.off('load').on('load', function() {
@@ -136,6 +149,11 @@
         // Handle modal close
         $modal.find('.vh360-crop-modal-close, .vh360-crop-cancel').off('click').on('click', function() {
             closeCropModal();
+        });
+
+        // Handle crop skip
+        $modal.find('.vh360-crop-skip').off('click').on('click', function() {
+            skipCrop();
         });
 
         // Handle crop confirmation
@@ -173,6 +191,7 @@
                     </div>
                     <div class="vh360-crop-modal-footer">
                         <button type="button" class="vh360-crop-cancel vh360-btn-secondary">${vh360AvatarCropper.i18n.cancel || 'Cancel'}</button>
+                        <button type="button" class="vh360-crop-skip vh360-btn-secondary">${vh360AvatarCropper.i18n.skipCrop || 'Skip Crop'}</button>
                         <button type="button" class="vh360-crop-apply vh360-btn-primary">${vh360AvatarCropper.i18n.apply || 'Apply Crop'}</button>
                     </div>
                 </div>
@@ -211,8 +230,10 @@
             minContainerHeight: 300,
             preview: $preview[0], // Use Cropper.js built-in preview
             crop: function(event) {
-                // Update hidden fields with crop data
-                updateCropFields(event.detail);
+                // Keep live crop changes in memory only. Hidden form fields are
+                // committed only after the user explicitly applies the crop.
+                pendingCropData = event.detail;
+                pendingImageData = cropperInstance ? cropperInstance.getImageData() : null;
             }
         });
     }
@@ -229,6 +250,20 @@
         $('input[name="avatar_crop_y"]').val(Math.round(cropData.y));
         $('input[name="avatar_crop_width"]').val(Math.round(cropData.width));
         $('input[name="avatar_crop_height"]').val(Math.round(cropData.height));
+    }
+
+    /**
+     * Clear hidden crop coordinate and source dimension fields
+     */
+    function clearCropFields() {
+        ensureCropFields();
+
+        $('input[name="avatar_crop_x"]').val('');
+        $('input[name="avatar_crop_y"]').val('');
+        $('input[name="avatar_crop_width"]').val('');
+        $('input[name="avatar_crop_height"]').val('');
+        $('input[name="avatar_source_width"]').val('');
+        $('input[name="avatar_source_height"]').val('');
     }
 
     /**
@@ -260,16 +295,19 @@
             return;
         }
 
-        // Get crop data
+        // Get final crop data and commit it only after explicit confirmation.
         const cropData = cropperInstance.getData(true); // true = rounded values
         const imageData = cropperInstance.getImageData();
+        pendingCropData = cropData;
+        pendingImageData = imageData;
 
         // Update hidden fields
         updateCropFields(cropData);
-        
+
         // Update source dimensions (naturalWidth/Height are already integers)
         $('input[name="avatar_source_width"]').val(imageData.naturalWidth);
         $('input[name="avatar_source_height"]').val(imageData.naturalHeight);
+        cropWasApplied = true;
 
         // Get cropped canvas and convert to blob
         const canvas = cropperInstance.getCroppedCanvas({
@@ -278,32 +316,105 @@
             imageSmoothingQuality: 'high',
         });
 
-        // Update preview in the form
-        canvas.toBlob(function(blob) {
-            if (blob) {
-                const previewURL = URL.createObjectURL(blob);
+        const updatePreviewAndClose = function(previewURL) {
+            if (previewURL) {
                 updateAvatarPreview(previewURL);
             }
             closeCropModal();
-        }, 'image/jpeg', (vh360AvatarCropper.quality || 90) / 100);
+        };
+
+        // Update preview in the form. Use toDataURL as a fallback for browsers
+        // where canvas.toBlob is unavailable or returns null.
+        if (canvas && typeof canvas.toBlob === 'function') {
+            canvas.toBlob(function(blob) {
+                if (blob) {
+                    updatePreviewAndClose(URL.createObjectURL(blob));
+                    return;
+                }
+
+                updatePreviewAndClose(canvas.toDataURL('image/jpeg', (vh360AvatarCropper.quality || 90) / 100));
+            }, 'image/jpeg', (vh360AvatarCropper.quality || 90) / 100);
+        } else if (canvas && typeof canvas.toDataURL === 'function') {
+            updatePreviewAndClose(canvas.toDataURL('image/jpeg', (vh360AvatarCropper.quality || 90) / 100));
+        } else {
+            closeCropModal();
+        }
+    }
+
+    /**
+     * Use the selected image without manually applying crop coordinates
+     */
+    function skipCrop() {
+        cropWasApplied = true;
+        clearCropFields();
+
+        if (selectedAvatarFile) {
+            const reader = new FileReader();
+
+            reader.onload = function(event) {
+                updateAvatarPreview(event.target.result);
+                closeCropModal();
+            };
+
+            reader.readAsDataURL(selectedAvatarFile);
+            return;
+        }
+
+        closeCropModal();
     }
 
     /**
      * Update avatar preview in the form
      */
     function updateAvatarPreview(imageURL) {
-        // Find avatar preview elements
-        let $preview = $('.vh360-avatar-preview img, .vh360-avatar-upload img').first();
-        
-        if ($preview.length === 0) {
-            // Create preview if it doesn't exist
-            const $container = $('.vh360-avatar-upload, .vh360-avatar-preview').first();
-            if ($container.length > 0) {
-                $container.html(`<img src="${imageURL}" alt="${vh360AvatarCropper.i18n.previewAlt || 'Avatar preview'}" style="max-width: 150px; border-radius: 50%;">`);
-            }
-        } else {
-            $preview.attr('src', imageURL);
+        const $form = $('#profile_picture, input[name="profile_picture"]').closest('form');
+        let $container = $form.find('.vh360-avatar-preview').first();
+
+        if ($container.length === 0) {
+            $container = $('.vh360-profile-form .vh360-avatar-preview').first();
         }
+
+        if ($container.length === 0) {
+            return;
+        }
+
+        $container
+            .removeClass('vh360-avatar-placeholder')
+            .empty()
+            .append($('<img>', {
+                src: imageURL,
+                alt: vh360AvatarCropper.i18n.previewAlt || 'Avatar preview',
+                class: 'vh360-avatar-preview-img'
+            }));
+    }
+
+    /**
+     * Initialize immediate cover image preview on the edit profile form
+     */
+    function initCoverImagePreview() {
+        $(document).on('change', '.vh360-profile-form #cover_image', function() {
+            const file = this.files && this.files[0];
+
+            if (!file || !file.type || !file.type.match(/^image\//)) {
+                return;
+            }
+
+            const reader = new FileReader();
+            const $coverPreview = $(this).closest('.vh360-profile-form').find('.vh360-cover-preview').first();
+
+            if ($coverPreview.length === 0) {
+                return;
+            }
+
+            reader.onload = function(event) {
+                $coverPreview
+                    .css('background-image', `url(${event.target.result})`)
+                    .find('.vh360-cover-placeholder')
+                    .hide();
+            };
+
+            reader.readAsDataURL(file);
+        });
     }
 
     /**
@@ -311,18 +422,21 @@
      */
     function closeCropModal() {
         const $modal = $('#vh360-avatar-crop-modal');
-        
-        // Fade out modal
-        $modal.fadeOut(200, function() {
-            // Destroy cropper instance
-            if (cropperInstance) {
-                cropperInstance.destroy();
-                cropperInstance = null;
-            }
+        const shouldResetSelection = !cropWasApplied;
 
-            // Clear image source
-            $modal.find('#vh360-crop-image').attr('src', '');
-        });
+        $modal.stop(true, true);
+
+        // Destroy cropper synchronously so a queued fade callback cannot destroy
+        // a newly opened cropper if the user immediately reopens the picker.
+        if (cropperInstance) {
+            cropperInstance.destroy();
+            cropperInstance = null;
+        }
+
+        // Clear modal image source and in-memory pending crop state.
+        $modal.find('#vh360-crop-image').attr('src', '');
+        pendingCropData = null;
+        pendingImageData = null;
 
         // Revoke object URL to free memory
         if (currentImageURL) {
@@ -330,10 +444,14 @@
             currentImageURL = null;
         }
 
-        // Reset file input only if crop was cancelled (no crop data)
-        if (!$('input[name="avatar_crop_x"]').val()) {
+        if (shouldResetSelection) {
             $('#profile_picture, input[name="profile_picture"]').val('');
+            selectedAvatarFile = null;
+            clearCropFields();
         }
+
+        // Fade out modal after cleanup.
+        $modal.fadeOut(200);
     }
 
 })(jQuery);

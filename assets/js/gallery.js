@@ -115,7 +115,7 @@
             // Open file dialog
             $uploadBtn.on('click', function(e) {
                 e.preventDefault();
-                $uploadInput.trigger('click');
+                $uploadInput.val('').trigger('click');
             });
 
             // Handle file selection

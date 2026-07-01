@@ -180,6 +180,35 @@ body.community-menu-compact .vh360-community-menu__toggle {
     }
 }
 
+
+/* ============================================
+   Narrow Desktop - Auto Compact
+   ============================================ */
+
+@media (min-width: 1024px) and (max-width: 1200px) {
+    body.has-community-menu .vh360-community-menu {
+        width: 64px;
+    }
+
+    body.has-community-menu {
+        --community-menu-left-gutter: 0px;
+    }
+
+    body.has-community-menu .vh360-community-menu__profile-info,
+    body.has-community-menu .vh360-cm-label {
+        display: none;
+    }
+
+    body.has-community-menu .vh360-community-menu__list a {
+        justify-content: center;
+        padding: 16px 8px;
+    }
+
+    body.has-community-menu .vh360-cm-icon {
+        margin-right: 0;
+    }
+}
+
 /* ============================================
    Mobile - Always Hidden
    ============================================ */

@@ -63,7 +63,7 @@
             // Featured image upload
             $(document).on('click.vh360events', '#vh360-event-upload-trigger', function(e) {
                 e.preventDefault();
-                $('#vh360-event-featured-image').click();
+                $('#vh360-event-featured-image').val('').trigger('click');
             });
             
             $(document).on('change.vh360events', '#vh360-event-featured-image', this.handleImageSelect.bind(this));

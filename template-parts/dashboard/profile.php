@@ -85,14 +85,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vh360_edit_profile_no
                 
                 // Handle profile picture upload (avatar)
                 if (!empty($_FILES['profile_picture']['name'])) {
-                    // Prepare crop data from hidden fields with sanitization
-                    $crop_data = array();
-                    if (isset($_POST['avatar_crop_x'], $_POST['avatar_crop_y'], $_POST['avatar_crop_width'], $_POST['avatar_crop_height'])) {
+                    // Prepare crop data only when a real crop area was submitted.
+                    $crop_data   = array();
+                    $crop_width  = isset($_POST['avatar_crop_width']) ? floatval($_POST['avatar_crop_width']) : 0;
+                    $crop_height = isset($_POST['avatar_crop_height']) ? floatval($_POST['avatar_crop_height']) : 0;
+
+                    if ($crop_width > 0 && $crop_height > 0) {
                         $crop_data = array(
-                            'x'             => floatval($_POST['avatar_crop_x']),
-                            'y'             => floatval($_POST['avatar_crop_y']),
-                            'width'         => floatval($_POST['avatar_crop_width']),
-                            'height'        => floatval($_POST['avatar_crop_height']),
+                            'x'             => isset($_POST['avatar_crop_x']) ? floatval($_POST['avatar_crop_x']) : 0,
+                            'y'             => isset($_POST['avatar_crop_y']) ? floatval($_POST['avatar_crop_y']) : 0,
+                            'width'         => $crop_width,
+                            'height'        => $crop_height,
                             'source_width'  => isset($_POST['avatar_source_width']) ? absint($_POST['avatar_source_width']) : null,
                             'source_height' => isset($_POST['avatar_source_height']) ? absint($_POST['avatar_source_height']) : null,
                         );

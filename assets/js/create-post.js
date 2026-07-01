@@ -41,7 +41,7 @@
                 e.preventDefault();
                 e.stopPropagation();
                 // Directly click the file input
-                document.getElementById('vh360_post_featured_image').click();
+                $('#vh360_post_featured_image').val('').trigger('click');
             });
 
             // Handle file input change for image preview
@@ -59,7 +59,7 @@
             $(document).on('click', '#vh360-edit-upload-trigger', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                document.getElementById('vh360-edit-featured-image').click();
+                $('#vh360-edit-featured-image').val('').trigger('click');
             });
 
             // Handle edit modal file input change
