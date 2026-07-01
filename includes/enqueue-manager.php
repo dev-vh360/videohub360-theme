@@ -663,7 +663,7 @@ function vh360_enqueue_activity_feed_assets() {
             'nonce'        => wp_create_nonce('vh360_like_post'),
             'shareNonce'   => wp_create_nonce('vh360_share_post'),
             'commentNonce' => wp_create_nonce('vh360_comment_post'),
-            'mentionNonce' => wp_create_nonce('vh360_user_mentions'),
+            'mentionNonce' => wp_create_nonce('vh360_activity_nonce'),
             'postActionsNonce'    => wp_create_nonce('vh360_post_actions'),
             'commentActionsNonce' => wp_create_nonce('vh360_comment_actions'),
             'currentUserAvatar' => get_avatar_url(get_current_user_id(), array('size' => 28)),

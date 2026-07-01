@@ -66,14 +66,32 @@ class VH360_Stripe_Webhook {
         $payload = $request->get_body();
         $sig_header = isset($_SERVER['HTTP_STRIPE_SIGNATURE']) ? sanitize_text_field(wp_unslash($_SERVER['HTTP_STRIPE_SIGNATURE'])) : '';
         
-        // Verify signature
-        if (!empty($webhook_secret)) {
-            $verified = $this->verify_signature($payload, $sig_header, $webhook_secret);
-            
-            if (is_wp_error($verified)) {
-                $this->log_webhook_error('signature_verification_failed', $verified->get_error_message());
-                return new WP_REST_Response(array('error' => 'Invalid signature'), 400);
-            }
+        // Fail closed: never process Stripe webhooks unless a signing secret
+        // is configured and the Stripe-Signature header verifies.
+        if (empty($webhook_secret)) {
+            $this->log_webhook_error(
+                'missing_webhook_secret',
+                'Stripe webhook signing secret is not configured.'
+            );
+
+            return new WP_REST_Response(
+                array('error' => 'Webhook not configured.'),
+                401
+            );
+        }
+
+        $verified = $this->verify_signature($payload, $sig_header, $webhook_secret);
+
+        if (is_wp_error($verified)) {
+            $this->log_webhook_error(
+                'invalid_signature',
+                $verified->get_error_message()
+            );
+
+            return new WP_REST_Response(
+                array('error' => 'Invalid webhook signature.'),
+                400
+            );
         }
         
         // Parse payload

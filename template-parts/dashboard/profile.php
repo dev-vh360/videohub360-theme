@@ -129,26 +129,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['vh360_edit_profile_no
                     require_once(ABSPATH . 'wp-admin/includes/image.php');
                     require_once(ABSPATH . 'wp-admin/includes/media.php');
                     
-                    $upload_overrides = array('test_form' => false);
-                    $upload = wp_handle_upload($_FILES['cover_image'], $upload_overrides);
-                    
-                    if (isset($upload['error'])) {
-                        $error_message = $upload['error'];
-                    } else {
-                        // Create attachment
-                        $attachment = array(
-                            'post_mime_type' => $upload['type'],
-                            'post_title' => sanitize_file_name(basename($upload['file'])),
-                            'post_content' => '',
-                            'post_status' => 'inherit',
-                        );
-                        
-                        $attach_id = wp_insert_attachment($attachment, $upload['file']);
-                        $attach_data = wp_generate_attachment_metadata($attach_id, $upload['file']);
-                        wp_update_attachment_metadata($attach_id, $attach_data);
-                        
-                        // Update user meta
-                        update_user_meta($current_user_id, '_vh360_cover_image', $attach_id);
+                    $max_cover_size = 5 * 1024 * 1024;
+
+                    if (!empty($_FILES['cover_image']['size']) && $_FILES['cover_image']['size'] > $max_cover_size) {
+                        $error_message = __('Cover image must be 5MB or smaller.', 'videohub360');
+                    }
+
+                    $allowed_cover_mimes = array(
+                        'image/jpeg',
+                        'image/png',
+                        'image/gif',
+                        'image/webp',
+                    );
+
+                    $upload_overrides = array(
+                        'test_form' => false,
+                        'mimes'     => array(
+                            'jpg|jpeg|jpe' => 'image/jpeg',
+                            'png'          => 'image/png',
+                            'gif'          => 'image/gif',
+                            'webp'         => 'image/webp',
+                        ),
+                    );
+
+                    if (empty($error_message)) {
+                        $upload = wp_handle_upload($_FILES['cover_image'], $upload_overrides);
+
+                        if (isset($upload['error'])) {
+                            $error_message = $upload['error'];
+                        } else {
+                            $file_check = wp_check_filetype_and_ext(
+                                $upload['file'],
+                                isset($_FILES['cover_image']['name']) ? $_FILES['cover_image']['name'] : ''
+                            );
+
+                            if (
+                                empty($file_check['type'])
+                                || !in_array($file_check['type'], $allowed_cover_mimes, true)
+                                || false === getimagesize($upload['file'])
+                            ) {
+                                @unlink($upload['file']);
+                                $error_message = __('Invalid cover image file.', 'videohub360');
+                            } else {
+                                // Create attachment
+                                $attachment = array(
+                                    'post_mime_type' => $file_check['type'],
+                                    'post_title' => sanitize_file_name(basename($upload['file'])),
+                                    'post_content' => '',
+                                    'post_status' => 'inherit',
+                                    'post_author' => $current_user_id,
+                                );
+
+                                $attach_id = wp_insert_attachment($attachment, $upload['file']);
+                                $attach_data = wp_generate_attachment_metadata($attach_id, $upload['file']);
+                                wp_update_attachment_metadata($attach_id, $attach_data);
+
+                                // Update user meta
+                                update_user_meta($current_user_id, '_vh360_cover_image', $attach_id);
+                            }
+                        }
                     }
                 }
                 

@@ -2105,6 +2105,7 @@ if (typeof window !== 'undefined') {
     function upgradeDatabaseForPrivateMessaging() {
         var formData = new FormData();
         formData.append('action', 'videohub360_chat_upgrade_database');
+        formData.append('nonce', chatNonce);
         
         fetch(ajaxUrl, { method: 'POST', body: formData })
         .then(function(response) { return response.json(); })

@@ -2080,16 +2080,18 @@ function vh360_ajax_search_user_mentions() {
         ) );
     }
 
+    check_ajax_referer( 'vh360_activity_nonce', 'nonce' );
+
     $query = isset( $_POST['q'] ) ? sanitize_text_field( wp_unslash( $_POST['q'] ) ) : '';
-    if ( '' === $query || strlen( $query ) < 1 ) {
+    if ( '' === $query || strlen( $query ) < 2 ) {
         wp_send_json_success( array( 'users' => array() ) );
     }
 
     $args = array(
         'number'         => 8,
         'search'         => '*' . $query . '*',
-        'search_columns' => array( 'user_login', 'user_nicename', 'user_email', 'display_name' ),
-        'fields'         => array( 'ID', 'user_login', 'display_name' ),
+        'search_columns' => array( 'user_login', 'user_nicename', 'display_name' ),
+        'fields'         => array( 'ID', 'user_login', 'user_nicename', 'display_name' ),
     );
 
     $user_query = new WP_User_Query( $args );
@@ -2107,8 +2109,10 @@ function vh360_ajax_search_user_mentions() {
             $results[] = array(
                 'id'     => $user->ID,
                 'name'   => $full_name,
-                'handle' => $user->user_login,
-                'avatar' => get_avatar_url( $user->ID, array( 'size' => 32 ) ),
+                'handle'      => $user->user_login,
+                'username'    => $user->user_nicename,
+                'avatar'      => get_avatar_url( $user->ID, array( 'size' => 32 ) ),
+                'profile_url' => function_exists( 'vh360_get_profile_url' ) ? vh360_get_profile_url( $user->ID ) : get_author_posts_url( $user->ID ),
             );
         }
     }
