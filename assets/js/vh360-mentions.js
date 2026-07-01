@@ -10,7 +10,7 @@
     $(document).ready(function() {
 
         const MENTION_INPUT_SELECTOR = '.vh360-post-textarea, .vh360-comment-form textarea[name="comment"]';
-        const MENTION_MIN_CHARS = 1;
+        const MENTION_MIN_CHARS = 2;
         const MENTION_DEBOUNCE_MS = 200;
 
         const state = {
