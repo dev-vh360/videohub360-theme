@@ -170,6 +170,11 @@
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
+
+.vh360-live-room-details-header .videohub360-open-chat-btn {
+    margin-right: 0;
+}
+
 .vh360-live-room-meta .videohub360-open-chat-btn:active {
     transform: translateY(0);
 }
@@ -253,17 +258,83 @@
     .vh360-live-room-title {
         font-size: 22px;
     }
-    
+
     .vh360-live-room-title-wrap {
         flex-direction: column;
         align-items: flex-start;
     }
-    
+
     .vh360-live-room-meta {
         flex-direction: column;
         align-items: flex-start;
     }
-    
+
+    .vh360-is-live-room .vh360-live-room-details-header {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px;
+        padding: 18px 0 22px;
+        margin-bottom: 24px;
+    }
+
+    .vh360-is-live-room .vh360-live-room-details-header .vh360-live-room-title-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        margin-bottom: 0;
+        min-width: 0;
+    }
+
+    .vh360-is-live-room .vh360-live-room-details-header .vh360-live-room-title {
+        margin: 0;
+        font-size: clamp(1.55rem, 7vw, 2rem);
+        line-height: 1.12;
+        overflow-wrap: anywhere;
+    }
+
+    .vh360-is-live-room .vh360-live-room-details-header .vh360-live-badge {
+        align-self: flex-start;
+    }
+
+    .vh360-is-live-room .vh360-live-room-details-header .vh360-live-room-meta {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        align-items: stretch;
+    }
+
+    .vh360-is-live-room .vh360-live-room-details-header .vh360-live-viewers,
+    .vh360-is-live-room .vh360-live-room-details-header .vh360-live-start-time {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 10px 12px;
+        border: 1px solid var(--vh360-color-border, #e5e7eb);
+        border-radius: 14px;
+        background: var(--vh360-bg-white, #ffffff);
+        color: var(--vh360-text-muted, #6b7280);
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.25;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .vh360-is-live-room .vh360-live-room-details-header .videohub360-open-chat-btn {
+        grid-column: 1 / -1;
+        width: 100%;
+        min-height: 48px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0;
+        border-radius: 14px;
+        white-space: nowrap;
+    }
+
     .vh360-host-name {
         font-size: 14px;
     }
