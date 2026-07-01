@@ -126,7 +126,8 @@
                 dataType: 'json',
                 data: {
                     action: 'vh360_search_user_mentions',
-                    q: query
+                    q: query,
+                    nonce: vh360Community.mentionNonce || vh360Community.nonce
                 },
                 success: function(response) {
                     if (!response || !response.success || !response.data || !Array.isArray(response.data.users)) {

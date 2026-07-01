@@ -761,6 +761,8 @@ class VideoHub360_Chat {
             wp_send_json_error(__('You do not have permission to upgrade the database.', 'videohub360'));
             return;
         }
+
+        check_ajax_referer('videohub360_chat_nonce', 'nonce');
         
         global $wpdb;
         $table_name = $wpdb->prefix . 'videohub360_chat_messages';
