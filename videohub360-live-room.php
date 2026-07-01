@@ -186,7 +186,7 @@ $can_moderate = vh360_user_can_manage_live_room($post_id) || current_user_can('m
                 <?php endif; ?>
             </section>
 
-            <header class="vh360-live-room-header vh360-live-room-details-header">
+            <header class="vh360-live-room-details-header">
                 <div class="vh360-live-room-title-wrap">
                     <h1 class="vh360-live-room-title"><?php echo esc_html(get_the_title($post_id)); ?></h1>
                     <?php if ($is_live && $livestream_fields['live_badge'] === 'yes') : ?>

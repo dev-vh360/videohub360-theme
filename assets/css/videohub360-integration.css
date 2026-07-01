@@ -308,14 +308,6 @@
     min-width: 0;
 }
 
-.vh360-live-room-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
 .vh360-live-room-title-wrap {
     display: flex;
     gap: 0.75rem;

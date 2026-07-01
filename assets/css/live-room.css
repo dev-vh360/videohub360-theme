@@ -98,7 +98,11 @@
 }
 
 /* Live Room Header (Title, Meta, Chat Button) */
-.vh360-live-room-header {
+.vh360-live-room-details-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
     margin-bottom: 24px;
     padding: 20px 0;
     border-bottom: 1px solid var(--vh360-color-border, #e5e7eb);
@@ -255,20 +259,6 @@
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
-    .vh360-live-room-title {
-        font-size: 22px;
-    }
-
-    .vh360-live-room-title-wrap {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .vh360-live-room-meta {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
     .vh360-is-live-room .vh360-live-room-details-header {
         display: grid;
         grid-template-columns: 1fr;
