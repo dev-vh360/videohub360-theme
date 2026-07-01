@@ -189,6 +189,19 @@ function videohub360_theme_customize_register($wp_customize) {
         'type'        => 'checkbox',
     ));
 
+    // Compact Mode on Dashboard
+    $wp_customize->add_setting('vh360_community_menu_compact_dashboard', array(
+        'default'           => 0,
+        'sanitize_callback' => 'absint',
+    ));
+
+    $wp_customize->add_control('vh360_community_menu_compact_dashboard', array(
+        'label'       => __('Compact Mode on Dashboard', 'videohub360-theme'),
+        'description' => __('Display the Community Menu as icons-only on the Dashboard template. This overrides “Hide on Dashboard Template.”', 'videohub360-theme'),
+        'section'     => 'vh360_community_menu_behavior',
+        'type'        => 'checkbox',
+    ));
+
     // Hide on Auth Pages
     $wp_customize->add_setting('vh360_community_menu_hide_auth', array(
         'default'           => 1,

@@ -1965,6 +1965,16 @@ function vh360_channel_has_playlists($author_id) {
 }
 
 /**
+ * Check if the current page uses a Dashboard template.
+ *
+ * @return bool True when viewing a Dashboard template page, false otherwise.
+ * @since 1.0.0
+ */
+function vh360_is_dashboard_template() {
+    return is_page_template('template-dashboard.php') || is_page_template('templates/dashboard.php');
+}
+
+/**
  * Check if Community Menu should be displayed
  *
  * Implements layered detection logic for Community Menu visibility:
@@ -1992,11 +2002,16 @@ function vh360_show_community_menu() {
 
     // Layer 3: Template exclusions based on Customizer settings
 
-    // Check Dashboard template exclusion
-    if (get_theme_mod('vh360_community_menu_hide_dashboard', 1)) {
-        if (is_page_template('template-dashboard.php') || is_page_template('templates/dashboard.php')) {
-            return false;
-        }
+    // Check Dashboard template exclusion. Dashboard compact mode intentionally overrides hiding.
+    $is_dashboard_template = vh360_is_dashboard_template();
+    $compact_on_dashboard  = (bool) get_theme_mod('vh360_community_menu_compact_dashboard', 0);
+
+    if (
+        $is_dashboard_template
+        && get_theme_mod('vh360_community_menu_hide_dashboard', 1)
+        && ! $compact_on_dashboard
+    ) {
+        return false;
     }
 
     // Check Auth pages exclusion
@@ -2136,6 +2151,13 @@ function vh360_force_compact_community_menu() {
  */
 function vh360_should_compact_community_menu() {
     if (vh360_force_compact_community_menu()) {
+        return true;
+    }
+
+    if (
+        vh360_is_dashboard_template()
+        && get_theme_mod('vh360_community_menu_compact_dashboard', 0)
+    ) {
         return true;
     }
 
