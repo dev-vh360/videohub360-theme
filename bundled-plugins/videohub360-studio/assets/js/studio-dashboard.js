@@ -428,18 +428,25 @@
         return job.id;
     }
 
+    function isRecordingActive() {
+        return state.recorder && state.recorder.state === 'recording';
+    }
+
     async function startRecording() {
         if (!state.support.mediaRecorder || !preferredMimeType()) {
             setRecordingStatus(strings.recorderUnavailable, 'error');
             return;
         }
+        let jobId = null;
+        let serverRecordingStarted = false;
         try {
             if (!state.cameraStream) {
                 await startPreview();
             }
-            const jobId = await ensureSetupJob();
+            jobId = await ensureSetupJob();
             const mimeType = preferredMimeType();
             const start = await api('/jobs/' + jobId + '/recording/start', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ mime_type: mimeType }) });
+            serverRecordingStarted = true;
             state.browserSessionId = start.browser_session_id;
             state.selectedMimeType = start.mime_type;
             state.recordingStream = state.cameraStream;
@@ -449,9 +456,9 @@
             state.pendingUploads.clear();
             state.recordingStartedAt = Date.now();
             const preset = getSelectedPreset();
-            const options = { mimeType: state.selectedMimeType };
-            if (preset.videoBitrate) { options.videoBitsPerSecond = preset.videoBitrate; }
-            if (preset.audioBitrate) { options.audioBitsPerSecond = preset.audioBitrate; }
+            const options = { mimeType: mimeType };
+            if (preset.video_bitrate) { options.videoBitsPerSecond = preset.video_bitrate; }
+            if (preset.audio_bitrate) { options.audioBitsPerSecond = preset.audio_bitrate; }
             state.recorder = new window.MediaRecorder(state.recordingStream, options);
             state.recorder.addEventListener('dataavailable', (event) => { if (event.data && event.data.size) { queueChunk(event.data, state.chunkIndex++); } });
             state.recorder.start((config.uploadSettings && config.uploadSettings.preferred_chunk_duration) || 5000);
@@ -460,6 +467,13 @@
             setRecordingStatus(strings.recordingActive, 'success');
             renderRecordingState();
         } catch (error) {
+            if (serverRecordingStarted && jobId) {
+                await api('/jobs/' + jobId + '/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } }).catch(() => {});
+                state.activeJobId = null;
+                state.browserSessionId = '';
+            }
+            state.recorder = null;
+            setRecorderButtons(false, false);
             setRecordingStatus(error.message || strings.recorderUnavailable, 'error');
         }
     }
@@ -670,11 +684,11 @@
         if (els.retryChunks) { els.retryChunks.addEventListener('click', retryFailedChunks); }
         if (els.finalizeRecording) { els.finalizeRecording.addEventListener('click', finalizeRecording); }
         window.addEventListener('beforeunload', (event) => {
-            if (state.recorder && state.recorder.state === 'recording') { event.preventDefault(); event.returnValue = ''; }
+            if (isRecordingActive()) { event.preventDefault(); event.returnValue = ''; }
             cleanup();
         });
         document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
+            if (document.hidden && !isRecordingActive()) {
                 cleanup();
             }
         });

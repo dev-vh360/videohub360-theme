@@ -66,7 +66,10 @@ class VH360_Studio_REST_Controller {
                 'methods'             => WP_REST_Server::CREATABLE,
                 'callback'            => array( $this, 'start_recording' ),
                 'permission_callback' => array( $this, 'permissions_check' ),
-                'args'                => array( 'id' => $this->get_id_arg(), 'mime_type' => array( 'required' => true, 'sanitize_callback' => 'sanitize_mime_type' ) ),
+                'args'                => array(
+                    'id'        => $this->get_id_arg(),
+                    'mime_type' => $this->get_mime_type_arg( true ),
+                ),
             )
         );
         register_rest_route(
@@ -77,13 +80,21 @@ class VH360_Studio_REST_Controller {
                     'methods'             => WP_REST_Server::CREATABLE,
                     'callback'            => array( $this, 'upload_chunk' ),
                     'permission_callback' => array( $this, 'permissions_check' ),
-                    'args'                => array( 'id' => $this->get_id_arg() ),
+                    'args'                => array(
+                        'id'                 => $this->get_id_arg(),
+                        'browser_session_id' => $this->get_browser_session_arg( true ),
+                        'chunk_index'        => $this->get_non_negative_int_arg( true ),
+                        'mime_type'          => $this->get_mime_type_arg( true ),
+                    ),
                 ),
                 array(
                     'methods'             => WP_REST_Server::READABLE,
                     'callback'            => array( $this, 'list_chunks' ),
                     'permission_callback' => array( $this, 'permissions_check' ),
-                    'args'                => array( 'id' => $this->get_id_arg() ),
+                    'args'                => array(
+                        'id'                 => $this->get_id_arg(),
+                        'browser_session_id' => $this->get_browser_session_arg( false ),
+                    ),
                 ),
             )
         );
@@ -94,7 +105,10 @@ class VH360_Studio_REST_Controller {
                 'methods'             => WP_REST_Server::CREATABLE,
                 'callback'            => array( $this, 'stop_recording' ),
                 'permission_callback' => array( $this, 'permissions_check' ),
-                'args'                => array( 'id' => $this->get_id_arg() ),
+                'args'                => array(
+                    'id'               => $this->get_id_arg(),
+                    'duration_seconds' => $this->get_non_negative_int_arg( false ),
+                ),
             )
         );
         register_rest_route(
@@ -104,7 +118,10 @@ class VH360_Studio_REST_Controller {
                 'methods'             => WP_REST_Server::CREATABLE,
                 'callback'            => array( $this, 'finalize_recording' ),
                 'permission_callback' => array( $this, 'permissions_check' ),
-                'args'                => array( 'id' => $this->get_id_arg() ),
+                'args'                => array(
+                    'id'              => $this->get_id_arg(),
+                    'expected_chunks' => $this->get_positive_int_arg( true ),
+                ),
             )
         );
 
@@ -127,6 +144,47 @@ class VH360_Studio_REST_Controller {
                 return is_numeric( $value ) && 0 < absint( $value );
             },
             'sanitize_callback' => 'absint',
+        );
+    }
+
+
+
+    private function get_mime_type_arg( $required ) {
+        return array(
+            'required'          => (bool) $required,
+            'validate_callback' => function( $value ) {
+                return $this->chunks->is_allowed_mime_type( $value );
+            },
+        );
+    }
+
+    private function get_browser_session_arg( $required ) {
+        return array(
+            'required'          => (bool) $required,
+            'sanitize_callback' => 'sanitize_text_field',
+            'validate_callback' => function( $value ) use ( $required ) {
+                return ! $required && ( null === $value || '' === $value ) || ( is_string( $value ) && '' !== trim( $value ) && 191 >= strlen( $value ) );
+            },
+        );
+    }
+
+    private function get_non_negative_int_arg( $required ) {
+        return array(
+            'required'          => (bool) $required,
+            'sanitize_callback' => 'absint',
+            'validate_callback' => function( $value ) use ( $required ) {
+                return ! $required && ( null === $value || '' === $value ) || ( is_numeric( $value ) && 0 <= intval( $value ) );
+            },
+        );
+    }
+
+    private function get_positive_int_arg( $required ) {
+        return array(
+            'required'          => (bool) $required,
+            'sanitize_callback' => 'absint',
+            'validate_callback' => function( $value ) {
+                return is_numeric( $value ) && 0 < intval( $value );
+            },
         );
     }
 
@@ -279,7 +337,7 @@ class VH360_Studio_REST_Controller {
             return new WP_Error( 'vh360_studio_invalid_status_transition', __( 'Recording can only start from a created job.', 'videohub360-studio' ), array( 'status' => 409 ) );
         }
         $settings = $this->chunks->upload_settings();
-        $mime_type = strtolower( strtok( sanitize_mime_type( $request->get_param( 'mime_type' ) ), ';' ) );
+        $mime_type = $this->chunks->base_mime_type( $request->get_param( 'mime_type' ) );
         if ( ! in_array( $mime_type, $settings['allowed_mime_types'], true ) ) {
             return new WP_Error( 'vh360_studio_invalid_recording_type', __( 'Recording MIME type is not allowed.', 'videohub360-studio' ), array( 'status' => 415 ) );
         }
