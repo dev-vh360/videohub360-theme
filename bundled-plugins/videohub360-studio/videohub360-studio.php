@@ -64,6 +64,7 @@ function vh360_studio_load_files() {
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-permissions.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-quality-presets.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-recording-jobs.php';
+    require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-assets.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'providers/interface-vh360-studio-live-engine-provider.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'providers/interface-vh360-studio-recording-provider.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'providers/interface-vh360-studio-replay-storage-provider.php';

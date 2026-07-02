@@ -25,6 +25,7 @@ class VH360_Studio_Plugin {
         VH360_Studio_Database::maybe_install();
         $this->registry = new VH360_Studio_Provider_Registry();
         $this->jobs     = new VH360_Studio_Recording_Jobs( $this->registry );
+        new VH360_Studio_Assets( $this->registry );
 
         add_filter( 'vh360_dashboard_tabs_registry', array( $this, 'register_dashboard_tab' ), 20, 2 );
         add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );

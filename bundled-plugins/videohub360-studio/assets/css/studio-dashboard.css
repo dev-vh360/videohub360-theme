@@ -1,0 +1,222 @@
+.vh360-studio-dashboard {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.vh360-studio-hero,
+.vh360-studio-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+.vh360-studio-hero {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.5rem;
+}
+
+.vh360-studio-kicker {
+    color: #4f46e5;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin: 0 0 0.25rem;
+    text-transform: uppercase;
+}
+
+.vh360-studio-hero h2,
+.vh360-studio-card h3 {
+    margin-top: 0;
+}
+
+.vh360-studio-status,
+.vh360-studio-job-result {
+    border-radius: 999px;
+    font-weight: 700;
+    padding: 0.65rem 1rem;
+}
+
+.vh360-studio-status[data-status-type="success"],
+.vh360-studio-job-result[data-status-type="success"] {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.vh360-studio-status[data-status-type="warning"],
+.vh360-studio-job-result[data-status-type="warning"] {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.vh360-studio-status[data-status-type="error"],
+.vh360-studio-job-result[data-status-type="error"] {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.vh360-studio-grid {
+    display: grid;
+    gap: 1.25rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.vh360-studio-card {
+    padding: 1.25rem;
+}
+
+.vh360-studio-card--wide {
+    grid-column: 1 / -1;
+}
+
+.vh360-studio-checks {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    list-style: none;
+    margin: 1rem 0 0;
+    padding: 0;
+}
+
+.vh360-studio-checks li {
+    align-items: center;
+    background: #f8fafc;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.8rem 1rem;
+}
+
+.vh360-studio-checks li strong {
+    white-space: nowrap;
+}
+
+.vh360-studio-checks .is-supported strong {
+    color: #15803d;
+}
+
+.vh360-studio-checks .is-unsupported strong {
+    color: #b91c1c;
+}
+
+.vh360-studio-card label {
+    display: block;
+    font-weight: 700;
+    margin: 0.75rem 0 0.35rem;
+}
+
+.vh360-studio-card select {
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    max-width: 100%;
+    min-height: 42px;
+    padding: 0.45rem 0.65rem;
+    width: 100%;
+}
+
+.vh360-studio-video-shell {
+    align-items: center;
+    aspect-ratio: 16 / 9;
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    border-radius: 14px;
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+    overflow: hidden;
+}
+
+.vh360-studio-video-shell video {
+    height: 100%;
+    object-fit: cover;
+    width: 100%;
+}
+
+.vh360-studio-video-shell--screen video {
+    object-fit: contain;
+}
+
+.vh360-studio-meter {
+    background: #e5e7eb;
+    border-radius: 999px;
+    height: 12px;
+    margin-top: 1rem;
+    overflow: hidden;
+}
+
+.vh360-studio-meter span {
+    background: linear-gradient(90deg, #22c55e, #eab308, #ef4444);
+    display: block;
+    height: 100%;
+    transition: width 120ms linear;
+    width: 0;
+}
+
+.vh360-studio-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.vh360-studio-button {
+    align-items: center;
+    background: #4f46e5;
+    border: 0;
+    border-radius: 999px;
+    color: #fff;
+    cursor: pointer;
+    display: inline-flex;
+    font-weight: 700;
+    justify-content: center;
+    min-height: 42px;
+    padding: 0.65rem 1rem;
+}
+
+.vh360-studio-button:hover,
+.vh360-studio-button:focus {
+    background: #4338ca;
+}
+
+.vh360-studio-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.vh360-studio-button--secondary {
+    background: #334155;
+}
+
+.vh360-studio-button--primary {
+    background: #0f766e;
+}
+
+.vh360-studio-help {
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.vh360-studio-recent-jobs {
+    overflow-x: auto;
+}
+
+@media (max-width: 782px) {
+    .vh360-studio-hero {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .vh360-studio-grid,
+    .vh360-studio-checks {
+        grid-template-columns: 1fr;
+    }
+
+    .vh360-studio-status,
+    .vh360-studio-job-result {
+        border-radius: 14px;
+        width: 100%;
+    }
+}
