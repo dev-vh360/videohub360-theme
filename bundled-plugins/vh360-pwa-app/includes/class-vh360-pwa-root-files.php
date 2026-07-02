@@ -22,6 +22,7 @@ final class VH360_PWA_Root_Files {
 		'vh360-manifest.json',
 		'vh360-sw.js',
 		'vh360-offline.html',
+		'vh360-launch.html',
 		'OneSignalSDKWorker.js',
 		'OneSignalSDKUpdaterWorker.js',
 		'OneSignalSDK.sw.js',
@@ -54,6 +55,7 @@ final class VH360_PWA_Root_Files {
 		$results = array();
 		$results['manifest'] = self::maybe_write_manifest( $root );
 		$results['offline'] = self::maybe_write_offline_page( $root );
+		$results['launch_shell'] = self::maybe_write_launch_shell( $root );
 		$results['service_worker'] = self::maybe_write_vh360_sw( $root );
 		$results['onesignal'] = self::maybe_write_onesignal_workers( $root );
 		return $results;
@@ -78,6 +80,12 @@ final class VH360_PWA_Root_Files {
 		return self::write_managed_file( $path, $html, 'vh360-offline.html', true );
 	}
 
+
+	private static function maybe_write_launch_shell( string $root ) : array {
+		$path = $root . 'vh360-launch.html';
+		return self::write_managed_file( $path, vh360_pwa_build_launch_shell(), 'vh360-launch.html', true );
+	}
+
 	private static function maybe_write_vh360_sw( string $root ) : array {
 		$path = $root . 'vh360-sw.js';
 		return self::write_managed_file( $path, vh360_pwa_build_sw_script(), 'vh360-sw.js', true );
@@ -93,9 +101,6 @@ final class VH360_PWA_Root_Files {
 		$wrapper = "/* VH360 Managed File: OneSignal service worker wrapper */\n" .
 			"self.addEventListener('message', function () {});\n" .
 			"try {\n" .
-			"  importScripts('https://cdn.onesignal.com/sdks/web/" . esc_js( VH360_PWA_ONESIGNAL_SDK_VERSION ) . "/OneSignalSDK.sw.js');\n" .
-			"} catch (e) {}\n" .
-			"try {\n" .
 			"  importScripts('" . esc_js( $vh360_sw_url ) . "');\n" .
 			"} catch (e) {}\n";
 
@@ -108,7 +113,7 @@ final class VH360_PWA_Root_Files {
 	}
 
 	private static function is_managed_file_content( string $existing ) : bool {
-		foreach ( array( 'VH360 Managed File', 'VH360 PWA & App plugin', '"generated_by": "VH360 PWA & App plugin"', '"vh360_managed": true', 'VH360 Service Worker', 'vh360-sw.js', 'vh360-offline.html' ) as $marker ) {
+		foreach ( array( 'VH360 Managed File', 'VH360 PWA & App plugin', '"generated_by": "VH360 PWA & App plugin"', '"vh360_managed": true', 'VH360 Service Worker', 'vh360-sw.js', 'vh360-offline.html', 'vh360-launch.html' ) as $marker ) {
 			if ( false !== strpos( $existing, $marker ) ) {
 				return true;
 			}

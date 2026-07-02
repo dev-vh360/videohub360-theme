@@ -218,6 +218,9 @@ $out['scope']     = $normalize_to_path( $scope );
 		$out['precache_offline'] = vh360_pwa_boolval( $input['precache_offline'] ?? $current['precache_offline'] );
 		$out['precache_home'] = vh360_pwa_boolval( $input['precache_home'] ?? $current['precache_home'] );
 		$out['precache_urls'] = sanitize_textarea_field( $input['precache_urls'] ?? $current['precache_urls'] );
+		$out['fast_launch_enabled'] = vh360_pwa_boolval( $input['fast_launch_enabled'] ?? $current['fast_launch_enabled'] );
+		$out['launch_mode'] = in_array( (string) ( $input['launch_mode'] ?? '' ), array( 'shell','cached_start' ), true ) ? (string) $input['launch_mode'] : $current['launch_mode'];
+		$out['launch_shell_max_ms'] = max( 500, min( 1200, absint( $input['launch_shell_max_ms'] ?? $current['launch_shell_max_ms'] ) ) );
 
 		$out['show_install_prompt'] = vh360_pwa_boolval( $input['show_install_prompt'] ?? $current['show_install_prompt'] );
 		$out['install_prompt_text'] = sanitize_text_field( $input['install_prompt_text'] ?? $current['install_prompt_text'] );
@@ -237,7 +240,7 @@ $out['scope']     = $normalize_to_path( $scope );
 		}
 		
 		$out['pwa_asset_version'] = ! empty( $current['pwa_asset_version'] ) ? absint( $current['pwa_asset_version'] ) : time();
-		$asset_keys = array( 'splash_enabled', 'splash_logo', 'splash_background_color', 'splash_title', 'splash_title_enabled', 'splash_title_font_size', 'splash_title_color', 'splash_title_offset', 'icon_192', 'icon_512', 'icon_maskable_192', 'icon_maskable_512', 'app_name', 'short_name', 'theme_color', 'background_color', 'start_url', 'cache_version' );
+		$asset_keys = array( 'splash_enabled', 'splash_logo', 'splash_background_color', 'splash_title', 'splash_title_enabled', 'splash_title_font_size', 'splash_title_color', 'splash_title_offset', 'icon_192', 'icon_512', 'icon_maskable_192', 'icon_maskable_512', 'app_name', 'short_name', 'theme_color', 'background_color', 'start_url', 'cache_version', 'fast_launch_enabled', 'launch_mode', 'launch_shell_max_ms' );
 		foreach ( $asset_keys as $asset_key ) {
 			if ( ( $current[ $asset_key ] ?? null ) !== ( $out[ $asset_key ] ?? null ) ) {
 				$out['pwa_asset_version'] = max( time(), absint( $out['pwa_asset_version'] ) + 1 );
@@ -860,6 +863,27 @@ $manifest_url = esc_url( vh360_pwa_endpoint_url( VH360_PWA_MANIFEST_SLUG ) );
 			echo '<option value="' . esc_attr( $k ) . '" ' . selected( (string) $opts['cache_strategy'], $k, false ) . '>' . esc_html( $label ) . '</option>';
 		}
 		echo '</select>';
+		echo '</td></tr>';
+
+		echo '<tr><th scope="row">' . esc_html__( 'Fast App Launch', 'vh360-pwa-app' ) . '</th><td>';
+		echo '<label><input type="checkbox" name="vh360_pwa_options[fast_launch_enabled]" value="1" ' . checked( ! empty( $opts['fast_launch_enabled'] ), true, false ) . '> ' . esc_html__( 'Serve a cached launch page immediately for installed app startup', 'vh360-pwa-app' ) . '</label>';
+		echo '<p class="description">' . esc_html__( 'Fast launch improves installed app startup by serving a cached launch page first, then loading the live site content. Private, account, checkout, dashboard, messages, REST, and admin requests stay network-first or bypass cache.', 'vh360-pwa-app' ) . '</p>';
+		echo '</td></tr>';
+
+		echo '<tr><th scope="row">' . esc_html__( 'Launch Mode', 'vh360-pwa-app' ) . '</th><td>';
+		echo '<select name="vh360_pwa_options[launch_mode]">';
+		$modes = array( 'shell' => __( 'Lightweight App Shell (recommended)', 'vh360-pwa-app' ), 'cached_start' => __( 'Cached Start Page', 'vh360-pwa-app' ) );
+		foreach ( $modes as $k => $label ) {
+			echo '<option value="' . esc_attr( $k ) . '" ' . selected( (string) $opts['launch_mode'], $k, false ) . '>' . esc_html( $label ) . '</option>';
+		}
+		echo '</select>';
+		echo '<p class="description">' . esc_html__( 'The lightweight shell is a small generated static file with branding and no Elementor, WooCommerce, remote API calls, videos, or push setup.', 'vh360-pwa-app' ) . '</p>';
+		echo '<p class="description"><strong>' . esc_html__( 'Cached Start Page warning:', 'vh360-pwa-app' ) . '</strong> ' . esc_html__( 'Only use Cached Start Page mode for public, non-personalized pages. Do not use it for dashboards, checkout/account pages, member-only pages, or pages that show user-specific menus, notifications, cart data, or account state.', 'vh360-pwa-app' ) . '</p>';
+		echo '</td></tr>';
+
+		echo '<tr><th scope="row">' . esc_html__( 'Maximum Launch Shell Display Time', 'vh360-pwa-app' ) . '</th><td>';
+		echo '<input type="number" min="500" max="1200" step="50" name="vh360_pwa_options[launch_shell_max_ms]" value="' . esc_attr( (string) $opts['launch_shell_max_ms'] ) . '" style="width:100px"> ms';
+		echo '<p class="description">' . esc_html__( 'Recommended range: 500–1200ms. Default: 500ms.', 'vh360-pwa-app' ) . '</p>';
 		echo '</td></tr>';
 
 		echo '<tr><th scope="row">' . esc_html__( 'Cache Version', 'vh360-pwa-app' ) . '</th><td>';

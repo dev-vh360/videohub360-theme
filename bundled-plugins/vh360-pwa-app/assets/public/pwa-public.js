@@ -433,7 +433,9 @@
     initRefreshControls();
   });
 
-  window.addEventListener('load', function () {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', registerSW);
+  } else {
     registerSW();
-  });
+  }
 })();

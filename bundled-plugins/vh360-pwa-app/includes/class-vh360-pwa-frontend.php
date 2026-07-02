@@ -80,7 +80,10 @@ class VH360_PWA_Frontend {
 			VH360_PWA_APP_URL . 'assets/public/pwa-public.js',
 			array(),
 			vh360_pwa_app_asset_version('assets/public/pwa-public.js'),
-			false
+			array(
+				'in_footer' => true,
+				'strategy'  => 'defer',
+			)
 		);
 		wp_enqueue_style(
 			'vh360-pwa-public',
