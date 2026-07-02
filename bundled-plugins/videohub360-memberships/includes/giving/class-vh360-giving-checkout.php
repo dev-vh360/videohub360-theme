@@ -5,7 +5,7 @@ if (!defined('ABSPATH')) exit;
 class VH360_Giving_Checkout {
     private static $instance = null;
     public static function get_instance(){ if(null===self::$instance){ self::$instance=new self(); } return self::$instance; }
-    private function __construct(){ add_action('wp_ajax_vh360_giving_create_checkout',array($this,'ajax_create_checkout')); add_action('wp_ajax_vh360_giving_cancel_recurring',array($this,'ajax_cancel_recurring')); add_action('admin_post_vh360_download_giving_history',array($this,'download_history')); add_action('wp_enqueue_scripts',array($this,'enqueue')); }
+    private function __construct(){ add_action('wp_ajax_vh360_giving_create_checkout',array($this,'ajax_create_checkout')); add_action('wp_ajax_vh360_giving_cancel_recurring',array($this,'ajax_cancel_recurring')); add_action('admin_post_vh360_download_giving_history',array($this,'download_history')); add_action('wp_enqueue_scripts',array($this,'enqueue')); add_action('template_redirect',array($this,'handle_checkout_cancel_return'),1); }
     public function enqueue(){
         if(
             function_exists('is_page_template')
@@ -60,9 +60,35 @@ class VH360_Giving_Checkout {
 
     private function build_session_params($d,$customer,$args){
         $dashboard_url=function_exists('vh360_get_dashboard_page_url')?vh360_get_dashboard_page_url():home_url('/dashboard/'); $is_sub='subscription'===$args['mode']; $interval='weekly'===$d['frequency']?'week':'month';
-        $params=array('mode'=>$args['mode'],'customer'=>$customer,'line_items[0][price_data][currency]'=>$d['currency'],'line_items[0][price_data][product_data][name]'=>vh360_giving_checkout_display_name().' - '.$d['fund']->label,'line_items[0][price_data][unit_amount]'=>(int)round($d['amount']*100),'line_items[0][quantity]'=>1,'success_url'=>add_query_arg(array('tab'=>'giving','vh360_giving_success'=>'1','session_id'=>'{CHECKOUT_SESSION_ID}'),$dashboard_url),'cancel_url'=>add_query_arg(array('tab'=>'giving','vh360_giving_cancel'=>'1'),$dashboard_url),'client_reference_id'=>$d['user_id'],'metadata[type]'=>$args['metadata_type'],'metadata[user_id]'=>$d['user_id'],'metadata['.$args['local_id_key'].']'=>$args['local_id'],'metadata[fund_key]'=>$d['fund']->fund_key,'metadata[source]'=>'dashboard');
+        $cancel_args=array('tab'=>'giving','vh360_giving_cancel'=>'1','session_id'=>'{CHECKOUT_SESSION_ID}');
+        if($is_sub){ $cancel_args['giving_recurring_id']=absint($args['local_id']); } else { $cancel_args['giving_transaction_id']=absint($args['local_id']); }
+        $params=array('mode'=>$args['mode'],'customer'=>$customer,'line_items[0][price_data][currency]'=>$d['currency'],'line_items[0][price_data][product_data][name]'=>vh360_giving_checkout_display_name().' - '.$d['fund']->label,'line_items[0][price_data][unit_amount]'=>(int)round($d['amount']*100),'line_items[0][quantity]'=>1,'success_url'=>add_query_arg(array('tab'=>'giving','vh360_giving_success'=>'1','session_id'=>'{CHECKOUT_SESSION_ID}'),$dashboard_url),'cancel_url'=>add_query_arg($cancel_args,$dashboard_url),'client_reference_id'=>$d['user_id'],'metadata[type]'=>$args['metadata_type'],'metadata[user_id]'=>$d['user_id'],'metadata['.$args['local_id_key'].']'=>$args['local_id'],'metadata[fund_key]'=>$d['fund']->fund_key,'metadata[source]'=>'dashboard');
         if($is_sub){ $params['line_items[0][price_data][recurring][interval]']=$interval; foreach(array('type'=>$args['metadata_type'],$args['local_id_key']=>$args['local_id'],'user_id'=>$d['user_id'],'fund_key'=>$d['fund']->fund_key,'source'=>'dashboard') as $k=>$v){ $params['subscription_data[metadata]['.$k.']']=$v; } } else { $params['payment_intent_data[metadata][type]']='giving'; $params['payment_intent_data[metadata][transaction_id]']=$args['local_id']; $params['payment_intent_data[metadata][source]']='dashboard'; }
         return $params;
+    }
+
+
+    public function handle_checkout_cancel_return(){
+        if(empty($_GET['vh360_giving_cancel'])||!is_user_logged_in()) return;
+        $user_id=get_current_user_id();
+        $session_id=isset($_GET['session_id'])?sanitize_text_field(wp_unslash($_GET['session_id'])):'';
+        if(!empty($_GET['giving_transaction_id'])){
+            $transaction_id=absint($_GET['giving_transaction_id']);
+            $transaction=VH360_Giving_Transactions::get($transaction_id);
+            if($transaction&&(int)$transaction->user_id===(int)$user_id&&'pending'===$transaction->status){
+                $update=array('status'=>'canceled');
+                if(''!==$session_id) $update['stripe_checkout_session_id']=$session_id;
+                VH360_Giving_Transactions::update($transaction_id,$update);
+            }
+            return;
+        }
+        if(!empty($_GET['giving_recurring_id'])){
+            $recurring_id=absint($_GET['giving_recurring_id']);
+            $gift=VH360_Giving_Recurring::get($recurring_id);
+            if($gift&&(int)$gift->user_id===(int)$user_id&&'incomplete'===$gift->status){
+                VH360_Giving_Recurring::mark_canceled($recurring_id);
+            }
+        }
     }
 
     public function ajax_cancel_recurring(){ check_ajax_referer('vh360_giving_checkout','nonce'); $user_id=get_current_user_id(); $id=isset($_POST['recurring_id'])?absint($_POST['recurring_id']):0; $gift=VH360_Giving_Recurring::get($id); if(!$user_id||!$gift||(int)$gift->user_id!==$user_id) wp_send_json_error(array('message'=>__('Recurring gift not found.','videohub360-memberships'))); if(empty($gift->stripe_subscription_id)){ VH360_Giving_Recurring::mark_canceled($id); wp_send_json_success(array('message'=>__('Recurring gift canceled.','videohub360-memberships'))); } $stripe=VH360_Stripe_Bootstrap::get_instance(); $result=$stripe->api_request('/v1/subscriptions/'.rawurlencode($gift->stripe_subscription_id),array('cancel_at_period_end'=>'true'),'POST'); if(is_wp_error($result)) wp_send_json_error(array('message'=>$result->get_error_message())); VH360_Giving_Recurring::update($id,$this->normalize_subscription_for_recurring($result)); wp_send_json_success(array('message'=>__('Recurring gift cancellation scheduled.','videohub360-memberships'))); }

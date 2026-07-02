@@ -220,7 +220,7 @@ class VH360_Giving_Admin {
         $webhook_configured = $stripe && '' !== (string) $stripe->get_webhook_secret();
         $endpoint = home_url('/wp-json/vh360-memberships/v1/stripe-webhook');
         $stripe_settings_url = admin_url('admin.php?page=vh360-theme-memberships#stripe');
-        $events = array('checkout.session.completed','invoice.paid','invoice.payment_failed','customer.subscription.updated','customer.subscription.deleted');
+        $events = array('checkout.session.completed','checkout.session.expired','invoice.paid','invoice.payment_failed','customer.subscription.updated','customer.subscription.deleted');
         ?>
         <div class="card vh360-giving-stripe-connection">
             <h2><?php esc_html_e('Stripe Connection', 'videohub360-memberships'); ?></h2>
@@ -335,7 +335,7 @@ class VH360_Giving_Admin {
         <form method="get" class="vh360-giving-filters">
             <input type="hidden" name="page" value="vh360-theme-giving">
             <input type="hidden" name="tab" value="transactions">
-            <select name="status"><option value=""><?php esc_html_e('All statuses', 'videohub360-memberships'); ?></option><?php foreach (array('pending', 'paid', 'failed', 'refunded') as $option) : ?><option value="<?php echo esc_attr($option); ?>" <?php selected($status, $option); ?>><?php echo esc_html(ucfirst($option)); ?></option><?php endforeach; ?></select>
+            <select name="status"><option value=""><?php esc_html_e('All statuses', 'videohub360-memberships'); ?></option><?php foreach (array('pending', 'paid', 'canceled', 'expired', 'failed', 'refunded') as $option) : ?><option value="<?php echo esc_attr($option); ?>" <?php selected($status, $option); ?>><?php echo esc_html(ucfirst($option)); ?></option><?php endforeach; ?></select>
             <select name="fund_id"><option value="0"><?php esc_html_e('All funds', 'videohub360-memberships'); ?></option><?php foreach ($funds as $fund) : ?><option value="<?php echo esc_attr($fund->id); ?>" <?php selected($fund_id, $fund->id); ?>><?php echo esc_html($fund->label); ?></option><?php endforeach; ?></select>
             <input type="date" name="date_from" value="<?php echo esc_attr($date_from); ?>">
             <input type="date" name="date_to" value="<?php echo esc_attr($date_to); ?>">
@@ -347,7 +347,7 @@ class VH360_Giving_Admin {
             <thead><tr><th><?php esc_html_e('Donor', 'videohub360-memberships'); ?></th><th><?php esc_html_e('Amount', 'videohub360-memberships'); ?></th><th><?php esc_html_e('Fund', 'videohub360-memberships'); ?></th><th><?php esc_html_e('Status', 'videohub360-memberships'); ?></th><th><?php esc_html_e('Gateway', 'videohub360-memberships'); ?></th><th><?php esc_html_e('Source', 'videohub360-memberships'); ?></th><th><?php esc_html_e('Date', 'videohub360-memberships'); ?></th><th><?php esc_html_e('Stripe IDs', 'videohub360-memberships'); ?></th></tr></thead>
             <tbody>
                 <?php if ($rows) : foreach ($rows as $row) : $user = get_userdata($row->user_id); ?>
-                    <tr><td><?php echo esc_html($user ? $user->display_name : '#' . $row->user_id); ?></td><td><?php echo esc_html(vh360_giving_format_amount($row->amount, $row->currency)); ?></td><td><?php echo esc_html($row->fund_label); ?></td><td><?php echo esc_html($row->status); ?></td><td><?php echo esc_html($row->gateway); ?></td><td><?php echo esc_html($row->source); ?></td><td><?php echo esc_html($row->created_at); ?></td><td><code><?php echo esc_html(trim($row->stripe_checkout_session_id . ' ' . $row->stripe_payment_intent_id)); ?></code></td></tr>
+                    <tr><td><?php echo esc_html($user ? $user->display_name : '#' . $row->user_id); ?></td><td><?php echo esc_html(vh360_giving_format_amount($row->amount, $row->currency)); ?></td><td><?php echo esc_html($row->fund_label); ?></td><td><?php echo esc_html(ucfirst(str_replace('_', ' ', $row->status))); ?></td><td><?php echo esc_html($row->gateway); ?></td><td><?php echo esc_html($row->source); ?></td><td><?php echo esc_html($row->created_at); ?></td><td><code><?php echo esc_html(trim($row->stripe_checkout_session_id . ' ' . $row->stripe_payment_intent_id)); ?></code></td></tr>
                 <?php endforeach; else : ?>
                     <tr><td colspan="8"><?php esc_html_e('No giving transactions match these filters.', 'videohub360-memberships'); ?></td></tr>
                 <?php endif; ?>
@@ -369,7 +369,7 @@ class VH360_Giving_Admin {
             <input type="date" name="date_from" value="<?php echo esc_attr($filters['date_from']); ?>">
             <input type="date" name="date_to" value="<?php echo esc_attr($filters['date_to']); ?>">
             <select name="fund_id"><option value="0"><?php esc_html_e('All funds', 'videohub360-memberships'); ?></option><?php foreach ($funds as $fund) : ?><option value="<?php echo esc_attr($fund->id); ?>" <?php selected($filters['fund_id'], $fund->id); ?>><?php echo esc_html($fund->label); ?></option><?php endforeach; ?></select>
-            <select name="transaction_status"><option value=""><?php esc_html_e('All transaction statuses', 'videohub360-memberships'); ?></option><?php foreach (array('pending','paid','failed','refunded') as $status) : ?><option value="<?php echo esc_attr($status); ?>" <?php selected($filters['transaction_status'], $status); ?>><?php echo esc_html(ucfirst($status)); ?></option><?php endforeach; ?></select>
+            <select name="transaction_status"><option value=""><?php esc_html_e('All transaction statuses', 'videohub360-memberships'); ?></option><?php foreach (array('pending', 'paid', 'canceled', 'expired', 'failed', 'refunded') as $status) : ?><option value="<?php echo esc_attr($status); ?>" <?php selected($filters['transaction_status'], $status); ?>><?php echo esc_html(ucfirst($status)); ?></option><?php endforeach; ?></select>
             <select name="recurring_status"><option value=""><?php esc_html_e('All recurring statuses', 'videohub360-memberships'); ?></option><?php foreach (array('incomplete','active','past_due','canceled') as $status) : ?><option value="<?php echo esc_attr($status); ?>" <?php selected($filters['recurring_status'], $status); ?>><?php echo esc_html(ucfirst(str_replace('_', ' ', $status))); ?></option><?php endforeach; ?></select>
             <select name="gateway"><option value=""><?php esc_html_e('All gateways', 'videohub360-memberships'); ?></option><option value="stripe" <?php selected($filters['gateway'], 'stripe'); ?>>Stripe</option></select>
             <select name="source"><option value=""><?php esc_html_e('All sources', 'videohub360-memberships'); ?></option><option value="dashboard" <?php selected($filters['source'], 'dashboard'); ?>>Dashboard</option></select>
