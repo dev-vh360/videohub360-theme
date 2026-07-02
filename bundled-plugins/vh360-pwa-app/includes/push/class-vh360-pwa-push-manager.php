@@ -410,7 +410,16 @@ class VH360_PWA_Push_Manager {
 	 */
 	public function reset_settings() : bool {
 		$deleted_settings = delete_option( 'vh360_pwa_push_settings' );
-		$deleted_logs = delete_option( 'vh360_pwa_push_logs' );
+		$deleted_logs     = delete_option( 'vh360_pwa_push_logs' );
+
+		if ( function_exists( 'vh360_pwa_bump_asset_version' ) ) {
+			vh360_pwa_bump_asset_version();
+		}
+
+		if ( class_exists( 'VH360_PWA_Root_Files' ) ) {
+			VH360_PWA_Root_Files::ensure_root_files();
+		}
+
 		return $deleted_settings || $deleted_logs;
 	}
 }
