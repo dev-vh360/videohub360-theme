@@ -228,7 +228,41 @@ class VH360_Studio_Recording_Jobs {
         return $this->get( $id, $user_id );
     }
 
+    public function start_recording( $id, $user_id, $browser_session_id, $mime_type ) {
+        return $this->update( $id, $user_id, array(
+            'status'             => self::STATUS_RECORDING,
+            'browser_session_id' => sanitize_text_field( $browser_session_id ),
+            'mime_type'          => sanitize_mime_type( $mime_type ),
+            'started_at'         => current_time( 'mysql' ),
+            'error_message'      => '',
+        ) );
+    }
+
+    public function mark_stopping( $id, $user_id, $duration_seconds = null ) {
+        $data = array( 'status' => self::STATUS_STOPPING, 'stopped_at' => current_time( 'mysql' ) );
+        if ( null !== $duration_seconds ) { $data['duration_seconds'] = absint( $duration_seconds ); }
+        return $this->update( $id, $user_id, $data );
+    }
+
+    public function mark_uploading( $id, $user_id ) {
+        return $this->update( $id, $user_id, array( 'status' => self::STATUS_UPLOADING ) );
+    }
+
+    public function mark_processing( $id, $user_id, $data = array() ) {
+        $data['status'] = self::STATUS_PROCESSING;
+        return $this->update( $id, $user_id, $data );
+    }
+
+    public function mark_failed( $id, $user_id, $message ) {
+        return $this->update( $id, $user_id, array( 'status' => self::STATUS_FAILED, 'error_message' => sanitize_textarea_field( $message ) ) );
+    }
+
     public function cancel( $id, $user_id ) {
-        return $this->update( $id, $user_id, array( 'status' => self::STATUS_CANCELLED ) );
+        $job = $this->update( $id, $user_id, array( 'status' => self::STATUS_CANCELLED ) );
+        if ( ! is_wp_error( $job ) && class_exists( 'VH360_Studio_Recording_Chunks' ) ) {
+            ( new VH360_Studio_Recording_Chunks( $this ) )->delete_job_chunks( $id );
+        }
+        return $job;
     }
 }
+

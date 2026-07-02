@@ -15,6 +15,11 @@ class VH360_Studio_Database {
         return $wpdb->prefix . 'vh360_studio_recording_jobs';
     }
 
+    public static function chunks_table_name() {
+        global $wpdb;
+        return $wpdb->prefix . 'vh360_studio_recording_chunks';
+    }
+
     public static function maybe_install() {
         if ( get_option( 'vh360_studio_db_version' ) !== VH360_STUDIO_DB_VERSION ) {
             self::install();
@@ -25,8 +30,9 @@ class VH360_Studio_Database {
         global $wpdb;
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
-        $table_name      = self::table_name();
-        $charset_collate = $wpdb->get_charset_collate();
+        $table_name       = self::table_name();
+        $chunks_table_name = self::chunks_table_name();
+        $charset_collate  = $wpdb->get_charset_collate();
 
         // Phase 1A has not shipped with production data. Replace the initial
         // unapproved scaffold schema cleanly if it was activated during review.
@@ -74,6 +80,30 @@ class VH360_Studio_Database {
         ) {$charset_collate};";
 
         dbDelta( $sql );
+
+        $chunks_sql = "CREATE TABLE {$chunks_table_name} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            job_id bigint(20) unsigned NOT NULL,
+            user_id bigint(20) unsigned NOT NULL,
+            browser_session_id varchar(191) NOT NULL,
+            chunk_index int(10) unsigned NOT NULL,
+            chunk_size bigint(20) unsigned NOT NULL DEFAULT 0,
+            mime_type varchar(100) NOT NULL DEFAULT '',
+            file_path text NOT NULL,
+            checksum varchar(64) NOT NULL DEFAULT '',
+            status varchar(40) NOT NULL DEFAULT 'received',
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+            PRIMARY KEY  (id),
+            UNIQUE KEY job_session_chunk (job_id,browser_session_id,chunk_index),
+            KEY job_id (job_id),
+            KEY user_id (user_id),
+            KEY browser_session_id (browser_session_id),
+            KEY chunk_index (chunk_index),
+            KEY status (status)
+        ) {$charset_collate};";
+
+        dbDelta( $chunks_sql );
         update_option( 'vh360_studio_db_version', VH360_STUDIO_DB_VERSION );
     }
 }

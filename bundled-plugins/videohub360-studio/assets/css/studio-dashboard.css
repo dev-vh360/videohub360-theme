@@ -248,3 +248,39 @@
         width: 100%;
     }
 }
+
+.vh360-studio-recorder-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin: 1rem 0;
+}
+
+.vh360-studio-recorder-grid div {
+    background: var(--vh360-studio-surface-muted);
+    border: 1px solid var(--vh360-studio-border);
+    border-radius: 12px;
+    padding: 0.75rem;
+}
+
+.vh360-studio-recorder-grid strong,
+.vh360-studio-recorder-grid span {
+    display: block;
+}
+
+.vh360-studio-recorder-grid span {
+    color: var(--vh360-studio-text-light);
+    margin-top: 0.25rem;
+    overflow-wrap: anywhere;
+}
+
+.vh360-studio-progress {
+    accent-color: var(--vh360-studio-primary);
+    width: 100%;
+}
+
+@media (max-width: 782px) {
+    .vh360-studio-recorder-grid {
+        grid-template-columns: 1fr;
+    }
+}
