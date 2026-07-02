@@ -1,68 +1,213 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) { exit; }
+/**
+ * Recording job service.
+ *
+ * @package VH360_Studio
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
 class VH360_Studio_Recording_Jobs {
-    const STATUS_DRAFT = 'draft';
-    const STATUS_SCHEDULED = 'scheduled';
-    const STATUS_RECORDING = 'recording';
-    const STATUS_COMPLETED = 'completed';
-    const STATUS_FAILED = 'failed';
-    const STATUS_CANCELLED = 'cancelled';
+    const STATUS_CREATED    = 'created';
+    const STATUS_RECORDING  = 'recording';
+    const STATUS_STOPPING   = 'stopping';
+    const STATUS_UPLOADING  = 'uploading';
+    const STATUS_PROCESSING = 'processing';
+    const STATUS_READY      = 'ready';
+    const STATUS_FAILED     = 'failed';
+    const STATUS_CANCELLED  = 'cancelled';
+
     private $registry;
-    public function __construct( VH360_Studio_Provider_Registry $registry ) { $this->registry = $registry; }
-    public function allowed_statuses() { return array( self::STATUS_DRAFT, self::STATUS_SCHEDULED, self::STATUS_RECORDING, self::STATUS_COMPLETED, self::STATUS_FAILED, self::STATUS_CANCELLED ); }
-    public function validate_payload( $data, $partial = false ) {
+
+    public function __construct( VH360_Studio_Provider_Registry $registry ) {
+        $this->registry = $registry;
+    }
+
+    public function allowed_statuses() {
+        return array(
+            self::STATUS_CREATED,
+            self::STATUS_RECORDING,
+            self::STATUS_STOPPING,
+            self::STATUS_UPLOADING,
+            self::STATUS_PROCESSING,
+            self::STATUS_READY,
+            self::STATUS_FAILED,
+            self::STATUS_CANCELLED,
+        );
+    }
+
+    public function transition_map() {
+        return array(
+            self::STATUS_CREATED    => array( self::STATUS_RECORDING, self::STATUS_CANCELLED ),
+            self::STATUS_RECORDING  => array( self::STATUS_STOPPING, self::STATUS_FAILED, self::STATUS_CANCELLED ),
+            self::STATUS_STOPPING   => array( self::STATUS_UPLOADING, self::STATUS_FAILED, self::STATUS_CANCELLED ),
+            self::STATUS_UPLOADING  => array( self::STATUS_PROCESSING, self::STATUS_FAILED, self::STATUS_CANCELLED ),
+            self::STATUS_PROCESSING => array( self::STATUS_READY, self::STATUS_FAILED ),
+            self::STATUS_READY      => array(),
+            self::STATUS_FAILED     => array(),
+            self::STATUS_CANCELLED  => array(),
+        );
+    }
+
+    public function can_transition( $from_status, $to_status ) {
+        if ( $from_status === $to_status ) {
+            return true;
+        }
+
+        $map = $this->transition_map();
+        return isset( $map[ $from_status ] ) && in_array( $to_status, $map[ $from_status ], true );
+    }
+
+    public function validate_payload( $data, $partial = false, $existing = null ) {
         $out = array();
-        if ( isset( $data['room_id'] ) ) { $out['room_id'] = sanitize_text_field( wp_unslash( $data['room_id'] ) ); } elseif ( ! $partial ) { $out['room_id'] = ''; }
-        if ( isset( $data['video_id'] ) ) { $out['video_id'] = absint( $data['video_id'] ); }
-        if ( isset( $data['status'] ) && in_array( sanitize_key( $data['status'] ), $this->allowed_statuses(), true ) ) { $out['status'] = sanitize_key( $data['status'] ); }
-        foreach ( array( 'live_provider', 'recording_provider', 'storage_provider', 'quality_preset' ) as $key ) {
-            if ( isset( $data[ $key ] ) ) { $out[ $key ] = sanitize_key( $data[ $key ] ); }
+
+        foreach ( array( 'source_type', 'recording_mode', 'quality_preset', 'storage_provider', 'status' ) as $key ) {
+            if ( isset( $data[ $key ] ) ) {
+                $out[ $key ] = sanitize_key( wp_unslash( $data[ $key ] ) );
+            }
         }
-        foreach ( array( 'external_id', 'source_url', 'replay_url' ) as $key ) {
-            if ( isset( $data[ $key ] ) ) { $out[ $key ] = 'external_id' === $key ? sanitize_text_field( wp_unslash( $data[ $key ] ) ) : esc_url_raw( wp_unslash( $data[ $key ] ) ); }
+
+        foreach ( array( 'source_id', 'room_id', 'browser_session_id', 'videopress_guid', 'publitio_file_id', 'local_temp_path' ) as $key ) {
+            if ( isset( $data[ $key ] ) ) {
+                $out[ $key ] = sanitize_text_field( wp_unslash( $data[ $key ] ) );
+            }
         }
-        if ( isset( $data['metadata'] ) ) { $out['metadata'] = wp_json_encode( $this->sanitize_metadata( $data['metadata'] ) ); }
-        foreach ( array( 'scheduled_at', 'started_at', 'completed_at', 'cancelled_at' ) as $key ) {
-            if ( isset( $data[ $key ] ) ) { $out[ $key ] = sanitize_text_field( wp_unslash( $data[ $key ] ) ); }
+
+        if ( isset( $data['mime_type'] ) ) {
+            $out['mime_type'] = sanitize_mime_type( wp_unslash( $data['mime_type'] ) );
         }
-        if ( isset( $out['recording_provider'] ) && ! $this->registry->has_recording_provider( $out['recording_provider'] ) ) { return new WP_Error( 'vh360_studio_invalid_recording_provider', __( 'Invalid recording provider.', 'videohub360-studio' ), array( 'status' => 400 ) ); }
-        if ( isset( $out['storage_provider'] ) && ! $this->registry->has_storage_provider( $out['storage_provider'] ) ) { return new WP_Error( 'vh360_studio_invalid_storage_provider', __( 'Invalid storage provider.', 'videohub360-studio' ), array( 'status' => 400 ) ); }
+
+        foreach ( array( 'playback_url', 'poster_url' ) as $key ) {
+            if ( isset( $data[ $key ] ) ) {
+                $out[ $key ] = esc_url_raw( wp_unslash( $data[ $key ] ) );
+            }
+        }
+
+        if ( isset( $data['error_message'] ) ) {
+            $out['error_message'] = sanitize_textarea_field( wp_unslash( $data['error_message'] ) );
+        }
+
+        foreach ( array( 'live_video_id', 'duration_seconds', 'file_size', 'wp_attachment_id', 'retry_count' ) as $key ) {
+            if ( isset( $data[ $key ] ) ) {
+                $out[ $key ] = absint( $data[ $key ] );
+            }
+        }
+
+        if ( isset( $data['videopress_processing_done'] ) ) {
+            $out['videopress_processing_done'] = rest_sanitize_boolean( $data['videopress_processing_done'] ) ? 1 : 0;
+        }
+
+        foreach ( array( 'started_at', 'stopped_at', 'completed_at' ) as $key ) {
+            if ( isset( $data[ $key ] ) ) {
+                $out[ $key ] = sanitize_text_field( wp_unslash( $data[ $key ] ) );
+            }
+        }
+
+        if ( isset( $out['status'] ) && ! in_array( $out['status'], $this->allowed_statuses(), true ) ) {
+            return new WP_Error( 'vh360_studio_invalid_status', __( 'Invalid recording job status.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        }
+
+        if ( $existing && isset( $out['status'] ) && ! $this->can_transition( $existing['status'], $out['status'] ) ) {
+            return new WP_Error( 'vh360_studio_invalid_status_transition', __( 'Invalid recording job status transition.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
+
+        if ( isset( $out['quality_preset'] ) && ! VH360_Studio_Quality_Presets::exists( $out['quality_preset'] ) ) {
+            return new WP_Error( 'vh360_studio_invalid_quality_preset', __( 'Invalid quality preset.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        }
+
+        if ( isset( $out['storage_provider'] ) && ! $this->registry->has_storage_provider( $out['storage_provider'] ) ) {
+            return new WP_Error( 'vh360_studio_invalid_storage_provider', __( 'Invalid storage provider.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        }
+
+        if ( ! $partial ) {
+            $out = wp_parse_args(
+                $out,
+                array(
+                    'source_type'     => 'live_room',
+                    'source_id'       => '',
+                    'room_id'         => '',
+                    'recording_mode'  => 'browser',
+                    'quality_preset'  => VH360_Studio_Quality_Presets::DEFAULT_PRESET,
+                    'storage_provider' => 'local_media',
+                    'status'          => self::STATUS_CREATED,
+                )
+            );
+        }
+
         return $out;
     }
-    private function sanitize_metadata( $value ) {
-        if ( is_array( $value ) ) { return array_map( array( $this, 'sanitize_metadata' ), $value ); }
-        return is_scalar( $value ) ? sanitize_text_field( wp_unslash( (string) $value ) ) : '';
-    }
+
     public function create( $user_id, $data ) {
         global $wpdb;
+
         $data = $this->validate_payload( $data );
-        if ( is_wp_error( $data ) ) { return $data; }
+        if ( is_wp_error( $data ) ) {
+            return $data;
+        }
+
         $now = current_time( 'mysql' );
-        $row = wp_parse_args( $data, array( 'user_id' => absint( $user_id ), 'status' => self::STATUS_DRAFT, 'live_provider' => 'agora_browser', 'recording_provider' => 'browser_recording', 'storage_provider' => 'local_media', 'quality_preset' => 'standard', 'created_at' => $now, 'updated_at' => $now ) );
+        $row = wp_parse_args(
+            $data,
+            array(
+                'user_id'    => absint( $user_id ),
+                'created_at' => $now,
+                'updated_at' => $now,
+            )
+        );
+
         $wpdb->insert( VH360_Studio_Database::table_name(), $row );
+
         return $wpdb->insert_id ? $this->get( $wpdb->insert_id, $user_id ) : new WP_Error( 'vh360_studio_create_failed', __( 'Unable to create recording job.', 'videohub360-studio' ), array( 'status' => 500 ) );
     }
+
     public function get( $id, $user_id = 0 ) {
         global $wpdb;
-        $sql = 'SELECT * FROM ' . VH360_Studio_Database::table_name() . ' WHERE id = %d';
+
+        $sql  = 'SELECT * FROM ' . VH360_Studio_Database::table_name() . ' WHERE id = %d';
         $args = array( absint( $id ) );
-        if ( $user_id && ! current_user_can( 'manage_options' ) ) { $sql .= ' AND user_id = %d'; $args[] = absint( $user_id ); }
+
+        if ( $user_id && ! VH360_Studio_Permissions::current_user_can_manage_all_jobs() ) {
+            $sql   .= ' AND user_id = %d';
+            $args[] = absint( $user_id );
+        }
+
         return $wpdb->get_row( $wpdb->prepare( $sql, $args ), ARRAY_A );
     }
+
     public function list( $user_id, $limit = 20 ) {
         global $wpdb;
+
         $limit = min( 100, max( 1, absint( $limit ) ) );
-        if ( current_user_can( 'manage_options' ) ) { return $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . VH360_Studio_Database::table_name() . ' ORDER BY created_at DESC LIMIT %d', $limit ), ARRAY_A ); }
+
+        if ( VH360_Studio_Permissions::current_user_can_manage_all_jobs() ) {
+            return $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . VH360_Studio_Database::table_name() . ' ORDER BY created_at DESC LIMIT %d', $limit ), ARRAY_A );
+        }
+
         return $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . VH360_Studio_Database::table_name() . ' WHERE user_id = %d ORDER BY created_at DESC LIMIT %d', absint( $user_id ), $limit ), ARRAY_A );
     }
+
     public function update( $id, $user_id, $data ) {
         global $wpdb;
-        if ( ! $this->get( $id, $user_id ) ) { return new WP_Error( 'vh360_studio_not_found', __( 'Recording job not found.', 'videohub360-studio' ), array( 'status' => 404 ) ); }
-        $data = $this->validate_payload( $data, true );
-        if ( is_wp_error( $data ) ) { return $data; }
+
+        $existing = $this->get( $id, $user_id );
+        if ( ! $existing ) {
+            return new WP_Error( 'vh360_studio_not_found', __( 'Recording job not found.', 'videohub360-studio' ), array( 'status' => 404 ) );
+        }
+
+        $data = $this->validate_payload( $data, true, $existing );
+        if ( is_wp_error( $data ) ) {
+            return $data;
+        }
+
         $data['updated_at'] = current_time( 'mysql' );
         $wpdb->update( VH360_Studio_Database::table_name(), $data, array( 'id' => absint( $id ) ) );
+
         return $this->get( $id, $user_id );
     }
-    public function cancel( $id, $user_id ) { return $this->update( $id, $user_id, array( 'status' => self::STATUS_CANCELLED, 'cancelled_at' => current_time( 'mysql' ) ) ); }
+
+    public function cancel( $id, $user_id ) {
+        return $this->update( $id, $user_id, array( 'status' => self::STATUS_CANCELLED ) );
+    }
 }
