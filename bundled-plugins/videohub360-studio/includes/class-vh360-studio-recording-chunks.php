@@ -88,14 +88,21 @@ class VH360_Studio_Recording_Chunks {
         $dir = $this->chunk_directory( $job['id'], $browser_session_id );
         if ( is_wp_error( $dir ) ) { return $dir; }
         $ext = 'video/mp4' === $base_mime ? 'mp4' : 'webm';
-        $path = trailingslashit( $dir ) . 'chunk-' . $chunk_index . '.' . $ext;
-        if ( ! @move_uploaded_file( $file['tmp_name'], $path ) ) {
+        $final_filename = 'chunk-' . $chunk_index . '.' . $ext;
+        $path = trailingslashit( $dir ) . $final_filename;
+        $validation_path = trailingslashit( $dir ) . 'chunk-' . $chunk_index . '-' . sanitize_file_name( wp_generate_uuid4() ) . '.tmp';
+        if ( ! @move_uploaded_file( $file['tmp_name'], $validation_path ) ) {
             return new WP_Error( 'vh360_studio_chunk_store_failed', __( 'Unable to store recording chunk.', 'videohub360-studio' ), array( 'status' => 500 ) );
         }
-        $type_check = $this->validate_stored_file_type( $path, $base_mime );
+        $type_check = $this->validate_stored_file_type( $validation_path, $base_mime, $final_filename );
         if ( is_wp_error( $type_check ) ) {
-            @unlink( $path );
+            @unlink( $validation_path );
             return $type_check;
+        }
+
+        if ( ! $this->replace_validated_chunk( $validation_path, $path ) ) {
+            @unlink( $validation_path );
+            return new WP_Error( 'vh360_studio_chunk_store_failed', __( 'Unable to store recording chunk.', 'videohub360-studio' ), array( 'status' => 500 ) );
         }
 
         $checksum = hash_file( 'sha256', $path );
@@ -147,9 +154,32 @@ class VH360_Studio_Recording_Chunks {
         return absint( $wpdb->get_var( $wpdb->prepare( 'SELECT chunk_size FROM ' . VH360_Studio_Database::chunks_table_name() . ' WHERE job_id = %d AND browser_session_id = %s AND chunk_index = %d AND status = %s', absint( $job_id ), sanitize_text_field( $session ), absint( $index ), self::STATUS_RECEIVED ) ) );
     }
 
-    private function validate_stored_file_type( $path, $expected_mime ) {
+    private function replace_validated_chunk( $source, $destination ) {
+        if ( @rename( $source, $destination ) ) {
+            return true;
+        }
+
+        if ( ! file_exists( $destination ) ) {
+            return false;
+        }
+
+        $backup = $destination . '.backup-' . sanitize_file_name( wp_generate_uuid4() );
+        if ( ! @rename( $destination, $backup ) ) {
+            return false;
+        }
+
+        if ( @rename( $source, $destination ) ) {
+            @unlink( $backup );
+            return true;
+        }
+
+        @rename( $backup, $destination );
+        return false;
+    }
+
+    private function validate_stored_file_type( $path, $expected_mime, $filename = '' ) {
         $extension = 'video/mp4' === $expected_mime ? 'mp4' : 'webm';
-        $filename  = basename( $path );
+        $filename  = $filename ? sanitize_file_name( $filename ) : basename( $path );
         $check     = wp_check_filetype_and_ext( $path, $filename, array( 'webm' => 'video/webm', 'mp4' => 'video/mp4' ) );
 
         if ( ! empty( $check['ext'] ) && $extension !== $check['ext'] ) {
