@@ -19,7 +19,7 @@ class VH360_Studio_REST_Controller {
         $this->jobs   = $jobs;
         $this->chunks = new VH360_Studio_Recording_Chunks( $jobs );
         $this->validator = new VH360_Studio_Recording_Validator( $this->chunks );
-        $this->publisher = new VH360_Studio_Replay_Publisher( VH360_Studio_Plugin::instance()->registry(), $jobs, $this->validator );
+        $this->publisher = new VH360_Studio_Replay_Publisher( VH360_Studio_Plugin::instance()->registry(), $jobs, $this->validator, $this->chunks );
     }
 
     public function register_routes() {
