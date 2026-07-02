@@ -71,7 +71,7 @@ class VH360_Studio_Recording_Jobs {
     public function validate_payload( $data, $partial = false, $existing = null ) {
         $out = array();
 
-        foreach ( array( 'source_type', 'recording_mode', 'quality_preset', 'storage_provider', 'status' ) as $key ) {
+        foreach ( array( 'source_type', 'recording_mode', 'quality_preset', 'storage_provider', 'status', 'publish_provider_status' ) as $key ) {
             if ( isset( $data[ $key ] ) ) {
                 $out[ $key ] = sanitize_key( wp_unslash( $data[ $key ] ) );
             }
@@ -97,7 +97,7 @@ class VH360_Studio_Recording_Jobs {
             $out['error_message'] = sanitize_textarea_field( wp_unslash( $data['error_message'] ) );
         }
 
-        foreach ( array( 'live_video_id', 'duration_seconds', 'file_size', 'wp_attachment_id', 'retry_count' ) as $key ) {
+        foreach ( array( 'live_video_id', 'duration_seconds', 'file_size', 'wp_attachment_id', 'retry_count', 'expected_chunks', 'received_chunks' ) as $key ) {
             if ( isset( $data[ $key ] ) ) {
                 $out[ $key ] = absint( $data[ $key ] );
             }
@@ -107,7 +107,14 @@ class VH360_Studio_Recording_Jobs {
             $out['videopress_processing_done'] = rest_sanitize_boolean( $data['videopress_processing_done'] ) ? 1 : 0;
         }
 
-        foreach ( array( 'started_at', 'stopped_at', 'completed_at' ) as $key ) {
+        if ( isset( $data['assembled_checksum'] ) ) {
+            $checksum = strtolower( sanitize_text_field( wp_unslash( $data['assembled_checksum'] ) ) );
+            if ( preg_match( '/^[a-f0-9]{64}$/', $checksum ) ) {
+                $out['assembled_checksum'] = $checksum;
+            }
+        }
+
+        foreach ( array( 'started_at', 'stopped_at', 'completed_at', 'assembled_at', 'temp_expires_at', 'publish_attempted_at' ) as $key ) {
             if ( isset( $data[ $key ] ) ) {
                 $out[ $key ] = sanitize_text_field( wp_unslash( $data[ $key ] ) );
             }

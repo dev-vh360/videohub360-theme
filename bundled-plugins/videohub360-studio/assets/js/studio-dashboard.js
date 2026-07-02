@@ -537,7 +537,8 @@
         try {
             if (els.recordingFinalizeStatus) { els.recordingFinalizeStatus.textContent = strings.finalizing; }
             const job = await api('/jobs/' + state.activeJobId + '/recording/finalize', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ expected_chunks: state.finalChunkCount }) });
-            setRecordingStatus(strings.recordingSaved, 'success');
+            setRecordingStatus('Recording finalized and temporary file validated. Replay publishing is prepared for a later phase.', 'success');
+            appendRecentJob(job);
             if (els.recordingFinalizeStatus) { els.recordingFinalizeStatus.textContent = job.status || 'processing'; }
         } catch (error) {
             setRecordingStatus(error.message || strings.chunkUploadFailed, 'error');
@@ -626,7 +627,13 @@
             '<td>' + escapeHtml(job.room_id || '') + '</td>' +
             '<td>' + escapeHtml(job.status || '') + '</td>' +
             '<td>' + escapeHtml(job.storage_provider || '') + '</td>' +
-            '<td>' + escapeHtml(job.created_at || '') + '</td>';
+            '<td>' + escapeHtml(job.created_at || '') + '</td>' +
+            '<td>' + escapeHtml(job.file_size ? String(job.file_size) : '—') + '</td>' +
+            '<td>' + escapeHtml(job.mime_type || '—') + '</td>' +
+            '<td>' + escapeHtml(job.assembled_at || '—') + '</td>' +
+            '<td>' + escapeHtml(job.temp_expires_at || '—') + '</td>' +
+            '<td>' + escapeHtml(job.publish_provider_status || '—') + '</td>' +
+            '<td>' + escapeHtml(job.error_message || '—') + '</td>';
         els.recentJobsBody.prepend(row);
         if (els.emptyJobs) {
             els.emptyJobs.hidden = true;

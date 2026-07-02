@@ -150,6 +150,12 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
                     <th><?php esc_html_e( 'Status', 'videohub360-studio' ); ?></th>
                     <th><?php esc_html_e( 'Storage', 'videohub360-studio' ); ?></th>
                     <th><?php esc_html_e( 'Created', 'videohub360-studio' ); ?></th>
+                    <th><?php esc_html_e( 'File Size', 'videohub360-studio' ); ?></th>
+                    <th><?php esc_html_e( 'MIME Type', 'videohub360-studio' ); ?></th>
+                    <th><?php esc_html_e( 'Assembled', 'videohub360-studio' ); ?></th>
+                    <th><?php esc_html_e( 'Temp Expires', 'videohub360-studio' ); ?></th>
+                    <th><?php esc_html_e( 'Provider Status', 'videohub360-studio' ); ?></th>
+                    <th><?php esc_html_e( 'Last Error', 'videohub360-studio' ); ?></th>
                 </tr>
             </thead>
             <tbody data-recent-jobs-body>
@@ -160,6 +166,12 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
                         <td><?php echo esc_html( $job['status'] ); ?></td>
                         <td><?php echo esc_html( $job['storage_provider'] ); ?></td>
                         <td><?php echo esc_html( $job['created_at'] ); ?></td>
+                        <td><?php echo esc_html( ! empty( $job['file_size'] ) ? size_format( absint( $job['file_size'] ) ) : '—' ); ?></td>
+                        <td><?php echo esc_html( ! empty( $job['mime_type'] ) ? $job['mime_type'] : '—' ); ?></td>
+                        <td><?php echo esc_html( ! empty( $job['assembled_at'] ) ? $job['assembled_at'] : '—' ); ?></td>
+                        <td><?php echo esc_html( ! empty( $job['temp_expires_at'] ) ? $job['temp_expires_at'] : '—' ); ?></td>
+                        <td><?php echo esc_html( ! empty( $job['publish_provider_status'] ) ? $job['publish_provider_status'] : '—' ); ?></td>
+                        <td><?php echo esc_html( ! empty( $job['error_message'] ) ? $job['error_message'] : '—' ); ?></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>

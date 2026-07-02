@@ -28,6 +28,8 @@ class VH360_Studio_Plugin {
         new VH360_Studio_Assets( $this->registry );
 
         add_filter( 'vh360_dashboard_tabs_registry', array( $this, 'register_dashboard_tab' ), 20, 2 );
+        VH360_Studio_Recording_Cleanup::schedule();
+        add_action( VH360_Studio_Recording_Cleanup::HOOK, array( new VH360_Studio_Recording_Cleanup( $this->jobs ), 'run' ) );
         add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
     }
 

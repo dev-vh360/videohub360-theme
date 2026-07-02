@@ -129,23 +129,28 @@ class VH360_Studio_Recording_Chunks {
         $dir = $this->chunk_directory( $job['id'], $browser_session_id );
         if ( is_wp_error( $dir ) ) { return $dir; }
         $assembled = trailingslashit( dirname( $dir ) ) . 'recording-' . absint( $job['id'] ) . '-' . sanitize_file_name( $browser_session_id ) . '.' . $ext;
-        $out = @fopen( $assembled, 'wb' );
+        $part = $assembled . '.part';
+        if ( file_exists( $part ) && $this->is_path_in_base_directory( $part ) ) { @unlink( $part ); }
+        $out = @fopen( $part, 'wb' );
         if ( ! $out ) { return new WP_Error( 'vh360_studio_assembly_failed', __( 'Unable to assemble recording.', 'videohub360-studio' ), array( 'status' => 500 ) ); }
         for ( $i = 0; $i < $expected_chunks; $i++ ) {
-            $path = $this->get_chunk_path( $job['id'], $browser_session_id, $i );
-            if ( ! $path || ! file_exists( $path ) ) { fclose( $out ); return new WP_Error( 'vh360_studio_missing_chunks', __( 'Recording chunks are incomplete.', 'videohub360-studio' ), array( 'status' => 409 ) ); }
-            $in = fopen( $path, 'rb' );
-            stream_copy_to_stream( $in, $out );
+            $row = $this->get_chunk_row( $job['id'], $browser_session_id, $i );
+            $valid = $this->validate_chunk_row_for_assembly( $row, $i );
+            if ( is_wp_error( $valid ) ) { fclose( $out ); @unlink( $part ); return $valid; }
+            $in = @fopen( $row['file_path'], 'rb' );
+            if ( ! $in ) { fclose( $out ); @unlink( $part ); return new WP_Error( 'vh360_studio_chunk_unreadable', __( 'Recording chunk could not be read.', 'videohub360-studio' ), array( 'status' => 409 ) ); }
+            if ( false === stream_copy_to_stream( $in, $out ) ) { fclose( $in ); fclose( $out ); @unlink( $part ); return new WP_Error( 'vh360_studio_assembly_failed', __( 'Unable to assemble recording.', 'videohub360-studio' ), array( 'status' => 500 ) ); }
             fclose( $in );
         }
         fclose( $out );
+        if ( ! @rename( $part, $assembled ) ) { @unlink( $part ); return new WP_Error( 'vh360_studio_assembly_failed', __( 'Unable to finalize assembled recording.', 'videohub360-studio' ), array( 'status' => 500 ) ); }
         return array( 'path' => $assembled, 'file_size' => filesize( $assembled ), 'mime_type' => $base_mime );
     }
 
     public function delete_job_chunks( $job_id, $browser_session_id = '' ) {
         global $wpdb;
         $job_dir = $this->base_directory() . '/' . absint( $job_id );
-        if ( is_dir( $job_dir ) ) { $this->delete_directory( $job_dir ); }
+        if ( is_dir( $job_dir ) && $this->is_path_in_base_directory( $job_dir ) ) { $this->delete_directory( $job_dir ); }
         $wpdb->delete( VH360_Studio_Database::chunks_table_name(), array( 'job_id' => absint( $job_id ) ) );
     }
 
@@ -210,9 +215,38 @@ class VH360_Studio_Recording_Chunks {
         $wpdb->replace( VH360_Studio_Database::chunks_table_name(), array( 'job_id'=>absint($job['id']), 'user_id'=>absint($job['user_id']), 'browser_session_id'=>$session, 'chunk_index'=>$index, 'chunk_size'=>$size, 'mime_type'=>$mime, 'file_path'=>$path, 'checksum'=>$checksum, 'status'=>self::STATUS_RECEIVED, 'created_at'=>$now, 'updated_at'=>$now ) );
     }
 
+    private function get_chunk_row( $job_id, $session, $index ) {
+        global $wpdb;
+        return $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . VH360_Studio_Database::chunks_table_name() . ' WHERE job_id = %d AND browser_session_id = %s AND chunk_index = %d AND status = %s', absint( $job_id ), sanitize_text_field( $session ), absint( $index ), self::STATUS_RECEIVED ), ARRAY_A );
+    }
+
+    private function validate_chunk_row_for_assembly( $row, $index ) {
+        if ( ! $row || absint( $row['chunk_index'] ) !== absint( $index ) || empty( $row['file_path'] ) || empty( $row['checksum'] ) ) {
+            return new WP_Error( 'vh360_studio_missing_chunks', __( 'Recording chunks are incomplete.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
+        $path = $row['file_path'];
+        if ( ! file_exists( $path ) || ! is_file( $path ) || ! is_readable( $path ) || ! $this->is_path_in_base_directory( $path ) ) {
+            return new WP_Error( 'vh360_studio_invalid_chunk_path', __( 'Recording chunk path is not allowed.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
+        if ( absint( filesize( $path ) ) !== absint( $row['chunk_size'] ) || hash_file( 'sha256', $path ) !== $row['checksum'] ) {
+            return new WP_Error( 'vh360_studio_chunk_integrity_failed', __( 'Recording chunk integrity check failed.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
+        return true;
+    }
+
     private function get_chunk_path( $job_id, $session, $index ) {
         global $wpdb;
         return $wpdb->get_var( $wpdb->prepare( 'SELECT file_path FROM ' . VH360_Studio_Database::chunks_table_name() . ' WHERE job_id = %d AND browser_session_id = %s AND chunk_index = %d AND status = %s', absint( $job_id ), sanitize_text_field( $session ), absint( $index ), self::STATUS_RECEIVED ) );
+    }
+
+    public function get_base_directory() {
+        return $this->base_directory();
+    }
+
+    public function is_path_in_base_directory( $path ) {
+        $base = realpath( $this->base_directory() );
+        $real = realpath( $path );
+        return $base && $real && 0 === strpos( $real, $base . DIRECTORY_SEPARATOR );
     }
 
     private function base_directory() {
@@ -233,7 +267,8 @@ class VH360_Studio_Recording_Chunks {
     }
 
     private function delete_directory( $dir ) {
-        foreach ( glob( trailingslashit( $dir ) . '*' ) as $file ) { is_dir( $file ) ? $this->delete_directory( $file ) : @unlink( $file ); }
+        if ( ! $this->is_path_in_base_directory( $dir ) ) { return; }
+        foreach ( glob( trailingslashit( $dir ) . '*' ) as $file ) { is_dir( $file ) ? $this->delete_directory( $file ) : ( $this->is_path_in_base_directory( $file ) ? @unlink( $file ) : false ); }
         @rmdir( $dir );
     }
 }

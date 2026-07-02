@@ -28,7 +28,7 @@ define( 'VH360_STUDIO_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'VH360_STUDIO_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'VH360_STUDIO_INCLUDES_DIR', VH360_STUDIO_PLUGIN_DIR . 'includes/' );
 define( 'VH360_STUDIO_TEMPLATES_DIR', VH360_STUDIO_PLUGIN_DIR . 'templates/' );
-define( 'VH360_STUDIO_DB_VERSION', '1.2.0' );
+define( 'VH360_STUDIO_DB_VERSION', '1.3.0' );
 
 /**
  * Load translations.
@@ -65,6 +65,9 @@ function vh360_studio_load_files() {
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-quality-presets.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-recording-jobs.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-recording-chunks.php';
+    require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-recording-validator.php';
+    require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-recording-cleanup.php';
+    require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-replay-publisher.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-assets.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'providers/interface-vh360-studio-live-engine-provider.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'providers/interface-vh360-studio-recording-provider.php';
@@ -97,3 +100,12 @@ function vh360_studio_activate() {
     VH360_Studio_Database::install();
 }
 register_activation_hook( __FILE__, 'vh360_studio_activate' );
+
+/**
+ * Deactivation callback.
+ */
+function vh360_studio_deactivate() {
+    vh360_studio_load_files();
+    VH360_Studio_Recording_Cleanup::unschedule();
+}
+register_deactivation_hook( __FILE__, 'vh360_studio_deactivate' );
