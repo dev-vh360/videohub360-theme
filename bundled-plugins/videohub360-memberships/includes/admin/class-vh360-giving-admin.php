@@ -183,6 +183,7 @@ class VH360_Giving_Admin {
         $options = vh360_giving_options();
         $fields  = array(
             'dashboard_tab_label' => __('Frontend dashboard tab label', 'videohub360-memberships'),
+            'checkout_display_name' => __('Checkout display name', 'videohub360-memberships'),
             'default_currency'    => __('Default currency', 'videohub360-memberships'),
             'minimum_amount'      => __('Minimum giving amount', 'videohub360-memberships'),
             'suggested_amounts'   => __('Suggested amounts', 'videohub360-memberships'),
