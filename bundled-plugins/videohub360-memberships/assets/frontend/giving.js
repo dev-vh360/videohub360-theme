@@ -1,5 +1,5 @@
 jQuery(function($){
-  try{var url=new URL(window.location.href),changed=false;['vh360_giving_success','vh360_giving_cancel','session_id'].forEach(function(k){if(url.searchParams.has(k)){url.searchParams.delete(k);changed=true;}});if(changed){window.history.replaceState({},document.title,url.toString());}}catch(e){}
+  try{var url=new URL(window.location.href),changed=false;['vh360_giving_success','vh360_giving_cancel','session_id','giving_transaction_id','giving_recurring_id'].forEach(function(k){if(url.searchParams.has(k)){url.searchParams.delete(k);changed=true;}});if(changed){window.history.replaceState({},document.title,url.toString());}}catch(e){}
   $(document).on('click','.vh360-giving-notice-dismiss',function(){$(this).closest('.vh360-giving-notice').fadeOut(150,function(){$(this).remove();});});
   $('[data-vh360-giving-return-notice="1"]').each(function(){var notice=this;setTimeout(function(){$(notice).fadeOut(250,function(){$(this).remove();});},8000);});
   $('.vh360-giving-amount').on('click',function(){$('[name="amount"]','#vh360-giving-form').val($(this).data('amount'));});
