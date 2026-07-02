@@ -27,6 +27,15 @@
     grid-template-columns: 340px minmax(0, 1fr);
 }
 
+@media (min-width: 1025px) {
+    body.single-post #primary.site-content > .container.has-sidebar.sidebar-right {
+        max-width: min(var(--max-width, 1280px), 1400px);
+        grid-template-columns: minmax(0, 940px) 340px;
+        justify-content: center;
+        gap: 2rem;
+    }
+}
+
 /* ==========================================================================
    Sidebar Styles
    ========================================================================== */
