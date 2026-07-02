@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 $storage_providers = $registry->get_storage_providers();
 $default_label     = isset( $quality_presets[ $default_preset ]['label'] ) ? $quality_presets[ $default_preset ]['label'] : $default_preset;
-$storage_label     = isset( $storage_providers['local_media'] ) ? $storage_providers['local_media']->get_label() : __( 'Local Media Fallback', 'videohub360-studio' );
+$storage_label     = isset( $storage_providers['videopress'] ) ? $storage_providers['videopress']->get_label() : __( 'VideoPress', 'videohub360-studio' );
 ?>
 <section class="vh360-studio-dashboard">
     <h2><?php esc_html_e( 'VH360 Studio', 'videohub360-studio' ); ?></h2>
@@ -19,7 +19,8 @@ $storage_label     = isset( $storage_providers['local_media'] ) ? $storage_provi
     <div class="vh360-studio-status-card">
         <p><strong><?php esc_html_e( 'Status:', 'videohub360-studio' ); ?></strong> <?php esc_html_e( 'Ready for browser recording workflow integration', 'videohub360-studio' ); ?></p>
         <p><strong><?php esc_html_e( 'Default Quality Preset:', 'videohub360-studio' ); ?></strong> <?php echo esc_html( $default_label ); ?></p>
-        <p><strong><?php esc_html_e( 'Default Storage Provider:', 'videohub360-studio' ); ?></strong> <?php echo esc_html( $storage_label ); ?></p>
+        <p><strong><?php esc_html_e( 'Recommended Replay/VOD Destination:', 'videohub360-studio' ); ?></strong> <?php echo esc_html( $storage_label ); ?></p>
+        <p><?php esc_html_e( 'Local Media remains available only as a limited fallback for constrained hosting environments.', 'videohub360-studio' ); ?></p>
         <p><strong><?php esc_html_e( 'Lifecycle:', 'videohub360-studio' ); ?></strong> <?php echo esc_html( implode( ' → ', array( 'created', 'recording', 'stopping', 'uploading', 'processing', 'ready' ) ) ); ?></p>
     </div>
     <h3><?php esc_html_e( 'Recent Recording Jobs', 'videohub360-studio' ); ?></h3>

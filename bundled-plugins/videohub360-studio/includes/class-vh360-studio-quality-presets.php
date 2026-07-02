@@ -24,7 +24,7 @@ class VH360_Studio_Quality_Presets {
                 'small_480p'    => array(
                     'label'             => __( 'Small 480p', 'videohub360-studio' ),
                     'resolution'        => array( 'width' => 854, 'height' => 480 ),
-                    'fps'               => 24,
+                    'fps'               => 30,
                     'video_bitrate'     => 1200000,
                     'audio_bitrate'     => 96000,
                     'recommended'       => false,

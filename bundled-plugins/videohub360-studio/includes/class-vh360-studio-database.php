@@ -43,7 +43,7 @@ class VH360_Studio_Database {
             room_id varchar(191) NOT NULL DEFAULT '',
             recording_mode varchar(40) NOT NULL DEFAULT 'browser',
             quality_preset varchar(40) NOT NULL DEFAULT 'standard_720p',
-            storage_provider varchar(80) NOT NULL DEFAULT 'local_media',
+            storage_provider varchar(80) NOT NULL DEFAULT 'videopress',
             status varchar(40) NOT NULL DEFAULT 'created',
             browser_session_id varchar(191) DEFAULT NULL,
             mime_type varchar(100) DEFAULT NULL,

@@ -109,6 +109,10 @@ class VH360_Studio_Recording_Jobs {
             return new WP_Error( 'vh360_studio_invalid_status', __( 'Invalid recording job status.', 'videohub360-studio' ), array( 'status' => 400 ) );
         }
 
+        if ( ! $partial && isset( $out['status'] ) && self::STATUS_CREATED !== $out['status'] ) {
+            return new WP_Error( 'vh360_studio_invalid_initial_status', __( 'New recording jobs must start in the created status.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        }
+
         if ( $existing && isset( $out['status'] ) && ! $this->can_transition( $existing['status'], $out['status'] ) ) {
             return new WP_Error( 'vh360_studio_invalid_status_transition', __( 'Invalid recording job status transition.', 'videohub360-studio' ), array( 'status' => 409 ) );
         }
@@ -130,7 +134,7 @@ class VH360_Studio_Recording_Jobs {
                     'room_id'         => '',
                     'recording_mode'  => 'browser',
                     'quality_preset'  => VH360_Studio_Quality_Presets::DEFAULT_PRESET,
-                    'storage_provider' => 'local_media',
+                    'storage_provider' => 'videopress',
                     'status'          => self::STATUS_CREATED,
                 )
             );
