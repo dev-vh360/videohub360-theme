@@ -684,7 +684,11 @@
         if (els.retryChunks) { els.retryChunks.addEventListener('click', retryFailedChunks); }
         if (els.finalizeRecording) { els.finalizeRecording.addEventListener('click', finalizeRecording); }
         window.addEventListener('beforeunload', (event) => {
-            if (isRecordingActive()) { event.preventDefault(); event.returnValue = ''; }
+            if (isRecordingActive()) {
+                event.preventDefault();
+                event.returnValue = '';
+                return;
+            }
             cleanup();
         });
         document.addEventListener('visibilitychange', () => {
