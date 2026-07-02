@@ -50,6 +50,19 @@ function isNavigationRequest(request) {
   return request.mode === 'navigate' || (request.headers.get('accept') || '').includes('text/html');
 }
 
+function normalizePath(url) {
+  const u = new URL(url, VH360_PWA.homeOrigin);
+  return u.pathname.replace(/\/+$/, '') || '/';
+}
+
+function isFastLaunchRequest(request) {
+  if (!VH360_PWA.fastLaunch || !isNavigationRequest(request)) return false;
+  const requestPath = normalizePath(request.url);
+  const startPath = normalizePath(VH360_PWA.startUrl || '/');
+  const shellPath = normalizePath(VH360_PWA.launchShellUrl || '/vh360-launch.html');
+  return requestPath === startPath || requestPath === shellPath;
+}
+
 function isStaticAsset(request) {
   const url = new URL(request.url);
   const p = url.pathname || '';
@@ -114,6 +127,39 @@ async function networkFirstWithFallback(request) {
   }
 }
 
+async function cacheFirstWithBackgroundRefresh(request) {
+  const pageCache = await caches.open(PAGE_CACHE);
+  const staticCache = await caches.open(STATIC_CACHE);
+  const cached = await pageCache.match(request, { ignoreSearch: true }) || await staticCache.match(request, { ignoreSearch: true });
+  const refresh = fetch(request).then((res) => {
+    if (res && res.ok && (res.type === 'basic' || res.type === 'default')) {
+      pageCache.put(request, res.clone());
+    }
+    return res;
+  }).catch(() => null);
+
+  if (cached) {
+    refresh.catch(() => null);
+    return cached;
+  }
+
+  const network = await refresh;
+  if (network) return network;
+  return caches.match(VH360_PWA.offlineUrl);
+}
+
+async function staleWhileRevalidate(request) {
+  const cache = await caches.open(PAGE_CACHE);
+  const cached = await cache.match(request);
+  const network = fetch(request).then((res) => {
+    if (res && res.ok && VH360_PWA.strategy !== 'safe') {
+      cache.put(request, res.clone());
+    }
+    return res;
+  }).catch(() => null);
+  return cached || await network || caches.match(VH360_PWA.offlineUrl);
+}
+
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (shouldBypass(req)) return;
@@ -124,6 +170,14 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (isNavigationRequest(req)) {
+    if (isFastLaunchRequest(req)) {
+      event.respondWith(cacheFirstWithBackgroundRefresh(req));
+      return;
+    }
+    if (VH360_PWA.strategy === 'balanced' || VH360_PWA.strategy === 'aggressive') {
+      event.respondWith(staleWhileRevalidate(req));
+      return;
+    }
     event.respondWith(networkFirstWithFallback(req));
     return;
   }

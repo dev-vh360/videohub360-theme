@@ -50,6 +50,9 @@ function vh360_pwa_get_options() : array {
 		'precache_offline'     => 1,
 		'precache_home'        => 0,
 		'precache_urls'        => '',
+		'fast_launch_enabled'  => 1,
+		'launch_mode'          => 'shell', // shell | cached_start
+		'launch_shell_max_ms'  => 1000,
 
 		'show_install_prompt'  => 1,
 		'install_prompt_text'  => 'Install this app',
@@ -142,6 +145,12 @@ function vh360_pwa_get_precache_urls( array $opts ) : array {
 	if ( ! empty( $opts['precache_home'] ) ) {
 		$urls[] = home_url( '/' );
 	}
+	if ( ! empty( $opts['fast_launch_enabled'] ) ) {
+		$urls[] = ! empty( $opts['start_url'] ) ? (string) $opts['start_url'] : home_url( '/' );
+		if ( isset( $opts['launch_mode'] ) && 'shell' === (string) $opts['launch_mode'] ) {
+			$urls[] = vh360_pwa_endpoint_url( VH360_PWA_LAUNCH_SHELL_SLUG );
+		}
+	}
 
 	$raw = isset( $opts['precache_urls'] ) ? (string) $opts['precache_urls'] : '';
 	if ( $raw ) {
@@ -202,11 +211,25 @@ function vh360_pwa_version_manifest_icons( array $icons, ?array $opts = null ) :
 	return $icons;
 }
 
+
+function vh360_pwa_build_launch_shell( ?array $opts = null ) : string {
+	$opts = is_array( $opts ) ? $opts : vh360_pwa_get_options();
+	$app = esc_html( (string) ( ! empty( $opts['short_name'] ) ? $opts['short_name'] : $opts['app_name'] ) );
+	$bg = esc_attr( (string) ( ! empty( $opts['splash_background_color'] ) ? $opts['splash_background_color'] : $opts['background_color'] ) );
+	$theme = esc_attr( (string) $opts['theme_color'] );
+	$start_url = esc_url( vh360_pwa_version_url( (string) $opts['start_url'], $opts ) );
+	$max_ms = max( 800, min( 1200, absint( $opts['launch_shell_max_ms'] ?? 1000 ) ) );
+	$logo = ! empty( $opts['splash_logo'] ) ? esc_url( vh360_pwa_version_url( (string) $opts['splash_logo'], $opts ) ) : '';
+	$logo_html = $logo ? '<img src="' . $logo . '" alt="" class="vh360-launch__logo">' : '<div class="vh360-launch__mark">' . esc_html( substr( wp_strip_all_tags( $app ), 0, 1 ) ) . '</div>';
+	return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="' . $theme . '"><title>' . $app . '</title><style>html,body{margin:0;min-height:100%;background:' . $bg . ';color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}body{display:grid;place-items:center}.vh360-launch{text-align:center;padding:32px}.vh360-launch__logo{width:96px;height:96px;object-fit:contain;border-radius:22px}.vh360-launch__mark{width:96px;height:96px;border-radius:24px;display:grid;place-items:center;margin:auto;background:rgba(255,255,255,.14);font-size:44px;font-weight:800}.vh360-launch__name{margin:18px 0 10px;font-size:22px;font-weight:700}.vh360-launch__loading{opacity:.78;font-size:14px}</style></head><body><!-- VH360 Managed File: vh360-launch.html --><main class="vh360-launch">' . $logo_html . '<div class="vh360-launch__name">' . $app . '</div><div class="vh360-launch__loading">Loading…</div></main><script>(function(){var target=' . wp_json_encode( $start_url ) . ';var max=' . (int) $max_ms . ';function go(){try{location.replace(target);}catch(e){location.href=target;}}if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){setTimeout(go,Math.min(max,1000));});}else{requestAnimationFrame(function(){setTimeout(go,Math.min(max,1000));});}}());</script></body></html>' . "\n";
+}
+
 /**
  * Build the canonical manifest shared by dynamic endpoint and root file.
  */
 function vh360_pwa_build_manifest( ?array $opts = null ) : array {
 	$opts = is_array( $opts ) ? $opts : vh360_pwa_get_options();
+	$manifest_start_url = ( ! empty( $opts['fast_launch_enabled'] ) && isset( $opts['launch_mode'] ) && 'shell' === (string) $opts['launch_mode'] ) ? vh360_pwa_endpoint_url( VH360_PWA_LAUNCH_SHELL_SLUG ) : (string) $opts['start_url'];
 	$background = ! empty( $opts['splash_enabled'] ) && ! empty( $opts['splash_background_color'] ) ? (string) $opts['splash_background_color'] : (string) $opts['background_color'];
 	$scope = esc_url_raw( (string) $opts['scope'] );
 	$icons = function_exists( 'vh360_pwa_get_manifest_icons' ) ? vh360_pwa_version_manifest_icons( vh360_pwa_get_manifest_icons(), $opts ) : array();
@@ -214,7 +237,7 @@ function vh360_pwa_build_manifest( ?array $opts = null ) : array {
 		'name'             => (string) $opts['app_name'],
 		'short_name'       => (string) $opts['short_name'],
 		'description'      => (string) $opts['description'],
-		'start_url'        => esc_url_raw( (string) $opts['start_url'] ),
+		'start_url'        => esc_url_raw( $manifest_start_url ),
 		'scope'            => $scope,
 		'id'               => $scope ?: '/',
 		'display'          => (string) $opts['display'],
@@ -259,6 +282,9 @@ function vh360_pwa_build_sw_script( ?array $opts = null ) : string {
 		'strategy'     => $strategy,
 		'precache'     => array_map( function( $url ) use ( $opts ) { return vh360_pwa_version_url( (string) $url, $opts ); }, vh360_pwa_get_precache_urls( $opts ) ),
 		'offlineUrl'   => vh360_pwa_version_url( vh360_pwa_endpoint_url( VH360_PWA_OFFLINE_SLUG ), $opts ),
+		'startUrl'     => vh360_pwa_version_url( (string) $opts['start_url'], $opts ),
+		'launchShellUrl' => vh360_pwa_version_url( vh360_pwa_endpoint_url( VH360_PWA_LAUNCH_SHELL_SLUG ), $opts ),
+		'fastLaunch'   => ! empty( $opts['fast_launch_enabled'] ),
 		'homeOrigin'   => home_url(),
 		'onesignal'    => $onesignal,
 	);
