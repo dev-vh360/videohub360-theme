@@ -12,10 +12,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 class VH360_Studio_REST_Controller {
     private $jobs;
     private $chunks;
+    private $validator;
+    private $publisher;
 
     public function __construct( VH360_Studio_Recording_Jobs $jobs ) {
         $this->jobs   = $jobs;
         $this->chunks = new VH360_Studio_Recording_Chunks( $jobs );
+        $this->validator = new VH360_Studio_Recording_Validator( $this->chunks );
+        $this->publisher = new VH360_Studio_Replay_Publisher( VH360_Studio_Plugin::instance()->registry(), $jobs, $this->validator );
     }
 
     public function register_routes() {
@@ -122,6 +126,17 @@ class VH360_Studio_REST_Controller {
                     'id'              => $this->get_id_arg(),
                     'expected_chunks' => $this->get_positive_int_arg( true ),
                 ),
+            )
+        );
+
+        register_rest_route(
+            'vh360-studio/v1',
+            '/jobs/(?P<id>\d+)/publishing/prepare',
+            array(
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => array( $this, 'prepare_publishing' ),
+                'permission_callback' => array( $this, 'permissions_check' ),
+                'args'                => array( 'id' => $this->get_id_arg() ),
             )
         );
 
@@ -387,9 +402,21 @@ class VH360_Studio_REST_Controller {
         if ( VH360_Studio_Recording_Jobs::STATUS_STOPPING !== $job['status'] ) { return new WP_Error( 'vh360_studio_invalid_status_transition', __( 'Recording can only finalize from the stopping status.', 'videohub360-studio' ), array( 'status' => 409 ) ); }
         $uploading = $this->jobs->mark_uploading( $job['id'], get_current_user_id() );
         if ( is_wp_error( $uploading ) ) { return $uploading; }
-        $assembled = $this->chunks->assemble_chunks( $uploading, $job['browser_session_id'], $request->get_param( 'expected_chunks' ), $job['mime_type'] );
+        $expected_chunks = $request->get_param( 'expected_chunks' );
+        $assembled = $this->chunks->assemble_chunks( $uploading, $job['browser_session_id'], $expected_chunks, $job['mime_type'] );
         if ( is_wp_error( $assembled ) ) { $this->jobs->mark_failed( $job['id'], get_current_user_id(), $assembled->get_error_message() ); return $assembled; }
-        return rest_ensure_response( $this->prepare_job_response( $this->jobs->mark_processing( $job['id'], get_current_user_id(), array( 'file_size' => absint( $assembled['file_size'] ), 'local_temp_path' => $assembled['path'], 'mime_type' => $assembled['mime_type'] ) ) ) );
+        $summary = $this->chunks->received_summary( $job['id'], $job['browser_session_id'] );
+        $recording = $this->validator->validate_assembled_recording( $uploading, $assembled, $summary, $expected_chunks );
+        if ( is_wp_error( $recording ) ) { $this->jobs->mark_failed( $job['id'], get_current_user_id(), $recording->get_error_message() ); return $recording; }
+        return rest_ensure_response( $this->prepare_job_response( $this->jobs->mark_processing( $job['id'], get_current_user_id(), array( 'file_size' => absint( $recording['file_size'] ), 'local_temp_path' => $recording['path'], 'mime_type' => $recording['mime_type'], 'expected_chunks' => $recording['expected_chunks'], 'received_chunks' => $recording['received_chunks'], 'assembled_checksum' => $recording['assembled_checksum'], 'assembled_at' => $recording['assembled_at'], 'temp_expires_at' => $recording['temp_expires_at'] ) ) ) );
+    }
+
+    public function prepare_publishing( WP_REST_Request $request ) {
+        $job = $this->chunks->validate_job_ownership( absint( $request['id'] ), get_current_user_id() );
+        if ( is_wp_error( $job ) ) { return $job; }
+        $prepared = $this->publisher->prepare( $job );
+        if ( is_wp_error( $prepared ) ) { return $prepared; }
+        return rest_ensure_response( $prepared );
     }
 
     public function cancel_job( WP_REST_Request $request ) {

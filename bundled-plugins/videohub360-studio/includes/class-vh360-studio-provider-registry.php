@@ -50,6 +50,12 @@ class VH360_Studio_Provider_Registry {
         return apply_filters( 'vh360_studio_storage_providers', $this->storage );
     }
 
+    public function get_storage_provider( $id ) {
+        $providers = $this->get_storage_providers();
+        $id = sanitize_key( $id );
+        return isset( $providers[ $id ] ) ? $providers[ $id ] : null;
+    }
+
     public function has_storage_provider( $id ) {
         $providers = $this->get_storage_providers();
         return isset( $providers[ $id ] );
