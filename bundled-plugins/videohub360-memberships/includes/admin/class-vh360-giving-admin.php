@@ -331,7 +331,7 @@ class VH360_Giving_Admin {
         $rows = $params ? $wpdb->get_results($wpdb->prepare($sql, $params)) : $wpdb->get_results($sql);
         ?>
         <h2><?php esc_html_e('Transactions', 'videohub360-memberships'); ?></h2>
-        <p><?php esc_html_e('MVP webhook handling marks successful Giving checkout sessions as paid. Failed session creation is marked failed before redirect; refunded status is reserved for a future refund webhook pass.', 'videohub360-memberships'); ?></p>
+        <p><?php esc_html_e('Giving transactions are updated automatically through Stripe Checkout and webhook events. Completed gifts are marked paid, canceled checkout attempts are marked canceled, abandoned checkout sessions are marked expired, and failed checkout attempts are marked failed. Refunded status is reserved for future refund handling.', 'videohub360-memberships'); ?></p>
         <form method="get" class="vh360-giving-filters">
             <input type="hidden" name="page" value="vh360-theme-giving">
             <input type="hidden" name="tab" value="transactions">
