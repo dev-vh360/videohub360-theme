@@ -34,7 +34,7 @@ function shouldBypass(request) {
   // Never cache admin/auth/REST/ajax or highly personalized commerce/community areas.
   if (p.startsWith('/wp-admin') || p.startsWith('/wp-login.php')) return true;
   if (p.includes('/wp-json') || p.includes('/admin-ajax.php')) return true;
-  if (/(^|\/)(dashboard|my-account|account|cart|checkout|messages|notifications|login|logout|register|members|settings)(\/|$)/i.test(p)) return true;
+  if (/(^|\/)(dashboard|my-account|account|cart|checkout|messages|notifications|login|logout|register|members|settings|billing|subscription|subscriptions|orders|payment-methods)(\/|$)/i.test(p)) return true;
 
   // Avoid preview, nonces, actions.
   const qp = url.searchParams;
@@ -58,9 +58,19 @@ function normalizePath(url) {
 function isFastLaunchRequest(request) {
   if (!VH360_PWA.fastLaunch || !isNavigationRequest(request)) return false;
   const requestPath = normalizePath(request.url);
-  const startPath = normalizePath(VH360_PWA.startUrl || '/');
   const shellPath = normalizePath(VH360_PWA.launchShellUrl || '/vh360-launch.html');
-  return requestPath === startPath || requestPath === shellPath;
+  const launchMode = VH360_PWA.launchMode || 'shell';
+
+  if (launchMode === 'shell') {
+    return requestPath === shellPath;
+  }
+
+  if (launchMode === 'cached_start') {
+    const startPath = normalizePath(VH360_PWA.startUrl || '/');
+    return requestPath === startPath && !shouldBypass(request);
+  }
+
+  return false;
 }
 
 function isStaticAsset(request) {

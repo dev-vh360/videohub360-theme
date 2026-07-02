@@ -136,6 +136,38 @@ function vh360_pwa_is_enabled() : bool {
 	return vh360_pwa_is_allowed_theme_active() && ! empty( $opts['enabled'] );
 }
 
+function vh360_pwa_url_is_public_cache_candidate( string $url ) : bool {
+	if ( '' === $url ) {
+		return false;
+	}
+	if ( 0 === strpos( $url, '/' ) ) {
+		$url = home_url( $url );
+	}
+	$home = wp_parse_url( home_url( '/' ) );
+	$parts = wp_parse_url( $url );
+	if ( ! is_array( $parts ) || ! is_array( $home ) ) {
+		return false;
+	}
+	if ( ! empty( $parts['host'] ) && ! empty( $home['host'] ) && strtolower( (string) $parts['host'] ) !== strtolower( (string) $home['host'] ) ) {
+		return false;
+	}
+	$path = isset( $parts['path'] ) ? (string) $parts['path'] : '/';
+	$query = isset( $parts['query'] ) ? (string) $parts['query'] : '';
+	if ( preg_match( '#/(wp-admin|wp-login\.php|wp-json)(/|$)#i', $path ) ) {
+		return false;
+	}
+	if ( false !== stripos( $path, 'admin-ajax.php' ) ) {
+		return false;
+	}
+	if ( preg_match( '#(^|/)(dashboard|my-account|account|cart|checkout|messages|notifications|login|logout|register|members|settings|billing|subscription|subscriptions|orders|payment-methods)(/|$)#i', $path ) ) {
+		return false;
+	}
+	if ( $query && preg_match( '/(^|&)(_wpnonce|nonce|action|preview|customize_changeset_uuid|customize_theme|loggedout|logout)=/i', $query ) ) {
+		return false;
+	}
+	return true;
+}
+
 function vh360_pwa_get_precache_urls( array $opts ) : array {
 	$urls = array();
 
@@ -146,9 +178,14 @@ function vh360_pwa_get_precache_urls( array $opts ) : array {
 		$urls[] = home_url( '/' );
 	}
 	if ( ! empty( $opts['fast_launch_enabled'] ) ) {
-		$urls[] = ! empty( $opts['start_url'] ) ? (string) $opts['start_url'] : home_url( '/' );
-		if ( isset( $opts['launch_mode'] ) && 'shell' === (string) $opts['launch_mode'] ) {
+		$launch_mode = isset( $opts['launch_mode'] ) ? (string) $opts['launch_mode'] : 'shell';
+		if ( 'shell' === $launch_mode ) {
 			$urls[] = vh360_pwa_endpoint_url( VH360_PWA_LAUNCH_SHELL_SLUG );
+		} elseif ( 'cached_start' === $launch_mode ) {
+			$start_url = ! empty( $opts['start_url'] ) ? (string) $opts['start_url'] : home_url( '/' );
+			if ( vh360_pwa_url_is_public_cache_candidate( $start_url ) ) {
+				$urls[] = $start_url;
+			}
 		}
 	}
 
@@ -270,9 +307,11 @@ function vh360_pwa_build_sw_script( ?array $opts = null ) : string {
 	$onesignal = array();
 	$push_settings = get_option( 'vh360_pwa_push_settings', array() );
 	if ( is_array( $push_settings ) ) {
-		$active_provider = (string) ( $push_settings['active_provider'] ?? 'onesignal' );
+		$mode = (string) ( $push_settings['mode'] ?? '' );
+		$active_provider = (string) ( $push_settings['active_provider'] ?? '' );
 		$providers = $push_settings['providers'] ?? array();
-		if ( isset( $providers[ $active_provider ] ) && is_array( $providers[ $active_provider ] ) && ! empty( $providers[ $active_provider ]['app_id'] ) ) {
+		$onesignal_settings = ( isset( $providers['onesignal'] ) && is_array( $providers['onesignal'] ) ) ? $providers['onesignal'] : array();
+		if ( in_array( $mode, array( 'provider', 'hybrid' ), true ) && 'onesignal' === $active_provider && ! empty( $onesignal_settings['app_id'] ) ) {
 			$sdk_version = defined( 'VH360_PWA_ONESIGNAL_SDK_VERSION' ) ? VH360_PWA_ONESIGNAL_SDK_VERSION : 'v16';
 			$onesignal = array( 'importUrl' => 'https://cdn.onesignal.com/sdks/web/' . $sdk_version . '/OneSignalSDK.sw.js' );
 		}
@@ -285,6 +324,7 @@ function vh360_pwa_build_sw_script( ?array $opts = null ) : string {
 		'startUrl'     => vh360_pwa_version_url( (string) $opts['start_url'], $opts ),
 		'launchShellUrl' => vh360_pwa_version_url( vh360_pwa_endpoint_url( VH360_PWA_LAUNCH_SHELL_SLUG ), $opts ),
 		'fastLaunch'   => ! empty( $opts['fast_launch_enabled'] ),
+		'launchMode'   => isset( $opts['launch_mode'] ) ? (string) $opts['launch_mode'] : 'shell',
 		'homeOrigin'   => home_url(),
 		'onesignal'    => $onesignal,
 	);

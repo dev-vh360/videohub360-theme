@@ -878,6 +878,7 @@ $manifest_url = esc_url( vh360_pwa_endpoint_url( VH360_PWA_MANIFEST_SLUG ) );
 		}
 		echo '</select>';
 		echo '<p class="description">' . esc_html__( 'The lightweight shell is a small generated static file with branding and no Elementor, WooCommerce, remote API calls, videos, or push setup.', 'vh360-pwa-app' ) . '</p>';
+		echo '<p class="description"><strong>' . esc_html__( 'Cached Start Page warning:', 'vh360-pwa-app' ) . '</strong> ' . esc_html__( 'Only use Cached Start Page mode for public, non-personalized pages. Do not use it for dashboards, checkout/account pages, member-only pages, or pages that show user-specific menus, notifications, cart data, or account state.', 'vh360-pwa-app' ) . '</p>';
 		echo '</td></tr>';
 
 		echo '<tr><th scope="row">' . esc_html__( 'Maximum Launch Shell Display Time', 'vh360-pwa-app' ) . '</th><td>';
