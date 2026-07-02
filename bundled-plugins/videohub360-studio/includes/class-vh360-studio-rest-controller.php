@@ -31,7 +31,7 @@ class VH360_Studio_REST_Controller {
                     'methods'             => WP_REST_Server::CREATABLE,
                     'callback'            => array( $this, 'create_job' ),
                     'permission_callback' => array( $this, 'permissions_check' ),
-                    'args'                => $this->get_write_args( false ),
+                    'args'                => $this->get_setup_create_args(),
                 ),
             )
         );
@@ -50,7 +50,7 @@ class VH360_Studio_REST_Controller {
                     'methods'             => WP_REST_Server::EDITABLE,
                     'callback'            => array( $this, 'update_job' ),
                     'permission_callback' => array( $this, 'permissions_check' ),
-                    'args'                => array_merge( array( 'id' => $this->get_id_arg() ), $this->get_write_args( true ) ),
+                    'args'                => array_merge( array( 'id' => $this->get_id_arg() ), $this->get_update_args() ),
                 ),
             )
         );
@@ -89,49 +89,87 @@ class VH360_Studio_REST_Controller {
         );
     }
 
-    private function get_write_args( $partial ) {
+    private function get_setup_create_args() {
         return array(
-            'source_type'                => array( 'required' => false, 'sanitize_callback' => 'sanitize_key' ),
-            'source_id'                  => array( 'required' => false, 'sanitize_callback' => 'sanitize_text_field' ),
-            'live_video_id'              => array( 'required' => false, 'sanitize_callback' => 'absint' ),
-            'room_id'                    => array( 'required' => false, 'sanitize_callback' => 'sanitize_text_field' ),
-            'recording_mode'             => array( 'required' => false, 'sanitize_callback' => 'sanitize_key' ),
-            'quality_preset'             => array(
+            'source_type'      => array(
+                'required'          => false,
+                'sanitize_callback' => 'sanitize_key',
+                'validate_callback' => array( $this, 'validate_source_type' ),
+            ),
+            'source_id'        => array( 'required' => false, 'sanitize_callback' => 'sanitize_text_field' ),
+            'live_video_id'    => array( 'required' => false, 'sanitize_callback' => 'absint' ),
+            'room_id'          => array( 'required' => false, 'sanitize_callback' => 'sanitize_text_field' ),
+            'recording_mode'   => array(
+                'required'          => false,
+                'sanitize_callback' => 'sanitize_key',
+                'validate_callback' => array( $this, 'validate_recording_mode' ),
+            ),
+            'quality_preset'   => array(
                 'required'          => false,
                 'sanitize_callback' => 'sanitize_key',
                 'validate_callback' => function( $value ) {
                     return VH360_Studio_Quality_Presets::exists( sanitize_key( $value ) );
                 },
             ),
-            'storage_provider'           => array(
+            'storage_provider' => array(
                 'required'          => false,
                 'sanitize_callback' => 'sanitize_key',
                 'validate_callback' => array( $this, 'validate_storage_provider' ),
             ),
-            'status'                     => array(
-                'required'          => false,
-                'sanitize_callback' => 'sanitize_key',
-                'validate_callback' => function( $value ) {
-                    return in_array( sanitize_key( $value ), $this->jobs->allowed_statuses(), true );
-                },
-            ),
-            'browser_session_id'         => array( 'required' => false, 'sanitize_callback' => 'sanitize_text_field' ),
-            'mime_type'                  => array( 'required' => false, 'sanitize_callback' => 'sanitize_mime_type' ),
-            'duration_seconds'           => array( 'required' => false, 'sanitize_callback' => 'absint' ),
-            'file_size'                  => array( 'required' => false, 'sanitize_callback' => 'absint' ),
-            'local_temp_path'            => array( 'required' => false, 'sanitize_callback' => 'sanitize_text_field' ),
-            'wp_attachment_id'           => array( 'required' => false, 'sanitize_callback' => 'absint' ),
-            'videopress_guid'            => array( 'required' => false, 'sanitize_callback' => 'sanitize_text_field' ),
-            'videopress_processing_done' => array( 'required' => false, 'sanitize_callback' => 'rest_sanitize_boolean' ),
-            'publitio_file_id'           => array( 'required' => false, 'sanitize_callback' => 'sanitize_text_field' ),
-            'playback_url'               => array( 'required' => false, 'sanitize_callback' => 'esc_url_raw', 'validate_callback' => array( $this, 'validate_optional_url' ) ),
-            'poster_url'                 => array( 'required' => false, 'sanitize_callback' => 'esc_url_raw', 'validate_callback' => array( $this, 'validate_optional_url' ) ),
-            'error_message'              => array( 'required' => false, 'sanitize_callback' => 'sanitize_textarea_field' ),
-            'retry_count'                => array( 'required' => false, 'sanitize_callback' => 'absint' ),
-            'started_at'                 => array( 'required' => false, 'sanitize_callback' => 'sanitize_text_field' ),
-            'stopped_at'                 => array( 'required' => false, 'sanitize_callback' => 'sanitize_text_field' ),
-            'completed_at'               => array( 'required' => false, 'sanitize_callback' => 'sanitize_text_field' ),
         );
+    }
+
+    private function get_update_args() {
+        return array_merge(
+            $this->get_setup_create_args(),
+            array(
+                'status' => array(
+                    'required'          => false,
+                    'sanitize_callback' => 'sanitize_key',
+                    'validate_callback' => function( $value ) {
+                        return in_array( sanitize_key( $value ), $this->jobs->allowed_statuses(), true );
+                    },
+                ),
+            )
+        );
+    }
+
+    private function setup_payload_from_request( WP_REST_Request $request ) {
+        $payload = array();
+        $allowed = array( 'source_type', 'source_id', 'live_video_id', 'room_id', 'recording_mode', 'quality_preset', 'storage_provider' );
+
+        foreach ( $allowed as $key ) {
+            if ( null !== $request->get_param( $key ) ) {
+                $payload[ $key ] = $request->get_param( $key );
+            }
+        }
+
+        $payload['status']         = VH360_Studio_Recording_Jobs::STATUS_CREATED;
+        $payload['recording_mode'] = isset( $payload['recording_mode'] ) ? $payload['recording_mode'] : 'browser';
+        $payload['source_type']    = isset( $payload['source_type'] ) ? $payload['source_type'] : 'studio_setup';
+
+        return $payload;
+    }
+
+    private function update_payload_from_request( WP_REST_Request $request ) {
+        $payload = array();
+        $allowed = array( 'source_type', 'source_id', 'live_video_id', 'room_id', 'recording_mode', 'quality_preset', 'storage_provider', 'status' );
+
+        foreach ( $allowed as $key ) {
+            if ( null !== $request->get_param( $key ) ) {
+                $payload[ $key ] = $request->get_param( $key );
+            }
+        }
+
+        return $payload;
+    }
+
+    public function validate_source_type( $value ) {
+        return in_array( sanitize_key( $value ), $this->jobs->allowed_source_types(), true );
+    }
+
+    public function validate_recording_mode( $value ) {
+        return in_array( sanitize_key( $value ), $this->jobs->allowed_recording_modes(), true );
     }
 
     public function validate_storage_provider( $value ) {
@@ -157,7 +195,7 @@ class VH360_Studio_REST_Controller {
     }
 
     public function create_job( WP_REST_Request $request ) {
-        return rest_ensure_response( $this->jobs->create( get_current_user_id(), $request->get_params() ) );
+        return rest_ensure_response( $this->jobs->create( get_current_user_id(), $this->setup_payload_from_request( $request ) ) );
     }
 
     public function get_job( WP_REST_Request $request ) {
@@ -166,7 +204,7 @@ class VH360_Studio_REST_Controller {
     }
 
     public function update_job( WP_REST_Request $request ) {
-        return rest_ensure_response( $this->jobs->update( absint( $request['id'] ), get_current_user_id(), $request->get_params() ) );
+        return rest_ensure_response( $this->jobs->update( absint( $request['id'] ), get_current_user_id(), $this->update_payload_from_request( $request ) ) );
     }
 
     public function cancel_job( WP_REST_Request $request ) {

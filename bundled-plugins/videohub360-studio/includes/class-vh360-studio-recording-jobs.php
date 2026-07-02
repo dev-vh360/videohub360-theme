@@ -38,6 +38,14 @@ class VH360_Studio_Recording_Jobs {
         );
     }
 
+    public function allowed_source_types() {
+        return array( 'studio_setup', 'live_room' );
+    }
+
+    public function allowed_recording_modes() {
+        return array( 'browser' );
+    }
+
     public function transition_map() {
         return array(
             self::STATUS_CREATED    => array( self::STATUS_RECORDING, self::STATUS_CANCELLED ),
@@ -109,6 +117,14 @@ class VH360_Studio_Recording_Jobs {
             return new WP_Error( 'vh360_studio_invalid_status', __( 'Invalid recording job status.', 'videohub360-studio' ), array( 'status' => 400 ) );
         }
 
+        if ( isset( $out['source_type'] ) && ! in_array( $out['source_type'], $this->allowed_source_types(), true ) ) {
+            return new WP_Error( 'vh360_studio_invalid_source_type', __( 'Invalid Studio source type.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        }
+
+        if ( isset( $out['recording_mode'] ) && ! in_array( $out['recording_mode'], $this->allowed_recording_modes(), true ) ) {
+            return new WP_Error( 'vh360_studio_invalid_recording_mode', __( 'Invalid Studio recording mode.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        }
+
         if ( ! $partial && isset( $out['status'] ) && self::STATUS_CREATED !== $out['status'] ) {
             return new WP_Error( 'vh360_studio_invalid_initial_status', __( 'New recording jobs must start in the created status.', 'videohub360-studio' ), array( 'status' => 400 ) );
         }
@@ -146,6 +162,7 @@ class VH360_Studio_Recording_Jobs {
     public function create( $user_id, $data ) {
         global $wpdb;
 
+        $data['status'] = self::STATUS_CREATED;
         $data = $this->validate_payload( $data );
         if ( is_wp_error( $data ) ) {
             return $data;

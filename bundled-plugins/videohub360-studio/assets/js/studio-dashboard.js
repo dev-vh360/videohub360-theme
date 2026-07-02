@@ -136,8 +136,15 @@
         const cameras = devices.filter((device) => device.kind === 'videoinput');
         const microphones = devices.filter((device) => device.kind === 'audioinput');
 
-        fillDeviceSelect(els.cameraSelect, cameras, 'Camera');
-        fillDeviceSelect(els.micSelect, microphones, 'Microphone');
+        fillDeviceSelect(els.cameraSelect, cameras, 'Camera', state.selectedCameraId);
+        fillDeviceSelect(els.micSelect, microphones, 'Microphone', state.selectedMicId);
+
+        if (!state.selectedCameraId && els.cameraSelect && els.cameraSelect.value) {
+            state.selectedCameraId = els.cameraSelect.value;
+        }
+        if (!state.selectedMicId && els.micSelect && els.micSelect.value) {
+            state.selectedMicId = els.micSelect.value;
+        }
 
         if (!cameras.length) {
             setStatus(strings.noCameraFound, 'warning');
@@ -146,7 +153,7 @@
         }
     }
 
-    function fillDeviceSelect(select, devices, fallbackLabel) {
+    function fillDeviceSelect(select, devices, fallbackLabel, selectedDeviceId) {
         if (!select) {
             return;
         }
@@ -165,6 +172,9 @@
             const option = document.createElement('option');
             option.value = device.deviceId;
             option.textContent = device.label || fallbackLabel + ' ' + (index + 1);
+            if (selectedDeviceId && device.deviceId === selectedDeviceId) {
+                option.selected = true;
+            }
             select.appendChild(option);
         });
         select.disabled = false;
@@ -359,7 +369,6 @@
                     'X-WP-Nonce': config.nonce,
                 },
                 body: JSON.stringify({
-                    status: 'created',
                     recording_mode: 'browser',
                     source_type: 'studio_setup',
                     source_id: 'studio-setup-' + Date.now(),

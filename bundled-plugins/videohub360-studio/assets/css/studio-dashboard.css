@@ -1,14 +1,32 @@
 .vh360-studio-dashboard {
+    --vh360-studio-surface: var(--surface-1, var(--bg-color, #fff));
+    --vh360-studio-surface-muted: var(--surface-3, var(--bg-light, #f8fafc));
+    --vh360-studio-border: var(--border-color, #e5e7eb);
+    --vh360-studio-text: var(--text-color, #0f172a);
+    --vh360-studio-text-light: var(--text-light, #64748b);
+    --vh360-studio-primary: var(--primary-color, var(--button-bg-color, #4f46e5));
+    --vh360-studio-secondary: var(--secondary-color, #334155);
+    --vh360-studio-button-bg: var(--button-bg-color, var(--primary-color, #4f46e5));
+    --vh360-studio-button-hover-bg: var(--button-hover-bg-color, var(--primary-color, #4338ca));
+    --vh360-studio-button-text: var(--button-text-color, #fff);
+    --vh360-studio-success: var(--success-color, #166534);
+    --vh360-studio-warning: var(--warning-color, #92400e);
+    --vh360-studio-error: var(--error-color, #991b1b);
+    --vh360-studio-success-bg: color-mix(in srgb, var(--vh360-studio-success) 14%, var(--vh360-studio-surface));
+    --vh360-studio-warning-bg: color-mix(in srgb, var(--vh360-studio-warning) 14%, var(--vh360-studio-surface));
+    --vh360-studio-error-bg: color-mix(in srgb, var(--vh360-studio-error) 14%, var(--vh360-studio-surface));
+    --vh360-studio-preview-bg: linear-gradient(135deg, var(--surface-3, #f8fafc), var(--bg-light, #f1f5f9));
     display: grid;
     gap: 1.5rem;
+    color: var(--vh360-studio-text);
 }
 
 .vh360-studio-hero,
 .vh360-studio-card {
-    background: #fff;
-    border: 1px solid #e5e7eb;
+    background: var(--vh360-studio-surface);
+    border: 1px solid var(--vh360-studio-border);
     border-radius: 18px;
-    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 12px 30px color-mix(in srgb, var(--vh360-studio-text) 8%, transparent);
 }
 
 .vh360-studio-hero {
@@ -20,7 +38,7 @@
 }
 
 .vh360-studio-kicker {
-    color: #4f46e5;
+    color: var(--vh360-studio-primary);
     font-size: 0.8rem;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -30,32 +48,35 @@
 
 .vh360-studio-hero h2,
 .vh360-studio-card h3 {
+    color: var(--vh360-studio-text);
     margin-top: 0;
 }
 
 .vh360-studio-status,
 .vh360-studio-job-result {
+    background: var(--vh360-studio-surface-muted);
     border-radius: 999px;
+    color: var(--vh360-studio-text);
     font-weight: 700;
     padding: 0.65rem 1rem;
 }
 
 .vh360-studio-status[data-status-type="success"],
 .vh360-studio-job-result[data-status-type="success"] {
-    background: #dcfce7;
-    color: #166534;
+    background: var(--vh360-studio-success-bg);
+    color: var(--vh360-studio-success);
 }
 
 .vh360-studio-status[data-status-type="warning"],
 .vh360-studio-job-result[data-status-type="warning"] {
-    background: #fef3c7;
-    color: #92400e;
+    background: var(--vh360-studio-warning-bg);
+    color: var(--vh360-studio-warning);
 }
 
 .vh360-studio-status[data-status-type="error"],
 .vh360-studio-job-result[data-status-type="error"] {
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--vh360-studio-error-bg);
+    color: var(--vh360-studio-error);
 }
 
 .vh360-studio-grid {
@@ -83,7 +104,8 @@
 
 .vh360-studio-checks li {
     align-items: center;
-    background: #f8fafc;
+    background: var(--vh360-studio-surface-muted);
+    border: 1px solid var(--vh360-studio-border);
     border-radius: 12px;
     display: flex;
     justify-content: space-between;
@@ -96,22 +118,25 @@
 }
 
 .vh360-studio-checks .is-supported strong {
-    color: #15803d;
+    color: var(--vh360-studio-success);
 }
 
 .vh360-studio-checks .is-unsupported strong {
-    color: #b91c1c;
+    color: var(--vh360-studio-error);
 }
 
 .vh360-studio-card label {
+    color: var(--vh360-studio-text);
     display: block;
     font-weight: 700;
     margin: 0.75rem 0 0.35rem;
 }
 
 .vh360-studio-card select {
-    border: 1px solid #cbd5e1;
+    background: var(--vh360-studio-surface);
+    border: 1px solid var(--vh360-studio-border);
     border-radius: 10px;
+    color: var(--vh360-studio-text);
     max-width: 100%;
     min-height: 42px;
     padding: 0.45rem 0.65rem;
@@ -121,7 +146,8 @@
 .vh360-studio-video-shell {
     align-items: center;
     aspect-ratio: 16 / 9;
-    background: linear-gradient(135deg, #0f172a, #1e293b);
+    background: var(--vh360-studio-preview-bg);
+    border: 1px solid var(--vh360-studio-border);
     border-radius: 14px;
     display: flex;
     justify-content: center;
@@ -140,7 +166,8 @@
 }
 
 .vh360-studio-meter {
-    background: #e5e7eb;
+    background: var(--vh360-studio-surface-muted);
+    border: 1px solid var(--vh360-studio-border);
     border-radius: 999px;
     height: 12px;
     margin-top: 1rem;
@@ -148,7 +175,7 @@
 }
 
 .vh360-studio-meter span {
-    background: linear-gradient(90deg, #22c55e, #eab308, #ef4444);
+    background: linear-gradient(90deg, var(--vh360-studio-success), var(--vh360-studio-warning), var(--vh360-studio-error));
     display: block;
     height: 100%;
     transition: width 120ms linear;
@@ -164,10 +191,10 @@
 
 .vh360-studio-button {
     align-items: center;
-    background: #4f46e5;
+    background: var(--vh360-studio-button-bg);
     border: 0;
     border-radius: 999px;
-    color: #fff;
+    color: var(--vh360-studio-button-text);
     cursor: pointer;
     display: inline-flex;
     font-weight: 700;
@@ -178,7 +205,8 @@
 
 .vh360-studio-button:hover,
 .vh360-studio-button:focus {
-    background: #4338ca;
+    background: var(--vh360-studio-button-hover-bg);
+    color: var(--vh360-studio-button-text);
 }
 
 .vh360-studio-button:disabled {
@@ -187,15 +215,15 @@
 }
 
 .vh360-studio-button--secondary {
-    background: #334155;
+    background: var(--vh360-studio-secondary);
 }
 
 .vh360-studio-button--primary {
-    background: #0f766e;
+    background: var(--vh360-studio-primary);
 }
 
 .vh360-studio-help {
-    color: #64748b;
+    color: var(--vh360-studio-text-light);
     font-size: 0.9rem;
 }
 
