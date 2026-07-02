@@ -28,7 +28,7 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
     <div class="vh360-studio-grid">
         <section class="vh360-studio-card vh360-studio-card--wide" aria-labelledby="vh360-studio-readiness-title">
             <h3 id="vh360-studio-readiness-title"><?php esc_html_e( 'Studio readiness', 'videohub360-studio' ); ?></h3>
-            <p><?php esc_html_e( 'These checks are read-only. Studio will not record or upload anything in this phase.', 'videohub360-studio' ); ?></p>
+            <p><?php esc_html_e( 'These checks confirm browser support for preview, recording, and chunked uploads.', 'videohub360-studio' ); ?></p>
             <ul class="vh360-studio-checks" data-support-checks></ul>
         </section>
 
@@ -89,7 +89,7 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
 
         <section class="vh360-studio-card" aria-labelledby="vh360-studio-storage-title">
             <h3 id="vh360-studio-storage-title"><?php esc_html_e( 'Replay destination', 'videohub360-studio' ); ?></h3>
-            <p><?php esc_html_e( 'VideoPress is the recommended replay/VOD destination. Publishing is not implemented in Phase 1B.', 'videohub360-studio' ); ?></p>
+            <p><?php esc_html_e( 'VideoPress is the recommended replay/VOD destination. Publishing remains a later phase; this phase only saves a temporary browser upload for processing.', 'videohub360-studio' ); ?></p>
             <label for="vh360-studio-storage-select"><?php esc_html_e( 'Destination', 'videohub360-studio' ); ?></label>
             <select id="vh360-studio-storage-select" data-storage-select>
                 <?php foreach ( $storage_providers as $provider_id => $provider ) : ?>
@@ -106,9 +106,34 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
             <p class="vh360-studio-help"><?php printf( esc_html__( 'Default: %s. Local Media remains available only as a limited fallback for constrained hosting environments.', 'videohub360-studio' ), esc_html( $storage_label ) ); ?></p>
         </section>
 
+
+
+        <section class="vh360-studio-card vh360-studio-card--wide" aria-labelledby="vh360-studio-recorder-title">
+            <h3 id="vh360-studio-recorder-title"><?php esc_html_e( 'Browser recording upload', 'videohub360-studio' ); ?></h3>
+            <p><?php esc_html_e( 'This records in your browser and uploads chunks to WordPress for later replay publishing.', 'videohub360-studio' ); ?></p>
+            <div class="vh360-studio-recorder-grid">
+                <div><strong><?php esc_html_e( 'Current job ID', 'videohub360-studio' ); ?></strong><span data-recording-job-id>—</span></div>
+                <div><strong><?php esc_html_e( 'Selected MIME type', 'videohub360-studio' ); ?></strong><span data-recording-mime>—</span></div>
+                <div><strong><?php esc_html_e( 'Recording timer', 'videohub360-studio' ); ?></strong><span data-recording-timer>00:00</span></div>
+                <div><strong><?php esc_html_e( 'Chunks uploaded', 'videohub360-studio' ); ?></strong><span data-recording-uploaded>0</span></div>
+                <div><strong><?php esc_html_e( 'Chunks pending', 'videohub360-studio' ); ?></strong><span data-recording-pending>0</span></div>
+                <div><strong><?php esc_html_e( 'Chunks failed', 'videohub360-studio' ); ?></strong><span data-recording-failed>0</span></div>
+                <div><strong><?php esc_html_e( 'Total bytes uploaded', 'videohub360-studio' ); ?></strong><span data-recording-bytes>0</span></div>
+                <div><strong><?php esc_html_e( 'Finalize status', 'videohub360-studio' ); ?></strong><span data-recording-finalize-status>—</span></div>
+            </div>
+            <progress class="vh360-studio-progress" max="100" value="0" data-recording-progress></progress>
+            <div class="vh360-studio-actions">
+                <button type="button" class="vh360-studio-button vh360-studio-button--primary" data-start-recording><?php esc_html_e( 'Start recording', 'videohub360-studio' ); ?></button>
+                <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-stop-recording disabled><?php esc_html_e( 'Stop recording', 'videohub360-studio' ); ?></button>
+                <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-retry-chunks disabled><?php esc_html_e( 'Retry failed chunks', 'videohub360-studio' ); ?></button>
+                <button type="button" class="vh360-studio-button" data-finalize-recording disabled><?php esc_html_e( 'Finalize recording', 'videohub360-studio' ); ?></button>
+            </div>
+            <div class="vh360-studio-job-result" aria-live="polite" data-recording-status></div>
+        </section>
+
         <section class="vh360-studio-card vh360-studio-card--wide" aria-labelledby="vh360-studio-job-title">
             <h3 id="vh360-studio-job-title"><?php esc_html_e( 'Setup job', 'videohub360-studio' ); ?></h3>
-            <p><?php esc_html_e( 'Create a safe setup job in the created state. Recording, uploading, and publishing will be added in later phases.', 'videohub360-studio' ); ?></p>
+            <p><?php esc_html_e( 'Create a safe setup job in the created state. Use this job to start browser recording and chunked uploads. Publishing is not implemented in this phase.', 'videohub360-studio' ); ?></p>
             <button type="button" class="vh360-studio-button vh360-studio-button--primary" data-create-job><?php esc_html_e( 'Create setup job', 'videohub360-studio' ); ?></button>
             <div class="vh360-studio-job-result" aria-live="polite" data-job-result></div>
         </section>

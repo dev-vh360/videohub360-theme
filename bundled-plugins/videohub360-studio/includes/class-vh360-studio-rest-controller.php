@@ -11,9 +11,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class VH360_Studio_REST_Controller {
     private $jobs;
+    private $chunks;
 
     public function __construct( VH360_Studio_Recording_Jobs $jobs ) {
-        $this->jobs = $jobs;
+        $this->jobs   = $jobs;
+        $this->chunks = new VH360_Studio_Recording_Chunks( $jobs );
     }
 
     public function register_routes() {
@@ -55,6 +57,74 @@ class VH360_Studio_REST_Controller {
             )
         );
 
+
+
+        register_rest_route(
+            'vh360-studio/v1',
+            '/jobs/(?P<id>\d+)/recording/start',
+            array(
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => array( $this, 'start_recording' ),
+                'permission_callback' => array( $this, 'permissions_check' ),
+                'args'                => array(
+                    'id'        => $this->get_id_arg(),
+                    'mime_type' => $this->get_mime_type_arg( true ),
+                ),
+            )
+        );
+        register_rest_route(
+            'vh360-studio/v1',
+            '/jobs/(?P<id>\d+)/chunks',
+            array(
+                array(
+                    'methods'             => WP_REST_Server::CREATABLE,
+                    'callback'            => array( $this, 'upload_chunk' ),
+                    'permission_callback' => array( $this, 'permissions_check' ),
+                    'args'                => array(
+                        'id'                 => $this->get_id_arg(),
+                        'browser_session_id' => $this->get_browser_session_arg( true ),
+                        'chunk_index'        => $this->get_non_negative_int_arg( true ),
+                        'mime_type'          => $this->get_mime_type_arg( true ),
+                    ),
+                ),
+                array(
+                    'methods'             => WP_REST_Server::READABLE,
+                    'callback'            => array( $this, 'list_chunks' ),
+                    'permission_callback' => array( $this, 'permissions_check' ),
+                    'args'                => array(
+                        'id'                 => $this->get_id_arg(),
+                        'browser_session_id' => $this->get_browser_session_arg( false ),
+                    ),
+                ),
+            )
+        );
+        register_rest_route(
+            'vh360-studio/v1',
+            '/jobs/(?P<id>\d+)/recording/stop',
+            array(
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => array( $this, 'stop_recording' ),
+                'permission_callback' => array( $this, 'permissions_check' ),
+                'args'                => array(
+                    'id'               => $this->get_id_arg(),
+                    'duration_seconds' => $this->get_non_negative_int_arg( false ),
+                ),
+            )
+        );
+        register_rest_route(
+            'vh360-studio/v1',
+            '/jobs/(?P<id>\d+)/recording/finalize',
+            array(
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => array( $this, 'finalize_recording' ),
+                'permission_callback' => array( $this, 'permissions_check' ),
+                'args'                => array(
+                    'id'              => $this->get_id_arg(),
+                    'expected_chunks' => $this->get_positive_int_arg( true ),
+                ),
+            )
+        );
+
         register_rest_route(
             'vh360-studio/v1',
             '/jobs/(?P<id>\d+)/cancel',
@@ -74,6 +144,47 @@ class VH360_Studio_REST_Controller {
                 return is_numeric( $value ) && 0 < absint( $value );
             },
             'sanitize_callback' => 'absint',
+        );
+    }
+
+
+
+    private function get_mime_type_arg( $required ) {
+        return array(
+            'required'          => (bool) $required,
+            'validate_callback' => function( $value ) {
+                return $this->chunks->is_allowed_mime_type( $value );
+            },
+        );
+    }
+
+    private function get_browser_session_arg( $required ) {
+        return array(
+            'required'          => (bool) $required,
+            'sanitize_callback' => 'sanitize_text_field',
+            'validate_callback' => function( $value ) use ( $required ) {
+                return ! $required && ( null === $value || '' === $value ) || ( is_string( $value ) && '' !== trim( $value ) && 191 >= strlen( $value ) );
+            },
+        );
+    }
+
+    private function get_non_negative_int_arg( $required ) {
+        return array(
+            'required'          => (bool) $required,
+            'sanitize_callback' => 'absint',
+            'validate_callback' => function( $value ) use ( $required ) {
+                return ! $required && ( null === $value || '' === $value ) || ( is_numeric( $value ) && 0 <= intval( $value ) );
+            },
+        );
+    }
+
+    private function get_positive_int_arg( $required ) {
+        return array(
+            'required'          => (bool) $required,
+            'sanitize_callback' => 'absint',
+            'validate_callback' => function( $value ) {
+                return is_numeric( $value ) && 0 < intval( $value );
+            },
         );
     }
 
@@ -153,7 +264,7 @@ class VH360_Studio_REST_Controller {
 
     private function update_payload_from_request( WP_REST_Request $request ) {
         $payload = array();
-        $allowed = array( 'source_type', 'source_id', 'live_video_id', 'room_id', 'recording_mode', 'quality_preset', 'storage_provider', 'status' );
+        $allowed = array( 'source_type', 'source_id', 'live_video_id', 'room_id', 'recording_mode', 'quality_preset', 'storage_provider' );
 
         foreach ( $allowed as $key ) {
             if ( null !== $request->get_param( $key ) ) {
@@ -190,24 +301,98 @@ class VH360_Studio_REST_Controller {
         return VH360_Studio_Permissions::user_can_access_studio( get_current_user_id() );
     }
 
+    private function prepare_job_response( $job ) {
+        if ( is_wp_error( $job ) ) {
+            return $job;
+        }
+        if ( is_array( $job ) && array_key_exists( 'local_temp_path', $job ) ) {
+            unset( $job['local_temp_path'] );
+        }
+        return $job;
+    }
+
     public function list_jobs( WP_REST_Request $request ) {
-        return rest_ensure_response( $this->jobs->list( get_current_user_id(), $request->get_param( 'per_page' ) ) );
+        return rest_ensure_response( array_map( array( $this, 'prepare_job_response' ), $this->jobs->list( get_current_user_id(), $request->get_param( 'per_page' ) ) ) );
     }
 
     public function create_job( WP_REST_Request $request ) {
-        return rest_ensure_response( $this->jobs->create( get_current_user_id(), $this->setup_payload_from_request( $request ) ) );
+        return rest_ensure_response( $this->prepare_job_response( $this->jobs->create( get_current_user_id(), $this->setup_payload_from_request( $request ) ) ) );
     }
 
     public function get_job( WP_REST_Request $request ) {
         $job = $this->jobs->get( absint( $request['id'] ), get_current_user_id() );
-        return $job ? rest_ensure_response( $job ) : new WP_Error( 'vh360_studio_not_found', __( 'Recording job not found.', 'videohub360-studio' ), array( 'status' => 404 ) );
+        return $job ? rest_ensure_response( $this->prepare_job_response( $job ) ) : new WP_Error( 'vh360_studio_not_found', __( 'Recording job not found.', 'videohub360-studio' ), array( 'status' => 404 ) );
     }
 
     public function update_job( WP_REST_Request $request ) {
-        return rest_ensure_response( $this->jobs->update( absint( $request['id'] ), get_current_user_id(), $this->update_payload_from_request( $request ) ) );
+        return rest_ensure_response( $this->prepare_job_response( $this->jobs->update( absint( $request['id'] ), get_current_user_id(), $this->update_payload_from_request( $request ) ) ) );
+    }
+
+
+
+    public function start_recording( WP_REST_Request $request ) {
+        $job = $this->chunks->validate_job_ownership( absint( $request['id'] ), get_current_user_id() );
+        if ( is_wp_error( $job ) ) { return $job; }
+        if ( VH360_Studio_Recording_Jobs::STATUS_CREATED !== $job['status'] ) {
+            return new WP_Error( 'vh360_studio_invalid_status_transition', __( 'Recording can only start from a created job.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
+        $settings = $this->chunks->upload_settings();
+        $mime_type = $this->chunks->base_mime_type( $request->get_param( 'mime_type' ) );
+        if ( ! in_array( $mime_type, $settings['allowed_mime_types'], true ) ) {
+            return new WP_Error( 'vh360_studio_invalid_recording_type', __( 'Recording MIME type is not allowed.', 'videohub360-studio' ), array( 'status' => 415 ) );
+        }
+        $session = wp_generate_uuid4();
+        $job = $this->jobs->start_recording( $job['id'], get_current_user_id(), $session, $mime_type );
+        if ( is_wp_error( $job ) ) { return $job; }
+        return rest_ensure_response( array( 'job_id' => absint( $job['id'] ), 'browser_session_id' => $session, 'mime_type' => $mime_type, 'upload_settings' => $settings, 'status' => $job['status'] ) );
+    }
+
+    public function upload_chunk( WP_REST_Request $request ) {
+        $job = $this->chunks->validate_job_ownership( absint( $request['id'] ), get_current_user_id() );
+        if ( is_wp_error( $job ) ) { return $job; }
+        if ( ! in_array( $job['status'], array( VH360_Studio_Recording_Jobs::STATUS_RECORDING, VH360_Studio_Recording_Jobs::STATUS_STOPPING ), true ) ) {
+            return new WP_Error( 'vh360_studio_invalid_chunk_status', __( 'Chunks can only be uploaded while recording is active or stopping.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
+        $session = sanitize_text_field( $request->get_param( 'browser_session_id' ) );
+        if ( ! $session || $session !== $job['browser_session_id'] ) { return new WP_Error( 'vh360_studio_invalid_session', __( 'Invalid browser recording session.', 'videohub360-studio' ), array( 'status' => 403 ) ); }
+        $chunk_index = $request->get_param( 'chunk_index' );
+        if ( null === $chunk_index || ! is_numeric( $chunk_index ) || 0 > intval( $chunk_index ) ) { return new WP_Error( 'vh360_studio_invalid_chunk_index', __( 'Invalid recording chunk index.', 'videohub360-studio' ), array( 'status' => 400 ) ); }
+        $files = $request->get_file_params();
+        if ( empty( $files['chunk'] ) ) { return new WP_Error( 'vh360_studio_missing_chunk', __( 'Missing uploaded recording chunk.', 'videohub360-studio' ), array( 'status' => 400 ) ); }
+        $summary = $this->chunks->store_uploaded_chunk( $job, $session, intval( $chunk_index ), $files['chunk'], $request->get_param( 'mime_type' ) );
+        if ( is_wp_error( $summary ) ) { $this->jobs->mark_failed( $job['id'], get_current_user_id(), $summary->get_error_message() ); return $summary; }
+        $summary['job_status'] = $job['status'];
+        return rest_ensure_response( $summary );
+    }
+
+    public function list_chunks( WP_REST_Request $request ) {
+        $job = $this->chunks->validate_job_ownership( absint( $request['id'] ), get_current_user_id() );
+        if ( is_wp_error( $job ) ) { return $job; }
+        $session = sanitize_text_field( $request->get_param( 'browser_session_id' ) ? $request->get_param( 'browser_session_id' ) : $job['browser_session_id'] );
+        $summary = $this->chunks->received_summary( $job['id'], $session );
+        $summary['job_status'] = $job['status'];
+        return rest_ensure_response( $summary );
+    }
+
+    public function stop_recording( WP_REST_Request $request ) {
+        $job = $this->chunks->validate_job_ownership( absint( $request['id'] ), get_current_user_id() );
+        if ( is_wp_error( $job ) ) { return $job; }
+        if ( VH360_Studio_Recording_Jobs::STATUS_RECORDING !== $job['status'] ) { return new WP_Error( 'vh360_studio_invalid_status_transition', __( 'Recording can only stop from the recording status.', 'videohub360-studio' ), array( 'status' => 409 ) ); }
+        return rest_ensure_response( $this->prepare_job_response( $this->jobs->mark_stopping( $job['id'], get_current_user_id(), $request->get_param( 'duration_seconds' ) ) ) );
+    }
+
+    public function finalize_recording( WP_REST_Request $request ) {
+        $job = $this->chunks->validate_job_ownership( absint( $request['id'] ), get_current_user_id() );
+        if ( is_wp_error( $job ) ) { return $job; }
+        if ( VH360_Studio_Recording_Jobs::STATUS_STOPPING !== $job['status'] ) { return new WP_Error( 'vh360_studio_invalid_status_transition', __( 'Recording can only finalize from the stopping status.', 'videohub360-studio' ), array( 'status' => 409 ) ); }
+        $uploading = $this->jobs->mark_uploading( $job['id'], get_current_user_id() );
+        if ( is_wp_error( $uploading ) ) { return $uploading; }
+        $assembled = $this->chunks->assemble_chunks( $uploading, $job['browser_session_id'], $request->get_param( 'expected_chunks' ), $job['mime_type'] );
+        if ( is_wp_error( $assembled ) ) { $this->jobs->mark_failed( $job['id'], get_current_user_id(), $assembled->get_error_message() ); return $assembled; }
+        return rest_ensure_response( $this->prepare_job_response( $this->jobs->mark_processing( $job['id'], get_current_user_id(), array( 'file_size' => absint( $assembled['file_size'] ), 'local_temp_path' => $assembled['path'], 'mime_type' => $assembled['mime_type'] ) ) ) );
     }
 
     public function cancel_job( WP_REST_Request $request ) {
-        return rest_ensure_response( $this->jobs->cancel( absint( $request['id'] ), get_current_user_id() ) );
+        return rest_ensure_response( $this->prepare_job_response( $this->jobs->cancel( absint( $request['id'] ), get_current_user_id() ) ) );
     }
 }
