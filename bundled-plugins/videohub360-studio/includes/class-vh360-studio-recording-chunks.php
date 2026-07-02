@@ -267,8 +267,31 @@ class VH360_Studio_Recording_Chunks {
     }
 
     private function delete_directory( $dir ) {
-        if ( ! $this->is_path_in_base_directory( $dir ) ) { return; }
-        foreach ( glob( trailingslashit( $dir ) . '*' ) as $file ) { is_dir( $file ) ? $this->delete_directory( $file ) : ( $this->is_path_in_base_directory( $file ) ? @unlink( $file ) : false ); }
+        if ( ! $this->is_path_in_base_directory( $dir ) || ! is_dir( $dir ) ) {
+            return;
+        }
+
+        $items = scandir( $dir );
+        if ( false === $items ) {
+            return;
+        }
+
+        foreach ( $items as $item ) {
+            if ( '.' === $item || '..' === $item ) {
+                continue;
+            }
+
+            $path = trailingslashit( $dir ) . $item;
+            if ( is_dir( $path ) ) {
+                $this->delete_directory( $path );
+                continue;
+            }
+
+            if ( is_file( $path ) && $this->is_path_in_base_directory( $path ) ) {
+                @unlink( $path );
+            }
+        }
+
         @rmdir( $dir );
     }
 }
