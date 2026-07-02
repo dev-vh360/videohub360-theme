@@ -52,7 +52,7 @@ function vh360_pwa_get_options() : array {
 		'precache_urls'        => '',
 		'fast_launch_enabled'  => 1,
 		'launch_mode'          => 'shell', // shell | cached_start
-		'launch_shell_max_ms'  => 1000,
+		'launch_shell_max_ms'  => 500,
 
 		'show_install_prompt'  => 1,
 		'install_prompt_text'  => 'Install this app',
@@ -255,10 +255,10 @@ function vh360_pwa_build_launch_shell( ?array $opts = null ) : string {
 	$bg = esc_attr( (string) ( ! empty( $opts['splash_background_color'] ) ? $opts['splash_background_color'] : $opts['background_color'] ) );
 	$theme = esc_attr( (string) $opts['theme_color'] );
 	$start_url = esc_url( vh360_pwa_version_url( (string) $opts['start_url'], $opts ) );
-	$max_ms = max( 800, min( 1200, absint( $opts['launch_shell_max_ms'] ?? 1000 ) ) );
+	$max_ms = max( 500, min( 1200, absint( $opts['launch_shell_max_ms'] ?? 500 ) ) );
 	$logo = ! empty( $opts['splash_logo'] ) ? esc_url( vh360_pwa_version_url( (string) $opts['splash_logo'], $opts ) ) : '';
 	$logo_html = $logo ? '<img src="' . $logo . '" alt="" class="vh360-launch__logo">' : '<div class="vh360-launch__mark">' . esc_html( substr( wp_strip_all_tags( $app ), 0, 1 ) ) . '</div>';
-	return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="' . $theme . '"><title>' . $app . '</title><style>html,body{margin:0;min-height:100%;background:' . $bg . ';color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}body{display:grid;place-items:center}.vh360-launch{text-align:center;padding:32px}.vh360-launch__logo{width:96px;height:96px;object-fit:contain;border-radius:22px}.vh360-launch__mark{width:96px;height:96px;border-radius:24px;display:grid;place-items:center;margin:auto;background:rgba(255,255,255,.14);font-size:44px;font-weight:800}.vh360-launch__name{margin:18px 0 10px;font-size:22px;font-weight:700}.vh360-launch__loading{opacity:.78;font-size:14px}</style></head><body><!-- VH360 Managed File: vh360-launch.html --><main class="vh360-launch">' . $logo_html . '<div class="vh360-launch__name">' . $app . '</div><div class="vh360-launch__loading">Loading…</div></main><script>(function(){var target=' . wp_json_encode( $start_url ) . ';var max=' . (int) $max_ms . ';function go(){try{location.replace(target);}catch(e){location.href=target;}}if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){setTimeout(go,Math.min(max,1000));});}else{requestAnimationFrame(function(){setTimeout(go,Math.min(max,1000));});}}());</script></body></html>' . "\n";
+	return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="' . $theme . '"><title>' . $app . '</title><style>html,body{margin:0;min-height:100%;background:' . $bg . ';color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}body{display:grid;place-items:center}.vh360-launch{text-align:center;padding:32px}.vh360-launch__logo{width:96px;height:96px;object-fit:contain;border-radius:22px}.vh360-launch__mark{width:96px;height:96px;border-radius:24px;display:grid;place-items:center;margin:auto;background:rgba(255,255,255,.14);font-size:44px;font-weight:800}.vh360-launch__name{margin:18px 0 10px;font-size:22px;font-weight:700}.vh360-launch__loading{opacity:.78;font-size:14px}</style></head><body><!-- VH360 Managed File: vh360-launch.html --><main class="vh360-launch">' . $logo_html . '<div class="vh360-launch__name">' . $app . '</div><div class="vh360-launch__loading">Loading…</div></main><script>(function(){var target=' . wp_json_encode( $start_url ) . ';var max=' . (int) $max_ms . ';function go(){try{location.replace(target);}catch(e){location.href=target;}}if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){setTimeout(go,max);});}else{requestAnimationFrame(function(){setTimeout(go,max);});}}());</script></body></html>' . "\n";
 }
 
 /**

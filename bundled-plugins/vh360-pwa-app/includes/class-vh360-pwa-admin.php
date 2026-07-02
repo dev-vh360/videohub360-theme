@@ -220,7 +220,7 @@ $out['scope']     = $normalize_to_path( $scope );
 		$out['precache_urls'] = sanitize_textarea_field( $input['precache_urls'] ?? $current['precache_urls'] );
 		$out['fast_launch_enabled'] = vh360_pwa_boolval( $input['fast_launch_enabled'] ?? $current['fast_launch_enabled'] );
 		$out['launch_mode'] = in_array( (string) ( $input['launch_mode'] ?? '' ), array( 'shell','cached_start' ), true ) ? (string) $input['launch_mode'] : $current['launch_mode'];
-		$out['launch_shell_max_ms'] = max( 800, min( 1200, absint( $input['launch_shell_max_ms'] ?? $current['launch_shell_max_ms'] ) ) );
+		$out['launch_shell_max_ms'] = max( 500, min( 1200, absint( $input['launch_shell_max_ms'] ?? $current['launch_shell_max_ms'] ) ) );
 
 		$out['show_install_prompt'] = vh360_pwa_boolval( $input['show_install_prompt'] ?? $current['show_install_prompt'] );
 		$out['install_prompt_text'] = sanitize_text_field( $input['install_prompt_text'] ?? $current['install_prompt_text'] );
@@ -882,8 +882,8 @@ $manifest_url = esc_url( vh360_pwa_endpoint_url( VH360_PWA_MANIFEST_SLUG ) );
 		echo '</td></tr>';
 
 		echo '<tr><th scope="row">' . esc_html__( 'Maximum Launch Shell Display Time', 'vh360-pwa-app' ) . '</th><td>';
-		echo '<input type="number" min="800" max="1200" step="50" name="vh360_pwa_options[launch_shell_max_ms]" value="' . esc_attr( (string) $opts['launch_shell_max_ms'] ) . '" style="width:100px"> ms';
-		echo '<p class="description">' . esc_html__( 'Recommended range: 800–1200ms. Default: 1000ms.', 'vh360-pwa-app' ) . '</p>';
+		echo '<input type="number" min="500" max="1200" step="50" name="vh360_pwa_options[launch_shell_max_ms]" value="' . esc_attr( (string) $opts['launch_shell_max_ms'] ) . '" style="width:100px"> ms';
+		echo '<p class="description">' . esc_html__( 'Recommended range: 500–1200ms. Default: 500ms.', 'vh360-pwa-app' ) . '</p>';
 		echo '</td></tr>';
 
 		echo '<tr><th scope="row">' . esc_html__( 'Cache Version', 'vh360-pwa-app' ) . '</th><td>';
