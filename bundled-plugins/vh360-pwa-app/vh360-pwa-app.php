@@ -159,6 +159,9 @@ if ( ! defined( 'VH360_PWA_SW_SLUG' ) ) {
 if ( ! defined( 'VH360_PWA_OFFLINE_SLUG' ) ) {
 	define( 'VH360_PWA_OFFLINE_SLUG', 'vh360-offline.html' );
 }
+if ( ! defined( 'VH360_PWA_LAUNCH_SHELL_SLUG' ) ) {
+	define( 'VH360_PWA_LAUNCH_SHELL_SLUG', 'vh360-launch.html' );
+}
 
 // OneSignal SDK version
 if ( ! defined( 'VH360_PWA_ONESIGNAL_SDK_VERSION' ) ) {

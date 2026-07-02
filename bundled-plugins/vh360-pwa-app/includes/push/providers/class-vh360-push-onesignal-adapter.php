@@ -118,7 +118,10 @@ class VH360_Push_OneSignal_Adapter implements VH360_PWA_Push_Adapter_Interface {
 			'https://cdn.onesignal.com/sdks/web/' . $sdk_version . '/OneSignalSDK.page.js',
 			array(),
 			null,
-			false
+			array(
+				'in_footer' => true,
+				'strategy'  => 'defer',
+			)
 		);
 
 		// Our initialization script
@@ -127,7 +130,10 @@ class VH360_Push_OneSignal_Adapter implements VH360_PWA_Push_Adapter_Interface {
 			VH360_PWA_APP_URL . 'assets/public/push-public.js',
 			array( 'onesignal-sdk' ),
 			vh360_pwa_app_asset_version('assets/public/push-public.js'),
-			false
+			array(
+				'in_footer' => true,
+				'strategy'  => 'defer',
+			)
 		);
 	}
 
