@@ -368,7 +368,7 @@ class VideoHub360_Admin {
             
             // Update chat settings
             update_option('videohub360_chat_enabled', isset($_POST['videohub360_chat_enabled']) ? 1 : 0);
-            update_option('videohub360_chat_placement', sanitize_text_field($_POST['videohub360_chat_placement'] ?? 'inline'));
+            update_option('videohub360_chat_placement', sanitize_text_field($_POST['videohub360_chat_placement'] ?? 'popup'));
             update_option('videohub360_chat_cleanup_days', intval($_POST['videohub360_chat_cleanup_days']));
             update_option('videohub360_chat_rate_limit', intval($_POST['videohub360_chat_rate_limit']));
             update_option('videohub360_chat_message_limit', intval($_POST['videohub360_chat_message_limit']));
@@ -486,7 +486,7 @@ class VideoHub360_Admin {
     
         
         $chat_enabled = get_option('videohub360_chat_enabled', 1);
-        $chat_placement = get_option('videohub360_chat_placement', 'inline');
+        $chat_placement = get_option('videohub360_chat_placement', 'popup');
         $chat_cleanup_days = get_option('videohub360_chat_cleanup_days', 30);
         $chat_rate_limit = get_option('videohub360_chat_rate_limit', 5);
         $chat_message_limit = get_option('videohub360_chat_message_limit', 500);

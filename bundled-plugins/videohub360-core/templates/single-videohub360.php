@@ -69,7 +69,7 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
     // Determine if chat should be enabled - for all livestreams when chat is enabled
     $is_live = get_post_meta(get_the_ID(), '_vh360_is_live', true);
     $chat_enabled = false;
-    $chat_placement = 'inline'; // Default placement
+    $chat_placement = 'popup'; // Default placement
     
     if ($is_live === 'yes') {
         $per_video_chat = get_post_meta(get_the_ID(), '_vh360_chat_enabled', true);
@@ -86,7 +86,7 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
         if (!empty($per_video_placement)) {
             $chat_placement = $per_video_placement;
         } else {
-            $chat_placement = get_option('videohub360_chat_placement', 'inline');
+            $chat_placement = get_option('videohub360_chat_placement', 'popup');
         }
         
         // If placement is 'off', disable chat
