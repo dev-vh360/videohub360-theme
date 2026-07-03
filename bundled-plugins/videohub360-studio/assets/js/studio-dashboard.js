@@ -12,6 +12,7 @@
     const state = {
         cameraStream: null,
         screenStream: null,
+        micStream: null,
         audioContext: null,
         analyser: null,
         meterFrame: null,
@@ -147,15 +148,17 @@
         }
         state.transitioning = transitionType === 'fade';
         const duration = Math.max(0, Math.min(2000, Number(els.transitionDuration && els.transitionDuration.value) || 300));
+        root.style.setProperty('--vh360-studio-transition-duration', duration + 'ms');
         if (state.transitioning) {
             root.classList.add('is-transitioning', 'is-fading');
         }
         try {
-            const stream = await getSourceStream(state.previewSource);
-            state.programSource = state.previewSource;
+            const nextSource = state.previewSource;
+            const stream = await getSourceStream(nextSource);
+            await replaceLiveVideoTrack(stream);
+            state.programSource = nextSource;
             state.programStream = stream;
             renderProgramState();
-            await replaceLiveVideoTrack(stream);
             setStatus(sourceLabel(state.programSource) + ' sent to Program.', 'success');
             if (transitionType === 'fade') {
                 await new Promise((resolve) => window.setTimeout(resolve, duration));
@@ -206,6 +209,62 @@
         if (track) {
             await state.broadcastSession.replaceVideoMediaStreamTrack(track);
         }
+    }
+
+    function isSourceProtected(sourceId) {
+        return state.programSource === sourceId && (state.broadcastSession || isRecordingActive());
+    }
+
+    function warnProtectedSource(sourceId) {
+        setStatus('This source is currently in Program. Send another source to Program before stopping it.', 'warning');
+        if (state.broadcastSession) {
+            setBroadcastStatus('This source is currently in Program. Send another source to Program before stopping it.', 'warning');
+        }
+    }
+
+    async function ensureMicStream() {
+        const existingAudio = state.cameraStream && state.cameraStream.getAudioTracks().find((track) => track.readyState !== 'ended');
+        if (existingAudio) {
+            return state.cameraStream;
+        }
+        const micAudio = state.micStream && state.micStream.getAudioTracks().find((track) => track.readyState !== 'ended');
+        if (micAudio) {
+            return state.micStream;
+        }
+        if (!state.support.getUserMedia) {
+            return null;
+        }
+        state.micStream = await navigator.mediaDevices.getUserMedia({
+            audio: state.selectedMicId ? { deviceId: { exact: state.selectedMicId } } : true,
+            video: false,
+        });
+        return state.micStream;
+    }
+
+    async function buildRecordingStreamFromProgram() {
+        const tracks = [];
+        if (state.programStream) {
+            state.programStream.getVideoTracks().forEach((track) => {
+                if (track.readyState !== 'ended') {
+                    tracks.push(track);
+                }
+            });
+        }
+        let audioSource = state.broadcastSession && state.broadcastSession.getLocalMediaStream ? state.broadcastSession.getLocalMediaStream() : null;
+        if (!audioSource || !audioSource.getAudioTracks().some((track) => track.readyState !== 'ended')) {
+            audioSource = state.cameraStream;
+        }
+        if (!audioSource || !audioSource.getAudioTracks().some((track) => track.readyState !== 'ended')) {
+            audioSource = await ensureMicStream();
+        }
+        if (audioSource) {
+            audioSource.getAudioTracks().forEach((track) => {
+                if (track.readyState !== 'ended') {
+                    tracks.push(track);
+                }
+            });
+        }
+        return tracks.length ? new MediaStream(tracks) : null;
     }
 
     function setStatus(message, type) {
@@ -357,7 +416,12 @@
             return;
         }
 
-        stopPreview();
+        if (state.cameraStream && isSourceProtected('camera')) {
+            warnProtectedSource('camera');
+            return;
+        }
+
+        stopPreview({ force: true });
 
         try {
             const preset = getSelectedPreset();
@@ -391,7 +455,11 @@
         }
     }
 
-    function stopPreview() {
+    function stopPreview(options = {}) {
+        if (!options.force && isSourceProtected('camera')) {
+            warnProtectedSource('camera');
+            return false;
+        }
         stopStream(state.cameraStream);
         state.cameraStream = null;
         if (els.cameraPreview) {
@@ -409,6 +477,7 @@
             state.programStream = null;
             renderProgramState();
         }
+        return true;
     }
 
     function setPreviewButtons(active) {
@@ -469,12 +538,17 @@
             return;
         }
 
-        stopScreenPreview();
+        if (state.screenStream && isSourceProtected('screen')) {
+            warnProtectedSource('screen');
+            return;
+        }
+
+        stopScreenPreview({ force: true });
 
         try {
             state.screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
             state.screenStream.getVideoTracks().forEach((track) => {
-                track.addEventListener('ended', stopScreenPreview, { once: true });
+                track.addEventListener('ended', () => handleScreenShareEnded(), { once: true });
             });
             if (els.screenPreview) {
                 els.screenPreview.srcObject = state.screenStream;
@@ -495,7 +569,11 @@
         }
     }
 
-    function stopScreenPreview() {
+    function stopScreenPreview(options = {}) {
+        if (!options.force && isSourceProtected('screen')) {
+            warnProtectedSource('screen');
+            return false;
+        }
         stopStream(state.screenStream);
         state.screenStream = null;
         if (els.screenPreview) {
@@ -511,6 +589,33 @@
             state.programSource = null;
             state.programStream = null;
             renderProgramState();
+        }
+        return true;
+    }
+
+    async function handleScreenShareEnded() {
+        state.screenStream = null;
+        if (els.screenPreview) {
+            els.screenPreview.srcObject = null;
+        }
+        setScreenButtons(false);
+        setShellClass('is-screen-active', false);
+        if (state.previewSource === 'screen') {
+            state.previewSource = null;
+            renderSourceState();
+        }
+        if (state.programSource === 'screen') {
+            state.programSource = null;
+            state.programStream = null;
+            renderProgramState();
+            setStatus('Screen Share ended. Program source was cleared.', 'warning');
+            if (state.broadcastSession && state.cameraStream) {
+                state.previewSource = 'camera';
+                await commitPreviewToProgram('cut');
+                setBroadcastStatus('Screen Share ended. Program fell back to Camera.', 'warning');
+            } else if (state.broadcastSession) {
+                setBroadcastStatus('Screen Share ended. Choose another source for Program.', 'warning');
+            }
         }
     }
 
@@ -620,7 +725,7 @@
         let serverRecordingStarted = false;
         try {
             if (state.programStream) {
-                state.recordingStream = state.programStream;
+                state.recordingStream = await buildRecordingStreamFromProgram();
             } else if (state.broadcastSession) {
                 state.recordingStream = state.broadcastSession.getLocalMediaStream ? state.broadcastSession.getLocalMediaStream() : null;
                 if (!state.recordingStream) {
@@ -919,8 +1024,10 @@
     }
 
     function cleanup() {
-        stopPreview();
-        stopScreenPreview();
+        stopPreview({ force: true });
+        stopScreenPreview({ force: true });
+        stopStream(state.micStream);
+        state.micStream = null;
     }
 
 
@@ -1130,8 +1237,9 @@
         }
         if (els.stopPreview) {
             els.stopPreview.addEventListener('click', () => {
-                stopPreview();
-                setStatus(strings.ready, 'success');
+                if (stopPreview()) {
+                    setStatus(strings.ready, 'success');
+                }
             });
         }
         if (els.startScreen) {
@@ -1139,8 +1247,9 @@
         }
         if (els.stopScreen) {
             els.stopScreen.addEventListener('click', () => {
-                stopScreenPreview();
-                setStatus(strings.ready, 'success');
+                if (stopScreenPreview()) {
+                    setStatus(strings.ready, 'success');
+                }
             });
         }
         if (els.cameraSelect) {
@@ -1195,7 +1304,7 @@
             cleanup();
         });
         document.addEventListener('visibilitychange', () => {
-            if (document.hidden && !isRecordingActive()) {
+            if (document.hidden && !isRecordingActive() && !state.broadcastSession) {
                 cleanup();
             }
         });

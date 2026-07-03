@@ -61,21 +61,37 @@
                 }
                 const nextTrack = window.AgoraRTC.createCustomVideoTrack({ mediaStreamTrack: mediaStreamTrack });
                 const oldTrack = state.videoTrack;
-                if (state.published && oldTrack) {
-                    await state.client.unpublish(oldTrack).catch(function () {});
+                const wasPublished = state.published;
+
+                try {
+                    if (wasPublished && oldTrack) {
+                        await state.client.unpublish(oldTrack);
+                    }
+                    await state.client.publish(nextTrack);
+                    state.videoTrack = nextTrack;
+                    state.published = true;
+                    if (localContainer && typeof nextTrack.play === 'function') {
+                        nextTrack.play(localContainer);
+                    }
+                    if (oldTrack) {
+                        oldTrack.stop();
+                        oldTrack.close();
+                    }
+                    emit(root, 'video-replaced', { uid: config.uid, channelName: config.channelName });
+                    return true;
+                } catch (error) {
+                    nextTrack.stop();
+                    nextTrack.close();
+                    state.videoTrack = oldTrack;
+                    state.published = wasPublished;
+                    if (wasPublished && oldTrack) {
+                        await state.client.publish(oldTrack).catch(function () {});
+                        if (localContainer && typeof oldTrack.play === 'function') {
+                            oldTrack.play(localContainer);
+                        }
+                    }
+                    throw error;
                 }
-                state.videoTrack = nextTrack;
-                if (localContainer && typeof nextTrack.play === 'function') {
-                    nextTrack.play(localContainer);
-                }
-                await state.client.publish(nextTrack);
-                state.published = true;
-                if (oldTrack) {
-                    oldTrack.stop();
-                    oldTrack.close();
-                }
-                emit(root, 'video-replaced', { uid: config.uid, channelName: config.channelName });
-                return true;
             }
 
             return {

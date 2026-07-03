@@ -120,6 +120,7 @@
 .vh360-studio-dashboard label { color: var(--vh360-studio-text); display: block; font-weight: 700; }
 .vh360-studio-dashboard input[type="text"],
 .vh360-studio-dashboard input[type="password"],
+.vh360-studio-dashboard input[type="number"],
 .vh360-studio-dashboard select,
 .vh360-studio-dashboard textarea { background: var(--vh360-studio-app-bg); border: 1px solid var(--vh360-studio-panel-border); border-radius: 10px; color: var(--vh360-studio-text); margin-top: 0.3rem; min-height: 40px; padding: 0.5rem 0.65rem; width: 100%; }
 .vh360-studio-dashboard textarea { min-height: 86px; }
@@ -238,7 +239,7 @@
 }
 
 .vh360-studio-dashboard.is-fading .vh360-studio-program-video {
-    animation: vh360-studio-program-fade 300ms ease-in-out;
+    animation: vh360-studio-program-fade var(--vh360-studio-transition-duration, 300ms) ease-in-out;
 }
 
 @keyframes vh360-studio-program-fade {
