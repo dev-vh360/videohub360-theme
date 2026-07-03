@@ -32,10 +32,20 @@ class VH360_Studio_Assets {
             $this->asset_version( $css_path )
         );
 
+        wp_enqueue_script( 'agora-rtc-sdk', 'https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js', array(), '4.20.0', true );
+
+        wp_enqueue_script(
+            'vh360-agora-broadcaster',
+            VIDEOHUB360_ASSETS_URL . 'js/agora-broadcaster.js',
+            array( 'agora-rtc-sdk' ),
+            videohub360_asset_version( 'assets/js/agora-broadcaster.js' ),
+            true
+        );
+
         wp_enqueue_script(
             'vh360-studio-dashboard',
             VH360_STUDIO_PLUGIN_URL . $js_path,
-            array(),
+            array( 'vh360-agora-broadcaster' ),
             $this->asset_version( $js_path ),
             true
         );
@@ -105,6 +115,12 @@ class VH360_Studio_Assets {
                 'localMediaReady'      => __( 'Replay saved to Media Library. Replay post created.', 'videohub360-studio' ),
                 'localMediaUnavailable' => __( 'Local Media publishing is unavailable because the current user cannot upload files or the uploads directory is not writable.', 'videohub360-studio' ),
                 'localMediaWarning'    => __( 'Local Media Fallback stores recordings in your WordPress Media Library and is best for testing or smaller recordings.', 'videohub360-studio' ),
+                'goLive'                => __( 'Go Live', 'videohub360-studio' ),
+                'goingLive'             => __( 'Joining Agora and publishing camera/microphone…', 'videohub360-studio' ),
+                'liveStarted'           => __( 'Live broadcast started.', 'videohub360-studio' ),
+                'liveEnded'             => __( 'Live broadcast ended.', 'videohub360-studio' ),
+                'broadcastFailed'       => __( 'Broadcast could not start. Check Agora settings and device permissions.', 'videohub360-studio' ),
+
             ),
             'supportLabels'             => array(
                 'mediaDevices'     => __( 'Media devices API', 'videohub360-studio' ),

@@ -307,3 +307,28 @@
 .vh360-studio-replay-link a {
     overflow-wrap: anywhere;
 }
+.vh360-studio-live-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.vh360-studio-live-grid input[type="text"],
+.vh360-studio-live-grid input[type="password"],
+.vh360-studio-live-grid select,
+.vh360-studio-live-grid textarea {
+    width: 100%;
+}
+
+.vh360-studio-agora-preview {
+    background: var(--vh360-studio-preview-bg);
+    border-radius: 12px;
+    min-height: 260px;
+    overflow: hidden;
+}
+
+.vh360-studio-agora-preview video {
+    height: 100%;
+    object-fit: cover;
+    width: 100%;
+}

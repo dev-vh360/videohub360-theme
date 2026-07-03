@@ -52,6 +52,8 @@ require_once VIDEOHUB360_PLUGIN_DIR . 'includes/renderers/render-chat.php';
 require_once VIDEOHUB360_PLUGIN_DIR . 'includes/renderers/render-livestream.php';
 require_once VIDEOHUB360_PLUGIN_DIR . 'includes/renderers/render-single-video-sidebar.php';
 require_once VIDEOHUB360_PLUGIN_DIR . 'includes/renderers/render-single-video-modals.php';
+require_once VIDEOHUB360_PLUGIN_DIR . 'includes/class-videohub360-livestream-service.php';
+add_action('init', array('VideoHub360_Livestream_Service', 'register_stale_cleanup'));
 
 // Base URL of the licensing server (store site) running the VideoHub360 Licensing plugin.
 // Replace this with your actual store URL before distributing, or override with the

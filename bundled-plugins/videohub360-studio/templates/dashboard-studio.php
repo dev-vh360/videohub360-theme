@@ -108,6 +108,29 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
 
 
 
+
+        <section class="vh360-studio-card vh360-studio-card--wide" aria-labelledby="vh360-studio-live-title">
+            <h3 id="vh360-studio-live-title"><?php esc_html_e( 'Livestream Setup / Go Live', 'videohub360-studio' ); ?></h3>
+            <p><?php esc_html_e( 'Agora is automatic. Studio creates a normal VideoHub360 livestream and broadcasts your camera and microphone from this dashboard while viewers watch the public single video page.', 'videohub360-studio' ); ?></p>
+            <div class="vh360-studio-live-grid">
+                <p><label><?php esc_html_e( 'Title', 'videohub360-studio' ); ?><input type="text" data-broadcast-title placeholder="<?php esc_attr_e( 'My livestream', 'videohub360-studio' ); ?>"></label></p>
+                <p><label><?php esc_html_e( 'Description', 'videohub360-studio' ); ?><textarea data-broadcast-description rows="3"></textarea></label></p>
+                <p><label><?php esc_html_e( 'Mode', 'videohub360-studio' ); ?><select data-broadcast-mode><option value="broadcast"><?php esc_html_e( 'Broadcast', 'videohub360-studio' ); ?></option><option value="interactive"><?php esc_html_e( 'Interactive', 'videohub360-studio' ); ?></option></select></label></p>
+                <p><label><input type="checkbox" data-broadcast-viewer-count checked> <?php esc_html_e( 'Display viewer count', 'videohub360-studio' ); ?></label></p>
+                <p><label><input type="checkbox" data-broadcast-chat checked> <?php esc_html_e( 'Display live chat', 'videohub360-studio' ); ?></label></p>
+                <p data-interactive-only><label><input type="checkbox" data-broadcast-everyone-host> <?php esc_html_e( 'Allow everyone to be host', 'videohub360-studio' ); ?></label></p>
+                <p data-interactive-only><label><input type="checkbox" data-broadcast-require-passcode> <?php esc_html_e( 'Require passcode to join/present', 'videohub360-studio' ); ?></label></p>
+                <p data-passcode-wrap hidden><label><?php esc_html_e( 'Passcode', 'videohub360-studio' ); ?><input type="password" data-broadcast-passcode autocomplete="new-password"></label></p>
+            </div>
+            <div class="vh360-studio-video-shell"><div data-agora-local-preview class="vh360-studio-agora-preview"></div></div>
+            <p data-viewer-link-wrap hidden><strong><?php esc_html_e( 'Public viewer link:', 'videohub360-studio' ); ?></strong> <a href="#" target="_blank" rel="noopener noreferrer" data-viewer-link></a> <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-copy-viewer-link><?php esc_html_e( 'Copy Viewer Link', 'videohub360-studio' ); ?></button></p>
+            <div class="vh360-studio-actions">
+                <button type="button" class="vh360-studio-button vh360-studio-button--primary" data-go-live><?php esc_html_e( 'Go Live', 'videohub360-studio' ); ?></button>
+                <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-end-live disabled><?php esc_html_e( 'End Live', 'videohub360-studio' ); ?></button>
+            </div>
+            <div class="vh360-studio-job-result" aria-live="polite" data-broadcast-status></div>
+        </section>
+
         <section class="vh360-studio-card vh360-studio-card--wide" aria-labelledby="vh360-studio-recorder-title">
             <h3 id="vh360-studio-recorder-title"><?php esc_html_e( 'Browser recording upload', 'videohub360-studio' ); ?></h3>
             <p><?php esc_html_e( 'This records in your browser and uploads chunks to WordPress for later replay publishing.', 'videohub360-studio' ); ?></p>
