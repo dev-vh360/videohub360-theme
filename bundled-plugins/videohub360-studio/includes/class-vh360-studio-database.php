@@ -62,6 +62,8 @@ class VH360_Studio_Database {
             temp_expires_at datetime DEFAULT NULL,
             publish_attempted_at datetime DEFAULT NULL,
             publish_provider_status varchar(80) DEFAULT NULL,
+            replay_video_id bigint(20) unsigned DEFAULT NULL,
+            published_at datetime DEFAULT NULL,
             local_temp_path text DEFAULT NULL,
             wp_attachment_id bigint(20) unsigned DEFAULT NULL,
             videopress_guid varchar(191) DEFAULT NULL,
@@ -81,6 +83,7 @@ class VH360_Studio_Database {
             KEY source_type (source_type),
             KEY source_id (source_id),
             KEY live_video_id (live_video_id),
+            KEY replay_video_id (replay_video_id),
             KEY room_id (room_id),
             KEY status (status),
             KEY created_at (created_at)

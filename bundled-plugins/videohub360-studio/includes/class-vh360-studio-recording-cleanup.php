@@ -37,7 +37,7 @@ class VH360_Studio_Recording_Cleanup {
         global $wpdb;
 
         $now  = current_time( 'timestamp' );
-        $rows = $wpdb->get_results( 'SELECT * FROM ' . VH360_Studio_Database::table_name() . " WHERE status IN ('created','recording','stopping','uploading','cancelled','failed','processing') ORDER BY updated_at ASC LIMIT 200", ARRAY_A );
+        $rows = $wpdb->get_results( 'SELECT * FROM ' . VH360_Studio_Database::table_name() . " WHERE status IN ('created','recording','stopping','uploading','cancelled','failed','processing','ready') ORDER BY updated_at ASC LIMIT 200", ARRAY_A );
 
         foreach ( $rows as $job ) {
             $created = $this->mysql_timestamp( $job['created_at'] );
@@ -63,7 +63,7 @@ class VH360_Studio_Recording_Cleanup {
                 $this->delete_temp_for_job( $job );
             }
 
-            if ( 'processing' === $job['status'] && ! empty( $job['temp_expires_at'] ) && $this->mysql_timestamp( $job['temp_expires_at'] ) < $now ) {
+            if ( in_array( $job['status'], array( 'processing', 'ready' ), true ) && ! empty( $job['temp_expires_at'] ) && $this->mysql_timestamp( $job['temp_expires_at'] ) < $now ) {
                 $this->delete_temp_for_job( $job );
             }
         }

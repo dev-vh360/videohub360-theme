@@ -96,6 +96,11 @@ class VH360_Studio_Assets {
                 'chunkUploadFailed'     => __( 'A recording chunk upload failed. Retry before finalizing.', 'videohub360-studio' ),
                 'recorderUnavailable'   => __( 'Browser recorder is unavailable.', 'videohub360-studio' ),
                 'recordingCancelled'    => __( 'Recording cancelled.', 'videohub360-studio' ),
+                'publishReplay'         => __( 'Publish replay', 'videohub360-studio' ),
+                'publishingReplay'      => __( 'Publishing replay through the selected provider…', 'videohub360-studio' ),
+                'publishStatusChecking' => __( 'Checking publishing status…', 'videohub360-studio' ),
+                'publishComplete'       => __( 'Replay published.', 'videohub360-studio' ),
+                'publishFailed'         => __( 'Replay publishing failed.', 'videohub360-studio' ),
             ),
             'supportLabels'             => array(
                 'mediaDevices'     => __( 'Media devices API', 'videohub360-studio' ),
@@ -119,6 +124,7 @@ class VH360_Studio_Assets {
                 'available'   => $provider->is_available(),
                 'recommended' => 'videopress' === $id,
                 'fallback'    => 'local_media' === $id,
+                'supportsPublish' => $provider->supports_publish(),
             );
         }
 

@@ -284,3 +284,26 @@
         grid-template-columns: 1fr;
     }
 }
+
+.vh360-studio-publish-status,
+.vh360-studio-replay-link {
+    background: var(--vh360-studio-surface-muted);
+    border: 1px solid var(--vh360-studio-border);
+    border-radius: 12px;
+    margin-top: 1rem;
+    padding: 0.8rem 1rem;
+}
+
+.vh360-studio-publish-status[data-status-type="success"] {
+    background: var(--vh360-studio-success-bg);
+    color: var(--vh360-studio-success);
+}
+
+.vh360-studio-publish-status[data-status-type="error"] {
+    background: var(--vh360-studio-error-bg);
+    color: var(--vh360-studio-error);
+}
+
+.vh360-studio-replay-link a {
+    overflow-wrap: anywhere;
+}

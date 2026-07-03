@@ -30,6 +30,7 @@
         recordingStartedAt: 0,
         durationTimer: null,
         finalChunkCount: 0,
+        currentJobStatus: '',
     };
 
     const els = {
@@ -65,6 +66,11 @@
         recordingBytes: root.querySelector('[data-recording-bytes]'),
         recordingFinalizeStatus: root.querySelector('[data-recording-finalize-status]'),
         recordingProgress: root.querySelector('[data-recording-progress]'),
+        publishReplay: root.querySelector('[data-publish-replay]'),
+        checkPublishingStatus: root.querySelector('[data-check-publishing-status]'),
+        publishingStatus: root.querySelector('[data-publishing-status]'),
+        replayLinkWrap: root.querySelector('[data-replay-link-wrap]'),
+        replayLink: root.querySelector('[data-replay-link]'),
     };
 
     function setStatus(message, type) {
@@ -537,11 +543,79 @@
         try {
             if (els.recordingFinalizeStatus) { els.recordingFinalizeStatus.textContent = strings.finalizing; }
             const job = await api('/jobs/' + state.activeJobId + '/recording/finalize', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ expected_chunks: state.finalChunkCount }) });
-            setRecordingStatus('Recording finalized and temporary file validated. Replay publishing is prepared for a later phase.', 'success');
+            state.currentJobStatus = job.status || 'processing';
+            setRecordingStatus('Recording finalized and temporary file validated. Replay publishing is ready.', 'success');
             appendRecentJob(job);
+            updatePublishingButtons();
             if (els.recordingFinalizeStatus) { els.recordingFinalizeStatus.textContent = job.status || 'processing'; }
         } catch (error) {
             setRecordingStatus(error.message || strings.chunkUploadFailed, 'error');
+        }
+    }
+
+
+    function setPublishingStatus(message, type) {
+        if (!els.publishingStatus) {
+            return;
+        }
+        els.publishingStatus.textContent = message || '';
+        els.publishingStatus.dataset.statusType = type || 'info';
+    }
+
+    function renderReplayLink(url) {
+        if (!els.replayLink || !els.replayLinkWrap) {
+            return;
+        }
+        if (!url) {
+            els.replayLinkWrap.hidden = true;
+            els.replayLink.removeAttribute('href');
+            els.replayLink.textContent = '';
+            return;
+        }
+        els.replayLink.href = url;
+        els.replayLink.textContent = url;
+        els.replayLinkWrap.hidden = false;
+    }
+
+    function updatePublishingButtons() {
+        const canPublish = Boolean(state.activeJobId) && state.currentJobStatus === 'processing';
+        if (els.publishReplay) { els.publishReplay.disabled = !canPublish; }
+        if (els.checkPublishingStatus) { els.checkPublishingStatus.disabled = !state.activeJobId; }
+    }
+
+    async function publishReplay() {
+        if (!state.activeJobId) {
+            return;
+        }
+        if (els.publishReplay) { els.publishReplay.disabled = true; }
+        setPublishingStatus(strings.publishingReplay, 'info');
+        try {
+            const result = await api('/jobs/' + state.activeJobId + '/publishing/publish', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
+            state.currentJobStatus = result.job_status || 'ready';
+            setPublishingStatus(result.message || strings.publishComplete, 'success');
+            renderReplayLink(result.replay_url || result.playback_url || '');
+            appendRecentJob({ id: state.activeJobId, status: state.currentJobStatus, storage_provider: result.provider_id, file_size: result.file_size, mime_type: result.mime_type, publish_provider_status: result.publish_provider_status, replay_video_id: result.replay_video_id });
+        } catch (error) {
+            setPublishingStatus(error.message || strings.publishFailed, 'error');
+        } finally {
+            updatePublishingButtons();
+        }
+    }
+
+    async function checkPublishingStatus() {
+        if (!state.activeJobId) {
+            return;
+        }
+        setPublishingStatus(strings.publishStatusChecking, 'info');
+        try {
+            const result = await api('/jobs/' + state.activeJobId + '/publishing/status', { method: 'GET' });
+            state.currentJobStatus = result.job_status || state.currentJobStatus;
+            setPublishingStatus((result.publish_provider_status || result.status || 'pending') + (result.videopress_guid ? ' · VideoPress GUID: ' + result.videopress_guid : ''), 'success');
+            renderReplayLink(result.replay_url || result.playback_url || '');
+        } catch (error) {
+            setPublishingStatus(error.message || strings.publishFailed, 'error');
+        } finally {
+            updatePublishingButtons();
         }
     }
 
@@ -633,6 +707,7 @@
             '<td>' + escapeHtml(job.assembled_at || '—') + '</td>' +
             '<td>' + escapeHtml(job.temp_expires_at || '—') + '</td>' +
             '<td>' + escapeHtml(job.publish_provider_status || '—') + '</td>' +
+            '<td>' + (job.replay_video_id ? escapeHtml(String(job.replay_video_id)) : '—') + '</td>' +
             '<td>' + escapeHtml(job.error_message || '—') + '</td>';
         els.recentJobsBody.prepend(row);
         if (els.emptyJobs) {
@@ -690,6 +765,8 @@
         if (els.stopRecording) { els.stopRecording.addEventListener('click', stopRecording); }
         if (els.retryChunks) { els.retryChunks.addEventListener('click', retryFailedChunks); }
         if (els.finalizeRecording) { els.finalizeRecording.addEventListener('click', finalizeRecording); }
+        if (els.publishReplay) { els.publishReplay.addEventListener('click', publishReplay); }
+        if (els.checkPublishingStatus) { els.checkPublishingStatus.addEventListener('click', checkPublishingStatus); }
         window.addEventListener('beforeunload', (event) => {
             if (isRecordingActive()) {
                 event.preventDefault();
@@ -709,5 +786,6 @@
     renderSupportChecks();
     updateReadinessStatus();
     updateQualityDetails();
+    updatePublishingButtons();
     bindEvents();
 }());
