@@ -1010,12 +1010,10 @@
         window.addEventListener('pagehide', endBroadcastKeepalive);
         window.addEventListener('beforeunload', (event) => {
             if (isRecordingActive()) {
-                endBroadcastKeepalive();
                 event.preventDefault();
                 event.returnValue = '';
                 return;
             }
-            endBroadcastKeepalive();
             cleanup();
         });
         document.addEventListener('visibilitychange', () => {
