@@ -7,7 +7,7 @@
 
     window.VH360AgoraBroadcaster = {
         create: function (config) {
-            const state = { client: null, audioTrack: null, videoTrack: null, joined: false, published: false };
+            const state = { client: null, audioTrack: null, videoTrack: null, videoTrackOwnsSource: true, joined: false, published: false };
             const root = config.container || document;
             const localContainer = config.localContainer || root.querySelector('[data-agora-local-preview]') || root;
 
@@ -17,6 +17,15 @@
                 }
                 const clientMode = config.clientMode === 'rtc' ? 'rtc' : 'live';
                 state.client = window.AgoraRTC.createClient({ mode: clientMode, codec: 'vp8' });
+                if (state.client && typeof state.client.on === 'function') {
+                    state.client.on('connection-state-change', function (current, previous, reason) {
+                        emit(root, 'connection-state-change', {
+                            current: current,
+                            previous: previous,
+                            reason: reason || ''
+                        });
+                    });
+                }
                 if (clientMode === 'live' && typeof state.client.setClientRole === 'function') {
                     await state.client.setClientRole('host');
                 }
@@ -25,8 +34,10 @@
                     state.videoTrack = window.AgoraRTC.createCustomVideoTrack({
                         mediaStreamTrack: config.initialVideoMediaStreamTrack
                     });
+                    state.videoTrackOwnsSource = false;
                 } else {
                     state.videoTrack = await window.AgoraRTC.createCameraVideoTrack(config.videoConfig || {});
+                    state.videoTrackOwnsSource = true;
                 }
                 if (localContainer) {
                     state.videoTrack.play(localContainer, { mirror: config.initialVideoSource !== 'screen' });
@@ -43,13 +54,19 @@
                 if (state.client && state.published) {
                     await state.client.unpublish().catch(function () {});
                 }
-                ['audioTrack', 'videoTrack'].forEach(function (key) {
-                    if (state[key]) {
-                        state[key].stop();
-                        state[key].close();
-                        state[key] = null;
+                if (state.audioTrack) {
+                    state.audioTrack.stop();
+                    state.audioTrack.close();
+                    state.audioTrack = null;
+                }
+                if (state.videoTrack) {
+                    state.videoTrack.stop();
+                    if (state.videoTrackOwnsSource) {
+                        state.videoTrack.close();
                     }
-                });
+                    state.videoTrack = null;
+                    state.videoTrackOwnsSource = true;
+                }
                 if (state.client && state.joined) {
                     await state.client.leave().catch(function () {});
                 }
@@ -58,22 +75,36 @@
                 emit(root, 'ended', {});
             }
 
+            function stopAndMaybeCloseVideoTrack(track, ownsSource) {
+                if (!track) {
+                    return;
+                }
+                if (typeof track.stop === 'function') {
+                    track.stop();
+                }
+                if (ownsSource && typeof track.close === 'function') {
+                    track.close();
+                }
+            }
+
             async function replaceVideoMediaStreamTrack(mediaStreamTrack, options) {
                 options = options || {};
                 if (!window.AgoraRTC || !state.client || !state.joined || !mediaStreamTrack) {
                     return false;
                 }
 
-                if (state.videoTrack && typeof state.videoTrack.replaceTrack === 'function') {
+                if (!options.forceRepublish && state.videoTrack && typeof state.videoTrack.replaceTrack === 'function') {
                     try {
                         await state.videoTrack.replaceTrack(mediaStreamTrack, false);
+                        state.videoTrackOwnsSource = false;
                         if (localContainer && typeof state.videoTrack.play === 'function') {
                             state.videoTrack.play(localContainer, { mirror: options.source !== 'screen' });
                         }
                         emit(root, 'video-replaced', {
                             uid: config.uid,
                             channelName: config.channelName,
-                            source: options.source || ''
+                            source: options.source || '',
+                            method: 'replaceTrack'
                         });
                         return true;
                     } catch (error) {
@@ -86,6 +117,7 @@
                 }
                 const nextTrack = window.AgoraRTC.createCustomVideoTrack({ mediaStreamTrack: mediaStreamTrack });
                 const oldTrack = state.videoTrack;
+                const oldTrackOwnsSource = state.videoTrackOwnsSource;
                 const wasPublished = state.published;
 
                 try {
@@ -94,20 +126,18 @@
                     }
                     await state.client.publish(nextTrack);
                     state.videoTrack = nextTrack;
+                    state.videoTrackOwnsSource = false;
                     state.published = true;
                     if (localContainer && typeof nextTrack.play === 'function') {
                         nextTrack.play(localContainer, { mirror: options.source !== 'screen' });
                     }
-                    if (oldTrack) {
-                        oldTrack.stop();
-                        oldTrack.close();
-                    }
-                    emit(root, 'video-replaced', { uid: config.uid, channelName: config.channelName, source: options.source || '' });
+                    stopAndMaybeCloseVideoTrack(oldTrack, oldTrackOwnsSource);
+                    emit(root, 'video-replaced', { uid: config.uid, channelName: config.channelName, source: options.source || '', method: 'republish' });
                     return true;
                 } catch (error) {
-                    nextTrack.stop();
-                    nextTrack.close();
+                    stopAndMaybeCloseVideoTrack(nextTrack, false);
                     state.videoTrack = oldTrack;
+                    state.videoTrackOwnsSource = oldTrackOwnsSource;
                     state.published = wasPublished;
                     if (wasPublished && oldTrack) {
                         await state.client.publish(oldTrack).catch(function () {});

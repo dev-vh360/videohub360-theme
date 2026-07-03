@@ -165,12 +165,16 @@
             state.programSource = nextSource;
             state.programStream = stream;
             renderProgramState();
-            setStatus(sourceLabel(state.programSource) + ' sent to Program.', 'success');
+            setStatus(state.broadcastSession ? sourceLabel(state.programSource) + ' was published to the live Program output.' : sourceLabel(state.programSource) + ' sent to Program.', 'success');
             if (transitionType === 'fade') {
                 await new Promise((resolve) => window.setTimeout(resolve, duration));
             }
         } catch (error) {
-            setStatus((error && error.message) || 'Program source could not be changed.', 'error');
+            const failedSource = sourceLabel(state.previewSource);
+            setStatus(state.broadcastSession ? failedSource + ' could not be published to the public livestream. Program was not changed.' : ((error && error.message) || 'Program source could not be changed.'), 'error');
+            if (state.broadcastSession) {
+                setBroadcastStatus((error && error.message) || failedSource + ' could not be published to the public livestream.', 'error');
+            }
         } finally {
             state.transitioning = false;
             root.classList.remove('is-transitioning', 'is-fading');
@@ -225,11 +229,19 @@
             throw new Error('The live broadcast could not accept the selected Program source.');
         }
         const track = stream.getVideoTracks()[0];
+        if (window.console && typeof window.console.info === 'function') {
+            window.console.info('[VH360 Studio] Replacing live Program source', {
+                source: sourceId,
+                trackReadyState: track ? track.readyState : '',
+                trackSettings: track && typeof track.getSettings === 'function' ? track.getSettings() : {}
+            });
+        }
         if (!track || track.readyState === 'ended') {
             throw new Error('The selected Program source is no longer available.');
         }
         const replaced = await state.broadcastSession.replaceVideoMediaStreamTrack(track, {
-            source: sourceId || state.previewSource || state.programSource || ''
+            source: sourceId || state.previewSource || state.programSource || '',
+            forceRepublish: true
         });
         if (replaced === false) {
             throw new Error('The Program source was not sent to the public livestream.');
@@ -1336,6 +1348,15 @@
         if (els.goLive) { els.goLive.addEventListener('click', goLive); }
         if (els.endLive) { els.endLive.addEventListener('click', endLive); }
         if (els.copyViewerLink) { els.copyViewerLink.addEventListener('click', () => { if (els.viewerLink && els.viewerLink.href) navigator.clipboard.writeText(els.viewerLink.href); }); }
+        root.addEventListener('vh360:agora-broadcaster:connection-state-change', (event) => {
+            const detail = event.detail || {};
+            if (window.console && typeof window.console.info === 'function') {
+                window.console.info('[VH360 Studio] Agora connection state changed', detail);
+            }
+            if (detail.current) {
+                setBroadcastStatus('Agora connection: ' + detail.current + (detail.reason ? ' (' + detail.reason + ')' : ''), detail.current === 'CONNECTED' ? 'success' : 'info');
+            }
+        });
         window.addEventListener('pagehide', endBroadcastKeepalive);
         window.addEventListener('beforeunload', (event) => {
             if (isRecordingActive()) {

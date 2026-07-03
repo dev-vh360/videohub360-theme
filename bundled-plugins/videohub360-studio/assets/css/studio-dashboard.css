@@ -246,3 +246,15 @@
     from { opacity: 0.35; }
     to { opacity: 1; }
 }
+
+.vh360-studio-dashboard.is-live .vh360-studio-program-video {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+}
+
+.vh360-studio-dashboard.is-live .vh360-studio-agora-preview {
+    inset: 0;
+    position: absolute;
+    z-index: 3;
+}
