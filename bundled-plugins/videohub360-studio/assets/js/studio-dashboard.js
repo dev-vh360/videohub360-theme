@@ -159,6 +159,12 @@
         if (state.transitioning || state.programSwitching) {
             return;
         }
+        const nextSource = state.previewSource;
+        if (state.programSource === nextSource && state.programStream) {
+            setStatus(sourceLabel(nextSource) + ' is already in Program.', 'info');
+            renderTransitionButtons();
+            return;
+        }
         state.programSwitching = true;
         renderTransitionButtons();
         state.transitioning = transitionType === 'fade';
@@ -168,7 +174,6 @@
             root.classList.add('is-transitioning', 'is-fading');
         }
         try {
-            const nextSource = state.previewSource;
             const stream = await getSourceStream(nextSource);
             await replaceLiveVideoTrack(stream, nextSource);
             state.programSource = nextSource;

@@ -63,10 +63,7 @@
                     state.audioTrack = null;
                 }
                 if (state.videoTrack) {
-                    state.videoTrack.stop();
-                    if (state.videoTrackOwnsSource) {
-                        state.videoTrack.close();
-                    }
+                    stopAndMaybeCloseVideoTrack(state.videoTrack, state.videoTrackOwnsSource);
                     state.videoTrack = null;
                     state.videoTrackOwnsSource = true;
                 }
