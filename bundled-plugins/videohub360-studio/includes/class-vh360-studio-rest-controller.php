@@ -357,7 +357,7 @@ class VH360_Studio_REST_Controller {
     }
 
     public function permissions_check( WP_REST_Request $request ) {
-        $nonce = $request->get_header( 'X-WP-Nonce' );
+        $nonce = $request->get_header( 'X-WP-Nonce' ) ?: $request->get_param( '_wpnonce' );
         if ( ! $nonce || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
             return new WP_Error( 'rest_cookie_invalid_nonce', __( 'Invalid REST nonce.', 'videohub360-studio' ), array( 'status' => 403 ) );
         }
@@ -428,9 +428,10 @@ class VH360_Studio_REST_Controller {
     public function broadcast_heartbeat( WP_REST_Request $request ) {
         $service = $this->livestream_service();
         if ( ! $service ) { return new WP_Error( 'vh360_studio_core_missing', __( 'VideoHub360 Core livestream service is unavailable.', 'videohub360-studio' ), array( 'status' => 500 ) ); }
-        $validated = $service->validate_agora_livestream_for_management( absint( $request['video_id'] ), get_current_user_id() );
-        if ( is_wp_error( $validated ) ) { return $validated; }
-        return rest_ensure_response( array( 'ok' => true, 'server_time' => current_time( 'mysql' ) ) );
+        $heartbeat = $service->update_studio_heartbeat( absint( $request['video_id'] ), get_current_user_id() );
+        if ( is_wp_error( $heartbeat ) ) { return $heartbeat; }
+        VideoHub360_Livestream_Service::cleanup_stale_studio_broadcasts();
+        return rest_ensure_response( array( 'ok' => true, 'server_time' => current_time( 'mysql' ), 'broadcast' => $heartbeat ) );
     }
 
     public function broadcast_end( WP_REST_Request $request ) {

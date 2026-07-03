@@ -10,6 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class VideoHub360_Livestream_Service {
+    const STALE_CLEANUP_HOOK = 'vh360_studio_stale_broadcast_cleanup';
     public function current_user_can_manage( $post_id, $user_id = 0 ) {
         $post_id = absint( $post_id );
         $user_id = absint( $user_id ) ?: get_current_user_id();
@@ -186,6 +187,7 @@ class VideoHub360_Livestream_Service {
         if ( '' === get_post_meta( $post_id, '_vh360_live_start_time', true ) ) {
             update_post_meta( $post_id, '_vh360_live_start_time', current_time( 'mysql' ) );
         }
+        update_post_meta( $post_id, '_vh360_studio_last_heartbeat_at', current_time( 'mysql' ) );
 
         if ( 'live_room' === get_post_meta( $post_id, '_vh360_context', true ) && 'yes' !== $old_is_live ) {
             do_action( 'vh360_live_room_started', $post_id );
@@ -220,6 +222,57 @@ class VideoHub360_Livestream_Service {
         }
 
         return $this->get_livestream_data( $post_id );
+    }
+
+
+    public function update_studio_heartbeat( $post_id, $user_id = 0 ) {
+        $post_id   = absint( $post_id );
+        $validated = $this->validate_agora_livestream_for_management( $post_id, $user_id );
+        if ( is_wp_error( $validated ) ) {
+            return $validated;
+        }
+
+        update_post_meta( $post_id, '_vh360_studio_last_heartbeat_at', current_time( 'mysql' ) );
+        return $this->get_livestream_data( $post_id );
+    }
+
+    public static function register_stale_cleanup() {
+        add_action( self::STALE_CLEANUP_HOOK, array( __CLASS__, 'cleanup_stale_studio_broadcasts' ) );
+        if ( ! wp_next_scheduled( self::STALE_CLEANUP_HOOK ) ) {
+            wp_schedule_event( time() + 300, 'hourly', self::STALE_CLEANUP_HOOK );
+        }
+    }
+
+    public static function cleanup_stale_studio_broadcasts( $timeout_seconds = null ) {
+        $timeout_seconds = null === $timeout_seconds ? (int) apply_filters( 'vh360_studio_broadcast_stale_timeout', 120 ) : absint( $timeout_seconds );
+        $cutoff          = date( 'Y-m-d H:i:s', current_time( 'timestamp' ) - max( 60, $timeout_seconds ) );
+
+        $query = new WP_Query(
+            array(
+                'post_type'      => 'videohub360',
+                'post_status'    => 'any',
+                'fields'         => 'ids',
+                'posts_per_page' => 20,
+                'no_found_rows'  => true,
+                'meta_query'     => array(
+                    'relation' => 'AND',
+                    array( 'key' => '_vh360_type', 'value' => 'agora' ),
+                    array( 'key' => '_vh360_agora_stream_live', 'value' => 'yes' ),
+                    array( 'key' => '_vh360_studio_last_heartbeat_at', 'value' => $cutoff, 'compare' => '<', 'type' => 'DATETIME' ),
+                ),
+            )
+        );
+
+        foreach ( $query->posts as $post_id ) {
+            update_post_meta( $post_id, '_vh360_stream_stopped', 'yes' );
+            update_post_meta( $post_id, '_vh360_agora_stream_live', 'no' );
+            update_post_meta( $post_id, '_vh360_is_live', 'yes' );
+            if ( function_exists( 'videohub360_debug_log' ) ) {
+                videohub360_debug_log( 'Studio Agora livestream marked ended by stale heartbeat cleanup', array( 'post_id' => absint( $post_id ) ) );
+            }
+        }
+
+        return count( $query->posts );
     }
 
     public function get_livestream_data( $post_id ) {

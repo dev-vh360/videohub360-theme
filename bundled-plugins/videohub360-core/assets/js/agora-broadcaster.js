@@ -59,6 +59,16 @@
                 stop: stop,
                 muteAudio: function (muted) { return state.audioTrack && state.audioTrack.setEnabled(!muted); },
                 muteVideo: function (muted) { return state.videoTrack && state.videoTrack.setEnabled(!muted); },
+                getLocalMediaStream: function () {
+                    const tracks = [];
+                    if (state.audioTrack && typeof state.audioTrack.getMediaStreamTrack === 'function') {
+                        tracks.push(state.audioTrack.getMediaStreamTrack());
+                    }
+                    if (state.videoTrack && typeof state.videoTrack.getMediaStreamTrack === 'function') {
+                        tracks.push(state.videoTrack.getMediaStreamTrack());
+                    }
+                    return tracks.length ? new MediaStream(tracks) : null;
+                },
                 getState: function () { return Object.assign({}, state); }
             };
         }

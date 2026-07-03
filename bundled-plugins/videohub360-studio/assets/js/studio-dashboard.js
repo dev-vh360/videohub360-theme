@@ -459,10 +459,6 @@
     }
 
     async function startRecording() {
-        if (state.broadcastSession) {
-            setRecordingStatus('Start browser recording before Go Live for this phase. Recording from an active Agora broadcast track is not yet available.', 'error');
-            return;
-        }
         if (!state.support.mediaRecorder || !preferredMimeType()) {
             setRecordingStatus(strings.recorderUnavailable, 'error');
             return;
@@ -470,8 +466,16 @@
         let jobId = null;
         let serverRecordingStarted = false;
         try {
-            if (!state.cameraStream) {
-                await startPreview();
+            if (state.broadcastSession) {
+                state.recordingStream = state.broadcastSession.getLocalMediaStream ? state.broadcastSession.getLocalMediaStream() : null;
+                if (!state.recordingStream) {
+                    throw new Error('The active broadcast tracks are unavailable for recording.');
+                }
+            } else {
+                if (!state.cameraStream) {
+                    await startPreview();
+                }
+                state.recordingStream = state.cameraStream;
             }
             jobId = await ensureSetupJob();
             const mimeType = preferredMimeType();
@@ -479,7 +483,6 @@
             serverRecordingStarted = true;
             state.browserSessionId = start.browser_session_id;
             state.selectedMimeType = start.mime_type;
-            state.recordingStream = state.cameraStream;
             state.chunkIndex = 0;
             state.uploadedChunks.clear();
             state.failedChunks.clear();
@@ -840,7 +843,7 @@
             return;
         }
         if (isRecordingActive()) {
-            setBroadcastStatus('Stop browser recording before going live. Recording from active Agora tracks is not yet available.', 'error');
+            setBroadcastStatus('Stop browser recording before going live, then start recording again after Agora is live so Studio can record the active broadcast tracks.', 'error');
             return;
         }
         if (!state.broadcastVideoId && els.broadcastMode && els.broadcastMode.value === 'interactive' && els.broadcastRequirePasscode && els.broadcastRequirePasscode.checked && (!els.broadcastPasscode || !els.broadcastPasscode.value.trim())) {
@@ -928,6 +931,21 @@
         setBroadcastStatus(strings.liveEnded, 'success');
     }
 
+
+    function endBroadcastKeepalive() {
+        if (!state.broadcastVideoId || !state.broadcastSession) {
+            return;
+        }
+        const url = config.restRoot.replace(/\/$/, '') + '/broadcasts/' + state.broadcastVideoId + '/end';
+        window.fetch(url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            keepalive: true,
+            headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce },
+            body: JSON.stringify({ reason: 'page_unload' })
+        }).catch(() => {});
+    }
+
     function bindEvents() {
         if (els.startPreview) {
             els.startPreview.addEventListener('click', startPreview);
@@ -989,12 +1007,15 @@
         if (els.goLive) { els.goLive.addEventListener('click', goLive); }
         if (els.endLive) { els.endLive.addEventListener('click', endLive); }
         if (els.copyViewerLink) { els.copyViewerLink.addEventListener('click', () => { if (els.viewerLink && els.viewerLink.href) navigator.clipboard.writeText(els.viewerLink.href); }); }
+        window.addEventListener('pagehide', endBroadcastKeepalive);
         window.addEventListener('beforeunload', (event) => {
             if (isRecordingActive()) {
+                endBroadcastKeepalive();
                 event.preventDefault();
                 event.returnValue = '';
                 return;
             }
+            endBroadcastKeepalive();
             cleanup();
         });
         document.addEventListener('visibilitychange', () => {
