@@ -577,6 +577,16 @@
         els.replayLinkWrap.hidden = false;
     }
 
+
+    function selectedStorageProviderId() {
+        return els.storageSelect ? els.storageSelect.value : config.recommendedStorageProvider;
+    }
+
+    function selectedStorageProvider() {
+        const providers = config.storageProviders || {};
+        return providers[selectedStorageProviderId()] || {};
+    }
+
     function updatePublishingButtons() {
         const canPublish = Boolean(state.activeJobId) && state.currentJobStatus === 'processing';
         if (els.publishReplay) { els.publishReplay.disabled = !canPublish; }
@@ -587,12 +597,18 @@
         if (!state.activeJobId) {
             return;
         }
+        const providerId = selectedStorageProviderId();
+        const provider = selectedStorageProvider();
+        if (providerId === 'local_media' && provider.available === false) {
+            setPublishingStatus(strings.localMediaUnavailable, 'error');
+            return;
+        }
         if (els.publishReplay) { els.publishReplay.disabled = true; }
-        setPublishingStatus(strings.publishingReplay, 'info');
+        setPublishingStatus(providerId === 'local_media' ? 'Publishing replay to WordPress Media Library...' : strings.publishingReplay, 'info');
         try {
             const result = await api('/jobs/' + state.activeJobId + '/publishing/publish', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
             state.currentJobStatus = result.job_status || 'ready';
-            setPublishingStatus(result.message || strings.publishComplete, 'success');
+            setPublishingStatus(providerId === 'local_media' ? (result.message || strings.localMediaReady || 'Replay saved to Media Library. Replay post created.') : (result.message || strings.publishComplete), 'success');
             renderReplayLink(result.replay_url || result.playback_url || '');
             appendRecentJob({ id: state.activeJobId, status: state.currentJobStatus, storage_provider: result.provider_id, file_size: result.file_size, mime_type: result.mime_type, publish_provider_status: result.publish_provider_status, replay_video_id: result.replay_video_id });
         } catch (error) {
@@ -757,6 +773,14 @@
         }
         if (els.qualitySelect) {
             els.qualitySelect.addEventListener('change', updateQualityDetails);
+        }
+        if (els.storageSelect) {
+            els.storageSelect.addEventListener('change', () => {
+                const provider = selectedStorageProvider();
+                if (selectedStorageProviderId() === 'local_media') {
+                    setJobResult(provider.available === false ? strings.localMediaUnavailable : strings.localMediaWarning, provider.available === false ? 'error' : 'warning');
+                }
+            });
         }
         if (els.createJob) {
             els.createJob.addEventListener('click', createSetupJob);

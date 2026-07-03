@@ -71,7 +71,7 @@ class VH360_Studio_Replay_Publisher {
             return $published;
         }
 
-        if ( isset( $published['status'] ) && 'published' !== $published['status'] ) {
+        if ( isset( $published['status'] ) && ! in_array( $published['status'], array( 'published', 'local_media_ready' ), true ) ) {
             $updated = $this->jobs->update( $job['id'], 0, array(
                 'wp_attachment_id'        => ! empty( $published['attachment_id'] ) ? absint( $published['attachment_id'] ) : 0,
                 'playback_url'            => ! empty( $published['playback_url'] ) ? esc_url_raw( $published['playback_url'] ) : '',
@@ -133,7 +133,7 @@ class VH360_Studio_Replay_Publisher {
     }
 
     private function complete_published_job( array $job, array $published, array $recording, VH360_Studio_Replay_Storage_Provider $provider ) {
-        $replay = $this->replay_posts->create_or_update( $job, $published, $recording );
+        $replay = $this->replay_posts->create_or_update_replay_post( $job, $published, $recording );
         if ( is_wp_error( $replay ) ) {
             $this->jobs->update( $job['id'], 0, array( 'publish_attempted_at' => current_time( 'mysql' ), 'publish_provider_status' => 'replay_post_failed' ) );
             return $replay;
@@ -142,12 +142,12 @@ class VH360_Studio_Replay_Publisher {
         $ready = $this->jobs->mark_ready( $job['id'], 0, array(
             'wp_attachment_id'        => absint( $published['attachment_id'] ),
             'videopress_guid'         => sanitize_text_field( $published['videopress_guid'] ),
-            'videopress_processing_done' => 1,
+            'videopress_processing_done' => isset( $published['videopress_processing_done'] ) ? absint( $published['videopress_processing_done'] ) : 1,
             'playback_url'            => ! empty( $published['playback_url'] ) ? esc_url_raw( $published['playback_url'] ) : '',
             'poster_url'              => ! empty( $published['poster_url'] ) ? esc_url_raw( $published['poster_url'] ) : '',
             'replay_video_id'         => absint( $replay['replay_video_id'] ),
             'publish_attempted_at'    => current_time( 'mysql' ),
-            'publish_provider_status' => 'published',
+            'publish_provider_status' => ! empty( $published['provider_status'] ) ? sanitize_key( $published['provider_status'] ) : ( ! empty( $published['status'] ) ? sanitize_key( $published['status'] ) : 'published' ),
             'error_message'           => '',
         ) );
         if ( is_wp_error( $ready ) ) {
@@ -167,7 +167,7 @@ class VH360_Studio_Replay_Publisher {
             'playback_url'            => $ready['playback_url'],
             'replay_video_id'         => absint( $ready['replay_video_id'] ),
             'replay_url'              => $replay['replay_url'],
-            'message'                 => __( 'Replay published and VideoHub360 replay post created.', 'videohub360-studio' ),
+            'message'                 => ! empty( $published['message'] ) && 'local_media_ready' === $ready['publish_provider_status'] ? __( 'Replay saved to Media Library and replay post created.', 'videohub360-studio' ) : __( 'Replay published and VideoHub360 replay post created.', 'videohub360-studio' ),
         );
     }
 

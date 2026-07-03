@@ -101,6 +101,10 @@ class VH360_Studio_Assets {
                 'publishStatusChecking' => __( 'Checking publishing status…', 'videohub360-studio' ),
                 'publishComplete'       => __( 'Replay published.', 'videohub360-studio' ),
                 'publishFailed'         => __( 'Replay publishing failed.', 'videohub360-studio' ),
+                'localMediaFallback'   => __( 'Local Media Fallback stores the replay in your WordPress Media Library. Use this for testing or smaller recordings. VideoPress is recommended for production replay hosting.', 'videohub360-studio' ),
+                'localMediaReady'      => __( 'Replay saved to Media Library. Replay post created.', 'videohub360-studio' ),
+                'localMediaUnavailable' => __( 'Local Media publishing is unavailable because the current user cannot upload files or the uploads directory is not writable.', 'videohub360-studio' ),
+                'localMediaWarning'    => __( 'Local Media Fallback stores recordings in your WordPress Media Library and is best for testing or smaller recordings.', 'videohub360-studio' ),
             ),
             'supportLabels'             => array(
                 'mediaDevices'     => __( 'Media devices API', 'videohub360-studio' ),

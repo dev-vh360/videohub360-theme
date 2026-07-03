@@ -10,6 +10,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class VH360_Studio_Replay_Posts {
+    public function create_or_update_replay_post( array $job, array $publish_result, array $recording ) {
+        return $this->create_or_update( $job, $publish_result, $recording );
+    }
+
     public function create_or_update( array $job, array $publish_result, array $recording ) {
         if ( ! post_type_exists( 'videohub360' ) ) {
             return new WP_Error( 'vh360_studio_replay_post_type_missing', __( 'The VideoHub360 post type is not available.', 'videohub360-studio' ), array( 'status' => 500 ) );

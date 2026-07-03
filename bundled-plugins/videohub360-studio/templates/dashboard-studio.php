@@ -103,7 +103,7 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
                     </option>
                 <?php endforeach; ?>
             </select>
-            <p class="vh360-studio-help"><?php printf( esc_html__( 'Default: %s. Local Media remains available only as a limited fallback for constrained hosting environments.', 'videohub360-studio' ), esc_html( $storage_label ) ); ?></p>
+            <p class="vh360-studio-help"><?php printf( esc_html__( 'Default: %s. Local Media Fallback stores recordings in your WordPress Media Library and is best for testing or smaller recordings. VideoPress is recommended for shared/cloud-hosting replay delivery.', 'videohub360-studio' ), esc_html( $storage_label ) ); ?></p>
         </section>
 
 
