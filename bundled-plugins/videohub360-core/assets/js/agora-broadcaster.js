@@ -52,9 +52,36 @@
                 emit(root, 'ended', {});
             }
 
+            async function replaceVideoMediaStreamTrack(mediaStreamTrack) {
+                if (!window.AgoraRTC || !state.client || !state.joined || !mediaStreamTrack) {
+                    return false;
+                }
+                if (typeof window.AgoraRTC.createCustomVideoTrack !== 'function') {
+                    throw new Error('Agora custom video tracks are unavailable in this browser.');
+                }
+                const nextTrack = window.AgoraRTC.createCustomVideoTrack({ mediaStreamTrack: mediaStreamTrack });
+                const oldTrack = state.videoTrack;
+                if (state.published && oldTrack) {
+                    await state.client.unpublish(oldTrack).catch(function () {});
+                }
+                state.videoTrack = nextTrack;
+                if (localContainer && typeof nextTrack.play === 'function') {
+                    nextTrack.play(localContainer);
+                }
+                await state.client.publish(nextTrack);
+                state.published = true;
+                if (oldTrack) {
+                    oldTrack.stop();
+                    oldTrack.close();
+                }
+                emit(root, 'video-replaced', { uid: config.uid, channelName: config.channelName });
+                return true;
+            }
+
             return {
                 start: start,
                 stop: stop,
+                replaceVideoMediaStreamTrack: replaceVideoMediaStreamTrack,
                 muteAudio: function (muted) { return state.audioTrack && state.audioTrack.setEnabled(!muted); },
                 muteVideo: function (muted) { return state.videoTrack && state.videoTrack.setEnabled(!muted); },
                 getLocalMediaStream: function () {

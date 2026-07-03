@@ -193,3 +193,55 @@
     .vh360-studio-actions { flex-direction: column; }
     .vh360-studio-button { width: 100%; }
 }
+
+.vh360-studio-program-video {
+    background: var(--vh360-studio-black);
+    height: 100%;
+    inset: 0;
+    object-fit: cover;
+    opacity: 0;
+    position: absolute;
+    visibility: hidden;
+    width: 100%;
+    z-index: 2;
+}
+
+.vh360-studio-program-video--screen { object-fit: contain; }
+
+.vh360-studio-dashboard.is-program-active .vh360-studio-program-video {
+    opacity: 1;
+    visibility: visible;
+}
+
+.vh360-studio-dashboard.is-program-active .vh360-studio-monitor--program [data-program-empty] { display: none; }
+
+.vh360-studio-dashboard [data-preview-source].is-active,
+.vh360-studio-dashboard [data-scene-source].is-active {
+    border-color: var(--vh360-studio-primary);
+    box-shadow: inset 3px 0 0 var(--vh360-studio-primary);
+}
+
+.vh360-studio-source-list button {
+    background: var(--vh360-studio-panel-bg-strong);
+    border: 1px solid var(--vh360-studio-panel-border);
+    border-radius: 10px;
+    color: var(--vh360-studio-text);
+    cursor: pointer;
+    font: inherit;
+    padding: 0.6rem 0.7rem;
+    text-align: left;
+    width: 100%;
+}
+
+.vh360-studio-dashboard.is-transitioning .vh360-studio-monitor--program {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--vh360-studio-primary) 65%, transparent), 0 18px 45px rgba(0, 0, 0, 0.22);
+}
+
+.vh360-studio-dashboard.is-fading .vh360-studio-program-video {
+    animation: vh360-studio-program-fade 300ms ease-in-out;
+}
+
+@keyframes vh360-studio-program-fade {
+    from { opacity: 0.35; }
+    to { opacity: 1; }
+}

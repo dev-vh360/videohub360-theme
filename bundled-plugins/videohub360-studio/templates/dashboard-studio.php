@@ -44,10 +44,10 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
 
             <section class="vh360-studio-transition-panel" aria-labelledby="vh360-studio-transition-title">
                 <h3 id="vh360-studio-transition-title"><?php esc_html_e( 'Transition', 'videohub360-studio' ); ?></h3>
-                <button type="button" class="vh360-studio-button vh360-studio-button--secondary" disabled title="<?php esc_attr_e( 'Reserved for the upcoming source-switching workflow', 'videohub360-studio' ); ?>"><?php esc_html_e( 'Cut', 'videohub360-studio' ); ?></button>
-                <button type="button" class="vh360-studio-button vh360-studio-button--secondary" disabled title="<?php esc_attr_e( 'Reserved for the upcoming source-switching workflow', 'videohub360-studio' ); ?>"><?php esc_html_e( 'Fade', 'videohub360-studio' ); ?></button>
-                <div class="vh360-studio-transition-duration"><?php esc_html_e( 'Duration: 300 ms', 'videohub360-studio' ); ?></div>
-                <p><?php esc_html_e( 'Transition controls are reserved for the upcoming source-switching workflow.', 'videohub360-studio' ); ?></p>
+                <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-transition-cut><?php esc_html_e( 'Cut', 'videohub360-studio' ); ?></button>
+                <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-transition-fade><?php esc_html_e( 'Fade', 'videohub360-studio' ); ?></button>
+                <label class="vh360-studio-transition-duration"><?php esc_html_e( 'Duration', 'videohub360-studio' ); ?><input type="number" min="0" max="2000" step="50" value="300" data-transition-duration></label>
+                <p><?php esc_html_e( 'Stage a source in Preview, then send it to Program.', 'videohub360-studio' ); ?></p>
             </section>
 
             <section class="vh360-studio-monitor vh360-studio-monitor--program" aria-labelledby="vh360-studio-program-title">
@@ -56,8 +56,9 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
                     <span class="vh360-studio-pill"><?php esc_html_e( 'Agora local output', 'videohub360-studio' ); ?></span>
                 </div>
                 <div class="vh360-studio-monitor-screen">
+                    <video class="vh360-studio-program-video" data-program-preview playsinline muted aria-label="<?php esc_attr_e( 'Program source preview', 'videohub360-studio' ); ?>"></video>
                     <div data-agora-local-preview class="vh360-studio-agora-preview"></div>
-                    <span class="vh360-studio-monitor-empty" data-program-empty><?php esc_html_e( 'Your active Agora camera feed appears here after Go Live starts.', 'videohub360-studio' ); ?></span>
+                    <span class="vh360-studio-monitor-empty" data-program-empty><?php esc_html_e( 'Choose a Preview source, then use Cut or Fade to send it to Program.', 'videohub360-studio' ); ?></span>
                 </div>
             </section>
         </div>
@@ -67,11 +68,10 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
                 <div class="vh360-studio-dock-header"><h3 id="vh360-studio-scenes-title"><?php esc_html_e( 'Scenes', 'videohub360-studio' ); ?></h3></div>
                 <div class="vh360-studio-dock-body">
                     <ul class="vh360-studio-scene-list">
-                        <li><button type="button" disabled aria-current="true"><?php esc_html_e( 'Main Scene', 'videohub360-studio' ); ?></button></li>
-                        <li><button type="button" disabled><?php esc_html_e( 'Camera Only', 'videohub360-studio' ); ?></button></li>
-                        <li><button type="button" disabled><?php esc_html_e( 'Screen Share', 'videohub360-studio' ); ?></button></li>
+                        <li><button type="button" data-scene-source="camera" aria-current="true"><?php esc_html_e( 'Camera Only', 'videohub360-studio' ); ?></button></li>
+                        <li><button type="button" data-scene-source="screen"><?php esc_html_e( 'Screen Share', 'videohub360-studio' ); ?></button></li>
                     </ul>
-                    <p class="vh360-studio-help"><?php esc_html_e( 'Scene switching will be available in a future Studio update.', 'videohub360-studio' ); ?></p>
+                    <p class="vh360-studio-help"><?php esc_html_e( 'Scene buttons stage the matching source in Preview.', 'videohub360-studio' ); ?></p>
                 </div>
             </section>
 
@@ -79,8 +79,8 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
                 <div class="vh360-studio-dock-header"><h3 id="vh360-studio-sources-title"><?php esc_html_e( 'Sources', 'videohub360-studio' ); ?></h3></div>
                 <div class="vh360-studio-dock-body vh360-studio-control-stack">
                     <ul class="vh360-studio-source-list">
-                        <li><?php esc_html_e( 'Camera preview', 'videohub360-studio' ); ?></li>
-                        <li><?php esc_html_e( 'Screen-share test', 'videohub360-studio' ); ?></li>
+                        <li><button type="button" data-preview-source="camera"><?php esc_html_e( 'Camera', 'videohub360-studio' ); ?></button></li>
+                        <li><button type="button" data-preview-source="screen"><?php esc_html_e( 'Screen Share', 'videohub360-studio' ); ?></button></li>
                     </ul>
                     <label for="vh360-studio-camera-select"><?php esc_html_e( 'Camera', 'videohub360-studio' ); ?></label>
                     <select id="vh360-studio-camera-select" data-camera-select disabled>
