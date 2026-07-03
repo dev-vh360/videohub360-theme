@@ -52,6 +52,7 @@ class VH360_Studio_Replay_Posts {
         update_post_meta( $post_id, '_vh360_studio_provider', $provider );
         update_post_meta( $post_id, '_vh360_studio_storage_provider', $provider );
         update_post_meta( $post_id, '_vh360_studio_attachment_id', $attachment_id );
+        update_post_meta( $post_id, '_vh360_studio_wp_attachment_id', $attachment_id );
         update_post_meta( $post_id, '_vh360_studio_videopress_guid', $guid );
         update_post_meta( $post_id, '_vh360_studio_assembled_checksum', ! empty( $recording['assembled_checksum'] ) ? sanitize_text_field( $recording['assembled_checksum'] ) : '' );
         update_post_meta( $post_id, '_vh360_studio_replay_source_live_video_id', ! empty( $job['live_video_id'] ) ? absint( $job['live_video_id'] ) : 0 );
@@ -88,7 +89,60 @@ class VH360_Studio_Replay_Posts {
             return '';
         }
 
-        return wp_kses_post( $rendered );
+        $allowed_embed_html = apply_filters(
+            'vh360_studio_allowed_videopress_embed_html',
+            array(
+                'iframe' => array(
+                    'src'             => true,
+                    'width'           => true,
+                    'height'          => true,
+                    'frameborder'     => true,
+                    'allow'           => true,
+                    'allowfullscreen' => true,
+                    'title'           => true,
+                    'loading'         => true,
+                    'referrerpolicy'  => true,
+                    'style'           => true,
+                    'class'           => true,
+                ),
+                'div'    => $this->global_embed_attributes(),
+                'video'  => array_merge(
+                    $this->global_embed_attributes(),
+                    array(
+                        'src'         => true,
+                        'controls'    => true,
+                        'playsinline' => true,
+                        'poster'      => true,
+                        'preload'     => true,
+                        'width'       => true,
+                        'height'      => true,
+                    )
+                ),
+                'source' => array(
+                    'src'  => true,
+                    'type' => true,
+                ),
+                'a'      => array(
+                    'href'   => true,
+                    'target' => true,
+                    'rel'    => true,
+                    'class'  => true,
+                ),
+            ),
+            $guid,
+            $rendered
+        );
+
+        return wp_kses( $rendered, $allowed_embed_html );
+    }
+
+    private function global_embed_attributes() {
+        return array(
+            'class' => true,
+            'id'    => true,
+            'style' => true,
+            'data-*' => true,
+        );
     }
 
     private function copy_source_taxonomies( $replay_post_id, $source_post_id ) {
@@ -106,6 +160,13 @@ class VH360_Studio_Replay_Posts {
     }
 
     private function replay_title( array $job ) {
+        if ( ! empty( $job['live_video_id'] ) ) {
+            $source_title = get_the_title( absint( $job['live_video_id'] ) );
+            if ( $source_title ) {
+                return sprintf( __( 'Replay: %s', 'videohub360-studio' ), sanitize_text_field( $source_title ) );
+            }
+        }
+
         if ( ! empty( $job['room_id'] ) ) {
             return sprintf( __( 'Studio Replay: %s', 'videohub360-studio' ), sanitize_text_field( $job['room_id'] ) );
         }

@@ -142,6 +142,7 @@ class VH360_Studio_Replay_Publisher {
         $ready = $this->jobs->mark_ready( $job['id'], 0, array(
             'wp_attachment_id'        => absint( $published['attachment_id'] ),
             'videopress_guid'         => sanitize_text_field( $published['videopress_guid'] ),
+            'videopress_processing_done' => 1,
             'playback_url'            => ! empty( $published['playback_url'] ) ? esc_url_raw( $published['playback_url'] ) : '',
             'poster_url'              => ! empty( $published['poster_url'] ) ? esc_url_raw( $published['poster_url'] ) : '',
             'replay_video_id'         => absint( $replay['replay_video_id'] ),
