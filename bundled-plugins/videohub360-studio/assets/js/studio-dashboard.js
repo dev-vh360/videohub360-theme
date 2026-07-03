@@ -805,6 +805,31 @@
         }
     }
 
+
+    function agoraVideoConfigFromPreset() {
+        const preset = getSelectedPreset();
+        const encoderConfig = {};
+        if (preset.resolution) {
+            encoderConfig.width = Number(preset.resolution.width);
+            encoderConfig.height = Number(preset.resolution.height);
+        }
+        if (preset.fps) {
+            encoderConfig.frameRate = Number(preset.fps);
+        }
+        const videoConfig = {};
+        if (state.selectedCameraId) {
+            videoConfig.cameraId = state.selectedCameraId;
+        }
+        if (Object.keys(encoderConfig).length) {
+            videoConfig.encoderConfig = encoderConfig;
+        }
+        return videoConfig;
+    }
+
+    function agoraAudioConfigFromSelection() {
+        return state.selectedMicId ? { microphoneId: state.selectedMicId } : {};
+    }
+
     async function goLive() {
         if (!window.VH360AgoraBroadcaster) {
             setBroadcastStatus(strings.broadcastFailed, 'error');
@@ -812,6 +837,7 @@
         }
         setBroadcastStatus(strings.goingLive, 'info');
         if (els.goLive) els.goLive.disabled = true;
+        stopPreview();
         try {
             const created = await api('/broadcasts', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify(broadcastPayload()) });
             const broadcast = created.broadcast || {};
@@ -830,6 +856,8 @@
                 uid: prepared.uid,
                 container: root,
                 localContainer: els.agoraLocalPreview,
+                audioConfig: agoraAudioConfigFromSelection(),
+                videoConfig: agoraVideoConfigFromPreset(),
             });
             await state.broadcastSession.start();
             await api('/broadcasts/' + state.broadcastVideoId + '/started', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ job_id: state.activeJobId || 0 }) });
@@ -845,6 +873,12 @@
     }
 
     async function endLive() {
+        if (state.recorder) {
+            setBroadcastStatus(strings.recordingActive, 'info');
+            await stopRecording().catch((error) => {
+                setRecordingStatus((error && error.message) || strings.chunkUploadFailed, 'error');
+            });
+        }
         if (state.heartbeatTimer) {
             window.clearInterval(state.heartbeatTimer);
             state.heartbeatTimer = null;

@@ -10,8 +10,39 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class VideoHub360_Livestream_Service {
-    public function current_user_can_manage( $post_id ) {
-        return current_user_can( 'edit_post', absint( $post_id ) ) || current_user_can( 'manage_options' );
+    public function current_user_can_manage( $post_id, $user_id = 0 ) {
+        $post_id = absint( $post_id );
+        $user_id = absint( $user_id ) ?: get_current_user_id();
+        $post    = get_post( $post_id );
+
+        if ( ! $post ) {
+            return false;
+        }
+
+        return current_user_can( 'manage_options' ) || current_user_can( 'edit_post', $post_id ) || ( $user_id && (int) $post->post_author === (int) $user_id );
+    }
+
+    public function validate_agora_livestream_for_management( $post_id, $user_id = 0 ) {
+        $post_id = absint( $post_id );
+        $post    = get_post( $post_id );
+
+        if ( ! $post ) {
+            return new WP_Error( 'vh360_livestream_not_found', __( 'Livestream not found.', 'videohub360' ), array( 'status' => 404 ) );
+        }
+
+        if ( 'videohub360' !== $post->post_type ) {
+            return new WP_Error( 'vh360_livestream_invalid_post_type', __( 'Invalid livestream post type.', 'videohub360' ), array( 'status' => 400 ) );
+        }
+
+        if ( 'agora' !== get_post_meta( $post_id, '_vh360_type', true ) || 'yes' !== get_post_meta( $post_id, '_vh360_is_live', true ) ) {
+            return new WP_Error( 'vh360_livestream_not_agora', __( 'This post is not an Agora livestream.', 'videohub360' ), array( 'status' => 400 ) );
+        }
+
+        if ( ! $this->current_user_can_manage( $post_id, $user_id ) ) {
+            return new WP_Error( 'vh360_livestream_forbidden', __( 'You cannot manage this livestream.', 'videohub360' ), array( 'status' => 403 ) );
+        }
+
+        return $post;
     }
 
     public function generate_channel_name( $post_id = 0 ) {
@@ -21,8 +52,14 @@ class VideoHub360_Livestream_Service {
 
     public function create_or_update_default_agora_livestream( $user_id, $data, $post_id = 0 ) {
         $post_id = absint( $post_id );
-        if ( $post_id && ! $this->current_user_can_manage( $post_id ) ) {
-            return new WP_Error( 'vh360_livestream_forbidden', __( 'You cannot manage this livestream.', 'videohub360' ), array( 'status' => 403 ) );
+        if ( $post_id ) {
+            $validated_post = get_post( $post_id );
+            if ( ! $validated_post || 'videohub360' !== $validated_post->post_type ) {
+                return new WP_Error( 'vh360_livestream_invalid_post', __( 'Invalid livestream post.', 'videohub360' ), array( 'status' => 400 ) );
+            }
+            if ( ! $this->current_user_can_manage( $post_id, $user_id ) ) {
+                return new WP_Error( 'vh360_livestream_forbidden', __( 'You cannot manage this livestream.', 'videohub360' ), array( 'status' => 403 ) );
+            }
         }
 
         $title = sanitize_text_field( $data['title'] ?? '' );
@@ -96,8 +133,9 @@ class VideoHub360_Livestream_Service {
 
     public function prepare_agora_broadcast_data( $post_id, $user_id = 0 ) {
         $post_id = absint( $post_id );
-        if ( ! $this->current_user_can_manage( $post_id ) ) {
-            return new WP_Error( 'vh360_livestream_forbidden', __( 'You cannot host this livestream.', 'videohub360' ), array( 'status' => 403 ) );
+        $validated = $this->validate_agora_livestream_for_management( $post_id, $user_id );
+        if ( is_wp_error( $validated ) ) {
+            return $validated;
         }
         $app_id = get_option( 'vh360_agora_app_id', get_option( 'videohub360_agora_app_id', '' ) );
         if ( '' === $app_id ) {
@@ -123,8 +161,57 @@ class VideoHub360_Livestream_Service {
         return array_merge( $this->get_livestream_data( $post_id ), array( 'appId' => $app_id, 'token' => $token, 'uid' => $uid, 'role' => 'host', 'expiresAt' => $expires_at ) );
     }
 
-    public function mark_live( $post_id ) { update_post_meta( absint( $post_id ), '_vh360_agora_stream_live', 'yes' ); update_post_meta( absint( $post_id ), '_vh360_stream_stopped', 'no' ); }
-    public function mark_ended( $post_id ) { update_post_meta( absint( $post_id ), '_vh360_agora_stream_live', 'no' ); update_post_meta( absint( $post_id ), '_vh360_stream_stopped', 'yes' ); }
+    public function mark_live( $post_id, $user_id = 0 ) {
+        $post_id   = absint( $post_id );
+        $validated = $this->validate_agora_livestream_for_management( $post_id, $user_id );
+        if ( is_wp_error( $validated ) ) {
+            return $validated;
+        }
+
+        $old_is_live = get_post_meta( $post_id, '_vh360_is_live', true ) === 'yes' ? 'yes' : 'no';
+
+        update_post_meta( $post_id, '_vh360_agora_stream_live', 'yes' );
+        update_post_meta( $post_id, '_vh360_is_live', 'yes' );
+        delete_post_meta( $post_id, '_vh360_stream_stopped' );
+
+        if ( '' === get_post_meta( $post_id, '_vh360_live_start_time', true ) ) {
+            update_post_meta( $post_id, '_vh360_live_start_time', current_time( 'mysql' ) );
+        }
+
+        if ( 'live_room' === get_post_meta( $post_id, '_vh360_context', true ) && 'yes' !== $old_is_live ) {
+            do_action( 'vh360_live_room_started', $post_id );
+        }
+
+        if ( function_exists( 'videohub360_debug_log' ) ) {
+            videohub360_debug_log( 'Studio Agora livestream marked live', array( 'post_id' => $post_id, 'user_id' => absint( $user_id ) ?: get_current_user_id() ) );
+        }
+
+        return $this->get_livestream_data( $post_id );
+    }
+
+    public function mark_ended( $post_id, $user_id = 0 ) {
+        $post_id   = absint( $post_id );
+        $validated = $this->validate_agora_livestream_for_management( $post_id, $user_id );
+        if ( is_wp_error( $validated ) ) {
+            return $validated;
+        }
+
+        $old_is_live = get_post_meta( $post_id, '_vh360_is_live', true ) === 'yes' ? 'yes' : 'no';
+
+        update_post_meta( $post_id, '_vh360_stream_stopped', 'yes' );
+        update_post_meta( $post_id, '_vh360_agora_stream_live', 'no' );
+        update_post_meta( $post_id, '_vh360_is_live', 'yes' );
+
+        if ( 'live_room' === get_post_meta( $post_id, '_vh360_context', true ) && 'yes' === $old_is_live ) {
+            do_action( 'vh360_live_room_ended', $post_id );
+        }
+
+        if ( function_exists( 'videohub360_debug_log' ) ) {
+            videohub360_debug_log( 'Studio Agora livestream marked ended', array( 'post_id' => $post_id, 'user_id' => absint( $user_id ) ?: get_current_user_id() ) );
+        }
+
+        return $this->get_livestream_data( $post_id );
+    }
 
     public function get_livestream_data( $post_id ) {
         return array(

@@ -419,28 +419,25 @@ class VH360_Studio_REST_Controller {
     public function broadcast_started( WP_REST_Request $request ) {
         $service = $this->livestream_service();
         if ( ! $service ) { return new WP_Error( 'vh360_studio_core_missing', __( 'VideoHub360 Core livestream service is unavailable.', 'videohub360-studio' ), array( 'status' => 500 ) ); }
-        $service->mark_live( absint( $request['video_id'] ) );
-        $job_id = absint( $request->get_param( 'job_id' ) );
-        $job = null;
-        if ( $job_id ) {
-            $job = $this->jobs->update( $job_id, get_current_user_id(), array(
-                'status'        => VH360_Studio_Recording_Jobs::STATUS_RECORDING,
-                'live_video_id' => absint( $request['video_id'] ),
-                'started_at'    => current_time( 'mysql' ),
-            ) );
-        }
-        return rest_ensure_response( array( 'stream_live' => true, 'job' => $this->prepare_job_response( $job ) ) );
+        $result = $service->mark_live( absint( $request['video_id'] ), get_current_user_id() );
+        if ( is_wp_error( $result ) ) { return $result; }
+        return rest_ensure_response( array( 'stream_live' => true, 'broadcast' => $result ) );
     }
 
     public function broadcast_heartbeat( WP_REST_Request $request ) {
+        $service = $this->livestream_service();
+        if ( ! $service ) { return new WP_Error( 'vh360_studio_core_missing', __( 'VideoHub360 Core livestream service is unavailable.', 'videohub360-studio' ), array( 'status' => 500 ) ); }
+        $validated = $service->validate_agora_livestream_for_management( absint( $request['video_id'] ), get_current_user_id() );
+        if ( is_wp_error( $validated ) ) { return $validated; }
         return rest_ensure_response( array( 'ok' => true, 'server_time' => current_time( 'mysql' ) ) );
     }
 
     public function broadcast_end( WP_REST_Request $request ) {
         $service = $this->livestream_service();
         if ( ! $service ) { return new WP_Error( 'vh360_studio_core_missing', __( 'VideoHub360 Core livestream service is unavailable.', 'videohub360-studio' ), array( 'status' => 500 ) ); }
-        $service->mark_ended( absint( $request['video_id'] ) );
-        return rest_ensure_response( array( 'stream_live' => false ) );
+        $result = $service->mark_ended( absint( $request['video_id'] ), get_current_user_id() );
+        if ( is_wp_error( $result ) ) { return $result; }
+        return rest_ensure_response( array( 'stream_live' => false, 'broadcast' => $result ) );
     }
 
     public function list_jobs( WP_REST_Request $request ) {
