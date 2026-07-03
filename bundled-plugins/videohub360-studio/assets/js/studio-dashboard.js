@@ -93,6 +93,10 @@
         copyViewerLink: root.querySelector('[data-copy-viewer-link]'),
     };
 
+    function setShellClass(className, active) {
+        root.classList.toggle(className, Boolean(active));
+    }
+
     function setStatus(message, type) {
         if (!els.status) {
             return;
@@ -258,6 +262,7 @@
             setupAudioMeter(state.cameraStream);
             await populateDevices();
             setPreviewButtons(true);
+            setShellClass('is-preview-active', true);
             setStatus(strings.previewActive, 'success');
         } catch (error) {
             stopPreview();
@@ -273,6 +278,7 @@
         }
         teardownAudioMeter();
         setPreviewButtons(false);
+        setShellClass('is-preview-active', false);
     }
 
     function setPreviewButtons(active) {
@@ -345,6 +351,7 @@
                 await els.screenPreview.play().catch(() => {});
             }
             setScreenButtons(true);
+            setShellClass('is-screen-active', true);
             setStatus(strings.screenPreviewActive, 'success');
         } catch (error) {
             stopScreenPreview();
@@ -359,6 +366,7 @@
             els.screenPreview.srcObject = null;
         }
         setScreenButtons(false);
+        setShellClass('is-screen-active', false);
     }
 
     function setScreenButtons(active) {
@@ -497,6 +505,7 @@
             state.recorder.start((config.uploadSettings && config.uploadSettings.preferred_chunk_duration) || 5000);
             startTimer();
             setRecorderButtons(true, false);
+            setShellClass('is-recording', true);
             setRecordingStatus(strings.recordingActive, 'success');
             renderRecordingState();
         } catch (error) {
@@ -550,6 +559,7 @@
         const duration = Math.max(0, Math.round((Date.now() - state.recordingStartedAt) / 1000));
         await api('/jobs/' + state.activeJobId + '/recording/stop', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ duration_seconds: duration }) });
         state.recorder = null;
+        setShellClass('is-recording', false);
         setRecorderButtons(false, true);
         renderRecordingState();
     }
@@ -881,6 +891,7 @@
                 api('/broadcasts/' + state.broadcastVideoId + '/heartbeat', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } }).catch(() => {});
             }, 30000);
             if (els.endLive) els.endLive.disabled = false;
+            setShellClass('is-live', true);
             setBroadcastStatus(strings.liveStarted, 'success');
         } catch (error) {
             const failedVideoId = state.broadcastVideoId;
@@ -897,6 +908,7 @@
             }
             if (els.endLive) els.endLive.disabled = true;
             if (els.goLive) els.goLive.disabled = false;
+            setShellClass('is-live', false);
             setBroadcastStatus((error && error.message) || strings.broadcastFailed, 'error');
         }
     }
@@ -928,6 +940,7 @@
         }
         if (els.goLive) els.goLive.disabled = false;
         if (els.endLive) els.endLive.disabled = true;
+        setShellClass('is-live', false);
         setBroadcastStatus(strings.liveEnded, 'success');
     }
 
