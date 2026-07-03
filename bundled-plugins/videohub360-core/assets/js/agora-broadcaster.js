@@ -87,10 +87,22 @@
                 }
             }
 
+            function isReadyToPublish() {
+                return Boolean(
+                    state.client &&
+                    state.joined &&
+                    state.published &&
+                    (!state.client.connectionState || state.client.connectionState === 'CONNECTED')
+                );
+            }
+
             async function replaceVideoMediaStreamTrack(mediaStreamTrack, options) {
                 options = options || {};
                 if (!window.AgoraRTC || !state.client || !state.joined || !mediaStreamTrack) {
                     return false;
+                }
+                if (!isReadyToPublish()) {
+                    throw new Error('Agora is not ready to publish a Program source.');
                 }
 
                 if (!options.forceRepublish && state.videoTrack && typeof state.videoTrack.replaceTrack === 'function') {
@@ -115,7 +127,7 @@
                 if (typeof window.AgoraRTC.createCustomVideoTrack !== 'function') {
                     throw new Error('Agora custom video tracks are unavailable in this browser.');
                 }
-                const nextTrack = window.AgoraRTC.createCustomVideoTrack({ mediaStreamTrack: mediaStreamTrack });
+                const nextTrack = options.agoraVideoTrack || window.AgoraRTC.createCustomVideoTrack({ mediaStreamTrack: mediaStreamTrack });
                 const oldTrack = state.videoTrack;
                 const oldTrackOwnsSource = state.videoTrackOwnsSource;
                 const wasPublished = state.published;
@@ -139,7 +151,7 @@
                     state.videoTrack = oldTrack;
                     state.videoTrackOwnsSource = oldTrackOwnsSource;
                     state.published = wasPublished;
-                    if (wasPublished && oldTrack) {
+                    if (wasPublished && oldTrack && (!state.client.connectionState || state.client.connectionState === 'CONNECTED')) {
                         await state.client.publish(oldTrack).catch(function () {});
                         if (localContainer && typeof oldTrack.play === 'function') {
                             oldTrack.play(localContainer, { mirror: options.source !== 'screen' });
@@ -153,6 +165,7 @@
                 start: start,
                 stop: stop,
                 replaceVideoMediaStreamTrack: replaceVideoMediaStreamTrack,
+                isReadyToPublish: isReadyToPublish,
                 muteAudio: function (muted) { return state.audioTrack && state.audioTrack.setEnabled(!muted); },
                 muteVideo: function (muted) { return state.videoTrack && state.videoTrack.setEnabled(!muted); },
                 getLocalMediaStream: function () {
@@ -165,7 +178,11 @@
                     }
                     return tracks.length ? new MediaStream(tracks) : null;
                 },
-                getState: function () { return Object.assign({}, state); }
+                getState: function () {
+                    return Object.assign({}, state, {
+                        connectionState: state.client ? state.client.connectionState || '' : ''
+                    });
+                }
             };
         }
     };

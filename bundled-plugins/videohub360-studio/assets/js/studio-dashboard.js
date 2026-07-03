@@ -12,6 +12,7 @@
     const state = {
         cameraStream: null,
         screenStream: null,
+        screenAgoraTrack: null,
         micStream: null,
         audioContext: null,
         analyser: null,
@@ -39,6 +40,11 @@
         programSource: null,
         programStream: null,
         transitioning: false,
+        broadcastStarting: false,
+        broadcastReady: false,
+        broadcastEnding: false,
+        programSwitching: false,
+        lastAgoraConnectionState: '',
     };
 
     const els = {
@@ -134,6 +140,7 @@
             return;
         }
         state.previewSource = sourceId;
+        renderPreviewState();
         renderSourceState();
         setStatus(sourceLabel(sourceId) + ' staged in Preview.', 'success');
     }
@@ -149,9 +156,11 @@
             setStatus('Choose a Preview source before using Cut or Fade.', 'warning');
             return;
         }
-        if (state.transitioning) {
+        if (state.transitioning || state.programSwitching) {
             return;
         }
+        state.programSwitching = true;
+        renderTransitionButtons();
         state.transitioning = transitionType === 'fade';
         const duration = Math.max(0, Math.min(2000, Number(els.transitionDuration && els.transitionDuration.value) || 300));
         root.style.setProperty('--vh360-studio-transition-duration', duration + 'ms');
@@ -165,7 +174,7 @@
             state.programSource = nextSource;
             state.programStream = stream;
             renderProgramState();
-            setStatus(state.broadcastSession ? sourceLabel(state.programSource) + ' was published to the live Program output.' : sourceLabel(state.programSource) + ' sent to Program.', 'success');
+            setStatus(state.broadcastSession ? sourceLabel(state.programSource) + ' was sent to Agora Program output.' : sourceLabel(state.programSource) + ' sent to Program.', 'success');
             if (transitionType === 'fade') {
                 await new Promise((resolve) => window.setTimeout(resolve, duration));
             }
@@ -177,12 +186,21 @@
             }
         } finally {
             state.transitioning = false;
+            state.programSwitching = false;
             root.classList.remove('is-transitioning', 'is-fading');
             renderSourceState();
+            renderTransitionButtons();
         }
     }
 
+    function renderPreviewState() {
+        root.dataset.previewSource = state.previewSource || '';
+        root.classList.toggle('is-preview-source-camera', state.previewSource === 'camera');
+        root.classList.toggle('is-preview-source-screen', state.previewSource === 'screen');
+    }
+
     function renderSourceState() {
+        renderPreviewState();
         els.previewSourceButtons.forEach((button) => {
             button.classList.toggle('is-active', button.dataset.previewSource === state.previewSource);
         });
@@ -199,11 +217,12 @@
 
     function renderTransitionButtons() {
         const recording = isRecordingActive();
+        const blocked = recording || state.broadcastStarting || state.broadcastEnding || state.programSwitching || (state.broadcastSession && !state.broadcastReady) || state.lastAgoraConnectionState === 'RECONNECTING' || state.lastAgoraConnectionState === 'DISCONNECTED';
         if (els.transitionCut) {
-            els.transitionCut.disabled = recording;
+            els.transitionCut.disabled = blocked;
         }
         if (els.transitionFade) {
-            els.transitionFade.disabled = recording;
+            els.transitionFade.disabled = blocked;
         }
     }
 
@@ -225,6 +244,12 @@
         if (!state.broadcastSession) {
             return true;
         }
+        if (!state.broadcastReady) {
+            throw new Error('The live broadcast is still connecting. Try again in a moment.');
+        }
+        if (typeof state.broadcastSession.isReadyToPublish === 'function' && !state.broadcastSession.isReadyToPublish()) {
+            throw new Error('The live broadcast is reconnecting. Try again when it is connected.');
+        }
         if (!stream || typeof state.broadcastSession.replaceVideoMediaStreamTrack !== 'function') {
             throw new Error('The live broadcast could not accept the selected Program source.');
         }
@@ -241,7 +266,8 @@
         }
         const replaced = await state.broadcastSession.replaceVideoMediaStreamTrack(track, {
             source: sourceId || state.previewSource || state.programSource || '',
-            forceRepublish: true
+            forceRepublish: true,
+            agoraVideoTrack: sourceId === 'screen' ? state.screenAgoraTrack : null
         });
         if (replaced === false) {
             throw new Error('The Program source was not sent to the public livestream.');
@@ -482,6 +508,7 @@
             }
             if (updateSelection) {
                 state.previewSource = 'camera';
+                renderPreviewState();
                 renderSourceState();
                 setStatus('Camera staged in Preview.', 'success');
             } else {
@@ -595,7 +622,18 @@
                 captureController = new window.CaptureController();
                 displayOptions.controller = captureController;
             }
-            state.screenStream = await navigator.mediaDevices.getDisplayMedia(displayOptions);
+            if (window.AgoraRTC && typeof window.AgoraRTC.createScreenVideoTrack === 'function') {
+                const createdTrack = await window.AgoraRTC.createScreenVideoTrack({ encoderConfig: '1080p_1' }, 'disable');
+                state.screenAgoraTrack = Array.isArray(createdTrack) ? createdTrack[0] : createdTrack;
+                const mediaTrack = state.screenAgoraTrack && typeof state.screenAgoraTrack.getMediaStreamTrack === 'function' ? state.screenAgoraTrack.getMediaStreamTrack() : null;
+                state.screenStream = mediaTrack ? new MediaStream([mediaTrack]) : null;
+            } else {
+                state.screenStream = await navigator.mediaDevices.getDisplayMedia(displayOptions);
+                state.screenAgoraTrack = null;
+            }
+            if (!state.screenStream) {
+                throw new Error('Screen Share could not be started.');
+            }
             if (captureController && typeof captureController.setFocusBehavior === 'function') {
                 try {
                     captureController.setFocusBehavior('focus-capturing-application');
@@ -612,6 +650,7 @@
             setShellClass('is-screen-active', true);
             if (updateSelection) {
                 state.previewSource = 'screen';
+                renderPreviewState();
                 renderSourceState();
                 setStatus('Screen Share staged in Preview.', 'success');
             } else {
@@ -629,7 +668,13 @@
             return false;
         }
         stopStream(state.screenStream);
+        if (state.screenAgoraTrack) {
+            state.screenAgoraTrack.stop();
+            state.screenAgoraTrack.close();
+            state.screenAgoraTrack = null;
+        }
         state.screenStream = null;
+        state.screenAgoraTrack = null;
         if (els.screenPreview) {
             els.screenPreview.srcObject = null;
         }
@@ -649,6 +694,7 @@
 
     async function handleScreenShareEnded() {
         state.screenStream = null;
+        state.screenAgoraTrack = null;
         if (els.screenPreview) {
             els.screenPreview.srcObject = null;
         }
@@ -1173,6 +1219,9 @@
             return;
         }
         setBroadcastStatus(strings.goingLive, 'info');
+        state.broadcastStarting = true;
+        state.broadcastReady = false;
+        renderTransitionButtons();
         if (els.goLive) els.goLive.disabled = true;
         try {
             if (!state.programSource) {
@@ -1190,7 +1239,7 @@
                 if (els.viewerLinkWrap) els.viewerLinkWrap.hidden = false;
             }
             const prepared = await api('/broadcasts/' + state.broadcastVideoId + '/prepare', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
-            state.broadcastSession = window.VH360AgoraBroadcaster.create({
+            const session = window.VH360AgoraBroadcaster.create({
                 appId: prepared.appId,
                 channelName: prepared.channelName,
                 token: prepared.token,
@@ -1203,7 +1252,11 @@
                 initialVideoMediaStreamTrack: state.programStream ? state.programStream.getVideoTracks()[0] : null,
                 initialVideoSource: state.programSource || '',
             });
-            await state.broadcastSession.start();
+            await session.start();
+            state.broadcastSession = session;
+            state.broadcastReady = true;
+            state.broadcastStarting = false;
+            renderTransitionButtons();
             await api('/broadcasts/' + state.broadcastVideoId + '/started', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ job_id: state.activeJobId || 0 }) });
             state.heartbeatTimer = window.setInterval(() => {
                 api('/broadcasts/' + state.broadcastVideoId + '/heartbeat', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } }).catch(() => {});
@@ -1216,6 +1269,7 @@
             if (state.broadcastSession) {
                 await state.broadcastSession.stop().catch(() => {});
                 state.broadcastSession = null;
+                state.broadcastReady = false;
             }
             if (failedVideoId) {
                 await api('/broadcasts/' + failedVideoId + '/end', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } }).catch(() => {});
@@ -1224,14 +1278,20 @@
                 window.clearInterval(state.heartbeatTimer);
                 state.heartbeatTimer = null;
             }
+            state.broadcastStarting = false;
+            state.broadcastReady = false;
             if (els.endLive) els.endLive.disabled = true;
             if (els.goLive) els.goLive.disabled = false;
             setShellClass('is-live', false);
+            renderTransitionButtons();
             setBroadcastStatus((error && error.message) || strings.broadcastFailed, 'error');
         }
     }
 
     async function endLive() {
+        state.broadcastEnding = true;
+        state.broadcastReady = false;
+        renderTransitionButtons();
         if (state.recorder) {
             setBroadcastStatus(strings.recordingActive, 'info');
             await stopRecording().catch((error) => {
@@ -1256,9 +1316,12 @@
                 return;
             }
         }
+        state.broadcastEnding = false;
+        state.broadcastReady = false;
         if (els.goLive) els.goLive.disabled = false;
         if (els.endLive) els.endLive.disabled = true;
         setShellClass('is-live', false);
+        renderTransitionButtons();
         setBroadcastStatus(strings.liveEnded, 'success');
     }
 
@@ -1354,6 +1417,9 @@
                 window.console.info('[VH360 Studio] Agora connection state changed', detail);
             }
             if (detail.current) {
+                state.lastAgoraConnectionState = detail.current;
+                state.broadcastReady = Boolean(state.broadcastSession) && detail.current === 'CONNECTED';
+                renderTransitionButtons();
                 setBroadcastStatus('Agora connection: ' + detail.current + (detail.reason ? ' (' + detail.reason + ')' : ''), detail.current === 'CONNECTED' ? 'success' : 'info');
             }
         });
@@ -1379,6 +1445,7 @@
     updateQualityDetails();
     updatePublishingButtons();
     updateBroadcastRules();
+    renderPreviewState();
     renderSourceState();
     renderProgramState();
     renderTransitionButtons();

@@ -98,8 +98,8 @@
 .vh360-studio-preview-stage { display: block; position: relative; }
 .vh360-studio-preview-video { background: var(--vh360-studio-black); height: 100%; inset: 0; object-fit: cover; opacity: 0; position: absolute; visibility: hidden; width: 100%; z-index: 1; }
 .vh360-studio-preview-video--screen { object-fit: contain; }
-.vh360-studio-dashboard.is-preview-active:not(.is-screen-active) .vh360-studio-preview-video--camera { opacity: 1; visibility: visible; }
-.vh360-studio-dashboard.is-screen-active .vh360-studio-preview-video--screen { opacity: 1; visibility: visible; z-index: 2; }
+.vh360-studio-dashboard.is-preview-source-camera .vh360-studio-preview-video--camera { opacity: 1; visibility: visible; z-index: 2; }
+.vh360-studio-dashboard.is-preview-source-screen .vh360-studio-preview-video--screen { opacity: 1; visibility: visible; z-index: 2; }
 .vh360-studio-agora-preview video { height: 100%; object-fit: cover; width: 100%; }
 .vh360-studio-agora-preview { background: var(--vh360-studio-black); height: 100%; min-height: 100%; overflow: hidden; width: 100%; }
 .vh360-studio-monitor-empty { color: var(--vh360-studio-text-muted); font-size: 0.9rem; left: 50%; pointer-events: none; position: absolute; text-align: center; top: 50%; transform: translate(-50%, -50%); width: min(90%, 24rem); z-index: 3; }

@@ -2527,6 +2527,10 @@ window.initializeAgoraPlayer = function(config) {
 
         try {
             await client.subscribe(user, mediaType);
+            window.vh360Log('Agora: public page subscribed to user media', {
+                uid: user && user.uid,
+                mediaType: mediaType
+            });
         } catch (subscribeError) {
             window.vh360Warn('Agora: Failed to subscribe to remote user media:', {
                 uid: user && user.uid,
@@ -2537,6 +2541,10 @@ window.initializeAgoraPlayer = function(config) {
         }
 
         if (mediaType === "video") {
+            window.vh360Log('Agora: public page received user-published video', {
+                uid: user && user.uid,
+                hasVideoTrack: !!(user && user.videoTrack)
+            });
             const remoteVideoTrack = user.videoTrack;
             if (!remoteVideoTrack) {
                 window.vh360Warn("Agora: No video track available for user:", user.uid);
@@ -2582,6 +2590,10 @@ window.initializeAgoraPlayer = function(config) {
             if (participant.videoContainerElement) {
                 participant.videoContainerElement.replaceChildren();
             }
+            window.vh360Log('Agora: public page attaching subscribed video', {
+                uid: user && user.uid,
+                hasVideoTrack: !!remoteVideoTrack
+            });
             attachParticipantVideo(participant, remoteVideoTrack, false);
 
             if ((isOriginalHost || config.canModerate) && user.uid !== security.user_id && participant.tileElement && !participant.tileElement.querySelector('.vh360-participant-menu-container')) {
