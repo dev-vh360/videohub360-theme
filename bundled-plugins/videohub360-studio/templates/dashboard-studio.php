@@ -68,7 +68,7 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
                 <div class="vh360-studio-dock-header"><h3 id="vh360-studio-scenes-title"><?php esc_html_e( 'Scenes', 'videohub360-studio' ); ?></h3></div>
                 <div class="vh360-studio-dock-body">
                     <ul class="vh360-studio-scene-list">
-                        <li><button type="button" data-scene-source="camera" aria-current="true"><?php esc_html_e( 'Camera Only', 'videohub360-studio' ); ?></button></li>
+                        <li><button type="button" data-scene-source="camera"><?php esc_html_e( 'Camera Only', 'videohub360-studio' ); ?></button></li>
                         <li><button type="button" data-scene-source="screen"><?php esc_html_e( 'Screen Share', 'videohub360-studio' ); ?></button></li>
                     </ul>
                     <p class="vh360-studio-help"><?php esc_html_e( 'Scene buttons stage the matching source in Preview.', 'videohub360-studio' ); ?></p>

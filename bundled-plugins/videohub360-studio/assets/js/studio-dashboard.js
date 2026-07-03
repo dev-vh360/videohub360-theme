@@ -139,6 +139,12 @@
     }
 
     async function commitPreviewToProgram(transitionType) {
+        if (isRecordingActive()) {
+            setStatus('Stop browser recording before changing the Program source.', 'warning');
+            setRecordingStatus('Stop browser recording before changing the Program source.', 'warning');
+            renderTransitionButtons();
+            return;
+        }
         if (!state.previewSource) {
             setStatus('Choose a Preview source before using Cut or Fade.', 'warning');
             return;
@@ -185,6 +191,16 @@
                 button.removeAttribute('aria-current');
             }
         });
+    }
+
+    function renderTransitionButtons() {
+        const recording = isRecordingActive();
+        if (els.transitionCut) {
+            els.transitionCut.disabled = recording;
+        }
+        if (els.transitionFade) {
+            els.transitionFade.disabled = recording;
+        }
     }
 
     function renderProgramState() {
@@ -959,6 +975,7 @@
         if (els.startRecording) { els.startRecording.disabled = recording; }
         if (els.stopRecording) { els.stopRecording.disabled = !recording; }
         if (els.finalizeRecording) { els.finalizeRecording.disabled = !stopped; }
+        renderTransitionButtons();
     }
 
     async function createSetupJob() {
@@ -1318,5 +1335,6 @@
     updateBroadcastRules();
     renderSourceState();
     renderProgramState();
+    renderTransitionButtons();
     bindEvents();
 }());
