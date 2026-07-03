@@ -21,9 +21,15 @@
                     await state.client.setClientRole('host');
                 }
                 state.audioTrack = await window.AgoraRTC.createMicrophoneAudioTrack(config.audioConfig || {});
-                state.videoTrack = await window.AgoraRTC.createCameraVideoTrack(config.videoConfig || {});
+                if (config.initialVideoMediaStreamTrack && typeof window.AgoraRTC.createCustomVideoTrack === 'function') {
+                    state.videoTrack = window.AgoraRTC.createCustomVideoTrack({
+                        mediaStreamTrack: config.initialVideoMediaStreamTrack
+                    });
+                } else {
+                    state.videoTrack = await window.AgoraRTC.createCameraVideoTrack(config.videoConfig || {});
+                }
                 if (localContainer) {
-                    state.videoTrack.play(localContainer);
+                    state.videoTrack.play(localContainer, { mirror: config.initialVideoSource !== 'screen' });
                 }
                 await state.client.join(config.appId, config.channelName, config.token || null, Number(config.uid));
                 state.joined = true;
@@ -52,10 +58,29 @@
                 emit(root, 'ended', {});
             }
 
-            async function replaceVideoMediaStreamTrack(mediaStreamTrack) {
+            async function replaceVideoMediaStreamTrack(mediaStreamTrack, options) {
+                options = options || {};
                 if (!window.AgoraRTC || !state.client || !state.joined || !mediaStreamTrack) {
                     return false;
                 }
+
+                if (state.videoTrack && typeof state.videoTrack.replaceTrack === 'function') {
+                    try {
+                        await state.videoTrack.replaceTrack(mediaStreamTrack, false);
+                        if (localContainer && typeof state.videoTrack.play === 'function') {
+                            state.videoTrack.play(localContainer, { mirror: options.source !== 'screen' });
+                        }
+                        emit(root, 'video-replaced', {
+                            uid: config.uid,
+                            channelName: config.channelName,
+                            source: options.source || ''
+                        });
+                        return true;
+                    } catch (error) {
+                        throw new Error('Agora video track replacement failed: ' + ((error && error.message) || 'Unknown error'));
+                    }
+                }
+
                 if (typeof window.AgoraRTC.createCustomVideoTrack !== 'function') {
                     throw new Error('Agora custom video tracks are unavailable in this browser.');
                 }
@@ -71,13 +96,13 @@
                     state.videoTrack = nextTrack;
                     state.published = true;
                     if (localContainer && typeof nextTrack.play === 'function') {
-                        nextTrack.play(localContainer);
+                        nextTrack.play(localContainer, { mirror: options.source !== 'screen' });
                     }
                     if (oldTrack) {
                         oldTrack.stop();
                         oldTrack.close();
                     }
-                    emit(root, 'video-replaced', { uid: config.uid, channelName: config.channelName });
+                    emit(root, 'video-replaced', { uid: config.uid, channelName: config.channelName, source: options.source || '' });
                     return true;
                 } catch (error) {
                     nextTrack.stop();
@@ -87,10 +112,10 @@
                     if (wasPublished && oldTrack) {
                         await state.client.publish(oldTrack).catch(function () {});
                         if (localContainer && typeof oldTrack.play === 'function') {
-                            oldTrack.play(localContainer);
+                            oldTrack.play(localContainer, { mirror: options.source !== 'screen' });
                         }
                     }
-                    throw error;
+                    throw new Error('Agora video track replacement failed: ' + ((error && error.message) || 'Unknown error'));
                 }
             }
 

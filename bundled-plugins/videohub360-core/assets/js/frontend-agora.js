@@ -2576,6 +2576,12 @@ window.initializeAgoraPlayer = function(config) {
                 wordpressUserId: wordpressUserId,
                 isOriginalHost: isUserOriginalHost
             });
+            if (participant.videoContainerElement && window.videoElementManager) {
+                window.videoElementManager.unregisterTrackBinding(participant.videoContainerElement.id);
+            }
+            if (participant.videoContainerElement) {
+                participant.videoContainerElement.replaceChildren();
+            }
             attachParticipantVideo(participant, remoteVideoTrack, false);
 
             if ((isOriginalHost || config.canModerate) && user.uid !== security.user_id && participant.tileElement && !participant.tileElement.querySelector('.vh360-participant-menu-container')) {

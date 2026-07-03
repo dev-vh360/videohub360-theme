@@ -161,7 +161,7 @@
         try {
             const nextSource = state.previewSource;
             const stream = await getSourceStream(nextSource);
-            await replaceLiveVideoTrack(stream);
+            await replaceLiveVideoTrack(stream, nextSource);
             state.programSource = nextSource;
             state.programStream = stream;
             renderProgramState();
@@ -217,14 +217,24 @@
         }
     }
 
-    async function replaceLiveVideoTrack(stream) {
-        if (!state.broadcastSession || !stream || typeof state.broadcastSession.replaceVideoMediaStreamTrack !== 'function') {
-            return;
+    async function replaceLiveVideoTrack(stream, sourceId) {
+        if (!state.broadcastSession) {
+            return true;
+        }
+        if (!stream || typeof state.broadcastSession.replaceVideoMediaStreamTrack !== 'function') {
+            throw new Error('The live broadcast could not accept the selected Program source.');
         }
         const track = stream.getVideoTracks()[0];
-        if (track) {
-            await state.broadcastSession.replaceVideoMediaStreamTrack(track);
+        if (!track || track.readyState === 'ended') {
+            throw new Error('The selected Program source is no longer available.');
         }
+        const replaced = await state.broadcastSession.replaceVideoMediaStreamTrack(track, {
+            source: sourceId || state.previewSource || state.programSource || ''
+        });
+        if (replaced === false) {
+            throw new Error('The Program source was not sent to the public livestream.');
+        }
+        return true;
     }
 
     function isSourceProtected(sourceId) {
@@ -562,7 +572,23 @@
         stopScreenPreview({ force: true });
 
         try {
-            state.screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+            let captureController = null;
+            const displayOptions = {
+                video: true,
+                audio: false,
+                surfaceSwitching: 'include',
+                selfBrowserSurface: 'exclude',
+            };
+            if ('CaptureController' in window) {
+                captureController = new window.CaptureController();
+                displayOptions.controller = captureController;
+            }
+            state.screenStream = await navigator.mediaDevices.getDisplayMedia(displayOptions);
+            if (captureController && typeof captureController.setFocusBehavior === 'function') {
+                try {
+                    captureController.setFocusBehavior('focus-capturing-application');
+                } catch (error) {}
+            }
             state.screenStream.getVideoTracks().forEach((track) => {
                 track.addEventListener('ended', () => handleScreenShareEnded(), { once: true });
             });
@@ -1162,11 +1188,10 @@
                 localContainer: els.agoraLocalPreview,
                 audioConfig: agoraAudioConfigFromSelection(),
                 videoConfig: agoraVideoConfigFromPreset(),
+                initialVideoMediaStreamTrack: state.programStream ? state.programStream.getVideoTracks()[0] : null,
+                initialVideoSource: state.programSource || '',
             });
             await state.broadcastSession.start();
-            if (state.programStream) {
-                await replaceLiveVideoTrack(state.programStream);
-            }
             await api('/broadcasts/' + state.broadcastVideoId + '/started', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ job_id: state.activeJobId || 0 }) });
             state.heartbeatTimer = window.setInterval(() => {
                 api('/broadcasts/' + state.broadcastVideoId + '/heartbeat', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } }).catch(() => {});
