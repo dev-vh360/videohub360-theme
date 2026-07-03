@@ -95,16 +95,16 @@
 .vh360-studio-pill { border: 1px solid var(--vh360-studio-panel-border); border-radius: 999px; color: var(--vh360-studio-text-muted); font-size: 0.75rem; font-weight: 800; padding: 0.2rem 0.55rem; text-transform: uppercase; }
 
 .vh360-studio-monitor-screen { aspect-ratio: 16 / 9; background: var(--vh360-studio-monitor-bg); border: 1px solid var(--vh360-studio-monitor-border); border-radius: 0 0 14px 14px; display: grid; min-height: 0; overflow: hidden; position: relative; }
-.vh360-studio-monitor-stack { display: grid; grid-template-columns: 1fr 1fr; height: 100%; min-width: 0; }
-.vh360-studio-video-shell { align-items: center; background: var(--vh360-studio-black); display: flex; justify-content: center; min-width: 0; overflow: hidden; position: relative; }
-.vh360-studio-video-shell + .vh360-studio-video-shell { border-left: 1px solid var(--vh360-studio-monitor-border); }
-.vh360-studio-video-shell video,
+.vh360-studio-preview-stage { display: block; position: relative; }
+.vh360-studio-preview-video { background: var(--vh360-studio-black); height: 100%; inset: 0; object-fit: cover; opacity: 0; position: absolute; visibility: hidden; width: 100%; z-index: 1; }
+.vh360-studio-preview-video--screen { object-fit: contain; }
+.vh360-studio-dashboard.is-preview-active:not(.is-screen-active) .vh360-studio-preview-video--camera { opacity: 1; visibility: visible; }
+.vh360-studio-dashboard.is-screen-active .vh360-studio-preview-video--screen { opacity: 1; visibility: visible; z-index: 2; }
 .vh360-studio-agora-preview video { height: 100%; object-fit: cover; width: 100%; }
-.vh360-studio-video-shell--screen video { object-fit: contain; }
 .vh360-studio-agora-preview { background: var(--vh360-studio-black); height: 100%; min-height: 100%; overflow: hidden; width: 100%; }
-.vh360-studio-monitor-empty { color: var(--vh360-studio-text-muted); font-size: 0.9rem; left: 50%; pointer-events: none; position: absolute; text-align: center; top: 50%; transform: translate(-50%, -50%); width: min(90%, 24rem); }
+.vh360-studio-monitor-empty { color: var(--vh360-studio-text-muted); font-size: 0.9rem; left: 50%; pointer-events: none; position: absolute; text-align: center; top: 50%; transform: translate(-50%, -50%); width: min(90%, 24rem); z-index: 3; }
 .vh360-studio-dashboard.is-preview-active .vh360-studio-monitor--preview [data-preview-empty],
-.vh360-studio-dashboard.is-screen-active .vh360-studio-monitor--preview [data-screen-empty],
+.vh360-studio-dashboard.is-screen-active .vh360-studio-monitor--preview [data-preview-empty],
 .vh360-studio-dashboard.is-live .vh360-studio-monitor--program [data-program-empty] { display: none; }
 
 .vh360-studio-transition-panel { align-items: stretch; background: var(--vh360-studio-panel-bg-strong); border: 1px solid var(--vh360-studio-panel-border); border-radius: 16px; display: flex; flex-direction: column; gap: 0.65rem; justify-content: center; padding: 0.85rem; text-align: center; }
@@ -180,7 +180,6 @@
     .vh360-studio-dock-grid,
     .vh360-studio-lower-panels { grid-template-columns: 1fr; }
     .vh360-studio-transition-panel { order: 3; }
-    .vh360-studio-monitor-stack,
     .vh360-studio-live-grid,
     .vh360-studio-recorder-stats,
     .vh360-studio-recorder-grid,

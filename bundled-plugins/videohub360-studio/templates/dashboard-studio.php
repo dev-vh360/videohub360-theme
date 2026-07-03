@@ -35,15 +35,10 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
                     <h3 id="vh360-studio-preview-title"><?php esc_html_e( 'Preview', 'videohub360-studio' ); ?></h3>
                     <span class="vh360-studio-pill"><?php esc_html_e( 'Local tests', 'videohub360-studio' ); ?></span>
                 </div>
-                <div class="vh360-studio-monitor-screen vh360-studio-monitor-stack">
-                    <div class="vh360-studio-video-shell">
-                        <video data-camera-preview playsinline muted aria-label="<?php esc_attr_e( 'Local camera preview', 'videohub360-studio' ); ?>"></video>
-                        <span class="vh360-studio-monitor-empty" data-preview-empty><?php esc_html_e( 'Camera preview appears here after you start camera and mic preview.', 'videohub360-studio' ); ?></span>
-                    </div>
-                    <div class="vh360-studio-video-shell vh360-studio-video-shell--screen">
-                        <video data-screen-preview playsinline muted aria-label="<?php esc_attr_e( 'Screen-share preview', 'videohub360-studio' ); ?>"></video>
-                        <span class="vh360-studio-monitor-empty" data-screen-empty><?php esc_html_e( 'Screen-share test appears here when active.', 'videohub360-studio' ); ?></span>
-                    </div>
+                <div class="vh360-studio-monitor-screen vh360-studio-preview-stage">
+                    <video class="vh360-studio-preview-video vh360-studio-preview-video--camera" data-camera-preview playsinline muted aria-label="<?php esc_attr_e( 'Local camera preview', 'videohub360-studio' ); ?>"></video>
+                    <video class="vh360-studio-preview-video vh360-studio-preview-video--screen" data-screen-preview playsinline muted aria-label="<?php esc_attr_e( 'Screen-share preview', 'videohub360-studio' ); ?>"></video>
+                    <span class="vh360-studio-monitor-empty" data-preview-empty><?php esc_html_e( 'Start camera preview or screen share from the Sources panel.', 'videohub360-studio' ); ?></span>
                 </div>
             </section>
 
