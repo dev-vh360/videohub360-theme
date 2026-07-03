@@ -1294,6 +1294,9 @@
                 if (els.viewerLinkWrap) els.viewerLinkWrap.hidden = false;
             }
             const prepared = await api('/broadcasts/' + state.broadcastVideoId + '/prepare', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
+            if (window.console && typeof window.console.info === 'function') {
+                window.console.info('[VH360 Studio] Studio broadcaster UID', prepared.uid);
+            }
             ensureProgramCompositor();
             const session = window.VH360AgoraBroadcaster.create({
                 appId: prepared.appId,

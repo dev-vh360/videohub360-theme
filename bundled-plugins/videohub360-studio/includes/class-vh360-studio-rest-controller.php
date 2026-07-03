@@ -399,6 +399,13 @@ class VH360_Studio_REST_Controller {
         $video_id = absint( $request->get_param( 'video_id' ) );
         $broadcast = $service->create_or_update_default_agora_livestream( get_current_user_id(), $this->broadcast_payload( $request ), $video_id );
         if ( is_wp_error( $broadcast ) ) { return $broadcast; }
+        $studio_host_uid = absint( get_post_meta( absint( $broadcast['videoId'] ), '_vh360_studio_host_agora_uid', true ) );
+        if ( ! $studio_host_uid ) {
+            $studio_host_uid = wp_rand( 100000000, 999999999 );
+            update_post_meta( absint( $broadcast['videoId'] ), '_vh360_studio_host_agora_uid', $studio_host_uid );
+        }
+        update_post_meta( absint( $broadcast['videoId'] ), '_vh360_studio_controlled_live', 'yes' );
+        update_post_meta( absint( $broadcast['videoId'] ), '_vh360_studio_host_user_id', get_current_user_id() );
         $job = $this->jobs->create( get_current_user_id(), array(
             'source_type'      => 'livestream_video',
             'source_id'        => 'videohub360-' . absint( $broadcast['videoId'] ),

@@ -497,12 +497,13 @@ if (!function_exists('videohub360_get_livestream_bootstrap_data')) {
             || current_user_can('edit_post', $post_id) 
             || $is_owner;
         $can_moderate = $is_original_host || current_user_can('moderate_comments') || current_user_can('manage_options');
+        $is_studio_controlled = 'yes' === get_post_meta($post_id, '_vh360_studio_controlled_live', true);
         $is_logged_in = is_user_logged_in();
         
         $current_user = wp_get_current_user();
         $user_display_name = $is_logged_in ? $current_user->display_name : 'Guest_' . substr(md5(sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])) . sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT']))), 0, 6);
         $user_id = $is_logged_in ? $current_user->ID : 0;
-        $agora_uid = $is_logged_in ? $user_id : videohub360_get_or_create_guest_agora_uid();
+        $agora_uid = $is_studio_controlled ? videohub360_get_or_create_guest_agora_uid() : ($is_logged_in ? $user_id : videohub360_get_or_create_guest_agora_uid());
         
         // Determine role
         $role = 'audience';
@@ -516,6 +517,9 @@ if (!function_exists('videohub360_get_livestream_bootstrap_data')) {
             }
         }
         
+        if ($is_studio_controlled) {
+            $role = 'audience';
+        }
         $agora_mode = $fields['agora_mode'] === 'broadcast' ? 'live' : 'rtc';
         
         // Check if this is an appointment room
@@ -584,7 +588,8 @@ if (!function_exists('videohub360_get_livestream_bootstrap_data')) {
             'agoraMode' => $fields['agora_mode'],
             'uid' => $agora_uid,
             'isHost' => ($role === 'host'),
-            'isOriginalHost' => $is_original_host,
+            'isOriginalHost' => $is_studio_controlled ? false : $is_original_host,
+            'studioControlled' => $is_studio_controlled,
             'canModerate' => $can_moderate,
             'allowEveryoneIsHost' => ($fields['agora_everyone_is_host'] === 'yes'),
             // hostPasscodeRequired: safe boolean — never expose the actual passcode value.

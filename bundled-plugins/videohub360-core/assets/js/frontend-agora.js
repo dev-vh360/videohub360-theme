@@ -597,6 +597,13 @@ window.initializeAgoraPlayer = function(config) {
     // Apply allowEveryoneIsHost logic for Interactive mode
     let isHost = config.isHost;
     let currentRole = config.role;
+    if (config.studioControlled) {
+        isHost = false;
+        currentRole = 'audience';
+        config.isHost = false;
+        config.role = 'audience';
+        config.allowEveryoneIsHost = false;
+    }
 
     // Initialize stream started flag - controls should not show until stream begins
     window.vh360StreamStarted = false;
@@ -607,6 +614,11 @@ window.initializeAgoraPlayer = function(config) {
     window.vh360Log("- Config agoraMode:", config.agoraMode);
     window.vh360Log("- Config allowEveryoneIsHost:", config.allowEveryoneIsHost);
     window.vh360Log("- Config isOriginalHost:", config.isOriginalHost);
+    window.vh360Log('[VH360 Public Live] Viewer mode', {
+        uid: config.uid,
+        role: config.role,
+        studioControlled: !!config.studioControlled
+    });
 
     if (config.allowEveryoneIsHost && config.agoraMode === 'interactive') {
         isHost = true;
@@ -618,7 +630,7 @@ window.initializeAgoraPlayer = function(config) {
     window.vh360Log("- currentRole:", currentRole);
     window.vh360Log("- isHost:", isHost);
 
-    let isOriginalHost = config.isOriginalHost;
+    let isOriginalHost = config.studioControlled ? false : config.isOriginalHost;
     let canModerate = config.canModerate;
     let security = config.security;
 
@@ -2541,6 +2553,10 @@ window.initializeAgoraPlayer = function(config) {
         }
 
         if (mediaType === "video") {
+            window.vh360Log('[VH360 Public Live] Remote video received', {
+                remoteUid: user && user.uid,
+                mediaType: mediaType
+            });
             window.vh360Log('Agora: public page received user-published video', {
                 uid: user && user.uid,
                 hasVideoTrack: !!(user && user.videoTrack)
@@ -3057,6 +3073,10 @@ window.initializeAgoraPlayer = function(config) {
 
     // -- Publishing (Host) --
     async function startPublishing() {
+        if (config.studioControlled) {
+            window.vh360Log('Studio-controlled broadcast: public page publishing disabled.');
+            return;
+        }
         try {
             window.vh360Log("VideoHub360: startPublishing() called");
             window.vh360Log("VideoHub360: Current role at publish time:", currentRole);
@@ -3254,6 +3274,10 @@ window.initializeAgoraPlayer = function(config) {
             }
             if (!security.is_logged_in) {
                 showAgoraError('Please log in to join as a presenter.');
+                return;
+            }
+            if (config.studioControlled) {
+                window.vh360Log('Studio-controlled broadcast: public page publishing disabled.');
                 return;
             }
             if (isOriginalHost) {
@@ -4757,6 +4781,9 @@ window.initializeAgoraPlayer = function(config) {
     // Simple join livestream button functionality
     function handleJoinLivestream() {
         window.vh360Log('VideoHub360: handleJoinLivestream() called');
+        if (config.studioControlled) {
+            window.vh360Log('Studio-controlled broadcast: public page publishing disabled.');
+        }
         window.vh360Log('VideoHub360: Current role at button click:', currentRole);
         window.vh360Log('VideoHub360: isOriginalHost:', isOriginalHost);
         window.vh360Log('VideoHub360: Config:', config);
@@ -4775,7 +4802,17 @@ window.initializeAgoraPlayer = function(config) {
             window.location.href = vh360Data.userLoginUrl;
             return;
         }
-        if (isOriginalHost) {
+        if (config.studioControlled) {
+            if (joinOverlay) {
+                joinOverlay.style.display = 'none';
+            }
+            window.vh360StreamStarted = true;
+            setLocalPlayerStatusHTML('<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#fff;font-size:1.2em;"><div>Connecting to livestream...</div></div>');
+            joinChannel().catch(error => {
+                window.vh360Error('Failed to join Studio-controlled livestream:', error);
+                showAgoraError('Failed to connect to livestream. Please refresh and try again.');
+            });
+        } else if (isOriginalHost) {
             setStreamStatus('yes').then(function(data) {
                 // PATCH: Update badges and "Started x ago" instantly
                 if (data && data.success && data.data && data.data.live_start_time) {

@@ -164,6 +164,10 @@ class VideoHub360_Ajax {
         $is_logged_in    = is_user_logged_in();
         $current_user_id = $is_logged_in ? (int) get_current_user_id() : 0;
 
+        if ( 'yes' === get_post_meta( $post_id, '_vh360_studio_controlled_live', true ) ) {
+            return $result;
+        }
+
         // Rule 1: Room manager / owner / admin may always publish.
         if ($this->user_can_manage_live_room($post_id)) {
             $result['can_publish'] = true;
