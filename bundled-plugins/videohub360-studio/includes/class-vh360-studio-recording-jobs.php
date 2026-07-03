@@ -97,7 +97,7 @@ class VH360_Studio_Recording_Jobs {
             $out['error_message'] = sanitize_textarea_field( wp_unslash( $data['error_message'] ) );
         }
 
-        foreach ( array( 'live_video_id', 'duration_seconds', 'file_size', 'wp_attachment_id', 'retry_count', 'expected_chunks', 'received_chunks' ) as $key ) {
+        foreach ( array( 'live_video_id', 'duration_seconds', 'file_size', 'wp_attachment_id', 'retry_count', 'expected_chunks', 'received_chunks', 'replay_video_id' ) as $key ) {
             if ( isset( $data[ $key ] ) ) {
                 $out[ $key ] = absint( $data[ $key ] );
             }
@@ -114,7 +114,7 @@ class VH360_Studio_Recording_Jobs {
             }
         }
 
-        foreach ( array( 'started_at', 'stopped_at', 'completed_at', 'assembled_at', 'temp_expires_at', 'publish_attempted_at' ) as $key ) {
+        foreach ( array( 'started_at', 'stopped_at', 'completed_at', 'assembled_at', 'temp_expires_at', 'publish_attempted_at', 'published_at' ) as $key ) {
             if ( isset( $data[ $key ] ) ) {
                 $out[ $key ] = sanitize_text_field( wp_unslash( $data[ $key ] ) );
             }
@@ -257,6 +257,13 @@ class VH360_Studio_Recording_Jobs {
 
     public function mark_processing( $id, $user_id, $data = array() ) {
         $data['status'] = self::STATUS_PROCESSING;
+        return $this->update( $id, $user_id, $data );
+    }
+
+    public function mark_ready( $id, $user_id, $data = array() ) {
+        $data['status']       = self::STATUS_READY;
+        $data['published_at'] = isset( $data['published_at'] ) ? $data['published_at'] : current_time( 'mysql' );
+        $data['completed_at'] = isset( $data['completed_at'] ) ? $data['completed_at'] : current_time( 'mysql' );
         return $this->update( $id, $user_id, $data );
     }
 

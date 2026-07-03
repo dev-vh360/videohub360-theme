@@ -142,6 +142,28 @@ class VH360_Studio_REST_Controller {
 
         register_rest_route(
             'vh360-studio/v1',
+            '/jobs/(?P<id>\d+)/publishing/publish',
+            array(
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => array( $this, 'publish_recording' ),
+                'permission_callback' => array( $this, 'permissions_check' ),
+                'args'                => array( 'id' => $this->get_id_arg() ),
+            )
+        );
+
+        register_rest_route(
+            'vh360-studio/v1',
+            '/jobs/(?P<id>\d+)/publishing/status',
+            array(
+                'methods'             => WP_REST_Server::READABLE,
+                'callback'            => array( $this, 'publishing_status' ),
+                'permission_callback' => array( $this, 'permissions_check' ),
+                'args'                => array( 'id' => $this->get_id_arg() ),
+            )
+        );
+
+        register_rest_route(
+            'vh360-studio/v1',
             '/jobs/(?P<id>\d+)/cancel',
             array(
                 'methods'             => WP_REST_Server::CREATABLE,
@@ -417,6 +439,25 @@ class VH360_Studio_REST_Controller {
         $prepared = $this->publisher->prepare( $job );
         if ( is_wp_error( $prepared ) ) { return $prepared; }
         return rest_ensure_response( $prepared );
+    }
+
+    public function publish_recording( WP_REST_Request $request ) {
+        $job = $this->chunks->validate_job_ownership( absint( $request['id'] ), get_current_user_id() );
+        if ( is_wp_error( $job ) ) { return $job; }
+        $published = $this->publisher->publish( $job );
+        if ( is_wp_error( $published ) ) { return $published; }
+        return rest_ensure_response( $published );
+    }
+
+    public function publishing_status( WP_REST_Request $request ) {
+        $job = $this->chunks->validate_job_ownership( absint( $request['id'] ), get_current_user_id() );
+        if ( is_wp_error( $job ) ) { return $job; }
+        if ( ! in_array( $job['status'], array( VH360_Studio_Recording_Jobs::STATUS_PROCESSING, VH360_Studio_Recording_Jobs::STATUS_READY ), true ) ) {
+            return new WP_Error( 'vh360_studio_invalid_publish_status', __( 'Publishing status is available for processing or ready jobs.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
+        $status = $this->publisher->status( $job );
+        if ( is_wp_error( $status ) ) { return $status; }
+        return rest_ensure_response( $status );
     }
 
     public function cancel_job( WP_REST_Request $request ) {

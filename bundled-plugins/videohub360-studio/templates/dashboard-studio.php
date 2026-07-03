@@ -89,7 +89,7 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
 
         <section class="vh360-studio-card" aria-labelledby="vh360-studio-storage-title">
             <h3 id="vh360-studio-storage-title"><?php esc_html_e( 'Replay destination', 'videohub360-studio' ); ?></h3>
-            <p><?php esc_html_e( 'VideoPress is the recommended replay/VOD destination. Publishing remains a later phase; this phase only saves a temporary browser upload for processing.', 'videohub360-studio' ); ?></p>
+            <p><?php esc_html_e( 'VideoPress is the recommended replay/VOD destination. VideoPress can publish validated Studio replays when Jetpack/VideoPress is available. Publitio remains a placeholder.', 'videohub360-studio' ); ?></p>
             <label for="vh360-studio-storage-select"><?php esc_html_e( 'Destination', 'videohub360-studio' ); ?></label>
             <select id="vh360-studio-storage-select" data-storage-select>
                 <?php foreach ( $storage_providers as $provider_id => $provider ) : ?>
@@ -103,7 +103,7 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
                     </option>
                 <?php endforeach; ?>
             </select>
-            <p class="vh360-studio-help"><?php printf( esc_html__( 'Default: %s. Local Media remains available only as a limited fallback for constrained hosting environments.', 'videohub360-studio' ), esc_html( $storage_label ) ); ?></p>
+            <p class="vh360-studio-help"><?php printf( esc_html__( 'Default: %s. Local Media Fallback stores recordings in your WordPress Media Library and is best for testing or smaller recordings. VideoPress is recommended for shared/cloud-hosting replay delivery.', 'videohub360-studio' ), esc_html( $storage_label ) ); ?></p>
         </section>
 
 
@@ -131,9 +131,23 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
             <div class="vh360-studio-job-result" aria-live="polite" data-recording-status></div>
         </section>
 
+        <section class="vh360-studio-card vh360-studio-card--wide" aria-labelledby="vh360-studio-publishing-title">
+            <h3 id="vh360-studio-publishing-title"><?php esc_html_e( 'Publish Replay', 'videohub360-studio' ); ?></h3>
+            <p><?php esc_html_e( 'Publish the current finalized processing job through the selected replay destination and create/update a normal VideoHub360 replay post. VideoPress requires a real GUID before the job is marked ready.', 'videohub360-studio' ); ?></p>
+            <div class="vh360-studio-actions">
+                <button type="button" class="vh360-studio-button vh360-studio-button--primary" data-publish-replay><?php esc_html_e( 'Publish replay', 'videohub360-studio' ); ?></button>
+                <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-check-publishing-status><?php esc_html_e( 'Check publishing status', 'videohub360-studio' ); ?></button>
+            </div>
+            <div class="vh360-studio-publish-status" aria-live="polite" data-publishing-status></div>
+            <p class="vh360-studio-replay-link" data-replay-link-wrap hidden>
+                <strong><?php esc_html_e( 'Replay:', 'videohub360-studio' ); ?></strong>
+                <a href="#" data-replay-link target="_blank" rel="noopener noreferrer"></a>
+            </p>
+        </section>
+
         <section class="vh360-studio-card vh360-studio-card--wide" aria-labelledby="vh360-studio-job-title">
             <h3 id="vh360-studio-job-title"><?php esc_html_e( 'Setup job', 'videohub360-studio' ); ?></h3>
-            <p><?php esc_html_e( 'Create a safe setup job in the created state. Use this job to start browser recording and chunked uploads. Publishing is not implemented in this phase.', 'videohub360-studio' ); ?></p>
+            <p><?php esc_html_e( 'Create a safe setup job in the created state. Use this job to start browser recording and chunked uploads. Use the publishing panel to publish validated processing jobs.', 'videohub360-studio' ); ?></p>
             <button type="button" class="vh360-studio-button vh360-studio-button--primary" data-create-job><?php esc_html_e( 'Create setup job', 'videohub360-studio' ); ?></button>
             <div class="vh360-studio-job-result" aria-live="polite" data-job-result></div>
         </section>
@@ -155,6 +169,7 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
                     <th><?php esc_html_e( 'Assembled', 'videohub360-studio' ); ?></th>
                     <th><?php esc_html_e( 'Temp Expires', 'videohub360-studio' ); ?></th>
                     <th><?php esc_html_e( 'Provider Status', 'videohub360-studio' ); ?></th>
+                    <th><?php esc_html_e( 'Replay', 'videohub360-studio' ); ?></th>
                     <th><?php esc_html_e( 'Last Error', 'videohub360-studio' ); ?></th>
                 </tr>
             </thead>
@@ -171,6 +186,7 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
                         <td><?php echo esc_html( ! empty( $job['assembled_at'] ) ? $job['assembled_at'] : '—' ); ?></td>
                         <td><?php echo esc_html( ! empty( $job['temp_expires_at'] ) ? $job['temp_expires_at'] : '—' ); ?></td>
                         <td><?php echo esc_html( ! empty( $job['publish_provider_status'] ) ? $job['publish_provider_status'] : '—' ); ?></td>
+                        <td><?php if ( ! empty( $job['replay_video_id'] ) ) : ?><a href="<?php echo esc_url( get_permalink( absint( $job['replay_video_id'] ) ) ); ?>"><?php echo esc_html( absint( $job['replay_video_id'] ) ); ?></a><?php else : ?><?php echo esc_html( '—' ); ?><?php endif; ?></td>
                         <td><?php echo esc_html( ! empty( $job['error_message'] ) ? $job['error_message'] : '—' ); ?></td>
                     </tr>
                 <?php endforeach; ?>
