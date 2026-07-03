@@ -67,16 +67,72 @@ class VH360_Studio_Replay_Publisher {
 
         $published = $provider->publish_recording( $job, $recording );
         if ( is_wp_error( $published ) ) {
-            $status = 'publish_failed';
-            $data = array( 'publish_attempted_at' => current_time( 'mysql' ), 'publish_provider_status' => $status );
-            $error_data = $published->get_error_data();
-            if ( is_array( $error_data ) && ! empty( $error_data['attachment_id'] ) ) {
-                $data['wp_attachment_id'] = absint( $error_data['attachment_id'] );
-            }
-            $this->jobs->update( $job['id'], 0, $data );
+            $this->jobs->update( $job['id'], 0, array( 'publish_attempted_at' => current_time( 'mysql' ), 'publish_provider_status' => 'publish_failed' ) );
             return $published;
         }
 
+        if ( isset( $published['status'] ) && 'published' !== $published['status'] ) {
+            $updated = $this->jobs->update( $job['id'], 0, array(
+                'wp_attachment_id'        => ! empty( $published['attachment_id'] ) ? absint( $published['attachment_id'] ) : 0,
+                'playback_url'            => ! empty( $published['playback_url'] ) ? esc_url_raw( $published['playback_url'] ) : '',
+                'publish_attempted_at'    => current_time( 'mysql' ),
+                'publish_provider_status' => sanitize_key( $published['status'] ),
+                'error_message'           => '',
+            ) );
+            if ( is_wp_error( $updated ) ) {
+                return $updated;
+            }
+
+            return array(
+                'provider_id'             => $provider->get_id(),
+                'provider_label'          => $provider->get_label(),
+                'job_status'              => $updated['status'],
+                'file_size'               => absint( $updated['file_size'] ),
+                'mime_type'               => $updated['mime_type'],
+                'assembled_checksum'      => $updated['assembled_checksum'],
+                'publish_provider_status' => $updated['publish_provider_status'],
+                'attachment_id'           => absint( $updated['wp_attachment_id'] ),
+                'playback_url'            => $updated['playback_url'],
+                'replay_video_id'         => ! empty( $updated['replay_video_id'] ) ? absint( $updated['replay_video_id'] ) : 0,
+                'message'                 => ! empty( $published['message'] ) ? $published['message'] : __( 'Recording attached to media. Waiting for VideoPress processing.', 'videohub360-studio' ),
+            );
+        }
+
+        return $this->complete_published_job( $job, $published, $recording, $provider );
+    }
+
+    public function status( array $job ) {
+        $provider = $this->get_provider( $job, false );
+        if ( is_wp_error( $provider ) ) {
+            return $provider;
+        }
+
+        $status = $provider->get_publish_status( $job );
+        if ( VH360_Studio_Recording_Jobs::STATUS_PROCESSING === $job['status'] && ! empty( $status['videopress_guid'] ) && ! empty( $status['attachment_id'] ) ) {
+            $recording = $this->build_recording_payload_for_status( $job );
+            $completed = $this->complete_published_job(
+                $job,
+                array(
+                    'attachment_id'    => absint( $status['attachment_id'] ),
+                    'playback_url'      => ! empty( $status['playback_url'] ) ? esc_url_raw( $status['playback_url'] ) : '',
+                    'videopress_guid'  => sanitize_text_field( $status['videopress_guid'] ),
+                    'poster_url'        => ! empty( $status['poster_url'] ) ? esc_url_raw( $status['poster_url'] ) : '',
+                ),
+                $recording,
+                $provider
+            );
+            if ( ! is_wp_error( $completed ) ) {
+                return $completed;
+            }
+        }
+
+        $status['job_status'] = $job['status'];
+        $status['publish_provider_status'] = ! empty( $job['publish_provider_status'] ) ? sanitize_key( $job['publish_provider_status'] ) : '';
+        $status['replay_url'] = ! empty( $job['replay_video_id'] ) ? get_permalink( absint( $job['replay_video_id'] ) ) : '';
+        return $status;
+    }
+
+    private function complete_published_job( array $job, array $published, array $recording, VH360_Studio_Replay_Storage_Provider $provider ) {
         $replay = $this->replay_posts->create_or_update( $job, $published, $recording );
         if ( is_wp_error( $replay ) ) {
             $this->jobs->update( $job['id'], 0, array( 'publish_attempted_at' => current_time( 'mysql' ), 'publish_provider_status' => 'replay_post_failed' ) );
@@ -86,7 +142,8 @@ class VH360_Studio_Replay_Publisher {
         $ready = $this->jobs->mark_ready( $job['id'], 0, array(
             'wp_attachment_id'        => absint( $published['attachment_id'] ),
             'videopress_guid'         => sanitize_text_field( $published['videopress_guid'] ),
-            'playback_url'            => esc_url_raw( $published['playback_url'] ),
+            'playback_url'            => ! empty( $published['playback_url'] ) ? esc_url_raw( $published['playback_url'] ) : '',
+            'poster_url'              => ! empty( $published['poster_url'] ) ? esc_url_raw( $published['poster_url'] ) : '',
             'replay_video_id'         => absint( $replay['replay_video_id'] ),
             'publish_attempted_at'    => current_time( 'mysql' ),
             'publish_provider_status' => 'published',
@@ -113,18 +170,6 @@ class VH360_Studio_Replay_Publisher {
         );
     }
 
-    public function status( array $job ) {
-        $provider = $this->get_provider( $job, false );
-        if ( is_wp_error( $provider ) ) {
-            return $provider;
-        }
-        $status = $provider->get_publish_status( $job );
-        $status['job_status'] = $job['status'];
-        $status['publish_provider_status'] = ! empty( $job['publish_provider_status'] ) ? sanitize_key( $job['publish_provider_status'] ) : '';
-        $status['replay_url'] = ! empty( $job['replay_video_id'] ) ? get_permalink( absint( $job['replay_video_id'] ) ) : '';
-        return $status;
-    }
-
     private function get_provider( array $job, $require_processing = true ) {
         if ( $require_processing && VH360_Studio_Recording_Jobs::STATUS_PROCESSING !== $job['status'] ) {
             return new WP_Error( 'vh360_studio_invalid_publish_status', __( 'Publishing can only be prepared for processing jobs.', 'videohub360-studio' ), array( 'status' => 409 ) );
@@ -137,17 +182,7 @@ class VH360_Studio_Replay_Publisher {
     }
 
     private function build_recording_payload( array $job ) {
-        $recording = array(
-            'path'               => isset( $job['local_temp_path'] ) ? $job['local_temp_path'] : '',
-            'file_size'          => absint( $job['file_size'] ),
-            'mime_type'          => isset( $job['mime_type'] ) ? sanitize_mime_type( $job['mime_type'] ) : '',
-            'assembled_checksum' => isset( $job['assembled_checksum'] ) ? sanitize_text_field( $job['assembled_checksum'] ) : '',
-            'duration_seconds'   => absint( $job['duration_seconds'] ),
-            'source_type'        => sanitize_key( $job['source_type'] ),
-            'source_id'          => sanitize_text_field( $job['source_id'] ),
-            'live_video_id'      => absint( $job['live_video_id'] ),
-            'room_id'            => sanitize_text_field( $job['room_id'] ),
-        );
+        $recording = $this->build_recording_payload_for_status( $job );
 
         if ( empty( $recording['path'] ) || ! $this->chunks->is_path_in_base_directory( $recording['path'] ) || ! file_exists( $recording['path'] ) || ! is_file( $recording['path'] ) || ! is_readable( $recording['path'] ) ) {
             return new WP_Error( 'vh360_studio_recording_missing', __( 'Validated temporary recording is no longer available.', 'videohub360-studio' ), array( 'status' => 410 ) );
@@ -159,5 +194,19 @@ class VH360_Studio_Replay_Publisher {
             return new WP_Error( 'vh360_studio_recording_integrity_failed', __( 'Validated temporary recording checksum no longer matches.', 'videohub360-studio' ), array( 'status' => 409 ) );
         }
         return $recording;
+    }
+
+    private function build_recording_payload_for_status( array $job ) {
+        return array(
+            'path'               => isset( $job['local_temp_path'] ) ? $job['local_temp_path'] : '',
+            'file_size'          => absint( $job['file_size'] ),
+            'mime_type'          => isset( $job['mime_type'] ) ? sanitize_mime_type( $job['mime_type'] ) : '',
+            'assembled_checksum' => isset( $job['assembled_checksum'] ) ? sanitize_text_field( $job['assembled_checksum'] ) : '',
+            'duration_seconds'   => absint( $job['duration_seconds'] ),
+            'source_type'        => sanitize_key( $job['source_type'] ),
+            'source_id'          => sanitize_text_field( $job['source_id'] ),
+            'live_video_id'      => absint( $job['live_video_id'] ),
+            'room_id'            => sanitize_text_field( $job['room_id'] ),
+        );
     }
 }
