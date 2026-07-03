@@ -34,7 +34,9 @@ function shouldBypass(request) {
   // Never cache admin/auth/REST/ajax or highly personalized commerce/community areas.
   if (p.startsWith('/wp-admin') || p.startsWith('/wp-login.php')) return true;
   if (p.includes('/wp-json') || p.includes('/admin-ajax.php')) return true;
-  if (/(^|\/)(dashboard|my-account|account|cart|checkout|messages|notifications|login|logout|register|members|settings|billing|subscription|subscriptions|orders|payment-methods)(\/|$)/i.test(p)) return true;
+  if (/(^|\/)(dashboard|service|my-account|account|cart|checkout|messages|notifications|login|logout|register|members|settings|billing|subscription|subscriptions|orders|payment-methods)(\/|$)/i.test(p)) return true;
+  if (/(^|\/)(live|video|videos|watch)(\/|$)/i.test(p)) return true;
+  if (/agora|AgoraRTC|frontend-agora|agora-broadcaster/i.test(p)) return true;
 
   // Avoid preview, nonces, actions.
   const qp = url.searchParams;

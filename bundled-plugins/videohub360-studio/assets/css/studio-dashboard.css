@@ -258,3 +258,32 @@
     position: absolute;
     z-index: 3;
 }
+
+.vh360-studio-program-canvas {
+    background: var(--vh360-studio-black);
+    height: 100%;
+    inset: 0;
+    object-fit: cover;
+    opacity: 0;
+    position: absolute;
+    visibility: hidden;
+    width: 100%;
+    z-index: 2;
+}
+
+.vh360-studio-dashboard.is-program-active .vh360-studio-program-canvas {
+    opacity: 1;
+    visibility: visible;
+}
+
+.vh360-studio-dashboard.is-live .vh360-studio-program-canvas {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+}
+
+.vh360-studio-dashboard.is-program-active .vh360-studio-program-video {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+}

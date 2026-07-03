@@ -56,6 +56,7 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
                     <span class="vh360-studio-pill"><?php esc_html_e( 'Agora local output', 'videohub360-studio' ); ?></span>
                 </div>
                 <div class="vh360-studio-monitor-screen">
+                    <canvas class="vh360-studio-program-canvas" data-program-canvas aria-label="<?php esc_attr_e( 'Program output preview', 'videohub360-studio' ); ?>"></canvas>
                     <video class="vh360-studio-program-video" data-program-preview playsinline muted aria-label="<?php esc_attr_e( 'Program source preview', 'videohub360-studio' ); ?>"></video>
                     <div data-agora-local-preview class="vh360-studio-agora-preview"></div>
                     <span class="vh360-studio-monitor-empty" data-program-empty><?php esc_html_e( 'Choose a Preview source, then use Cut or Fade to send it to Program.', 'videohub360-studio' ); ?></span>
