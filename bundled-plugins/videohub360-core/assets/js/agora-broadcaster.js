@@ -30,7 +30,10 @@
                     await state.client.setClientRole('host');
                 }
                 state.audioTrack = await window.AgoraRTC.createMicrophoneAudioTrack(config.audioConfig || {});
-                if (config.initialVideoMediaStreamTrack && typeof window.AgoraRTC.createCustomVideoTrack === 'function') {
+                if (config.initialVideoTrack) {
+                    state.videoTrack = config.initialVideoTrack;
+                    state.videoTrackOwnsSource = false;
+                } else if (config.initialVideoMediaStreamTrack && typeof window.AgoraRTC.createCustomVideoTrack === 'function') {
                     state.videoTrack = window.AgoraRTC.createCustomVideoTrack({
                         mediaStreamTrack: config.initialVideoMediaStreamTrack
                     });
@@ -76,13 +79,13 @@
             }
 
             function stopAndMaybeCloseVideoTrack(track, ownsSource) {
-                if (!track) {
+                if (!track || !ownsSource) {
                     return;
                 }
                 if (typeof track.stop === 'function') {
                     track.stop();
                 }
-                if (ownsSource && typeof track.close === 'function') {
+                if (typeof track.close === 'function') {
                     track.close();
                 }
             }

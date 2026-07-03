@@ -103,8 +103,8 @@
 .vh360-studio-agora-preview video { height: 100%; object-fit: cover; width: 100%; }
 .vh360-studio-agora-preview { background: var(--vh360-studio-black); height: 100%; min-height: 100%; overflow: hidden; width: 100%; }
 .vh360-studio-monitor-empty { color: var(--vh360-studio-text-muted); font-size: 0.9rem; left: 50%; pointer-events: none; position: absolute; text-align: center; top: 50%; transform: translate(-50%, -50%); width: min(90%, 24rem); z-index: 3; }
-.vh360-studio-dashboard.is-preview-active .vh360-studio-monitor--preview [data-preview-empty],
-.vh360-studio-dashboard.is-screen-active .vh360-studio-monitor--preview [data-preview-empty],
+.vh360-studio-dashboard.is-preview-source-camera .vh360-studio-monitor--preview [data-preview-empty],
+.vh360-studio-dashboard.is-preview-source-screen .vh360-studio-monitor--preview [data-preview-empty],
 .vh360-studio-dashboard.is-live .vh360-studio-monitor--program [data-program-empty] { display: none; }
 
 .vh360-studio-transition-panel { align-items: stretch; background: var(--vh360-studio-panel-bg-strong); border: 1px solid var(--vh360-studio-panel-border); border-radius: 16px; display: flex; flex-direction: column; gap: 0.65rem; justify-content: center; padding: 0.85rem; text-align: center; }

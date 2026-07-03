@@ -193,6 +193,16 @@
         }
     }
 
+    function fallbackPreviewSource(endedSource) {
+        if (endedSource === 'screen' && state.cameraStream) {
+            return 'camera';
+        }
+        if (endedSource === 'camera' && state.screenStream) {
+            return 'screen';
+        }
+        return null;
+    }
+
     function renderPreviewState() {
         root.dataset.previewSource = state.previewSource || '';
         root.classList.toggle('is-preview-source-camera', state.previewSource === 'camera');
@@ -534,7 +544,8 @@
         setPreviewButtons(false);
         setShellClass('is-preview-active', false);
         if (state.previewSource === 'camera') {
-            state.previewSource = null;
+            state.previewSource = fallbackPreviewSource('camera');
+            renderPreviewState();
             renderSourceState();
         }
         if (state.programSource === 'camera') {
@@ -681,7 +692,8 @@
         setScreenButtons(false);
         setShellClass('is-screen-active', false);
         if (state.previewSource === 'screen') {
-            state.previewSource = null;
+            state.previewSource = fallbackPreviewSource('screen');
+            renderPreviewState();
             renderSourceState();
         }
         if (state.programSource === 'screen') {
@@ -701,7 +713,8 @@
         setScreenButtons(false);
         setShellClass('is-screen-active', false);
         if (state.previewSource === 'screen') {
-            state.previewSource = null;
+            state.previewSource = fallbackPreviewSource('screen');
+            renderPreviewState();
             renderSourceState();
         }
         if (state.programSource === 'screen') {
@@ -1249,6 +1262,7 @@
                 localContainer: els.agoraLocalPreview,
                 audioConfig: agoraAudioConfigFromSelection(),
                 videoConfig: agoraVideoConfigFromPreset(),
+                initialVideoTrack: state.programSource === 'screen' ? state.screenAgoraTrack : null,
                 initialVideoMediaStreamTrack: state.programStream ? state.programStream.getVideoTracks()[0] : null,
                 initialVideoSource: state.programSource || '',
             });
