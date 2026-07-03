@@ -459,6 +459,10 @@
     }
 
     async function startRecording() {
+        if (state.broadcastSession) {
+            setRecordingStatus('Start browser recording before Go Live for this phase. Recording from an active Agora broadcast track is not yet available.', 'error');
+            return;
+        }
         if (!state.support.mediaRecorder || !preferredMimeType()) {
             setRecordingStatus(strings.recorderUnavailable, 'error');
             return;
@@ -835,6 +839,14 @@
             setBroadcastStatus(strings.broadcastFailed, 'error');
             return;
         }
+        if (isRecordingActive()) {
+            setBroadcastStatus('Stop browser recording before going live. Recording from active Agora tracks is not yet available.', 'error');
+            return;
+        }
+        if (!state.broadcastVideoId && els.broadcastMode && els.broadcastMode.value === 'interactive' && els.broadcastRequirePasscode && els.broadcastRequirePasscode.checked && (!els.broadcastPasscode || !els.broadcastPasscode.value.trim())) {
+            setBroadcastStatus('Enter a passcode before enabling passcode access.', 'error');
+            return;
+        }
         setBroadcastStatus(strings.goingLive, 'info');
         if (els.goLive) els.goLive.disabled = true;
         stopPreview();
@@ -854,6 +866,7 @@
                 channelName: prepared.channelName,
                 token: prepared.token,
                 uid: prepared.uid,
+                clientMode: prepared.clientMode,
                 container: root,
                 localContainer: els.agoraLocalPreview,
                 audioConfig: agoraAudioConfigFromSelection(),
@@ -867,6 +880,19 @@
             if (els.endLive) els.endLive.disabled = false;
             setBroadcastStatus(strings.liveStarted, 'success');
         } catch (error) {
+            const failedVideoId = state.broadcastVideoId;
+            if (state.broadcastSession) {
+                await state.broadcastSession.stop().catch(() => {});
+                state.broadcastSession = null;
+            }
+            if (failedVideoId) {
+                await api('/broadcasts/' + failedVideoId + '/end', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } }).catch(() => {});
+            }
+            if (state.heartbeatTimer) {
+                window.clearInterval(state.heartbeatTimer);
+                state.heartbeatTimer = null;
+            }
+            if (els.endLive) els.endLive.disabled = true;
             if (els.goLive) els.goLive.disabled = false;
             setBroadcastStatus((error && error.message) || strings.broadcastFailed, 'error');
         }
@@ -888,7 +914,14 @@
             state.broadcastSession = null;
         }
         if (state.broadcastVideoId) {
-            await api('/broadcasts/' + state.broadcastVideoId + '/end', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } }).catch(() => {});
+            try {
+                await api('/broadcasts/' + state.broadcastVideoId + '/end', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
+            } catch (error) {
+                if (els.goLive) els.goLive.disabled = false;
+                if (els.endLive) els.endLive.disabled = true;
+                setBroadcastStatus('Local broadcast stopped, but WordPress could not mark the public livestream ended: ' + ((error && error.message) || 'Unknown error'), 'error');
+                return;
+            }
         }
         if (els.goLive) els.goLive.disabled = false;
         if (els.endLive) els.endLive.disabled = true;

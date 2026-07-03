@@ -67,6 +67,13 @@ class VideoHub360_Livestream_Service {
             $title = __( 'Untitled Livestream', 'videohub360' );
         }
 
+        $requested_mode = in_array( ( $data['agora_mode'] ?? 'broadcast' ), array( 'broadcast', 'interactive' ), true ) ? $data['agora_mode'] : 'broadcast';
+        $requested_everyone_is_host = ( 'interactive' === $requested_mode && ! empty( $data['agora_everyone_is_host'] ) && 'yes' === $data['agora_everyone_is_host'] ) ? 'yes' : 'no';
+        $requested_require_passcode = ( 'interactive' === $requested_mode && 'yes' !== $requested_everyone_is_host && ! empty( $data['require_passcode'] ) && 'yes' === $data['require_passcode'] );
+        if ( $requested_require_passcode && '' === sanitize_text_field( $data['host_passcode'] ?? '' ) && ( ! $post_id || '' === get_post_meta( $post_id, '_vh360_host_passcode', true ) ) ) {
+            return new WP_Error( 'vh360_livestream_passcode_required', __( 'A host passcode is required when passcode access is enabled.', 'videohub360' ), array( 'status' => 400 ) );
+        }
+
         $postarr = array(
             'post_type'    => 'videohub360',
             'post_title'   => $title,
@@ -96,9 +103,9 @@ class VideoHub360_Livestream_Service {
         }
         $channel = preg_replace( '/[^A-Za-z0-9_\-]/', '', $channel );
 
-        $mode = in_array( ( $data['agora_mode'] ?? 'broadcast' ), array( 'broadcast', 'interactive' ), true ) ? $data['agora_mode'] : 'broadcast';
-        $everyone_is_host = ( 'interactive' === $mode && ! empty( $data['agora_everyone_is_host'] ) && 'yes' === $data['agora_everyone_is_host'] ) ? 'yes' : 'no';
-        $require_passcode = ( 'interactive' === $mode && 'yes' !== $everyone_is_host && ! empty( $data['require_passcode'] ) && 'yes' === $data['require_passcode'] );
+        $mode = $requested_mode;
+        $everyone_is_host = $requested_everyone_is_host;
+        $require_passcode = $requested_require_passcode;
 
         $meta = array(
             '_vh360_context'                => 'default',
@@ -158,7 +165,9 @@ class VideoHub360_Livestream_Service {
         } elseif ( (bool) get_option( 'vh360_agora_require_tokens', 1 ) ) {
             return new WP_Error( 'vh360_livestream_missing_certificate', __( 'Agora App Certificate is required before Studio can broadcast.', 'videohub360' ), array( 'status' => 400 ) );
         }
-        return array_merge( $this->get_livestream_data( $post_id ), array( 'appId' => $app_id, 'token' => $token, 'uid' => $uid, 'role' => 'host', 'expiresAt' => $expires_at ) );
+        $agora_mode = get_post_meta( $post_id, '_vh360_agora_mode', true ) ?: 'broadcast';
+        $client_mode = 'interactive' === $agora_mode ? 'rtc' : 'live';
+        return array_merge( $this->get_livestream_data( $post_id ), array( 'appId' => $app_id, 'token' => $token, 'uid' => $uid, 'role' => 'host', 'expiresAt' => $expires_at, 'clientMode' => $client_mode ) );
     }
 
     public function mark_live( $post_id, $user_id = 0 ) {
@@ -220,6 +229,7 @@ class VideoHub360_Livestream_Service {
             'mode' => get_post_meta( $post_id, '_vh360_agora_mode', true ) ?: 'broadcast',
             'viewerPermalink' => get_permalink( $post_id ),
             'streamLive' => 'yes' === get_post_meta( $post_id, '_vh360_agora_stream_live', true ),
+            'clientMode' => 'interactive' === ( get_post_meta( $post_id, '_vh360_agora_mode', true ) ?: 'broadcast' ) ? 'rtc' : 'live',
         );
     }
 }

@@ -15,8 +15,11 @@
                 if (!window.AgoraRTC) {
                     throw new Error('Agora RTC SDK is unavailable.');
                 }
-                state.client = window.AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
-                state.client.setClientRole('host');
+                const clientMode = config.clientMode === 'rtc' ? 'rtc' : 'live';
+                state.client = window.AgoraRTC.createClient({ mode: clientMode, codec: 'vp8' });
+                if (clientMode === 'live' && typeof state.client.setClientRole === 'function') {
+                    await state.client.setClientRole('host');
+                }
                 state.audioTrack = await window.AgoraRTC.createMicrophoneAudioTrack(config.audioConfig || {});
                 state.videoTrack = await window.AgoraRTC.createCameraVideoTrack(config.videoConfig || {});
                 if (localContainer) {

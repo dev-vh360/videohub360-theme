@@ -401,6 +401,7 @@ class VH360_Studio_REST_Controller {
         if ( is_wp_error( $broadcast ) ) { return $broadcast; }
         $job = $this->jobs->create( get_current_user_id(), array(
             'source_type'      => 'livestream_video',
+            'source_id'        => 'videohub360-' . absint( $broadcast['videoId'] ),
             'live_video_id'    => absint( $broadcast['videoId'] ),
             'room_id'          => sanitize_text_field( $broadcast['channelName'] ),
             'recording_mode'   => 'browser',
