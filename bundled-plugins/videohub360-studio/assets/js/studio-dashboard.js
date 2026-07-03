@@ -31,6 +31,9 @@
         durationTimer: null,
         finalChunkCount: 0,
         currentJobStatus: '',
+        broadcastVideoId: null,
+        broadcastSession: null,
+        heartbeatTimer: null,
     };
 
     const els = {
@@ -71,6 +74,23 @@
         publishingStatus: root.querySelector('[data-publishing-status]'),
         replayLinkWrap: root.querySelector('[data-replay-link-wrap]'),
         replayLink: root.querySelector('[data-replay-link]'),
+        broadcastTitle: root.querySelector('[data-broadcast-title]'),
+        broadcastDescription: root.querySelector('[data-broadcast-description]'),
+        broadcastMode: root.querySelector('[data-broadcast-mode]'),
+        broadcastViewerCount: root.querySelector('[data-broadcast-viewer-count]'),
+        broadcastChat: root.querySelector('[data-broadcast-chat]'),
+        broadcastEveryoneHost: root.querySelector('[data-broadcast-everyone-host]'),
+        broadcastRequirePasscode: root.querySelector('[data-broadcast-require-passcode]'),
+        broadcastPasscode: root.querySelector('[data-broadcast-passcode]'),
+        broadcastPasscodeWrap: root.querySelector('[data-passcode-wrap]'),
+        interactiveOnly: root.querySelectorAll('[data-interactive-only]'),
+        goLive: root.querySelector('[data-go-live]'),
+        endLive: root.querySelector('[data-end-live]'),
+        broadcastStatus: root.querySelector('[data-broadcast-status]'),
+        agoraLocalPreview: root.querySelector('[data-agora-local-preview]'),
+        viewerLinkWrap: root.querySelector('[data-viewer-link-wrap]'),
+        viewerLink: root.querySelector('[data-viewer-link]'),
+        copyViewerLink: root.querySelector('[data-copy-viewer-link]'),
     };
 
     function setStatus(message, type) {
@@ -736,6 +756,111 @@
         stopScreenPreview();
     }
 
+
+    function setBroadcastStatus(message, type) {
+        if (els.broadcastStatus) {
+            els.broadcastStatus.textContent = message;
+            els.broadcastStatus.dataset.statusType = type || 'info';
+        }
+    }
+
+    function broadcastPayload() {
+        const mode = els.broadcastMode ? els.broadcastMode.value : 'broadcast';
+        return {
+            video_id: state.broadcastVideoId || 0,
+            title: els.broadcastTitle && els.broadcastTitle.value ? els.broadcastTitle.value : 'Studio Livestream',
+            description: els.broadcastDescription ? els.broadcastDescription.value : '',
+            agora_mode: mode,
+            viewer_count: !!(els.broadcastViewerCount && els.broadcastViewerCount.checked),
+            chat_enabled: !!(els.broadcastChat && els.broadcastChat.checked),
+            agora_everyone_is_host: mode === 'interactive' && !!(els.broadcastEveryoneHost && els.broadcastEveryoneHost.checked),
+            require_passcode: mode === 'interactive' && !!(els.broadcastRequirePasscode && els.broadcastRequirePasscode.checked),
+            host_passcode: els.broadcastPasscode ? els.broadcastPasscode.value : '',
+            quality_preset: els.qualitySelect ? els.qualitySelect.value : config.defaultQualityPreset,
+            storage_provider: els.storageSelect ? els.storageSelect.value : config.recommendedStorageProvider,
+        };
+    }
+
+    function updateBroadcastRules() {
+        const interactive = els.broadcastMode && els.broadcastMode.value === 'interactive';
+        els.interactiveOnly.forEach((el) => { el.hidden = !interactive; });
+        if (!interactive) {
+            if (els.broadcastEveryoneHost) els.broadcastEveryoneHost.checked = false;
+            if (els.broadcastRequirePasscode) els.broadcastRequirePasscode.checked = false;
+        }
+        if (els.broadcastEveryoneHost && els.broadcastEveryoneHost.checked && els.broadcastRequirePasscode) {
+            els.broadcastRequirePasscode.checked = false;
+            els.broadcastRequirePasscode.disabled = true;
+        } else if (els.broadcastRequirePasscode) {
+            els.broadcastRequirePasscode.disabled = false;
+        }
+        if (els.broadcastRequirePasscode && els.broadcastRequirePasscode.checked && els.broadcastEveryoneHost) {
+            els.broadcastEveryoneHost.checked = false;
+            els.broadcastEveryoneHost.disabled = true;
+        } else if (els.broadcastEveryoneHost) {
+            els.broadcastEveryoneHost.disabled = false;
+        }
+        if (els.broadcastPasscodeWrap) {
+            els.broadcastPasscodeWrap.hidden = !interactive || !els.broadcastRequirePasscode || !els.broadcastRequirePasscode.checked;
+        }
+    }
+
+    async function goLive() {
+        if (!window.VH360AgoraBroadcaster) {
+            setBroadcastStatus(strings.broadcastFailed, 'error');
+            return;
+        }
+        setBroadcastStatus(strings.goingLive, 'info');
+        if (els.goLive) els.goLive.disabled = true;
+        try {
+            const created = await api('/broadcasts', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify(broadcastPayload()) });
+            const broadcast = created.broadcast || {};
+            state.broadcastVideoId = broadcast.videoId;
+            state.activeJobId = created.job && created.job.id ? created.job.id : state.activeJobId;
+            if (els.viewerLink && broadcast.viewerPermalink) {
+                els.viewerLink.href = broadcast.viewerPermalink;
+                els.viewerLink.textContent = broadcast.viewerPermalink;
+                if (els.viewerLinkWrap) els.viewerLinkWrap.hidden = false;
+            }
+            const prepared = await api('/broadcasts/' + state.broadcastVideoId + '/prepare', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
+            state.broadcastSession = window.VH360AgoraBroadcaster.create({
+                appId: prepared.appId,
+                channelName: prepared.channelName,
+                token: prepared.token,
+                uid: prepared.uid,
+                container: root,
+                localContainer: els.agoraLocalPreview,
+            });
+            await state.broadcastSession.start();
+            await api('/broadcasts/' + state.broadcastVideoId + '/started', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ job_id: state.activeJobId || 0 }) });
+            state.heartbeatTimer = window.setInterval(() => {
+                api('/broadcasts/' + state.broadcastVideoId + '/heartbeat', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } }).catch(() => {});
+            }, 30000);
+            if (els.endLive) els.endLive.disabled = false;
+            setBroadcastStatus(strings.liveStarted, 'success');
+        } catch (error) {
+            if (els.goLive) els.goLive.disabled = false;
+            setBroadcastStatus((error && error.message) || strings.broadcastFailed, 'error');
+        }
+    }
+
+    async function endLive() {
+        if (state.heartbeatTimer) {
+            window.clearInterval(state.heartbeatTimer);
+            state.heartbeatTimer = null;
+        }
+        if (state.broadcastSession) {
+            await state.broadcastSession.stop();
+            state.broadcastSession = null;
+        }
+        if (state.broadcastVideoId) {
+            await api('/broadcasts/' + state.broadcastVideoId + '/end', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } }).catch(() => {});
+        }
+        if (els.goLive) els.goLive.disabled = false;
+        if (els.endLive) els.endLive.disabled = true;
+        setBroadcastStatus(strings.liveEnded, 'success');
+    }
+
     function bindEvents() {
         if (els.startPreview) {
             els.startPreview.addEventListener('click', startPreview);
@@ -791,6 +916,12 @@
         if (els.finalizeRecording) { els.finalizeRecording.addEventListener('click', finalizeRecording); }
         if (els.publishReplay) { els.publishReplay.addEventListener('click', publishReplay); }
         if (els.checkPublishingStatus) { els.checkPublishingStatus.addEventListener('click', checkPublishingStatus); }
+        if (els.broadcastMode) { els.broadcastMode.addEventListener('change', updateBroadcastRules); }
+        if (els.broadcastEveryoneHost) { els.broadcastEveryoneHost.addEventListener('change', updateBroadcastRules); }
+        if (els.broadcastRequirePasscode) { els.broadcastRequirePasscode.addEventListener('change', updateBroadcastRules); }
+        if (els.goLive) { els.goLive.addEventListener('click', goLive); }
+        if (els.endLive) { els.endLive.addEventListener('click', endLive); }
+        if (els.copyViewerLink) { els.copyViewerLink.addEventListener('click', () => { if (els.viewerLink && els.viewerLink.href) navigator.clipboard.writeText(els.viewerLink.href); }); }
         window.addEventListener('beforeunload', (event) => {
             if (isRecordingActive()) {
                 event.preventDefault();
@@ -811,5 +942,6 @@
     updateReadinessStatus();
     updateQualityDetails();
     updatePublishingButtons();
+    updateBroadcastRules();
     bindEvents();
 }());

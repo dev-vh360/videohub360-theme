@@ -39,7 +39,7 @@ class VH360_Studio_Recording_Jobs {
     }
 
     public function allowed_source_types() {
-        return array( 'studio_setup', 'live_room' );
+        return array( 'studio_setup', 'live_room', 'livestream_video' );
     }
 
     public function allowed_recording_modes() {

@@ -22,7 +22,34 @@ class VH360_Studio_REST_Controller {
         $this->publisher = new VH360_Studio_Replay_Publisher( VH360_Studio_Plugin::instance()->registry(), $jobs, $this->validator, $this->chunks );
     }
 
+    private function livestream_service() {
+        return class_exists( 'VideoHub360_Livestream_Service' ) ? new VideoHub360_Livestream_Service() : null;
+    }
+
     public function register_routes() {
+        register_rest_route(
+            'vh360-studio/v1',
+            '/broadcasts',
+            array(
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => array( $this, 'create_broadcast' ),
+                'permission_callback' => array( $this, 'permissions_check' ),
+            )
+        );
+
+        foreach ( array( 'prepare', 'started', 'heartbeat', 'end' ) as $broadcast_action ) {
+            register_rest_route(
+                'vh360-studio/v1',
+                '/broadcasts/(?P<video_id>\d+)/' . $broadcast_action,
+                array(
+                    'methods'             => WP_REST_Server::CREATABLE,
+                    'callback'            => array( $this, 'broadcast_' . $broadcast_action ),
+                    'permission_callback' => array( $this, 'permissions_check' ),
+                    'args'                => array( 'video_id' => $this->get_id_arg() ),
+                )
+            );
+        }
+
         register_rest_route(
             'vh360-studio/v1',
             '/jobs',
@@ -346,6 +373,74 @@ class VH360_Studio_REST_Controller {
             unset( $job['local_temp_path'] );
         }
         return $job;
+    }
+
+    private function broadcast_payload( WP_REST_Request $request ) {
+        $mode = $request->get_param( 'agora_mode' ) ?: 'broadcast';
+        $everyone = rest_sanitize_boolean( $request->get_param( 'agora_everyone_is_host' ) ) ? 'yes' : 'no';
+        $require = rest_sanitize_boolean( $request->get_param( 'require_passcode' ) ) ? 'yes' : 'no';
+        if ( 'broadcast' === $mode ) { $everyone = 'no'; $require = 'no'; }
+        if ( 'yes' === $everyone ) { $require = 'no'; }
+        return array(
+            'title'                  => $request->get_param( 'title' ),
+            'description'            => $request->get_param( 'description' ),
+            'agora_mode'             => in_array( $mode, array( 'broadcast', 'interactive' ), true ) ? $mode : 'broadcast',
+            'viewer_count'           => rest_sanitize_boolean( $request->get_param( 'viewer_count' ) ) ? 'yes' : 'no',
+            'chat_enabled'           => rest_sanitize_boolean( $request->get_param( 'chat_enabled' ) ) ? 'yes' : 'no',
+            'agora_everyone_is_host' => $everyone,
+            'require_passcode'       => $require,
+            'host_passcode'          => $request->get_param( 'host_passcode' ),
+        );
+    }
+
+    public function create_broadcast( WP_REST_Request $request ) {
+        $service = $this->livestream_service();
+        if ( ! $service ) { return new WP_Error( 'vh360_studio_core_missing', __( 'VideoHub360 Core livestream service is unavailable.', 'videohub360-studio' ), array( 'status' => 500 ) ); }
+        $video_id = absint( $request->get_param( 'video_id' ) );
+        $broadcast = $service->create_or_update_default_agora_livestream( get_current_user_id(), $this->broadcast_payload( $request ), $video_id );
+        if ( is_wp_error( $broadcast ) ) { return $broadcast; }
+        $job = $this->jobs->create( get_current_user_id(), array(
+            'source_type'      => 'livestream_video',
+            'live_video_id'    => absint( $broadcast['videoId'] ),
+            'room_id'          => sanitize_text_field( $broadcast['channelName'] ),
+            'recording_mode'   => 'browser',
+            'quality_preset'   => sanitize_key( $request->get_param( 'quality_preset' ) ?: VH360_Studio_Quality_Presets::DEFAULT_PRESET ),
+            'storage_provider' => sanitize_key( $request->get_param( 'storage_provider' ) ?: 'videopress' ),
+        ) );
+        return rest_ensure_response( array( 'broadcast' => $broadcast, 'job' => $this->prepare_job_response( $job ) ) );
+    }
+
+    public function broadcast_prepare( WP_REST_Request $request ) {
+        $service = $this->livestream_service();
+        if ( ! $service ) { return new WP_Error( 'vh360_studio_core_missing', __( 'VideoHub360 Core livestream service is unavailable.', 'videohub360-studio' ), array( 'status' => 500 ) ); }
+        return rest_ensure_response( $service->prepare_agora_broadcast_data( absint( $request['video_id'] ), get_current_user_id() ) );
+    }
+
+    public function broadcast_started( WP_REST_Request $request ) {
+        $service = $this->livestream_service();
+        if ( ! $service ) { return new WP_Error( 'vh360_studio_core_missing', __( 'VideoHub360 Core livestream service is unavailable.', 'videohub360-studio' ), array( 'status' => 500 ) ); }
+        $service->mark_live( absint( $request['video_id'] ) );
+        $job_id = absint( $request->get_param( 'job_id' ) );
+        $job = null;
+        if ( $job_id ) {
+            $job = $this->jobs->update( $job_id, get_current_user_id(), array(
+                'status'        => VH360_Studio_Recording_Jobs::STATUS_RECORDING,
+                'live_video_id' => absint( $request['video_id'] ),
+                'started_at'    => current_time( 'mysql' ),
+            ) );
+        }
+        return rest_ensure_response( array( 'stream_live' => true, 'job' => $this->prepare_job_response( $job ) ) );
+    }
+
+    public function broadcast_heartbeat( WP_REST_Request $request ) {
+        return rest_ensure_response( array( 'ok' => true, 'server_time' => current_time( 'mysql' ) ) );
+    }
+
+    public function broadcast_end( WP_REST_Request $request ) {
+        $service = $this->livestream_service();
+        if ( ! $service ) { return new WP_Error( 'vh360_studio_core_missing', __( 'VideoHub360 Core livestream service is unavailable.', 'videohub360-studio' ), array( 'status' => 500 ) ); }
+        $service->mark_ended( absint( $request['video_id'] ) );
+        return rest_ensure_response( array( 'stream_live' => false ) );
     }
 
     public function list_jobs( WP_REST_Request $request ) {
