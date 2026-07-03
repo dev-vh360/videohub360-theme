@@ -52,8 +52,6 @@
                 emit(root, 'ended', {});
             }
 
-            window.addEventListener('beforeunload', function () { stop(); });
-
             return {
                 start: start,
                 stop: stop,
