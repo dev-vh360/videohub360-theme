@@ -49,10 +49,10 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
 
             <section class="vh360-studio-transition-panel" aria-labelledby="vh360-studio-transition-title">
                 <h3 id="vh360-studio-transition-title"><?php esc_html_e( 'Transition', 'videohub360-studio' ); ?></h3>
-                <button type="button" class="vh360-studio-button vh360-studio-button--secondary" disabled><?php esc_html_e( 'Cut', 'videohub360-studio' ); ?></button>
-                <button type="button" class="vh360-studio-button vh360-studio-button--secondary" disabled><?php esc_html_e( 'Fade', 'videohub360-studio' ); ?></button>
+                <button type="button" class="vh360-studio-button vh360-studio-button--secondary" disabled title="<?php esc_attr_e( 'Reserved for the upcoming source-switching workflow', 'videohub360-studio' ); ?>"><?php esc_html_e( 'Cut', 'videohub360-studio' ); ?></button>
+                <button type="button" class="vh360-studio-button vh360-studio-button--secondary" disabled title="<?php esc_attr_e( 'Reserved for the upcoming source-switching workflow', 'videohub360-studio' ); ?>"><?php esc_html_e( 'Fade', 'videohub360-studio' ); ?></button>
                 <div class="vh360-studio-transition-duration"><?php esc_html_e( 'Duration: 300 ms', 'videohub360-studio' ); ?></div>
-                <p><?php esc_html_e( 'Preview to Program switching is intentionally disabled until Phase 1H.', 'videohub360-studio' ); ?></p>
+                <p><?php esc_html_e( 'Transition controls are reserved for the upcoming source-switching workflow.', 'videohub360-studio' ); ?></p>
             </section>
 
             <section class="vh360-studio-monitor vh360-studio-monitor--program" aria-labelledby="vh360-studio-program-title">
@@ -76,7 +76,7 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
                         <li><button type="button" disabled><?php esc_html_e( 'Camera Only', 'videohub360-studio' ); ?></button></li>
                         <li><button type="button" disabled><?php esc_html_e( 'Screen Share', 'videohub360-studio' ); ?></button></li>
                     </ul>
-                    <p class="vh360-studio-help"><?php esc_html_e( 'Scene buttons are visual placeholders in Phase 1G.', 'videohub360-studio' ); ?></p>
+                    <p class="vh360-studio-help"><?php esc_html_e( 'Scene switching will be available in a future Studio update.', 'videohub360-studio' ); ?></p>
                 </div>
             </section>
 
