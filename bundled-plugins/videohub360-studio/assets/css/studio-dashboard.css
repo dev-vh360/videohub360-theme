@@ -194,6 +194,15 @@
 .vh360-studio-scene-control-button:focus { border-color: var(--vh360-studio-primary); color: var(--vh360-studio-primary); outline: none; }
 .vh360-studio-scene-control-button:disabled { cursor: not-allowed; opacity: 0.45; }
 
+.vh360-studio-scene-add-menu-wrap { position: relative; }
+.vh360-studio-scene-add-menu { background: var(--vh360-studio-panel-bg); border: 1px solid var(--vh360-studio-panel-border); border-radius: 12px; bottom: calc(100% + 0.5rem); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35); display: grid; gap: 0.25rem; left: 50%; min-width: 190px; padding: 0.4rem; position: absolute; transform: translateX(-50%); z-index: 20; }
+.vh360-studio-scene-add-menu[hidden] { display: none !important; }
+.vh360-studio-scene-add-menu button { background: transparent; border: 0; border-radius: 9px; color: var(--vh360-studio-text); cursor: pointer; display: grid; gap: 0.15rem; padding: 0.65rem 0.75rem; text-align: left; width: 100%; }
+.vh360-studio-scene-add-menu button:hover,
+.vh360-studio-scene-add-menu button:focus { background: var(--vh360-studio-panel-bg-strong); outline: none; }
+.vh360-studio-scene-add-menu span { font-weight: 800; }
+.vh360-studio-scene-add-menu small { color: var(--vh360-studio-text-muted); font-size: 0.78rem; }
+
 .vh360-studio-audio-channel { background: var(--vh360-studio-panel-bg-strong); border: 1px solid var(--vh360-studio-panel-border); border-radius: 12px; padding: 0.75rem; }
 .vh360-studio-meter { background: var(--vh360-studio-black); border: 1px solid var(--vh360-studio-panel-border); border-radius: 999px; height: 18px; margin-top: 0.75rem; overflow: hidden; }
 .vh360-studio-meter span { background: linear-gradient(90deg, var(--vh360-studio-success), var(--vh360-studio-warning) 68%, var(--vh360-studio-danger)); display: block; height: 100%; transition: width 120ms linear; width: 0; }

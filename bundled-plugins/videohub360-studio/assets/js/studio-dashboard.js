@@ -41,6 +41,8 @@
         programSource: null,
         programStream: null,
         mediaSources: new Map(),
+        mediaSourceModalMode: 'upload',
+        localMediaSourceCounter: 0,
         programCanvas: null,
         programContext: null,
         programOutputStream: null,
@@ -122,9 +124,14 @@
         copyViewerLink: root.querySelector('[data-copy-viewer-link]'),
         studioFullscreen: root.querySelector('[data-studio-fullscreen]'),
         copyViewerFeedback: root.querySelector('[data-copy-viewer-feedback]'),
-        openMediaSourceModal: root.querySelector('[data-open-media-source-modal]'),
+        mediaSourceMenuToggle: root.querySelector('[data-toggle-media-source-menu]'),
+        mediaSourceMenu: root.querySelector('[data-media-source-menu]'),
+        openLocalMediaSource: root.querySelector('[data-open-local-media-source]'),
+        openUploadMediaSource: root.querySelector('[data-open-upload-media-source]'),
         deleteSelectedMediaScene: root.querySelector('[data-delete-selected-media-scene]'),
         mediaSourceModal: root.querySelector('[data-media-source-modal]'),
+        mediaSourceModalTitle: root.querySelector('[data-media-source-modal-title]'),
+        mediaSourceModalHelp: root.querySelector('[data-media-source-modal-help]'),
         closeMediaSourceModal: root.querySelectorAll('[data-close-media-source-modal]'),
         persistentMediaSourceInput: root.querySelector('[data-persistent-media-source-input]'),
         persistentMediaSourceName: root.querySelector('[data-persistent-media-source-name]'),
@@ -1050,12 +1057,48 @@
         els.persistentMediaSourceStatus.hidden = !message;
     }
 
-    function openMediaSourceModal() {
-        if (!els.mediaSourceModal) {
+    function toggleMediaSourceMenu() {
+        if (!els.mediaSourceMenu || !els.mediaSourceMenuToggle) {
             return;
         }
+
+        const open = els.mediaSourceMenu.hidden;
+        els.mediaSourceMenu.hidden = !open;
+        els.mediaSourceMenuToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    function closeMediaSourceMenu() {
+        if (els.mediaSourceMenu) {
+            els.mediaSourceMenu.hidden = true;
+        }
+
+        if (els.mediaSourceMenuToggle) {
+            els.mediaSourceMenuToggle.setAttribute('aria-expanded', 'false');
+        }
+    }
+
+    function openMediaSourceModal(mode) {
+        state.mediaSourceModalMode = mode === 'local' ? 'local' : 'upload';
         resetMediaSourceModal();
-        els.mediaSourceModal.hidden = false;
+
+        if (els.mediaSourceModalTitle) {
+            els.mediaSourceModalTitle.textContent = state.mediaSourceModalMode === 'local' ? 'Add Local Media' : 'Upload to Studio';
+        }
+
+        if (els.mediaSourceModalHelp) {
+            els.mediaSourceModalHelp.textContent = state.mediaSourceModalMode === 'local'
+                ? 'Local media is available for this Studio session only and is not uploaded to WordPress.'
+                : 'Uploaded media will be saved to Studio and remain available until you delete it.';
+        }
+
+        if (els.importMediaSource) {
+            els.importMediaSource.textContent = state.mediaSourceModalMode === 'local' ? 'Add Local Media' : 'Upload to Studio';
+        }
+
+        if (els.mediaSourceModal) {
+            els.mediaSourceModal.hidden = false;
+        }
+
         if (els.persistentMediaSourceInput) {
             els.persistentMediaSourceInput.focus();
         }
@@ -1084,6 +1127,74 @@
             els.persistentMediaSourceName.value = filenameWithoutExtension(file.name);
         }
         setMediaSourceModalStatus('', 'info');
+    }
+
+    async function importSelectedMediaSource() {
+        if (state.mediaSourceModalMode === 'local') {
+            await importLocalMediaSource();
+            return;
+        }
+
+        await importPersistentMediaSource();
+    }
+
+    async function importLocalMediaSource() {
+        const file = els.persistentMediaSourceInput && els.persistentMediaSourceInput.files && els.persistentMediaSourceInput.files[0];
+        const displayName = els.persistentMediaSourceName ? els.persistentMediaSourceName.value.trim() : '';
+
+        if (!file) {
+            setMediaSourceModalStatus('Choose an image or video file.', 'error');
+            return;
+        }
+
+        if (!file.type || file.type.indexOf('image/') !== 0 && file.type.indexOf('video/') !== 0) {
+            setMediaSourceModalStatus('Choose an image or video file.', 'error');
+            return;
+        }
+
+        if (!displayName) {
+            setMediaSourceModalStatus('Enter a display name before adding this source.', 'error');
+            return;
+        }
+
+        if (els.importMediaSource) {
+            els.importMediaSource.disabled = true;
+        }
+
+        try {
+            const type = file.type.indexOf('image/') === 0 ? 'image' : 'video';
+            const id = 'local-' + (++state.localMediaSourceCounter);
+            const url = URL.createObjectURL(file);
+            const source = {
+                id,
+                attachmentId: null,
+                sourceId: 'media:' + id,
+                type,
+                name: displayName,
+                url,
+                mime: file.type,
+                filename: file.name || '',
+                element: null,
+                persistent: false,
+                local: true,
+                inScenes: false,
+            };
+
+            source.element = createMediaElement(source);
+            state.mediaSources.set(id, source);
+            addMediaSourceToScenes(id);
+
+            closeMediaSourceModal();
+            selectSceneSource(source.sourceId);
+            await setPreviewSource(source.sourceId);
+            setStatus('Local media added for this Studio session.', 'success');
+        } catch (error) {
+            setMediaSourceModalStatus((error && error.message) || 'Local media could not be added.', 'error');
+        } finally {
+            if (els.importMediaSource) {
+                els.importMediaSource.disabled = false;
+            }
+        }
     }
 
     async function importPersistentMediaSource() {
@@ -1282,6 +1393,55 @@
         setStatus('Media source deleted from Studio.', 'success');
     }
 
+    async function deleteMediaSource(sourceId) {
+        const source = getMediaSource(sourceId);
+
+        if (!source) {
+            return;
+        }
+
+        if (source.persistent) {
+            await deletePersistentMediaSource(sourceId);
+        } else {
+            deleteLocalMediaSource(sourceId);
+        }
+    }
+
+    function deleteLocalMediaSource(sourceId) {
+        const source = getMediaSource(sourceId);
+
+        if (!source) {
+            return;
+        }
+
+        if (state.selectedSceneSource === source.sourceId) {
+            state.selectedSceneSource = '';
+        }
+
+        if (state.previewSource === source.sourceId) {
+            state.previewSource = null;
+        }
+
+        if (state.programSource === source.sourceId) {
+            state.programSource = null;
+            state.programStream = null;
+        }
+
+        removeMediaSceneButton(source.sourceId);
+        releaseMediaSource(source);
+        state.mediaSources.delete(String(source.id));
+
+        if (els.mediaPreview) {
+            els.mediaPreview.innerHTML = '';
+        }
+
+        renderPreviewState();
+        renderProgramState();
+        renderSourceState();
+        renderSceneControls();
+        setStatus('Local media removed from this Studio session.', 'success');
+    }
+
     async function deleteSelectedMediaScene() {
         const mediaSource = getSelectedMediaSource();
 
@@ -1302,14 +1462,18 @@
             return;
         }
 
-        const confirmed = window.confirm('Delete this media source from Studio?');
+        const confirmed = window.confirm(
+            mediaSource.persistent
+                ? 'Delete this uploaded media source from Studio?'
+                : 'Remove this local media source from this Studio session?'
+        );
 
         if (!confirmed) {
             return;
         }
 
         try {
-            await deletePersistentMediaSource(mediaSource.sourceId);
+            await deleteMediaSource(mediaSource.sourceId);
         } catch (error) {
             setStatus((error && error.message) || 'Media source could not be deleted.', 'error');
         }
@@ -1962,17 +2126,44 @@
                 setPreviewSource(sourceId);
             });
         }
-        if (els.openMediaSourceModal) {
-            els.openMediaSourceModal.addEventListener('click', openMediaSourceModal);
-        }
         els.closeMediaSourceModal.forEach((button) => {
             button.addEventListener('click', closeMediaSourceModal);
         });
         if (els.persistentMediaSourceInput) {
             els.persistentMediaSourceInput.addEventListener('change', handlePersistentMediaFileSelected);
         }
+        if (els.mediaSourceMenuToggle) {
+            els.mediaSourceMenuToggle.addEventListener('click', (event) => {
+                event.stopPropagation();
+                toggleMediaSourceMenu();
+            });
+        }
+        if (els.openLocalMediaSource) {
+            els.openLocalMediaSource.addEventListener('click', () => {
+                closeMediaSourceMenu();
+                openMediaSourceModal('local');
+            });
+        }
+        if (els.openUploadMediaSource) {
+            els.openUploadMediaSource.addEventListener('click', () => {
+                closeMediaSourceMenu();
+                openMediaSourceModal('upload');
+            });
+        }
+        document.addEventListener('click', (event) => {
+            if (!els.mediaSourceMenu || !els.mediaSourceMenuToggle) {
+                return;
+            }
+
+            const clickedMenu = els.mediaSourceMenu.contains(event.target);
+            const clickedToggle = els.mediaSourceMenuToggle.contains(event.target);
+
+            if (!clickedMenu && !clickedToggle) {
+                closeMediaSourceMenu();
+            }
+        });
         if (els.importMediaSource) {
-            els.importMediaSource.addEventListener('click', importPersistentMediaSource);
+            els.importMediaSource.addEventListener('click', importSelectedMediaSource);
         }
         if (els.deleteSelectedMediaScene) {
             els.deleteSelectedMediaScene.addEventListener('click', deleteSelectedMediaScene);

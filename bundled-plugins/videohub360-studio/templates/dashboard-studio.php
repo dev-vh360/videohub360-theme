@@ -84,9 +84,30 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
                         <li><button type="button" data-scene-source="screen"><?php esc_html_e( 'Screen Share', 'videohub360-studio' ); ?></button></li>
                     </ul>
                     <div class="vh360-studio-scene-controls" aria-label="<?php esc_attr_e( 'Scene controls', 'videohub360-studio' ); ?>">
-                        <button type="button" class="vh360-studio-scene-control-button" data-open-media-source-modal aria-label="<?php esc_attr_e( 'Add media source', 'videohub360-studio' ); ?>">
-                            <span aria-hidden="true">+</span>
-                        </button>
+                        <div class="vh360-studio-scene-add-menu-wrap">
+                            <button
+                                type="button"
+                                class="vh360-studio-scene-control-button"
+                                data-toggle-media-source-menu
+                                aria-label="<?php esc_attr_e( 'Add media source', 'videohub360-studio' ); ?>"
+                                aria-haspopup="true"
+                                aria-expanded="false"
+                            >
+                                <span aria-hidden="true">+</span>
+                            </button>
+
+                            <div class="vh360-studio-scene-add-menu" data-media-source-menu hidden>
+                                <button type="button" data-open-local-media-source>
+                                    <span><?php esc_html_e( 'Local Media', 'videohub360-studio' ); ?></span>
+                                    <small><?php esc_html_e( 'Current session only', 'videohub360-studio' ); ?></small>
+                                </button>
+
+                                <button type="button" data-open-upload-media-source>
+                                    <span><?php esc_html_e( 'Upload to Studio', 'videohub360-studio' ); ?></span>
+                                    <small><?php esc_html_e( 'Saved until deleted', 'videohub360-studio' ); ?></small>
+                                </button>
+                            </div>
+                        </div>
 
                         <button type="button" class="vh360-studio-scene-control-button" data-delete-selected-media-scene aria-label="<?php esc_attr_e( 'Delete selected media scene', 'videohub360-studio' ); ?>" disabled>
                             <span aria-hidden="true">−</span>
@@ -216,7 +237,7 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
 
         <div class="vh360-studio-modal__panel">
             <div class="vh360-studio-modal__header">
-                <h3 id="vh360-studio-media-source-title"><?php esc_html_e( 'Add Media Source', 'videohub360-studio' ); ?></h3>
+                <h3 id="vh360-studio-media-source-title" data-media-source-modal-title><?php esc_html_e( 'Add Media Source', 'videohub360-studio' ); ?></h3>
                 <button type="button" class="vh360-studio-modal__close" data-close-media-source-modal aria-label="<?php esc_attr_e( 'Close', 'videohub360-studio' ); ?>">×</button>
             </div>
 
@@ -231,7 +252,7 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
                     <input type="text" data-persistent-media-source-name maxlength="120" placeholder="<?php esc_attr_e( 'Example: Welcome Video', 'videohub360-studio' ); ?>">
                 </label>
 
-                <p class="vh360-studio-help">
+                <p class="vh360-studio-help" data-media-source-modal-help>
                     <?php esc_html_e( 'Imported media will be saved to Studio and remain available until you delete it.', 'videohub360-studio' ); ?>
                 </p>
 
