@@ -440,9 +440,11 @@
             return;
         }
 
-        const viewerWindow = window.open(state.viewerPermalink, '_blank', 'noopener,noreferrer');
+        const viewerWindow = window.open(state.viewerPermalink, '_blank');
 
-        if (!viewerWindow) {
+        if (viewerWindow) {
+            viewerWindow.opener = null;
+        } else {
             setBroadcastStatus('Popup blocking prevented the viewer page from opening. Allow popups for this site and try again.', 'warning');
         }
     }
