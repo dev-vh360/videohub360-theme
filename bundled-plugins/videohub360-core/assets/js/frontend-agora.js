@@ -632,7 +632,15 @@ window.initializeAgoraPlayer = function(config) {
 
     let isOriginalHost = config.studioControlled ? false : config.isOriginalHost;
     let canModerate = config.canModerate;
-    let security = config.security;
+    let security = config.security || {};
+
+    if (config.studioControlled) {
+        config.displayName = config.viewerDisplayName || config.displayName || 'Guest';
+        config.userId = config.viewerUserId || config.userId || 0;
+        security.user_id = config.viewerUserId || security.user_id || 0;
+        security.display_name = config.viewerDisplayName || security.display_name || config.displayName || 'Guest';
+        security.avatar_url = config.viewerAvatarUrl || config.viewerAvatar || security.avatar_url || config.avatarUrl || '';
+    }
 
     // === Helper Functions ===
 
@@ -946,19 +954,25 @@ window.initializeAgoraPlayer = function(config) {
         thumbnailRailStage = null;
     }
 
+    function isStudioHostUid(uid) {
+        return !!(config.studioControlled && config.studioHostUid && String(uid) === String(config.studioHostUid));
+    }
+
     function resolveWordPressUserId(uid, options = {}) {
         if (Object.prototype.hasOwnProperty.call(options, 'wordpressUserId')) return options.wordpressUserId || null;
+        if (isStudioHostUid(uid)) return config.studioHostUserId || null;
         if (window.pendingUserInfo && window.pendingUserInfo[uid] && window.pendingUserInfo[uid].wordpressUserId) return window.pendingUserInfo[uid].wordpressUserId;
         if (remoteUsers[uid] && remoteUsers[uid].wordpressUserId) return remoteUsers[uid].wordpressUserId;
-        if (currentUserUID && String(uid) === String(currentUserUID)) return security.user_id || null;
+        if (currentUserUID && String(uid) === String(currentUserUID)) return config.viewerUserId || security.user_id || null;
         return null;
     }
 
     function resolveParticipantDisplayName(uid, options = {}) {
         if (options.displayName) return options.displayName;
+        if (isStudioHostUid(uid) && config.studioHostDisplayName) return config.studioHostDisplayName;
         if (window.pendingUserInfo && window.pendingUserInfo[uid] && window.pendingUserInfo[uid].displayName) return window.pendingUserInfo[uid].displayName;
         if (remoteUsers[uid] && remoteUsers[uid].displayName) return remoteUsers[uid].displayName;
-        if (currentUserUID && String(uid) === String(currentUserUID)) return config.displayName || security.display_name || `User ${uid}`;
+        if (currentUserUID && String(uid) === String(currentUserUID)) return config.viewerDisplayName || config.displayName || security.display_name || `User ${uid}`;
         return `User ${uid}`;
     }
 
@@ -2570,8 +2584,15 @@ window.initializeAgoraPlayer = function(config) {
             let initialDisplayName = `User ${user.uid}`;
             let wordpressUserId = null;
             let isUserOriginalHost = user.uid === originalHostUID;
+            const isStudioHost = isStudioHostUid(user.uid);
 
-            if (window.pendingUserInfo && window.pendingUserInfo[user.uid]) {
+            if (isStudioHost) {
+                initialDisplayName = config.studioHostDisplayName || initialDisplayName;
+                wordpressUserId = config.studioHostUserId || null;
+                isUserOriginalHost = false;
+            }
+
+            if (!isStudioHost && window.pendingUserInfo && window.pendingUserInfo[user.uid]) {
                 const pendingInfo = window.pendingUserInfo[user.uid];
                 initialDisplayName = pendingInfo.displayName || initialDisplayName;
                 wordpressUserId = pendingInfo.wordpressUserId || null;
@@ -2600,6 +2621,10 @@ window.initializeAgoraPlayer = function(config) {
                 wordpressUserId: wordpressUserId,
                 isOriginalHost: isUserOriginalHost
             });
+            if (isStudioHost && participant) {
+                participant.displayName = config.studioHostDisplayName || participant.displayName;
+                participant.wordpressUserId = config.studioHostUserId || participant.wordpressUserId;
+            }
             if (participant.videoContainerElement && window.videoElementManager) {
                 window.videoElementManager.unregisterTrackBinding(participant.videoContainerElement.id);
             }
@@ -2635,9 +2660,10 @@ window.initializeAgoraPlayer = function(config) {
                 window.vh360Log("Agora: Audio track subscribed for UID:", user.uid, "- Volume tracking enabled");
             }
 
+            const isStudioHostAudio = isStudioHostUid(user.uid);
             let displayName = resolveParticipantDisplayName(user.uid);
             let wordpressUserId = resolveWordPressUserId(user.uid);
-            if (window.pendingUserInfo && window.pendingUserInfo[user.uid]) {
+            if (!isStudioHostAudio && window.pendingUserInfo && window.pendingUserInfo[user.uid]) {
                 displayName = window.pendingUserInfo[user.uid].displayName || displayName;
                 wordpressUserId = window.pendingUserInfo[user.uid].wordpressUserId || wordpressUserId;
                 delete window.pendingUserInfo[user.uid];
