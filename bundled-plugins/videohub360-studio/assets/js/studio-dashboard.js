@@ -56,6 +56,7 @@
         broadcastEnding: false,
         programSwitching: false,
         lastAgoraConnectionState: '',
+        mediaControlsExpanded: false,
     };
 
     const els = {
@@ -67,6 +68,7 @@
         programEmpty: root.querySelector('[data-program-empty]'),
         sceneList: root.querySelector('[data-scene-list]'),
         mediaPreview: root.querySelector('[data-media-preview]'),
+        toggleMediaControls: root.querySelector('[data-toggle-media-controls]'),
         mediaPlaybackControls: root.querySelector('[data-media-playback-controls]'),
         mediaPlayPause: root.querySelector('[data-media-play-pause]'),
         mediaPlayPauseLabel: root.querySelector('[data-media-play-pause-label]'),
@@ -364,6 +366,9 @@
 
     function selectSceneSource(sourceId) {
         state.selectedSceneSource = sourceId || '';
+        if (!getActiveMediaSource()) {
+            state.mediaControlsExpanded = false;
+        }
         renderSourceState();
         renderSceneControls();
         renderMediaPlaybackControls();
@@ -441,14 +446,29 @@
 
     function renderSelectedMediaControls() {
         const source = getActiveMediaSource();
-        const show = Boolean(source);
+        const hasMedia = Boolean(source);
 
-        if (els.selectedMediaControls) {
-            els.selectedMediaControls.hidden = !show;
+        if (els.toggleMediaControls) {
+            els.toggleMediaControls.hidden = !hasMedia;
+            els.toggleMediaControls.disabled = !hasMedia;
+            els.toggleMediaControls.setAttribute(
+                'aria-expanded',
+                hasMedia && state.mediaControlsExpanded ? 'true' : 'false'
+            );
         }
 
-        if (!source) {
+        if (!hasMedia) {
+            state.mediaControlsExpanded = false;
+
+            if (els.selectedMediaControls) {
+                els.selectedMediaControls.hidden = true;
+            }
+
             return;
+        }
+
+        if (els.selectedMediaControls) {
+            els.selectedMediaControls.hidden = !state.mediaControlsExpanded;
         }
 
         const transform = source.transform || defaultMediaTransform();
@@ -2381,6 +2401,19 @@
         }).catch(() => {});
     }
 
+    function toggleSelectedMediaControls() {
+        const source = getActiveMediaSource();
+
+        if (!source) {
+            state.mediaControlsExpanded = false;
+            renderSelectedMediaControls();
+            return;
+        }
+
+        state.mediaControlsExpanded = !state.mediaControlsExpanded;
+        renderSelectedMediaControls();
+    }
+
     function toggleSelectedMediaPlayback() {
         const source = getActiveVideoMediaSource();
 
@@ -2567,6 +2600,7 @@
                 applyProgramCanvasResolution();
             });
         }
+        if (els.toggleMediaControls) { els.toggleMediaControls.addEventListener('click', toggleSelectedMediaControls); }
         if (els.mediaPlayPause) { els.mediaPlayPause.addEventListener('click', toggleSelectedMediaPlayback); }
         if (els.mediaRestart) { els.mediaRestart.addEventListener('click', restartSelectedMedia); }
         if (els.mediaLoop) { els.mediaLoop.addEventListener('change', toggleSelectedMediaLoop); }

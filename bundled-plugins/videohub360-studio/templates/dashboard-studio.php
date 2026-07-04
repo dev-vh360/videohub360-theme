@@ -44,7 +44,16 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
             <section class="vh360-studio-monitor vh360-studio-monitor--preview" aria-labelledby="vh360-studio-preview-title">
                 <div class="vh360-studio-monitor-header">
                     <h3 id="vh360-studio-preview-title"><?php esc_html_e( 'Preview', 'videohub360-studio' ); ?></h3>
-                    <span class="vh360-studio-pill"><?php esc_html_e( 'Local tests', 'videohub360-studio' ); ?></span>
+                    <button
+                        type="button"
+                        class="vh360-studio-monitor-action"
+                        data-toggle-media-controls
+                        aria-expanded="false"
+                        aria-controls="vh360-studio-selected-media-controls"
+                        hidden
+                    >
+                        <?php esc_html_e( 'Media Controls', 'videohub360-studio' ); ?>
+                    </button>
                 </div>
                 <div class="vh360-studio-monitor-screen vh360-studio-preview-stage">
                     <video class="vh360-studio-preview-video vh360-studio-preview-video--camera" data-camera-preview playsinline muted aria-label="<?php esc_attr_e( 'Local camera preview', 'videohub360-studio' ); ?>"></video>
@@ -69,6 +78,50 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
                     <input type="range" min="0" max="1000" value="0" step="1" data-media-seek aria-label="<?php esc_attr_e( 'Media timeline', 'videohub360-studio' ); ?>">
 
                     <span class="vh360-studio-media-time" data-media-time>00:00 / 00:00</span>
+                </div>
+                <div
+                    id="vh360-studio-selected-media-controls"
+                    class="vh360-studio-selected-media-controls"
+                    data-selected-media-controls
+                    hidden
+                >
+                    <h4><?php esc_html_e( 'Selected Media', 'videohub360-studio' ); ?></h4>
+                    <p class="vh360-studio-selected-media-name" data-selected-media-name></p>
+
+                    <label>
+                        <?php esc_html_e( 'Fit mode', 'videohub360-studio' ); ?>
+                        <select data-media-fit-mode>
+                            <option value="fit"><?php esc_html_e( 'Fit to canvas', 'videohub360-studio' ); ?></option>
+                            <option value="fill"><?php esc_html_e( 'Fill / crop', 'videohub360-studio' ); ?></option>
+                            <option value="stretch"><?php esc_html_e( 'Stretch', 'videohub360-studio' ); ?></option>
+                            <option value="original"><?php esc_html_e( 'Original size', 'videohub360-studio' ); ?></option>
+                            <option value="custom"><?php esc_html_e( 'Custom', 'videohub360-studio' ); ?></option>
+                        </select>
+                    </label>
+
+                    <label>
+                        <?php esc_html_e( 'Scale', 'videohub360-studio' ); ?>
+                        <input type="range" min="10" max="300" step="1" value="100" data-media-scale>
+                        <span data-media-scale-value>100%</span>
+                    </label>
+
+                    <label>
+                        <?php esc_html_e( 'Position X', 'videohub360-studio' ); ?>
+                        <input type="range" min="-100" max="100" step="1" value="0" data-media-position-x>
+                        <span data-media-position-x-value>0</span>
+                    </label>
+
+                    <label>
+                        <?php esc_html_e( 'Position Y', 'videohub360-studio' ); ?>
+                        <input type="range" min="-100" max="100" step="1" value="0" data-media-position-y>
+                        <span data-media-position-y-value>0</span>
+                    </label>
+
+                    <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-media-reset-transform>
+                        <?php esc_html_e( 'Reset media transform', 'videohub360-studio' ); ?>
+                    </button>
+
+                    <p class="vh360-studio-help" data-program-resolution-details></p>
                 </div>
             </section>
 
@@ -149,45 +202,6 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
                         <?php endforeach; ?>
                     </select>
                     <p class="vh360-studio-help" data-quality-details><?php echo esc_html( $default_label ); ?></p>
-                    <div class="vh360-studio-selected-media-controls" data-selected-media-controls hidden>
-                        <h4><?php esc_html_e( 'Selected Media', 'videohub360-studio' ); ?></h4>
-                        <p class="vh360-studio-selected-media-name" data-selected-media-name></p>
-
-                        <label>
-                            <?php esc_html_e( 'Fit mode', 'videohub360-studio' ); ?>
-                            <select data-media-fit-mode>
-                                <option value="fit"><?php esc_html_e( 'Fit to canvas', 'videohub360-studio' ); ?></option>
-                                <option value="fill"><?php esc_html_e( 'Fill / crop', 'videohub360-studio' ); ?></option>
-                                <option value="stretch"><?php esc_html_e( 'Stretch', 'videohub360-studio' ); ?></option>
-                                <option value="original"><?php esc_html_e( 'Original size', 'videohub360-studio' ); ?></option>
-                                <option value="custom"><?php esc_html_e( 'Custom', 'videohub360-studio' ); ?></option>
-                            </select>
-                        </label>
-
-                        <label>
-                            <?php esc_html_e( 'Scale', 'videohub360-studio' ); ?>
-                            <input type="range" min="10" max="300" step="1" value="100" data-media-scale>
-                            <span data-media-scale-value>100%</span>
-                        </label>
-
-                        <label>
-                            <?php esc_html_e( 'Position X', 'videohub360-studio' ); ?>
-                            <input type="range" min="-100" max="100" step="1" value="0" data-media-position-x>
-                            <span data-media-position-x-value>0</span>
-                        </label>
-
-                        <label>
-                            <?php esc_html_e( 'Position Y', 'videohub360-studio' ); ?>
-                            <input type="range" min="-100" max="100" step="1" value="0" data-media-position-y>
-                            <span data-media-position-y-value>0</span>
-                        </label>
-
-                        <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-media-reset-transform>
-                            <?php esc_html_e( 'Reset media transform', 'videohub360-studio' ); ?>
-                        </button>
-
-                        <p class="vh360-studio-help" data-program-resolution-details></p>
-                    </div>
                 </div>
             </section>
 
