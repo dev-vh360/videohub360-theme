@@ -37,6 +37,7 @@
         viewerPermalink: '',
         heartbeatTimer: null,
         previewSource: null,
+        selectedSceneSource: '',
         programSource: null,
         programStream: null,
         mediaSources: new Map(),
@@ -121,9 +122,8 @@
         copyViewerLink: root.querySelector('[data-copy-viewer-link]'),
         studioFullscreen: root.querySelector('[data-studio-fullscreen]'),
         copyViewerFeedback: root.querySelector('[data-copy-viewer-feedback]'),
-        mediaSourceList: root.querySelector('[data-media-source-list]'),
-        emptyMediaSources: root.querySelector('[data-empty-media-sources]'),
         openMediaSourceModal: root.querySelector('[data-open-media-source-modal]'),
+        deleteSelectedMediaScene: root.querySelector('[data-delete-selected-media-scene]'),
         mediaSourceModal: root.querySelector('[data-media-source-modal]'),
         closeMediaSourceModal: root.querySelectorAll('[data-close-media-source-modal]'),
         persistentMediaSourceInput: root.querySelector('[data-persistent-media-source-input]'),
@@ -329,11 +329,30 @@
                 button.removeAttribute('aria-current');
             }
         });
-        if (els.mediaSourceList) {
-            els.mediaSourceList.querySelectorAll('[data-media-source-id]').forEach((card) => {
-                card.classList.toggle('is-active', 'media:' + card.dataset.mediaSourceId === state.previewSource);
-            });
+        renderSceneControls();
+    }
+
+    function selectSceneSource(sourceId) {
+        state.selectedSceneSource = sourceId || '';
+        renderSourceState();
+        renderSceneControls();
+    }
+
+    function getSelectedMediaSource() {
+        if (!isMediaSource(state.selectedSceneSource)) {
+            return null;
         }
+
+        return getMediaSource(state.selectedSceneSource);
+    }
+
+    function renderSceneControls() {
+        if (!els.deleteSelectedMediaScene) {
+            return;
+        }
+
+        const selectedMedia = getSelectedMediaSource();
+        els.deleteSelectedMediaScene.disabled = !selectedMedia;
     }
 
     function renderTransitionButtons() {
@@ -1098,10 +1117,11 @@
         try {
             const response = await api('/media-sources', { method: 'POST', body: formData });
             const source = registerPersistentMediaSource(response.source);
-            renderMediaSourceList();
             renderSourceState();
+            renderSceneControls();
             closeMediaSourceModal();
             if (source) {
+                selectSceneSource(source.sourceId);
                 await setPreviewSource(source.sourceId);
             }
             setStatus('Media source added to Studio.', 'success');
@@ -1118,8 +1138,8 @@
         try {
             const response = await api('/media-sources');
             (response.sources || []).forEach(registerPersistentMediaSource);
-            renderMediaSourceList();
             renderSourceState();
+            renderSceneControls();
         } catch (error) {
             setStatus((error && error.message) || 'Studio media sources could not be loaded.', 'warning');
         }
@@ -1148,54 +1168,6 @@
         state.mediaSources.set(id, source);
         addMediaSourceToScenes(id);
         return source;
-    }
-
-    function renderMediaSourceList() {
-        if (!els.mediaSourceList) {
-            return;
-        }
-
-        els.mediaSourceList.innerHTML = '';
-
-        const sources = Array.from(state.mediaSources.values());
-
-        if (els.emptyMediaSources) {
-            els.emptyMediaSources.hidden = sources.length > 0;
-        }
-
-        sources.forEach((source) => {
-            const item = document.createElement('li');
-            const card = document.createElement('div');
-            const title = document.createElement('div');
-            const meta = document.createElement('div');
-            const actions = document.createElement('div');
-            const stageButton = document.createElement('button');
-            const removeButton = document.createElement('button');
-
-            card.className = 'vh360-studio-media-source-card';
-            card.dataset.mediaSourceId = source.id;
-            card.classList.toggle('is-active', state.previewSource === source.sourceId);
-            title.className = 'vh360-studio-media-source-title';
-            title.textContent = source.name;
-            meta.className = 'vh360-studio-media-source-meta';
-            meta.textContent = (source.type === 'image' ? 'Image' : 'Video') + (source.filename ? ' · ' + source.filename : '');
-            actions.className = 'vh360-studio-media-source-actions';
-
-            stageButton.type = 'button';
-            stageButton.className = 'vh360-studio-button vh360-studio-button--secondary';
-            stageButton.dataset.stageMediaSource = source.id;
-            stageButton.textContent = 'Stage Preview';
-
-            removeButton.type = 'button';
-            removeButton.className = 'vh360-studio-button vh360-studio-button--secondary';
-            removeButton.dataset.removeMediaSource = source.id;
-            removeButton.textContent = source.persistent ? 'Delete' : 'Remove';
-
-            actions.append(stageButton, removeButton);
-            card.append(title, meta, actions);
-            item.appendChild(card);
-            els.mediaSourceList.appendChild(item);
-        });
     }
 
     function addMediaSourceToScenes(id) {
@@ -1249,6 +1221,7 @@
         });
 
         state.mediaSources.clear();
+        state.selectedSceneSource = '';
 
         if (els.sceneList) {
             els.sceneList.querySelectorAll('[data-media-scene-id]').forEach((scene) => {
@@ -1260,71 +1233,85 @@
             els.mediaPreview.innerHTML = '';
         }
 
-        renderMediaSourceList();
         renderSourceState();
+        renderSceneControls();
     }
 
-    async function deletePersistentMediaSource(source) {
-        await api('/media-sources/' + encodeURIComponent(source.attachmentId || source.id), { method: 'DELETE' });
+    function removeMediaSceneButton(sourceId) {
+        if (!els.sceneList) {
+            return;
+        }
+
+        const mediaId = mediaIdFromSourceId(sourceId);
+        els.sceneList.querySelectorAll('[data-media-scene-id]').forEach((item) => {
+            if (item.dataset.mediaSceneId === mediaId) {
+                item.remove();
+            }
+        });
     }
 
-    async function removeMediaSource(id) {
-        const source = state.mediaSources.get(String(id));
+    async function deletePersistentMediaSource(sourceId) {
+        const source = getMediaSource(sourceId);
         if (!source) {
             return;
         }
 
-        if (isSourceProtected(source.sourceId)) {
-            setStatus('This source is currently in Program. Send another source to Program before removing it.', 'warning');
-            if (state.broadcastSession) {
-                setBroadcastStatus('This source is currently in Program. Send another source to Program before removing it.', 'warning');
-            }
-            return;
-        }
+        await api('/media-sources/' + encodeURIComponent(source.attachmentId || source.id), { method: 'DELETE' });
 
-        if (source.persistent && !window.confirm('Delete this media source from Studio?')) {
-            return;
+        if (state.selectedSceneSource === source.sourceId) {
+            state.selectedSceneSource = '';
         }
-
-        if (source.persistent) {
-            try {
-                await deletePersistentMediaSource(source);
-            } catch (error) {
-                setStatus((error && error.message) || 'Media source could not be deleted.', 'error');
-                return;
-            }
-        }
-
         if (state.previewSource === source.sourceId) {
             state.previewSource = null;
         }
-
         if (state.programSource === source.sourceId) {
             state.programSource = null;
             state.programStream = null;
         }
 
-        removeMediaScene(id);
+        removeMediaSceneButton(source.sourceId);
         releaseMediaSource(source);
-        state.mediaSources.delete(String(id));
+        state.mediaSources.delete(String(source.id));
+        if (els.mediaPreview) {
+            els.mediaPreview.innerHTML = '';
+        }
         renderPreviewState();
         renderProgramState();
-        renderMediaSourceList();
         renderSourceState();
-        setStatus(source.persistent ? 'Media source deleted from Studio.' : 'Media source removed.', 'success');
+        renderSceneControls();
+        setStatus('Media source deleted from Studio.', 'success');
     }
 
-    function handleMediaSourceListClick(event) {
-        const stageButton = event.target.closest('[data-stage-media-source]');
-        const removeButton = event.target.closest('[data-remove-media-source]');
+    async function deleteSelectedMediaScene() {
+        const mediaSource = getSelectedMediaSource();
 
-        if (stageButton && els.mediaSourceList.contains(stageButton)) {
-            setPreviewSource('media:' + stageButton.dataset.stageMediaSource);
+        if (!mediaSource) {
+            setStatus('Select a media scene before deleting.', 'warning');
+            renderSceneControls();
             return;
         }
 
-        if (removeButton && els.mediaSourceList.contains(removeButton)) {
-            removeMediaSource(removeButton.dataset.removeMediaSource);
+        if (isSourceProtected(mediaSource.sourceId)) {
+            const message = 'This source is currently in Program. Send another source to Program before removing it.';
+            setStatus(message, 'warning');
+
+            if (state.broadcastSession) {
+                setBroadcastStatus(message, 'warning');
+            }
+
+            return;
+        }
+
+        const confirmed = window.confirm('Delete this media source from Studio?');
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            await deletePersistentMediaSource(mediaSource.sourceId);
+        } catch (error) {
+            setStatus((error && error.message) || 'Media source could not be deleted.', 'error');
         }
     }
 
@@ -1741,8 +1728,8 @@
             state.programStream = null;
             renderPreviewState();
             renderProgramState();
-            renderMediaSourceList();
             renderSourceState();
+            renderSceneControls();
         }
     }
 
@@ -1970,7 +1957,9 @@
                     return;
                 }
 
-                setPreviewSource(button.dataset.sceneSource);
+                const sourceId = button.dataset.sceneSource || '';
+                selectSceneSource(sourceId);
+                setPreviewSource(sourceId);
             });
         }
         if (els.openMediaSourceModal) {
@@ -1985,8 +1974,8 @@
         if (els.importMediaSource) {
             els.importMediaSource.addEventListener('click', importPersistentMediaSource);
         }
-        if (els.mediaSourceList) {
-            els.mediaSourceList.addEventListener('click', handleMediaSourceListClick);
+        if (els.deleteSelectedMediaScene) {
+            els.deleteSelectedMediaScene.addEventListener('click', deleteSelectedMediaScene);
         }
         if (els.transitionCut) { els.transitionCut.addEventListener('click', () => commitPreviewToProgram('cut')); }
         if (els.transitionFade) { els.transitionFade.addEventListener('click', () => commitPreviewToProgram('fade')); }
@@ -2097,7 +2086,7 @@
     renderSourceState();
     renderProgramState();
     renderTransitionButtons();
-    renderMediaSourceList();
+    renderSceneControls();
     updateViewerLinkControls();
     bindEvents();
     loadPersistentMediaSources();

@@ -83,9 +83,13 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
                         <li><button type="button" data-scene-source="camera"><?php esc_html_e( 'Camera Only', 'videohub360-studio' ); ?></button></li>
                         <li><button type="button" data-scene-source="screen"><?php esc_html_e( 'Screen Share', 'videohub360-studio' ); ?></button></li>
                     </ul>
-                    <div class="vh360-studio-scene-add">
-                        <button type="button" class="vh360-studio-scene-add-button" data-open-media-source-modal aria-label="<?php esc_attr_e( 'Add media source', 'videohub360-studio' ); ?>">
+                    <div class="vh360-studio-scene-controls" aria-label="<?php esc_attr_e( 'Scene controls', 'videohub360-studio' ); ?>">
+                        <button type="button" class="vh360-studio-scene-control-button" data-open-media-source-modal aria-label="<?php esc_attr_e( 'Add media source', 'videohub360-studio' ); ?>">
                             <span aria-hidden="true">+</span>
+                        </button>
+
+                        <button type="button" class="vh360-studio-scene-control-button" data-delete-selected-media-scene aria-label="<?php esc_attr_e( 'Delete selected media scene', 'videohub360-studio' ); ?>" disabled>
+                            <span aria-hidden="true">−</span>
                         </button>
                     </div>
                     <p class="vh360-studio-help"><?php esc_html_e( 'Scene buttons stage the matching source in Preview.', 'videohub360-studio' ); ?></p>
@@ -99,17 +103,6 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
                     <select id="vh360-studio-camera-select" data-camera-select disabled>
                         <option value=""><?php esc_html_e( 'Grant camera access to list devices', 'videohub360-studio' ); ?></option>
                     </select>
-                    <div class="vh360-studio-source-manager" data-media-source-manager>
-                        <div class="vh360-studio-source-manager-header">
-                            <h4><?php esc_html_e( 'Media Sources', 'videohub360-studio' ); ?></h4>
-                        </div>
-
-                        <p class="vh360-studio-help" data-empty-media-sources>
-                            <?php esc_html_e( 'Manage the selected source and Studio media used by your scenes.', 'videohub360-studio' ); ?>
-                        </p>
-
-                        <ul class="vh360-studio-media-source-list" data-media-source-list></ul>
-                    </div>
                     <label for="vh360-studio-quality-select"><?php esc_html_e( 'Quality preset', 'videohub360-studio' ); ?></label>
                     <select id="vh360-studio-quality-select" data-quality-select>
                         <?php foreach ( $quality_presets as $preset_id => $preset ) : ?>
