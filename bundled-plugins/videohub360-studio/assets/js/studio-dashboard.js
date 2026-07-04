@@ -1144,6 +1144,27 @@
         }
     }
 
+    function clearLocalMediaSources() {
+        state.mediaSources.forEach((source) => {
+            releaseMediaSource(source);
+        });
+
+        state.mediaSources.clear();
+
+        if (els.sceneList) {
+            els.sceneList.querySelectorAll('[data-media-scene-id]').forEach((scene) => {
+                scene.remove();
+            });
+        }
+
+        if (els.mediaPreview) {
+            els.mediaPreview.innerHTML = '';
+        }
+
+        renderMediaSourceList();
+        renderSourceState();
+    }
+
     function removeMediaSource(id) {
         const source = state.mediaSources.get(id);
         if (!source) {
@@ -1592,25 +1613,21 @@
         }
     }
 
-    function cleanup() {
+    function cleanup(options = {}) {
         const canStopProgramOutput = !state.broadcastSession && !isRecordingActive();
+        const releaseMediaSources = options.releaseMediaSources === true;
+
         stopPreview({ force: true });
         stopScreenPreview({ force: true });
         stopProgramCompositor({ stopTracks: canStopProgramOutput, clearStream: canStopProgramOutput });
         stopStream(state.micStream);
         state.micStream = null;
 
-        if (canStopProgramOutput) {
-            state.mediaSources.forEach((source) => {
-                releaseMediaSource(source);
-            });
-            state.mediaSources.clear();
+        if (canStopProgramOutput && releaseMediaSources) {
+            clearLocalMediaSources();
             state.previewSource = null;
             state.programSource = null;
             state.programStream = null;
-            if (els.mediaPreview) {
-                els.mediaPreview.innerHTML = '';
-            }
             renderPreviewState();
             renderProgramState();
             renderMediaSourceList();
@@ -1937,7 +1954,7 @@
         window.addEventListener('pagehide', () => {
             endBroadcastKeepalive();
             if (!isRecordingActive() && !state.broadcastSession) {
-                cleanup();
+                cleanup({ releaseMediaSources: true });
             }
         });
         window.addEventListener('beforeunload', (event) => {
@@ -1946,11 +1963,11 @@
                 event.returnValue = '';
                 return;
             }
-            cleanup();
+            cleanup({ releaseMediaSources: true });
         });
         document.addEventListener('visibilitychange', () => {
             if (document.hidden && !isRecordingActive() && !state.broadcastSession) {
-                cleanup();
+                cleanup({ releaseMediaSources: false });
             }
         });
     }
