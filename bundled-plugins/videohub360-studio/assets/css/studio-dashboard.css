@@ -26,6 +26,10 @@
 }
 
 
+.vh360-studio-dashboard [hidden] {
+    display: none !important;
+}
+
 .vh360-studio-dashboard:fullscreen {
     border-radius: 0;
     min-height: 100vh;
@@ -107,13 +111,6 @@
     justify-content: flex-end;
 }
 
-.vh360-studio-viewer-label {
-    color: var(--vh360-studio-text-muted);
-    font-size: 0.8rem;
-    font-weight: 800;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-}
 
 .vh360-studio-copy-feedback {
     color: var(--vh360-studio-success);
@@ -272,9 +269,7 @@
 }
 
 .vh360-studio-dashboard.is-live .vh360-studio-agora-preview {
-    inset: 0;
-    position: absolute;
-    z-index: 3;
+    display: none;
 }
 
 .vh360-studio-program-canvas {
@@ -292,10 +287,4 @@
 .vh360-studio-dashboard.is-program-active .vh360-studio-program-canvas {
     opacity: 1;
     visibility: visible;
-}
-
-.vh360-studio-dashboard.is-live .vh360-studio-program-canvas {
-    opacity: 0;
-    pointer-events: none;
-    visibility: hidden;
 }

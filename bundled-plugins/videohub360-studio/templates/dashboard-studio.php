@@ -28,10 +28,9 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
             </button>
 
             <div class="vh360-studio-viewer-actions" data-viewer-link-wrap hidden>
-                <span class="vh360-studio-viewer-label"><?php esc_html_e( 'Viewer Link', 'videohub360-studio' ); ?></span>
-                <a class="vh360-studio-button vh360-studio-button--secondary" href="#" target="_blank" rel="noopener noreferrer" data-viewer-link>
+                <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-open-viewer-link disabled>
                     <?php esc_html_e( 'Open Viewer', 'videohub360-studio' ); ?>
-                </a>
+                </button>
                 <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-copy-viewer-link>
                     <?php esc_html_e( 'Copy Link', 'videohub360-studio' ); ?>
                 </button>

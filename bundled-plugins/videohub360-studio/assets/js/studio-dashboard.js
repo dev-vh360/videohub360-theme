@@ -34,6 +34,7 @@
         currentJobStatus: '',
         broadcastVideoId: null,
         broadcastSession: null,
+        viewerPermalink: '',
         heartbeatTimer: null,
         previewSource: null,
         programSource: null,
@@ -113,7 +114,7 @@
         broadcastStatus: root.querySelector('[data-broadcast-status]'),
         agoraLocalPreview: root.querySelector('[data-agora-local-preview]'),
         viewerLinkWrap: root.querySelector('[data-viewer-link-wrap]'),
-        viewerLink: root.querySelector('[data-viewer-link]'),
+        openViewerLink: root.querySelector('[data-open-viewer-link]'),
         copyViewerLink: root.querySelector('[data-copy-viewer-link]'),
         studioFullscreen: root.querySelector('[data-studio-fullscreen]'),
         copyViewerFeedback: root.querySelector('[data-copy-viewer-feedback]'),
@@ -407,13 +408,54 @@
         els.studioFullscreen.textContent = isStudioFullscreen() ? 'Exit Fullscreen' : 'Fullscreen Studio';
     }
 
+    function hasActiveViewerLink() {
+        return Boolean(state.broadcastSession && state.viewerPermalink);
+    }
+
+    function updateViewerLinkControls() {
+        const active = hasActiveViewerLink();
+
+        if (els.viewerLinkWrap) {
+            els.viewerLinkWrap.hidden = !active;
+        }
+
+        if (els.openViewerLink) {
+            els.openViewerLink.disabled = !active;
+        }
+
+        if (els.copyViewerLink) {
+            els.copyViewerLink.disabled = !active;
+        }
+
+        if (els.copyViewerFeedback) {
+            els.copyViewerFeedback.hidden = true;
+            els.copyViewerFeedback.textContent = '';
+        }
+    }
+
+    function openViewerLink() {
+        if (!hasActiveViewerLink()) {
+            setBroadcastStatus('The public viewer link is available after the livestream starts.', 'warning');
+            updateViewerLinkControls();
+            return;
+        }
+
+        const viewerWindow = window.open(state.viewerPermalink, '_blank', 'noopener,noreferrer');
+
+        if (!viewerWindow) {
+            setBroadcastStatus('Popup blocking prevented the viewer page from opening. Allow popups for this site and try again.', 'warning');
+        }
+    }
+
     async function copyViewerLink() {
-        if (!els.viewerLink || !els.viewerLink.href) {
+        if (!hasActiveViewerLink()) {
+            setBroadcastStatus('The public viewer link is available after the livestream starts.', 'warning');
+            updateViewerLinkControls();
             return;
         }
 
         try {
-            await navigator.clipboard.writeText(els.viewerLink.href);
+            await navigator.clipboard.writeText(state.viewerPermalink);
 
             if (els.copyViewerFeedback) {
                 els.copyViewerFeedback.textContent = 'Copied';
@@ -430,7 +472,7 @@
                 els.copyViewerFeedback.hidden = false;
             }
 
-            setStatus('Unable to copy viewer link. Open the viewer link and copy it from the address bar.', 'warning');
+            setBroadcastStatus('Unable to copy viewer link. Open the viewer page and copy it from the address bar.', 'warning');
         }
     }
 
@@ -1318,10 +1360,8 @@
             const broadcast = created.broadcast || {};
             state.broadcastVideoId = broadcast.videoId;
             state.activeJobId = created.job && created.job.id ? created.job.id : state.activeJobId;
-            if (els.viewerLink && broadcast.viewerPermalink) {
-                els.viewerLink.href = broadcast.viewerPermalink;
-                if (els.viewerLinkWrap) els.viewerLinkWrap.hidden = false;
-            }
+            state.viewerPermalink = broadcast.viewerPermalink || '';
+            updateViewerLinkControls();
             const prepared = await api('/broadcasts/' + state.broadcastVideoId + '/prepare', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
             studioDebugLog('[VH360 Studio] Studio broadcaster UID', prepared.uid);
             ensureProgramCompositor();
@@ -1340,6 +1380,7 @@
             });
             await session.start();
             state.broadcastSession = session;
+            updateViewerLinkControls();
             state.broadcastReady = true;
             state.broadcastStarting = false;
             renderTransitionButtons();
@@ -1356,6 +1397,8 @@
                 await state.broadcastSession.stop().catch(() => {});
                 state.broadcastSession = null;
                 state.broadcastReady = false;
+                state.viewerPermalink = '';
+                updateViewerLinkControls();
             }
             if (failedVideoId) {
                 await api('/broadcasts/' + failedVideoId + '/end', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } }).catch(() => {});
@@ -1392,6 +1435,8 @@
             await state.broadcastSession.stop();
             state.broadcastSession = null;
         }
+        state.viewerPermalink = '';
+        updateViewerLinkControls();
         if (state.broadcastVideoId) {
             try {
                 await api('/broadcasts/' + state.broadcastVideoId + '/end', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
@@ -1497,6 +1542,7 @@
         if (els.goLive) { els.goLive.addEventListener('click', goLive); }
         if (els.endLive) { els.endLive.addEventListener('click', endLive); }
         if (els.studioFullscreen) { els.studioFullscreen.addEventListener('click', toggleStudioFullscreen); }
+        if (els.openViewerLink) { els.openViewerLink.addEventListener('click', openViewerLink); }
         if (els.copyViewerLink) { els.copyViewerLink.addEventListener('click', copyViewerLink); }
         document.addEventListener('fullscreenchange', updateFullscreenButton);
         updateFullscreenButton();
@@ -1541,5 +1587,6 @@
     renderSourceState();
     renderProgramState();
     renderTransitionButtons();
+    updateViewerLinkControls();
     bindEvents();
 }());
