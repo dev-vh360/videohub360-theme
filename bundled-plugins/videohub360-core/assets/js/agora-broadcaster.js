@@ -7,7 +7,7 @@
 
     window.VH360AgoraBroadcaster = {
         create: function (config) {
-            const state = { client: null, audioTrack: null, videoTrack: null, joined: false, published: false };
+            const state = { client: null, audioTrack: null, videoTrack: null, videoTrackOwnsSource: true, joined: false, published: false };
             const root = config.container || document;
             const localContainer = config.localContainer || root.querySelector('[data-agora-local-preview]') || root;
 
@@ -17,13 +17,30 @@
                 }
                 const clientMode = config.clientMode === 'rtc' ? 'rtc' : 'live';
                 state.client = window.AgoraRTC.createClient({ mode: clientMode, codec: 'vp8' });
+                if (state.client && typeof state.client.on === 'function') {
+                    state.client.on('connection-state-change', function (current, previous, reason) {
+                        emit(root, 'connection-state-change', {
+                            current: current,
+                            previous: previous,
+                            reason: reason || ''
+                        });
+                    });
+                }
                 if (clientMode === 'live' && typeof state.client.setClientRole === 'function') {
                     await state.client.setClientRole('host');
                 }
                 state.audioTrack = await window.AgoraRTC.createMicrophoneAudioTrack(config.audioConfig || {});
-                state.videoTrack = await window.AgoraRTC.createCameraVideoTrack(config.videoConfig || {});
+                if (config.initialVideoMediaStreamTrack && typeof window.AgoraRTC.createCustomVideoTrack === 'function') {
+                    state.videoTrack = window.AgoraRTC.createCustomVideoTrack({
+                        mediaStreamTrack: config.initialVideoMediaStreamTrack
+                    });
+                    state.videoTrackOwnsSource = false;
+                } else {
+                    state.videoTrack = await window.AgoraRTC.createCameraVideoTrack(config.videoConfig || {});
+                    state.videoTrackOwnsSource = true;
+                }
                 if (localContainer) {
-                    state.videoTrack.play(localContainer);
+                    state.videoTrack.play(localContainer, { mirror: config.initialVideoSource !== 'screen' });
                 }
                 await state.client.join(config.appId, config.channelName, config.token || null, Number(config.uid));
                 state.joined = true;
@@ -37,13 +54,16 @@
                 if (state.client && state.published) {
                     await state.client.unpublish().catch(function () {});
                 }
-                ['audioTrack', 'videoTrack'].forEach(function (key) {
-                    if (state[key]) {
-                        state[key].stop();
-                        state[key].close();
-                        state[key] = null;
-                    }
-                });
+                if (state.audioTrack) {
+                    state.audioTrack.stop();
+                    state.audioTrack.close();
+                    state.audioTrack = null;
+                }
+                if (state.videoTrack) {
+                    stopAndMaybeCloseVideoTrack(state.videoTrack, state.videoTrackOwnsSource);
+                    state.videoTrack = null;
+                    state.videoTrackOwnsSource = true;
+                }
                 if (state.client && state.joined) {
                     await state.client.leave().catch(function () {});
                 }
@@ -52,9 +72,31 @@
                 emit(root, 'ended', {});
             }
 
+            function stopAndMaybeCloseVideoTrack(track, ownsSource) {
+                if (!track || !ownsSource) {
+                    return;
+                }
+                if (typeof track.stop === 'function') {
+                    track.stop();
+                }
+                if (typeof track.close === 'function') {
+                    track.close();
+                }
+            }
+
+            function isReadyToPublish() {
+                return Boolean(
+                    state.client &&
+                    state.joined &&
+                    state.published &&
+                    (!state.client.connectionState || state.client.connectionState === 'CONNECTED')
+                );
+            }
+
             return {
                 start: start,
                 stop: stop,
+                isReadyToPublish: isReadyToPublish,
                 muteAudio: function (muted) { return state.audioTrack && state.audioTrack.setEnabled(!muted); },
                 muteVideo: function (muted) { return state.videoTrack && state.videoTrack.setEnabled(!muted); },
                 getLocalMediaStream: function () {
@@ -67,7 +109,11 @@
                     }
                     return tracks.length ? new MediaStream(tracks) : null;
                 },
-                getState: function () { return Object.assign({}, state); }
+                getState: function () {
+                    return Object.assign({}, state, {
+                        connectionState: state.client ? state.client.connectionState || '' : ''
+                    });
+                }
             };
         }
     };

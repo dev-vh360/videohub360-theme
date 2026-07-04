@@ -115,6 +115,7 @@ if (!function_exists('videohub360_render_livestream')) {
                 || current_user_can('edit_post', get_the_ID()) 
                 || $is_owner;
             $can_moderate = $is_original_host || current_user_can('moderate_comments') || current_user_can('manage_options');
+            $is_studio_controlled = 'yes' === get_post_meta(get_the_ID(), '_vh360_studio_controlled_live', true);
             $is_logged_in = is_user_logged_in();
 
             // Debug info — intentionally omits sensitive data (user roles, capabilities).
@@ -126,7 +127,9 @@ if (!function_exists('videohub360_render_livestream')) {
 
             // Determine role based on capabilities and mode
             $role = 'audience';
-            if ($fields['agora_mode'] === 'broadcast') {
+            if ($is_studio_controlled) {
+                $role = 'audience';
+            } elseif ($fields['agora_mode'] === 'broadcast') {
                 // In broadcast mode, admins and original host get host role
                 $role = ($is_original_host || current_user_can('manage_options')) ? 'host' : 'audience';
             } else {
@@ -199,7 +202,7 @@ if ($is_appointment && function_exists('vh360_get_appointment_session_state')) {
             $player_html .= '<div class="vh360-overlay-waiting">Waiting for the professional to start the session</div>';
         }
     }
-} elseif ($is_original_host) {
+} elseif ($is_original_host && ! $is_studio_controlled) {
     // Regular live room - original behavior for host
     $player_html .= '<h3 class="vh360-overlay-title">Live Stream Control</h3>';
     $player_html .= '<p class="vh360-overlay-description">Start the live stream for your viewers.</p>';
@@ -250,7 +253,7 @@ $player_html .= '</div>';
             
 
             // End stream button (if applicable, between leave and fullscreen)
-            if ($is_original_host) {
+            if ($is_original_host && ! $is_studio_controlled) {
                 $player_html .= '<button id="vh360-agora-end-stream" class="vh360-agora-control-btn vh360-agora-control-btn-text vh360-agora-btn-end">End Stream</button>';
             }
             

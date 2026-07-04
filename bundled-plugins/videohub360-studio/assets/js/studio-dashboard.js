@@ -12,6 +12,7 @@
     const state = {
         cameraStream: null,
         screenStream: null,
+        micStream: null,
         audioContext: null,
         analyser: null,
         meterFrame: null,
@@ -34,6 +35,22 @@
         broadcastVideoId: null,
         broadcastSession: null,
         heartbeatTimer: null,
+        previewSource: null,
+        programSource: null,
+        programStream: null,
+        programCanvas: null,
+        programContext: null,
+        programOutputStream: null,
+        programAnimationFrame: null,
+        programFrameRate: 30,
+        programWidth: 1280,
+        programHeight: 720,
+        transitioning: false,
+        broadcastStarting: false,
+        broadcastReady: false,
+        broadcastEnding: false,
+        programSwitching: false,
+        lastAgoraConnectionState: '',
     };
 
     const els = {
@@ -41,6 +58,13 @@
         supportChecks: root.querySelector('[data-support-checks]'),
         cameraPreview: root.querySelector('[data-camera-preview]'),
         screenPreview: root.querySelector('[data-screen-preview]'),
+        programCanvas: root.querySelector('[data-program-canvas]'),
+        programEmpty: root.querySelector('[data-program-empty]'),
+        previewSourceButtons: root.querySelectorAll('[data-preview-source]'),
+        sceneSourceButtons: root.querySelectorAll('[data-scene-source]'),
+        transitionCut: root.querySelector('[data-transition-cut]'),
+        transitionFade: root.querySelector('[data-transition-fade]'),
+        transitionDuration: root.querySelector('[data-transition-duration]'),
         cameraSelect: root.querySelector('[data-camera-select]'),
         micSelect: root.querySelector('[data-mic-select]'),
         startPreview: root.querySelector('[data-start-preview]'),
@@ -95,6 +119,252 @@
 
     function setShellClass(className, active) {
         root.classList.toggle(className, Boolean(active));
+    }
+
+    function studioDebugLog() {
+        if (window.__VH360_STUDIO_DEBUG === true && window.console && typeof window.console.info === 'function') {
+            window.console.info.apply(window.console, arguments);
+        }
+    }
+
+    function sourceLabel(sourceId) {
+        return sourceId === 'screen' ? 'Screen Share' : 'Camera';
+    }
+
+    async function getSourceStream(sourceId) {
+        if (sourceId === 'screen') {
+            if (!state.screenStream || !state.screenStream.getVideoTracks().length || state.screenStream.getVideoTracks()[0].readyState === 'ended') {
+                await startScreenPreview(false);
+            }
+            return state.screenStream;
+        }
+        if (!state.cameraStream || !state.cameraStream.getVideoTracks().length || state.cameraStream.getVideoTracks()[0].readyState === 'ended') {
+            await startPreview(false);
+        }
+        return state.cameraStream;
+    }
+
+    async function setPreviewSource(sourceId) {
+        const stream = await getSourceStream(sourceId);
+        if (!stream) {
+            return;
+        }
+        state.previewSource = sourceId;
+        renderPreviewState();
+        renderSourceState();
+        setStatus(sourceLabel(sourceId) + ' staged in Preview.', 'success');
+    }
+
+    async function commitPreviewToProgram(transitionType) {
+        if (!state.previewSource) {
+            setStatus('Choose a Preview source before using Cut or Fade.', 'warning');
+            return;
+        }
+        if (state.transitioning || state.programSwitching) {
+            return;
+        }
+        const nextSource = state.previewSource;
+        if (state.programSource === nextSource && state.programStream) {
+            setStatus(sourceLabel(nextSource) + ' is already in Program.', 'info');
+            renderTransitionButtons();
+            return;
+        }
+        state.programSwitching = true;
+        renderTransitionButtons();
+        state.transitioning = transitionType === 'fade';
+        const duration = Math.max(0, Math.min(2000, Number(els.transitionDuration && els.transitionDuration.value) || 300));
+        root.style.setProperty('--vh360-studio-transition-duration', duration + 'ms');
+        if (state.transitioning) {
+            root.classList.add('is-transitioning', 'is-fading');
+        }
+        try {
+            const stream = await getSourceStream(nextSource);
+            state.programSource = nextSource;
+            state.programStream = stream;
+            ensureProgramCompositor();
+            renderProgramState();
+            setStatus(sourceLabel(state.programSource) + ' sent to Program.', 'success');
+            if (transitionType === 'fade') {
+                await new Promise((resolve) => window.setTimeout(resolve, duration));
+            }
+        } catch (error) {
+            setStatus((error && error.message) || 'Program source could not be changed.', 'error');
+        } finally {
+            state.transitioning = false;
+            state.programSwitching = false;
+            root.classList.remove('is-transitioning', 'is-fading');
+            renderSourceState();
+            renderTransitionButtons();
+        }
+    }
+
+    function fallbackPreviewSource(endedSource) {
+        if (endedSource === 'screen' && state.cameraStream) {
+            return 'camera';
+        }
+        if (endedSource === 'camera' && state.screenStream) {
+            return 'screen';
+        }
+        return null;
+    }
+
+    function renderPreviewState() {
+        root.dataset.previewSource = state.previewSource || '';
+        root.classList.toggle('is-preview-source-camera', state.previewSource === 'camera');
+        root.classList.toggle('is-preview-source-screen', state.previewSource === 'screen');
+    }
+
+    function renderSourceState() {
+        renderPreviewState();
+        els.previewSourceButtons.forEach((button) => {
+            button.classList.toggle('is-active', button.dataset.previewSource === state.previewSource);
+        });
+        els.sceneSourceButtons.forEach((button) => {
+            const active = button.dataset.sceneSource === state.previewSource;
+            button.classList.toggle('is-active', active);
+            if (active) {
+                button.setAttribute('aria-current', 'true');
+            } else {
+                button.removeAttribute('aria-current');
+            }
+        });
+    }
+
+    function renderTransitionButtons() {
+        const blocked = state.broadcastStarting || state.broadcastEnding || state.programSwitching || (state.broadcastSession && !state.broadcastReady) || state.lastAgoraConnectionState === 'RECONNECTING' || state.lastAgoraConnectionState === 'DISCONNECTED';
+        if (els.transitionCut) {
+            els.transitionCut.disabled = blocked;
+        }
+        if (els.transitionFade) {
+            els.transitionFade.disabled = blocked;
+        }
+    }
+
+    function ensureProgramCompositor() {
+        if (!els.programCanvas) {
+            return null;
+        }
+        if (!state.programCanvas) {
+            state.programCanvas = els.programCanvas;
+            state.programCanvas.width = state.programWidth;
+            state.programCanvas.height = state.programHeight;
+            state.programContext = state.programCanvas.getContext('2d');
+        }
+        if (!state.programOutputStream && typeof state.programCanvas.captureStream === 'function') {
+            state.programOutputStream = state.programCanvas.captureStream(state.programFrameRate);
+        }
+        if (!state.programAnimationFrame) {
+            drawProgramFrame();
+        }
+        return state.programOutputStream;
+    }
+
+    function stopProgramCompositor(options = {}) {
+        if (state.programAnimationFrame) {
+            window.cancelAnimationFrame(state.programAnimationFrame);
+            state.programAnimationFrame = null;
+        }
+        if (options.stopTracks && state.programOutputStream) {
+            state.programOutputStream.getTracks().forEach((track) => track.stop());
+        }
+        if (options.clearStream) {
+            state.programOutputStream = null;
+        }
+    }
+
+    function drawProgramFrame() {
+        if (!state.programContext || !state.programCanvas) {
+            state.programAnimationFrame = null;
+            return;
+        }
+        const context = state.programContext;
+        const width = state.programCanvas.width;
+        const height = state.programCanvas.height;
+        context.fillStyle = '#020617';
+        context.fillRect(0, 0, width, height);
+        const sourceVideo = state.programSource === 'screen' ? els.screenPreview : els.cameraPreview;
+        if (sourceVideo && sourceVideo.readyState >= 2) {
+            drawVideoContain(context, sourceVideo, width, height, state.programSource !== 'screen');
+        }
+        state.programAnimationFrame = window.requestAnimationFrame(drawProgramFrame);
+    }
+
+    function drawVideoContain(context, video, width, height, cover) {
+        const videoWidth = video.videoWidth || width;
+        const videoHeight = video.videoHeight || height;
+        const scale = cover ? Math.max(width / videoWidth, height / videoHeight) : Math.min(width / videoWidth, height / videoHeight);
+        const drawWidth = videoWidth * scale;
+        const drawHeight = videoHeight * scale;
+        const x = (width - drawWidth) / 2;
+        const y = (height - drawHeight) / 2;
+        context.drawImage(video, x, y, drawWidth, drawHeight);
+    }
+
+    function renderProgramState() {
+        if (els.programCanvas) {
+            els.programCanvas.classList.toggle('vh360-studio-program-canvas--screen', state.programSource === 'screen');
+        }
+        root.classList.toggle('is-program-active', Boolean(state.programStream));
+        if (els.programEmpty) {
+            els.programEmpty.hidden = Boolean(state.programStream);
+        }
+    }
+
+    function isSourceProtected(sourceId) {
+        return state.programSource === sourceId && (state.broadcastSession || isRecordingActive());
+    }
+
+    function warnProtectedSource(sourceId) {
+        setStatus('This source is currently in Program. Send another source to Program before stopping it.', 'warning');
+        if (state.broadcastSession) {
+            setBroadcastStatus('This source is currently in Program. Send another source to Program before stopping it.', 'warning');
+        }
+    }
+
+    async function ensureMicStream() {
+        const existingAudio = state.cameraStream && state.cameraStream.getAudioTracks().find((track) => track.readyState !== 'ended');
+        if (existingAudio) {
+            return state.cameraStream;
+        }
+        const micAudio = state.micStream && state.micStream.getAudioTracks().find((track) => track.readyState !== 'ended');
+        if (micAudio) {
+            return state.micStream;
+        }
+        if (!state.support.getUserMedia) {
+            return null;
+        }
+        state.micStream = await navigator.mediaDevices.getUserMedia({
+            audio: state.selectedMicId ? { deviceId: { exact: state.selectedMicId } } : true,
+            video: false,
+        });
+        return state.micStream;
+    }
+
+    async function buildRecordingStreamFromProgram() {
+        const tracks = [];
+        const programOutput = ensureProgramCompositor() || state.programStream;
+        if (programOutput) {
+            programOutput.getVideoTracks().forEach((track) => {
+                if (track.readyState !== 'ended') {
+                    tracks.push(track);
+                }
+            });
+        }
+        let audioSource = state.broadcastSession && state.broadcastSession.getLocalMediaStream ? state.broadcastSession.getLocalMediaStream() : null;
+        if (!audioSource || !audioSource.getAudioTracks().some((track) => track.readyState !== 'ended')) {
+            audioSource = state.cameraStream;
+        }
+        if (!audioSource || !audioSource.getAudioTracks().some((track) => track.readyState !== 'ended')) {
+            audioSource = await ensureMicStream();
+        }
+        if (audioSource) {
+            audioSource.getAudioTracks().forEach((track) => {
+                if (track.readyState !== 'ended') {
+                    tracks.push(track);
+                }
+            });
+        }
+        return tracks.length ? new MediaStream(tracks) : null;
     }
 
     function setStatus(message, type) {
@@ -236,7 +506,7 @@
         select.disabled = false;
     }
 
-    async function startPreview() {
+    async function startPreview(updateSelection = true) {
         if (!state.support.secureContext) {
             setStatus(strings.insecureContext, 'error');
             return;
@@ -246,7 +516,12 @@
             return;
         }
 
-        stopPreview();
+        if (state.cameraStream && isSourceProtected('camera')) {
+            warnProtectedSource('camera');
+            return;
+        }
+
+        stopPreview({ force: true });
 
         try {
             const preset = getSelectedPreset();
@@ -263,14 +538,29 @@
             await populateDevices();
             setPreviewButtons(true);
             setShellClass('is-preview-active', true);
-            setStatus(strings.previewActive, 'success');
+            if (state.programSource === 'camera') {
+                state.programStream = state.cameraStream;
+                renderProgramState();
+            }
+            if (updateSelection) {
+                state.previewSource = 'camera';
+                renderPreviewState();
+                renderSourceState();
+                setStatus('Camera staged in Preview.', 'success');
+            } else {
+                setStatus(strings.previewActive, 'success');
+            }
         } catch (error) {
             stopPreview();
             setStatus(friendlyMediaError(error), 'error');
         }
     }
 
-    function stopPreview() {
+    function stopPreview(options = {}) {
+        if (!options.force && isSourceProtected('camera')) {
+            warnProtectedSource('camera');
+            return false;
+        }
         stopStream(state.cameraStream);
         state.cameraStream = null;
         if (els.cameraPreview) {
@@ -279,6 +569,17 @@
         teardownAudioMeter();
         setPreviewButtons(false);
         setShellClass('is-preview-active', false);
+        if (state.previewSource === 'camera') {
+            state.previewSource = fallbackPreviewSource('camera');
+            renderPreviewState();
+            renderSourceState();
+        }
+        if (state.programSource === 'camera') {
+            state.programSource = null;
+            state.programStream = null;
+            renderProgramState();
+        }
+        return true;
     }
 
     function setPreviewButtons(active) {
@@ -333,18 +634,42 @@
         state.analyser = null;
     }
 
-    async function startScreenPreview() {
+    async function startScreenPreview(updateSelection = true) {
         if (!state.support.getDisplayMedia) {
             setStatus(strings.screenUnsupported, 'error');
             return;
         }
 
-        stopScreenPreview();
+        if (state.screenStream && isSourceProtected('screen')) {
+            warnProtectedSource('screen');
+            return;
+        }
+
+        stopScreenPreview({ force: true });
 
         try {
-            state.screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+            let captureController = null;
+            const displayOptions = {
+                video: true,
+                audio: false,
+                surfaceSwitching: 'include',
+                selfBrowserSurface: 'exclude',
+            };
+            if ('CaptureController' in window) {
+                captureController = new window.CaptureController();
+                displayOptions.controller = captureController;
+            }
+            state.screenStream = await navigator.mediaDevices.getDisplayMedia(displayOptions);
+            if (!state.screenStream) {
+                throw new Error('Screen Share could not be started.');
+            }
+            if (captureController && typeof captureController.setFocusBehavior === 'function') {
+                try {
+                    captureController.setFocusBehavior('focus-capturing-application');
+                } catch (error) {}
+            }
             state.screenStream.getVideoTracks().forEach((track) => {
-                track.addEventListener('ended', stopScreenPreview, { once: true });
+                track.addEventListener('ended', () => handleScreenShareEnded(), { once: true });
             });
             if (els.screenPreview) {
                 els.screenPreview.srcObject = state.screenStream;
@@ -352,14 +677,25 @@
             }
             setScreenButtons(true);
             setShellClass('is-screen-active', true);
-            setStatus(strings.screenPreviewActive, 'success');
+            if (updateSelection) {
+                state.previewSource = 'screen';
+                renderPreviewState();
+                renderSourceState();
+                setStatus('Screen Share staged in Preview.', 'success');
+            } else {
+                setStatus(strings.screenPreviewActive, 'success');
+            }
         } catch (error) {
             stopScreenPreview();
             setStatus(error && error.name === 'NotAllowedError' ? strings.screenCancelled : friendlyMediaError(error), 'warning');
         }
     }
 
-    function stopScreenPreview() {
+    function stopScreenPreview(options = {}) {
+        if (!options.force && isSourceProtected('screen')) {
+            warnProtectedSource('screen');
+            return false;
+        }
         stopStream(state.screenStream);
         state.screenStream = null;
         if (els.screenPreview) {
@@ -367,6 +703,44 @@
         }
         setScreenButtons(false);
         setShellClass('is-screen-active', false);
+        if (state.previewSource === 'screen') {
+            state.previewSource = fallbackPreviewSource('screen');
+            renderPreviewState();
+            renderSourceState();
+        }
+        if (state.programSource === 'screen') {
+            state.programSource = null;
+            state.programStream = null;
+            renderProgramState();
+        }
+        return true;
+    }
+
+    async function handleScreenShareEnded() {
+        state.screenStream = null;
+        if (els.screenPreview) {
+            els.screenPreview.srcObject = null;
+        }
+        setScreenButtons(false);
+        setShellClass('is-screen-active', false);
+        if (state.previewSource === 'screen') {
+            state.previewSource = fallbackPreviewSource('screen');
+            renderPreviewState();
+            renderSourceState();
+        }
+        if (state.programSource === 'screen') {
+            state.programSource = null;
+            state.programStream = null;
+            renderProgramState();
+            setStatus('Screen Share ended. Program source was cleared.', 'warning');
+            if (state.broadcastSession && state.cameraStream) {
+                state.previewSource = 'camera';
+                await commitPreviewToProgram('cut');
+                setBroadcastStatus('Screen Share ended. Program fell back to Camera.', 'warning');
+            } else if (state.broadcastSession) {
+                setBroadcastStatus('Screen Share ended. Choose another source for Program.', 'warning');
+            }
+        }
     }
 
     function setScreenButtons(active) {
@@ -474,16 +848,21 @@
         let jobId = null;
         let serverRecordingStarted = false;
         try {
-            if (state.broadcastSession) {
+            if (state.programStream) {
+                state.recordingStream = await buildRecordingStreamFromProgram();
+            } else if (state.broadcastSession) {
                 state.recordingStream = state.broadcastSession.getLocalMediaStream ? state.broadcastSession.getLocalMediaStream() : null;
                 if (!state.recordingStream) {
                     throw new Error('The active broadcast tracks are unavailable for recording.');
                 }
-            } else {
-                if (!state.cameraStream) {
-                    await startPreview();
-                }
+            } else if (state.cameraStream) {
                 state.recordingStream = state.cameraStream;
+            } else {
+                await setPreviewSource('camera');
+                state.recordingStream = state.programStream || state.cameraStream;
+            }
+            if (!state.recordingStream) {
+                throw new Error('Choose a Program source before recording.');
             }
             jobId = await ensureSetupJob();
             const mimeType = preferredMimeType();
@@ -704,6 +1083,7 @@
         if (els.startRecording) { els.startRecording.disabled = recording; }
         if (els.stopRecording) { els.stopRecording.disabled = !recording; }
         if (els.finalizeRecording) { els.finalizeRecording.disabled = !stopped; }
+        renderTransitionButtons();
     }
 
     async function createSetupJob() {
@@ -769,8 +1149,12 @@
     }
 
     function cleanup() {
-        stopPreview();
-        stopScreenPreview();
+        const canStopProgramOutput = !state.broadcastSession && !isRecordingActive();
+        stopPreview({ force: true });
+        stopScreenPreview({ force: true });
+        stopProgramCompositor({ stopTracks: canStopProgramOutput, clearStream: canStopProgramOutput });
+        stopStream(state.micStream);
+        state.micStream = null;
     }
 
 
@@ -861,9 +1245,16 @@
             return;
         }
         setBroadcastStatus(strings.goingLive, 'info');
+        state.broadcastStarting = true;
+        state.broadcastReady = false;
+        renderTransitionButtons();
         if (els.goLive) els.goLive.disabled = true;
-        stopPreview();
         try {
+            if (!state.programSource) {
+                await setPreviewSource('camera');
+                await commitPreviewToProgram('cut');
+            }
+            setBroadcastStatus('Go Live will use the current Program source.', 'info');
             const created = await api('/broadcasts', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify(broadcastPayload()) });
             const broadcast = created.broadcast || {};
             state.broadcastVideoId = broadcast.videoId;
@@ -874,7 +1265,9 @@
                 if (els.viewerLinkWrap) els.viewerLinkWrap.hidden = false;
             }
             const prepared = await api('/broadcasts/' + state.broadcastVideoId + '/prepare', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
-            state.broadcastSession = window.VH360AgoraBroadcaster.create({
+            studioDebugLog('[VH360 Studio] Studio broadcaster UID', prepared.uid);
+            ensureProgramCompositor();
+            const session = window.VH360AgoraBroadcaster.create({
                 appId: prepared.appId,
                 channelName: prepared.channelName,
                 token: prepared.token,
@@ -884,8 +1277,14 @@
                 localContainer: els.agoraLocalPreview,
                 audioConfig: agoraAudioConfigFromSelection(),
                 videoConfig: agoraVideoConfigFromPreset(),
+                initialVideoMediaStreamTrack: state.programOutputStream ? state.programOutputStream.getVideoTracks()[0] : null,
+                initialVideoSource: state.programSource || '',
             });
-            await state.broadcastSession.start();
+            await session.start();
+            state.broadcastSession = session;
+            state.broadcastReady = true;
+            state.broadcastStarting = false;
+            renderTransitionButtons();
             await api('/broadcasts/' + state.broadcastVideoId + '/started', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ job_id: state.activeJobId || 0 }) });
             state.heartbeatTimer = window.setInterval(() => {
                 api('/broadcasts/' + state.broadcastVideoId + '/heartbeat', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } }).catch(() => {});
@@ -898,6 +1297,7 @@
             if (state.broadcastSession) {
                 await state.broadcastSession.stop().catch(() => {});
                 state.broadcastSession = null;
+                state.broadcastReady = false;
             }
             if (failedVideoId) {
                 await api('/broadcasts/' + failedVideoId + '/end', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } }).catch(() => {});
@@ -906,14 +1306,20 @@
                 window.clearInterval(state.heartbeatTimer);
                 state.heartbeatTimer = null;
             }
+            state.broadcastStarting = false;
+            state.broadcastReady = false;
             if (els.endLive) els.endLive.disabled = true;
             if (els.goLive) els.goLive.disabled = false;
             setShellClass('is-live', false);
+            renderTransitionButtons();
             setBroadcastStatus((error && error.message) || strings.broadcastFailed, 'error');
         }
     }
 
     async function endLive() {
+        state.broadcastEnding = true;
+        state.broadcastReady = false;
+        renderTransitionButtons();
         if (state.recorder) {
             setBroadcastStatus(strings.recordingActive, 'info');
             await stopRecording().catch((error) => {
@@ -938,9 +1344,12 @@
                 return;
             }
         }
+        state.broadcastEnding = false;
+        state.broadcastReady = false;
         if (els.goLive) els.goLive.disabled = false;
         if (els.endLive) els.endLive.disabled = true;
         setShellClass('is-live', false);
+        renderTransitionButtons();
         setBroadcastStatus(strings.liveEnded, 'success');
     }
 
@@ -960,13 +1369,22 @@
     }
 
     function bindEvents() {
+        els.previewSourceButtons.forEach((button) => {
+            button.addEventListener('click', () => setPreviewSource(button.dataset.previewSource));
+        });
+        els.sceneSourceButtons.forEach((button) => {
+            button.addEventListener('click', () => setPreviewSource(button.dataset.sceneSource));
+        });
+        if (els.transitionCut) { els.transitionCut.addEventListener('click', () => commitPreviewToProgram('cut')); }
+        if (els.transitionFade) { els.transitionFade.addEventListener('click', () => commitPreviewToProgram('fade')); }
         if (els.startPreview) {
             els.startPreview.addEventListener('click', startPreview);
         }
         if (els.stopPreview) {
             els.stopPreview.addEventListener('click', () => {
-                stopPreview();
-                setStatus(strings.ready, 'success');
+                if (stopPreview()) {
+                    setStatus(strings.ready, 'success');
+                }
             });
         }
         if (els.startScreen) {
@@ -974,8 +1392,9 @@
         }
         if (els.stopScreen) {
             els.stopScreen.addEventListener('click', () => {
-                stopScreenPreview();
-                setStatus(strings.ready, 'success');
+                if (stopScreenPreview()) {
+                    setStatus(strings.ready, 'success');
+                }
             });
         }
         if (els.cameraSelect) {
@@ -1020,7 +1439,22 @@
         if (els.goLive) { els.goLive.addEventListener('click', goLive); }
         if (els.endLive) { els.endLive.addEventListener('click', endLive); }
         if (els.copyViewerLink) { els.copyViewerLink.addEventListener('click', () => { if (els.viewerLink && els.viewerLink.href) navigator.clipboard.writeText(els.viewerLink.href); }); }
-        window.addEventListener('pagehide', endBroadcastKeepalive);
+        root.addEventListener('vh360:agora-broadcaster:connection-state-change', (event) => {
+            const detail = event.detail || {};
+            studioDebugLog('[VH360 Studio] Agora connection state changed', detail);
+            if (detail.current) {
+                state.lastAgoraConnectionState = detail.current;
+                state.broadcastReady = Boolean(state.broadcastSession) && detail.current === 'CONNECTED';
+                renderTransitionButtons();
+                setBroadcastStatus('Agora connection: ' + detail.current + (detail.reason ? ' (' + detail.reason + ')' : ''), detail.current === 'CONNECTED' ? 'success' : 'info');
+            }
+        });
+        window.addEventListener('pagehide', () => {
+            endBroadcastKeepalive();
+            if (!isRecordingActive() && !state.broadcastSession) {
+                cleanup();
+            }
+        });
         window.addEventListener('beforeunload', (event) => {
             if (isRecordingActive()) {
                 event.preventDefault();
@@ -1030,7 +1464,7 @@
             cleanup();
         });
         document.addEventListener('visibilitychange', () => {
-            if (document.hidden && !isRecordingActive()) {
+            if (document.hidden && !isRecordingActive() && !state.broadcastSession) {
                 cleanup();
             }
         });
@@ -1042,5 +1476,9 @@
     updateQualityDetails();
     updatePublishingButtons();
     updateBroadcastRules();
+    renderPreviewState();
+    renderSourceState();
+    renderProgramState();
+    renderTransitionButtons();
     bindEvents();
 }());

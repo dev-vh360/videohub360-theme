@@ -154,8 +154,17 @@ class VideoHub360_Livestream_Service {
             $channel = $this->generate_channel_name( $post_id );
             update_post_meta( $post_id, '_vh360_agora_channel_name', $channel );
         }
-        $uid = absint( $user_id ) ?: get_current_user_id();
-        $uid = $uid ? $uid : wp_rand( 100000, 999999 );
+        $is_studio_controlled = 'yes' === get_post_meta( $post_id, '_vh360_studio_controlled_live', true );
+        if ( $is_studio_controlled ) {
+            $uid = absint( get_post_meta( $post_id, '_vh360_studio_host_agora_uid', true ) );
+            if ( ! $uid ) {
+                $uid = wp_rand( 100000000, 999999999 );
+                update_post_meta( $post_id, '_vh360_studio_host_agora_uid', $uid );
+            }
+        } else {
+            $uid = absint( $user_id ) ?: get_current_user_id();
+            $uid = $uid ? $uid : wp_rand( 100000, 999999 );
+        }
         $token = '';
         $expires_at = time() + 3600;
         $certificate = get_option( 'vh360_agora_app_certificate', '' );

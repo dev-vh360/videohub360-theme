@@ -597,6 +597,13 @@ window.initializeAgoraPlayer = function(config) {
     // Apply allowEveryoneIsHost logic for Interactive mode
     let isHost = config.isHost;
     let currentRole = config.role;
+    if (config.studioControlled) {
+        isHost = false;
+        currentRole = 'audience';
+        config.isHost = false;
+        config.role = 'audience';
+        config.allowEveryoneIsHost = false;
+    }
 
     // Initialize stream started flag - controls should not show until stream begins
     window.vh360StreamStarted = false;
@@ -607,6 +614,11 @@ window.initializeAgoraPlayer = function(config) {
     window.vh360Log("- Config agoraMode:", config.agoraMode);
     window.vh360Log("- Config allowEveryoneIsHost:", config.allowEveryoneIsHost);
     window.vh360Log("- Config isOriginalHost:", config.isOriginalHost);
+    window.vh360Log('[VH360 Public Live] Viewer mode', {
+        uid: config.uid,
+        role: config.role,
+        studioControlled: !!config.studioControlled
+    });
 
     if (config.allowEveryoneIsHost && config.agoraMode === 'interactive') {
         isHost = true;
@@ -618,9 +630,17 @@ window.initializeAgoraPlayer = function(config) {
     window.vh360Log("- currentRole:", currentRole);
     window.vh360Log("- isHost:", isHost);
 
-    let isOriginalHost = config.isOriginalHost;
+    let isOriginalHost = config.studioControlled ? false : config.isOriginalHost;
     let canModerate = config.canModerate;
-    let security = config.security;
+    let security = config.security || {};
+
+    if (config.studioControlled) {
+        config.displayName = config.viewerDisplayName || config.displayName || 'Guest';
+        config.userId = config.viewerUserId || config.userId || 0;
+        security.user_id = config.viewerUserId || security.user_id || 0;
+        security.display_name = config.viewerDisplayName || security.display_name || config.displayName || 'Guest';
+        security.avatar_url = config.viewerAvatarUrl || config.viewerAvatar || security.avatar_url || config.avatarUrl || '';
+    }
 
     // === Helper Functions ===
 
@@ -934,19 +954,25 @@ window.initializeAgoraPlayer = function(config) {
         thumbnailRailStage = null;
     }
 
+    function isStudioHostUid(uid) {
+        return !!(config.studioControlled && config.studioHostUid && String(uid) === String(config.studioHostUid));
+    }
+
     function resolveWordPressUserId(uid, options = {}) {
         if (Object.prototype.hasOwnProperty.call(options, 'wordpressUserId')) return options.wordpressUserId || null;
+        if (isStudioHostUid(uid)) return config.studioHostUserId || null;
         if (window.pendingUserInfo && window.pendingUserInfo[uid] && window.pendingUserInfo[uid].wordpressUserId) return window.pendingUserInfo[uid].wordpressUserId;
         if (remoteUsers[uid] && remoteUsers[uid].wordpressUserId) return remoteUsers[uid].wordpressUserId;
-        if (currentUserUID && String(uid) === String(currentUserUID)) return security.user_id || null;
+        if (currentUserUID && String(uid) === String(currentUserUID)) return config.viewerUserId || security.user_id || null;
         return null;
     }
 
     function resolveParticipantDisplayName(uid, options = {}) {
         if (options.displayName) return options.displayName;
+        if (isStudioHostUid(uid) && config.studioHostDisplayName) return config.studioHostDisplayName;
         if (window.pendingUserInfo && window.pendingUserInfo[uid] && window.pendingUserInfo[uid].displayName) return window.pendingUserInfo[uid].displayName;
         if (remoteUsers[uid] && remoteUsers[uid].displayName) return remoteUsers[uid].displayName;
-        if (currentUserUID && String(uid) === String(currentUserUID)) return config.displayName || security.display_name || `User ${uid}`;
+        if (currentUserUID && String(uid) === String(currentUserUID)) return config.viewerDisplayName || config.displayName || security.display_name || `User ${uid}`;
         return `User ${uid}`;
     }
 
@@ -2527,6 +2553,10 @@ window.initializeAgoraPlayer = function(config) {
 
         try {
             await client.subscribe(user, mediaType);
+            window.vh360Log('Agora: public page subscribed to user media', {
+                uid: user && user.uid,
+                mediaType: mediaType
+            });
         } catch (subscribeError) {
             window.vh360Warn('Agora: Failed to subscribe to remote user media:', {
                 uid: user && user.uid,
@@ -2537,6 +2567,14 @@ window.initializeAgoraPlayer = function(config) {
         }
 
         if (mediaType === "video") {
+            window.vh360Log('[VH360 Public Live] Remote video received', {
+                remoteUid: user && user.uid,
+                mediaType: mediaType
+            });
+            window.vh360Log('Agora: public page received user-published video', {
+                uid: user && user.uid,
+                hasVideoTrack: !!(user && user.videoTrack)
+            });
             const remoteVideoTrack = user.videoTrack;
             if (!remoteVideoTrack) {
                 window.vh360Warn("Agora: No video track available for user:", user.uid);
@@ -2546,8 +2584,15 @@ window.initializeAgoraPlayer = function(config) {
             let initialDisplayName = `User ${user.uid}`;
             let wordpressUserId = null;
             let isUserOriginalHost = user.uid === originalHostUID;
+            const isStudioHost = isStudioHostUid(user.uid);
 
-            if (window.pendingUserInfo && window.pendingUserInfo[user.uid]) {
+            if (isStudioHost) {
+                initialDisplayName = config.studioHostDisplayName || initialDisplayName;
+                wordpressUserId = config.studioHostUserId || null;
+                isUserOriginalHost = false;
+            }
+
+            if (!isStudioHost && window.pendingUserInfo && window.pendingUserInfo[user.uid]) {
                 const pendingInfo = window.pendingUserInfo[user.uid];
                 initialDisplayName = pendingInfo.displayName || initialDisplayName;
                 wordpressUserId = pendingInfo.wordpressUserId || null;
@@ -2576,6 +2621,20 @@ window.initializeAgoraPlayer = function(config) {
                 wordpressUserId: wordpressUserId,
                 isOriginalHost: isUserOriginalHost
             });
+            if (isStudioHost && participant) {
+                participant.displayName = config.studioHostDisplayName || participant.displayName;
+                participant.wordpressUserId = config.studioHostUserId || participant.wordpressUserId;
+            }
+            if (participant.videoContainerElement && window.videoElementManager) {
+                window.videoElementManager.unregisterTrackBinding(participant.videoContainerElement.id);
+            }
+            if (participant.videoContainerElement) {
+                participant.videoContainerElement.replaceChildren();
+            }
+            window.vh360Log('Agora: public page attaching subscribed video', {
+                uid: user && user.uid,
+                hasVideoTrack: !!remoteVideoTrack
+            });
             attachParticipantVideo(participant, remoteVideoTrack, false);
 
             if ((isOriginalHost || config.canModerate) && user.uid !== security.user_id && participant.tileElement && !participant.tileElement.querySelector('.vh360-participant-menu-container')) {
@@ -2601,9 +2660,10 @@ window.initializeAgoraPlayer = function(config) {
                 window.vh360Log("Agora: Audio track subscribed for UID:", user.uid, "- Volume tracking enabled");
             }
 
+            const isStudioHostAudio = isStudioHostUid(user.uid);
             let displayName = resolveParticipantDisplayName(user.uid);
             let wordpressUserId = resolveWordPressUserId(user.uid);
-            if (window.pendingUserInfo && window.pendingUserInfo[user.uid]) {
+            if (!isStudioHostAudio && window.pendingUserInfo && window.pendingUserInfo[user.uid]) {
                 displayName = window.pendingUserInfo[user.uid].displayName || displayName;
                 wordpressUserId = window.pendingUserInfo[user.uid].wordpressUserId || wordpressUserId;
                 delete window.pendingUserInfo[user.uid];
@@ -3039,6 +3099,10 @@ window.initializeAgoraPlayer = function(config) {
 
     // -- Publishing (Host) --
     async function startPublishing() {
+        if (config.studioControlled) {
+            window.vh360Log('Studio-controlled broadcast: public page publishing disabled.');
+            return;
+        }
         try {
             window.vh360Log("VideoHub360: startPublishing() called");
             window.vh360Log("VideoHub360: Current role at publish time:", currentRole);
@@ -3236,6 +3300,10 @@ window.initializeAgoraPlayer = function(config) {
             }
             if (!security.is_logged_in) {
                 showAgoraError('Please log in to join as a presenter.');
+                return;
+            }
+            if (config.studioControlled) {
+                window.vh360Log('Studio-controlled broadcast: public page publishing disabled.');
                 return;
             }
             if (isOriginalHost) {
@@ -4739,6 +4807,9 @@ window.initializeAgoraPlayer = function(config) {
     // Simple join livestream button functionality
     function handleJoinLivestream() {
         window.vh360Log('VideoHub360: handleJoinLivestream() called');
+        if (config.studioControlled) {
+            window.vh360Log('Studio-controlled broadcast: public page publishing disabled.');
+        }
         window.vh360Log('VideoHub360: Current role at button click:', currentRole);
         window.vh360Log('VideoHub360: isOriginalHost:', isOriginalHost);
         window.vh360Log('VideoHub360: Config:', config);
@@ -4757,7 +4828,17 @@ window.initializeAgoraPlayer = function(config) {
             window.location.href = vh360Data.userLoginUrl;
             return;
         }
-        if (isOriginalHost) {
+        if (config.studioControlled) {
+            if (joinOverlay) {
+                joinOverlay.style.display = 'none';
+            }
+            window.vh360StreamStarted = true;
+            setLocalPlayerStatusHTML('<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#fff;font-size:1.2em;"><div>Connecting to livestream...</div></div>');
+            joinChannel().catch(error => {
+                window.vh360Error('Failed to join Studio-controlled livestream:', error);
+                showAgoraError('Failed to connect to livestream. Please refresh and try again.');
+            });
+        } else if (isOriginalHost) {
             setStreamStatus('yes').then(function(data) {
                 // PATCH: Update badges and "Started x ago" instantly
                 if (data && data.success && data.data && data.data.live_start_time) {
