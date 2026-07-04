@@ -50,6 +50,35 @@ class VH360_Studio_REST_Controller {
             );
         }
 
+
+        register_rest_route(
+            'vh360-studio/v1',
+            '/media-sources',
+            array(
+                array(
+                    'methods'             => WP_REST_Server::READABLE,
+                    'callback'            => array( $this, 'list_media_sources' ),
+                    'permission_callback' => array( $this, 'permissions_check' ),
+                ),
+                array(
+                    'methods'             => WP_REST_Server::CREATABLE,
+                    'callback'            => array( $this, 'upload_media_source' ),
+                    'permission_callback' => array( $this, 'permissions_check' ),
+                ),
+            )
+        );
+
+        register_rest_route(
+            'vh360-studio/v1',
+            '/media-sources/(?P<id>\d+)',
+            array(
+                'methods'             => WP_REST_Server::DELETABLE,
+                'callback'            => array( $this, 'delete_media_source' ),
+                'permission_callback' => array( $this, 'permissions_check' ),
+                'args'                => array( 'id' => $this->get_id_arg() ),
+            )
+        );
+
         register_rest_route(
             'vh360-studio/v1',
             '/jobs',
@@ -198,6 +227,165 @@ class VH360_Studio_REST_Controller {
                 'permission_callback' => array( $this, 'permissions_check' ),
                 'args'                => array( 'id' => $this->get_id_arg() ),
             )
+        );
+    }
+
+
+    public function list_media_sources( WP_REST_Request $request ) {
+        $query = new WP_Query(
+            array(
+                'post_type'      => 'attachment',
+                'post_status'    => 'inherit',
+                'posts_per_page' => 100,
+                'author'         => get_current_user_id(),
+                'orderby'        => 'date',
+                'order'          => 'DESC',
+                'meta_query'     => array(
+                    array(
+                        'key'   => '_vh360_studio_media_source',
+                        'value' => '1',
+                    ),
+                    array(
+                        'key'   => '_vh360_studio_media_owner',
+                        'value' => (string) get_current_user_id(),
+                    ),
+                ),
+            )
+        );
+
+        $sources = array_map( array( $this, 'prepare_media_source_response' ), $query->posts );
+        return rest_ensure_response( array( 'sources' => array_values( array_filter( $sources ) ) ) );
+    }
+
+    public function upload_media_source( WP_REST_Request $request ) {
+        if ( ! current_user_can( 'upload_files' ) ) {
+            return new WP_Error( 'vh360_studio_media_upload_forbidden', __( 'Studio media source imports require permission to upload files.', 'videohub360-studio' ), array( 'status' => 403 ) );
+        }
+
+        $files = $request->get_file_params();
+        if ( empty( $files['file'] ) ) {
+            return new WP_Error( 'vh360_studio_media_missing_file', __( 'Choose an image or video file to import.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        }
+
+        $file = $files['file'];
+        if ( empty( $file['tmp_name'] ) || ! is_uploaded_file( $file['tmp_name'] ) ) {
+            return new WP_Error( 'vh360_studio_media_invalid_upload', __( 'The uploaded media source could not be read.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        }
+
+        $mime = $this->detect_media_source_mime_type( $file );
+        if ( is_wp_error( $mime ) ) {
+            return $mime;
+        }
+
+        $type = 0 === strpos( $mime, 'image/' ) ? 'image' : 'video';
+        $display_name = sanitize_text_field( wp_unslash( (string) $request->get_param( 'display_name' ) ) );
+        if ( '' === $display_name ) {
+            $display_name = pathinfo( sanitize_file_name( $file['name'] ), PATHINFO_FILENAME );
+        }
+        $display_name = trim( substr( $display_name, 0, 120 ) );
+        if ( '' === $display_name ) {
+            $display_name = __( 'Studio Media Source', 'videohub360-studio' );
+        }
+
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        require_once ABSPATH . 'wp-admin/includes/media.php';
+        require_once ABSPATH . 'wp-admin/includes/image.php';
+
+        $upload = wp_handle_upload( $file, array( 'test_form' => false, 'mimes' => $this->allowed_media_source_mimes() ) );
+        if ( isset( $upload['error'] ) ) {
+            return new WP_Error( 'vh360_studio_media_upload_failed', $upload['error'], array( 'status' => 500 ) );
+        }
+
+        $attachment_id = wp_insert_attachment(
+            array(
+                'post_mime_type' => $upload['type'],
+                'post_title'     => $display_name,
+                'post_content'   => '',
+                'post_status'    => 'inherit',
+                'post_author'    => get_current_user_id(),
+            ),
+            $upload['file']
+        );
+
+        if ( is_wp_error( $attachment_id ) || ! $attachment_id ) {
+            return new WP_Error( 'vh360_studio_media_attachment_failed', __( 'Studio could not create the media attachment.', 'videohub360-studio' ), array( 'status' => 500 ) );
+        }
+
+        $metadata = wp_generate_attachment_metadata( $attachment_id, $upload['file'] );
+        if ( ! is_wp_error( $metadata ) && ! empty( $metadata ) ) {
+            wp_update_attachment_metadata( $attachment_id, $metadata );
+        }
+
+        update_post_meta( $attachment_id, '_vh360_studio_media_source', '1' );
+        update_post_meta( $attachment_id, '_vh360_studio_media_owner', (string) get_current_user_id() );
+        update_post_meta( $attachment_id, '_vh360_studio_media_name', $display_name );
+        update_post_meta( $attachment_id, '_vh360_studio_media_type', $type );
+
+        return rest_ensure_response( array( 'source' => $this->prepare_media_source_response( get_post( $attachment_id ) ) ) );
+    }
+
+    public function delete_media_source( WP_REST_Request $request ) {
+        $attachment_id = absint( $request['id'] );
+        $attachment = get_post( $attachment_id );
+        if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
+            return new WP_Error( 'vh360_studio_media_not_found', __( 'Studio media source not found.', 'videohub360-studio' ), array( 'status' => 404 ) );
+        }
+
+        if ( '1' !== get_post_meta( $attachment_id, '_vh360_studio_media_source', true ) ) {
+            return new WP_Error( 'vh360_studio_media_not_studio_source', __( 'This attachment is not a Studio media source.', 'videohub360-studio' ), array( 'status' => 403 ) );
+        }
+
+        if ( (string) get_current_user_id() !== (string) get_post_meta( $attachment_id, '_vh360_studio_media_owner', true ) ) {
+            return new WP_Error( 'vh360_studio_media_not_owner', __( 'You can only delete your own Studio media sources.', 'videohub360-studio' ), array( 'status' => 403 ) );
+        }
+
+        $deleted = wp_delete_attachment( $attachment_id, true );
+        if ( ! $deleted ) {
+            return new WP_Error( 'vh360_studio_media_delete_failed', __( 'Studio could not delete this media source.', 'videohub360-studio' ), array( 'status' => 500 ) );
+        }
+
+        return rest_ensure_response( array( 'success' => true, 'id' => $attachment_id ) );
+    }
+
+    private function detect_media_source_mime_type( $file ) {
+        $check = wp_check_filetype_and_ext( $file['tmp_name'], $file['name'], $this->allowed_media_source_mimes() );
+        $mime = ! empty( $check['type'] ) ? $check['type'] : '';
+        if ( ! $mime || 0 !== strpos( $mime, 'image/' ) && 0 !== strpos( $mime, 'video/' ) ) {
+            return new WP_Error( 'vh360_studio_media_invalid_type', __( 'Studio media sources must be image or video files.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        }
+        return $mime;
+    }
+
+    private function allowed_media_source_mimes() {
+        return array_filter(
+            wp_get_mime_types(),
+            function( $mime ) {
+                return 0 === strpos( $mime, 'image/' ) || 0 === strpos( $mime, 'video/' );
+            }
+        );
+    }
+
+    private function prepare_media_source_response( $attachment ) {
+        if ( ! $attachment ) {
+            return null;
+        }
+
+        $id = absint( $attachment->ID );
+        $mime = get_post_mime_type( $id );
+        $type = get_post_meta( $id, '_vh360_studio_media_type', true );
+        if ( ! in_array( $type, array( 'image', 'video' ), true ) ) {
+            $type = 0 === strpos( $mime, 'image/' ) ? 'image' : 'video';
+        }
+
+        return array(
+            'id'       => $id,
+            'sourceId' => 'media:' . $id,
+            'name'     => get_post_meta( $id, '_vh360_studio_media_name', true ) ?: get_the_title( $id ),
+            'type'     => $type,
+            'url'      => wp_get_attachment_url( $id ),
+            'mime'     => $mime,
+            'filename' => wp_basename( get_attached_file( $id ) ),
+            'created'  => mysql_to_rfc3339( $attachment->post_date_gmt ?: $attachment->post_date ),
         );
     }
 
