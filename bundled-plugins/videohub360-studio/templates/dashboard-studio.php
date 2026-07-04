@@ -53,11 +53,10 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
             <section class="vh360-studio-monitor vh360-studio-monitor--program" aria-labelledby="vh360-studio-program-title">
                 <div class="vh360-studio-monitor-header">
                     <h3 id="vh360-studio-program-title"><?php esc_html_e( 'Program', 'videohub360-studio' ); ?></h3>
-                    <span class="vh360-studio-pill"><?php esc_html_e( 'Agora local output', 'videohub360-studio' ); ?></span>
+                    <span class="vh360-studio-pill"><?php esc_html_e( 'Program output', 'videohub360-studio' ); ?></span>
                 </div>
                 <div class="vh360-studio-monitor-screen">
                     <canvas class="vh360-studio-program-canvas" data-program-canvas aria-label="<?php esc_attr_e( 'Program output preview', 'videohub360-studio' ); ?>"></canvas>
-                    <video class="vh360-studio-program-video" data-program-preview playsinline muted aria-label="<?php esc_attr_e( 'Program source preview', 'videohub360-studio' ); ?>"></video>
                     <div data-agora-local-preview class="vh360-studio-agora-preview"></div>
                     <span class="vh360-studio-monitor-empty" data-program-empty><?php esc_html_e( 'Choose a Preview source, then use Cut or Fade to send it to Program.', 'videohub360-studio' ); ?></span>
                 </div>
@@ -92,7 +91,7 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
                         <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-stop-preview disabled><?php esc_html_e( 'Stop preview', 'videohub360-studio' ); ?></button>
                     </div>
                     <div class="vh360-studio-actions">
-                        <button type="button" class="vh360-studio-button" data-start-screen><?php esc_html_e( 'Test screen share', 'videohub360-studio' ); ?></button>
+                        <button type="button" class="vh360-studio-button" data-start-screen><?php esc_html_e( 'Start screen share', 'videohub360-studio' ); ?></button>
                         <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-stop-screen disabled><?php esc_html_e( 'Stop screen share', 'videohub360-studio' ); ?></button>
                     </div>
                     <label for="vh360-studio-quality-select"><?php esc_html_e( 'Quality preset', 'videohub360-studio' ); ?></label>

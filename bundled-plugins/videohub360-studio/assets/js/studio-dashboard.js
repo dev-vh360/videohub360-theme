@@ -12,7 +12,6 @@
     const state = {
         cameraStream: null,
         screenStream: null,
-        screenAgoraTrack: null,
         micStream: null,
         audioContext: null,
         analyser: null,
@@ -59,7 +58,6 @@
         supportChecks: root.querySelector('[data-support-checks]'),
         cameraPreview: root.querySelector('[data-camera-preview]'),
         screenPreview: root.querySelector('[data-screen-preview]'),
-        programPreview: root.querySelector('[data-program-preview]'),
         programCanvas: root.querySelector('[data-program-canvas]'),
         programEmpty: root.querySelector('[data-program-empty]'),
         previewSourceButtons: root.querySelectorAll('[data-preview-source]'),
@@ -123,7 +121,11 @@
         root.classList.toggle(className, Boolean(active));
     }
 
-
+    function studioDebugLog() {
+        if (window.__VH360_STUDIO_DEBUG === true && window.console && typeof window.console.info === 'function') {
+            window.console.info.apply(window.console, arguments);
+        }
+    }
 
     function sourceLabel(sourceId) {
         return sourceId === 'screen' ? 'Screen Share' : 'Camera';
@@ -257,6 +259,19 @@
         return state.programOutputStream;
     }
 
+    function stopProgramCompositor(options = {}) {
+        if (state.programAnimationFrame) {
+            window.cancelAnimationFrame(state.programAnimationFrame);
+            state.programAnimationFrame = null;
+        }
+        if (options.stopTracks && state.programOutputStream) {
+            state.programOutputStream.getTracks().forEach((track) => track.stop());
+        }
+        if (options.clearStream) {
+            state.programOutputStream = null;
+        }
+    }
+
     function drawProgramFrame() {
         if (!state.programContext || !state.programCanvas) {
             state.programAnimationFrame = null;
@@ -286,9 +301,6 @@
     }
 
     function renderProgramState() {
-        if (els.programPreview) {
-            els.programPreview.srcObject = null;
-        }
         if (els.programCanvas) {
             els.programCanvas.classList.toggle('vh360-studio-program-canvas--screen', state.programSource === 'screen');
         }
@@ -296,41 +308,6 @@
         if (els.programEmpty) {
             els.programEmpty.hidden = Boolean(state.programStream);
         }
-    }
-
-    async function replaceLiveVideoTrack(stream, sourceId) {
-        if (!state.broadcastSession) {
-            return true;
-        }
-        if (!state.broadcastReady) {
-            throw new Error('The live broadcast is still connecting. Try again in a moment.');
-        }
-        if (typeof state.broadcastSession.isReadyToPublish === 'function' && !state.broadcastSession.isReadyToPublish()) {
-            throw new Error('The live broadcast is reconnecting. Try again when it is connected.');
-        }
-        if (!stream || typeof state.broadcastSession.replaceVideoMediaStreamTrack !== 'function') {
-            throw new Error('The live broadcast could not accept the selected Program source.');
-        }
-        const track = stream.getVideoTracks()[0];
-        if (window.console && typeof window.console.info === 'function') {
-            window.console.info('[VH360 Studio] Replacing live Program source', {
-                source: sourceId,
-                trackReadyState: track ? track.readyState : '',
-                trackSettings: track && typeof track.getSettings === 'function' ? track.getSettings() : {}
-            });
-        }
-        if (!track || track.readyState === 'ended') {
-            throw new Error('The selected Program source is no longer available.');
-        }
-        const replaced = await state.broadcastSession.replaceVideoMediaStreamTrack(track, {
-            source: sourceId || state.previewSource || state.programSource || '',
-            forceRepublish: true,
-            agoraVideoTrack: sourceId === 'screen' ? state.screenAgoraTrack : null
-        });
-        if (replaced === false) {
-            throw new Error('The Program source was not sent to the public livestream.');
-        }
-        return true;
     }
 
     function isSourceProtected(sourceId) {
@@ -683,7 +660,6 @@
                 displayOptions.controller = captureController;
             }
             state.screenStream = await navigator.mediaDevices.getDisplayMedia(displayOptions);
-            state.screenAgoraTrack = null;
             if (!state.screenStream) {
                 throw new Error('Screen Share could not be started.');
             }
@@ -721,13 +697,7 @@
             return false;
         }
         stopStream(state.screenStream);
-        if (state.screenAgoraTrack) {
-            state.screenAgoraTrack.stop();
-            state.screenAgoraTrack.close();
-            state.screenAgoraTrack = null;
-        }
         state.screenStream = null;
-        state.screenAgoraTrack = null;
         if (els.screenPreview) {
             els.screenPreview.srcObject = null;
         }
@@ -748,7 +718,6 @@
 
     async function handleScreenShareEnded() {
         state.screenStream = null;
-        state.screenAgoraTrack = null;
         if (els.screenPreview) {
             els.screenPreview.srcObject = null;
         }
@@ -1180,8 +1149,10 @@
     }
 
     function cleanup() {
+        const canStopProgramOutput = !state.broadcastSession && !isRecordingActive();
         stopPreview({ force: true });
         stopScreenPreview({ force: true });
+        stopProgramCompositor({ stopTracks: canStopProgramOutput, clearStream: canStopProgramOutput });
         stopStream(state.micStream);
         state.micStream = null;
     }
@@ -1294,9 +1265,7 @@
                 if (els.viewerLinkWrap) els.viewerLinkWrap.hidden = false;
             }
             const prepared = await api('/broadcasts/' + state.broadcastVideoId + '/prepare', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
-            if (window.console && typeof window.console.info === 'function') {
-                window.console.info('[VH360 Studio] Studio broadcaster UID', prepared.uid);
-            }
+            studioDebugLog('[VH360 Studio] Studio broadcaster UID', prepared.uid);
             ensureProgramCompositor();
             const session = window.VH360AgoraBroadcaster.create({
                 appId: prepared.appId,
@@ -1308,7 +1277,6 @@
                 localContainer: els.agoraLocalPreview,
                 audioConfig: agoraAudioConfigFromSelection(),
                 videoConfig: agoraVideoConfigFromPreset(),
-                initialVideoTrack: null,
                 initialVideoMediaStreamTrack: state.programOutputStream ? state.programOutputStream.getVideoTracks()[0] : null,
                 initialVideoSource: state.programSource || '',
             });
@@ -1473,9 +1441,7 @@
         if (els.copyViewerLink) { els.copyViewerLink.addEventListener('click', () => { if (els.viewerLink && els.viewerLink.href) navigator.clipboard.writeText(els.viewerLink.href); }); }
         root.addEventListener('vh360:agora-broadcaster:connection-state-change', (event) => {
             const detail = event.detail || {};
-            if (window.console && typeof window.console.info === 'function') {
-                window.console.info('[VH360 Studio] Agora connection state changed', detail);
-            }
+            studioDebugLog('[VH360 Studio] Agora connection state changed', detail);
             if (detail.current) {
                 state.lastAgoraConnectionState = detail.current;
                 state.broadcastReady = Boolean(state.broadcastSession) && detail.current === 'CONNECTED';
@@ -1483,7 +1449,12 @@
                 setBroadcastStatus('Agora connection: ' + detail.current + (detail.reason ? ' (' + detail.reason + ')' : ''), detail.current === 'CONNECTED' ? 'success' : 'info');
             }
         });
-        window.addEventListener('pagehide', endBroadcastKeepalive);
+        window.addEventListener('pagehide', () => {
+            endBroadcastKeepalive();
+            if (!isRecordingActive() && !state.broadcastSession) {
+                cleanup();
+            }
+        });
         window.addEventListener('beforeunload', (event) => {
             if (isRecordingActive()) {
                 event.preventDefault();

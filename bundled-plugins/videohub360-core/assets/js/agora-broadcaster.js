@@ -30,10 +30,7 @@
                     await state.client.setClientRole('host');
                 }
                 state.audioTrack = await window.AgoraRTC.createMicrophoneAudioTrack(config.audioConfig || {});
-                if (config.initialVideoTrack) {
-                    state.videoTrack = config.initialVideoTrack;
-                    state.videoTrackOwnsSource = false;
-                } else if (config.initialVideoMediaStreamTrack && typeof window.AgoraRTC.createCustomVideoTrack === 'function') {
+                if (config.initialVideoMediaStreamTrack && typeof window.AgoraRTC.createCustomVideoTrack === 'function') {
                     state.videoTrack = window.AgoraRTC.createCustomVideoTrack({
                         mediaStreamTrack: config.initialVideoMediaStreamTrack
                     });
@@ -96,75 +93,9 @@
                 );
             }
 
-            async function replaceVideoMediaStreamTrack(mediaStreamTrack, options) {
-                options = options || {};
-                if (!window.AgoraRTC || !state.client || !state.joined || !mediaStreamTrack) {
-                    return false;
-                }
-                if (!isReadyToPublish()) {
-                    throw new Error('Agora is not ready to publish a Program source.');
-                }
-
-                if (!options.forceRepublish && state.videoTrack && typeof state.videoTrack.replaceTrack === 'function') {
-                    try {
-                        await state.videoTrack.replaceTrack(mediaStreamTrack, false);
-                        state.videoTrackOwnsSource = false;
-                        if (localContainer && typeof state.videoTrack.play === 'function') {
-                            state.videoTrack.play(localContainer, { mirror: options.source !== 'screen' });
-                        }
-                        emit(root, 'video-replaced', {
-                            uid: config.uid,
-                            channelName: config.channelName,
-                            source: options.source || '',
-                            method: 'replaceTrack'
-                        });
-                        return true;
-                    } catch (error) {
-                        throw new Error('Agora video track replacement failed: ' + ((error && error.message) || 'Unknown error'));
-                    }
-                }
-
-                if (typeof window.AgoraRTC.createCustomVideoTrack !== 'function') {
-                    throw new Error('Agora custom video tracks are unavailable in this browser.');
-                }
-                const nextTrack = options.agoraVideoTrack || window.AgoraRTC.createCustomVideoTrack({ mediaStreamTrack: mediaStreamTrack });
-                const oldTrack = state.videoTrack;
-                const oldTrackOwnsSource = state.videoTrackOwnsSource;
-                const wasPublished = state.published;
-
-                try {
-                    if (wasPublished && oldTrack) {
-                        await state.client.unpublish(oldTrack);
-                    }
-                    await state.client.publish(nextTrack);
-                    state.videoTrack = nextTrack;
-                    state.videoTrackOwnsSource = false;
-                    state.published = true;
-                    if (localContainer && typeof nextTrack.play === 'function') {
-                        nextTrack.play(localContainer, { mirror: options.source !== 'screen' });
-                    }
-                    stopAndMaybeCloseVideoTrack(oldTrack, oldTrackOwnsSource);
-                    emit(root, 'video-replaced', { uid: config.uid, channelName: config.channelName, source: options.source || '', method: 'republish' });
-                    return true;
-                } catch (error) {
-                    stopAndMaybeCloseVideoTrack(nextTrack, false);
-                    state.videoTrack = oldTrack;
-                    state.videoTrackOwnsSource = oldTrackOwnsSource;
-                    state.published = wasPublished;
-                    if (wasPublished && oldTrack && (!state.client.connectionState || state.client.connectionState === 'CONNECTED')) {
-                        await state.client.publish(oldTrack).catch(function () {});
-                        if (localContainer && typeof oldTrack.play === 'function') {
-                            oldTrack.play(localContainer, { mirror: options.source !== 'screen' });
-                        }
-                    }
-                    throw new Error('Agora video track replacement failed: ' + ((error && error.message) || 'Unknown error'));
-                }
-            }
-
             return {
                 start: start,
                 stop: stop,
-                replaceVideoMediaStreamTrack: replaceVideoMediaStreamTrack,
                 isReadyToPublish: isReadyToPublish,
                 muteAudio: function (muted) { return state.audioTrack && state.audioTrack.setEnabled(!muted); },
                 muteVideo: function (muted) { return state.videoTrack && state.videoTrack.setEnabled(!muted); },

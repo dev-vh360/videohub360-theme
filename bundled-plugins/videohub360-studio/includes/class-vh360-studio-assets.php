@@ -116,7 +116,7 @@ class VH360_Studio_Assets {
                 'localMediaUnavailable' => __( 'Local Media publishing is unavailable because the current user cannot upload files or the uploads directory is not writable.', 'videohub360-studio' ),
                 'localMediaWarning'    => __( 'Local Media Fallback stores recordings in your WordPress Media Library and is best for testing or smaller recordings.', 'videohub360-studio' ),
                 'goLive'                => __( 'Go Live', 'videohub360-studio' ),
-                'goingLive'             => __( 'Joining Agora and publishing camera/microphone…', 'videohub360-studio' ),
+                'goingLive'             => __( 'Joining Agora and publishing the Program output…', 'videohub360-studio' ),
                 'liveStarted'           => __( 'Live broadcast started.', 'videohub360-studio' ),
                 'liveEnded'             => __( 'Live broadcast ended.', 'videohub360-studio' ),
                 'broadcastFailed'       => __( 'Broadcast could not start. Check Agora settings and device permissions.', 'videohub360-studio' ),
