@@ -115,6 +115,8 @@
         viewerLinkWrap: root.querySelector('[data-viewer-link-wrap]'),
         viewerLink: root.querySelector('[data-viewer-link]'),
         copyViewerLink: root.querySelector('[data-copy-viewer-link]'),
+        studioFullscreen: root.querySelector('[data-studio-fullscreen]'),
+        copyViewerFeedback: root.querySelector('[data-copy-viewer-feedback]'),
     };
 
     function setShellClass(className, active) {
@@ -373,6 +375,63 @@
         }
         els.status.textContent = message;
         els.status.dataset.statusType = type || 'info';
+    }
+
+    function isStudioFullscreen() {
+        return document.fullscreenElement === root;
+    }
+
+    async function toggleStudioFullscreen() {
+        if (!document.fullscreenEnabled) {
+            setStatus('Fullscreen is not supported in this browser.', 'warning');
+            return;
+        }
+
+        try {
+            if (isStudioFullscreen()) {
+                await document.exitFullscreen();
+            } else {
+                // True popout should be a later dedicated Studio route/window, not active DOM relocation.
+                await root.requestFullscreen();
+            }
+        } catch (error) {
+            setStatus('Unable to toggle fullscreen mode.', 'error');
+        }
+    }
+
+    function updateFullscreenButton() {
+        if (!els.studioFullscreen) {
+            return;
+        }
+
+        els.studioFullscreen.textContent = isStudioFullscreen() ? 'Exit Fullscreen' : 'Fullscreen Studio';
+    }
+
+    async function copyViewerLink() {
+        if (!els.viewerLink || !els.viewerLink.href) {
+            return;
+        }
+
+        try {
+            await navigator.clipboard.writeText(els.viewerLink.href);
+
+            if (els.copyViewerFeedback) {
+                els.copyViewerFeedback.textContent = 'Copied';
+                els.copyViewerFeedback.hidden = false;
+                window.setTimeout(() => {
+                    if (els.copyViewerFeedback) {
+                        els.copyViewerFeedback.hidden = true;
+                    }
+                }, 2200);
+            }
+        } catch (error) {
+            if (els.copyViewerFeedback) {
+                els.copyViewerFeedback.textContent = 'Copy failed';
+                els.copyViewerFeedback.hidden = false;
+            }
+
+            setStatus('Unable to copy viewer link. Open the viewer link and copy it from the address bar.', 'warning');
+        }
     }
 
     function setJobResult(message, type) {
@@ -1261,7 +1320,6 @@
             state.activeJobId = created.job && created.job.id ? created.job.id : state.activeJobId;
             if (els.viewerLink && broadcast.viewerPermalink) {
                 els.viewerLink.href = broadcast.viewerPermalink;
-                els.viewerLink.textContent = broadcast.viewerPermalink;
                 if (els.viewerLinkWrap) els.viewerLinkWrap.hidden = false;
             }
             const prepared = await api('/broadcasts/' + state.broadcastVideoId + '/prepare', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
@@ -1438,7 +1496,10 @@
         if (els.broadcastRequirePasscode) { els.broadcastRequirePasscode.addEventListener('change', updateBroadcastRules); }
         if (els.goLive) { els.goLive.addEventListener('click', goLive); }
         if (els.endLive) { els.endLive.addEventListener('click', endLive); }
-        if (els.copyViewerLink) { els.copyViewerLink.addEventListener('click', () => { if (els.viewerLink && els.viewerLink.href) navigator.clipboard.writeText(els.viewerLink.href); }); }
+        if (els.studioFullscreen) { els.studioFullscreen.addEventListener('click', toggleStudioFullscreen); }
+        if (els.copyViewerLink) { els.copyViewerLink.addEventListener('click', copyViewerLink); }
+        document.addEventListener('fullscreenchange', updateFullscreenButton);
+        updateFullscreenButton();
         root.addEventListener('vh360:agora-broadcaster:connection-state-change', (event) => {
             const detail = event.detail || {};
             studioDebugLog('[VH360 Studio] Agora connection state changed', detail);

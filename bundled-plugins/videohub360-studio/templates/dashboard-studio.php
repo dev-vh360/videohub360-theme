@@ -18,13 +18,25 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
         <div>
             <p class="vh360-studio-kicker"><?php esc_html_e( 'Production console', 'videohub360-studio' ); ?></p>
             <h2><?php esc_html_e( 'VH360 Studio', 'videohub360-studio' ); ?></h2>
-            <p><?php esc_html_e( 'Prepare sources, monitor the local broadcast, record chunks, and publish replays from one OBS-inspired workbench.', 'videohub360-studio' ); ?></p>
         </div>
-        <div class="vh360-studio-status" aria-live="polite" data-studio-status>
+        <div class="vh360-studio-screen-reader-status" aria-live="polite" data-studio-status>
             <?php esc_html_e( 'Checking browser support…', 'videohub360-studio' ); ?>
         </div>
         <div class="vh360-studio-topbar-links" aria-live="polite">
-            <p data-viewer-link-wrap hidden><strong><?php esc_html_e( 'Public viewer link:', 'videohub360-studio' ); ?></strong> <a href="#" target="_blank" rel="noopener noreferrer" data-viewer-link></a> <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-copy-viewer-link><?php esc_html_e( 'Copy Viewer Link', 'videohub360-studio' ); ?></button></p>
+            <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-studio-fullscreen>
+                <?php esc_html_e( 'Fullscreen Studio', 'videohub360-studio' ); ?>
+            </button>
+
+            <div class="vh360-studio-viewer-actions" data-viewer-link-wrap hidden>
+                <span class="vh360-studio-viewer-label"><?php esc_html_e( 'Viewer Link', 'videohub360-studio' ); ?></span>
+                <a class="vh360-studio-button vh360-studio-button--secondary" href="#" target="_blank" rel="noopener noreferrer" data-viewer-link>
+                    <?php esc_html_e( 'Open Viewer', 'videohub360-studio' ); ?>
+                </a>
+                <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-copy-viewer-link>
+                    <?php esc_html_e( 'Copy Link', 'videohub360-studio' ); ?>
+                </button>
+                <span class="vh360-studio-copy-feedback" data-copy-viewer-feedback hidden></span>
+            </div>
         </div>
     </header>
 
