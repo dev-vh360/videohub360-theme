@@ -67,6 +67,13 @@
         programEmpty: root.querySelector('[data-program-empty]'),
         sceneList: root.querySelector('[data-scene-list]'),
         mediaPreview: root.querySelector('[data-media-preview]'),
+        mediaPlaybackControls: root.querySelector('[data-media-playback-controls]'),
+        mediaPlayPause: root.querySelector('[data-media-play-pause]'),
+        mediaPlayPauseLabel: root.querySelector('[data-media-play-pause-label]'),
+        mediaRestart: root.querySelector('[data-media-restart]'),
+        mediaLoop: root.querySelector('[data-media-loop]'),
+        mediaSeek: root.querySelector('[data-media-seek]'),
+        mediaTime: root.querySelector('[data-media-time]'),
         previewSourceButtons: root.querySelectorAll('[data-preview-source]'),
         sceneSourceButtons: root.querySelectorAll('[data-scene-source]'),
         transitionCut: root.querySelector('[data-transition-cut]'),
@@ -82,6 +89,17 @@
         qualitySelect: root.querySelector('[data-quality-select]'),
         storageSelect: root.querySelector('[data-storage-select]'),
         qualityDetails: root.querySelector('[data-quality-details]'),
+        selectedMediaControls: root.querySelector('[data-selected-media-controls]'),
+        selectedMediaName: root.querySelector('[data-selected-media-name]'),
+        mediaFitMode: root.querySelector('[data-media-fit-mode]'),
+        mediaScale: root.querySelector('[data-media-scale]'),
+        mediaScaleValue: root.querySelector('[data-media-scale-value]'),
+        mediaPositionX: root.querySelector('[data-media-position-x]'),
+        mediaPositionXValue: root.querySelector('[data-media-position-x-value]'),
+        mediaPositionY: root.querySelector('[data-media-position-y]'),
+        mediaPositionYValue: root.querySelector('[data-media-position-y-value]'),
+        mediaResetTransform: root.querySelector('[data-media-reset-transform]'),
+        programResolutionDetails: root.querySelector('[data-program-resolution-details]'),
         createJob: root.querySelector('[data-create-job]'),
         jobResult: root.querySelector('[data-job-result]'),
         recentJobsBody: root.querySelector('[data-recent-jobs-body]'),
@@ -138,6 +156,15 @@
         persistentMediaSourceStatus: root.querySelector('[data-persistent-media-source-status]'),
         importMediaSource: root.querySelector('[data-import-media-source]'),
     };
+
+    function defaultMediaTransform() {
+        return {
+            fitMode: 'fit',
+            scale: 100,
+            x: 0,
+            y: 0,
+        };
+    }
 
     function setShellClass(className, active) {
         root.classList.toggle(className, Boolean(active));
@@ -300,26 +327,20 @@
         root.classList.toggle('is-preview-source-screen', state.previewSource === 'screen');
         root.classList.toggle('is-preview-source-media', isMediaSource(state.previewSource));
 
-        if (!els.mediaPreview) {
-            return;
+        if (els.mediaPreview) {
+            els.mediaPreview.innerHTML = '';
+
+            if (isMediaSource(state.previewSource)) {
+                const mediaSource = getMediaSource(state.previewSource);
+                if (mediaSource && mediaSource.element) {
+                    els.mediaPreview.appendChild(mediaSource.element);
+                    renderPreviewMediaTransform();
+                }
+            }
         }
 
-        els.mediaPreview.innerHTML = '';
-
-        if (!isMediaSource(state.previewSource)) {
-            return;
-        }
-
-        const mediaSource = getMediaSource(state.previewSource);
-        if (!mediaSource || !mediaSource.element) {
-            return;
-        }
-
-        els.mediaPreview.appendChild(mediaSource.element);
-
-        if (mediaSource.type === 'video') {
-            mediaSource.element.play().catch(() => {});
-        }
+        renderMediaPlaybackControls();
+        renderSelectedMediaControls();
     }
 
     function renderSourceState() {
@@ -337,12 +358,16 @@
             }
         });
         renderSceneControls();
+        renderMediaPlaybackControls();
+        renderSelectedMediaControls();
     }
 
     function selectSceneSource(sourceId) {
         state.selectedSceneSource = sourceId || '';
         renderSourceState();
         renderSceneControls();
+        renderMediaPlaybackControls();
+        renderSelectedMediaControls();
     }
 
     function getSelectedMediaSource() {
@@ -351,6 +376,139 @@
         }
 
         return getMediaSource(state.selectedSceneSource);
+    }
+
+    function getActiveMediaSource() {
+        if (isMediaSource(state.previewSource)) {
+            return getMediaSource(state.previewSource);
+        }
+
+        if (isMediaSource(state.selectedSceneSource)) {
+            return getMediaSource(state.selectedSceneSource);
+        }
+
+        return null;
+    }
+
+    function getActiveVideoMediaSource() {
+        const source = getActiveMediaSource();
+        return source && source.type === 'video' ? source : null;
+    }
+
+    function formatMediaTime(seconds) {
+        if (!Number.isFinite(seconds) || seconds < 0) {
+            seconds = 0;
+        }
+
+        const total = Math.floor(seconds);
+        const minutes = Math.floor(total / 60);
+        const remainder = total % 60;
+
+        return String(minutes).padStart(2, '0') + ':' + String(remainder).padStart(2, '0');
+    }
+
+    function renderMediaPlaybackControls() {
+        const source = getActiveVideoMediaSource();
+        const video = source && source.element;
+
+        if (els.mediaPlaybackControls) {
+            els.mediaPlaybackControls.hidden = !video;
+        }
+
+        if (!video) {
+            return;
+        }
+
+        if (els.mediaLoop) {
+            els.mediaLoop.checked = Boolean(video.loop);
+        }
+
+        if (els.mediaPlayPauseLabel) {
+            els.mediaPlayPauseLabel.textContent = video.paused ? 'Play' : 'Pause';
+        }
+
+        if (els.mediaSeek) {
+            const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+            els.mediaSeek.disabled = !duration;
+            els.mediaSeek.value = duration ? Math.round((video.currentTime / duration) * 1000) : 0;
+        }
+
+        if (els.mediaTime) {
+            const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+            els.mediaTime.textContent = formatMediaTime(video.currentTime || 0) + ' / ' + formatMediaTime(duration);
+        }
+    }
+
+    function renderSelectedMediaControls() {
+        const source = getActiveMediaSource();
+        const show = Boolean(source);
+
+        if (els.selectedMediaControls) {
+            els.selectedMediaControls.hidden = !show;
+        }
+
+        if (!source) {
+            return;
+        }
+
+        const transform = source.transform || defaultMediaTransform();
+        source.transform = transform;
+
+        if (els.selectedMediaName) {
+            els.selectedMediaName.textContent = source.name || 'Media Source';
+        }
+
+        if (els.mediaFitMode) {
+            els.mediaFitMode.value = transform.fitMode || 'fit';
+        }
+
+        if (els.mediaScale) {
+            els.mediaScale.value = transform.scale;
+        }
+
+        if (els.mediaScaleValue) {
+            els.mediaScaleValue.textContent = transform.scale + '%';
+        }
+
+        if (els.mediaPositionX) {
+            els.mediaPositionX.value = transform.x;
+        }
+
+        if (els.mediaPositionXValue) {
+            els.mediaPositionXValue.textContent = String(transform.x);
+        }
+
+        if (els.mediaPositionY) {
+            els.mediaPositionY.value = transform.y;
+        }
+
+        if (els.mediaPositionYValue) {
+            els.mediaPositionYValue.textContent = String(transform.y);
+        }
+
+        if (els.programResolutionDetails) {
+            els.programResolutionDetails.textContent = 'Program canvas: ' + state.programWidth + '×' + state.programHeight + ' at ' + state.programFrameRate + 'fps.';
+        }
+    }
+
+    function renderPreviewMediaTransform() {
+        if (!els.mediaPreview) {
+            return;
+        }
+
+        const source = isMediaSource(state.previewSource) ? getMediaSource(state.previewSource) : null;
+        const element = source && source.element;
+
+        if (!element) {
+            return;
+        }
+
+        const transform = source.transform || defaultMediaTransform();
+
+        element.dataset.fitMode = transform.fitMode || 'fit';
+        element.style.setProperty('--vh360-media-scale', String((transform.scale || 100) / 100));
+        element.style.setProperty('--vh360-media-x', (transform.x || 0) + '%');
+        element.style.setProperty('--vh360-media-y', (transform.y || 0) + '%');
     }
 
     function renderSceneControls() {
@@ -426,14 +584,77 @@
             const mediaSource = getMediaSource(state.programSource);
 
             if (mediaSource && mediaSource.type === 'image' && mediaSource.element.complete) {
-                drawImageContain(context, mediaSource.element, width, height);
+                drawMediaElement(context, mediaSource.element, width, height, mediaSource.transform || defaultMediaTransform(), 'image');
             }
 
             if (mediaSource && mediaSource.type === 'video' && mediaSource.element.readyState >= 2) {
-                drawVideoContain(context, mediaSource.element, width, height, false);
+                drawMediaElement(context, mediaSource.element, width, height, mediaSource.transform || defaultMediaTransform(), 'video');
             }
         }
         state.programAnimationFrame = window.requestAnimationFrame(drawProgramFrame);
+    }
+
+    function getMediaNaturalSize(element, type, fallbackWidth, fallbackHeight) {
+        if (type === 'image') {
+            return {
+                width: element.naturalWidth || fallbackWidth,
+                height: element.naturalHeight || fallbackHeight,
+            };
+        }
+
+        return {
+            width: element.videoWidth || fallbackWidth,
+            height: element.videoHeight || fallbackHeight,
+        };
+    }
+
+    function calculateMediaDrawRect(sourceWidth, sourceHeight, canvasWidth, canvasHeight, transform) {
+        const fitMode = transform.fitMode || 'fit';
+        let drawWidth = canvasWidth;
+        let drawHeight = canvasHeight;
+
+        if (fitMode === 'stretch') {
+            drawWidth = canvasWidth;
+            drawHeight = canvasHeight;
+        } else if (fitMode === 'original') {
+            drawWidth = sourceWidth;
+            drawHeight = sourceHeight;
+        } else {
+            const scale = fitMode === 'fill'
+                ? Math.max(canvasWidth / sourceWidth, canvasHeight / sourceHeight)
+                : Math.min(canvasWidth / sourceWidth, canvasHeight / sourceHeight);
+
+            drawWidth = sourceWidth * scale;
+            drawHeight = sourceHeight * scale;
+        }
+
+        if (fitMode === 'custom') {
+            const baseScale = Math.min(canvasWidth / sourceWidth, canvasHeight / sourceHeight);
+            const customScale = (Number(transform.scale) || 100) / 100;
+            drawWidth = sourceWidth * baseScale * customScale;
+            drawHeight = sourceHeight * baseScale * customScale;
+        } else if (fitMode !== 'stretch') {
+            const customScale = (Number(transform.scale) || 100) / 100;
+            drawWidth *= customScale;
+            drawHeight *= customScale;
+        }
+
+        const offsetX = (Number(transform.x) || 0) / 100 * canvasWidth;
+        const offsetY = (Number(transform.y) || 0) / 100 * canvasHeight;
+
+        return {
+            x: (canvasWidth - drawWidth) / 2 + offsetX,
+            y: (canvasHeight - drawHeight) / 2 + offsetY,
+            width: drawWidth,
+            height: drawHeight,
+        };
+    }
+
+    function drawMediaElement(context, element, canvasWidth, canvasHeight, transform, type) {
+        const size = getMediaNaturalSize(element, type, canvasWidth, canvasHeight);
+        const rect = calculateMediaDrawRect(size.width, size.height, canvasWidth, canvasHeight, transform || defaultMediaTransform());
+
+        context.drawImage(element, rect.x, rect.y, rect.width, rect.height);
     }
 
     function drawImageContain(context, image, width, height) {
@@ -1031,6 +1252,9 @@
         video.controls = false;
         video.preload = 'metadata';
         video.src = source.url;
+        ['play', 'pause', 'timeupdate', 'loadedmetadata', 'durationchange', 'ended'].forEach((eventName) => {
+            video.addEventListener(eventName, renderMediaPlaybackControls);
+        });
         return video;
     }
 
@@ -1178,6 +1402,7 @@
                 persistent: false,
                 local: true,
                 inScenes: false,
+                transform: defaultMediaTransform(),
             };
 
             source.element = createMediaElement(source);
@@ -1274,6 +1499,7 @@
             element: null,
             persistent: true,
             inScenes: false,
+            transform: defaultMediaTransform(),
         };
         source.element = createMediaElement(source);
         state.mediaSources.set(id, source);
@@ -1516,6 +1742,49 @@
 
 
 
+    function getPresetResolution() {
+        const preset = getSelectedPreset();
+
+        if (preset && preset.resolution && preset.resolution.width && preset.resolution.height) {
+            return {
+                width: Number(preset.resolution.width) || 1280,
+                height: Number(preset.resolution.height) || 720,
+                fps: Number(preset.fps) || 30,
+            };
+        }
+
+        return {
+            width: 1280,
+            height: 720,
+            fps: 30,
+        };
+    }
+
+    function applyProgramCanvasResolution(options = {}) {
+        const resolution = getPresetResolution();
+        const activeOutput = state.broadcastSession || isRecordingActive();
+
+        if (activeOutput && !options.force) {
+            return;
+        }
+
+        state.programWidth = resolution.width;
+        state.programHeight = resolution.height;
+        state.programFrameRate = resolution.fps;
+
+        if (state.programCanvas) {
+            state.programCanvas.width = state.programWidth;
+            state.programCanvas.height = state.programHeight;
+        }
+
+        if (!activeOutput && state.programOutputStream) {
+            stopProgramCompositor({ stopTracks: true, clearStream: true });
+            ensureProgramCompositor();
+        }
+
+        renderSelectedMediaControls();
+    }
+
     function getSelectedPreset() {
         return (config.qualityPresets || {})[els.qualitySelect ? els.qualitySelect.value : config.defaultQualityPreset] || (config.qualityPresets || {})[config.defaultQualityPreset] || {};
     }
@@ -1576,6 +1845,7 @@
         let serverRecordingStarted = false;
         try {
             if (hasProgramOutput()) {
+                applyProgramCanvasResolution();
                 state.recordingStream = await buildRecordingStreamFromProgram();
             } else if (state.broadcastSession) {
                 state.recordingStream = state.broadcastSession.getLocalMediaStream ? state.broadcastSession.getLocalMediaStream() : null;
@@ -2003,6 +2273,7 @@
             updateViewerLinkControls();
             const prepared = await api('/broadcasts/' + state.broadcastVideoId + '/prepare', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
             studioDebugLog('[VH360 Studio] Studio broadcaster UID', prepared.uid);
+            applyProgramCanvasResolution();
             ensureProgramCompositor();
             const session = window.VH360AgoraBroadcaster.create({
                 appId: prepared.appId,
@@ -2110,6 +2381,84 @@
         }).catch(() => {});
     }
 
+    function toggleSelectedMediaPlayback() {
+        const source = getActiveVideoMediaSource();
+
+        if (!source || !source.element) {
+            return;
+        }
+
+        if (source.element.paused) {
+            source.element.play().catch(() => {
+                setStatus('Unable to play media. Try selecting it again.', 'warning');
+            });
+        } else {
+            source.element.pause();
+        }
+
+        renderMediaPlaybackControls();
+    }
+
+    function restartSelectedMedia() {
+        const source = getActiveVideoMediaSource();
+
+        if (!source || !source.element) {
+            return;
+        }
+
+        source.element.currentTime = 0;
+        source.element.play().catch(() => {});
+        renderMediaPlaybackControls();
+    }
+
+    function toggleSelectedMediaLoop() {
+        const source = getActiveVideoMediaSource();
+
+        if (!source || !source.element || !els.mediaLoop) {
+            return;
+        }
+
+        source.element.loop = els.mediaLoop.checked;
+        renderMediaPlaybackControls();
+    }
+
+    function seekSelectedMedia() {
+        const source = getActiveVideoMediaSource();
+        const video = source && source.element;
+
+        if (!video || !els.mediaSeek || !Number.isFinite(video.duration) || video.duration <= 0) {
+            return;
+        }
+
+        video.currentTime = (Number(els.mediaSeek.value) / 1000) * video.duration;
+        renderMediaPlaybackControls();
+    }
+
+    function updateActiveMediaTransform(partial) {
+        const source = getActiveMediaSource();
+
+        if (!source) {
+            return;
+        }
+
+        source.transform = Object.assign(defaultMediaTransform(), source.transform || {}, partial || {});
+
+        renderSelectedMediaControls();
+        renderPreviewMediaTransform();
+    }
+
+    function resetActiveMediaTransform() {
+        const source = getActiveMediaSource();
+
+        if (!source) {
+            return;
+        }
+
+        source.transform = defaultMediaTransform();
+        renderSelectedMediaControls();
+        renderPreviewMediaTransform();
+    }
+
     function bindEvents() {
         els.previewSourceButtons.forEach((button) => {
             button.addEventListener('click', () => setPreviewSource(button.dataset.previewSource));
@@ -2207,8 +2556,42 @@
             });
         }
         if (els.qualitySelect) {
-            els.qualitySelect.addEventListener('change', updateQualityDetails);
+            els.qualitySelect.addEventListener('change', () => {
+                updateQualityDetails();
+
+                if (state.broadcastSession || isRecordingActive()) {
+                    setStatus('Quality changes apply before going live or recording starts.', 'warning');
+                    return;
+                }
+
+                applyProgramCanvasResolution();
+            });
         }
+        if (els.mediaPlayPause) { els.mediaPlayPause.addEventListener('click', toggleSelectedMediaPlayback); }
+        if (els.mediaRestart) { els.mediaRestart.addEventListener('click', restartSelectedMedia); }
+        if (els.mediaLoop) { els.mediaLoop.addEventListener('change', toggleSelectedMediaLoop); }
+        if (els.mediaSeek) { els.mediaSeek.addEventListener('input', seekSelectedMedia); }
+        if (els.mediaFitMode) {
+            els.mediaFitMode.addEventListener('change', () => {
+                updateActiveMediaTransform({ fitMode: els.mediaFitMode.value });
+            });
+        }
+        if (els.mediaScale) {
+            els.mediaScale.addEventListener('input', () => {
+                updateActiveMediaTransform({ scale: Number(els.mediaScale.value) || 100, fitMode: 'custom' });
+            });
+        }
+        if (els.mediaPositionX) {
+            els.mediaPositionX.addEventListener('input', () => {
+                updateActiveMediaTransform({ x: Number(els.mediaPositionX.value) || 0, fitMode: 'custom' });
+            });
+        }
+        if (els.mediaPositionY) {
+            els.mediaPositionY.addEventListener('input', () => {
+                updateActiveMediaTransform({ y: Number(els.mediaPositionY.value) || 0, fitMode: 'custom' });
+            });
+        }
+        if (els.mediaResetTransform) { els.mediaResetTransform.addEventListener('click', resetActiveMediaTransform); }
         if (els.storageSelect) {
             els.storageSelect.addEventListener('change', () => {
                 const provider = selectedStorageProvider();
@@ -2271,6 +2654,7 @@
     renderSupportChecks();
     updateReadinessStatus();
     updateQualityDetails();
+    applyProgramCanvasResolution();
     updatePublishingButtons();
     updateBroadcastRules();
     renderPreviewState();
