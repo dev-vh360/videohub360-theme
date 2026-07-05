@@ -67,7 +67,7 @@ class VH360_Studio_Replay_Posts {
         $provider      = sanitize_key( $job['storage_provider'] );
 
         update_post_meta( $post_id, 'video_url', $playback_url );
-        update_post_meta( $post_id, '_vh360_is_live', 'no' );
+        update_post_meta( $post_id, '_vh360_is_live', $is_live_conversion ? 'yes' : 'no' );
         update_post_meta( $post_id, '_vh360_agora_stream_live', 'no' );
         update_post_meta( $post_id, '_vh360_stream_stopped', 'yes' );
         update_post_meta( $post_id, '_vh360_studio_job_id', absint( $job['id'] ) );
@@ -94,11 +94,16 @@ class VH360_Studio_Replay_Posts {
             $custom_html = $this->render_videopress_embed_html( $guid );
         }
 
+        update_post_meta( $post_id, '_vh360_studio_replay_playback_type', $custom_html ? 'embed' : 'direct_video' );
         if ( $custom_html ) {
-            update_post_meta( $post_id, '_vh360_type', 'embed' );
+            if ( ! $is_live_conversion ) {
+                update_post_meta( $post_id, '_vh360_type', 'embed' );
+            }
             update_post_meta( $post_id, 'videohub360_custom_html', $custom_html );
         } else {
-            update_post_meta( $post_id, '_vh360_type', 'video' );
+            if ( ! $is_live_conversion ) {
+                update_post_meta( $post_id, '_vh360_type', 'video' );
+            }
             delete_post_meta( $post_id, 'videohub360_custom_html' );
         }
 

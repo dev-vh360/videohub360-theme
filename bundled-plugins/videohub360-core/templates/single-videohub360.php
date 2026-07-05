@@ -62,6 +62,34 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
         $poster = $livestream_fields['poster'];
     }
 
+    $is_legacy_studio_livestream_replay = (
+        get_post_meta(get_the_ID(), '_vh360_studio_converted_live_to_replay', true) === 'yes'
+        && get_post_meta(get_the_ID(), '_vh360_studio_replay_ready', true) === 'yes'
+        && (int) get_post_meta(get_the_ID(), '_vh360_studio_replay_source_live_video_id', true) === (int) get_the_ID()
+    );
+
+    $has_studio_replay_playback = (
+        get_post_meta(get_the_ID(), '_vh360_studio_replay_ready', true) === 'yes'
+        && (
+            !empty($video_url)
+            || !empty($custom_html)
+        )
+    );
+
+    $is_stopped_livestream_replay = (
+        (
+            $livestream_fields['is_live'] === 'yes'
+            && $livestream_fields['stream_stopped'] === 'yes'
+            && $has_studio_replay_playback
+        )
+        || (
+            $is_legacy_studio_livestream_replay
+            && $has_studio_replay_playback
+        )
+    );
+
+    $is_livestream_surface = $livestream_fields['is_live'] === 'yes' || $is_legacy_studio_livestream_replay;
+
     $videohub360_categories = get_the_terms(get_the_ID(), 'videohub360_category');
     $videohub360_series = get_the_terms(get_the_ID(), 'videohub360_series');
     $videohub360_locations = get_the_terms(get_the_ID(), 'videohub360_location');
@@ -71,7 +99,7 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
     $chat_enabled = false;
     $chat_placement = 'popup'; // Default placement
     
-    if ($is_live === 'yes') {
+    if ($is_live === 'yes' || $is_legacy_studio_livestream_replay) {
         $per_video_chat = get_post_meta(get_the_ID(), '_vh360_chat_enabled', true);
         if ($per_video_chat === 'yes') {
             $chat_enabled = true;
@@ -199,7 +227,7 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                 <div class="<?php echo esc_attr($vh360_video_player_classes); ?>" id="videohub360-livestream-player-root">
                     <?php echo videohub360_render_livestream($livestream_fields, $chat_enabled, $chat_placement, $is_user_logged_in, $user_avatar, $user_display_name, $user_logout_url); ?>
                 </div>
-            <?php elseif ($livestream_fields['is_live'] === 'yes' && $livestream_fields['stream_stopped'] === 'yes' && !$is_youtube_auto_managed): ?>
+            <?php elseif ((($livestream_fields['is_live'] === 'yes' && $livestream_fields['stream_stopped'] === 'yes') || $is_legacy_studio_livestream_replay) && !$is_stopped_livestream_replay && !$is_youtube_auto_managed): ?>
                 <div class="videohub360-video-player">
                     <div class="vh360-offline-wrapper">
                         <?php if (!empty($livestream_fields['offline_message'])) : ?>
@@ -422,7 +450,7 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                                     <span class="videohub360-stream-duration" id="vh360-stream-started-meta" data-start="<?php echo esc_attr($livestream_fields['live_start_time']); ?>"></span>
                                 <?php endif; ?>
                             </div>
-                        <?php elseif ($livestream_fields['is_live'] === 'yes'): ?>
+                        <?php elseif ($is_livestream_surface): ?>
                             <div class="videohub360-views-info">
                                 <span class="videohub360-views-count"><?php printf(esc_html__('%s views', 'videohub360'), esc_html($views_display)); ?></span>
                                 <?php if (!empty($livestream_fields['live_start_time'])): ?>
