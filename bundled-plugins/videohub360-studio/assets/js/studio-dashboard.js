@@ -76,17 +76,11 @@
         mediaLoop: root.querySelector('[data-media-loop]'),
         mediaSeek: root.querySelector('[data-media-seek]'),
         mediaTime: root.querySelector('[data-media-time]'),
-        previewSourceButtons: root.querySelectorAll('[data-preview-source]'),
-        sceneSourceButtons: root.querySelectorAll('[data-scene-source]'),
         transitionCut: root.querySelector('[data-transition-cut]'),
         transitionFade: root.querySelector('[data-transition-fade]'),
         transitionDuration: root.querySelector('[data-transition-duration]'),
         cameraSelect: root.querySelector('[data-camera-select]'),
         micSelect: root.querySelector('[data-mic-select]'),
-        startPreview: root.querySelector('[data-start-preview]'),
-        stopPreview: root.querySelector('[data-stop-preview]'),
-        startScreen: root.querySelector('[data-start-screen]'),
-        stopScreen: root.querySelector('[data-stop-screen]'),
         micMeter: root.querySelector('[data-mic-meter]'),
         qualitySelect: root.querySelector('[data-quality-select]'),
         storageSelect: root.querySelector('[data-storage-select]'),
@@ -347,9 +341,6 @@
 
     function renderSourceState() {
         renderPreviewState();
-        els.previewSourceButtons.forEach((button) => {
-            button.classList.toggle('is-active', button.dataset.previewSource === state.previewSource);
-        });
         root.querySelectorAll('[data-scene-source]').forEach((button) => {
             const active = button.dataset.sceneSource === state.previewSource;
             button.classList.toggle('is-active', active);
@@ -1058,7 +1049,6 @@
             }
             setupAudioMeter(state.cameraStream);
             await populateDevices();
-            setPreviewButtons(true);
             setShellClass('is-preview-active', true);
             if (state.programSource === 'camera') {
                 state.programStream = state.cameraStream;
@@ -1089,7 +1079,6 @@
             els.cameraPreview.srcObject = null;
         }
         teardownAudioMeter();
-        setPreviewButtons(false);
         setShellClass('is-preview-active', false);
         if (state.previewSource === 'camera') {
             state.previewSource = fallbackPreviewSource('camera');
@@ -1102,15 +1091,6 @@
             renderProgramState();
         }
         return true;
-    }
-
-    function setPreviewButtons(active) {
-        if (els.startPreview) {
-            els.startPreview.disabled = active;
-        }
-        if (els.stopPreview) {
-            els.stopPreview.disabled = !active;
-        }
     }
 
     function setupAudioMeter(stream) {
@@ -1197,7 +1177,6 @@
                 els.screenPreview.srcObject = state.screenStream;
                 await els.screenPreview.play().catch(() => {});
             }
-            setScreenButtons(true);
             setShellClass('is-screen-active', true);
             if (updateSelection) {
                 state.previewSource = 'screen';
@@ -1223,7 +1202,6 @@
         if (els.screenPreview) {
             els.screenPreview.srcObject = null;
         }
-        setScreenButtons(false);
         setShellClass('is-screen-active', false);
         if (state.previewSource === 'screen') {
             state.previewSource = fallbackPreviewSource('screen');
@@ -1243,7 +1221,6 @@
         if (els.screenPreview) {
             els.screenPreview.srcObject = null;
         }
-        setScreenButtons(false);
         setShellClass('is-screen-active', false);
         if (state.previewSource === 'screen') {
             state.previewSource = fallbackPreviewSource('screen');
@@ -1262,15 +1239,6 @@
             } else if (state.broadcastSession) {
                 setBroadcastStatus('Screen Share ended. Choose another source for Program.', 'warning');
             }
-        }
-    }
-
-    function setScreenButtons(active) {
-        if (els.startScreen) {
-            els.startScreen.disabled = active;
-        }
-        if (els.stopScreen) {
-            els.stopScreen.disabled = !active;
         }
     }
 
@@ -2516,9 +2484,6 @@
     }
 
     function bindEvents() {
-        els.previewSourceButtons.forEach((button) => {
-            button.addEventListener('click', () => setPreviewSource(button.dataset.previewSource));
-        });
         if (els.sceneList) {
             els.sceneList.addEventListener('click', (event) => {
                 const button = event.target.closest('[data-scene-source]');
@@ -2575,26 +2540,6 @@
         }
         if (els.transitionCut) { els.transitionCut.addEventListener('click', () => commitPreviewToProgram('cut')); }
         if (els.transitionFade) { els.transitionFade.addEventListener('click', () => commitPreviewToProgram('fade')); }
-        if (els.startPreview) {
-            els.startPreview.addEventListener('click', startPreview);
-        }
-        if (els.stopPreview) {
-            els.stopPreview.addEventListener('click', () => {
-                if (stopPreview()) {
-                    setStatus(strings.ready, 'success');
-                }
-            });
-        }
-        if (els.startScreen) {
-            els.startScreen.addEventListener('click', startScreenPreview);
-        }
-        if (els.stopScreen) {
-            els.stopScreen.addEventListener('click', () => {
-                if (stopScreenPreview()) {
-                    setStatus(strings.ready, 'success');
-                }
-            });
-        }
         if (els.cameraSelect) {
             els.cameraSelect.addEventListener('change', () => {
                 state.selectedCameraId = els.cameraSelect.value;
