@@ -2186,7 +2186,7 @@
             await api('/jobs/' + state.activeJobId + '/recording/stop', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ duration_seconds: duration }) });
             setRecordingStatus(strings.recordingSaved, 'success');
         } catch (error) {
-            setRecordingStatus((error && error.message) || 'Recording could not be stopped cleanly. Retry failed chunks or finalize if all chunks uploaded.', 'error');
+            setRecordingStatus((error && error.message) || 'Recording could not be stopped cleanly. Retry the upload or prepare the replay if uploading has finished.', 'error');
         } finally {
             stopTimer();
             state.recorder = null;
@@ -2255,7 +2255,10 @@
 
     function updatePublishingButtons() {
         const canPublish = Boolean(state.activeJobId) && state.currentJobStatus === 'processing';
-        if (els.publishReplay) { els.publishReplay.disabled = !canPublish; }
+        if (els.publishReplay) {
+            els.publishReplay.hidden = !canPublish;
+            els.publishReplay.disabled = !canPublish;
+        }
     }
 
     function stopPublishPolling() {
@@ -2305,7 +2308,7 @@
             const replayUrl = result.replay_url || result.playback_url || '';
             setPublishingStatus(replayUrl ? strings.publishComplete : (result.message || strings.publishProcessing || 'Replay is still processing. We’ll keep checking.'), replayUrl ? 'success' : 'info');
             renderReplayLink(replayUrl);
-            appendRecentJob({ id: state.activeJobId, status: state.currentJobStatus, file_size: result.file_size, mime_type: result.mime_type, publish_provider_status: result.publish_provider_status, replay_video_id: result.replay_video_id, replay_url: replayUrl });
+            appendRecentJob({ id: state.activeJobId, status: state.currentJobStatus, file_size: result.file_size, mime_type: result.mime_type, publish_provider_status: result.publish_provider_status, replay_video_id: result.replay_video_id, replay_url: replayUrl, display_title: result.display_title });
             if (shouldPollPublishStatus(result)) {
                 startPublishPolling();
             }
@@ -2331,7 +2334,7 @@
             renderReplayLink(replayUrl);
             if (replayUrl || result.replay_video_id) {
                 setPublishingStatus(strings.publishComplete, 'success');
-                appendRecentJob({ id: state.activeJobId, status: 'ready', replay_video_id: result.replay_video_id, replay_url: replayUrl, publish_provider_status: result.publish_provider_status || result.status });
+                appendRecentJob({ id: state.activeJobId, status: 'ready', replay_video_id: result.replay_video_id, replay_url: replayUrl, publish_provider_status: result.publish_provider_status || result.status, display_title: result.display_title });
             } else if (shouldPollPublishStatus(result)) {
                 setPublishingStatus(strings.publishProcessing || 'Replay is still processing. We’ll keep checking.', 'info');
             } else if (result.status === 'failed' || result.publish_provider_status === 'publish_failed') {
@@ -2401,14 +2404,22 @@
         if (els.recordingProgressLabel) {
             els.recordingProgressLabel.textContent = progress + '%';
         }
-        if (els.retryChunks) { els.retryChunks.disabled = !state.failedChunks.size; }
-        if (els.finalizeRecording) { els.finalizeRecording.disabled = !state.finalChunkCount || state.pendingUploads.size || state.failedChunks.size; }
+        const recording = isRecordingActive();
+        const hasFailedUploads = Boolean(state.failedChunks.size);
+        const canPrepareReplay = Boolean(state.activeJobId && state.finalChunkCount && !state.pendingUploads.size && !hasFailedUploads && state.currentJobStatus !== 'processing' && state.currentJobStatus !== 'ready');
+        setButtonVisibility(els.startRecording, !recording && !state.activeJobId, true);
+        setButtonVisibility(els.stopRecording, recording, true);
+        setButtonVisibility(els.retryChunks, hasFailedUploads, hasFailedUploads);
+        setButtonVisibility(els.finalizeRecording, canPrepareReplay, canPrepareReplay);
+        updatePublishingButtons();
     }
 
     function setRecorderButtons(recording, stopped) {
-        if (els.startRecording) { els.startRecording.disabled = recording; }
-        if (els.stopRecording) { els.stopRecording.disabled = !recording; }
-        if (els.finalizeRecording) { els.finalizeRecording.disabled = !stopped; }
+        setButtonVisibility(els.startRecording, !recording && !state.activeJobId, true);
+        setButtonVisibility(els.stopRecording, recording, true);
+        const canPrepareReplay = Boolean(stopped && state.activeJobId && state.finalChunkCount && !state.pendingUploads.size && !state.failedChunks.size && state.currentJobStatus !== 'processing' && state.currentJobStatus !== 'ready');
+        setButtonVisibility(els.finalizeRecording, canPrepareReplay, canPrepareReplay);
+        setButtonVisibility(els.retryChunks, Boolean(state.failedChunks.size), Boolean(state.failedChunks.size));
         renderTransitionButtons();
     }
 
@@ -2428,7 +2439,7 @@
             recording: 'Recording',
             uploading: 'Uploading',
             processing: 'Preparing',
-            ready: 'Published',
+            ready: 'Ready',
             failed: 'Needs attention',
             cancelled: 'Cancelled',
         };
@@ -2436,11 +2447,48 @@
     }
 
     function jobRecordingLabel(job) {
+        if (job && job.display_title) {
+            return job.display_title;
+        }
+        if (job && job.replay_title) {
+            return job.replay_title;
+        }
         if (job && job.title) {
             return job.title;
         }
 
-        return job && job.id ? 'Studio recording #' + job.id : 'Studio recording';
+        return 'Studio replay';
+    }
+
+    function formatFriendlyDate(value) {
+        if (!value) {
+            return '—';
+        }
+        const normalized = String(value).indexOf('T') === -1 ? String(value).replace(' ', 'T') : String(value);
+        const date = new Date(normalized);
+        if (Number.isNaN(date.getTime())) {
+            return value;
+        }
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const diffDays = Math.round((today - target) / 86400000);
+        const time = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+        if (diffDays === 0) {
+            return 'Today ' + time;
+        }
+        if (diffDays === 1) {
+            return 'Yesterday ' + time;
+        }
+        return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function setButtonVisibility(button, visible, enabled) {
+        if (!button) {
+            return;
+        }
+        button.hidden = !visible;
+        button.disabled = !visible || !enabled;
     }
 
     function findJobRow(tbody, rowId) {
@@ -2467,7 +2515,7 @@
                 : '—';
             row.innerHTML = '<td>' + escapeHtml(jobRecordingLabel(job)) + '</td>' +
                 '<td>' + escapeHtml(friendlyJobStatus(job)) + '</td>' +
-                '<td>' + escapeHtml(job.created_at || '') + '</td>' +
+                '<td>' + escapeHtml(formatFriendlyDate(job.created_at)) + '</td>' +
                 '<td>' + replayCell + '</td>';
             if (!row.parentNode) {
                 els.recentReplaysBody.prepend(row);

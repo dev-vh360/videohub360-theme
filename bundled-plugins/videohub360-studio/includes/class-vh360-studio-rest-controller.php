@@ -583,10 +583,27 @@ class VH360_Studio_REST_Controller {
         if ( is_wp_error( $job ) ) {
             return $job;
         }
-        if ( is_array( $job ) && array_key_exists( 'local_temp_path', $job ) ) {
-            unset( $job['local_temp_path'] );
+        if ( is_array( $job ) ) {
+            if ( array_key_exists( 'local_temp_path', $job ) ) {
+                unset( $job['local_temp_path'] );
+            }
+            $job['display_title'] = $this->job_display_title( $job );
         }
         return $job;
+    }
+
+    private function job_display_title( array $job ) {
+        foreach ( array( 'replay_video_id', 'live_video_id' ) as $post_id_key ) {
+            if ( empty( $job[ $post_id_key ] ) ) {
+                continue;
+            }
+            $title = get_the_title( absint( $job[ $post_id_key ] ) );
+            if ( $title ) {
+                return $title;
+            }
+        }
+
+        return __( 'Studio replay', 'videohub360-studio' );
     }
 
     private function broadcast_payload( WP_REST_Request $request ) {
