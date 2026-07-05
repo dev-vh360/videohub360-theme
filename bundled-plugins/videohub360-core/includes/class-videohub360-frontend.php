@@ -762,7 +762,22 @@ class VideoHub360_Frontend {
             $post_id = $post ? $post->ID : 0;
         }
         
-        return get_post_meta($post_id, '_vh360_is_live', true) === 'yes';
+        return get_post_meta($post_id, '_vh360_is_live', true) === 'yes' || $this->is_studio_stopped_livestream_replay($post_id);
+    }
+
+    /**
+     * Check whether a Studio replay should still be treated as a stopped livestream surface.
+     */
+    private function is_studio_stopped_livestream_replay($post_id = null) {
+        if (!$post_id) {
+            global $post;
+            $post_id = $post ? $post->ID : 0;
+        }
+
+        return $post_id
+            && get_post_meta($post_id, '_vh360_studio_converted_live_to_replay', true) === 'yes'
+            && get_post_meta($post_id, '_vh360_studio_replay_ready', true) === 'yes'
+            && (int) get_post_meta($post_id, '_vh360_studio_replay_source_live_video_id', true) === (int) $post_id;
     }
     
     /**

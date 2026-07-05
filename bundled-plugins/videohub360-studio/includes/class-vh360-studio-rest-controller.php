@@ -474,11 +474,6 @@ class VH360_Studio_REST_Controller {
                     return VH360_Studio_Quality_Presets::exists( sanitize_key( $value ) );
                 },
             ),
-            'storage_provider' => array(
-                'required'          => false,
-                'sanitize_callback' => 'sanitize_key',
-                'validate_callback' => array( $this, 'validate_storage_provider' ),
-            ),
         );
     }
 
@@ -499,7 +494,7 @@ class VH360_Studio_REST_Controller {
 
     private function setup_payload_from_request( WP_REST_Request $request ) {
         $payload = array();
-        $allowed = array( 'source_type', 'source_id', 'live_video_id', 'room_id', 'recording_mode', 'quality_preset', 'storage_provider' );
+        $allowed = array( 'source_type', 'source_id', 'live_video_id', 'room_id', 'recording_mode', 'quality_preset' );
 
         foreach ( $allowed as $key ) {
             if ( null !== $request->get_param( $key ) ) {
@@ -507,16 +502,17 @@ class VH360_Studio_REST_Controller {
             }
         }
 
-        $payload['status']         = VH360_Studio_Recording_Jobs::STATUS_CREATED;
-        $payload['recording_mode'] = isset( $payload['recording_mode'] ) ? $payload['recording_mode'] : 'browser';
-        $payload['source_type']    = isset( $payload['source_type'] ) ? $payload['source_type'] : 'studio_setup';
+        $payload['status']           = VH360_Studio_Recording_Jobs::STATUS_CREATED;
+        $payload['recording_mode']   = isset( $payload['recording_mode'] ) ? $payload['recording_mode'] : 'browser';
+        $payload['source_type']      = isset( $payload['source_type'] ) ? $payload['source_type'] : 'studio_setup';
+        $payload['storage_provider'] = $this->default_replay_storage_provider();
 
         return $payload;
     }
 
     private function update_payload_from_request( WP_REST_Request $request ) {
         $payload = array();
-        $allowed = array( 'source_type', 'source_id', 'live_video_id', 'room_id', 'recording_mode', 'quality_preset', 'storage_provider' );
+        $allowed = array( 'source_type', 'source_id', 'live_video_id', 'room_id', 'recording_mode', 'quality_preset' );
 
         foreach ( $allowed as $key ) {
             if ( null !== $request->get_param( $key ) ) {
@@ -537,7 +533,37 @@ class VH360_Studio_REST_Controller {
 
     public function validate_storage_provider( $value ) {
         $registry = VH360_Studio_Plugin::instance()->registry();
-        return $registry->has_storage_provider( sanitize_key( $value ) );
+        return $registry->has_storage_provider( $this->normalize_storage_provider_id( sanitize_key( $value ) ) );
+    }
+
+    private function default_replay_storage_provider() {
+        $registry  = VH360_Studio_Plugin::instance()->registry();
+        $raw_saved = get_option( 'vh360_studio_default_replay_storage_provider', '' );
+        $saved     = $this->normalize_storage_provider_id( $raw_saved );
+
+        if ( $saved && $this->storage_provider_is_available( $registry, $saved ) ) {
+            return $saved;
+        }
+
+        if ( $this->storage_provider_is_available( $registry, 'videopress' ) ) {
+            return 'videopress';
+        }
+
+        if ( $this->storage_provider_is_available( $registry, 'local_media' ) ) {
+            return 'local_media';
+        }
+
+        return 'videopress';
+    }
+
+    private function storage_provider_is_available( VH360_Studio_Provider_Registry $registry, $provider_id ) {
+        $provider = $registry->get_storage_provider( sanitize_key( $provider_id ) );
+        return $provider && $provider->is_available();
+    }
+
+    private function normalize_storage_provider_id( $provider ) {
+        $provider = sanitize_key( $provider );
+        return 'local' === $provider ? 'local_media' : $provider;
     }
 
     public function validate_optional_url( $value ) {
@@ -557,10 +583,57 @@ class VH360_Studio_REST_Controller {
         if ( is_wp_error( $job ) ) {
             return $job;
         }
-        if ( is_array( $job ) && array_key_exists( 'local_temp_path', $job ) ) {
-            unset( $job['local_temp_path'] );
+        if ( is_array( $job ) ) {
+            if ( array_key_exists( 'local_temp_path', $job ) ) {
+                unset( $job['local_temp_path'] );
+            }
+            $job['display_title'] = $this->job_display_title( $job );
         }
         return $job;
+    }
+
+    private function job_display_title( array $job ) {
+        foreach ( array( 'replay_video_id', 'live_video_id' ) as $post_id_key ) {
+            if ( empty( $job[ $post_id_key ] ) ) {
+                continue;
+            }
+            $title = get_the_title( absint( $job[ $post_id_key ] ) );
+            if ( $title ) {
+                return $title;
+            }
+        }
+
+        return __( 'Studio replay', 'videohub360-studio' );
+    }
+
+
+    private function prepare_publish_response( $response, array $job ) {
+        if ( is_wp_error( $response ) || ! is_array( $response ) ) {
+            return $response;
+        }
+
+        $display_job = array_merge( $job, $response );
+        $job_status  = ! empty( $response['job_status'] ) ? sanitize_key( $response['job_status'] ) : ( ! empty( $response['status'] ) ? sanitize_key( $response['status'] ) : sanitize_key( $job['status'] ) );
+        $publish_status = ! empty( $response['publish_provider_status'] ) ? sanitize_key( $response['publish_provider_status'] ) : ( ! empty( $response['publish_status'] ) ? sanitize_key( $response['publish_status'] ) : ( ! empty( $job['publish_provider_status'] ) ? sanitize_key( $job['publish_provider_status'] ) : '' ) );
+        $replay_video_id = ! empty( $response['replay_video_id'] ) ? absint( $response['replay_video_id'] ) : ( ! empty( $job['replay_video_id'] ) ? absint( $job['replay_video_id'] ) : 0 );
+
+        $response['id']            = absint( $job['id'] );
+        $response['job_id']        = absint( $job['id'] );
+        $response['display_title'] = $this->job_display_title( $display_job );
+        $response['created_at']    = ! empty( $job['created_at'] ) ? $job['created_at'] : '';
+        $response['status']        = $job_status;
+        $response['job_status']    = $job_status;
+        $response['publish_status'] = $publish_status;
+        $response['publish_provider_status'] = $publish_status;
+        $response['replay_video_id'] = $replay_video_id;
+        if ( empty( $response['replay_url'] ) && $replay_video_id ) {
+            $response['replay_url'] = get_permalink( $replay_video_id );
+        }
+        if ( ! isset( $response['error_message'] ) ) {
+            $response['error_message'] = ! empty( $job['error_message'] ) ? $job['error_message'] : '';
+        }
+
+        return $response;
     }
 
     private function broadcast_payload( WP_REST_Request $request ) {
@@ -601,7 +674,7 @@ class VH360_Studio_REST_Controller {
             'room_id'          => sanitize_text_field( $broadcast['channelName'] ),
             'recording_mode'   => 'browser',
             'quality_preset'   => sanitize_key( $request->get_param( 'quality_preset' ) ?: VH360_Studio_Quality_Presets::DEFAULT_PRESET ),
-            'storage_provider' => sanitize_key( $request->get_param( 'storage_provider' ) ?: 'videopress' ),
+            'storage_provider' => $this->default_replay_storage_provider(),
         ) );
         return rest_ensure_response( array( 'broadcast' => $broadcast, 'job' => $this->prepare_job_response( $job ) ) );
     }
@@ -735,7 +808,7 @@ class VH360_Studio_REST_Controller {
         if ( is_wp_error( $job ) ) { return $job; }
         $published = $this->publisher->publish( $job );
         if ( is_wp_error( $published ) ) { return $published; }
-        return rest_ensure_response( $published );
+        return rest_ensure_response( $this->prepare_publish_response( $published, $job ) );
     }
 
     public function publishing_status( WP_REST_Request $request ) {
@@ -746,7 +819,7 @@ class VH360_Studio_REST_Controller {
         }
         $status = $this->publisher->status( $job );
         if ( is_wp_error( $status ) ) { return $status; }
-        return rest_ensure_response( $status );
+        return rest_ensure_response( $this->prepare_publish_response( $status, $job ) );
     }
 
     public function cancel_job( WP_REST_Request $request ) {

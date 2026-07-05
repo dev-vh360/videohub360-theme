@@ -60,11 +60,17 @@
         lastRestError: '',
         mediaSourceUploadActive: false,
         mediaSourceModalTrigger: null,
+        publishPollTimer: null,
+        publishPollAttempts: 0,
     };
 
     const els = {
         status: root.querySelector('[data-studio-status]'),
         supportChecks: root.querySelector('[data-support-checks]'),
+        readinessSummary: root.querySelector('[data-readiness-summary]'),
+        readinessHeading: root.querySelector('[data-readiness-heading]'),
+        readinessMessage: root.querySelector('[data-readiness-message]'),
+        readinessIssues: root.querySelector('[data-readiness-issues]'),
         cameraPreview: root.querySelector('[data-camera-preview]'),
         screenPreview: root.querySelector('[data-screen-preview]'),
         programCanvas: root.querySelector('[data-program-canvas]'),
@@ -86,7 +92,6 @@
         micSelect: root.querySelector('[data-mic-select]'),
         micMeter: root.querySelector('[data-mic-meter]'),
         qualitySelect: root.querySelector('[data-quality-select]'),
-        storageSelect: root.querySelector('[data-storage-select]'),
         qualityDetails: root.querySelector('[data-quality-details]'),
         selectedMediaControls: root.querySelector('[data-selected-media-controls]'),
         selectedMediaName: root.querySelector('[data-selected-media-name]'),
@@ -99,9 +104,10 @@
         mediaPositionYValue: root.querySelector('[data-media-position-y-value]'),
         mediaResetTransform: root.querySelector('[data-media-reset-transform]'),
         programResolutionDetails: root.querySelector('[data-program-resolution-details]'),
-        createJob: root.querySelector('[data-create-job]'),
         jobResult: root.querySelector('[data-job-result]'),
-        recentJobsBody: root.querySelector('[data-recent-jobs-body]'),
+        recentReplaysBody: root.querySelector('[data-recent-replays-body]'),
+        recentJobsTechnicalBody: root.querySelector('[data-recent-jobs-technical-body]'),
+        emptyReplays: root.querySelector('[data-empty-replays]'),
         emptyJobs: root.querySelector('[data-empty-jobs]'),
         startRecording: root.querySelector('[data-start-recording]'),
         stopRecording: root.querySelector('[data-stop-recording]'),
@@ -117,8 +123,10 @@
         recordingBytes: root.querySelector('[data-recording-bytes]'),
         recordingFinalizeStatus: root.querySelector('[data-recording-finalize-status]'),
         recordingProgress: root.querySelector('[data-recording-progress]'),
+        recordingProgressLabel: root.querySelector('[data-recording-progress-label]'),
+        recordingSummaryStatus: root.querySelector('[data-recording-summary-status]'),
+        replayRawUrl: root.querySelector('[data-replay-raw-url]'),
         publishReplay: root.querySelector('[data-publish-replay]'),
-        checkPublishingStatus: root.querySelector('[data-check-publishing-status]'),
         publishingStatus: root.querySelector('[data-publishing-status]'),
         replayLinkWrap: root.querySelector('[data-replay-link-wrap]'),
         replayLink: root.querySelector('[data-replay-link]'),
@@ -990,7 +998,54 @@
         };
     }
 
+    function readinessIssues() {
+        const issues = [];
+        if (!state.support.secureContext) {
+            issues.push('Use HTTPS or localhost for Studio recording.');
+        }
+        if (!state.support.mediaDevices || !state.support.getUserMedia) {
+            issues.push('Camera or microphone access is unavailable. Allow browser permissions, then refresh.');
+        }
+        if (!state.support.getDisplayMedia) {
+            issues.push('Screen sharing is unavailable in this browser.');
+        }
+        if (!state.support.mediaRecorder) {
+            issues.push('This browser does not support recording. Try Chrome, Edge, or Safari.');
+        }
+        if (!state.support.canvasContext || !state.support.canvasCapture) {
+            issues.push('Program canvas recording is unsupported in this browser.');
+        }
+        if (!state.support.mimeTypes || !state.support.mimeTypes.length) {
+            issues.push('No supported recording format was detected.');
+        }
+        return issues;
+    }
+
+    function renderReadinessSummary() {
+        const issues = readinessIssues();
+        if (els.readinessSummary) {
+            els.readinessSummary.dataset.statusType = issues.length ? 'warning' : 'success';
+        }
+        if (els.readinessHeading) {
+            els.readinessHeading.textContent = issues.length ? 'Studio needs attention.' : 'Ready to go live.';
+        }
+        if (els.readinessMessage) {
+            els.readinessMessage.textContent = issues.length ? 'Resolve the items below, then refresh Studio if needed.' : 'Camera, microphone, screen share, and recording are supported.';
+        }
+        if (els.readinessIssues) {
+            els.readinessIssues.innerHTML = '';
+            els.readinessIssues.hidden = !issues.length;
+            issues.forEach((issue) => {
+                const item = document.createElement('li');
+                item.textContent = issue;
+                els.readinessIssues.appendChild(item);
+            });
+        }
+    }
+
     function renderSupportChecks() {
+        renderReadinessSummary();
+
         if (!els.supportChecks) {
             return;
         }
@@ -1991,7 +2046,7 @@
         if (state.activeJobId) {
             return state.activeJobId;
         }
-        const job = await api('/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ recording_mode: 'browser', source_type: 'studio_setup', source_id: 'studio-recording-' + Date.now(), quality_preset: els.qualitySelect ? els.qualitySelect.value : config.defaultQualityPreset, storage_provider: els.storageSelect ? els.storageSelect.value : config.recommendedStorageProvider }) });
+        const job = await api('/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ recording_mode: 'browser', source_type: 'studio_setup', source_id: 'studio-recording-' + Date.now(), quality_preset: els.qualitySelect ? els.qualitySelect.value : config.defaultQualityPreset }) });
         state.activeJobId = job.id;
         appendRecentJob(job);
         return job.id;
@@ -2131,7 +2186,7 @@
             await api('/jobs/' + state.activeJobId + '/recording/stop', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ duration_seconds: duration }) });
             setRecordingStatus(strings.recordingSaved, 'success');
         } catch (error) {
-            setRecordingStatus((error && error.message) || 'Recording could not be stopped cleanly. Retry failed chunks or finalize if all chunks uploaded.', 'error');
+            setRecordingStatus((error && error.message) || 'Recording could not be stopped cleanly. Retry the upload or prepare the replay if uploading has finished.', 'error');
         } finally {
             stopTimer();
             state.recorder = null;
@@ -2160,7 +2215,7 @@
             if (els.finalizeRecording) { els.finalizeRecording.disabled = true; }
             const job = await api('/jobs/' + state.activeJobId + '/recording/finalize', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ expected_chunks: state.finalChunkCount }) });
             state.currentJobStatus = job.status || 'processing';
-            setRecordingStatus('Recording finalized and temporary file validated. Replay publishing is ready.', 'success');
+            setRecordingStatus('Replay prepared. You can publish it now.', 'success');
             appendRecentJob(job);
             updatePublishingButtons();
             if (els.recordingFinalizeStatus) { els.recordingFinalizeStatus.textContent = job.status || 'processing'; }
@@ -2182,75 +2237,118 @@
     }
 
     function renderReplayLink(url) {
+        if (els.replayRawUrl) {
+            els.replayRawUrl.textContent = url || '—';
+        }
         if (!els.replayLink || !els.replayLinkWrap) {
             return;
         }
         if (!url) {
             els.replayLinkWrap.hidden = true;
             els.replayLink.removeAttribute('href');
-            els.replayLink.textContent = '';
             return;
         }
         els.replayLink.href = url;
-        els.replayLink.textContent = url;
+        els.replayLink.textContent = 'Open replay';
         els.replayLinkWrap.hidden = false;
-    }
-
-
-    function selectedStorageProviderId() {
-        return els.storageSelect ? els.storageSelect.value : config.recommendedStorageProvider;
-    }
-
-    function selectedStorageProvider() {
-        const providers = config.storageProviders || {};
-        return providers[selectedStorageProviderId()] || {};
     }
 
     function updatePublishingButtons() {
         const canPublish = Boolean(state.activeJobId) && state.currentJobStatus === 'processing';
-        if (els.publishReplay) { els.publishReplay.disabled = !canPublish; }
-        if (els.checkPublishingStatus) { els.checkPublishingStatus.disabled = !state.activeJobId; }
+        if (els.publishReplay) {
+            els.publishReplay.hidden = !canPublish;
+            els.publishReplay.disabled = !canPublish;
+        }
+    }
+
+    function stopPublishPolling() {
+        if (state.publishPollTimer) {
+            window.clearTimeout(state.publishPollTimer);
+        }
+        state.publishPollTimer = null;
+        state.publishPollAttempts = 0;
+    }
+
+    function shouldPollPublishStatus(result) {
+        const status = result && (result.job_status || result.status || result.publish_provider_status || '');
+        if (result && (result.replay_url || result.replay_video_id)) {
+            return false;
+        }
+        return ['pending', 'prepared', 'processing', 'media_attached_waiting_videopress'].indexOf(status) !== -1;
+    }
+
+    function startPublishPolling() {
+        stopPublishPolling();
+        const maxAttempts = 24;
+        const poll = async () => {
+            if (!state.activeJobId || state.publishPollAttempts >= maxAttempts) {
+                stopPublishPolling();
+                return;
+            }
+            state.publishPollAttempts += 1;
+            const result = await checkPublishingStatus(true);
+            if (result && shouldPollPublishStatus(result)) {
+                state.publishPollTimer = window.setTimeout(poll, 5000);
+            } else {
+                stopPublishPolling();
+            }
+        };
+        state.publishPollTimer = window.setTimeout(poll, 5000);
     }
 
     async function publishReplay() {
         if (!state.activeJobId) {
             return;
         }
-        const providerId = selectedStorageProviderId();
-        const provider = selectedStorageProvider();
-        if (providerId === 'local_media' && provider.available === false) {
-            setPublishingStatus(strings.localMediaUnavailable, 'error');
-            return;
-        }
         if (els.publishReplay) { els.publishReplay.disabled = true; }
-        setPublishingStatus(providerId === 'local_media' ? 'Publishing replay to WordPress Media Library...' : strings.publishingReplay, 'info');
+        setPublishingStatus(strings.publishingReplay, 'info');
         try {
             const result = await api('/jobs/' + state.activeJobId + '/publishing/publish', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
             state.currentJobStatus = result.job_status || 'ready';
-            setPublishingStatus(providerId === 'local_media' ? (result.message || strings.localMediaReady || 'Replay saved to Media Library. Replay post created.') : (result.message || strings.publishComplete), 'success');
-            renderReplayLink(result.replay_url || result.playback_url || '');
-            appendRecentJob({ id: state.activeJobId, status: state.currentJobStatus, storage_provider: result.provider_id, file_size: result.file_size, mime_type: result.mime_type, publish_provider_status: result.publish_provider_status, replay_video_id: result.replay_video_id, replay_url: result.replay_url || result.playback_url || '' });
+            const replayUrl = result.replay_url || result.playback_url || '';
+            setPublishingStatus(replayUrl ? strings.publishComplete : (result.message || strings.publishProcessing || 'Replay is still processing. We’ll keep checking.'), replayUrl ? 'success' : 'info');
+            renderReplayLink(replayUrl);
+            appendRecentJob(Object.assign({}, result, { id: result.id || result.job_id || state.activeJobId, status: state.currentJobStatus, replay_url: replayUrl || result.replay_url || result.playback_url || '' }));
+            if (shouldPollPublishStatus(result)) {
+                startPublishPolling();
+            }
         } catch (error) {
+            stopPublishPolling();
             setPublishingStatus(error.message || strings.publishFailed, 'error');
         } finally {
             updatePublishingButtons();
         }
     }
 
-    async function checkPublishingStatus() {
+    async function checkPublishingStatus(isAutomatic) {
         if (!state.activeJobId) {
-            return;
+            return null;
         }
-        setPublishingStatus(strings.publishStatusChecking, 'info');
+        if (!isAutomatic) {
+            setPublishingStatus(strings.publishStatusChecking, 'info');
+        }
         try {
             const result = await api('/jobs/' + state.activeJobId + '/publishing/status', { method: 'GET' });
             state.currentJobStatus = result.job_status || state.currentJobStatus;
-            setPublishingStatus((result.publish_provider_status || result.status || 'pending') + (result.videopress_guid ? ' · VideoPress GUID: ' + result.videopress_guid : ''), 'success');
-            renderReplayLink(result.replay_url || result.playback_url || '');
-        } catch (error) {
-            setPublishingStatus(error.message || strings.publishFailed, 'error');
-        } finally {
+            const replayUrl = result.replay_url || result.playback_url || '';
+            renderReplayLink(replayUrl);
+            if (replayUrl || result.replay_video_id) {
+                setPublishingStatus(strings.publishComplete, 'success');
+                appendRecentJob(Object.assign({}, result, { id: result.id || result.job_id || state.activeJobId, status: result.job_status || 'ready', replay_url: replayUrl || result.replay_url || result.playback_url || '' }));
+            } else if (shouldPollPublishStatus(result)) {
+                setPublishingStatus(strings.publishProcessing || 'Replay is still processing. We’ll keep checking.', 'info');
+            } else if (result.status === 'failed' || result.publish_provider_status === 'publish_failed') {
+                setPublishingStatus(strings.publishFailed, 'error');
+            } else {
+                setPublishingStatus(result.message || result.publish_provider_status || result.status || 'pending', 'info');
+            }
             updatePublishingButtons();
+            return result;
+        } catch (error) {
+            stopPublishPolling();
+            setPublishingStatus(error.message || strings.publishFailed, 'error');
+            updatePublishingButtons();
+            return { status: 'failed' };
         }
     }
 
@@ -2264,6 +2362,28 @@
         state.durationTimer = null;
     }
 
+    function recordingSummaryStatus() {
+        if (state.failedChunks.size) {
+            return 'Needs attention';
+        }
+        if (isRecordingActive()) {
+            return 'Recording';
+        }
+        if (state.pendingUploads.size) {
+            return 'Uploading recording';
+        }
+        if (state.currentJobStatus === 'processing') {
+            return 'Replay ready to publish';
+        }
+        if (state.currentJobStatus === 'ready') {
+            return 'Replay published';
+        }
+        if (state.finalChunkCount) {
+            return 'Ready to prepare replay';
+        }
+        return 'Ready to record';
+    }
+
     function renderRecordingState() {
         if (els.recordingJobId) { els.recordingJobId.textContent = state.activeJobId || '—'; }
         if (els.recordingMime) { els.recordingMime.textContent = state.selectedMimeType || preferredMimeType() || '—'; }
@@ -2271,97 +2391,177 @@
         if (els.recordingUploaded) { els.recordingUploaded.textContent = String(state.uploadedChunks.size); }
         if (els.recordingPending) { els.recordingPending.textContent = String(state.pendingUploads.size); }
         if (els.recordingFailed) { els.recordingFailed.textContent = String(state.failedChunks.size); }
-        if (els.recordingTimer && state.recordingStartedAt) {
-            const seconds = Math.max(0, Math.floor((Date.now() - state.recordingStartedAt) / 1000));
+        if (els.recordingSummaryStatus) { els.recordingSummaryStatus.textContent = recordingSummaryStatus(); }
+        if (els.recordingTimer) {
+            const seconds = state.recordingStartedAt ? Math.max(0, Math.floor((Date.now() - state.recordingStartedAt) / 1000)) : 0;
             els.recordingTimer.textContent = String(Math.floor(seconds / 60)).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0');
         }
+        const total = Math.max(state.chunkIndex, state.finalChunkCount, 1);
+        const progress = Math.round((state.uploadedChunks.size / total) * 100);
         if (els.recordingProgress) {
-            const total = Math.max(state.chunkIndex, state.finalChunkCount, 1);
-            els.recordingProgress.value = Math.round((state.uploadedChunks.size / total) * 100);
+            els.recordingProgress.value = progress;
         }
-        if (els.retryChunks) { els.retryChunks.disabled = !state.failedChunks.size; }
-        if (els.finalizeRecording) { els.finalizeRecording.disabled = !state.finalChunkCount || state.pendingUploads.size || state.failedChunks.size; }
+        if (els.recordingProgressLabel) {
+            els.recordingProgressLabel.textContent = progress + '%';
+        }
+        const recording = isRecordingActive();
+        const hasFailedUploads = Boolean(state.failedChunks.size);
+        const canPrepareReplay = Boolean(state.activeJobId && state.finalChunkCount && !state.pendingUploads.size && !hasFailedUploads && state.currentJobStatus !== 'processing' && state.currentJobStatus !== 'ready');
+        setButtonVisibility(els.startRecording, !recording && !state.activeJobId, true);
+        setButtonVisibility(els.stopRecording, recording, true);
+        setButtonVisibility(els.retryChunks, hasFailedUploads, hasFailedUploads);
+        setButtonVisibility(els.finalizeRecording, canPrepareReplay, canPrepareReplay);
+        updatePublishingButtons();
     }
 
     function setRecorderButtons(recording, stopped) {
-        if (els.startRecording) { els.startRecording.disabled = recording; }
-        if (els.stopRecording) { els.stopRecording.disabled = !recording; }
-        if (els.finalizeRecording) { els.finalizeRecording.disabled = !stopped; }
+        setButtonVisibility(els.startRecording, !recording && !state.activeJobId, true);
+        setButtonVisibility(els.stopRecording, recording, true);
+        const canPrepareReplay = Boolean(stopped && state.activeJobId && state.finalChunkCount && !state.pendingUploads.size && !state.failedChunks.size && state.currentJobStatus !== 'processing' && state.currentJobStatus !== 'ready');
+        setButtonVisibility(els.finalizeRecording, canPrepareReplay, canPrepareReplay);
+        setButtonVisibility(els.retryChunks, Boolean(state.failedChunks.size), Boolean(state.failedChunks.size));
         renderTransitionButtons();
     }
 
-    async function createSetupJob() {
-        if (!els.createJob) {
-            return;
+    function friendlyJobStatus(job) {
+        if (!job) {
+            return '—';
         }
-
-        els.createJob.disabled = true;
-        setJobResult('', 'info');
-
-        try {
-            const payload = await api('/jobs', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-WP-Nonce': config.nonce,
-                },
-                body: JSON.stringify({
-                    recording_mode: 'browser',
-                    source_type: 'studio_setup',
-                    source_id: 'studio-setup-' + Date.now(),
-                    quality_preset: els.qualitySelect ? els.qualitySelect.value : config.defaultQualityPreset,
-                    storage_provider: els.storageSelect ? els.storageSelect.value : config.recommendedStorageProvider,
-                }),
-            });
-            state.activeJobId = payload.id;
-            updateOperatorStatus();
-            setJobResult(strings.setupJobCreated + ' #' + payload.id, 'success');
-            appendRecentJob(payload);
-            setStatus(strings.setupJobCreated, 'success');
-        } catch (error) {
-            setJobResult(error.message || strings.jobCreationFailed, 'error');
-        } finally {
-            els.createJob.disabled = false;
+        if (job.error_message || job.status === 'failed') {
+            return 'Needs attention';
         }
+        if (job.replay_video_id || job.replay_url || job.playback_url) {
+            return 'Published';
+        }
+        const status = job.status || job.job_status || '';
+        const labels = {
+            created: 'Created',
+            recording: 'Recording',
+            uploading: 'Uploading',
+            processing: 'Preparing',
+            ready: 'Ready',
+            failed: 'Needs attention',
+            cancelled: 'Cancelled',
+        };
+        return labels[status] || (status ? status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ') : '—');
     }
 
+    function jobRecordingLabel(job) {
+        if (job && job.display_title) {
+            return job.display_title;
+        }
+        if (job && job.replay_title) {
+            return job.replay_title;
+        }
+        if (job && job.title) {
+            return job.title;
+        }
+
+        return 'Studio replay';
+    }
+
+    function formatFriendlyDate(value) {
+        if (!value) {
+            return '—';
+        }
+        const normalized = String(value).indexOf('T') === -1 ? String(value).replace(' ', 'T') : String(value);
+        const date = new Date(normalized);
+        if (Number.isNaN(date.getTime())) {
+            return value;
+        }
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const diffDays = Math.round((today - target) / 86400000);
+        const time = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+        if (diffDays === 0) {
+            return 'Today ' + time;
+        }
+        if (diffDays === 1) {
+            return 'Yesterday ' + time;
+        }
+        return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function setButtonVisibility(button, visible, enabled) {
+        if (!button) {
+            return;
+        }
+        button.hidden = !visible;
+        button.disabled = !visible || !enabled;
+    }
+
+    function findJobRow(tbody, rowId) {
+        if (!tbody || !rowId) {
+            return null;
+        }
+        return Array.from(tbody.querySelectorAll('tr')).find((item) => item.dataset.jobId === rowId) || null;
+    }
+
+    function recentReplayCellText(row, index) {
+        if (!row || !row.children || !row.children[index]) {
+            return '';
+        }
+        return row.children[index].textContent.trim();
+    }
 
     function appendRecentJob(job) {
-        if (!els.recentJobsBody || !job) {
+        if (!job) {
             return;
         }
         const rowId = String(job.id || '');
-        let row = null;
-        if (rowId) {
-            row = Array.from(els.recentJobsBody.querySelectorAll('tr')).find((item) => item.dataset.jobId === rowId || (item.cells && item.cells[0] && item.cells[0].textContent === rowId)) || null;
-        }
-        if (!row) {
-            row = document.createElement('tr');
-        }
-        if (rowId) {
-            row.dataset.jobId = rowId;
-        }
         const replayUrl = job.replay_url || job.playback_url || job.permalink || '';
-        const replayCell = job.replay_video_id
-            ? (replayUrl ? '<a href="' + escapeHtml(replayUrl) + '">' + escapeHtml(String(job.replay_video_id)) + '</a>' : escapeHtml(String(job.replay_video_id)))
-            : '—';
-        row.innerHTML = '<td>' + escapeHtml(String(job.id || '')) + '</td>' +
-            '<td>' + escapeHtml(job.room_id || '') + '</td>' +
-            '<td>' + escapeHtml(job.status || '') + '</td>' +
-            '<td>' + escapeHtml(job.storage_provider || '') + '</td>' +
-            '<td>' + escapeHtml(job.created_at || '') + '</td>' +
-            '<td>' + escapeHtml(formatBytes(job.file_size)) + '</td>' +
-            '<td>' + escapeHtml(job.mime_type || '—') + '</td>' +
-            '<td>' + escapeHtml(job.assembled_at || '—') + '</td>' +
-            '<td>' + escapeHtml(job.temp_expires_at || '—') + '</td>' +
-            '<td>' + escapeHtml(job.publish_provider_status || '—') + '</td>' +
-            '<td>' + replayCell + '</td>' +
-            '<td>' + escapeHtml(job.error_message || '—') + '</td>';
-        if (!row.parentNode) {
-            els.recentJobsBody.prepend(row);
+
+        if (els.recentReplaysBody) {
+            let row = findJobRow(els.recentReplaysBody, rowId) || document.createElement('tr');
+            if (rowId) {
+                row.dataset.jobId = rowId;
+            }
+            const replayCell = replayUrl
+                ? '<a href="' + escapeHtml(replayUrl) + '" target="_blank" rel="noopener noreferrer">Open replay</a>'
+                : '—';
+            const existingTitle = recentReplayCellText(row, 0);
+            const incomingTitle = jobRecordingLabel(job);
+            const finalTitle = incomingTitle && incomingTitle !== 'Studio replay' ? incomingTitle : (existingTitle || incomingTitle || 'Studio replay');
+            const existingCreated = recentReplayCellText(row, 2);
+            const finalCreated = job.created_at ? formatFriendlyDate(job.created_at) : (existingCreated || '—');
+            row.innerHTML = '<td>' + escapeHtml(finalTitle) + '</td>' +
+                '<td>' + escapeHtml(friendlyJobStatus(job)) + '</td>' +
+                '<td>' + escapeHtml(finalCreated) + '</td>' +
+                '<td>' + replayCell + '</td>';
+            if (!row.parentNode) {
+                els.recentReplaysBody.prepend(row);
+            }
+            if (els.emptyReplays) {
+                els.emptyReplays.hidden = true;
+            }
         }
-        if (els.emptyJobs) {
-            els.emptyJobs.hidden = true;
+
+        if (els.recentJobsTechnicalBody) {
+            let row = findJobRow(els.recentJobsTechnicalBody, rowId) || document.createElement('tr');
+            if (rowId) {
+                row.dataset.jobId = rowId;
+            }
+            const replayCell = job.replay_video_id
+                ? (replayUrl ? '<a href="' + escapeHtml(replayUrl) + '">' + escapeHtml(String(job.replay_video_id)) + '</a>' : escapeHtml(String(job.replay_video_id)))
+                : '—';
+            row.innerHTML = '<td>' + escapeHtml(String(job.id || '')) + '</td>' +
+                '<td>' + escapeHtml(job.room_id || '') + '</td>' +
+                '<td>' + escapeHtml(job.status || job.job_status || '') + '</td>' +
+                '<td>' + escapeHtml(job.created_at || '') + '</td>' +
+                '<td>' + escapeHtml(formatBytes(job.file_size)) + '</td>' +
+                '<td>' + escapeHtml(job.mime_type || '—') + '</td>' +
+                '<td>' + escapeHtml(job.assembled_at || '—') + '</td>' +
+                '<td>' + escapeHtml(job.temp_expires_at || '—') + '</td>' +
+                '<td>' + escapeHtml(job.publish_provider_status || '—') + '</td>' +
+                '<td>' + replayCell + '</td>' +
+                '<td>' + escapeHtml(job.error_message || '—') + '</td>';
+            if (!row.parentNode) {
+                els.recentJobsTechnicalBody.prepend(row);
+            }
+            if (els.emptyJobs) {
+                els.emptyJobs.hidden = true;
+            }
         }
     }
 
@@ -2423,7 +2623,6 @@
             require_passcode: mode === 'interactive' && !!(els.broadcastRequirePasscode && els.broadcastRequirePasscode.checked),
             host_passcode: els.broadcastPasscode ? els.broadcastPasscode.value : '',
             quality_preset: els.qualitySelect ? els.qualitySelect.value : config.defaultQualityPreset,
-            storage_provider: els.storageSelect ? els.storageSelect.value : config.recommendedStorageProvider,
         };
     }
 
@@ -2830,23 +3029,11 @@
             });
         }
         if (els.mediaResetTransform) { els.mediaResetTransform.addEventListener('click', resetActiveMediaTransform); }
-        if (els.storageSelect) {
-            els.storageSelect.addEventListener('change', () => {
-                const provider = selectedStorageProvider();
-                if (selectedStorageProviderId() === 'local_media') {
-                    setJobResult(provider.available === false ? strings.localMediaUnavailable : strings.localMediaWarning, provider.available === false ? 'error' : 'warning');
-                }
-            });
-        }
-        if (els.createJob) {
-            els.createJob.addEventListener('click', createSetupJob);
-        }
         if (els.startRecording) { els.startRecording.addEventListener('click', startRecording); }
         if (els.stopRecording) { els.stopRecording.addEventListener('click', stopRecording); }
         if (els.retryChunks) { els.retryChunks.addEventListener('click', retryFailedChunks); }
         if (els.finalizeRecording) { els.finalizeRecording.addEventListener('click', finalizeRecording); }
         if (els.publishReplay) { els.publishReplay.addEventListener('click', publishReplay); }
-        if (els.checkPublishingStatus) { els.checkPublishingStatus.addEventListener('click', checkPublishingStatus); }
         if (els.broadcastMode) { els.broadcastMode.addEventListener('change', updateBroadcastRules); }
         if (els.broadcastEveryoneHost) { els.broadcastEveryoneHost.addEventListener('change', updateBroadcastRules); }
         if (els.broadcastRequirePasscode) { els.broadcastRequirePasscode.addEventListener('change', updateBroadcastRules); }
@@ -2894,6 +3081,7 @@
     updateQualityDetails();
     applyProgramCanvasResolution();
     updatePublishingButtons();
+    renderRecordingState();
     updateBroadcastRules();
     renderPreviewState();
     renderSourceState();

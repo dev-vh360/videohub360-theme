@@ -74,8 +74,6 @@ class VH360_Studio_Assets {
             'nonce'                     => wp_create_nonce( 'wp_rest' ),
             'qualityPresets'            => VH360_Studio_Quality_Presets::get_presets(),
             'defaultQualityPreset'      => VH360_Studio_Quality_Presets::DEFAULT_PRESET,
-            'storageProviders'          => $this->get_storage_provider_data(),
-            'recommendedStorageProvider' => 'videopress',
             'uploadSettings'             => class_exists( 'VH360_Studio_Recording_Chunks' ) ? ( new VH360_Studio_Recording_Chunks( VH360_Studio_Plugin::instance()->jobs() ) )->upload_settings() : array(),
             'currentUserId'             => get_current_user_id(),
             'strings'                   => array(
@@ -98,23 +96,20 @@ class VH360_Studio_Assets {
                 'notSupported'           => __( 'Not supported', 'videohub360-studio' ),
                 'startRecording'        => __( 'Start recording', 'videohub360-studio' ),
                 'stopRecording'         => __( 'Stop recording', 'videohub360-studio' ),
-                'recordingActive'       => __( 'Recording active. Chunks are uploading to WordPress.', 'videohub360-studio' ),
-                'uploadingChunk'        => __( 'Uploading recording chunk…', 'videohub360-studio' ),
-                'uploadRetry'           => __( 'Retrying failed chunks…', 'videohub360-studio' ),
-                'finalizing'            => __( 'Finalizing recording…', 'videohub360-studio' ),
+                'recordingActive'       => __( 'Recording active. Uploading to WordPress.', 'videohub360-studio' ),
+                'uploadingChunk'        => __( 'Uploading recording…', 'videohub360-studio' ),
+                'uploadRetry'           => __( 'Retrying upload…', 'videohub360-studio' ),
+                'finalizing'            => __( 'Preparing replay…', 'videohub360-studio' ),
                 'recordingSaved'        => __( 'Recording saved for processing.', 'videohub360-studio' ),
-                'chunkUploadFailed'     => __( 'A recording chunk upload failed. Retry before finalizing.', 'videohub360-studio' ),
+                'chunkUploadFailed'     => __( 'A recording upload failed. Retry the upload before preparing the replay.', 'videohub360-studio' ),
                 'recorderUnavailable'   => __( 'Browser recorder is unavailable.', 'videohub360-studio' ),
                 'recordingCancelled'    => __( 'Recording cancelled.', 'videohub360-studio' ),
                 'publishReplay'         => __( 'Publish replay', 'videohub360-studio' ),
-                'publishingReplay'      => __( 'Publishing replay through the selected provider…', 'videohub360-studio' ),
+                'publishingReplay'      => __( 'Publishing replay…', 'videohub360-studio' ),
                 'publishStatusChecking' => __( 'Checking publishing status…', 'videohub360-studio' ),
                 'publishComplete'       => __( 'Replay published.', 'videohub360-studio' ),
-                'publishFailed'         => __( 'Replay publishing failed.', 'videohub360-studio' ),
-                'localMediaFallback'   => __( 'Local Media Fallback stores the replay in your WordPress Media Library. Use this for testing or smaller recordings. VideoPress is recommended for production replay hosting.', 'videohub360-studio' ),
-                'localMediaReady'      => __( 'Replay saved to Media Library. Replay post created.', 'videohub360-studio' ),
-                'localMediaUnavailable' => __( 'Local Media publishing is unavailable because the current user cannot upload files or the uploads directory is not writable.', 'videohub360-studio' ),
-                'localMediaWarning'    => __( 'Local Media Fallback stores recordings in your WordPress Media Library and is best for testing or smaller recordings.', 'videohub360-studio' ),
+                'publishProcessing'     => __( 'Replay is still processing. We’ll keep checking.', 'videohub360-studio' ),
+                'publishFailed'         => __( 'Replay publishing failed. Please try again.', 'videohub360-studio' ),
                 'goLive'                => __( 'Go Live', 'videohub360-studio' ),
                 'goingLive'             => __( 'Joining Agora and publishing the Program output…', 'videohub360-studio' ),
                 'liveStarted'           => __( 'Live broadcast started.', 'videohub360-studio' ),
@@ -137,20 +132,4 @@ class VH360_Studio_Assets {
         );
     }
 
-    private function get_storage_provider_data() {
-        $providers = array();
-
-        foreach ( $this->registry->get_storage_providers() as $id => $provider ) {
-            $providers[ $id ] = array(
-                'id'          => $provider->get_id(),
-                'label'       => $provider->get_label(),
-                'available'   => $provider->is_available(),
-                'recommended' => 'videopress' === $id,
-                'fallback'    => 'local_media' === $id,
-                'supportsPublish' => $provider->supports_publish(),
-            );
-        }
-
-        return $providers;
-    }
 }

@@ -90,7 +90,7 @@ class VH360_Studio_Local_Media_Replay_Storage_Provider implements VH360_Studio_R
             'size'     => absint( $recording['file_size'] ),
         );
 
-        $post_id       = ! empty( $job['replay_video_id'] ) ? absint( $job['replay_video_id'] ) : 0;
+        $post_id       = $this->resolve_attachment_parent_post_id( $job );
         $attachment_id = media_handle_sideload( $file, $post_id, $this->attachment_title( $job ) );
         if ( is_wp_error( $attachment_id ) ) {
             @unlink( $tmp );
@@ -163,6 +163,22 @@ class VH360_Studio_Local_Media_Replay_Storage_Provider implements VH360_Studio_R
     private function poster_url( $attachment_id ) {
         $poster_id = get_post_thumbnail_id( $attachment_id );
         return $poster_id ? esc_url_raw( wp_get_attachment_url( $poster_id ) ) : '';
+    }
+
+
+    private function resolve_attachment_parent_post_id( array $job ) {
+        $live_video_id   = ! empty( $job['live_video_id'] ) ? absint( $job['live_video_id'] ) : 0;
+        $replay_video_id = ! empty( $job['replay_video_id'] ) ? absint( $job['replay_video_id'] ) : 0;
+
+        if ( $live_video_id && 'videohub360' === get_post_type( $live_video_id ) ) {
+            return $live_video_id;
+        }
+
+        if ( $replay_video_id && 'videohub360' === get_post_type( $replay_video_id ) ) {
+            return $replay_video_id;
+        }
+
+        return 0;
     }
 
     private function attachment_title( array $job ) {
