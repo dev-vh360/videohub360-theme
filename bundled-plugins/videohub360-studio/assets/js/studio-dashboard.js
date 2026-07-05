@@ -86,7 +86,6 @@
         micSelect: root.querySelector('[data-mic-select]'),
         micMeter: root.querySelector('[data-mic-meter]'),
         qualitySelect: root.querySelector('[data-quality-select]'),
-        storageSelect: root.querySelector('[data-storage-select]'),
         qualityDetails: root.querySelector('[data-quality-details]'),
         selectedMediaControls: root.querySelector('[data-selected-media-controls]'),
         selectedMediaName: root.querySelector('[data-selected-media-name]'),
@@ -1991,7 +1990,7 @@
         if (state.activeJobId) {
             return state.activeJobId;
         }
-        const job = await api('/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ recording_mode: 'browser', source_type: 'studio_setup', source_id: 'studio-recording-' + Date.now(), quality_preset: els.qualitySelect ? els.qualitySelect.value : config.defaultQualityPreset, storage_provider: els.storageSelect ? els.storageSelect.value : config.recommendedStorageProvider }) });
+        const job = await api('/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ recording_mode: 'browser', source_type: 'studio_setup', source_id: 'studio-recording-' + Date.now(), quality_preset: els.qualitySelect ? els.qualitySelect.value : config.defaultQualityPreset }) });
         state.activeJobId = job.id;
         appendRecentJob(job);
         return job.id;
@@ -2197,15 +2196,6 @@
     }
 
 
-    function selectedStorageProviderId() {
-        return els.storageSelect ? els.storageSelect.value : config.recommendedStorageProvider;
-    }
-
-    function selectedStorageProvider() {
-        const providers = config.storageProviders || {};
-        return providers[selectedStorageProviderId()] || {};
-    }
-
     function updatePublishingButtons() {
         const canPublish = Boolean(state.activeJobId) && state.currentJobStatus === 'processing';
         if (els.publishReplay) { els.publishReplay.disabled = !canPublish; }
@@ -2216,20 +2206,14 @@
         if (!state.activeJobId) {
             return;
         }
-        const providerId = selectedStorageProviderId();
-        const provider = selectedStorageProvider();
-        if (providerId === 'local_media' && provider.available === false) {
-            setPublishingStatus(strings.localMediaUnavailable, 'error');
-            return;
-        }
         if (els.publishReplay) { els.publishReplay.disabled = true; }
-        setPublishingStatus(providerId === 'local_media' ? 'Publishing replay to WordPress Media Library...' : strings.publishingReplay, 'info');
+        setPublishingStatus(strings.publishingReplay, 'info');
         try {
             const result = await api('/jobs/' + state.activeJobId + '/publishing/publish', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
             state.currentJobStatus = result.job_status || 'ready';
-            setPublishingStatus(providerId === 'local_media' ? (result.message || strings.localMediaReady || 'Replay saved to Media Library. Replay post created.') : (result.message || strings.publishComplete), 'success');
+            setPublishingStatus(result.message || strings.publishComplete, 'success');
             renderReplayLink(result.replay_url || result.playback_url || '');
-            appendRecentJob({ id: state.activeJobId, status: state.currentJobStatus, storage_provider: result.provider_id, file_size: result.file_size, mime_type: result.mime_type, publish_provider_status: result.publish_provider_status, replay_video_id: result.replay_video_id, replay_url: result.replay_url || result.playback_url || '' });
+            appendRecentJob({ id: state.activeJobId, status: state.currentJobStatus, file_size: result.file_size, mime_type: result.mime_type, publish_provider_status: result.publish_provider_status, replay_video_id: result.replay_video_id, replay_url: result.replay_url || result.playback_url || '' });
         } catch (error) {
             setPublishingStatus(error.message || strings.publishFailed, 'error');
         } finally {
@@ -2245,7 +2229,7 @@
         try {
             const result = await api('/jobs/' + state.activeJobId + '/publishing/status', { method: 'GET' });
             state.currentJobStatus = result.job_status || state.currentJobStatus;
-            setPublishingStatus((result.publish_provider_status || result.status || 'pending') + (result.videopress_guid ? ' · VideoPress GUID: ' + result.videopress_guid : ''), 'success');
+            setPublishingStatus(result.message || result.publish_provider_status || result.status || 'pending', 'success');
             renderReplayLink(result.replay_url || result.playback_url || '');
         } catch (error) {
             setPublishingStatus(error.message || strings.publishFailed, 'error');
@@ -2310,7 +2294,6 @@
                     source_type: 'studio_setup',
                     source_id: 'studio-setup-' + Date.now(),
                     quality_preset: els.qualitySelect ? els.qualitySelect.value : config.defaultQualityPreset,
-                    storage_provider: els.storageSelect ? els.storageSelect.value : config.recommendedStorageProvider,
                 }),
             });
             state.activeJobId = payload.id;
@@ -2348,7 +2331,6 @@
         row.innerHTML = '<td>' + escapeHtml(String(job.id || '')) + '</td>' +
             '<td>' + escapeHtml(job.room_id || '') + '</td>' +
             '<td>' + escapeHtml(job.status || '') + '</td>' +
-            '<td>' + escapeHtml(job.storage_provider || '') + '</td>' +
             '<td>' + escapeHtml(job.created_at || '') + '</td>' +
             '<td>' + escapeHtml(formatBytes(job.file_size)) + '</td>' +
             '<td>' + escapeHtml(job.mime_type || '—') + '</td>' +
@@ -2423,7 +2405,6 @@
             require_passcode: mode === 'interactive' && !!(els.broadcastRequirePasscode && els.broadcastRequirePasscode.checked),
             host_passcode: els.broadcastPasscode ? els.broadcastPasscode.value : '',
             quality_preset: els.qualitySelect ? els.qualitySelect.value : config.defaultQualityPreset,
-            storage_provider: els.storageSelect ? els.storageSelect.value : config.recommendedStorageProvider,
         };
     }
 
@@ -2830,14 +2811,6 @@
             });
         }
         if (els.mediaResetTransform) { els.mediaResetTransform.addEventListener('click', resetActiveMediaTransform); }
-        if (els.storageSelect) {
-            els.storageSelect.addEventListener('change', () => {
-                const provider = selectedStorageProvider();
-                if (selectedStorageProviderId() === 'local_media') {
-                    setJobResult(provider.available === false ? strings.localMediaUnavailable : strings.localMediaWarning, provider.available === false ? 'error' : 'warning');
-                }
-            });
-        }
         if (els.createJob) {
             els.createJob.addEventListener('click', createSetupJob);
         }

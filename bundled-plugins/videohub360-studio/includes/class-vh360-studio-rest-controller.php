@@ -474,11 +474,6 @@ class VH360_Studio_REST_Controller {
                     return VH360_Studio_Quality_Presets::exists( sanitize_key( $value ) );
                 },
             ),
-            'storage_provider' => array(
-                'required'          => false,
-                'sanitize_callback' => 'sanitize_key',
-                'validate_callback' => array( $this, 'validate_storage_provider' ),
-            ),
         );
     }
 
@@ -499,7 +494,7 @@ class VH360_Studio_REST_Controller {
 
     private function setup_payload_from_request( WP_REST_Request $request ) {
         $payload = array();
-        $allowed = array( 'source_type', 'source_id', 'live_video_id', 'room_id', 'recording_mode', 'quality_preset', 'storage_provider' );
+        $allowed = array( 'source_type', 'source_id', 'live_video_id', 'room_id', 'recording_mode', 'quality_preset' );
 
         foreach ( $allowed as $key ) {
             if ( null !== $request->get_param( $key ) ) {
@@ -507,16 +502,17 @@ class VH360_Studio_REST_Controller {
             }
         }
 
-        $payload['status']         = VH360_Studio_Recording_Jobs::STATUS_CREATED;
-        $payload['recording_mode'] = isset( $payload['recording_mode'] ) ? $payload['recording_mode'] : 'browser';
-        $payload['source_type']    = isset( $payload['source_type'] ) ? $payload['source_type'] : 'studio_setup';
+        $payload['status']           = VH360_Studio_Recording_Jobs::STATUS_CREATED;
+        $payload['recording_mode']   = isset( $payload['recording_mode'] ) ? $payload['recording_mode'] : 'browser';
+        $payload['source_type']      = isset( $payload['source_type'] ) ? $payload['source_type'] : 'studio_setup';
+        $payload['storage_provider'] = $this->default_replay_storage_provider();
 
         return $payload;
     }
 
     private function update_payload_from_request( WP_REST_Request $request ) {
         $payload = array();
-        $allowed = array( 'source_type', 'source_id', 'live_video_id', 'room_id', 'recording_mode', 'quality_preset', 'storage_provider' );
+        $allowed = array( 'source_type', 'source_id', 'live_video_id', 'room_id', 'recording_mode', 'quality_preset' );
 
         foreach ( $allowed as $key ) {
             if ( null !== $request->get_param( $key ) ) {
@@ -537,7 +533,32 @@ class VH360_Studio_REST_Controller {
 
     public function validate_storage_provider( $value ) {
         $registry = VH360_Studio_Plugin::instance()->registry();
-        return $registry->has_storage_provider( sanitize_key( $value ) );
+        return $registry->has_storage_provider( $this->normalize_storage_provider_id( sanitize_key( $value ) ) );
+    }
+
+    private function default_replay_storage_provider() {
+        $registry = VH360_Studio_Plugin::instance()->registry();
+        $saved    = $this->normalize_storage_provider_id( get_option( 'vh360_studio_default_replay_storage_provider', 'videopress' ) );
+
+        if ( $saved && $registry->has_storage_provider( $saved ) ) {
+            return $saved;
+        }
+
+        $videopress = $registry->get_storage_provider( 'videopress' );
+        if ( $videopress && $videopress->is_available() ) {
+            return 'videopress';
+        }
+
+        if ( $registry->has_storage_provider( 'local_media' ) ) {
+            return 'local_media';
+        }
+
+        return 'videopress';
+    }
+
+    private function normalize_storage_provider_id( $provider ) {
+        $provider = sanitize_key( $provider );
+        return 'local' === $provider ? 'local_media' : $provider;
     }
 
     public function validate_optional_url( $value ) {
@@ -601,7 +622,7 @@ class VH360_Studio_REST_Controller {
             'room_id'          => sanitize_text_field( $broadcast['channelName'] ),
             'recording_mode'   => 'browser',
             'quality_preset'   => sanitize_key( $request->get_param( 'quality_preset' ) ?: VH360_Studio_Quality_Presets::DEFAULT_PRESET ),
-            'storage_provider' => sanitize_key( $request->get_param( 'storage_provider' ) ?: 'videopress' ),
+            'storage_provider' => $this->default_replay_storage_provider(),
         ) );
         return rest_ensure_response( array( 'broadcast' => $broadcast, 'job' => $this->prepare_job_response( $job ) ) );
     }

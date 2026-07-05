@@ -9,9 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-$storage_providers = $registry->get_storage_providers();
 $default_label     = isset( $quality_presets[ $default_preset ]['label'] ) ? $quality_presets[ $default_preset ]['label'] : $default_preset;
-$storage_label     = isset( $storage_providers['videopress'] ) ? $storage_providers['videopress']->get_label() : __( 'VideoPress', 'videohub360-studio' );
 ?>
 <section class="vh360-studio-dashboard" data-vh360-studio-dashboard>
     <header class="vh360-studio-topbar">
@@ -262,13 +260,6 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
                         <button type="button" class="vh360-studio-button" data-finalize-recording disabled><?php esc_html_e( 'Finalize recording', 'videohub360-studio' ); ?></button>
                     </div>
                     <div class="vh360-studio-job-result" aria-live="polite" data-recording-status></div>
-                    <label for="vh360-studio-storage-select"><?php esc_html_e( 'Replay destination', 'videohub360-studio' ); ?></label>
-                    <select id="vh360-studio-storage-select" data-storage-select>
-                        <?php foreach ( $storage_providers as $provider_id => $provider ) : ?>
-                            <option value="<?php echo esc_attr( $provider_id ); ?>" <?php selected( $provider_id, 'videopress' ); ?>><?php echo esc_html( $provider->get_label() ); ?><?php if ( 'videopress' === $provider_id ) : ?> <?php esc_html_e( '(recommended)', 'videohub360-studio' ); ?><?php elseif ( 'local_media' === $provider_id ) : ?> <?php esc_html_e( '(limited fallback)', 'videohub360-studio' ); ?><?php endif; ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <p class="vh360-studio-help"><?php printf( esc_html__( 'Default: %s. Local Media Fallback stores recordings in your WordPress Media Library and is best for testing or smaller recordings. VideoPress is recommended for shared/cloud-hosting replay delivery.', 'videohub360-studio' ), esc_html( $storage_label ) ); ?></p>
                     <div class="vh360-studio-actions">
                         <button type="button" class="vh360-studio-button vh360-studio-button--primary" data-publish-replay><?php esc_html_e( 'Publish replay', 'videohub360-studio' ); ?></button>
                         <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-check-publishing-status><?php esc_html_e( 'Check publishing status', 'videohub360-studio' ); ?></button>
@@ -303,10 +294,10 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
             <h3 id="vh360-studio-recent-title"><?php esc_html_e( 'Recent Recording Jobs', 'videohub360-studio' ); ?></h3>
             <p data-empty-jobs <?php echo empty( $jobs ) ? '' : 'hidden'; ?>><?php esc_html_e( 'No recording jobs have been created yet.', 'videohub360-studio' ); ?></p>
             <table class="vh360-dashboard-table">
-                <thead><tr><th><?php esc_html_e( 'ID', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Room', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Status', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Storage', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Created', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'File Size', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'MIME Type', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Assembled', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Temp Expires', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Provider Status', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Replay', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Last Error', 'videohub360-studio' ); ?></th></tr></thead>
+                <thead><tr><th><?php esc_html_e( 'ID', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Room', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Status', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Created', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'File Size', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'MIME Type', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Assembled', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Temp Expires', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Publish Status', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Replay', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Last Error', 'videohub360-studio' ); ?></th></tr></thead>
                 <tbody data-recent-jobs-body>
                     <?php foreach ( $jobs as $job ) : ?>
-                        <tr><td><?php echo esc_html( $job['id'] ); ?></td><td><?php echo esc_html( $job['room_id'] ); ?></td><td><?php echo esc_html( $job['status'] ); ?></td><td><?php echo esc_html( $job['storage_provider'] ); ?></td><td><?php echo esc_html( $job['created_at'] ); ?></td><td><?php echo esc_html( ! empty( $job['file_size'] ) ? size_format( absint( $job['file_size'] ) ) : '—' ); ?></td><td><?php echo esc_html( ! empty( $job['mime_type'] ) ? $job['mime_type'] : '—' ); ?></td><td><?php echo esc_html( ! empty( $job['assembled_at'] ) ? $job['assembled_at'] : '—' ); ?></td><td><?php echo esc_html( ! empty( $job['temp_expires_at'] ) ? $job['temp_expires_at'] : '—' ); ?></td><td><?php echo esc_html( ! empty( $job['publish_provider_status'] ) ? $job['publish_provider_status'] : '—' ); ?></td><td><?php if ( ! empty( $job['replay_video_id'] ) ) : ?><a href="<?php echo esc_url( get_permalink( absint( $job['replay_video_id'] ) ) ); ?>"><?php echo esc_html( absint( $job['replay_video_id'] ) ); ?></a><?php else : ?><?php echo esc_html( '—' ); ?><?php endif; ?></td><td><?php echo esc_html( ! empty( $job['error_message'] ) ? $job['error_message'] : '—' ); ?></td></tr>
+                        <tr><td><?php echo esc_html( $job['id'] ); ?></td><td><?php echo esc_html( $job['room_id'] ); ?></td><td><?php echo esc_html( $job['status'] ); ?></td><td><?php echo esc_html( $job['created_at'] ); ?></td><td><?php echo esc_html( ! empty( $job['file_size'] ) ? size_format( absint( $job['file_size'] ) ) : '—' ); ?></td><td><?php echo esc_html( ! empty( $job['mime_type'] ) ? $job['mime_type'] : '—' ); ?></td><td><?php echo esc_html( ! empty( $job['assembled_at'] ) ? $job['assembled_at'] : '—' ); ?></td><td><?php echo esc_html( ! empty( $job['temp_expires_at'] ) ? $job['temp_expires_at'] : '—' ); ?></td><td><?php echo esc_html( ! empty( $job['publish_provider_status'] ) ? $job['publish_provider_status'] : '—' ); ?></td><td><?php if ( ! empty( $job['replay_video_id'] ) ) : ?><a href="<?php echo esc_url( get_permalink( absint( $job['replay_video_id'] ) ) ); ?>"><?php echo esc_html( absint( $job['replay_video_id'] ) ); ?></a><?php else : ?><?php echo esc_html( '—' ); ?><?php endif; ?></td><td><?php echo esc_html( ! empty( $job['error_message'] ) ? $job['error_message'] : '—' ); ?></td></tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
