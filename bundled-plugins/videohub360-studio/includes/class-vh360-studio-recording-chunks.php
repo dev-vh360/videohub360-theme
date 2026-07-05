@@ -23,8 +23,8 @@ class VH360_Studio_Recording_Chunks {
             'max_chunk_size'           => (int) apply_filters( 'vh360_studio_max_chunk_size', 8 * 1024 * 1024 ),
             'max_total_recording_size' => (int) apply_filters( 'vh360_studio_max_total_recording_size', 512 * 1024 * 1024 ),
             'preferred_chunk_duration' => (int) apply_filters( 'vh360_studio_chunk_time_slice', 5000 ),
-            'allowed_mime_types'       => (array) apply_filters( 'vh360_studio_allowed_recording_mime_types', array( 'video/webm', 'video/mp4' ) ),
-            'allowed_extensions'       => (array) apply_filters( 'vh360_studio_allowed_recording_extensions', array( 'webm', 'mp4' ) ),
+            'allowed_mime_types'       => (array) apply_filters( 'vh360_studio_allowed_recording_mime_types', array( 'video/mp4', 'video/webm' ) ),
+            'allowed_extensions'       => (array) apply_filters( 'vh360_studio_allowed_recording_extensions', array( 'mp4', 'webm' ) ),
         );
     }
 
@@ -35,6 +35,10 @@ class VH360_Studio_Recording_Chunks {
 
     public function is_allowed_mime_type( $mime_type ) {
         return in_array( $this->base_mime_type( $mime_type ), $this->upload_settings()['allowed_mime_types'], true );
+    }
+
+    public function extension_for_mime_type( $mime_type ) {
+        return 'video/mp4' === $this->base_mime_type( $mime_type ) ? 'mp4' : 'webm';
     }
 
     public function validate_job_ownership( $job_id, $user_id ) {
@@ -87,7 +91,7 @@ class VH360_Studio_Recording_Chunks {
         }
         $dir = $this->chunk_directory( $job['id'], $browser_session_id );
         if ( is_wp_error( $dir ) ) { return $dir; }
-        $ext = 'video/mp4' === $base_mime ? 'mp4' : 'webm';
+        $ext = $this->extension_for_mime_type( $base_mime );
         $final_filename = 'chunk-' . $chunk_index . '.' . $ext;
         $path = trailingslashit( $dir ) . $final_filename;
         $validation_path = trailingslashit( $dir ) . 'chunk-' . $chunk_index . '-' . sanitize_file_name( wp_generate_uuid4() ) . '.tmp';
@@ -125,7 +129,7 @@ class VH360_Studio_Recording_Chunks {
         if ( ! $this->is_allowed_mime_type( $base_mime ) ) {
             return new WP_Error( 'vh360_studio_invalid_recording_type', __( 'Recording MIME type is not allowed.', 'videohub360-studio' ), array( 'status' => 415 ) );
         }
-        $ext = 'video/mp4' === $base_mime ? 'mp4' : 'webm';
+        $ext = $this->extension_for_mime_type( $base_mime );
         $dir = $this->chunk_directory( $job['id'], $browser_session_id );
         if ( is_wp_error( $dir ) ) { return $dir; }
         $assembled = trailingslashit( dirname( $dir ) ) . 'recording-' . absint( $job['id'] ) . '-' . sanitize_file_name( $browser_session_id ) . '.' . $ext;
@@ -183,7 +187,7 @@ class VH360_Studio_Recording_Chunks {
     }
 
     private function validate_stored_file_type( $path, $expected_mime, $filename = '' ) {
-        $extension = 'video/mp4' === $expected_mime ? 'mp4' : 'webm';
+        $extension = $this->extension_for_mime_type( $expected_mime );
         $filename  = $filename ? sanitize_file_name( $filename ) : basename( $path );
         $check     = wp_check_filetype_and_ext( $path, $filename, array( 'webm' => 'video/webm', 'mp4' => 'video/mp4' ) );
 

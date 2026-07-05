@@ -57,6 +57,9 @@
         programSwitching: false,
         lastAgoraConnectionState: '',
         mediaControlsExpanded: false,
+        lastRestError: '',
+        mediaSourceUploadActive: false,
+        mediaSourceModalTrigger: null,
     };
 
     const els = {
@@ -151,6 +154,11 @@
         persistentMediaSourceName: root.querySelector('[data-persistent-media-source-name]'),
         persistentMediaSourceStatus: root.querySelector('[data-persistent-media-source-status]'),
         importMediaSource: root.querySelector('[data-import-media-source]'),
+        operatorCanvasSupport: root.querySelector('[data-operator-canvas-support]'),
+        operatorProgramSource: root.querySelector('[data-operator-program-source]'),
+        operatorActiveJob: root.querySelector('[data-operator-active-job]'),
+        operatorLastRestError: root.querySelector('[data-operator-last-rest-error]'),
+        operatorRecordingFormat: root.querySelector('[data-operator-recording-format]'),
     };
 
     function defaultMediaTransform() {
@@ -186,6 +194,26 @@
 
     function hasProgramOutput() {
         return Boolean(state.programSource && (state.programStream || isMediaSource(state.programSource)));
+    }
+
+    function updateOperatorStatus() {
+        if (els.operatorCanvasSupport) {
+            els.operatorCanvasSupport.textContent = state.support.canvasCapture && state.support.canvasContext ? 'Supported' : 'Unsupported';
+        }
+        if (els.operatorProgramSource) {
+            els.operatorProgramSource.textContent = state.programSource ? sourceLabel(state.programSource) : 'None';
+        }
+        if (els.operatorActiveJob) {
+            els.operatorActiveJob.textContent = state.activeJobId || '—';
+        }
+        if (els.operatorLastRestError) {
+            els.operatorLastRestError.textContent = state.lastRestError || 'None';
+        }
+        if (els.operatorRecordingFormat) {
+            const recordingMimeType = state.selectedMimeType || preferredMimeType();
+            els.operatorRecordingFormat.textContent = recordingFormatLabel(recordingMimeType);
+            els.operatorRecordingFormat.dataset.statusType = isWebmMime(recordingMimeType) ? 'warning' : 'success';
+        }
     }
 
     function sourceLabel(sourceId) {
@@ -353,6 +381,7 @@
         renderSceneControls();
         renderMediaPlaybackControls();
         renderSelectedMediaControls();
+        updateOperatorStatus();
     }
 
     function selectSceneSource(sourceId) {
@@ -566,7 +595,7 @@
             state.programCanvas = els.programCanvas;
             state.programCanvas.width = state.programWidth;
             state.programCanvas.height = state.programHeight;
-            state.programContext = state.programCanvas.getContext('2d');
+            state.programContext = state.support.canvasContext ? state.programCanvas.getContext('2d') : null;
         }
         if (!state.programOutputStream && typeof state.programCanvas.captureStream === 'function') {
             state.programOutputStream = state.programCanvas.captureStream(state.programFrameRate);
@@ -721,6 +750,7 @@
         if (els.programEmpty) {
             els.programEmpty.hidden = active;
         }
+        updateOperatorStatus();
     }
 
     function isSourceProtected(sourceId) {
@@ -786,6 +816,23 @@
         }
         els.status.textContent = message;
         els.status.dataset.statusType = type || 'info';
+        updateOperatorStatus();
+    }
+
+    function requiredSupportError(context) {
+        const missing = [];
+        if (!state.support.secureContext) { missing.push('secure browser context'); }
+        if (!state.support.mediaDevices) { missing.push('media devices API'); }
+        if (!state.support.getUserMedia) { missing.push('camera and microphone access'); }
+        if (!state.support.canvasContext) { missing.push('canvas drawing support'); }
+        if ((context === 'live' || (context === 'recording' && hasProgramOutput())) && !state.support.canvasCapture) {
+            missing.push('Program canvas output');
+        }
+        if (context === 'recording') {
+            if (!state.support.mediaRecorder) { missing.push('browser recorder support'); }
+            if (!preferredMimeType()) { missing.push('a supported recording format'); }
+        }
+        return missing.length ? 'Studio cannot ' + (context === 'live' ? 'go live' : 'start recording') + ' because this browser is missing: ' + missing.join(', ') + '.' : '';
     }
 
     function isStudioFullscreen() {
@@ -867,7 +914,7 @@
         }
 
         try {
-            await navigator.clipboard.writeText(state.viewerPermalink);
+            await copyTextToClipboard(state.viewerPermalink);
 
             if (els.copyViewerFeedback) {
                 els.copyViewerFeedback.textContent = 'Copied';
@@ -888,6 +935,27 @@
         }
     }
 
+    async function copyTextToClipboard(text) {
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+            await navigator.clipboard.writeText(text);
+            return;
+        }
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.setAttribute('readonly', 'readonly');
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+            if (!document.execCommand('copy')) {
+                throw new Error('Copy command was not available.');
+            }
+        } finally {
+            textarea.remove();
+        }
+    }
+
     function setJobResult(message, type) {
         if (!els.jobResult) {
             return;
@@ -899,15 +967,14 @@
     function detectSupport() {
         const mediaDevices = Boolean(navigator.mediaDevices);
         const mediaRecorder = 'MediaRecorder' in window;
-        const mimeCandidates = [
-            'video/webm;codecs=vp9,opus',
-            'video/webm;codecs=vp8,opus',
-            'video/webm',
-            'video/mp4',
-        ];
+        const mimeCandidates = recordingMimeCandidates();
         const mimeTypes = mediaRecorder
             ? mimeCandidates.filter((type) => window.MediaRecorder.isTypeSupported(type))
             : [];
+        const canvas = document.createElement('canvas');
+        const canvasContext = Boolean(canvas && typeof canvas.getContext === 'function' && canvas.getContext('2d'));
+        const canvasCapture = Boolean(window.HTMLCanvasElement && window.HTMLCanvasElement.prototype && typeof window.HTMLCanvasElement.prototype.captureStream === 'function');
+        const fallbackCopy = typeof document.queryCommandSupported === 'function' ? document.queryCommandSupported('copy') : typeof document.execCommand === 'function';
 
         state.support = {
             mediaDevices,
@@ -917,6 +984,9 @@
             mediaRecorder,
             secureContext: window.isSecureContext || window.location.hostname === 'localhost',
             mimeTypes,
+            canvasContext,
+            canvasCapture,
+            clipboardCopy: Boolean(navigator.clipboard && typeof navigator.clipboard.writeText === 'function') || fallbackCopy,
         };
     }
 
@@ -932,6 +1002,9 @@
             ['getDisplayMedia', state.support.getDisplayMedia],
             ['mediaRecorder', state.support.mediaRecorder],
             ['secureContext', state.support.secureContext],
+            ['canvasCapture', state.support.canvasCapture],
+            ['canvasContext', state.support.canvasContext],
+            ['clipboardCopy', state.support.clipboardCopy],
         ];
 
         els.supportChecks.innerHTML = '';
@@ -946,6 +1019,14 @@
         mimeItem.className = state.support.mimeTypes.length ? 'is-supported' : 'is-unsupported';
         mimeItem.innerHTML = '<span>' + escapeHtml(supportLabels.mimeTypes || 'Formats') + '</span><strong>' + escapeHtml(state.support.mimeTypes.length ? state.support.mimeTypes.join(', ') : strings.notSupported) + '</strong>';
         els.supportChecks.appendChild(mimeItem);
+
+        const preferred = preferredMimeType();
+        if (isWebmMime(preferred)) {
+            const warning = document.createElement('li');
+            warning.className = 'is-unsupported';
+            warning.innerHTML = '<span>' + escapeHtml('Recording format') + '</span><strong>' + escapeHtml(webmFallbackWarning()) + '</strong>';
+            els.supportChecks.appendChild(warning);
+        }
     }
 
     function updateReadinessStatus() {
@@ -953,11 +1034,12 @@
             setStatus(strings.insecureContext, 'error');
             return;
         }
-        if (!state.support.mediaDevices || !state.support.getUserMedia || !state.support.mediaRecorder) {
+        if (!state.support.mediaDevices || !state.support.getUserMedia || !state.support.mediaRecorder || !state.support.canvasContext || !state.support.canvasCapture) {
             setStatus(strings.browserUnsupported, 'error');
             return;
         }
         setStatus(strings.ready, 'success');
+        updateOperatorStatus();
     }
 
     function escapeHtml(value) {
@@ -1312,6 +1394,7 @@
 
     function openMediaSourceModal(mode) {
         state.mediaSourceModalMode = mode === 'local' ? 'local' : 'upload';
+        state.mediaSourceModalTrigger = document.activeElement && document.activeElement.focus ? document.activeElement : null;
         resetMediaSourceModal();
 
         if (els.mediaSourceModalTitle) {
@@ -1341,8 +1424,16 @@
         if (!els.mediaSourceModal) {
             return;
         }
+        if (state.mediaSourceUploadActive) {
+            setMediaSourceModalStatus('Media upload is still running. Wait for it to finish before closing.', 'warning');
+            return;
+        }
         els.mediaSourceModal.hidden = true;
         resetMediaSourceModal();
+        if (state.mediaSourceModalTrigger && typeof state.mediaSourceModalTrigger.focus === 'function') {
+            state.mediaSourceModalTrigger.focus();
+        }
+        state.mediaSourceModalTrigger = null;
     }
 
     function handlePersistentMediaFileSelected() {
@@ -1393,6 +1484,7 @@
         if (els.importMediaSource) {
             els.importMediaSource.disabled = true;
         }
+        state.mediaSourceUploadActive = true;
 
         try {
             const type = file.type.indexOf('image/') === 0 ? 'image' : 'video';
@@ -1418,6 +1510,7 @@
             state.mediaSources.set(id, source);
             addMediaSourceToScenes(id);
 
+            state.mediaSourceUploadActive = false;
             closeMediaSourceModal();
             selectSceneSource(source.sourceId);
             await setPreviewSource(source.sourceId);
@@ -1428,6 +1521,7 @@
             if (els.importMediaSource) {
                 els.importMediaSource.disabled = false;
             }
+            state.mediaSourceUploadActive = false;
         }
     }
 
@@ -1457,6 +1551,7 @@
         if (els.importMediaSource) {
             els.importMediaSource.disabled = true;
         }
+        state.mediaSourceUploadActive = true;
         setMediaSourceModalStatus('Adding media source…', 'info');
 
         try {
@@ -1464,6 +1559,7 @@
             const source = registerPersistentMediaSource(response.source);
             renderSourceState();
             renderSceneControls();
+            state.mediaSourceUploadActive = false;
             closeMediaSourceModal();
             if (source) {
                 selectSceneSource(source.sourceId);
@@ -1476,6 +1572,7 @@
             if (els.importMediaSource) {
                 els.importMediaSource.disabled = false;
             }
+            state.mediaSourceUploadActive = false;
         }
     }
 
@@ -1819,18 +1916,75 @@
         }
     }
 
+    function recordingMimeCandidates() {
+        return [
+            'video/mp4;codecs="avc1.424028,mp4a.40.2"',
+            'video/mp4;codecs="avc1.42E01E,mp4a.40.2"',
+            'video/mp4;codecs="avc1.640028,mp4a.40.2"',
+            'video/mp4',
+            'video/webm;codecs=vp9,opus',
+            'video/webm;codecs=vp8,opus',
+            'video/webm',
+        ];
+    }
+
     function preferredMimeType() {
         const supported = state.support.mimeTypes || [];
-        return supported.find((type) => type.indexOf('video/webm') === 0) || supported[0] || '';
+        return supported[0] || '';
+    }
+
+    function isMp4Mime(mimeType) {
+        return String(mimeType || '').toLowerCase().indexOf('video/mp4') !== -1;
+    }
+
+    function isWebmMime(mimeType) {
+        return String(mimeType || '').toLowerCase().indexOf('video/webm') !== -1;
+    }
+
+    function recordingExtension(mimeType) {
+        return isMp4Mime(mimeType) ? '.mp4' : '.webm';
+    }
+
+    function recordingFormatLabel(mimeType) {
+        const selected = mimeType || preferredMimeType();
+        if (isMp4Mime(selected)) {
+            return 'Recording format: MP4';
+        }
+        if (isWebmMime(selected)) {
+            return 'Recording format: WebM fallback';
+        }
+        return 'Recording format: Not supported';
+    }
+
+    function webmFallbackWarning() {
+        return 'This browser does not support MP4 recording. Studio will use WebM fallback, which may not play in all Safari versions.';
     }
 
     async function api(path, options) {
         const response = await window.fetch(config.restRoot.replace(/\/$/, '') + path, Object.assign({ credentials: 'same-origin', headers: { 'X-WP-Nonce': config.nonce } }, options || {}));
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-            throw new Error(payload && payload.message ? payload.message : 'Studio request failed.');
+        const contentType = response.headers ? response.headers.get('content-type') || '' : '';
+        let payload = null;
+        let parseFailed = false;
+        if (contentType.indexOf('application/json') !== -1) {
+            try {
+                payload = await response.json();
+            } catch (error) {
+                parseFailed = true;
+            }
+        } else {
+            const text = await response.text().catch(() => '');
+            parseFailed = Boolean(text);
         }
-        return payload;
+        if (!response.ok || parseFailed) {
+            const fallback = 'Studio request failed for ' + path + '. HTTP ' + response.status + '.';
+            const message = payload && payload.message ? payload.message : fallback;
+            state.lastRestError = message;
+            updateOperatorStatus();
+            throw new Error(message);
+        }
+        state.lastRestError = '';
+        updateOperatorStatus();
+        return payload || {};
     }
 
     async function ensureSetupJob() {
@@ -1848,6 +2002,12 @@
     }
 
     async function startRecording() {
+        const supportError = requiredSupportError('recording');
+        if (supportError) {
+            setRecordingStatus(supportError, 'error');
+            setStatus(supportError, 'error');
+            return;
+        }
         if (!state.support.mediaRecorder || !preferredMimeType()) {
             setRecordingStatus(strings.recorderUnavailable, 'error');
             return;
@@ -1877,7 +2037,7 @@
             const start = await api('/jobs/' + jobId + '/recording/start', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ mime_type: mimeType }) });
             serverRecordingStarted = true;
             state.browserSessionId = start.browser_session_id;
-            state.selectedMimeType = start.mime_type;
+            state.selectedMimeType = mimeType;
             state.chunkIndex = 0;
             state.uploadedChunks.clear();
             state.failedChunks.clear();
@@ -1888,12 +2048,23 @@
             if (preset.video_bitrate) { options.videoBitsPerSecond = preset.video_bitrate; }
             if (preset.audio_bitrate) { options.audioBitsPerSecond = preset.audio_bitrate; }
             state.recorder = new window.MediaRecorder(state.recordingStream, options);
-            state.recorder.addEventListener('dataavailable', (event) => { if (event.data && event.data.size) { queueChunk(event.data, state.chunkIndex++); } });
+            state.selectedMimeType = state.recorder.mimeType || mimeType || start.mime_type;
+            state.recorder.addEventListener('dataavailable', (event) => {
+                if (event.data && event.data.size) {
+                    const finalMimeType = event.data.type || (state.recorder && state.recorder.mimeType) || state.selectedMimeType;
+                    const chunk = event.data.type === finalMimeType ? event.data : new Blob([event.data], { type: finalMimeType });
+                    queueChunk(chunk, state.chunkIndex++);
+                }
+            });
             state.recorder.start((config.uploadSettings && config.uploadSettings.preferred_chunk_duration) || 5000);
             startTimer();
             setRecorderButtons(true, false);
             setShellClass('is-recording', true);
-            setRecordingStatus(strings.recordingActive, 'success');
+            if (isWebmMime(state.selectedMimeType)) {
+                setRecordingStatus(webmFallbackWarning(), 'warning');
+            } else {
+                setRecordingStatus(strings.recordingActive, 'success');
+            }
             renderRecordingState();
         } catch (error) {
             if (serverRecordingStarted && jobId) {
@@ -1919,8 +2090,9 @@
             const form = new FormData();
             form.append('browser_session_id', state.browserSessionId);
             form.append('chunk_index', String(index));
-            form.append('mime_type', state.selectedMimeType);
-            form.append('chunk', blob, 'chunk-' + index + (state.selectedMimeType === 'video/mp4' ? '.mp4' : '.webm'));
+            const finalMimeType = blob.type || state.selectedMimeType;
+            form.append('mime_type', finalMimeType);
+            form.append('chunk', blob, 'chunk-' + index + recordingExtension(finalMimeType));
             const summary = await api('/jobs/' + state.activeJobId + '/chunks', { method: 'POST', body: form });
             state.pendingUploads.delete(index);
             state.failedChunks.delete(index);
@@ -1936,19 +2108,38 @@
 
     async function stopRecording() {
         if (!state.recorder) { return; }
-        await new Promise((resolve) => {
-            state.recorder.addEventListener('stop', resolve, { once: true });
-            state.recorder.stop();
-        });
-        stopTimer();
-        state.finalChunkCount = state.chunkIndex;
-        await waitForUploads();
-        const duration = Math.max(0, Math.round((Date.now() - state.recordingStartedAt) / 1000));
-        await api('/jobs/' + state.activeJobId + '/recording/stop', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ duration_seconds: duration }) });
-        state.recorder = null;
-        setShellClass('is-recording', false);
-        setRecorderButtons(false, true);
-        renderRecordingState();
+        const recorder = state.recorder;
+        try {
+            if (recorder.state !== 'inactive') {
+                await new Promise((resolve, reject) => {
+                    const timeout = window.setTimeout(resolve, 3000);
+                    recorder.addEventListener('stop', () => {
+                        window.clearTimeout(timeout);
+                        resolve();
+                    }, { once: true });
+                    try {
+                        recorder.stop();
+                    } catch (error) {
+                        window.clearTimeout(timeout);
+                        reject(error);
+                    }
+                });
+            }
+            state.finalChunkCount = state.chunkIndex;
+            await waitForUploads();
+            const duration = Math.max(0, Math.round((Date.now() - state.recordingStartedAt) / 1000));
+            await api('/jobs/' + state.activeJobId + '/recording/stop', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ duration_seconds: duration }) });
+            setRecordingStatus(strings.recordingSaved, 'success');
+        } catch (error) {
+            setRecordingStatus((error && error.message) || 'Recording could not be stopped cleanly. Retry failed chunks or finalize if all chunks uploaded.', 'error');
+        } finally {
+            stopTimer();
+            state.recorder = null;
+            setShellClass('is-recording', false);
+            setRecorderButtons(false, state.activeJobId && !state.pendingUploads.size && !state.failedChunks.size);
+            renderRecordingState();
+            updateOperatorStatus();
+        }
     }
 
     async function waitForUploads() {
@@ -1966,6 +2157,7 @@
         if (state.failedChunks.size || state.pendingUploads.size) { return; }
         try {
             if (els.recordingFinalizeStatus) { els.recordingFinalizeStatus.textContent = strings.finalizing; }
+            if (els.finalizeRecording) { els.finalizeRecording.disabled = true; }
             const job = await api('/jobs/' + state.activeJobId + '/recording/finalize', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ expected_chunks: state.finalChunkCount }) });
             state.currentJobStatus = job.status || 'processing';
             setRecordingStatus('Recording finalized and temporary file validated. Replay publishing is ready.', 'success');
@@ -1974,6 +2166,9 @@
             if (els.recordingFinalizeStatus) { els.recordingFinalizeStatus.textContent = job.status || 'processing'; }
         } catch (error) {
             setRecordingStatus(error.message || strings.chunkUploadFailed, 'error');
+            if (els.recordingFinalizeStatus) { els.recordingFinalizeStatus.textContent = error.message || strings.chunkUploadFailed; }
+        } finally {
+            renderRecordingState();
         }
     }
 
@@ -2034,7 +2229,7 @@
             state.currentJobStatus = result.job_status || 'ready';
             setPublishingStatus(providerId === 'local_media' ? (result.message || strings.localMediaReady || 'Replay saved to Media Library. Replay post created.') : (result.message || strings.publishComplete), 'success');
             renderReplayLink(result.replay_url || result.playback_url || '');
-            appendRecentJob({ id: state.activeJobId, status: state.currentJobStatus, storage_provider: result.provider_id, file_size: result.file_size, mime_type: result.mime_type, publish_provider_status: result.publish_provider_status, replay_video_id: result.replay_video_id });
+            appendRecentJob({ id: state.activeJobId, status: state.currentJobStatus, storage_provider: result.provider_id, file_size: result.file_size, mime_type: result.mime_type, publish_provider_status: result.publish_provider_status, replay_video_id: result.replay_video_id, replay_url: result.replay_url || result.playback_url || '' });
         } catch (error) {
             setPublishingStatus(error.message || strings.publishFailed, 'error');
         } finally {
@@ -2072,6 +2267,7 @@
     function renderRecordingState() {
         if (els.recordingJobId) { els.recordingJobId.textContent = state.activeJobId || '—'; }
         if (els.recordingMime) { els.recordingMime.textContent = state.selectedMimeType || preferredMimeType() || '—'; }
+        updateOperatorStatus();
         if (els.recordingUploaded) { els.recordingUploaded.textContent = String(state.uploadedChunks.size); }
         if (els.recordingPending) { els.recordingPending.textContent = String(state.pendingUploads.size); }
         if (els.recordingFailed) { els.recordingFailed.textContent = String(state.failedChunks.size); }
@@ -2103,9 +2299,8 @@
         setJobResult('', 'info');
 
         try {
-            const response = await window.fetch(config.restRoot.replace(/\/$/, '') + '/jobs', {
+            const payload = await api('/jobs', {
                 method: 'POST',
-                credentials: 'same-origin',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-WP-Nonce': config.nonce,
@@ -2118,11 +2313,8 @@
                     storage_provider: els.storageSelect ? els.storageSelect.value : config.recommendedStorageProvider,
                 }),
             });
-            const payload = await response.json();
-            if (!response.ok) {
-                throw new Error(payload && payload.message ? payload.message : strings.jobCreationFailed);
-            }
             state.activeJobId = payload.id;
+            updateOperatorStatus();
             setJobResult(strings.setupJobCreated + ' #' + payload.id, 'success');
             appendRecentJob(payload);
             setStatus(strings.setupJobCreated, 'success');
@@ -2133,27 +2325,59 @@
         }
     }
 
+
     function appendRecentJob(job) {
         if (!els.recentJobsBody || !job) {
             return;
         }
-        const row = document.createElement('tr');
+        const rowId = String(job.id || '');
+        let row = null;
+        if (rowId) {
+            row = Array.from(els.recentJobsBody.querySelectorAll('tr')).find((item) => item.dataset.jobId === rowId || (item.cells && item.cells[0] && item.cells[0].textContent === rowId)) || null;
+        }
+        if (!row) {
+            row = document.createElement('tr');
+        }
+        if (rowId) {
+            row.dataset.jobId = rowId;
+        }
+        const replayUrl = job.replay_url || job.playback_url || job.permalink || '';
+        const replayCell = job.replay_video_id
+            ? (replayUrl ? '<a href="' + escapeHtml(replayUrl) + '">' + escapeHtml(String(job.replay_video_id)) + '</a>' : escapeHtml(String(job.replay_video_id)))
+            : '—';
         row.innerHTML = '<td>' + escapeHtml(String(job.id || '')) + '</td>' +
             '<td>' + escapeHtml(job.room_id || '') + '</td>' +
             '<td>' + escapeHtml(job.status || '') + '</td>' +
             '<td>' + escapeHtml(job.storage_provider || '') + '</td>' +
             '<td>' + escapeHtml(job.created_at || '') + '</td>' +
-            '<td>' + escapeHtml(job.file_size ? String(job.file_size) : '—') + '</td>' +
+            '<td>' + escapeHtml(formatBytes(job.file_size)) + '</td>' +
             '<td>' + escapeHtml(job.mime_type || '—') + '</td>' +
             '<td>' + escapeHtml(job.assembled_at || '—') + '</td>' +
             '<td>' + escapeHtml(job.temp_expires_at || '—') + '</td>' +
             '<td>' + escapeHtml(job.publish_provider_status || '—') + '</td>' +
-            '<td>' + (job.replay_video_id ? escapeHtml(String(job.replay_video_id)) : '—') + '</td>' +
+            '<td>' + replayCell + '</td>' +
             '<td>' + escapeHtml(job.error_message || '—') + '</td>';
-        els.recentJobsBody.prepend(row);
+        if (!row.parentNode) {
+            els.recentJobsBody.prepend(row);
+        }
         if (els.emptyJobs) {
             els.emptyJobs.hidden = true;
         }
+    }
+
+    function formatBytes(bytes) {
+        const value = Number(bytes);
+        if (!value || value < 0) {
+            return '—';
+        }
+        const units = ['B', 'KB', 'MB', 'GB'];
+        let size = value;
+        let unit = 0;
+        while (size >= 1024 && unit < units.length - 1) {
+            size /= 1024;
+            unit++;
+        }
+        return (unit === 0 ? String(Math.round(size)) : size.toFixed(size >= 10 ? 1 : 2).replace(/\\.0+$/, '')) + ' ' + units[unit];
     }
 
     function cleanup(options = {}) {
@@ -2253,6 +2477,12 @@
     }
 
     async function goLive() {
+        const supportError = requiredSupportError('live');
+        if (supportError) {
+            setBroadcastStatus(supportError, 'error');
+            setStatus(supportError, 'error');
+            return;
+        }
         if (!window.VH360AgoraBroadcaster) {
             setBroadcastStatus(strings.broadcastFailed, 'error');
             return;
@@ -2530,6 +2760,12 @@
 
             if (!clickedMenu && !clickedToggle) {
                 closeMediaSourceMenu();
+            }
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && els.mediaSourceModal && !els.mediaSourceModal.hidden) {
+                event.preventDefault();
+                closeMediaSourceModal();
             }
         });
         if (els.importMediaSource) {

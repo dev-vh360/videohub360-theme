@@ -227,8 +227,8 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                             </svg>
                         </button>
                     </div>
-                    <?php if ($has_any_ads && isset($active_ads['preroll'])): ?>
-                    <div id="videohub360-ad-container" class="videohub360-hide <?php echo !empty($ad_click_urls['preroll']) ? 'videohub360-ad-clickable' : ''; ?>" 
+                    <?php if ($has_any_ads): ?>
+                    <div id="videohub360-ad-container" class="videohub360-hide <?php echo !empty($ad_click_urls['preroll']) ? 'videohub360-ad-clickable' : ''; ?>"
                          data-ad-type="preroll" 
                          data-ad-url="<?php echo esc_attr($ad_click_urls['preroll']); ?>" 
                          data-ad-new-tab="<?php echo esc_attr($ad_click_urls['new_tab']); ?>"
@@ -237,7 +237,6 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                         <div class="videohub360-ad-label" id="videohub360-ad-label"><?php esc_html_e('Advertisement', 'videohub360'); ?></div>
                         <span id="videohub360-ad-skip-msg"></span>
                         <button class="videohub360-ad-skip-btn" id="videohub360-ad-skip-btn" type="button"><?php esc_html_e('Skip Ad', 'videohub360'); ?></button>
-                        <?php if (!empty($ad_click_urls['preroll'])): ?>
                         <div class="videohub360-ad-click-overlay" tabindex="0" role="button" aria-label="<?php esc_attr_e('Click to visit advertiser', 'videohub360'); ?>">
                             <div class="videohub360-ad-click-indicator">
                                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="videohub360-ad-click-icon" aria-hidden="true">
@@ -246,9 +245,10 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                                 <?php esc_html_e('Learn More', 'videohub360'); ?>
                             </div>
                         </div>
-                        <?php endif; ?>
                         <video id="videohub360-ad-video" width="100%" height="auto" controls playsinline poster="<?php echo esc_url($poster); ?>">
+                            <?php if (!empty($ad_video_url)): ?>
                             <source src="<?php echo esc_url($ad_video_url); ?>" type="video/mp4">
+                            <?php endif; ?>
                             <?php esc_html_e('Your browser does not support the video tag.', 'videohub360'); ?>
                         </video>
                     </div>

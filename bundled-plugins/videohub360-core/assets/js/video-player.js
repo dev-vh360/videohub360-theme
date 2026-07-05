@@ -21,11 +21,14 @@ if (typeof window !== 'undefined') {
     var adLabel = document.getElementById('videohub360-ad-label');
     var mainContainer = document.getElementById('videohub360-main-container');
     var mainVideo = document.getElementById('videohub360-main-video');
-    var adUrl = adVideo && adVideo.querySelector('source') ? adVideo.querySelector('source').src : '';
-    var hasAd = !!(adUrl && typeof adUrl === 'string' && adUrl.trim() !== '');
+    var sourceEl = adVideo ? adVideo.querySelector('source') : null;
+    var adUrl = sourceEl ? (sourceEl.getAttribute('src') || '') : '';
+    var hasAd = isValidAdUrl(adUrl);
     var skipDelay = 5;
     var skipSecondsLeft = skipDelay;
     var skipInterval;
+    var adFailureTimer = null;
+    var adStartTimer = null;
 
     // New variables for mid-roll and post-roll functionality
     var midrollAdUrl = '';
@@ -37,6 +40,7 @@ if (typeof window !== 'undefined') {
     var pausedVideoTime = 0;
     var currentAdType = 'preroll'; // 'preroll', 'midroll', 'postroll'
     var hasInitializedAdTracking = false;
+    var hasBoundAdFailureHandlers = false;
     
     // Ad click-through variables
     var adClickUrls = {
@@ -154,6 +158,8 @@ if (typeof window !== 'undefined') {
     }
 
     function showMainContent() {
+        clearAdFailureTimers();
+
         // Stop ad video playback and reset
         if (adVideo) {
             adVideo.pause();
@@ -172,11 +178,171 @@ if (typeof window !== 'undefined') {
             if (playPromise) playPromise.catch(function(){});
         }
         isPlayingAd = false;
+        currentAdType = null;
+    }
+
+    function clearAdFailureTimers() {
+        if (adFailureTimer) {
+            clearTimeout(adFailureTimer);
+            adFailureTimer = null;
+        }
+        if (adStartTimer) {
+            clearTimeout(adStartTimer);
+            adStartTimer = null;
+        }
+    }
+
+    function recoverFromAdFailure(reason) {
+        var failedAdType = currentAdType;
+        clearAdFailureTimers();
+        if (skipInterval) {
+            clearInterval(skipInterval);
+            skipInterval = null;
+        }
+        if (skipMsg) skipMsg.style.display = 'none';
+        if (skipBtn) skipBtn.style.display = 'none';
+
+        isPlayingAd = false;
+
+        if (adVideo) {
+            try {
+                adVideo.pause();
+                adVideo.removeAttribute('src');
+                var currentAdSource = adVideo.querySelector('source');
+                if (currentAdSource) {
+                    currentAdSource.removeAttribute('src');
+                }
+                adVideo.load();
+            } catch (error) {}
+        }
+
+        if (adContainer) {
+            adContainer.classList.add('videohub360-hide');
+        }
+
+        if (mainContainer) {
+            mainContainer.classList.remove('videohub360-hide');
+        }
+
+        if (posterWrap && mainVideo && !mainVideo.paused) {
+            posterWrap.classList.add('videohub360-hide');
+        }
+
+        if (failedAdType === 'midroll' && mainVideo) {
+            if (pausedVideoTime > 0) {
+                mainVideo.currentTime = pausedVideoTime;
+                pausedVideoTime = 0;
+            }
+            var midrollPromise = mainVideo.play && mainVideo.play();
+            if (midrollPromise) midrollPromise.catch(function(){});
+        } else if (failedAdType === 'preroll' && mainVideo) {
+            if (posterWrap) posterWrap.classList.add('videohub360-hide');
+            var prerollPromise = mainVideo.play && mainVideo.play();
+            if (prerollPromise) prerollPromise.catch(function(){});
+        }
+
+        currentAdType = null;
+    }
+
+    function scheduleAdFailureRecovery(reason) {
+        if (!isPlayingAd) {
+            return;
+        }
+
+        if (adFailureTimer) {
+            clearTimeout(adFailureTimer);
+        }
+
+        adFailureTimer = setTimeout(function() {
+            if (isPlayingAd && adVideo && (adVideo.readyState < 2 || adVideo.paused)) {
+                recoverFromAdFailure(reason);
+            }
+        }, 4000);
+    }
+
+    function scheduleAdStartTimeout(reason) {
+        if (adStartTimer) {
+            clearTimeout(adStartTimer);
+        }
+
+        adStartTimer = setTimeout(function() {
+            if (isPlayingAd && adVideo && (adVideo.readyState < 2 || adVideo.currentTime === 0 || adVideo.paused)) {
+                recoverFromAdFailure(reason);
+            }
+        }, 5000);
+    }
+
+    function markAdPlaybackStarted() {
+        if (adStartTimer) {
+            clearTimeout(adStartTimer);
+            adStartTimer = null;
+        }
+        if (adFailureTimer) {
+            clearTimeout(adFailureTimer);
+            adFailureTimer = null;
+        }
+    }
+
+    function bindAdVideoFailureHandlers() {
+        if (!adVideo || hasBoundAdFailureHandlers) {
+            return;
+        }
+
+        hasBoundAdFailureHandlers = true;
+
+        adVideo.addEventListener('error', function() {
+            if (isPlayingAd) {
+                recoverFromAdFailure('ad_video_error');
+            }
+        });
+
+        ['stalled', 'abort', 'emptied'].forEach(function(eventName) {
+            adVideo.addEventListener(eventName, function() {
+                scheduleAdFailureRecovery('ad_' + eventName);
+            });
+        });
+
+        ['playing', 'timeupdate', 'loadeddata'].forEach(function(eventName) {
+            adVideo.addEventListener(eventName, function() {
+                if (isPlayingAd) {
+                    markAdPlaybackStarted();
+                }
+            });
+        });
+    }
+
+    function isValidAdUrl(adUrl) {
+        if (!adUrl || typeof adUrl !== 'string' || adUrl.trim() === '') {
+            return false;
+        }
+
+        try {
+            new URL(adUrl, window.location.href);
+            return true;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    function prepareAdPlayback(adUrl) {
+        // Strengthen validation to catch empty strings, whitespace, and invalid URLs
+        if (!adContainer || !adVideo || !isValidAdUrl(adUrl)) {
+            return false;
+        }
+
+        var currentAdSource = adVideo.querySelector('source');
+        if (!currentAdSource) {
+            currentAdSource = document.createElement('source');
+            currentAdSource.type = 'video/mp4';
+            adVideo.appendChild(currentAdSource);
+        }
+
+        return currentAdSource;
     }
 
     function showAd(adType, adUrl) {
-        // Strengthen validation to catch empty strings, whitespace, and invalid URLs
-        if (!adUrl || typeof adUrl !== 'string' || adUrl.trim() === '') {
+        var currentAdSource = prepareAdPlayback(adUrl);
+        if (!currentAdSource) {
             return false;
         }
         
@@ -184,19 +350,25 @@ if (typeof window !== 'undefined') {
         if (isInFullscreen()) {
             exitFullscreen().then(function() {
                 // Continue with ad display after exiting fullscreen
-                displayAd(adType, adUrl);
+                displayAd(adType, adUrl, currentAdSource);
             }).catch(function() {
                 // If exit fullscreen fails, still try to show the ad
-                displayAd(adType, adUrl);
+                displayAd(adType, adUrl, currentAdSource);
             });
             return true;
         }
         
         // If not in fullscreen, show ad immediately
-        return displayAd(adType, adUrl);
+        return displayAd(adType, adUrl, currentAdSource);
     }
 
-    function displayAd(adType, adUrl) {
+    function displayAd(adType, adUrl, currentAdSource) {
+        currentAdSource = currentAdSource || prepareAdPlayback(adUrl);
+        if (!currentAdSource) {
+            return false;
+        }
+
+        clearAdFailureTimers();
         adType = adType || 'preroll';
         currentAdType = adType;
         isPlayingAd = true;
@@ -229,17 +401,21 @@ if (typeof window !== 'undefined') {
         if (adContainer) adContainer.classList.remove('videohub360-hide');
         
         if (adVideo) {
-            // Update ad video source if different
-            var currentAdSource = adVideo.querySelector('source');
-            if (currentAdSource && currentAdSource.src !== adUrl) {
-                currentAdSource.src = adUrl;
+            if (currentAdSource.getAttribute('src') !== adUrl) {
+                currentAdSource.setAttribute('src', adUrl);
+                currentAdSource.type = 'video/mp4';
                 adVideo.load();
             }
             
             adVideo.currentTime = 0;
             adVideo.muted = false;
             var playPromise = adVideo.play && adVideo.play();
-            if (playPromise) playPromise.catch(function(){});
+            scheduleAdStartTimeout('ad_start_timeout');
+            if (playPromise && typeof playPromise.catch === 'function') {
+                playPromise.catch(function() {
+                    recoverFromAdFailure('ad_play_rejected');
+                });
+            }
         }
         
         // Set up skip countdown
@@ -266,6 +442,7 @@ if (typeof window !== 'undefined') {
     }
 
     function handleAdEnd() {
+        clearAdFailureTimers();
         if (currentAdType === 'postroll') {
             // Post-roll ended, video is complete
             // Stop ad video playback and reset
@@ -278,6 +455,7 @@ if (typeof window !== 'undefined') {
             if (mainContainer) mainContainer.classList.remove('videohub360-hide');
             // Don't resume main video since it's already ended
             isPlayingAd = false;
+            currentAdType = null;
         } else {
             // Pre-roll or mid-roll ended, continue main video
             showMainContent();
@@ -288,6 +466,13 @@ if (typeof window !== 'undefined') {
         if (!midrollAdUrl || typeof midrollAdUrl !== 'string' || midrollAdUrl.trim() === '' || shownMidrollAds.indexOf(timeSeconds) !== -1) {
             return false; // No ad URL or already shown this ad
         }
+
+        if (!prepareAdPlayback(midrollAdUrl)) {
+            shownMidrollAds.push(timeSeconds);
+            if (mainContainer) mainContainer.classList.remove('videohub360-hide');
+            if (adContainer) adContainer.classList.add('videohub360-hide');
+            return false;
+        }
         
         // Pause main video and store time
         if (mainVideo && !mainVideo.paused) {
@@ -297,9 +482,21 @@ if (typeof window !== 'undefined') {
         
         // Mark this mid-roll as shown
         shownMidrollAds.push(timeSeconds);
-        
-        // Show the mid-roll ad
-        return showAd('midroll', midrollAdUrl);
+
+        if (!showAd('midroll', midrollAdUrl)) {
+            shownMidrollAds = shownMidrollAds.filter(function(shownTime) {
+                return shownTime !== timeSeconds;
+            });
+            if (mainContainer) mainContainer.classList.remove('videohub360-hide');
+            if (adContainer) adContainer.classList.add('videohub360-hide');
+            if (mainVideo) {
+                var resumePromise = mainVideo.play && mainVideo.play();
+                if (resumePromise) resumePromise.catch(function(){});
+            }
+            return false;
+        }
+
+        return true;
     }
 
     function showPostrollAd() {
@@ -356,6 +553,8 @@ if (typeof window !== 'undefined') {
 
     // Set up video event listeners for mid-roll and post-roll
     function setupVideoEventListeners() {
+        bindAdVideoFailureHandlers();
+
         // Skip event listener setup for custom HTML videos
         if (isCustomHtmlVideo()) {
             // Still set up ad control event listeners for pre-roll ads
