@@ -426,3 +426,40 @@
     .vh360-studio-media-playback [data-media-seek],
     .vh360-studio-media-time { grid-column: 1 / -1; }
 }
+
+.vh360-studio-operator-status {
+    margin-top: 1rem;
+    padding: 0.85rem;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.42);
+}
+
+.vh360-studio-operator-status h4 {
+    margin: 0 0 0.6rem;
+    font-size: 0.9rem;
+}
+
+.vh360-studio-operator-status dl {
+    display: grid;
+    gap: 0.45rem;
+    margin: 0;
+}
+
+.vh360-studio-operator-status dl > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.vh360-studio-operator-status dt {
+    color: #cbd5e1;
+    font-weight: 600;
+}
+
+.vh360-studio-operator-status dd {
+    margin: 0;
+    color: #f8fafc;
+    text-align: right;
+    overflow-wrap: anywhere;
+}

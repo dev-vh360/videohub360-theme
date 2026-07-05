@@ -130,6 +130,9 @@ class VH360_Studio_Assets {
                 'mediaRecorder'    => __( 'Browser recorder support', 'videohub360-studio' ),
                 'secureContext'    => __( 'Secure browser context', 'videohub360-studio' ),
                 'mimeTypes'        => __( 'Supported recording formats', 'videohub360-studio' ),
+                'canvasCapture'    => __( 'Program canvas output', 'videohub360-studio' ),
+                'canvasContext'    => __( 'Canvas drawing support', 'videohub360-studio' ),
+                'clipboardCopy'    => __( 'Clipboard copy support', 'videohub360-studio' ),
             ),
         );
     }

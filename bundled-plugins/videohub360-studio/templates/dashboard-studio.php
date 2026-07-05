@@ -287,6 +287,15 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
             <h3 id="vh360-studio-readiness-title"><?php esc_html_e( 'Studio readiness', 'videohub360-studio' ); ?></h3>
             <p><?php esc_html_e( 'These checks confirm browser support for preview, recording, and chunked uploads.', 'videohub360-studio' ); ?></p>
             <ul class="vh360-studio-checks" data-support-checks></ul>
+            <div class="vh360-studio-operator-status" aria-live="polite">
+                <h4><?php esc_html_e( 'Operator status', 'videohub360-studio' ); ?></h4>
+                <dl>
+                    <div><dt><?php esc_html_e( 'Program canvas', 'videohub360-studio' ); ?></dt><dd data-operator-canvas-support>—</dd></div>
+                    <div><dt><?php esc_html_e( 'Program source', 'videohub360-studio' ); ?></dt><dd data-operator-program-source>—</dd></div>
+                    <div><dt><?php esc_html_e( 'Active job', 'videohub360-studio' ); ?></dt><dd data-operator-active-job>—</dd></div>
+                    <div><dt><?php esc_html_e( 'Last REST error', 'videohub360-studio' ); ?></dt><dd data-operator-last-rest-error><?php esc_html_e( 'None', 'videohub360-studio' ); ?></dd></div>
+                </dl>
+            </div>
         </section>
 
         <section class="vh360-studio-lower-panel vh360-studio-recent-jobs" aria-labelledby="vh360-studio-recent-title">
