@@ -2308,7 +2308,7 @@
             const replayUrl = result.replay_url || result.playback_url || '';
             setPublishingStatus(replayUrl ? strings.publishComplete : (result.message || strings.publishProcessing || 'Replay is still processing. We’ll keep checking.'), replayUrl ? 'success' : 'info');
             renderReplayLink(replayUrl);
-            appendRecentJob({ id: state.activeJobId, status: state.currentJobStatus, file_size: result.file_size, mime_type: result.mime_type, publish_provider_status: result.publish_provider_status, replay_video_id: result.replay_video_id, replay_url: replayUrl, display_title: result.display_title });
+            appendRecentJob(Object.assign({}, result, { id: result.id || result.job_id || state.activeJobId, status: state.currentJobStatus, replay_url: replayUrl || result.replay_url || result.playback_url || '' }));
             if (shouldPollPublishStatus(result)) {
                 startPublishPolling();
             }
@@ -2334,7 +2334,7 @@
             renderReplayLink(replayUrl);
             if (replayUrl || result.replay_video_id) {
                 setPublishingStatus(strings.publishComplete, 'success');
-                appendRecentJob({ id: state.activeJobId, status: 'ready', replay_video_id: result.replay_video_id, replay_url: replayUrl, publish_provider_status: result.publish_provider_status || result.status, display_title: result.display_title });
+                appendRecentJob(Object.assign({}, result, { id: result.id || result.job_id || state.activeJobId, status: result.job_status || 'ready', replay_url: replayUrl || result.replay_url || result.playback_url || '' }));
             } else if (shouldPollPublishStatus(result)) {
                 setPublishingStatus(strings.publishProcessing || 'Replay is still processing. We’ll keep checking.', 'info');
             } else if (result.status === 'failed' || result.publish_provider_status === 'publish_failed') {
@@ -2498,6 +2498,13 @@
         return Array.from(tbody.querySelectorAll('tr')).find((item) => item.dataset.jobId === rowId) || null;
     }
 
+    function recentReplayCellText(row, index) {
+        if (!row || !row.children || !row.children[index]) {
+            return '';
+        }
+        return row.children[index].textContent.trim();
+    }
+
     function appendRecentJob(job) {
         if (!job) {
             return;
@@ -2513,9 +2520,14 @@
             const replayCell = replayUrl
                 ? '<a href="' + escapeHtml(replayUrl) + '" target="_blank" rel="noopener noreferrer">Open replay</a>'
                 : '—';
-            row.innerHTML = '<td>' + escapeHtml(jobRecordingLabel(job)) + '</td>' +
+            const existingTitle = recentReplayCellText(row, 0);
+            const incomingTitle = jobRecordingLabel(job);
+            const finalTitle = incomingTitle && incomingTitle !== 'Studio replay' ? incomingTitle : (existingTitle || incomingTitle || 'Studio replay');
+            const existingCreated = recentReplayCellText(row, 2);
+            const finalCreated = job.created_at ? formatFriendlyDate(job.created_at) : (existingCreated || '—');
+            row.innerHTML = '<td>' + escapeHtml(finalTitle) + '</td>' +
                 '<td>' + escapeHtml(friendlyJobStatus(job)) + '</td>' +
-                '<td>' + escapeHtml(formatFriendlyDate(job.created_at)) + '</td>' +
+                '<td>' + escapeHtml(finalCreated) + '</td>' +
                 '<td>' + replayCell + '</td>';
             if (!row.parentNode) {
                 els.recentReplaysBody.prepend(row);

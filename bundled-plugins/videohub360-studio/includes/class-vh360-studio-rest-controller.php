@@ -606,6 +606,36 @@ class VH360_Studio_REST_Controller {
         return __( 'Studio replay', 'videohub360-studio' );
     }
 
+
+    private function prepare_publish_response( $response, array $job ) {
+        if ( is_wp_error( $response ) || ! is_array( $response ) ) {
+            return $response;
+        }
+
+        $display_job = array_merge( $job, $response );
+        $job_status  = ! empty( $response['job_status'] ) ? sanitize_key( $response['job_status'] ) : ( ! empty( $response['status'] ) ? sanitize_key( $response['status'] ) : sanitize_key( $job['status'] ) );
+        $publish_status = ! empty( $response['publish_provider_status'] ) ? sanitize_key( $response['publish_provider_status'] ) : ( ! empty( $response['publish_status'] ) ? sanitize_key( $response['publish_status'] ) : ( ! empty( $job['publish_provider_status'] ) ? sanitize_key( $job['publish_provider_status'] ) : '' ) );
+        $replay_video_id = ! empty( $response['replay_video_id'] ) ? absint( $response['replay_video_id'] ) : ( ! empty( $job['replay_video_id'] ) ? absint( $job['replay_video_id'] ) : 0 );
+
+        $response['id']            = absint( $job['id'] );
+        $response['job_id']        = absint( $job['id'] );
+        $response['display_title'] = $this->job_display_title( $display_job );
+        $response['created_at']    = ! empty( $job['created_at'] ) ? $job['created_at'] : '';
+        $response['status']        = $job_status;
+        $response['job_status']    = $job_status;
+        $response['publish_status'] = $publish_status;
+        $response['publish_provider_status'] = $publish_status;
+        $response['replay_video_id'] = $replay_video_id;
+        if ( empty( $response['replay_url'] ) && $replay_video_id ) {
+            $response['replay_url'] = get_permalink( $replay_video_id );
+        }
+        if ( ! isset( $response['error_message'] ) ) {
+            $response['error_message'] = ! empty( $job['error_message'] ) ? $job['error_message'] : '';
+        }
+
+        return $response;
+    }
+
     private function broadcast_payload( WP_REST_Request $request ) {
         $mode = $request->get_param( 'agora_mode' ) ?: 'broadcast';
         $everyone = rest_sanitize_boolean( $request->get_param( 'agora_everyone_is_host' ) ) ? 'yes' : 'no';
@@ -778,7 +808,7 @@ class VH360_Studio_REST_Controller {
         if ( is_wp_error( $job ) ) { return $job; }
         $published = $this->publisher->publish( $job );
         if ( is_wp_error( $published ) ) { return $published; }
-        return rest_ensure_response( $published );
+        return rest_ensure_response( $this->prepare_publish_response( $published, $job ) );
     }
 
     public function publishing_status( WP_REST_Request $request ) {
@@ -789,7 +819,7 @@ class VH360_Studio_REST_Controller {
         }
         $status = $this->publisher->status( $job );
         if ( is_wp_error( $status ) ) { return $status; }
-        return rest_ensure_response( $status );
+        return rest_ensure_response( $this->prepare_publish_response( $status, $job ) );
     }
 
     public function cancel_job( WP_REST_Request $request ) {
