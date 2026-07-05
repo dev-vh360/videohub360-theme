@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class VH360_Studio_Quality_Presets {
-    const DEFAULT_PRESET = 'standard_720p';
+    const DEFAULT_PRESET = 'high_1080p';
 
     /**
      * Get controlled recorder quality presets.
@@ -35,7 +35,7 @@ class VH360_Studio_Quality_Presets {
                     'fps'               => 30,
                     'video_bitrate'     => 2500000,
                     'audio_bitrate'     => 128000,
-                    'recommended'       => true,
+                    'recommended'       => false,
                 ),
                 'high_1080p'    => array(
                     'label'             => __( 'High 1080p', 'videohub360-studio' ),
@@ -43,7 +43,7 @@ class VH360_Studio_Quality_Presets {
                     'fps'               => 30,
                     'video_bitrate'     => 5000000,
                     'audio_bitrate'     => 160000,
-                    'recommended'       => false,
+                    'recommended'       => true,
                 ),
             )
         );

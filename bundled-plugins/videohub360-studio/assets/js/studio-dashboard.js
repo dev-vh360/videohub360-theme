@@ -48,14 +48,15 @@
         programOutputStream: null,
         programAnimationFrame: null,
         programFrameRate: 30,
-        programWidth: 1280,
-        programHeight: 720,
+        programWidth: 1920,
+        programHeight: 1080,
         transitioning: false,
         broadcastStarting: false,
         broadcastReady: false,
         broadcastEnding: false,
         programSwitching: false,
         lastAgoraConnectionState: '',
+        mediaControlsExpanded: false,
     };
 
     const els = {
@@ -67,21 +68,34 @@
         programEmpty: root.querySelector('[data-program-empty]'),
         sceneList: root.querySelector('[data-scene-list]'),
         mediaPreview: root.querySelector('[data-media-preview]'),
-        previewSourceButtons: root.querySelectorAll('[data-preview-source]'),
-        sceneSourceButtons: root.querySelectorAll('[data-scene-source]'),
+        toggleMediaControls: root.querySelector('[data-toggle-media-controls]'),
+        mediaPlaybackControls: root.querySelector('[data-media-playback-controls]'),
+        mediaPlayPause: root.querySelector('[data-media-play-pause]'),
+        mediaPlayPauseLabel: root.querySelector('[data-media-play-pause-label]'),
+        mediaRestart: root.querySelector('[data-media-restart]'),
+        mediaLoop: root.querySelector('[data-media-loop]'),
+        mediaSeek: root.querySelector('[data-media-seek]'),
+        mediaTime: root.querySelector('[data-media-time]'),
         transitionCut: root.querySelector('[data-transition-cut]'),
         transitionFade: root.querySelector('[data-transition-fade]'),
         transitionDuration: root.querySelector('[data-transition-duration]'),
         cameraSelect: root.querySelector('[data-camera-select]'),
         micSelect: root.querySelector('[data-mic-select]'),
-        startPreview: root.querySelector('[data-start-preview]'),
-        stopPreview: root.querySelector('[data-stop-preview]'),
-        startScreen: root.querySelector('[data-start-screen]'),
-        stopScreen: root.querySelector('[data-stop-screen]'),
         micMeter: root.querySelector('[data-mic-meter]'),
         qualitySelect: root.querySelector('[data-quality-select]'),
         storageSelect: root.querySelector('[data-storage-select]'),
         qualityDetails: root.querySelector('[data-quality-details]'),
+        selectedMediaControls: root.querySelector('[data-selected-media-controls]'),
+        selectedMediaName: root.querySelector('[data-selected-media-name]'),
+        mediaFitMode: root.querySelector('[data-media-fit-mode]'),
+        mediaScale: root.querySelector('[data-media-scale]'),
+        mediaScaleValue: root.querySelector('[data-media-scale-value]'),
+        mediaPositionX: root.querySelector('[data-media-position-x]'),
+        mediaPositionXValue: root.querySelector('[data-media-position-x-value]'),
+        mediaPositionY: root.querySelector('[data-media-position-y]'),
+        mediaPositionYValue: root.querySelector('[data-media-position-y-value]'),
+        mediaResetTransform: root.querySelector('[data-media-reset-transform]'),
+        programResolutionDetails: root.querySelector('[data-program-resolution-details]'),
         createJob: root.querySelector('[data-create-job]'),
         jobResult: root.querySelector('[data-job-result]'),
         recentJobsBody: root.querySelector('[data-recent-jobs-body]'),
@@ -138,6 +152,15 @@
         persistentMediaSourceStatus: root.querySelector('[data-persistent-media-source-status]'),
         importMediaSource: root.querySelector('[data-import-media-source]'),
     };
+
+    function defaultMediaTransform() {
+        return {
+            fitMode: 'fit',
+            scale: 100,
+            x: 0,
+            y: 0,
+        };
+    }
 
     function setShellClass(className, active) {
         root.classList.toggle(className, Boolean(active));
@@ -300,33 +323,24 @@
         root.classList.toggle('is-preview-source-screen', state.previewSource === 'screen');
         root.classList.toggle('is-preview-source-media', isMediaSource(state.previewSource));
 
-        if (!els.mediaPreview) {
-            return;
+        if (els.mediaPreview) {
+            els.mediaPreview.innerHTML = '';
+
+            if (isMediaSource(state.previewSource)) {
+                const mediaSource = getMediaSource(state.previewSource);
+                if (mediaSource && mediaSource.element) {
+                    els.mediaPreview.appendChild(mediaSource.element);
+                    renderPreviewMediaTransform();
+                }
+            }
         }
 
-        els.mediaPreview.innerHTML = '';
-
-        if (!isMediaSource(state.previewSource)) {
-            return;
-        }
-
-        const mediaSource = getMediaSource(state.previewSource);
-        if (!mediaSource || !mediaSource.element) {
-            return;
-        }
-
-        els.mediaPreview.appendChild(mediaSource.element);
-
-        if (mediaSource.type === 'video') {
-            mediaSource.element.play().catch(() => {});
-        }
+        renderMediaPlaybackControls();
+        renderSelectedMediaControls();
     }
 
     function renderSourceState() {
         renderPreviewState();
-        els.previewSourceButtons.forEach((button) => {
-            button.classList.toggle('is-active', button.dataset.previewSource === state.previewSource);
-        });
         root.querySelectorAll('[data-scene-source]').forEach((button) => {
             const active = button.dataset.sceneSource === state.previewSource;
             button.classList.toggle('is-active', active);
@@ -337,12 +351,19 @@
             }
         });
         renderSceneControls();
+        renderMediaPlaybackControls();
+        renderSelectedMediaControls();
     }
 
     function selectSceneSource(sourceId) {
         state.selectedSceneSource = sourceId || '';
+        if (!getActiveMediaSource()) {
+            state.mediaControlsExpanded = false;
+        }
         renderSourceState();
         renderSceneControls();
+        renderMediaPlaybackControls();
+        renderSelectedMediaControls();
     }
 
     function getSelectedMediaSource() {
@@ -351,6 +372,171 @@
         }
 
         return getMediaSource(state.selectedSceneSource);
+    }
+
+    function getActiveMediaSource() {
+        if (isMediaSource(state.previewSource)) {
+            return getMediaSource(state.previewSource);
+        }
+
+        if (isMediaSource(state.selectedSceneSource)) {
+            return getMediaSource(state.selectedSceneSource);
+        }
+
+        return null;
+    }
+
+    function getActiveVideoMediaSource() {
+        const source = getActiveMediaSource();
+        return source && source.type === 'video' ? source : null;
+    }
+
+    function formatMediaTime(seconds) {
+        if (!Number.isFinite(seconds) || seconds < 0) {
+            seconds = 0;
+        }
+
+        const total = Math.floor(seconds);
+        const minutes = Math.floor(total / 60);
+        const remainder = total % 60;
+
+        return String(minutes).padStart(2, '0') + ':' + String(remainder).padStart(2, '0');
+    }
+
+    function renderMediaPlaybackControls() {
+        const source = getActiveVideoMediaSource();
+        const video = source && source.element;
+
+        if (els.mediaPlaybackControls) {
+            els.mediaPlaybackControls.hidden = !video;
+        }
+
+        if (!video) {
+            return;
+        }
+
+        if (els.mediaLoop) {
+            els.mediaLoop.checked = Boolean(video.loop);
+        }
+
+        if (els.mediaPlayPauseLabel) {
+            els.mediaPlayPauseLabel.textContent = video.paused ? 'Play' : 'Pause';
+        }
+
+        if (els.mediaSeek) {
+            const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+            els.mediaSeek.disabled = !duration;
+            els.mediaSeek.value = duration ? Math.round((video.currentTime / duration) * 1000) : 0;
+        }
+
+        if (els.mediaTime) {
+            const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+            els.mediaTime.textContent = formatMediaTime(video.currentTime || 0) + ' / ' + formatMediaTime(duration);
+        }
+    }
+
+    function renderSelectedMediaControls() {
+        const source = getActiveMediaSource();
+        const hasMedia = Boolean(source);
+
+        if (els.toggleMediaControls) {
+            els.toggleMediaControls.hidden = !hasMedia;
+            els.toggleMediaControls.disabled = !hasMedia;
+            els.toggleMediaControls.setAttribute(
+                'aria-expanded',
+                hasMedia && state.mediaControlsExpanded ? 'true' : 'false'
+            );
+        }
+
+        if (!hasMedia) {
+            state.mediaControlsExpanded = false;
+
+            if (els.selectedMediaControls) {
+                els.selectedMediaControls.hidden = true;
+            }
+
+            return;
+        }
+
+        if (els.selectedMediaControls) {
+            els.selectedMediaControls.hidden = !state.mediaControlsExpanded;
+        }
+
+        const transform = source.transform || defaultMediaTransform();
+        source.transform = transform;
+
+        if (els.selectedMediaName) {
+            els.selectedMediaName.textContent = source.name || 'Media Source';
+        }
+
+        if (els.mediaFitMode) {
+            els.mediaFitMode.value = transform.fitMode || 'fit';
+        }
+
+        if (els.mediaScale) {
+            els.mediaScale.value = transform.scale;
+        }
+
+        if (els.mediaScaleValue) {
+            els.mediaScaleValue.textContent = transform.scale + '%';
+        }
+
+        if (els.mediaPositionX) {
+            els.mediaPositionX.value = transform.x;
+        }
+
+        if (els.mediaPositionXValue) {
+            els.mediaPositionXValue.textContent = String(transform.x);
+        }
+
+        if (els.mediaPositionY) {
+            els.mediaPositionY.value = transform.y;
+        }
+
+        if (els.mediaPositionYValue) {
+            els.mediaPositionYValue.textContent = String(transform.y);
+        }
+
+        if (els.programResolutionDetails) {
+            els.programResolutionDetails.textContent = 'Program canvas: ' + state.programWidth + '×' + state.programHeight + ' at ' + state.programFrameRate + 'fps.';
+        }
+    }
+
+    function getPreviewStageResolution() {
+        return {
+            width: state.programWidth || 1920,
+            height: state.programHeight || 1080,
+        };
+    }
+
+    function renderPreviewMediaTransform() {
+        if (!els.mediaPreview) {
+            return;
+        }
+
+        const source = isMediaSource(state.previewSource) ? getMediaSource(state.previewSource) : null;
+        const element = source && source.element;
+
+        if (!element) {
+            return;
+        }
+
+        const transform = source.transform || defaultMediaTransform();
+        const stage = getPreviewStageResolution();
+        const natural = getMediaNaturalSize(element, source.type, stage.width, stage.height);
+        const rect = calculateMediaDrawRect(
+            natural.width,
+            natural.height,
+            stage.width,
+            stage.height,
+            transform
+        );
+
+        element.dataset.fitMode = transform.fitMode || 'fit';
+        element.style.left = (rect.x / stage.width * 100) + '%';
+        element.style.top = (rect.y / stage.height * 100) + '%';
+        element.style.width = (rect.width / stage.width * 100) + '%';
+        element.style.height = (rect.height / stage.height * 100) + '%';
     }
 
     function renderSceneControls() {
@@ -426,14 +612,77 @@
             const mediaSource = getMediaSource(state.programSource);
 
             if (mediaSource && mediaSource.type === 'image' && mediaSource.element.complete) {
-                drawImageContain(context, mediaSource.element, width, height);
+                drawMediaElement(context, mediaSource.element, width, height, mediaSource.transform || defaultMediaTransform(), 'image');
             }
 
             if (mediaSource && mediaSource.type === 'video' && mediaSource.element.readyState >= 2) {
-                drawVideoContain(context, mediaSource.element, width, height, false);
+                drawMediaElement(context, mediaSource.element, width, height, mediaSource.transform || defaultMediaTransform(), 'video');
             }
         }
         state.programAnimationFrame = window.requestAnimationFrame(drawProgramFrame);
+    }
+
+    function getMediaNaturalSize(element, type, fallbackWidth, fallbackHeight) {
+        if (type === 'image') {
+            return {
+                width: element.naturalWidth || fallbackWidth,
+                height: element.naturalHeight || fallbackHeight,
+            };
+        }
+
+        return {
+            width: element.videoWidth || fallbackWidth,
+            height: element.videoHeight || fallbackHeight,
+        };
+    }
+
+    function calculateMediaDrawRect(sourceWidth, sourceHeight, canvasWidth, canvasHeight, transform) {
+        const fitMode = transform.fitMode || 'fit';
+        let drawWidth = canvasWidth;
+        let drawHeight = canvasHeight;
+
+        if (fitMode === 'stretch') {
+            drawWidth = canvasWidth;
+            drawHeight = canvasHeight;
+        } else if (fitMode === 'original') {
+            drawWidth = sourceWidth;
+            drawHeight = sourceHeight;
+        } else {
+            const scale = fitMode === 'fill'
+                ? Math.max(canvasWidth / sourceWidth, canvasHeight / sourceHeight)
+                : Math.min(canvasWidth / sourceWidth, canvasHeight / sourceHeight);
+
+            drawWidth = sourceWidth * scale;
+            drawHeight = sourceHeight * scale;
+        }
+
+        if (fitMode === 'custom') {
+            const baseScale = Math.min(canvasWidth / sourceWidth, canvasHeight / sourceHeight);
+            const customScale = (Number(transform.scale) || 100) / 100;
+            drawWidth = sourceWidth * baseScale * customScale;
+            drawHeight = sourceHeight * baseScale * customScale;
+        } else if (fitMode !== 'stretch') {
+            const customScale = (Number(transform.scale) || 100) / 100;
+            drawWidth *= customScale;
+            drawHeight *= customScale;
+        }
+
+        const offsetX = (Number(transform.x) || 0) / 100 * canvasWidth;
+        const offsetY = (Number(transform.y) || 0) / 100 * canvasHeight;
+
+        return {
+            x: (canvasWidth - drawWidth) / 2 + offsetX,
+            y: (canvasHeight - drawHeight) / 2 + offsetY,
+            width: drawWidth,
+            height: drawHeight,
+        };
+    }
+
+    function drawMediaElement(context, element, canvasWidth, canvasHeight, transform, type) {
+        const size = getMediaNaturalSize(element, type, canvasWidth, canvasHeight);
+        const rect = calculateMediaDrawRect(size.width, size.height, canvasWidth, canvasHeight, transform || defaultMediaTransform());
+
+        context.drawImage(element, rect.x, rect.y, rect.width, rect.height);
     }
 
     function drawImageContain(context, image, width, height) {
@@ -800,7 +1049,6 @@
             }
             setupAudioMeter(state.cameraStream);
             await populateDevices();
-            setPreviewButtons(true);
             setShellClass('is-preview-active', true);
             if (state.programSource === 'camera') {
                 state.programStream = state.cameraStream;
@@ -831,7 +1079,6 @@
             els.cameraPreview.srcObject = null;
         }
         teardownAudioMeter();
-        setPreviewButtons(false);
         setShellClass('is-preview-active', false);
         if (state.previewSource === 'camera') {
             state.previewSource = fallbackPreviewSource('camera');
@@ -844,15 +1091,6 @@
             renderProgramState();
         }
         return true;
-    }
-
-    function setPreviewButtons(active) {
-        if (els.startPreview) {
-            els.startPreview.disabled = active;
-        }
-        if (els.stopPreview) {
-            els.stopPreview.disabled = !active;
-        }
     }
 
     function setupAudioMeter(stream) {
@@ -939,7 +1177,6 @@
                 els.screenPreview.srcObject = state.screenStream;
                 await els.screenPreview.play().catch(() => {});
             }
-            setScreenButtons(true);
             setShellClass('is-screen-active', true);
             if (updateSelection) {
                 state.previewSource = 'screen';
@@ -965,7 +1202,6 @@
         if (els.screenPreview) {
             els.screenPreview.srcObject = null;
         }
-        setScreenButtons(false);
         setShellClass('is-screen-active', false);
         if (state.previewSource === 'screen') {
             state.previewSource = fallbackPreviewSource('screen');
@@ -985,7 +1221,6 @@
         if (els.screenPreview) {
             els.screenPreview.srcObject = null;
         }
-        setScreenButtons(false);
         setShellClass('is-screen-active', false);
         if (state.previewSource === 'screen') {
             state.previewSource = fallbackPreviewSource('screen');
@@ -1007,19 +1242,11 @@
         }
     }
 
-    function setScreenButtons(active) {
-        if (els.startScreen) {
-            els.startScreen.disabled = active;
-        }
-        if (els.stopScreen) {
-            els.stopScreen.disabled = !active;
-        }
-    }
-
     function createMediaElement(source) {
         if (source.type === 'image') {
             const image = document.createElement('img');
             image.alt = source.name || '';
+            image.addEventListener('load', renderPreviewMediaTransform);
             image.src = source.url;
             return image;
         }
@@ -1031,6 +1258,12 @@
         video.controls = false;
         video.preload = 'metadata';
         video.src = source.url;
+        ['play', 'pause', 'timeupdate', 'loadedmetadata', 'durationchange', 'ended'].forEach((eventName) => {
+            video.addEventListener(eventName, renderMediaPlaybackControls);
+        });
+        ['loadedmetadata', 'durationchange'].forEach((eventName) => {
+            video.addEventListener(eventName, renderPreviewMediaTransform);
+        });
         return video;
     }
 
@@ -1178,6 +1411,7 @@
                 persistent: false,
                 local: true,
                 inScenes: false,
+                transform: defaultMediaTransform(),
             };
 
             source.element = createMediaElement(source);
@@ -1274,6 +1508,7 @@
             element: null,
             persistent: true,
             inScenes: false,
+            transform: defaultMediaTransform(),
         };
         source.element = createMediaElement(source);
         state.mediaSources.set(id, source);
@@ -1516,6 +1751,51 @@
 
 
 
+    function getPresetResolution() {
+        const preset = getSelectedPreset();
+
+        if (preset && preset.resolution && preset.resolution.width && preset.resolution.height) {
+            return {
+                width: Number(preset.resolution.width) || 1920,
+                height: Number(preset.resolution.height) || 1080,
+                fps: Number(preset.fps) || 30,
+            };
+        }
+
+        return {
+            width: 1920,
+            height: 1080,
+            fps: 30,
+        };
+    }
+
+    function applyProgramCanvasResolution(options = {}) {
+        const resolution = getPresetResolution();
+        const activeOutput = state.broadcastSession || isRecordingActive();
+
+        if (activeOutput && !options.force) {
+            return;
+        }
+
+        state.programWidth = resolution.width;
+        state.programHeight = resolution.height;
+        state.programFrameRate = resolution.fps;
+
+        renderPreviewMediaTransform();
+
+        if (state.programCanvas) {
+            state.programCanvas.width = state.programWidth;
+            state.programCanvas.height = state.programHeight;
+        }
+
+        if (!activeOutput && state.programOutputStream) {
+            stopProgramCompositor({ stopTracks: true, clearStream: true });
+            ensureProgramCompositor();
+        }
+
+        renderSelectedMediaControls();
+    }
+
     function getSelectedPreset() {
         return (config.qualityPresets || {})[els.qualitySelect ? els.qualitySelect.value : config.defaultQualityPreset] || (config.qualityPresets || {})[config.defaultQualityPreset] || {};
     }
@@ -1576,6 +1856,7 @@
         let serverRecordingStarted = false;
         try {
             if (hasProgramOutput()) {
+                applyProgramCanvasResolution();
                 state.recordingStream = await buildRecordingStreamFromProgram();
             } else if (state.broadcastSession) {
                 state.recordingStream = state.broadcastSession.getLocalMediaStream ? state.broadcastSession.getLocalMediaStream() : null;
@@ -2003,6 +2284,7 @@
             updateViewerLinkControls();
             const prepared = await api('/broadcasts/' + state.broadcastVideoId + '/prepare', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
             studioDebugLog('[VH360 Studio] Studio broadcaster UID', prepared.uid);
+            applyProgramCanvasResolution();
             ensureProgramCompositor();
             const session = window.VH360AgoraBroadcaster.create({
                 appId: prepared.appId,
@@ -2110,10 +2392,98 @@
         }).catch(() => {});
     }
 
+    function toggleSelectedMediaControls() {
+        const source = getActiveMediaSource();
+
+        if (!source) {
+            state.mediaControlsExpanded = false;
+            renderSelectedMediaControls();
+            return;
+        }
+
+        state.mediaControlsExpanded = !state.mediaControlsExpanded;
+        renderSelectedMediaControls();
+    }
+
+    function toggleSelectedMediaPlayback() {
+        const source = getActiveVideoMediaSource();
+
+        if (!source || !source.element) {
+            return;
+        }
+
+        if (source.element.paused) {
+            source.element.play().catch(() => {
+                setStatus('Unable to play media. Try selecting it again.', 'warning');
+            });
+        } else {
+            source.element.pause();
+        }
+
+        renderMediaPlaybackControls();
+    }
+
+    function restartSelectedMedia() {
+        const source = getActiveVideoMediaSource();
+
+        if (!source || !source.element) {
+            return;
+        }
+
+        source.element.currentTime = 0;
+        source.element.play().catch(() => {});
+        renderMediaPlaybackControls();
+    }
+
+    function toggleSelectedMediaLoop() {
+        const source = getActiveVideoMediaSource();
+
+        if (!source || !source.element || !els.mediaLoop) {
+            return;
+        }
+
+        source.element.loop = els.mediaLoop.checked;
+        renderMediaPlaybackControls();
+    }
+
+    function seekSelectedMedia() {
+        const source = getActiveVideoMediaSource();
+        const video = source && source.element;
+
+        if (!video || !els.mediaSeek || !Number.isFinite(video.duration) || video.duration <= 0) {
+            return;
+        }
+
+        video.currentTime = (Number(els.mediaSeek.value) / 1000) * video.duration;
+        renderMediaPlaybackControls();
+    }
+
+    function updateActiveMediaTransform(partial) {
+        const source = getActiveMediaSource();
+
+        if (!source) {
+            return;
+        }
+
+        source.transform = Object.assign(defaultMediaTransform(), source.transform || {}, partial || {});
+
+        renderSelectedMediaControls();
+        renderPreviewMediaTransform();
+    }
+
+    function resetActiveMediaTransform() {
+        const source = getActiveMediaSource();
+
+        if (!source) {
+            return;
+        }
+
+        source.transform = defaultMediaTransform();
+        renderSelectedMediaControls();
+        renderPreviewMediaTransform();
+    }
+
     function bindEvents() {
-        els.previewSourceButtons.forEach((button) => {
-            button.addEventListener('click', () => setPreviewSource(button.dataset.previewSource));
-        });
         if (els.sceneList) {
             els.sceneList.addEventListener('click', (event) => {
                 const button = event.target.closest('[data-scene-source]');
@@ -2170,26 +2540,6 @@
         }
         if (els.transitionCut) { els.transitionCut.addEventListener('click', () => commitPreviewToProgram('cut')); }
         if (els.transitionFade) { els.transitionFade.addEventListener('click', () => commitPreviewToProgram('fade')); }
-        if (els.startPreview) {
-            els.startPreview.addEventListener('click', startPreview);
-        }
-        if (els.stopPreview) {
-            els.stopPreview.addEventListener('click', () => {
-                if (stopPreview()) {
-                    setStatus(strings.ready, 'success');
-                }
-            });
-        }
-        if (els.startScreen) {
-            els.startScreen.addEventListener('click', startScreenPreview);
-        }
-        if (els.stopScreen) {
-            els.stopScreen.addEventListener('click', () => {
-                if (stopScreenPreview()) {
-                    setStatus(strings.ready, 'success');
-                }
-            });
-        }
         if (els.cameraSelect) {
             els.cameraSelect.addEventListener('change', () => {
                 state.selectedCameraId = els.cameraSelect.value;
@@ -2207,8 +2557,43 @@
             });
         }
         if (els.qualitySelect) {
-            els.qualitySelect.addEventListener('change', updateQualityDetails);
+            els.qualitySelect.addEventListener('change', () => {
+                updateQualityDetails();
+
+                if (state.broadcastSession || isRecordingActive()) {
+                    setStatus('Quality changes apply before going live or recording starts.', 'warning');
+                    return;
+                }
+
+                applyProgramCanvasResolution();
+            });
         }
+        if (els.toggleMediaControls) { els.toggleMediaControls.addEventListener('click', toggleSelectedMediaControls); }
+        if (els.mediaPlayPause) { els.mediaPlayPause.addEventListener('click', toggleSelectedMediaPlayback); }
+        if (els.mediaRestart) { els.mediaRestart.addEventListener('click', restartSelectedMedia); }
+        if (els.mediaLoop) { els.mediaLoop.addEventListener('change', toggleSelectedMediaLoop); }
+        if (els.mediaSeek) { els.mediaSeek.addEventListener('input', seekSelectedMedia); }
+        if (els.mediaFitMode) {
+            els.mediaFitMode.addEventListener('change', () => {
+                updateActiveMediaTransform({ fitMode: els.mediaFitMode.value });
+            });
+        }
+        if (els.mediaScale) {
+            els.mediaScale.addEventListener('input', () => {
+                updateActiveMediaTransform({ scale: Number(els.mediaScale.value) || 100, fitMode: 'custom' });
+            });
+        }
+        if (els.mediaPositionX) {
+            els.mediaPositionX.addEventListener('input', () => {
+                updateActiveMediaTransform({ x: Number(els.mediaPositionX.value) || 0, fitMode: 'custom' });
+            });
+        }
+        if (els.mediaPositionY) {
+            els.mediaPositionY.addEventListener('input', () => {
+                updateActiveMediaTransform({ y: Number(els.mediaPositionY.value) || 0, fitMode: 'custom' });
+            });
+        }
+        if (els.mediaResetTransform) { els.mediaResetTransform.addEventListener('click', resetActiveMediaTransform); }
         if (els.storageSelect) {
             els.storageSelect.addEventListener('change', () => {
                 const provider = selectedStorageProvider();
@@ -2271,6 +2656,7 @@
     renderSupportChecks();
     updateReadinessStatus();
     updateQualityDetails();
+    applyProgramCanvasResolution();
     updatePublishingButtons();
     updateBroadcastRules();
     renderPreviewState();
