@@ -168,7 +168,7 @@ class VideoHub360_Admin {
      */
     private function sanitize_studio_replay_storage_provider($provider) {
         $provider = sanitize_key($provider);
-        return in_array($provider, array('videopress', 'publitio', 'local'), true) ? $provider : 'videopress';
+        return in_array($provider, array('videopress', 'local'), true) ? $provider : 'videopress';
     }
 
     /**
@@ -854,7 +854,6 @@ class VideoHub360_Admin {
                         <td>
                             <select name="vh360_studio_default_replay_storage_provider">
                                 <option value="videopress" <?php selected($studio_default_replay_storage_provider, 'videopress'); ?>>VideoPress / WordPress Media Library</option>
-                                <option value="publitio" <?php selected($studio_default_replay_storage_provider, 'publitio'); ?>>Publitio</option>
                                 <option value="local" <?php selected($studio_default_replay_storage_provider, 'local'); ?>>Local Media Library</option>
                             </select>
                             <p class="description">Admin-only default used silently by VH360 Studio when it creates new recording jobs.</p>

@@ -537,23 +537,28 @@ class VH360_Studio_REST_Controller {
     }
 
     private function default_replay_storage_provider() {
-        $registry = VH360_Studio_Plugin::instance()->registry();
-        $saved    = $this->normalize_storage_provider_id( get_option( 'vh360_studio_default_replay_storage_provider', 'videopress' ) );
+        $registry  = VH360_Studio_Plugin::instance()->registry();
+        $raw_saved = get_option( 'vh360_studio_default_replay_storage_provider', '' );
+        $saved     = $this->normalize_storage_provider_id( $raw_saved );
 
-        if ( $saved && $registry->has_storage_provider( $saved ) ) {
+        if ( $saved && $this->storage_provider_is_available( $registry, $saved ) ) {
             return $saved;
         }
 
-        $videopress = $registry->get_storage_provider( 'videopress' );
-        if ( $videopress && $videopress->is_available() ) {
+        if ( $this->storage_provider_is_available( $registry, 'videopress' ) ) {
             return 'videopress';
         }
 
-        if ( $registry->has_storage_provider( 'local_media' ) ) {
+        if ( $this->storage_provider_is_available( $registry, 'local_media' ) ) {
             return 'local_media';
         }
 
         return 'videopress';
+    }
+
+    private function storage_provider_is_available( VH360_Studio_Provider_Registry $registry, $provider_id ) {
+        $provider = $registry->get_storage_provider( sanitize_key( $provider_id ) );
+        return $provider && $provider->is_available();
     }
 
     private function normalize_storage_provider_id( $provider ) {
