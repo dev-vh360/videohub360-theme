@@ -128,7 +128,8 @@ class VH360_Studio_Replay_Publisher {
 
         $status['job_status'] = $job['status'];
         $status['publish_provider_status'] = ! empty( $job['publish_provider_status'] ) ? sanitize_key( $job['publish_provider_status'] ) : '';
-        $status['replay_url'] = ! empty( $job['replay_video_id'] ) ? get_permalink( absint( $job['replay_video_id'] ) ) : '';
+        $replay_post_id = $this->resolve_replay_url_post_id( $job );
+        $status['replay_url'] = $replay_post_id ? get_permalink( $replay_post_id ) : '';
         return $status;
     }
 
@@ -167,8 +168,38 @@ class VH360_Studio_Replay_Publisher {
             'playback_url'            => $ready['playback_url'],
             'replay_video_id'         => absint( $ready['replay_video_id'] ),
             'replay_url'              => $replay['replay_url'],
-            'message'                 => ! empty( $published['message'] ) && 'local_media_ready' === $ready['publish_provider_status'] ? __( 'Replay saved to Media Library and replay post created.', 'videohub360-studio' ) : __( 'Replay published and VideoHub360 replay post created.', 'videohub360-studio' ),
+            'message'                 => $this->published_message( $job, $ready, $published ),
         );
+    }
+
+
+    private function resolve_replay_url_post_id( array $job ) {
+        $replay_video_id = ! empty( $job['replay_video_id'] ) ? absint( $job['replay_video_id'] ) : 0;
+        if ( $replay_video_id && 'videohub360' === get_post_type( $replay_video_id ) ) {
+            return $replay_video_id;
+        }
+
+        $live_video_id = ! empty( $job['live_video_id'] ) ? absint( $job['live_video_id'] ) : 0;
+        if ( $live_video_id && 'videohub360' === get_post_type( $live_video_id ) ) {
+            $converted = get_post_meta( $live_video_id, '_vh360_studio_converted_live_to_replay', true );
+            $ready     = get_post_meta( $live_video_id, '_vh360_studio_replay_ready', true );
+            if ( 'yes' === $converted || 'yes' === $ready || ! empty( $job['playback_url'] ) ) {
+                return $live_video_id;
+            }
+        }
+
+        return 0;
+    }
+
+    private function published_message( array $job, array $ready, array $published ) {
+        $live_video_id   = ! empty( $job['live_video_id'] ) ? absint( $job['live_video_id'] ) : 0;
+        $replay_video_id = ! empty( $ready['replay_video_id'] ) ? absint( $ready['replay_video_id'] ) : 0;
+
+        if ( $live_video_id && $replay_video_id === $live_video_id ) {
+            return __( 'Replay published and original livestream post updated.', 'videohub360-studio' );
+        }
+
+        return __( 'Replay published and VideoHub360 replay post created.', 'videohub360-studio' );
     }
 
     private function get_provider( array $job, $require_processing = true ) {
