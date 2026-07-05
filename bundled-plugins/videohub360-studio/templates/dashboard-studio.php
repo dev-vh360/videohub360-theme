@@ -10,6 +10,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $default_label     = isset( $quality_presets[ $default_preset ]['label'] ) ? $quality_presets[ $default_preset ]['label'] : $default_preset;
+$is_admin          = current_user_can( 'manage_options' );
+$friendly_job_status = static function( $job ) {
+    if ( ! empty( $job['error_message'] ) || ( isset( $job['status'] ) && 'failed' === $job['status'] ) ) {
+        return __( 'Needs attention', 'videohub360-studio' );
+    }
+    if ( ! empty( $job['replay_video_id'] ) || ! empty( $job['replay_url'] ) ) {
+        return __( 'Published', 'videohub360-studio' );
+    }
+    $labels = array(
+        'created'   => __( 'Created', 'videohub360-studio' ),
+        'recording' => __( 'Recording', 'videohub360-studio' ),
+        'uploading' => __( 'Uploading', 'videohub360-studio' ),
+        'processing'=> __( 'Preparing', 'videohub360-studio' ),
+        'ready'     => __( 'Published', 'videohub360-studio' ),
+        'cancelled' => __( 'Cancelled', 'videohub360-studio' ),
+    );
+    return isset( $labels[ $job['status'] ] ) ? $labels[ $job['status'] ] : ucfirst( str_replace( '_', ' ', $job['status'] ) );
+};
 ?>
 <section class="vh360-studio-dashboard" data-vh360-studio-dashboard>
     <header class="vh360-studio-topbar">
@@ -242,32 +260,39 @@ $default_label     = isset( $quality_presets[ $default_preset ]['label'] ) ? $qu
             <section class="vh360-studio-dock vh360-studio-dock--recording" aria-labelledby="vh360-studio-recorder-title">
                 <div class="vh360-studio-dock-header"><h3 id="vh360-studio-recorder-title"><?php esc_html_e( 'Recording / Replay', 'videohub360-studio' ); ?></h3></div>
                 <div class="vh360-studio-dock-body">
-                    <div class="vh360-studio-recorder-stats">
-                        <div><strong><?php esc_html_e( 'Current job ID', 'videohub360-studio' ); ?></strong><span data-recording-job-id>—</span></div>
-                        <div><strong><?php esc_html_e( 'Selected MIME type', 'videohub360-studio' ); ?></strong><span data-recording-mime>—</span></div>
-                        <div><strong><?php esc_html_e( 'Recording timer', 'videohub360-studio' ); ?></strong><span data-recording-timer>00:00</span></div>
-                        <div><strong><?php esc_html_e( 'Chunks uploaded', 'videohub360-studio' ); ?></strong><span data-recording-uploaded>0</span></div>
-                        <div><strong><?php esc_html_e( 'Chunks pending', 'videohub360-studio' ); ?></strong><span data-recording-pending>0</span></div>
-                        <div><strong><?php esc_html_e( 'Chunks failed', 'videohub360-studio' ); ?></strong><span data-recording-failed>0</span></div>
-                        <div><strong><?php esc_html_e( 'Total bytes uploaded', 'videohub360-studio' ); ?></strong><span data-recording-bytes>0</span></div>
-                        <div><strong><?php esc_html_e( 'Finalize status', 'videohub360-studio' ); ?></strong><span data-recording-finalize-status>—</span></div>
+                    <div class="vh360-studio-workflow-summary">
+                        <div><strong><?php esc_html_e( 'Status', 'videohub360-studio' ); ?></strong><span data-recording-summary-status><?php esc_html_e( 'Ready to record', 'videohub360-studio' ); ?></span></div>
+                        <div><strong><?php esc_html_e( 'Duration', 'videohub360-studio' ); ?></strong><span data-recording-timer>00:00</span></div>
+                        <div><strong><?php esc_html_e( 'Progress', 'videohub360-studio' ); ?></strong><span data-recording-progress-label>0%</span></div>
                     </div>
                     <progress class="vh360-studio-progress" max="100" value="0" data-recording-progress></progress>
                     <div class="vh360-studio-actions">
                         <button type="button" class="vh360-studio-button vh360-studio-button--primary" data-start-recording><?php esc_html_e( 'Start recording', 'videohub360-studio' ); ?></button>
                         <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-stop-recording disabled><?php esc_html_e( 'Stop recording', 'videohub360-studio' ); ?></button>
                         <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-retry-chunks disabled><?php esc_html_e( 'Retry failed chunks', 'videohub360-studio' ); ?></button>
-                        <button type="button" class="vh360-studio-button" data-finalize-recording disabled><?php esc_html_e( 'Finalize recording', 'videohub360-studio' ); ?></button>
+                        <button type="button" class="vh360-studio-button" data-finalize-recording disabled><?php esc_html_e( 'Prepare replay', 'videohub360-studio' ); ?></button>
                     </div>
                     <div class="vh360-studio-job-result" aria-live="polite" data-recording-status></div>
                     <div class="vh360-studio-actions">
                         <button type="button" class="vh360-studio-button vh360-studio-button--primary" data-publish-replay><?php esc_html_e( 'Publish replay', 'videohub360-studio' ); ?></button>
-                        <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-check-publishing-status><?php esc_html_e( 'Check publishing status', 'videohub360-studio' ); ?></button>
-                        <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-create-job><?php esc_html_e( 'Create setup job', 'videohub360-studio' ); ?></button>
                     </div>
-                    <div class="vh360-studio-job-result" aria-live="polite" data-job-result></div>
                     <div class="vh360-studio-publish-status" aria-live="polite" data-publishing-status></div>
-                    <p class="vh360-studio-replay-link" data-replay-link-wrap hidden><strong><?php esc_html_e( 'Replay:', 'videohub360-studio' ); ?></strong> <a href="#" data-replay-link target="_blank" rel="noopener noreferrer"></a></p>
+                    <p class="vh360-studio-replay-link" data-replay-link-wrap hidden><strong><?php esc_html_e( 'Replay published.', 'videohub360-studio' ); ?></strong> <a href="#" class="vh360-studio-button vh360-studio-button--secondary" data-replay-link target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Open replay', 'videohub360-studio' ); ?></a></p>
+                    <?php if ( $is_admin ) : ?>
+                        <details class="vh360-studio-technical-details">
+                            <summary><?php esc_html_e( 'Technical Recording Details', 'videohub360-studio' ); ?></summary>
+                            <div class="vh360-studio-recorder-stats">
+                                <div><strong><?php esc_html_e( 'Current job ID', 'videohub360-studio' ); ?></strong><span data-recording-job-id>—</span></div>
+                                <div><strong><?php esc_html_e( 'Selected MIME type', 'videohub360-studio' ); ?></strong><span data-recording-mime>—</span></div>
+                                <div><strong><?php esc_html_e( 'Chunks uploaded', 'videohub360-studio' ); ?></strong><span data-recording-uploaded>0</span></div>
+                                <div><strong><?php esc_html_e( 'Chunks pending', 'videohub360-studio' ); ?></strong><span data-recording-pending>0</span></div>
+                                <div><strong><?php esc_html_e( 'Chunks failed', 'videohub360-studio' ); ?></strong><span data-recording-failed>0</span></div>
+                                <div><strong><?php esc_html_e( 'Total bytes uploaded', 'videohub360-studio' ); ?></strong><span data-recording-bytes>0</span></div>
+                                <div><strong><?php esc_html_e( 'Finalize status', 'videohub360-studio' ); ?></strong><span data-recording-finalize-status>—</span></div>
+                                <div><strong><?php esc_html_e( 'Raw replay URL', 'videohub360-studio' ); ?></strong><span data-replay-raw-url>—</span></div>
+                            </div>
+                        </details>
+                    <?php endif; ?>
                 </div>
             </section>
         </div>
@@ -276,31 +301,57 @@ $default_label     = isset( $quality_presets[ $default_preset ]['label'] ) ? $qu
     <div class="vh360-studio-lower-panels">
         <section class="vh360-studio-lower-panel" aria-labelledby="vh360-studio-readiness-title">
             <h3 id="vh360-studio-readiness-title"><?php esc_html_e( 'Studio readiness', 'videohub360-studio' ); ?></h3>
-            <p><?php esc_html_e( 'These checks confirm browser support for preview, recording, and chunked uploads.', 'videohub360-studio' ); ?></p>
-            <ul class="vh360-studio-checks" data-support-checks></ul>
-            <div class="vh360-studio-operator-status" aria-live="polite">
-                <h4><?php esc_html_e( 'Operator status', 'videohub360-studio' ); ?></h4>
-                <dl>
-                    <div><dt><?php esc_html_e( 'Program canvas', 'videohub360-studio' ); ?></dt><dd data-operator-canvas-support>—</dd></div>
-                    <div><dt><?php esc_html_e( 'Program source', 'videohub360-studio' ); ?></dt><dd data-operator-program-source>—</dd></div>
-                    <div><dt><?php esc_html_e( 'Recording format', 'videohub360-studio' ); ?></dt><dd data-operator-recording-format>—</dd></div>
-                    <div><dt><?php esc_html_e( 'Active job', 'videohub360-studio' ); ?></dt><dd data-operator-active-job>—</dd></div>
-                    <div><dt><?php esc_html_e( 'Last REST error', 'videohub360-studio' ); ?></dt><dd data-operator-last-rest-error><?php esc_html_e( 'None', 'videohub360-studio' ); ?></dd></div>
-                </dl>
+            <div class="vh360-studio-readiness-summary" data-readiness-summary>
+                <strong data-readiness-heading><?php esc_html_e( 'Checking Studio…', 'videohub360-studio' ); ?></strong>
+                <p data-readiness-message><?php esc_html_e( 'Checking browser support and permissions.', 'videohub360-studio' ); ?></p>
+                <ul data-readiness-issues hidden></ul>
             </div>
+            <?php if ( $is_admin ) : ?>
+                <details class="vh360-studio-technical-details">
+                    <summary><?php esc_html_e( 'Browser details', 'videohub360-studio' ); ?></summary>
+                    <ul class="vh360-studio-checks" data-support-checks></ul>
+                    <div class="vh360-studio-operator-status" aria-live="polite">
+                        <h4><?php esc_html_e( 'Operator status', 'videohub360-studio' ); ?></h4>
+                        <dl>
+                            <div><dt><?php esc_html_e( 'Program canvas', 'videohub360-studio' ); ?></dt><dd data-operator-canvas-support>—</dd></div>
+                            <div><dt><?php esc_html_e( 'Program source', 'videohub360-studio' ); ?></dt><dd data-operator-program-source>—</dd></div>
+                            <div><dt><?php esc_html_e( 'Recording format', 'videohub360-studio' ); ?></dt><dd data-operator-recording-format>—</dd></div>
+                            <div><dt><?php esc_html_e( 'Active job', 'videohub360-studio' ); ?></dt><dd data-operator-active-job>—</dd></div>
+                            <div><dt><?php esc_html_e( 'Last REST error', 'videohub360-studio' ); ?></dt><dd data-operator-last-rest-error><?php esc_html_e( 'None', 'videohub360-studio' ); ?></dd></div>
+                        </dl>
+                    </div>
+                </details>
+            <?php endif; ?>
         </section>
 
         <section class="vh360-studio-lower-panel vh360-studio-recent-jobs" aria-labelledby="vh360-studio-recent-title">
-            <h3 id="vh360-studio-recent-title"><?php esc_html_e( 'Recent Recording Jobs', 'videohub360-studio' ); ?></h3>
-            <p data-empty-jobs <?php echo empty( $jobs ) ? '' : 'hidden'; ?>><?php esc_html_e( 'No recording jobs have been created yet.', 'videohub360-studio' ); ?></p>
-            <table class="vh360-dashboard-table">
-                <thead><tr><th><?php esc_html_e( 'ID', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Room', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Status', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Created', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'File Size', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'MIME Type', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Assembled', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Temp Expires', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Publish Status', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Replay', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Last Error', 'videohub360-studio' ); ?></th></tr></thead>
-                <tbody data-recent-jobs-body>
+            <h3 id="vh360-studio-recent-title"><?php esc_html_e( 'Recent Replays', 'videohub360-studio' ); ?></h3>
+            <p data-empty-replays <?php echo empty( $jobs ) ? '' : 'hidden'; ?>><?php esc_html_e( 'No replays yet.', 'videohub360-studio' ); ?></p>
+            <table class="vh360-recent-replays-table">
+                <thead><tr><th><?php esc_html_e( 'Recording', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Status', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Created', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Replay', 'videohub360-studio' ); ?></th></tr></thead>
+                <tbody data-recent-replays-body>
                     <?php foreach ( $jobs as $job ) : ?>
-                        <tr><td><?php echo esc_html( $job['id'] ); ?></td><td><?php echo esc_html( $job['room_id'] ); ?></td><td><?php echo esc_html( $job['status'] ); ?></td><td><?php echo esc_html( $job['created_at'] ); ?></td><td><?php echo esc_html( ! empty( $job['file_size'] ) ? size_format( absint( $job['file_size'] ) ) : '—' ); ?></td><td><?php echo esc_html( ! empty( $job['mime_type'] ) ? $job['mime_type'] : '—' ); ?></td><td><?php echo esc_html( ! empty( $job['assembled_at'] ) ? $job['assembled_at'] : '—' ); ?></td><td><?php echo esc_html( ! empty( $job['temp_expires_at'] ) ? $job['temp_expires_at'] : '—' ); ?></td><td><?php echo esc_html( ! empty( $job['publish_provider_status'] ) ? $job['publish_provider_status'] : '—' ); ?></td><td><?php if ( ! empty( $job['replay_video_id'] ) ) : ?><a href="<?php echo esc_url( get_permalink( absint( $job['replay_video_id'] ) ) ); ?>"><?php echo esc_html( absint( $job['replay_video_id'] ) ); ?></a><?php else : ?><?php echo esc_html( '—' ); ?><?php endif; ?></td><td><?php echo esc_html( ! empty( $job['error_message'] ) ? $job['error_message'] : '—' ); ?></td></tr>
+                        <?php $replay_url = ! empty( $job['replay_video_id'] ) ? get_permalink( absint( $job['replay_video_id'] ) ) : ''; ?>
+                        <tr data-job-id="<?php echo esc_attr( $job['id'] ); ?>"><td><?php echo esc_html( sprintf( __( 'Studio recording #%d', 'videohub360-studio' ), absint( $job['id'] ) ) ); ?></td><td><?php echo esc_html( $friendly_job_status( $job ) ); ?></td><td><?php echo esc_html( $job['created_at'] ); ?></td><td><?php if ( $replay_url ) : ?><a href="<?php echo esc_url( $replay_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Open replay', 'videohub360-studio' ); ?></a><?php else : ?><?php echo esc_html( '—' ); ?><?php endif; ?></td></tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
+            <?php if ( $is_admin ) : ?>
+                <details class="vh360-studio-technical-details vh360-studio-technical-jobs">
+                    <summary><?php esc_html_e( 'Technical job history', 'videohub360-studio' ); ?></summary>
+                    <p data-empty-jobs <?php echo empty( $jobs ) ? '' : 'hidden'; ?>><?php esc_html_e( 'No recording jobs have been created yet.', 'videohub360-studio' ); ?></p>
+                    <div class="vh360-studio-technical-table-wrap">
+                        <table class="vh360-dashboard-table">
+                            <thead><tr><th><?php esc_html_e( 'ID', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Room', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Status', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Created', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'File Size', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'MIME Type', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Assembled', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Temp Expires', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Publish Status', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Replay', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Last Error', 'videohub360-studio' ); ?></th></tr></thead>
+                            <tbody data-recent-jobs-technical-body>
+                                <?php foreach ( $jobs as $job ) : ?>
+                                    <tr data-job-id="<?php echo esc_attr( $job['id'] ); ?>"><td><?php echo esc_html( $job['id'] ); ?></td><td><?php echo esc_html( $job['room_id'] ); ?></td><td><?php echo esc_html( $job['status'] ); ?></td><td><?php echo esc_html( $job['created_at'] ); ?></td><td><?php echo esc_html( ! empty( $job['file_size'] ) ? size_format( absint( $job['file_size'] ) ) : '—' ); ?></td><td><?php echo esc_html( ! empty( $job['mime_type'] ) ? $job['mime_type'] : '—' ); ?></td><td><?php echo esc_html( ! empty( $job['assembled_at'] ) ? $job['assembled_at'] : '—' ); ?></td><td><?php echo esc_html( ! empty( $job['temp_expires_at'] ) ? $job['temp_expires_at'] : '—' ); ?></td><td><?php echo esc_html( ! empty( $job['publish_provider_status'] ) ? $job['publish_provider_status'] : '—' ); ?></td><td><?php if ( ! empty( $job['replay_video_id'] ) ) : ?><a href="<?php echo esc_url( get_permalink( absint( $job['replay_video_id'] ) ) ); ?>"><?php echo esc_html( absint( $job['replay_video_id'] ) ); ?></a><?php else : ?><?php echo esc_html( '—' ); ?><?php endif; ?></td><td><?php echo esc_html( ! empty( $job['error_message'] ) ? $job['error_message'] : '—' ); ?></td></tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+            <?php endif; ?>
         </section>
     </div>
 
