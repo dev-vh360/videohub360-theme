@@ -292,6 +292,7 @@ $storage_label     = isset( $storage_providers['videopress'] ) ? $storage_provid
                 <dl>
                     <div><dt><?php esc_html_e( 'Program canvas', 'videohub360-studio' ); ?></dt><dd data-operator-canvas-support>—</dd></div>
                     <div><dt><?php esc_html_e( 'Program source', 'videohub360-studio' ); ?></dt><dd data-operator-program-source>—</dd></div>
+                    <div><dt><?php esc_html_e( 'Recording format', 'videohub360-studio' ); ?></dt><dd data-operator-recording-format>—</dd></div>
                     <div><dt><?php esc_html_e( 'Active job', 'videohub360-studio' ); ?></dt><dd data-operator-active-job>—</dd></div>
                     <div><dt><?php esc_html_e( 'Last REST error', 'videohub360-studio' ); ?></dt><dd data-operator-last-rest-error><?php esc_html_e( 'None', 'videohub360-studio' ); ?></dd></div>
                 </dl>

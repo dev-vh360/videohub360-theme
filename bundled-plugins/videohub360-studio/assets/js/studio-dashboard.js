@@ -158,6 +158,7 @@
         operatorProgramSource: root.querySelector('[data-operator-program-source]'),
         operatorActiveJob: root.querySelector('[data-operator-active-job]'),
         operatorLastRestError: root.querySelector('[data-operator-last-rest-error]'),
+        operatorRecordingFormat: root.querySelector('[data-operator-recording-format]'),
     };
 
     function defaultMediaTransform() {
@@ -207,6 +208,11 @@
         }
         if (els.operatorLastRestError) {
             els.operatorLastRestError.textContent = state.lastRestError || 'None';
+        }
+        if (els.operatorRecordingFormat) {
+            const recordingMimeType = state.selectedMimeType || preferredMimeType();
+            els.operatorRecordingFormat.textContent = recordingFormatLabel(recordingMimeType);
+            els.operatorRecordingFormat.dataset.statusType = isWebmMime(recordingMimeType) ? 'warning' : 'success';
         }
     }
 
@@ -961,12 +967,7 @@
     function detectSupport() {
         const mediaDevices = Boolean(navigator.mediaDevices);
         const mediaRecorder = 'MediaRecorder' in window;
-        const mimeCandidates = [
-            'video/webm;codecs=vp9,opus',
-            'video/webm;codecs=vp8,opus',
-            'video/webm',
-            'video/mp4',
-        ];
+        const mimeCandidates = recordingMimeCandidates();
         const mimeTypes = mediaRecorder
             ? mimeCandidates.filter((type) => window.MediaRecorder.isTypeSupported(type))
             : [];
@@ -1018,6 +1019,14 @@
         mimeItem.className = state.support.mimeTypes.length ? 'is-supported' : 'is-unsupported';
         mimeItem.innerHTML = '<span>' + escapeHtml(supportLabels.mimeTypes || 'Formats') + '</span><strong>' + escapeHtml(state.support.mimeTypes.length ? state.support.mimeTypes.join(', ') : strings.notSupported) + '</strong>';
         els.supportChecks.appendChild(mimeItem);
+
+        const preferred = preferredMimeType();
+        if (isWebmMime(preferred)) {
+            const warning = document.createElement('li');
+            warning.className = 'is-unsupported';
+            warning.innerHTML = '<span>' + escapeHtml('Recording format') + '</span><strong>' + escapeHtml(webmFallbackWarning()) + '</strong>';
+            els.supportChecks.appendChild(warning);
+        }
     }
 
     function updateReadinessStatus() {
@@ -1907,9 +1916,48 @@
         }
     }
 
+    function recordingMimeCandidates() {
+        return [
+            'video/mp4;codecs="avc1.424028,mp4a.40.2"',
+            'video/mp4;codecs="avc1.42E01E,mp4a.40.2"',
+            'video/mp4;codecs="avc1.640028,mp4a.40.2"',
+            'video/mp4',
+            'video/webm;codecs=vp9,opus',
+            'video/webm;codecs=vp8,opus',
+            'video/webm',
+        ];
+    }
+
     function preferredMimeType() {
         const supported = state.support.mimeTypes || [];
-        return supported.find((type) => type.indexOf('video/webm') === 0) || supported[0] || '';
+        return supported[0] || '';
+    }
+
+    function isMp4Mime(mimeType) {
+        return String(mimeType || '').toLowerCase().indexOf('video/mp4') !== -1;
+    }
+
+    function isWebmMime(mimeType) {
+        return String(mimeType || '').toLowerCase().indexOf('video/webm') !== -1;
+    }
+
+    function recordingExtension(mimeType) {
+        return isMp4Mime(mimeType) ? '.mp4' : '.webm';
+    }
+
+    function recordingFormatLabel(mimeType) {
+        const selected = mimeType || preferredMimeType();
+        if (isMp4Mime(selected)) {
+            return 'Recording format: MP4';
+        }
+        if (isWebmMime(selected)) {
+            return 'Recording format: WebM fallback';
+        }
+        return 'Recording format: Not supported';
+    }
+
+    function webmFallbackWarning() {
+        return 'This browser does not support MP4 recording. Studio will use WebM fallback, which may not play in all Safari versions.';
     }
 
     async function api(path, options) {
@@ -1989,7 +2037,7 @@
             const start = await api('/jobs/' + jobId + '/recording/start', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ mime_type: mimeType }) });
             serverRecordingStarted = true;
             state.browserSessionId = start.browser_session_id;
-            state.selectedMimeType = start.mime_type;
+            state.selectedMimeType = mimeType;
             state.chunkIndex = 0;
             state.uploadedChunks.clear();
             state.failedChunks.clear();
@@ -2000,12 +2048,23 @@
             if (preset.video_bitrate) { options.videoBitsPerSecond = preset.video_bitrate; }
             if (preset.audio_bitrate) { options.audioBitsPerSecond = preset.audio_bitrate; }
             state.recorder = new window.MediaRecorder(state.recordingStream, options);
-            state.recorder.addEventListener('dataavailable', (event) => { if (event.data && event.data.size) { queueChunk(event.data, state.chunkIndex++); } });
+            state.selectedMimeType = state.recorder.mimeType || mimeType || start.mime_type;
+            state.recorder.addEventListener('dataavailable', (event) => {
+                if (event.data && event.data.size) {
+                    const finalMimeType = event.data.type || (state.recorder && state.recorder.mimeType) || state.selectedMimeType;
+                    const chunk = event.data.type === finalMimeType ? event.data : new Blob([event.data], { type: finalMimeType });
+                    queueChunk(chunk, state.chunkIndex++);
+                }
+            });
             state.recorder.start((config.uploadSettings && config.uploadSettings.preferred_chunk_duration) || 5000);
             startTimer();
             setRecorderButtons(true, false);
             setShellClass('is-recording', true);
-            setRecordingStatus(strings.recordingActive, 'success');
+            if (isWebmMime(state.selectedMimeType)) {
+                setRecordingStatus(webmFallbackWarning(), 'warning');
+            } else {
+                setRecordingStatus(strings.recordingActive, 'success');
+            }
             renderRecordingState();
         } catch (error) {
             if (serverRecordingStarted && jobId) {
@@ -2031,8 +2090,9 @@
             const form = new FormData();
             form.append('browser_session_id', state.browserSessionId);
             form.append('chunk_index', String(index));
-            form.append('mime_type', state.selectedMimeType);
-            form.append('chunk', blob, 'chunk-' + index + (state.selectedMimeType === 'video/mp4' ? '.mp4' : '.webm'));
+            const finalMimeType = blob.type || state.selectedMimeType;
+            form.append('mime_type', finalMimeType);
+            form.append('chunk', blob, 'chunk-' + index + recordingExtension(finalMimeType));
             const summary = await api('/jobs/' + state.activeJobId + '/chunks', { method: 'POST', body: form });
             state.pendingUploads.delete(index);
             state.failedChunks.delete(index);
@@ -2207,6 +2267,7 @@
     function renderRecordingState() {
         if (els.recordingJobId) { els.recordingJobId.textContent = state.activeJobId || '—'; }
         if (els.recordingMime) { els.recordingMime.textContent = state.selectedMimeType || preferredMimeType() || '—'; }
+        updateOperatorStatus();
         if (els.recordingUploaded) { els.recordingUploaded.textContent = String(state.uploadedChunks.size); }
         if (els.recordingPending) { els.recordingPending.textContent = String(state.pendingUploads.size); }
         if (els.recordingFailed) { els.recordingFailed.textContent = String(state.failedChunks.size); }

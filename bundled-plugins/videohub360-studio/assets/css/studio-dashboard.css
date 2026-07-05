@@ -463,3 +463,7 @@
     text-align: right;
     overflow-wrap: anywhere;
 }
+
+.vh360-studio-operator-status dd[data-status-type="warning"] {
+    color: #fbbf24;
+}
