@@ -65,6 +65,11 @@ class VH360_Studio_Replay_Publisher {
             return $recording;
         }
 
+        $target_validation = $this->validate_replay_target_for_publish( $job );
+        if ( is_wp_error( $target_validation ) ) {
+            return $target_validation;
+        }
+
         $published = $provider->publish_recording( $job, $recording );
         if ( is_wp_error( $published ) ) {
             $this->jobs->update( $job['id'], 0, array( 'publish_attempted_at' => current_time( 'mysql' ), 'publish_provider_status' => 'publish_failed' ) );
@@ -200,6 +205,30 @@ class VH360_Studio_Replay_Publisher {
         }
 
         return __( 'Replay published and VideoHub360 replay post created.', 'videohub360-studio' );
+    }
+
+
+    private function validate_replay_target_for_publish( array $job ) {
+        $live_video_id = ! empty( $job['live_video_id'] ) ? absint( $job['live_video_id'] ) : 0;
+        if ( ! $live_video_id ) {
+            return true;
+        }
+
+        $post = get_post( $live_video_id );
+        if ( ! $post || 'videohub360' !== $post->post_type ) {
+            return new WP_Error( 'vh360_studio_invalid_live_replay_target', __( 'The original livestream post is not available.', 'videohub360-studio' ), array( 'status' => 404 ) );
+        }
+
+        $job_user_id = ! empty( $job['user_id'] ) ? absint( $job['user_id'] ) : 0;
+        if ( $job_user_id && absint( $post->post_author ) === $job_user_id ) {
+            return true;
+        }
+
+        if ( current_user_can( 'edit_post', $live_video_id ) ) {
+            return true;
+        }
+
+        return new WP_Error( 'vh360_studio_live_replay_target_forbidden', __( 'You are not allowed to update the original livestream post.', 'videohub360-studio' ), array( 'status' => 403 ) );
     }
 
     private function get_provider( array $job, $require_processing = true ) {
