@@ -48,8 +48,8 @@
         programOutputStream: null,
         programAnimationFrame: null,
         programFrameRate: 30,
-        programWidth: 1280,
-        programHeight: 720,
+        programWidth: 1920,
+        programHeight: 1080,
         transitioning: false,
         broadcastStarting: false,
         broadcastReady: false,
@@ -511,6 +511,13 @@
         }
     }
 
+    function getPreviewStageResolution() {
+        return {
+            width: state.programWidth || 1920,
+            height: state.programHeight || 1080,
+        };
+    }
+
     function renderPreviewMediaTransform() {
         if (!els.mediaPreview) {
             return;
@@ -524,11 +531,21 @@
         }
 
         const transform = source.transform || defaultMediaTransform();
+        const stage = getPreviewStageResolution();
+        const natural = getMediaNaturalSize(element, source.type, stage.width, stage.height);
+        const rect = calculateMediaDrawRect(
+            natural.width,
+            natural.height,
+            stage.width,
+            stage.height,
+            transform
+        );
 
         element.dataset.fitMode = transform.fitMode || 'fit';
-        element.style.setProperty('--vh360-media-scale', String((transform.scale || 100) / 100));
-        element.style.setProperty('--vh360-media-x', (transform.x || 0) + '%');
-        element.style.setProperty('--vh360-media-y', (transform.y || 0) + '%');
+        element.style.left = (rect.x / stage.width * 100) + '%';
+        element.style.top = (rect.y / stage.height * 100) + '%';
+        element.style.width = (rect.width / stage.width * 100) + '%';
+        element.style.height = (rect.height / stage.height * 100) + '%';
     }
 
     function renderSceneControls() {
@@ -1261,6 +1278,7 @@
         if (source.type === 'image') {
             const image = document.createElement('img');
             image.alt = source.name || '';
+            image.addEventListener('load', renderPreviewMediaTransform);
             image.src = source.url;
             return image;
         }
@@ -1274,6 +1292,9 @@
         video.src = source.url;
         ['play', 'pause', 'timeupdate', 'loadedmetadata', 'durationchange', 'ended'].forEach((eventName) => {
             video.addEventListener(eventName, renderMediaPlaybackControls);
+        });
+        ['loadedmetadata', 'durationchange'].forEach((eventName) => {
+            video.addEventListener(eventName, renderPreviewMediaTransform);
         });
         return video;
     }
@@ -1767,15 +1788,15 @@
 
         if (preset && preset.resolution && preset.resolution.width && preset.resolution.height) {
             return {
-                width: Number(preset.resolution.width) || 1280,
-                height: Number(preset.resolution.height) || 720,
+                width: Number(preset.resolution.width) || 1920,
+                height: Number(preset.resolution.height) || 1080,
                 fps: Number(preset.fps) || 30,
             };
         }
 
         return {
-            width: 1280,
-            height: 720,
+            width: 1920,
+            height: 1080,
             fps: 30,
         };
     }
@@ -1791,6 +1812,8 @@
         state.programWidth = resolution.width;
         state.programHeight = resolution.height;
         state.programFrameRate = resolution.fps;
+
+        renderPreviewMediaTransform();
 
         if (state.programCanvas) {
             state.programCanvas.width = state.programWidth;

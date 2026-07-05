@@ -48,7 +48,7 @@ class VH360_Studio_Database {
             live_video_id bigint(20) unsigned DEFAULT NULL,
             room_id varchar(191) NOT NULL DEFAULT '',
             recording_mode varchar(40) NOT NULL DEFAULT 'browser',
-            quality_preset varchar(40) NOT NULL DEFAULT 'standard_720p',
+            quality_preset varchar(40) NOT NULL DEFAULT 'high_1080p',
             storage_provider varchar(80) NOT NULL DEFAULT 'videopress',
             status varchar(40) NOT NULL DEFAULT 'created',
             browser_session_id varchar(191) DEFAULT NULL,
