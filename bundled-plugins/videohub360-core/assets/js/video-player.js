@@ -27,6 +27,8 @@ if (typeof window !== 'undefined') {
     var skipDelay = 5;
     var skipSecondsLeft = skipDelay;
     var skipInterval;
+    var adFailureTimer = null;
+    var adStartTimer = null;
 
     // New variables for mid-roll and post-roll functionality
     var midrollAdUrl = '';
@@ -38,6 +40,7 @@ if (typeof window !== 'undefined') {
     var pausedVideoTime = 0;
     var currentAdType = 'preroll'; // 'preroll', 'midroll', 'postroll'
     var hasInitializedAdTracking = false;
+    var hasBoundAdFailureHandlers = false;
     
     // Ad click-through variables
     var adClickUrls = {
@@ -155,6 +158,8 @@ if (typeof window !== 'undefined') {
     }
 
     function showMainContent() {
+        clearAdFailureTimers();
+
         // Stop ad video playback and reset
         if (adVideo) {
             adVideo.pause();
@@ -173,6 +178,137 @@ if (typeof window !== 'undefined') {
             if (playPromise) playPromise.catch(function(){});
         }
         isPlayingAd = false;
+        currentAdType = null;
+    }
+
+    function clearAdFailureTimers() {
+        if (adFailureTimer) {
+            clearTimeout(adFailureTimer);
+            adFailureTimer = null;
+        }
+        if (adStartTimer) {
+            clearTimeout(adStartTimer);
+            adStartTimer = null;
+        }
+    }
+
+    function recoverFromAdFailure(reason) {
+        var failedAdType = currentAdType;
+        clearAdFailureTimers();
+        if (skipInterval) {
+            clearInterval(skipInterval);
+            skipInterval = null;
+        }
+        if (skipMsg) skipMsg.style.display = 'none';
+        if (skipBtn) skipBtn.style.display = 'none';
+
+        isPlayingAd = false;
+
+        if (adVideo) {
+            try {
+                adVideo.pause();
+                adVideo.removeAttribute('src');
+                var currentAdSource = adVideo.querySelector('source');
+                if (currentAdSource) {
+                    currentAdSource.removeAttribute('src');
+                }
+                adVideo.load();
+            } catch (error) {}
+        }
+
+        if (adContainer) {
+            adContainer.classList.add('videohub360-hide');
+        }
+
+        if (mainContainer) {
+            mainContainer.classList.remove('videohub360-hide');
+        }
+
+        if (posterWrap && mainVideo && !mainVideo.paused) {
+            posterWrap.classList.add('videohub360-hide');
+        }
+
+        if (failedAdType === 'midroll' && mainVideo) {
+            if (pausedVideoTime > 0) {
+                mainVideo.currentTime = pausedVideoTime;
+                pausedVideoTime = 0;
+            }
+            var midrollPromise = mainVideo.play && mainVideo.play();
+            if (midrollPromise) midrollPromise.catch(function(){});
+        } else if (failedAdType === 'preroll' && mainVideo) {
+            if (posterWrap) posterWrap.classList.add('videohub360-hide');
+            var prerollPromise = mainVideo.play && mainVideo.play();
+            if (prerollPromise) prerollPromise.catch(function(){});
+        }
+
+        currentAdType = null;
+    }
+
+    function scheduleAdFailureRecovery(reason) {
+        if (!isPlayingAd) {
+            return;
+        }
+
+        if (adFailureTimer) {
+            clearTimeout(adFailureTimer);
+        }
+
+        adFailureTimer = setTimeout(function() {
+            if (isPlayingAd && adVideo && (adVideo.readyState < 2 || adVideo.paused)) {
+                recoverFromAdFailure(reason);
+            }
+        }, 4000);
+    }
+
+    function scheduleAdStartTimeout(reason) {
+        if (adStartTimer) {
+            clearTimeout(adStartTimer);
+        }
+
+        adStartTimer = setTimeout(function() {
+            if (isPlayingAd && adVideo && (adVideo.readyState < 2 || adVideo.currentTime === 0 || adVideo.paused)) {
+                recoverFromAdFailure(reason);
+            }
+        }, 5000);
+    }
+
+    function markAdPlaybackStarted() {
+        if (adStartTimer) {
+            clearTimeout(adStartTimer);
+            adStartTimer = null;
+        }
+        if (adFailureTimer) {
+            clearTimeout(adFailureTimer);
+            adFailureTimer = null;
+        }
+    }
+
+    function bindAdVideoFailureHandlers() {
+        if (!adVideo || hasBoundAdFailureHandlers) {
+            return;
+        }
+
+        hasBoundAdFailureHandlers = true;
+
+        adVideo.addEventListener('error', function() {
+            if (isPlayingAd) {
+                recoverFromAdFailure('ad_video_error');
+            }
+        });
+
+        ['stalled', 'abort', 'emptied'].forEach(function(eventName) {
+            adVideo.addEventListener(eventName, function() {
+                scheduleAdFailureRecovery('ad_' + eventName);
+            });
+        });
+
+        ['playing', 'timeupdate', 'loadeddata'].forEach(function(eventName) {
+            adVideo.addEventListener(eventName, function() {
+                if (isPlayingAd) {
+                    markAdPlaybackStarted();
+                }
+            });
+        });
     }
 
     function isValidAdUrl(adUrl) {
@@ -232,6 +368,7 @@ if (typeof window !== 'undefined') {
             return false;
         }
 
+        clearAdFailureTimers();
         adType = adType || 'preroll';
         currentAdType = adType;
         isPlayingAd = true;
@@ -273,7 +410,12 @@ if (typeof window !== 'undefined') {
             adVideo.currentTime = 0;
             adVideo.muted = false;
             var playPromise = adVideo.play && adVideo.play();
-            if (playPromise) playPromise.catch(function(){});
+            scheduleAdStartTimeout('ad_start_timeout');
+            if (playPromise && typeof playPromise.catch === 'function') {
+                playPromise.catch(function() {
+                    recoverFromAdFailure('ad_play_rejected');
+                });
+            }
         }
         
         // Set up skip countdown
@@ -300,6 +442,7 @@ if (typeof window !== 'undefined') {
     }
 
     function handleAdEnd() {
+        clearAdFailureTimers();
         if (currentAdType === 'postroll') {
             // Post-roll ended, video is complete
             // Stop ad video playback and reset
@@ -312,6 +455,7 @@ if (typeof window !== 'undefined') {
             if (mainContainer) mainContainer.classList.remove('videohub360-hide');
             // Don't resume main video since it's already ended
             isPlayingAd = false;
+            currentAdType = null;
         } else {
             // Pre-roll or mid-roll ended, continue main video
             showMainContent();
@@ -324,6 +468,7 @@ if (typeof window !== 'undefined') {
         }
 
         if (!prepareAdPlayback(midrollAdUrl)) {
+            shownMidrollAds.push(timeSeconds);
             if (mainContainer) mainContainer.classList.remove('videohub360-hide');
             if (adContainer) adContainer.classList.add('videohub360-hide');
             return false;
@@ -408,6 +553,8 @@ if (typeof window !== 'undefined') {
 
     // Set up video event listeners for mid-roll and post-roll
     function setupVideoEventListeners() {
+        bindAdVideoFailureHandlers();
+
         // Skip event listener setup for custom HTML videos
         if (isCustomHtmlVideo()) {
             // Still set up ad control event listeners for pre-roll ads
