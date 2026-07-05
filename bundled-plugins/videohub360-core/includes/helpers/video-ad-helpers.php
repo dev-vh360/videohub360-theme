@@ -16,6 +16,30 @@ if (!function_exists('videohub360_has_valid_ad_url')) {
     }
 }
 
+// Helper function to sanitize comma-separated mid-roll timings into positive integer seconds
+if (!function_exists('videohub360_sanitize_midroll_timing')) {
+    function videohub360_sanitize_midroll_timing($timing) {
+        if (is_array($timing)) {
+            $timing = implode(',', $timing);
+        }
+
+        $parts = explode(',', (string) $timing);
+        $clean = array();
+
+        foreach ($parts as $part) {
+            $seconds = absint(trim($part));
+            if ($seconds > 0) {
+                $clean[] = $seconds;
+            }
+        }
+
+        $clean = array_values(array_unique($clean));
+        sort($clean, SORT_NUMERIC);
+
+        return implode(',', $clean);
+    }
+}
+
 // Helper function to determine which ad types should be active for the current video
 if (!function_exists('videohub360_get_active_ads')) {
     function videohub360_get_active_ads($post_id) {
@@ -36,14 +60,16 @@ if (!function_exists('videohub360_get_active_ads')) {
             $midroll_url = get_option('videohub360_global_midroll_ad_url', '');
         }
         if (videohub360_has_valid_ad_url($midroll_url)) {
-            $active_ads['midroll'] = $midroll_url;
-
-            // Also get timing for midroll ads
             $midroll_timing = get_post_meta($post_id, 'midroll_ad_timing', true);
             if (empty($midroll_timing)) {
                 $midroll_timing = get_option('videohub360_global_midroll_timing', '30,60,120');
             }
-            $active_ads['midroll_timing'] = $midroll_timing;
+            $midroll_timing = videohub360_sanitize_midroll_timing($midroll_timing);
+
+            if (!empty($midroll_timing)) {
+                $active_ads['midroll'] = $midroll_url;
+                $active_ads['midroll_timing'] = $midroll_timing;
+            }
         }
 
         // Check postroll ad

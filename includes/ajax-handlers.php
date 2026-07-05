@@ -916,8 +916,12 @@ class VH360_Ajax_Handlers {
         // Ad settings
         $ad_video_url = isset($_POST['vh360_ad_video_url']) ? esc_url_raw($_POST['vh360_ad_video_url']) : '';
         $midroll_ad_video_url = isset($_POST['vh360_midroll_ad_video_url']) ? esc_url_raw($_POST['vh360_midroll_ad_video_url']) : '';
-        $midroll_ad_timing = isset($_POST['vh360_midroll_ad_timing']) ? absint($_POST['vh360_midroll_ad_timing']) : 0;
+        $raw_midroll_ad_timing = isset($_POST['vh360_midroll_ad_timing']) ? wp_unslash($_POST['vh360_midroll_ad_timing']) : '';
+        $midroll_ad_timing = function_exists('videohub360_sanitize_midroll_timing')
+            ? videohub360_sanitize_midroll_timing($raw_midroll_ad_timing)
+            : preg_replace('/[^0-9,]/', '', sanitize_text_field($raw_midroll_ad_timing));
         $postroll_ad_video_url = isset($_POST['vh360_postroll_ad_video_url']) ? esc_url_raw($_POST['vh360_postroll_ad_video_url']) : '';
+        $postroll_ad_enabled = isset($_POST['vh360_postroll_ad_enabled']) && 'yes' === sanitize_text_field(wp_unslash($_POST['vh360_postroll_ad_enabled'])) ? 'yes' : 'no';
         
         // Advanced settings
         $override_quality = isset($_POST['vh360_override_quality']) ? 'yes' : 'no';
@@ -1013,12 +1017,13 @@ class VH360_Ajax_Handlers {
         update_post_meta($post_id, 'video_url', $video_url);
         update_post_meta($post_id, 'videohub360_custom_html', $custom_html);
 
-        $ad_settings_submitted = isset($_POST['vh360_ad_video_url']) || isset($_POST['vh360_midroll_ad_video_url']) || isset($_POST['vh360_midroll_ad_timing']) || isset($_POST['vh360_postroll_ad_video_url']);
+        $ad_settings_submitted = isset($_POST['vh360_ad_video_url']) || isset($_POST['vh360_midroll_ad_video_url']) || isset($_POST['vh360_midroll_ad_timing']) || isset($_POST['vh360_postroll_ad_video_url']) || isset($_POST['vh360_postroll_ad_enabled']);
         if (!$edit_mode || $ad_settings_submitted) {
             update_post_meta($post_id, 'ad_video_url', $ad_video_url);
             update_post_meta($post_id, 'midroll_ad_video_url', $midroll_ad_video_url);
             update_post_meta($post_id, 'midroll_ad_timing', $midroll_ad_timing);
             update_post_meta($post_id, 'postroll_ad_video_url', $postroll_ad_video_url);
+            update_post_meta($post_id, 'postroll_ad_enabled', $postroll_ad_enabled);
         }
 
         $advanced_settings_submitted = isset($_POST['vh360_override_quality']) || isset($_POST['vh360_video_quality']) || isset($_POST['vh360_video_mirror']) || isset($_POST['vh360_poster_url']);

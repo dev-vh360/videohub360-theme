@@ -61,6 +61,7 @@ if (isset($_GET['edit']) && !empty($_GET['edit'])) {
             'midroll_ad_url' => get_post_meta($edit_video_id, 'midroll_ad_video_url', true),
             'midroll_timing' => get_post_meta($edit_video_id, 'midroll_ad_timing', true),
             'postroll_ad_url' => get_post_meta($edit_video_id, 'postroll_ad_video_url', true),
+            'postroll_ad_enabled' => get_post_meta($edit_video_id, 'postroll_ad_enabled', true),
             'quality_override' => get_post_meta($edit_video_id, '_vh360_override_quality_settings', true),
             'video_quality' => get_post_meta($edit_video_id, '_vh360_video_quality', true),
             'video_mirror' => get_post_meta($edit_video_id, '_vh360_video_mirror', true),
@@ -1069,17 +1070,17 @@ $locations = get_terms(array(
                         <?php esc_html_e('Mid-roll Ad Timing (seconds)', 'videohub360-theme'); ?>
                     </label>
                     <input 
-                        type="number" 
+                        type="text"
                         id="vh360_midroll_ad_timing" 
                         name="vh360_midroll_ad_timing" 
                         class="vh360-input"
-                        min="0"
-                        step="1"
-                        placeholder="<?php esc_attr_e('60', 'videohub360-theme'); ?>"
+                        inputmode="numeric"
+                        pattern="[0-9, ]*"
+                        placeholder="<?php esc_attr_e('30,60,120', 'videohub360-theme'); ?>"
                         value="<?php echo esc_attr($video_data['midroll_timing'] ?? ''); ?>"
                     >
                     <p class="vh360-form-help">
-                        <?php esc_html_e('Time in seconds when the mid-roll ad should play', 'videohub360-theme'); ?>
+                        <?php esc_html_e('Comma-separated times in seconds when mid-roll ads should play, for example 30,60,120.', 'videohub360-theme'); ?>
                     </p>
                 </div>
 
@@ -1098,6 +1099,20 @@ $locations = get_terms(array(
                     <p class="vh360-form-help">
                         <?php echo esc_html($vh360_create_labels['ad_postroll_help']); ?>
                     </p>
+                </div>
+
+                <div class="vh360-form-field">
+                    <label class="vh360-checkbox-label">
+                        <input type="hidden" name="vh360_postroll_ad_enabled" value="no">
+                        <input
+                            type="checkbox"
+                            id="vh360_postroll_ad_enabled"
+                            name="vh360_postroll_ad_enabled"
+                            value="yes"
+                            <?php checked(($video_data['postroll_ad_enabled'] ?? ''), 'yes'); ?>
+                        >
+                        <?php esc_html_e('Enable post-roll ad for this video', 'videohub360-theme'); ?>
+                    </label>
                 </div>
 
             </div>

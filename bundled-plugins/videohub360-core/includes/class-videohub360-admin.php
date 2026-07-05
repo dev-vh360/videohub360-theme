@@ -320,7 +320,13 @@ class VideoHub360_Admin {
             
             // Update global mid-roll and post-roll ad settings
             update_option('videohub360_global_midroll_ad_url', esc_url_raw($_POST['videohub360_global_midroll_ad_url']));
-            update_option('videohub360_global_midroll_timing', sanitize_text_field($_POST['videohub360_global_midroll_timing']));
+            $global_midroll_timing = isset($_POST['videohub360_global_midroll_timing']) ? wp_unslash($_POST['videohub360_global_midroll_timing']) : '';
+            update_option(
+                'videohub360_global_midroll_timing',
+                function_exists('videohub360_sanitize_midroll_timing')
+                    ? videohub360_sanitize_midroll_timing($global_midroll_timing)
+                    : preg_replace('/[^0-9,]/', '', sanitize_text_field($global_midroll_timing))
+            );
             update_option('videohub360_global_postroll_ad_url', esc_url_raw($_POST['videohub360_global_postroll_ad_url']));
             update_option('videohub360_global_postroll_enabled', isset($_POST['videohub360_global_postroll_enabled']) ? 1 : 0);
             
@@ -2073,10 +2079,10 @@ class VideoHub360_Admin {
             update_post_meta($post_id, 'midroll_ad_video_url', esc_url_raw($_POST['videohub360_midroll_ad_url']));
         }
         if (isset($_POST['videohub360_midroll_timing'])) {
-            // Validate and clean timing values (comma-separated seconds)
-            $timing = sanitize_text_field($_POST['videohub360_midroll_timing']);
-            // Remove any invalid characters and ensure only numbers and commas
-            $timing = preg_replace('/[^0-9,]/', '', $timing);
+            $raw_timing = wp_unslash($_POST['videohub360_midroll_timing']);
+            $timing = function_exists('videohub360_sanitize_midroll_timing')
+                ? videohub360_sanitize_midroll_timing($raw_timing)
+                : preg_replace('/[^0-9,]/', '', sanitize_text_field($raw_timing));
             update_post_meta($post_id, 'midroll_ad_timing', $timing);
         }
         if (isset($_POST['videohub360_postroll_ad_url'])) {
