@@ -58,17 +58,25 @@ class VH360_Studio_Publitio_Client {
             return new WP_Error( 'vh360_studio_publitio_credentials_missing', __( 'Publitio API key and secret are required.', 'videohub360-studio' ), array( 'status' => 400 ) );
         }
 
-        $mime_type = $mime_type ? sanitize_mime_type( $mime_type ) : 'application/octet-stream';
-        $filename  = $filename ? sanitize_file_name( $filename ) : basename( $path );
-        $url       = add_query_arg( array_merge( $this->auth_params(), $params ), self::API_BASE . '/files/create' );
-        $curl      = curl_init( $url );
+        $mime_type   = $mime_type ? sanitize_mime_type( $mime_type ) : 'application/octet-stream';
+        $filename    = $filename ? sanitize_file_name( $filename ) : basename( $path );
+        $auth        = $this->auth_params();
+        $url         = self::API_BASE . '/files/create?' . http_build_query( $auth, '', '&', PHP_QUERY_RFC3986 );
+        $post_fields = $this->sanitize_upload_params( $params );
+
+        if ( ! filter_var( $url, FILTER_VALIDATE_URL ) ) {
+            return new WP_Error( 'vh360_studio_publitio_upload_url_invalid', __( 'Publitio upload could not start because the upload URL was invalid.', 'videohub360-studio' ), array( 'status' => 500 ) );
+        }
+
+        $post_fields['file'] = new CURLFile( $path, $mime_type, $filename );
+        $curl                = curl_init( $url );
         if ( ! $curl ) {
             return new WP_Error( 'vh360_studio_publitio_curl_init_failed', __( 'Publitio upload failed before reaching the API.', 'videohub360-studio' ), array( 'status' => 500 ) );
         }
 
         curl_setopt_array( $curl, array(
             CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => array( 'file' => new CURLFile( $path, $mime_type, $filename ) ),
+            CURLOPT_POSTFIELDS     => $post_fields,
             CURLOPT_HTTPHEADER     => array( 'Accept: application/json' ),
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT        => (int) apply_filters( 'vh360_studio_publitio_upload_timeout', 300 ),
@@ -76,19 +84,57 @@ class VH360_Studio_Publitio_Client {
 
         $body       = curl_exec( $curl );
         $errno      = curl_errno( $curl );
-        $curl_error = curl_error( $curl );
         $code       = absint( curl_getinfo( $curl, CURLINFO_RESPONSE_CODE ) );
         curl_close( $curl );
 
         if ( $errno ) {
-            $message = CURLE_OPERATION_TIMEDOUT === $errno ? __( 'Publitio upload timed out.', 'videohub360-studio' ) : __( 'Publitio upload failed before reaching the API.', 'videohub360-studio' );
-            if ( $curl_error ) {
-                $message .= ' ' . wp_html_excerpt( sanitize_text_field( $curl_error ), 120, '…' );
+            if ( defined( 'CURLE_URL_MALFORMAT' ) && CURLE_URL_MALFORMAT === $errno ) {
+                $message = __( 'Publitio upload could not start because the upload request URL was invalid.', 'videohub360-studio' );
+            } elseif ( CURLE_OPERATION_TIMEDOUT === $errno ) {
+                $message = __( 'Publitio upload timed out.', 'videohub360-studio' );
+            } else {
+                $message = __( 'Publitio upload failed before reaching the API.', 'videohub360-studio' );
             }
             return new WP_Error( 'vh360_studio_publitio_upload_transport_failed', $message, array( 'status' => 502 ) );
         }
 
         return $this->parse_response_body( $body, $code );
+    }
+
+    private function sanitize_upload_params( array $params ) {
+        $clean = array();
+
+        foreach ( $params as $key => $value ) {
+            if ( ! is_scalar( $value ) ) {
+                continue;
+            }
+
+            $key   = sanitize_key( $key );
+            $value = preg_replace( '/[\x00-\x1F\x7F]/u', ' ', (string) $value );
+            $value = trim( sanitize_text_field( $value ) );
+
+            if ( '' === $key || '' === $value ) {
+                continue;
+            }
+
+            if ( 'public_id' === $key ) {
+                $value = sanitize_title( $value );
+            } elseif ( in_array( $key, array( 'privacy', 'option_download', 'option_hls' ), true ) ) {
+                if ( ! in_array( $value, array( '0', '1' ), true ) ) {
+                    continue;
+                }
+            } elseif ( 'option_ad' === $key ) {
+                if ( ! in_array( $value, array( '0', '1', '2' ), true ) ) {
+                    continue;
+                }
+            }
+
+            if ( '' !== $value ) {
+                $clean[ $key ] = $value;
+            }
+        }
+
+        return $clean;
     }
 
     private function request( $method, $path, array $params = array(), $multipart = false ) {

@@ -111,14 +111,15 @@ class VH360_Studio_Admin {
     public function test_publitio_upload() {
         if ( ! current_user_can( 'manage_options' ) ) { wp_die( esc_html__( 'You are not allowed to manage Studio settings.', 'videohub360-studio' ) ); }
         check_admin_referer( 'vh360_studio_test_publitio_upload' );
-        $tmp = wp_tempnam( 'vh360-studio-publitio-test.txt' );
+        $tmp = wp_tempnam( 'vh360-studio-publitio-test.png' );
         $status = 'failed';
         $error = '';
-        if ( ! $tmp || false === file_put_contents( $tmp, 'VH360 Studio Publitio upload test ' . gmdate( 'c' ) ) ) {
+        $png = base64_decode( 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=', true );
+        if ( ! $tmp || ! $png || false === file_put_contents( $tmp, $png ) ) {
             $error = __( 'Unable to create a local Publitio upload test file.', 'videohub360-studio' );
         } else {
             $client = new VH360_Studio_Publitio_Client();
-            $result = $client->create_file( $tmp, array( 'title' => 'VH360 Studio upload test', 'privacy' => '0', 'option_download' => '0', 'option_hls' => '0', 'option_ad' => '0' ), 'text/plain', basename( $tmp ) );
+            $result = $client->create_file( $tmp, array( 'title' => 'VH360 Studio upload test', 'privacy' => '0', 'option_download' => '0', 'option_hls' => '0', 'option_ad' => '0' ), 'image/png', 'vh360-studio-publitio-test.png' );
             if ( is_wp_error( $result ) ) {
                 $error = sanitize_text_field( $result->get_error_message() );
             } else {
