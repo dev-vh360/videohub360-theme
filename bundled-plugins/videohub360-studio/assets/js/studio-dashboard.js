@@ -1902,12 +1902,10 @@
         if (!els.qualityDetails || !els.qualitySelect) {
             return;
         }
-        const preset = (config.qualityPresets || {})[els.qualitySelect.value];
-        if (!preset) {
-            return;
-        }
+        const preset = getSelectedPreset();
         const resolution = preset.resolution ? preset.resolution.width + '×' + preset.resolution.height : '';
-        els.qualityDetails.textContent = preset.label + ' · ' + resolution + ' · ' + preset.fps + 'fps';
+        const bitrate = preset.video_bitrate ? ' · ~' + Math.round(Number(preset.video_bitrate) / 1000000 * 10) / 10 + ' Mbps video' : '';
+        els.qualityDetails.textContent = preset.label + ' · ' + resolution + ' · ' + preset.fps + 'fps' + bitrate + '. Higher quality creates larger files and longer uploads.';
     }
 
 
@@ -1957,8 +1955,15 @@
         renderSelectedMediaControls();
     }
 
+    function getSelectedPresetKey() {
+        const presets = config.qualityPresets || {};
+        const selected = els.qualitySelect ? els.qualitySelect.value : config.defaultQualityPreset;
+        return presets[selected] ? selected : (presets[config.defaultQualityPreset] ? config.defaultQualityPreset : Object.keys(presets)[0]);
+    }
+
     function getSelectedPreset() {
-        return (config.qualityPresets || {})[els.qualitySelect ? els.qualitySelect.value : config.defaultQualityPreset] || (config.qualityPresets || {})[config.defaultQualityPreset] || {};
+        const presets = config.qualityPresets || {};
+        return presets[getSelectedPresetKey()] || {};
     }
 
     function buildVideoConstraints(preset) {
@@ -2055,7 +2060,7 @@
         if (state.activeJobId) {
             return state.activeJobId;
         }
-        const job = await api('/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ recording_mode: 'browser', source_type: 'studio_setup', source_id: 'studio-recording-' + Date.now(), quality_preset: els.qualitySelect ? els.qualitySelect.value : config.defaultQualityPreset }) });
+        const job = await api('/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ recording_mode: 'browser', source_type: 'studio_setup', source_id: 'studio-recording-' + Date.now(), quality_preset: getSelectedPresetKey() }) });
         state.activeJobId = job.id;
         appendRecentJob(job);
         return job.id;
@@ -2098,10 +2103,6 @@
             }
             jobId = await ensureSetupJob();
             const mimeType = preferredMimeType();
-            const start = await api('/jobs/' + jobId + '/recording/start', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ mime_type: mimeType }) });
-            serverRecordingStarted = true;
-            state.browserSessionId = start.browser_session_id;
-            state.selectedMimeType = mimeType;
             state.chunkIndex = 0;
             state.uploadedChunks.clear();
             state.failedChunks.clear();
@@ -2109,10 +2110,14 @@
             state.recordingStartedAt = Date.now();
             const preset = getSelectedPreset();
             const options = { mimeType: mimeType };
-            if (preset.video_bitrate) { options.videoBitsPerSecond = preset.video_bitrate; }
-            if (preset.audio_bitrate) { options.audioBitsPerSecond = preset.audio_bitrate; }
+            if (preset.video_bitrate) { options.videoBitsPerSecond = Number(preset.video_bitrate); }
+            if (preset.audio_bitrate) { options.audioBitsPerSecond = Number(preset.audio_bitrate); }
             state.recorder = new window.MediaRecorder(state.recordingStream, options);
-            state.selectedMimeType = state.recorder.mimeType || mimeType || start.mime_type;
+            state.selectedMimeType = state.recorder.mimeType || mimeType;
+            const start = await api('/jobs/' + jobId + '/recording/start', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ mime_type: state.selectedMimeType }) });
+            serverRecordingStarted = true;
+            state.browserSessionId = start.browser_session_id;
+            state.selectedMimeType = start.mime_type || state.selectedMimeType;
             state.recorder.addEventListener('dataavailable', (event) => {
                 if (event.data && event.data.size) {
                     const finalMimeType = event.data.type || (state.recorder && state.recorder.mimeType) || state.selectedMimeType;
@@ -2148,6 +2153,15 @@
         renderRecordingState();
     }
 
+
+    async function sha256Blob(blob) {
+        if (!window.crypto || !window.crypto.subtle || !blob || typeof blob.arrayBuffer !== 'function') {
+            return '';
+        }
+        const digest = await window.crypto.subtle.digest('SHA-256', await blob.arrayBuffer());
+        return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+    }
+
     async function uploadChunk(blob, index) {
         try {
             setRecordingStatus(strings.uploadingChunk, 'info');
@@ -2156,6 +2170,8 @@
             form.append('chunk_index', String(index));
             const finalMimeType = blob.type || state.selectedMimeType;
             form.append('mime_type', finalMimeType);
+            const checksum = await sha256Blob(blob);
+            if (checksum) { form.append('chunk_checksum', checksum); }
             form.append('chunk', blob, 'chunk-' + index + recordingExtension(finalMimeType));
             const summary = await api('/jobs/' + state.activeJobId + '/chunks', { method: 'POST', body: form });
             state.pendingUploads.delete(index);
@@ -2165,7 +2181,7 @@
         } catch (error) {
             state.pendingUploads.delete(index);
             state.failedChunks.set(index, blob);
-            setRecordingStatus(strings.chunkUploadFailed, 'error');
+            setRecordingStatus((error && error.message) || strings.chunkUploadFailed, 'error');
         }
         renderRecordingState();
     }
@@ -2218,7 +2234,14 @@
     }
 
     async function finalizeRecording() {
-        if (state.failedChunks.size || state.pendingUploads.size) { return; }
+        if (state.failedChunks.size || state.pendingUploads.size) {
+            setRecordingStatus('Retry failed chunks during this session before preparing the replay.', 'warning');
+            return;
+        }
+        if (!state.finalChunkCount) {
+            setRecordingStatus('No recording chunks were captured. Start a new recording and try again.', 'error');
+            return;
+        }
         try {
             if (els.recordingFinalizeStatus) { els.recordingFinalizeStatus.textContent = strings.finalizing; }
             if (els.finalizeRecording) { els.finalizeRecording.disabled = true; }
@@ -2697,7 +2720,7 @@
             agora_everyone_is_host: mode === 'interactive' && !!(els.broadcastEveryoneHost && els.broadcastEveryoneHost.checked),
             require_passcode: mode === 'interactive' && !!(els.broadcastRequirePasscode && els.broadcastRequirePasscode.checked),
             host_passcode: els.broadcastPasscode ? els.broadcastPasscode.value : '',
-            quality_preset: els.qualitySelect ? els.qualitySelect.value : config.defaultQualityPreset,
+            quality_preset: getSelectedPresetKey(),
             featured_image_id: featuredImageId,
             clear_featured_image: !featuredImageId && state.clearFeaturedImage,
         };

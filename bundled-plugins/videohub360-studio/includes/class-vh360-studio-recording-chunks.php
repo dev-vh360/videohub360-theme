@@ -69,7 +69,7 @@ class VH360_Studio_Recording_Chunks {
         return array( 'received_chunk_indexes' => $indexes, 'received_bytes' => $bytes, 'chunk_count' => count( $indexes ) );
     }
 
-    public function store_uploaded_chunk( $job, $browser_session_id, $chunk_index, $file, $declared_mime_type ) {
+    public function store_uploaded_chunk( $job, $browser_session_id, $chunk_index, $file, $declared_mime_type, $declared_checksum = '' ) {
         $settings = $this->upload_settings();
         $browser_session_id = sanitize_text_field( $browser_session_id );
         $chunk_index = absint( $chunk_index );
@@ -82,7 +82,11 @@ class VH360_Studio_Recording_Chunks {
         }
         $base_mime = $this->base_mime_type( $declared_mime_type ? $declared_mime_type : ( isset( $file['type'] ) ? $file['type'] : '' ) );
         if ( ! in_array( $base_mime, $settings['allowed_mime_types'], true ) ) {
-            return new WP_Error( 'vh360_studio_invalid_chunk_type', __( 'Recording chunk type is not allowed.', 'videohub360-studio' ), array( 'status' => 415 ) );
+            return new WP_Error( 'vh360_studio_invalid_chunk_type', __( 'Recording chunk type is not allowed. Use a supported MP4 or WebM recording format.', 'videohub360-studio' ), array( 'status' => 415 ) );
+        }
+        $job_mime = ! empty( $job['mime_type'] ) ? $this->base_mime_type( $job['mime_type'] ) : '';
+        if ( $job_mime && $job_mime !== $base_mime ) {
+            return new WP_Error( 'vh360_studio_chunk_type_mismatch', __( 'Recording chunk type does not match the recorder format saved for this job.', 'videohub360-studio' ), array( 'status' => 409 ) );
         }
         $summary = $this->received_summary( $job['id'], $browser_session_id );
         $existing_chunk_size = $this->get_existing_chunk_size( $job['id'], $browser_session_id, $chunk_index );
@@ -110,6 +114,11 @@ class VH360_Studio_Recording_Chunks {
         }
 
         $checksum = hash_file( 'sha256', $path );
+        $declared_checksum = strtolower( sanitize_text_field( wp_unslash( $declared_checksum ) ) );
+        if ( $declared_checksum && ( ! preg_match( '/^[a-f0-9]{64}$/', $declared_checksum ) || $checksum !== $declared_checksum ) ) {
+            @unlink( $path );
+            return new WP_Error( 'vh360_studio_chunk_checksum_mismatch', __( 'Recording chunk checksum did not match. Retry this chunk upload.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
         $this->upsert_chunk( $job, $browser_session_id, $chunk_index, $size, $base_mime, $path, $checksum );
         return $this->received_summary( $job['id'], $browser_session_id );
     }
@@ -118,7 +127,7 @@ class VH360_Studio_Recording_Chunks {
         $summary = $this->received_summary( $job['id'], $browser_session_id );
         $expected_chunks = absint( $expected_chunks );
         if ( 1 > $expected_chunks || $summary['chunk_count'] !== $expected_chunks ) {
-            return new WP_Error( 'vh360_studio_missing_chunks', __( 'Not all recording chunks have been received.', 'videohub360-studio' ), array( 'status' => 409 ) );
+            return new WP_Error( 'vh360_studio_missing_chunks', __( 'Not all expected recording chunks have been received. Retry failed chunks before preparing the replay.', 'videohub360-studio' ), array( 'status' => 409 ) );
         }
         for ( $i = 0; $i < $expected_chunks; $i++ ) {
             if ( ! in_array( $i, $summary['received_chunk_indexes'], true ) ) {

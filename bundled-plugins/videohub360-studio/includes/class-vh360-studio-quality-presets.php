@@ -57,7 +57,30 @@ class VH360_Studio_Quality_Presets {
      */
     public static function exists( $preset ) {
         $presets = self::get_presets();
-        return isset( $presets[ $preset ] );
+        return isset( $presets[ sanitize_key( $preset ) ] );
+    }
+
+    /**
+     * Return a safe preset ID, falling back to the Studio default.
+     *
+     * @param string $preset Preset ID.
+     * @return string
+     */
+    public static function normalize( $preset ) {
+        $preset = sanitize_key( $preset );
+        return self::exists( $preset ) ? $preset : self::DEFAULT_PRESET;
+    }
+
+    /**
+     * Get a controlled preset definition.
+     *
+     * @param string $preset Preset ID.
+     * @return array
+     */
+    public static function get_preset( $preset ) {
+        $presets = self::get_presets();
+        $preset  = self::normalize( $preset );
+        return isset( $presets[ $preset ] ) ? $presets[ $preset ] : $presets[ self::DEFAULT_PRESET ];
     }
 
     /**

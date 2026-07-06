@@ -251,7 +251,7 @@ $friendly_job_status = static function( $job ) {
                             <option value="<?php echo esc_attr( $preset_id ); ?>" <?php selected( $preset_id, $default_preset ); ?>><?php echo esc_html( $preset['label'] ); ?><?php if ( ! empty( $preset['recommended'] ) ) : ?> <?php esc_html_e( '(recommended)', 'videohub360-studio' ); ?><?php endif; ?></option>
                         <?php endforeach; ?>
                     </select>
-                    <p class="vh360-studio-help" data-quality-details><?php echo esc_html( $default_label ); ?></p>
+                    <p class="vh360-studio-help" data-quality-details><?php echo esc_html( $default_label ); ?> · <?php esc_html_e( 'Higher quality creates larger files and longer uploads; lower presets remain available for smaller recordings.', 'videohub360-studio' ); ?></p>
                 </div>
             </section>
 
@@ -316,9 +316,10 @@ $friendly_job_status = static function( $job ) {
                     <div class="vh360-studio-actions">
                         <button type="button" class="vh360-studio-button vh360-studio-button--primary" data-start-recording><?php esc_html_e( 'Start recording', 'videohub360-studio' ); ?></button>
                         <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-stop-recording hidden disabled><?php esc_html_e( 'Stop recording', 'videohub360-studio' ); ?></button>
-                        <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-retry-chunks hidden disabled><?php esc_html_e( 'Retry upload', 'videohub360-studio' ); ?></button>
+                        <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-retry-chunks hidden disabled><?php esc_html_e( 'Retry failed chunks', 'videohub360-studio' ); ?></button>
                         <button type="button" class="vh360-studio-button" data-finalize-recording hidden disabled><?php esc_html_e( 'Prepare replay', 'videohub360-studio' ); ?></button>
                     </div>
+                    <p class="vh360-studio-help"><?php esc_html_e( 'Studio uploads recordings in chunks and can retry failed chunks during this browser session.', 'videohub360-studio' ); ?></p>
                     <div class="vh360-studio-job-result" aria-live="polite" data-recording-status></div>
                     <div class="vh360-studio-actions">
                         <button type="button" class="vh360-studio-button vh360-studio-button--primary" data-publish-replay hidden disabled><?php esc_html_e( 'Publish replay', 'videohub360-studio' ); ?></button>

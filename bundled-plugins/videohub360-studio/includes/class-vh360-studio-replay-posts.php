@@ -102,8 +102,8 @@ class VH360_Studio_Replay_Posts {
         }
 
         $custom_html = '';
-        if ( 'local_media' === $provider && 'video/webm' === $this->recording_mime_type( $recording ) ) {
-            $custom_html = $this->render_local_media_iframe( $playback_url );
+        if ( 'local_media' === $provider ) {
+            $custom_html = $this->render_local_media_video( $playback_url, $poster_url, $this->recording_mime_type( $recording ) );
         } elseif ( $guid ) {
             $custom_html = $this->render_videopress_embed_html( $guid );
         }
@@ -164,37 +164,49 @@ class VH360_Studio_Replay_Posts {
         return new WP_Error( 'vh360_studio_live_replay_target_forbidden', __( 'You are not allowed to update the original livestream post.', 'videohub360-studio' ), array( 'status' => 403 ) );
     }
 
-    private function render_local_media_iframe( $playback_url ) {
+    private function render_local_media_video( $playback_url, $poster_url = '', $mime_type = '' ) {
         $playback_url = esc_url_raw( $playback_url );
+        $poster_url   = esc_url_raw( $poster_url );
+        $mime_type    = in_array( $mime_type, array( 'video/mp4', 'video/webm' ), true ) ? $mime_type : '';
         if ( ! $playback_url ) {
             return '';
         }
 
-        $iframe = sprintf(
-            '<iframe class="vh360-studio-local-media-embed" src="%s" title="%s" loading="lazy" allow="fullscreen" allowfullscreen style="width:100%%;aspect-ratio:16/9;border:0;"></iframe>',
+        $poster_attr = $poster_url ? ' poster="' . esc_url( $poster_url ) . '"' : '';
+        $type_attr   = $mime_type ? ' type="' . esc_attr( $mime_type ) . '"' : '';
+        $html        = sprintf(
+            '<video class="vh360-studio-local-media-embed" controls playsinline preload="metadata"%1$s style="width:100%%;height:auto;aspect-ratio:16/9;background:#000;"><source src="%2$s"%3$s><a href="%2$s" target="_blank" rel="noopener noreferrer">%4$s</a></video>',
+            $poster_attr,
             esc_url( $playback_url ),
-            esc_attr__( 'Local Media replay', 'videohub360-studio' )
+            $type_attr,
+            esc_html__( 'Open local replay file', 'videohub360-studio' )
         );
 
-        return wp_kses( $iframe, $this->allowed_local_media_embed_html() );
+        return wp_kses( $html, $this->allowed_local_media_embed_html() );
     }
 
     private function allowed_local_media_embed_html() {
         return apply_filters(
             'vh360_studio_allowed_local_media_embed_html',
             array(
-                'iframe' => array(
-                    'src'             => true,
-                    'width'           => true,
-                    'height'          => true,
-                    'frameborder'     => true,
-                    'allow'           => true,
-                    'allowfullscreen' => true,
-                    'title'           => true,
-                    'loading'         => true,
-                    'referrerpolicy'  => true,
-                    'style'           => true,
-                    'class'           => true,
+                'video'  => array_merge(
+                    $this->global_embed_attributes(),
+                    array(
+                        'controls'    => true,
+                        'playsinline' => true,
+                        'poster'      => true,
+                        'preload'     => true,
+                        'style'       => true,
+                    )
+                ),
+                'source' => array(
+                    'src'  => true,
+                    'type' => true,
+                ),
+                'a'      => array(
+                    'href'   => true,
+                    'target' => true,
+                    'rel'    => true,
                 ),
             )
         );

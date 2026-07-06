@@ -155,6 +155,7 @@ class VH360_Studio_REST_Controller {
                         'browser_session_id' => $this->get_browser_session_arg( true ),
                         'chunk_index'        => $this->get_non_negative_int_arg( true ),
                         'mime_type'          => $this->get_mime_type_arg( true ),
+                        'chunk_checksum'     => $this->get_checksum_arg( false ),
                     ),
                 ),
                 array(
@@ -504,6 +505,16 @@ class VH360_Studio_REST_Controller {
         );
     }
 
+    private function get_checksum_arg( $required ) {
+        return array(
+            'required'          => (bool) $required,
+            'sanitize_callback' => 'sanitize_text_field',
+            'validate_callback' => function( $value ) use ( $required ) {
+                return ! $required && ( null === $value || '' === $value ) || ( is_string( $value ) && preg_match( '/^[a-fA-F0-9]{64}$/', $value ) );
+            },
+        );
+    }
+
     private function get_browser_session_arg( $required ) {
         return array(
             'required'          => (bool) $required,
@@ -563,10 +574,7 @@ class VH360_Studio_REST_Controller {
             ),
             'quality_preset'   => array(
                 'required'          => false,
-                'sanitize_callback' => 'sanitize_key',
-                'validate_callback' => function( $value ) {
-                    return VH360_Studio_Quality_Presets::exists( sanitize_key( $value ) );
-                },
+                'sanitize_callback' => array( 'VH360_Studio_Quality_Presets', 'normalize' ),
             ),
         );
     }
@@ -771,7 +779,7 @@ class VH360_Studio_REST_Controller {
             'live_video_id'    => absint( $broadcast['videoId'] ),
             'room_id'          => sanitize_text_field( $broadcast['channelName'] ),
             'recording_mode'   => 'browser',
-            'quality_preset'   => sanitize_key( $request->get_param( 'quality_preset' ) ?: VH360_Studio_Quality_Presets::DEFAULT_PRESET ),
+            'quality_preset'   => VH360_Studio_Quality_Presets::normalize( $request->get_param( 'quality_preset' ) ?: VH360_Studio_Quality_Presets::DEFAULT_PRESET ),
             'storage_provider' => $this->default_replay_storage_provider(),
         ) );
         return rest_ensure_response( array( 'broadcast' => $broadcast, 'job' => $this->prepare_job_response( $job ) ) );
@@ -856,7 +864,7 @@ class VH360_Studio_REST_Controller {
         if ( null === $chunk_index || ! is_numeric( $chunk_index ) || 0 > intval( $chunk_index ) ) { return new WP_Error( 'vh360_studio_invalid_chunk_index', __( 'Invalid recording chunk index.', 'videohub360-studio' ), array( 'status' => 400 ) ); }
         $files = $request->get_file_params();
         if ( empty( $files['chunk'] ) ) { return new WP_Error( 'vh360_studio_missing_chunk', __( 'Missing uploaded recording chunk.', 'videohub360-studio' ), array( 'status' => 400 ) ); }
-        $summary = $this->chunks->store_uploaded_chunk( $job, $session, intval( $chunk_index ), $files['chunk'], $request->get_param( 'mime_type' ) );
+        $summary = $this->chunks->store_uploaded_chunk( $job, $session, intval( $chunk_index ), $files['chunk'], $request->get_param( 'mime_type' ), $request->get_param( 'chunk_checksum' ) );
         if ( is_wp_error( $summary ) ) { $this->jobs->mark_failed( $job['id'], get_current_user_id(), $summary->get_error_message() ); return $summary; }
         $summary['job_status'] = $job['status'];
         return rest_ensure_response( $summary );
