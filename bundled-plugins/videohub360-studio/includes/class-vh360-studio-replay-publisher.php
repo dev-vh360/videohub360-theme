@@ -172,7 +172,7 @@ class VH360_Studio_Replay_Publisher {
 
     private function provider_status_is_ready( array $status ) {
         $provider_status = ! empty( $status['provider_status'] ) ? sanitize_key( $status['provider_status'] ) : ( ! empty( $status['status'] ) ? sanitize_key( $status['status'] ) : '' );
-        return ( ! empty( $status['videopress_guid'] ) && ! empty( $status['attachment_id'] ) ) || ( ! empty( $status['publitio_file_id'] ) && ( ! empty( $status['playback_url'] ) || ! empty( $status['embed_url'] ) ) && in_array( $provider_status, array( 'publitio_ready', 'published', 'ready' ), true ) );
+        return ( ! empty( $status['videopress_guid'] ) && ! empty( $status['attachment_id'] ) ) || ( ! empty( $status['publitio_file_id'] ) && ( ! empty( $status['playback_url'] ) || ! empty( $status['embed_url'] ) ) && in_array( $provider_status, array( 'publitio_ready', 'publitio_direct_ready', 'published', 'ready' ), true ) );
     }
 
     private function complete_published_job( array $job, array $published, array $recording, VH360_Studio_Replay_Storage_Provider $provider ) {

@@ -2085,6 +2085,16 @@
         return state.recorder && state.recorder.state === 'recording';
     }
 
+    function isPublitioDirectMode() {
+        const direct = config.publitioDirectUpload || {};
+        return Boolean(
+            state.currentStorageProvider === 'publitio' &&
+            direct.enabled &&
+            direct.upload_mode === 'direct_browser' &&
+            direct.upload_preset_id
+        );
+    }
+
     async function startRecording() {
         const supportError = requiredSupportError('recording');
         if (supportError) {
@@ -2149,7 +2159,7 @@
                 if (event.data && event.data.size) {
                     const finalMimeType = event.data.type || (state.recorder && state.recorder.mimeType) || state.selectedMimeType;
                     const chunk = event.data.type === finalMimeType ? event.data : new Blob([event.data], { type: finalMimeType });
-                    queueRecordingBlob(chunk);
+                    handleRecordingBlob(chunk);
                 }
             });
             state.recorder.start((config.uploadSettings && config.uploadSettings.preferred_chunk_duration) || 5000);
@@ -2203,16 +2213,25 @@
         setRecordingStatus('Large recording data was split into smaller upload chunks.', 'info');
     }
 
+    function handleRecordingBlob(blob) {
+        if (isPublitioDirectMode()) {
+            rememberDirectUploadPart(blob, state.chunkIndex++);
+            renderRecordingState();
+            return;
+        }
+
+        queueRecordingBlob(blob);
+    }
+
     function queueChunk(blob, index) {
         state.pendingUploads.add(index);
-        rememberDirectUploadPart(blob, index);
         uploadChunk(blob, index).catch(() => {});
         renderRecordingState();
     }
 
     function rememberDirectUploadPart(blob, index) {
         const direct = config.publitioDirectUpload || {};
-        if (!direct.enabled || !state.directUploadAvailable || !blob || !blob.size) {
+        if (!isPublitioDirectMode() || !state.directUploadAvailable || !blob || !blob.size) {
             return;
         }
         const maxSize = Number(direct.max_size || 0);
@@ -2220,6 +2239,7 @@
             state.directUploadAvailable = false;
             state.directUploadParts.clear();
             state.directUploadBytes = 0;
+            setRecordingStatus('Direct Publitio upload limit was exceeded. Use server relay mode for very long recordings.', 'warning');
             return;
         }
         state.directUploadParts.set(Number(index), blob);
@@ -2348,7 +2368,7 @@
             state.finalChunkCount = state.chunkIndex;
             state.recorder = null;
             setShellClass('is-recording', false);
-            setRecordingStatus(strings.uploadingChunk, 'info');
+            setRecordingStatus(isPublitioDirectMode() ? 'Recording stopped. Ready to upload directly to Publitio.' : strings.uploadingChunk, 'info');
             renderRecordingState();
             updateOperatorStatus();
             return true;
@@ -2371,6 +2391,22 @@
         }
         if (!state.recordingStoppedAt) {
             await stopLocalRecording();
+        }
+        if (isPublitioDirectMode()) {
+            try {
+                const job = await confirmServerStop();
+                setRecordingStatus('Recording stopped. Ready to upload directly to Publitio.', 'success');
+                return job;
+            } catch (error) {
+                state.stopFailed = true;
+                state.serverStopConfirmed = false;
+                state.currentJobStatus = 'stop_failed';
+                setRecordingStatus((error && error.message) || 'Server stop confirmation failed. Retry stop before publishing.', 'error');
+                throw error;
+            } finally {
+                renderRecordingState();
+                updateOperatorStatus();
+            }
         }
         if (state.failedChunks.size) {
             setRecordingStatus('Some chunks failed to upload. Retry failed chunks before preparing the replay.', 'warning');
@@ -2491,7 +2527,8 @@
     }
 
     function updatePublishingButtons() {
-        const canPublish = Boolean(state.activeJobId) && state.currentJobStatus === 'processing';
+        const directReady = isPublitioDirectMode() && state.recordingStoppedAt && state.serverStopConfirmed && state.directUploadParts.size && state.directUploadAvailable && state.currentJobStatus !== 'ready';
+        const canPublish = Boolean(state.activeJobId) && (state.currentJobStatus === 'processing' || directReady);
         if (els.publishReplay) {
             els.publishReplay.hidden = !canPublish;
             els.publishReplay.disabled = !canPublish;
@@ -2535,7 +2572,7 @@
 
     function canDirectUploadToPublitio() {
         const direct = config.publitioDirectUpload || {};
-        return Boolean(direct.enabled && state.currentStorageProvider === 'publitio' && state.directUploadAvailable && state.directUploadParts.size && window.XMLHttpRequest && window.FormData);
+        return Boolean(isPublitioDirectMode() && state.recordingStoppedAt && state.serverStopConfirmed && state.directUploadAvailable && state.directUploadParts.size && window.XMLHttpRequest && window.FormData);
     }
 
     function buildDirectUploadBlob() {
@@ -2599,7 +2636,7 @@
         }
 
         setPublishingStatus(strings.publitioDirectUploading || 'Uploading directly to Publitio…', 'info');
-        const auth = await api('/jobs/' + state.activeJobId + '/publitio/direct-upload/authorize', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
+        const auth = await api('/jobs/' + state.activeJobId + '/publitio/direct-upload/authorize', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ mime_type: baseMime || blob.type || state.selectedMimeType, file_size: blob.size, duration_seconds: state.recordingDurationSeconds || 0 }) });
         const form = new FormData();
         form.append('file', blob, 'vh360-studio-replay-' + state.activeJobId + recordingExtension(baseMime || blob.type || state.selectedMimeType));
         ['public_id', 'title', 'description', 'tags', 'folder', 'privacy', 'option_download', 'option_hls', 'option_ad'].forEach((key) => {
@@ -2642,12 +2679,9 @@
         try {
             let result;
             if (canDirectUploadToPublitio()) {
-                try {
-                    result = await publishReplayViaDirectPublitio();
-                } catch (directError) {
-                    setPublishingStatus(strings.publitioDirectFallback || 'Direct upload failed. Using server relay fallback.', 'warning');
-                    result = await publishReplayViaServerRelay();
-                }
+                result = await publishReplayViaDirectPublitio();
+            } else if (isPublitioDirectMode()) {
+                throw new Error('Direct Publitio upload is enabled, but the local recording Blob is unavailable or over the direct upload limit. Retry while the recording is still in this browser, or switch to server relay for the next recording.');
             } else {
                 result = await publishReplayViaServerRelay();
             }
@@ -2765,7 +2799,7 @@
         const recording = isRecordingActive();
         const stopping = Boolean(state.recordingStopRequested && !state.recordingStoppedAt);
         const hasFailedUploads = Boolean(state.failedChunks.size);
-        const canPrepareReplay = Boolean(state.activeJobId && state.serverStopConfirmed && state.finalChunkCount && !state.pendingUploads.size && !hasFailedUploads && !state.finalizeInProgress && state.currentJobStatus !== 'processing' && state.currentJobStatus !== 'ready');
+        const canPrepareReplay = Boolean(!isPublitioDirectMode() && state.activeJobId && state.serverStopConfirmed && state.finalChunkCount && !state.pendingUploads.size && !hasFailedUploads && !state.finalizeInProgress && state.currentJobStatus !== 'processing' && state.currentJobStatus !== 'ready');
         setButtonVisibility(els.startRecording, !recording && !stopping && !state.activeJobId, true);
         if (els.stopRecording) { els.stopRecording.textContent = state.stopFailed ? 'Retry stop' : 'Stop recording'; }
         setButtonVisibility(els.stopRecording, recording || stopping || state.stopFailed, !stopping);
@@ -2779,7 +2813,7 @@
         setButtonVisibility(els.startRecording, !recording && !stopping && !state.activeJobId, true);
         if (els.stopRecording) { els.stopRecording.textContent = state.stopFailed ? 'Retry stop' : 'Stop recording'; }
         setButtonVisibility(els.stopRecording, recording || stopping || state.stopFailed, !stopping);
-        const canPrepareReplay = Boolean(stopped && state.serverStopConfirmed && state.activeJobId && state.finalChunkCount && !state.pendingUploads.size && !state.failedChunks.size && !state.finalizeInProgress && state.currentJobStatus !== 'processing' && state.currentJobStatus !== 'ready');
+        const canPrepareReplay = Boolean(!isPublitioDirectMode() && stopped && state.serverStopConfirmed && state.activeJobId && state.finalChunkCount && !state.pendingUploads.size && !state.failedChunks.size && !state.finalizeInProgress && state.currentJobStatus !== 'processing' && state.currentJobStatus !== 'ready');
         setButtonVisibility(els.finalizeRecording, canPrepareReplay, canPrepareReplay);
         setButtonVisibility(els.retryChunks, Boolean(state.failedChunks.size), Boolean(state.failedChunks.size));
         renderTransitionButtons();
@@ -3229,11 +3263,11 @@
                 return;
             }
             if (state.recordingStoppedAt && !state.serverStopConfirmed) {
-                setRecordingStatus(strings.uploadingChunk, 'info');
+                setRecordingStatus(isPublitioDirectMode() ? 'Recording stopped. Ready to upload directly to Publitio.' : strings.uploadingChunk, 'info');
                 finishRecordingUploadsAndConfirmStop().catch(() => {});
             }
         } else if (state.recordingStoppedAt && !state.serverStopConfirmed) {
-            setRecordingStatus(strings.uploadingChunk, 'info');
+            setRecordingStatus(isPublitioDirectMode() ? 'Recording stopped. Ready to upload directly to Publitio.' : strings.uploadingChunk, 'info');
             finishRecordingUploadsAndConfirmStop().catch(() => {});
         }
         if (state.heartbeatTimer) {

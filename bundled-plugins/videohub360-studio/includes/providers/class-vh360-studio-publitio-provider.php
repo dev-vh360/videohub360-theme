@@ -105,7 +105,12 @@ class VH360_Studio_Publitio_Provider implements VH360_Studio_Replay_Storage_Prov
         if ( is_wp_error( $result ) ) {
             return $result;
         }
-        return $this->result_from_response( $result, __( 'Publitio direct upload verified.', 'videohub360-studio' ) );
+        $verified = $this->result_from_response( $result, __( 'Publitio direct upload verified.', 'videohub360-studio' ) );
+        if ( is_array( $verified ) ) {
+            $verified['status']          = self::STATUS_READY === $verified['status'] ? 'publitio_direct_ready' : 'publitio_direct_processing';
+            $verified['provider_status'] = $verified['status'];
+        }
+        return $verified;
     }
 
     private function client() { return new VH360_Studio_Publitio_Client(); }
