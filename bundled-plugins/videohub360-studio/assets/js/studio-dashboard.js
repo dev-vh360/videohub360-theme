@@ -29,6 +29,10 @@
         uploadedChunks: new Set(),
         failedChunks: new Map(),
         recordingStartedAt: 0,
+        recordingStoppedAt: null,
+        recordingDurationSeconds: 0,
+        recordingStopPromise: null,
+        recordingStopRequested: false,
         durationTimer: null,
         finalChunkCount: 0,
         currentJobStatus: '',
@@ -64,6 +68,9 @@
         publishPollAttempts: 0,
         stopFailed: false,
         serverStopConfirmed: false,
+        serverStopConfirming: false,
+        serverStopPromise: null,
+        finalizeInProgress: false,
         featuredImageId: 0,
         featuredImageUrl: '',
         clearFeaturedImage: false,
@@ -2108,10 +2115,17 @@
             state.chunkIndex = 0;
             state.stopFailed = false;
             state.serverStopConfirmed = false;
+            state.serverStopConfirming = false;
+            state.serverStopPromise = null;
             state.uploadedChunks.clear();
             state.failedChunks.clear();
             state.pendingUploads.clear();
             state.recordingStartedAt = Date.now();
+            state.recordingStoppedAt = null;
+            state.recordingDurationSeconds = 0;
+            state.recordingStopPromise = null;
+            state.recordingStopRequested = false;
+            state.finalChunkCount = 0;
             const preset = getSelectedPreset();
             const options = { mimeType: mimeType };
             if (preset.video_bitrate) { options.videoBitsPerSecond = Number(preset.video_bitrate); }
@@ -2197,7 +2211,7 @@
 
     async function uploadChunk(blob, index) {
         try {
-            setRecordingStatus(strings.uploadingChunk, 'info');
+            setRecordingStatus(state.recordingStoppedAt ? strings.uploadingChunk : strings.recordingActive, 'info');
             const form = new FormData();
             form.append('browser_session_id', state.browserSessionId);
             form.append('chunk_index', String(index));
@@ -2217,18 +2231,33 @@
             setRecordingStatus((error && error.message) || strings.chunkUploadFailed, 'error');
         }
         renderRecordingState();
+        if (state.recordingStoppedAt && !state.pendingUploads.size && !state.failedChunks.size && !state.serverStopConfirmed && !state.serverStopConfirming) {
+            finishRecordingUploadsAndConfirmStop().catch(() => {});
+        }
     }
 
     async function confirmServerStop() {
         if (!state.activeJobId) {
             return null;
         }
-        const duration = Math.max(0, Math.round((Date.now() - state.recordingStartedAt) / 1000));
-        const job = await api('/jobs/' + state.activeJobId + '/recording/stop', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ duration_seconds: duration }) });
-        state.serverStopConfirmed = true;
-        state.stopFailed = false;
-        state.currentJobStatus = job.status || 'stopping';
-        return job;
+        if (state.serverStopPromise) {
+            return state.serverStopPromise;
+        }
+        state.serverStopConfirming = true;
+        state.serverStopPromise = (async () => {
+            const duration = Math.max(0, Math.round(state.recordingDurationSeconds || 0));
+            const job = await api('/jobs/' + state.activeJobId + '/recording/stop', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ duration_seconds: duration }) });
+            state.serverStopConfirmed = true;
+            state.stopFailed = false;
+            state.currentJobStatus = job.status || 'stopping';
+            return job;
+        })();
+        try {
+            return await state.serverStopPromise;
+        } finally {
+            state.serverStopConfirming = false;
+            state.serverStopPromise = null;
+        }
     }
 
     async function retryServerStop() {
@@ -2237,9 +2266,7 @@
         }
         try {
             setRecordingStatus('Retrying server stop confirmation…', 'info');
-            await waitForUploads();
-            await confirmServerStop();
-            setRecordingStatus(strings.recordingSaved, 'success');
+            await finishRecordingUploadsAndConfirmStop();
         } catch (error) {
             state.stopFailed = true;
             state.serverStopConfirmed = false;
@@ -2253,16 +2280,29 @@
         }
     }
 
-    async function stopRecording() {
-        if (!state.recorder) {
-            if (state.stopFailed) {
-                await retryServerStop();
-            }
+    function freezeRecordingDuration() {
+        if (!state.recordingStartedAt) {
+            state.recordingDurationSeconds = 0;
             return;
         }
+        state.recordingStoppedAt = state.recordingStoppedAt || Date.now();
+        state.recordingDurationSeconds = Math.max(0, Math.round((state.recordingStoppedAt - state.recordingStartedAt) / 1000));
+        stopTimer();
+    }
+
+    async function stopLocalRecording() {
+        if (state.recordingStopPromise) {
+            return state.recordingStopPromise;
+        }
+        if (!state.recorder) {
+            if (state.recordingStartedAt && !state.recordingStoppedAt) {
+                freezeRecordingDuration();
+            }
+            return null;
+        }
         const recorder = state.recorder;
-        let localStopSucceeded = false;
-        try {
+        state.recordingStopRequested = true;
+        state.recordingStopPromise = (async () => {
             if (recorder.state !== 'inactive') {
                 await new Promise((resolve, reject) => {
                     const timeout = window.setTimeout(resolve, 3000);
@@ -2278,29 +2318,72 @@
                     }
                 });
             }
-            localStopSucceeded = true;
+            freezeRecordingDuration();
             state.finalChunkCount = state.chunkIndex;
-            await waitForUploads();
-            await confirmServerStop();
-            setRecordingStatus(strings.recordingSaved, 'success');
+            state.recorder = null;
+            setShellClass('is-recording', false);
+            setRecordingStatus(strings.uploadingChunk, 'info');
+            renderRecordingState();
+            updateOperatorStatus();
+            return true;
+        })();
+        try {
+            return await state.recordingStopPromise;
         } catch (error) {
-            if (localStopSucceeded) {
-                state.stopFailed = true;
-                state.serverStopConfirmed = false;
-                state.currentJobStatus = 'stop_failed';
-                setRecordingStatus((error && error.message) || 'Server stop confirmation failed. Retry stop before preparing the replay.', 'error');
-            } else {
-                setRecordingStatus((error && error.message) || 'Recording could not be stopped cleanly. Try stopping again.', 'error');
-            }
+            state.recordingStopRequested = false;
+            state.recordingStopPromise = null;
+            setRecordingStatus((error && error.message) || 'Recording could not be stopped cleanly. Try stopping again.', 'error');
+            renderRecordingState();
+            updateOperatorStatus();
+            throw error;
+        }
+    }
+
+    async function finishRecordingUploadsAndConfirmStop() {
+        if (!state.activeJobId || state.serverStopConfirmed) {
+            return null;
+        }
+        if (!state.recordingStoppedAt) {
+            await stopLocalRecording();
+        }
+        if (state.failedChunks.size) {
+            setRecordingStatus('Some chunks failed to upload. Retry failed chunks before preparing the replay.', 'warning');
+            return null;
+        }
+        await waitForUploads();
+        if (state.failedChunks.size) {
+            setRecordingStatus('Some chunks failed to upload. Retry failed chunks before preparing the replay.', 'warning');
+            return null;
+        }
+        try {
+            const job = await confirmServerStop();
+            setRecordingStatus(strings.recordingSaved, 'success');
+            return job;
+        } catch (error) {
+            state.stopFailed = true;
+            state.serverStopConfirmed = false;
+            state.currentJobStatus = 'stop_failed';
+            setRecordingStatus((error && error.message) || 'Server stop confirmation failed. Retry stop before preparing the replay.', 'error');
+            throw error;
         } finally {
-            if (localStopSucceeded) {
-                stopTimer();
-                state.recorder = null;
-                setShellClass('is-recording', false);
-            }
             setRecorderButtons(false, state.serverStopConfirmed && state.activeJobId && !state.pendingUploads.size && !state.failedChunks.size);
             renderRecordingState();
             updateOperatorStatus();
+        }
+    }
+
+    async function stopRecording() {
+        if (state.stopFailed) {
+            await retryServerStop();
+            return;
+        }
+        try {
+            await stopLocalRecording();
+            await finishRecordingUploadsAndConfirmStop();
+        } catch (error) {
+            if (!state.recordingStoppedAt) {
+                setRecordingStatus((error && error.message) || 'Recording could not be stopped cleanly. Try stopping again.', 'error');
+            }
         }
     }
 
@@ -2312,10 +2395,17 @@
 
     function retryFailedChunks() {
         setRecordingStatus(strings.uploadRetry, 'info');
-        Array.from(state.failedChunks.entries()).forEach(([index, blob]) => uploadChunk(blob, index));
+        Array.from(state.failedChunks.entries()).forEach(([index, blob]) => {
+            state.pendingUploads.add(index);
+            uploadChunk(blob, index).catch(() => {});
+        });
+        renderRecordingState();
     }
 
     async function finalizeRecording() {
+        if (state.finalizeInProgress) {
+            return;
+        }
         if (state.stopFailed || !state.serverStopConfirmed) {
             setRecordingStatus('Confirm server stop before preparing the replay.', 'warning');
             return;
@@ -2329,6 +2419,7 @@
             return;
         }
         try {
+            state.finalizeInProgress = true;
             if (els.recordingFinalizeStatus) { els.recordingFinalizeStatus.textContent = strings.finalizing; }
             if (els.finalizeRecording) { els.finalizeRecording.disabled = true; }
             const job = await api('/jobs/' + state.activeJobId + '/recording/finalize', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ expected_chunks: state.finalChunkCount }) });
@@ -2341,6 +2432,7 @@
             setRecordingStatus(error.message || strings.chunkUploadFailed, 'error');
             if (els.recordingFinalizeStatus) { els.recordingFinalizeStatus.textContent = error.message || strings.chunkUploadFailed; }
         } finally {
+            state.finalizeInProgress = false;
             renderRecordingState();
         }
     }
@@ -2424,7 +2516,7 @@
             const result = await api('/jobs/' + state.activeJobId + '/publishing/publish', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
             state.currentJobStatus = result.job_status || 'ready';
             const replayUrl = result.replay_url || result.playback_url || '';
-            setPublishingStatus(replayUrl ? strings.publishComplete : (result.message || strings.publishProcessing || 'Replay is still processing. We’ll keep checking.'), replayUrl ? 'success' : 'info');
+            setPublishingStatus(replayUrl ? strings.publishComplete : (result.message || strings.publishProcessing || 'Replay uploaded to Publitio. Waiting for processing.'), replayUrl ? 'success' : 'info');
             renderReplayLink(replayUrl);
             appendRecentJob(Object.assign({}, result, { id: result.id || result.job_id || state.activeJobId, status: state.currentJobStatus, replay_url: replayUrl || result.replay_url || result.playback_url || '' }));
             if (shouldPollPublishStatus(result)) {
@@ -2454,7 +2546,7 @@
                 setPublishingStatus(strings.publishComplete, 'success');
                 appendRecentJob(Object.assign({}, result, { id: result.id || result.job_id || state.activeJobId, status: result.job_status || 'ready', replay_url: replayUrl || result.replay_url || result.playback_url || '' }));
             } else if (shouldPollPublishStatus(result)) {
-                setPublishingStatus(strings.publishProcessing || 'Replay is still processing. We’ll keep checking.', 'info');
+                setPublishingStatus(strings.publishProcessing || 'Replay uploaded to Publitio. Waiting for processing.', 'info');
             } else if (result.status === 'failed' || result.publish_provider_status === 'publish_failed') {
                 setPublishingStatus(strings.publishFailed, 'error');
             } else {
@@ -2491,7 +2583,7 @@
             return 'Recording';
         }
         if (state.pendingUploads.size) {
-            return 'Uploading recording';
+            return 'Uploading chunks';
         }
         if (state.currentJobStatus === 'processing') {
             return 'Replay ready to publish';
@@ -2517,7 +2609,12 @@
         if (els.recordingFailed) { els.recordingFailed.textContent = String(state.failedChunks.size); }
         if (els.recordingSummaryStatus) { els.recordingSummaryStatus.textContent = recordingSummaryStatus(); }
         if (els.recordingTimer) {
-            const seconds = state.recordingStartedAt ? Math.max(0, Math.floor((Date.now() - state.recordingStartedAt) / 1000)) : 0;
+            let seconds = 0;
+            if (state.recordingStoppedAt) {
+                seconds = Math.max(0, state.recordingDurationSeconds || 0);
+            } else if (state.recordingStartedAt) {
+                seconds = Math.max(0, Math.floor((Date.now() - state.recordingStartedAt) / 1000));
+            }
             els.recordingTimer.textContent = String(Math.floor(seconds / 60)).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0');
         }
         const total = Math.max(state.chunkIndex, state.finalChunkCount, 1);
@@ -2529,21 +2626,23 @@
             els.recordingProgressLabel.textContent = progress + '%';
         }
         const recording = isRecordingActive();
+        const stopping = Boolean(state.recordingStopRequested && !state.recordingStoppedAt);
         const hasFailedUploads = Boolean(state.failedChunks.size);
-        const canPrepareReplay = Boolean(state.activeJobId && state.serverStopConfirmed && state.finalChunkCount && !state.pendingUploads.size && !hasFailedUploads && state.currentJobStatus !== 'processing' && state.currentJobStatus !== 'ready');
-        setButtonVisibility(els.startRecording, !recording && !state.activeJobId, true);
+        const canPrepareReplay = Boolean(state.activeJobId && state.serverStopConfirmed && state.finalChunkCount && !state.pendingUploads.size && !hasFailedUploads && !state.finalizeInProgress && state.currentJobStatus !== 'processing' && state.currentJobStatus !== 'ready');
+        setButtonVisibility(els.startRecording, !recording && !stopping && !state.activeJobId, true);
         if (els.stopRecording) { els.stopRecording.textContent = state.stopFailed ? 'Retry stop' : 'Stop recording'; }
-        setButtonVisibility(els.stopRecording, recording || state.stopFailed, true);
+        setButtonVisibility(els.stopRecording, recording || stopping || state.stopFailed, !stopping);
         setButtonVisibility(els.retryChunks, hasFailedUploads, hasFailedUploads);
         setButtonVisibility(els.finalizeRecording, canPrepareReplay, canPrepareReplay);
         updatePublishingButtons();
     }
 
     function setRecorderButtons(recording, stopped) {
-        setButtonVisibility(els.startRecording, !recording && !state.activeJobId, true);
+        const stopping = Boolean(state.recordingStopRequested && !state.recordingStoppedAt);
+        setButtonVisibility(els.startRecording, !recording && !stopping && !state.activeJobId, true);
         if (els.stopRecording) { els.stopRecording.textContent = state.stopFailed ? 'Retry stop' : 'Stop recording'; }
-        setButtonVisibility(els.stopRecording, recording || state.stopFailed, true);
-        const canPrepareReplay = Boolean(stopped && state.serverStopConfirmed && state.activeJobId && state.finalChunkCount && !state.pendingUploads.size && !state.failedChunks.size && state.currentJobStatus !== 'processing' && state.currentJobStatus !== 'ready');
+        setButtonVisibility(els.stopRecording, recording || stopping || state.stopFailed, !stopping);
+        const canPrepareReplay = Boolean(stopped && state.serverStopConfirmed && state.activeJobId && state.finalChunkCount && !state.pendingUploads.size && !state.failedChunks.size && !state.finalizeInProgress && state.currentJobStatus !== 'processing' && state.currentJobStatus !== 'ready');
         setButtonVisibility(els.finalizeRecording, canPrepareReplay, canPrepareReplay);
         setButtonVisibility(els.retryChunks, Boolean(state.failedChunks.size), Boolean(state.failedChunks.size));
         renderTransitionButtons();
@@ -2972,14 +3071,32 @@
     }
 
     async function endLive() {
+        if (state.broadcastEnding) {
+            return;
+        }
         state.broadcastEnding = true;
         state.broadcastReady = false;
         renderTransitionButtons();
-        if (state.recorder) {
-            setBroadcastStatus(strings.recordingActive, 'info');
-            await stopRecording().catch((error) => {
+        if (state.recorder || state.recordingStopPromise) {
+            setBroadcastStatus('Stopping local recording before ending live…', 'info');
+            const localStopError = await stopLocalRecording().then(() => null).catch((error) => {
                 setRecordingStatus((error && error.message) || strings.chunkUploadFailed, 'error');
+                return error || new Error(strings.chunkUploadFailed);
             });
+            if (localStopError) {
+                state.broadcastEnding = false;
+                state.broadcastReady = Boolean(state.broadcastSession);
+                renderTransitionButtons();
+                setBroadcastStatus('Recording could not be stopped cleanly. Stop recording before ending live.', 'error');
+                return;
+            }
+            if (state.recordingStoppedAt && !state.serverStopConfirmed) {
+                setRecordingStatus(strings.uploadingChunk, 'info');
+                finishRecordingUploadsAndConfirmStop().catch(() => {});
+            }
+        } else if (state.recordingStoppedAt && !state.serverStopConfirmed) {
+            setRecordingStatus(strings.uploadingChunk, 'info');
+            finishRecordingUploadsAndConfirmStop().catch(() => {});
         }
         if (state.heartbeatTimer) {
             window.clearInterval(state.heartbeatTimer);
@@ -2995,6 +3112,7 @@
             try {
                 await api('/broadcasts/' + state.broadcastVideoId + '/end', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
             } catch (error) {
+                state.broadcastEnding = false;
                 if (els.goLive) els.goLive.disabled = false;
                 if (els.endLive) els.endLive.disabled = true;
                 setBroadcastStatus('Local broadcast stopped, but WordPress could not mark the public livestream ended: ' + ((error && error.message) || 'Unknown error'), 'error');
@@ -3007,7 +3125,7 @@
         if (els.endLive) els.endLive.disabled = true;
         setShellClass('is-live', false);
         renderTransitionButtons();
-        setBroadcastStatus(strings.liveEnded, 'success');
+        setBroadcastStatus((state.recordingStoppedAt && !state.serverStopConfirmed) ? 'Live ended. Recording upload is still finishing.' : strings.liveEnded, 'success');
     }
 
 
