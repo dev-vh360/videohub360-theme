@@ -76,10 +76,11 @@ class VH360_Studio_Replay_Publisher {
             return $published;
         }
 
-        if ( isset( $published['status'] ) && ! in_array( $published['status'], array( 'published', 'local_media_ready' ), true ) ) {
+        if ( isset( $published['status'] ) && ! in_array( $published['status'], array( 'published', 'local_media_ready', 'publitio_ready' ), true ) ) {
             $updated = $this->jobs->update( $job['id'], 0, array(
                 'wp_attachment_id'        => ! empty( $published['attachment_id'] ) ? absint( $published['attachment_id'] ) : 0,
-                'playback_url'            => ! empty( $published['playback_url'] ) ? esc_url_raw( $published['playback_url'] ) : '',
+                'publitio_file_id'        => ! empty( $published['publitio_file_id'] ) ? sanitize_text_field( $published['publitio_file_id'] ) : '',
+                'playback_url'            => ! empty( $published['playback_url'] ) ? esc_url_raw( $published['playback_url'] ) : ( ! empty( $published['embed_url'] ) ? esc_url_raw( $published['embed_url'] ) : '' ),
                 'publish_attempted_at'    => current_time( 'mysql' ),
                 'publish_provider_status' => sanitize_key( $published['status'] ),
                 'error_message'           => '',
@@ -97,9 +98,10 @@ class VH360_Studio_Replay_Publisher {
                 'assembled_checksum'      => $updated['assembled_checksum'],
                 'publish_provider_status' => $updated['publish_provider_status'],
                 'attachment_id'           => absint( $updated['wp_attachment_id'] ),
+                'publitio_file_id'        => ! empty( $updated['publitio_file_id'] ) ? sanitize_text_field( $updated['publitio_file_id'] ) : '',
                 'playback_url'            => $updated['playback_url'],
                 'replay_video_id'         => ! empty( $updated['replay_video_id'] ) ? absint( $updated['replay_video_id'] ) : 0,
-                'message'                 => ! empty( $published['message'] ) ? $published['message'] : __( 'Recording attached to media. Waiting for VideoPress processing.', 'videohub360-studio' ),
+                'message'                 => ! empty( $published['message'] ) ? $published['message'] : __( 'Recording uploaded and waiting for provider processing.', 'videohub360-studio' ),
             );
         }
 
@@ -113,19 +115,9 @@ class VH360_Studio_Replay_Publisher {
         }
 
         $status = $provider->get_publish_status( $job );
-        if ( VH360_Studio_Recording_Jobs::STATUS_PROCESSING === $job['status'] && ! empty( $status['videopress_guid'] ) && ! empty( $status['attachment_id'] ) ) {
+        if ( VH360_Studio_Recording_Jobs::STATUS_PROCESSING === $job['status'] && $this->provider_status_is_ready( $status ) ) {
             $recording = $this->build_recording_payload_for_status( $job );
-            $completed = $this->complete_published_job(
-                $job,
-                array(
-                    'attachment_id'    => absint( $status['attachment_id'] ),
-                    'playback_url'      => ! empty( $status['playback_url'] ) ? esc_url_raw( $status['playback_url'] ) : '',
-                    'videopress_guid'  => sanitize_text_field( $status['videopress_guid'] ),
-                    'poster_url'        => ! empty( $status['poster_url'] ) ? esc_url_raw( $status['poster_url'] ) : '',
-                ),
-                $recording,
-                $provider
-            );
+            $completed = $this->complete_published_job( $job, $status, $recording, $provider );
             if ( ! is_wp_error( $completed ) ) {
                 return $completed;
             }
@@ -138,6 +130,11 @@ class VH360_Studio_Replay_Publisher {
         return $status;
     }
 
+    private function provider_status_is_ready( array $status ) {
+        $provider_status = ! empty( $status['provider_status'] ) ? sanitize_key( $status['provider_status'] ) : ( ! empty( $status['status'] ) ? sanitize_key( $status['status'] ) : '' );
+        return ( ! empty( $status['videopress_guid'] ) && ! empty( $status['attachment_id'] ) ) || ( ! empty( $status['publitio_file_id'] ) && ( ! empty( $status['playback_url'] ) || ! empty( $status['embed_url'] ) ) && in_array( $provider_status, array( 'publitio_ready', 'published', 'ready' ), true ) );
+    }
+
     private function complete_published_job( array $job, array $published, array $recording, VH360_Studio_Replay_Storage_Provider $provider ) {
         $replay = $this->replay_posts->create_or_update_replay_post( $job, $published, $recording );
         if ( is_wp_error( $replay ) ) {
@@ -146,8 +143,9 @@ class VH360_Studio_Replay_Publisher {
         }
 
         $ready = $this->jobs->mark_ready( $job['id'], 0, array(
-            'wp_attachment_id'        => absint( $published['attachment_id'] ),
-            'videopress_guid'         => sanitize_text_field( $published['videopress_guid'] ),
+            'wp_attachment_id'        => ! empty( $published['attachment_id'] ) ? absint( $published['attachment_id'] ) : 0,
+            'publitio_file_id'        => ! empty( $published['publitio_file_id'] ) ? sanitize_text_field( $published['publitio_file_id'] ) : '',
+            'videopress_guid'         => ! empty( $published['videopress_guid'] ) ? sanitize_text_field( $published['videopress_guid'] ) : '',
             'videopress_processing_done' => isset( $published['videopress_processing_done'] ) ? absint( $published['videopress_processing_done'] ) : 1,
             'playback_url'            => ! empty( $published['playback_url'] ) ? esc_url_raw( $published['playback_url'] ) : '',
             'poster_url'              => ! empty( $published['poster_url'] ) ? esc_url_raw( $published['poster_url'] ) : '',
@@ -169,6 +167,7 @@ class VH360_Studio_Replay_Publisher {
             'assembled_checksum'      => $ready['assembled_checksum'],
             'publish_provider_status' => $ready['publish_provider_status'],
             'attachment_id'           => absint( $ready['wp_attachment_id'] ),
+            'publitio_file_id'        => ! empty( $ready['publitio_file_id'] ) ? sanitize_text_field( $ready['publitio_file_id'] ) : '',
             'videopress_guid'         => $ready['videopress_guid'],
             'playback_url'            => $ready['playback_url'],
             'replay_video_id'         => absint( $ready['replay_video_id'] ),

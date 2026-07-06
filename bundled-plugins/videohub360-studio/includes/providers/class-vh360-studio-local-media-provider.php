@@ -21,7 +21,8 @@ class VH360_Studio_Local_Media_Replay_Storage_Provider implements VH360_Studio_R
     }
 
     public function is_available() {
-        return (bool) apply_filters( 'vh360_studio_local_media_available', current_user_can( 'upload_files' ) && $this->media_functions_available() && $this->uploads_directory_is_writable(), $this );
+        $enabled = '1' === (string) get_option( 'vh360_studio_local_media_fallback_enabled', '1' );
+        return (bool) apply_filters( 'vh360_studio_local_media_available', $enabled && current_user_can( 'upload_files' ) && $this->media_functions_available() && $this->uploads_directory_is_writable(), $this );
     }
 
     public function supports_publish() {

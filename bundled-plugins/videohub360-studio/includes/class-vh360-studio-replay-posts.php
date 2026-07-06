@@ -63,6 +63,9 @@ class VH360_Studio_Replay_Posts {
         $playback_url  = ! empty( $publish_result['playback_url'] ) ? esc_url_raw( $publish_result['playback_url'] ) : '';
         $poster_url    = ! empty( $publish_result['poster_url'] ) ? esc_url_raw( $publish_result['poster_url'] ) : '';
         $guid          = ! empty( $publish_result['videopress_guid'] ) ? sanitize_text_field( $publish_result['videopress_guid'] ) : '';
+        $publitio_file_id = ! empty( $publish_result['publitio_file_id'] ) ? sanitize_text_field( $publish_result['publitio_file_id'] ) : '';
+        $publitio_embed_url = ! empty( $publish_result['embed_url'] ) ? esc_url_raw( $publish_result['embed_url'] ) : '';
+        $provider_status = ! empty( $publish_result['provider_status'] ) ? sanitize_key( $publish_result['provider_status'] ) : ( ! empty( $publish_result['status'] ) ? sanitize_key( $publish_result['status'] ) : '' );
         $attachment_id = ! empty( $publish_result['attachment_id'] ) ? absint( $publish_result['attachment_id'] ) : 0;
         $provider      = sanitize_key( $job['storage_provider'] );
 
@@ -76,6 +79,10 @@ class VH360_Studio_Replay_Posts {
         update_post_meta( $post_id, '_vh360_studio_attachment_id', $attachment_id );
         update_post_meta( $post_id, '_vh360_studio_wp_attachment_id', $attachment_id );
         update_post_meta( $post_id, '_vh360_studio_videopress_guid', $guid );
+        update_post_meta( $post_id, '_vh360_studio_publitio_file_id', $publitio_file_id );
+        update_post_meta( $post_id, '_vh360_studio_publitio_playback_url', $playback_url );
+        update_post_meta( $post_id, '_vh360_studio_publitio_embed_url', $publitio_embed_url );
+        update_post_meta( $post_id, '_vh360_studio_publitio_provider_status', $provider_status );
         update_post_meta( $post_id, '_vh360_studio_assembled_checksum', ! empty( $recording['assembled_checksum'] ) ? sanitize_text_field( $recording['assembled_checksum'] ) : '' );
         update_post_meta( $post_id, '_vh360_studio_replay_source_live_video_id', ! empty( $job['live_video_id'] ) ? absint( $job['live_video_id'] ) : 0 );
         update_post_meta( $post_id, '_vh360_studio_replay_published_at', current_time( 'mysql' ) );
@@ -104,6 +111,8 @@ class VH360_Studio_Replay_Posts {
         $custom_html = '';
         if ( 'local_media' === $provider ) {
             $custom_html = $this->render_local_media_video( $playback_url, $poster_url, $this->recording_mime_type( $recording ) );
+        } elseif ( 'publitio' === $provider && $publitio_embed_url ) {
+            $custom_html = $this->render_safe_iframe_embed( $publitio_embed_url, __( 'Publitio replay', 'videohub360-studio' ) );
         } elseif ( $guid ) {
             $custom_html = $this->render_videopress_embed_html( $guid );
         }
@@ -162,6 +171,33 @@ class VH360_Studio_Replay_Posts {
         }
 
         return new WP_Error( 'vh360_studio_live_replay_target_forbidden', __( 'You are not allowed to update the original livestream post.', 'videohub360-studio' ), array( 'status' => 403 ) );
+    }
+
+    private function render_safe_iframe_embed( $url, $title ) {
+        $url = esc_url_raw( $url );
+        if ( ! $url ) {
+            return '';
+        }
+        $html = sprintf(
+            '<iframe class="vh360-studio-provider-embed" src="%s" title="%s" loading="lazy" allow="fullscreen; autoplay; encrypted-media; picture-in-picture" allowfullscreen style="width:100%%;aspect-ratio:16/9;border:0;"></iframe>',
+            esc_url( $url ),
+            esc_attr( $title )
+        );
+        return wp_kses( $html, $this->allowed_provider_iframe_html() );
+    }
+
+    private function allowed_provider_iframe_html() {
+        return array(
+            'iframe' => array(
+                'src'             => true,
+                'title'           => true,
+                'loading'         => true,
+                'allow'           => true,
+                'allowfullscreen' => true,
+                'style'           => true,
+                'class'           => true,
+            ),
+        );
     }
 
     private function render_local_media_video( $playback_url, $poster_url = '', $mime_type = '' ) {

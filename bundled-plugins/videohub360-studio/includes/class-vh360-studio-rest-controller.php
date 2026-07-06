@@ -726,6 +726,10 @@ class VH360_Studio_REST_Controller {
             return 'videopress';
         }
 
+        if ( $this->storage_provider_is_available( $registry, 'publitio' ) ) {
+            return 'publitio';
+        }
+
         if ( $this->storage_provider_is_available( $registry, 'local_media' ) ) {
             return 'local_media';
         }
