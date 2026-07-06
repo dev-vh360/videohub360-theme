@@ -37,16 +37,6 @@ class VH360_Studio_REST_Controller {
             )
         );
 
-        register_rest_route(
-            'vh360-studio/v1',
-            '/cover-image',
-            array(
-                'methods'             => WP_REST_Server::CREATABLE,
-                'callback'            => array( $this, 'upload_cover_image' ),
-                'permission_callback' => array( $this, 'permissions_check' ),
-            )
-        );
-
         foreach ( array( 'prepare', 'started', 'heartbeat', 'end' ) as $broadcast_action ) {
             register_rest_route(
                 'vh360-studio/v1',
@@ -268,57 +258,6 @@ class VH360_Studio_REST_Controller {
     }
 
 
-    public function upload_cover_image( WP_REST_Request $request ) {
-        if ( ! current_user_can( 'upload_files' ) ) {
-            return new WP_Error( 'vh360_studio_cover_upload_forbidden', __( 'Cover image uploads require permission to upload files.', 'videohub360-studio' ), array( 'status' => 403 ) );
-        }
-
-        $files = $request->get_file_params();
-        if ( empty( $files['file'] ) ) {
-            return new WP_Error( 'vh360_studio_cover_missing_file', __( 'Choose an image file to upload.', 'videohub360-studio' ), array( 'status' => 400 ) );
-        }
-
-        $file = $files['file'];
-        if ( empty( $file['tmp_name'] ) || ! is_uploaded_file( $file['tmp_name'] ) ) {
-            return new WP_Error( 'vh360_studio_cover_invalid_upload', __( 'The uploaded cover image could not be read.', 'videohub360-studio' ), array( 'status' => 400 ) );
-        }
-
-        $mime = $this->detect_cover_image_mime_type( $file );
-        if ( is_wp_error( $mime ) ) {
-            return $mime;
-        }
-
-        require_once ABSPATH . 'wp-admin/includes/file.php';
-        require_once ABSPATH . 'wp-admin/includes/media.php';
-        require_once ABSPATH . 'wp-admin/includes/image.php';
-
-        $upload = wp_handle_upload( $file, array( 'test_form' => false, 'mimes' => $this->allowed_cover_image_mimes() ) );
-        if ( isset( $upload['error'] ) ) {
-            return new WP_Error( 'vh360_studio_cover_upload_failed', $upload['error'], array( 'status' => 500 ) );
-        }
-
-        $title = pathinfo( sanitize_file_name( $file['name'] ), PATHINFO_FILENAME );
-        $attachment_id = wp_insert_attachment( array(
-            'post_mime_type' => $upload['type'],
-            'post_title'     => $title ? $title : __( 'Studio Cover Image', 'videohub360-studio' ),
-            'post_content'   => '',
-            'post_status'    => 'inherit',
-            'post_author'    => get_current_user_id(),
-        ), $upload['file'] );
-
-        if ( is_wp_error( $attachment_id ) || ! $attachment_id ) {
-            return new WP_Error( 'vh360_studio_cover_attachment_failed', __( 'Studio could not create the cover image attachment.', 'videohub360-studio' ), array( 'status' => 500 ) );
-        }
-
-        wp_update_attachment_metadata( $attachment_id, wp_generate_attachment_metadata( $attachment_id, $upload['file'] ) );
-        update_post_meta( $attachment_id, '_vh360_studio_cover_owner', (string) get_current_user_id() );
-
-        return rest_ensure_response( array(
-            'attachment_id' => absint( $attachment_id ),
-            'url'           => wp_get_attachment_image_url( $attachment_id, 'large' ) ?: wp_get_attachment_url( $attachment_id ),
-        ) );
-    }
-
     public function upload_media_source( WP_REST_Request $request ) {
         if ( ! current_user_can( 'upload_files' ) ) {
             return new WP_Error( 'vh360_studio_media_upload_forbidden', __( 'Studio media source imports require permission to upload files.', 'videohub360-studio' ), array( 'status' => 403 ) );
@@ -418,18 +357,6 @@ class VH360_Studio_REST_Controller {
         return $mime;
     }
 
-    private function detect_cover_image_mime_type( $file ) {
-        $check = wp_check_filetype_and_ext( $file['tmp_name'], $file['name'], $this->allowed_cover_image_mimes() );
-        $mime = ! empty( $check['type'] ) ? $check['type'] : '';
-        if ( ! $mime || 0 !== strpos( $mime, 'image/' ) ) {
-            return new WP_Error( 'vh360_studio_cover_invalid_type', __( 'Studio cover images must be safe image files.', 'videohub360-studio' ), array( 'status' => 400 ) );
-        }
-        return $mime;
-    }
-
-    private function allowed_cover_image_mimes() {
-        return array_intersect( wp_get_mime_types(), array( 'image/jpeg', 'image/png', 'image/gif', 'image/webp' ) );
-    }
 
     private function user_can_use_image_attachment( $attachment_id ) {
         $attachment_id = absint( $attachment_id );
@@ -736,6 +663,7 @@ class VH360_Studio_REST_Controller {
             'require_passcode'       => $require,
             'host_passcode'          => $request->get_param( 'host_passcode' ),
             'featured_image_id'      => absint( $request->get_param( 'featured_image_id' ) ),
+            'clear_featured_image'   => rest_sanitize_boolean( $request->get_param( 'clear_featured_image' ) ),
         );
     }
 

@@ -64,6 +64,7 @@
         publishPollAttempts: 0,
         featuredImageId: 0,
         featuredImageUrl: '',
+        clearFeaturedImage: false,
     };
 
     const els = {
@@ -2610,9 +2611,14 @@
     }
 
 
-    function setCoverImage(attachmentId, imageUrl) {
+    function setCoverImage(attachmentId, imageUrl, options = {}) {
         state.featuredImageId = Number(attachmentId) || 0;
         state.featuredImageUrl = imageUrl || '';
+        if (options.clear === true) {
+            state.clearFeaturedImage = true;
+        } else if (state.featuredImageId || options.clear === false) {
+            state.clearFeaturedImage = false;
+        }
         if (els.coverImageId) {
             els.coverImageId.value = state.featuredImageId ? String(state.featuredImageId) : '';
         }
@@ -2644,7 +2650,7 @@
             }
             const sizes = data.sizes || {};
             const imageUrl = (sizes.large && sizes.large.url) || (sizes.medium && sizes.medium.url) || data.url || '';
-            setCoverImage(data.id, imageUrl);
+            setCoverImage(data.id, imageUrl, { clear: false });
         });
         frame.open();
     }
@@ -2658,6 +2664,7 @@
 
     function broadcastPayload() {
         const mode = els.broadcastMode ? els.broadcastMode.value : 'broadcast';
+        const featuredImageId = state.featuredImageId || (els.coverImageId ? Number(els.coverImageId.value) || 0 : 0);
         return {
             video_id: state.broadcastVideoId || 0,
             title: els.broadcastTitle && els.broadcastTitle.value ? els.broadcastTitle.value : 'Studio Livestream',
@@ -2669,7 +2676,8 @@
             require_passcode: mode === 'interactive' && !!(els.broadcastRequirePasscode && els.broadcastRequirePasscode.checked),
             host_passcode: els.broadcastPasscode ? els.broadcastPasscode.value : '',
             quality_preset: els.qualitySelect ? els.qualitySelect.value : config.defaultQualityPreset,
-            featured_image_id: state.featuredImageId || (els.coverImageId ? Number(els.coverImageId.value) || 0 : 0),
+            featured_image_id: featuredImageId,
+            clear_featured_image: !featuredImageId && state.clearFeaturedImage,
         };
     }
 
@@ -2758,7 +2766,9 @@
             state.activeJobId = created.job && created.job.id ? created.job.id : state.activeJobId;
             state.viewerPermalink = broadcast.viewerPermalink || '';
             if (broadcast.featuredImageId || broadcast.featuredImageUrl) {
-                setCoverImage(broadcast.featuredImageId || state.featuredImageId, broadcast.featuredImageUrl || state.featuredImageUrl);
+                setCoverImage(broadcast.featuredImageId || state.featuredImageId, broadcast.featuredImageUrl || state.featuredImageUrl, { clear: false });
+            } else {
+                state.clearFeaturedImage = false;
             }
             updateViewerLinkControls();
             const prepared = await api('/broadcasts/' + state.broadcastVideoId + '/prepare', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
@@ -3086,7 +3096,7 @@
         if (els.publishReplay) { els.publishReplay.addEventListener('click', publishReplay); }
         if (els.broadcastMode) { els.broadcastMode.addEventListener('change', updateBroadcastRules); }
         if (els.selectCoverImage) { els.selectCoverImage.addEventListener('click', selectCoverImage); }
-        if (els.removeCoverImage) { els.removeCoverImage.addEventListener('click', () => setCoverImage(0, '')); }
+        if (els.removeCoverImage) { els.removeCoverImage.addEventListener('click', () => setCoverImage(0, '', { clear: true })); }
         if (els.broadcastEveryoneHost) { els.broadcastEveryoneHost.addEventListener('change', updateBroadcastRules); }
         if (els.broadcastRequirePasscode) { els.broadcastRequirePasscode.addEventListener('change', updateBroadcastRules); }
         if (els.goLive) { els.goLive.addEventListener('click', goLive); }

@@ -134,6 +134,9 @@ class VideoHub360_Livestream_Service {
             if ( $poster_url ) {
                 update_post_meta( $saved_id, '_vh360_poster', esc_url_raw( $poster_url ) );
             }
+        } elseif ( ! empty( $data['clear_featured_image'] ) && $this->current_user_can_manage( $saved_id, $user_id ) ) {
+            delete_post_thumbnail( $saved_id );
+            delete_post_meta( $saved_id, '_vh360_poster' );
         }
 
         if ( $require_passcode ) {
