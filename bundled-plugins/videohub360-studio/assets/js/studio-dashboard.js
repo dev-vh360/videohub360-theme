@@ -139,6 +139,7 @@
         coverImagePreview: root.querySelector('[data-cover-image-preview]'),
         coverImagePreviewImg: root.querySelector('[data-cover-image-preview-img]'),
         selectCoverImage: root.querySelector('[data-select-cover-image]'),
+        coverImageFile: root.querySelector('[data-cover-image-file]'),
         removeCoverImage: root.querySelector('[data-remove-cover-image]'),
         broadcastMode: root.querySelector('[data-broadcast-mode]'),
         broadcastViewerCount: root.querySelector('[data-broadcast-viewer-count]'),
@@ -2632,28 +2633,49 @@
     }
 
     function selectCoverImage() {
-        if (!window.wp || !window.wp.media) {
-            setBroadcastStatus('The WordPress media picker is unavailable.', 'error');
+        if (!els.coverImageFile) {
+            setBroadcastStatus('Cover image upload is unavailable.', 'error');
             return;
         }
-        const frame = window.wp.media({
-            title: 'Select cover image',
-            button: { text: 'Use this cover image' },
-            library: { type: 'image' },
-            multiple: false
-        });
-        frame.on('select', () => {
-            const attachment = frame.state().get('selection').first();
-            const data = attachment ? attachment.toJSON() : null;
-            if (!data || !data.id) {
-                return;
-            }
-            const sizes = data.sizes || {};
-            const imageUrl = (sizes.large && sizes.large.url) || (sizes.medium && sizes.medium.url) || data.url || '';
-            setCoverImage(data.id, imageUrl, { clear: false });
-        });
-        frame.open();
+        els.coverImageFile.click();
     }
+
+    async function uploadSelectedCoverImage() {
+        const file = els.coverImageFile && els.coverImageFile.files && els.coverImageFile.files[0];
+        if (!file) {
+            return;
+        }
+
+        if (!file.type || file.type.indexOf('image/') !== 0) {
+            setBroadcastStatus('Choose a valid image file.', 'error');
+            els.coverImageFile.value = '';
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        if (els.selectCoverImage) {
+            els.selectCoverImage.disabled = true;
+        }
+        setBroadcastStatus('Uploading cover image…', 'info');
+
+        try {
+            const response = await api('/cover-image', { method: 'POST', body: formData });
+            setCoverImage(response.attachment_id || 0, response.url || response.thumbnail_url || '', { clear: false });
+            setBroadcastStatus('Cover image uploaded.', 'success');
+        } catch (error) {
+            setBroadcastStatus((error && error.message) || 'Cover image upload failed.', 'error');
+        } finally {
+            if (els.selectCoverImage) {
+                els.selectCoverImage.disabled = false;
+            }
+            if (els.coverImageFile) {
+                els.coverImageFile.value = '';
+            }
+        }
+    }
+
 
     function setBroadcastStatus(message, type) {
         if (els.broadcastStatus) {
@@ -3096,6 +3118,7 @@
         if (els.publishReplay) { els.publishReplay.addEventListener('click', publishReplay); }
         if (els.broadcastMode) { els.broadcastMode.addEventListener('change', updateBroadcastRules); }
         if (els.selectCoverImage) { els.selectCoverImage.addEventListener('click', selectCoverImage); }
+        if (els.coverImageFile) { els.coverImageFile.addEventListener('change', uploadSelectedCoverImage); }
         if (els.removeCoverImage) { els.removeCoverImage.addEventListener('click', () => setCoverImage(0, '', { clear: true })); }
         if (els.broadcastEveryoneHost) { els.broadcastEveryoneHost.addEventListener('change', updateBroadcastRules); }
         if (els.broadcastRequirePasscode) { els.broadcastRequirePasscode.addEventListener('change', updateBroadcastRules); }

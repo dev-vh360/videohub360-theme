@@ -59,6 +59,7 @@ class VH360_Studio_VideoPress_Provider implements VH360_Studio_Replay_Storage_Pr
 
         $existing_attachment_id = ! empty( $job['wp_attachment_id'] ) ? absint( $job['wp_attachment_id'] ) : 0;
         if ( $existing_attachment_id && 'attachment' === get_post_type( $existing_attachment_id ) ) {
+            $this->copy_source_thumbnail_to_attachment( $existing_attachment_id, $job );
             return $this->result_from_attachment( $existing_attachment_id, __( 'Existing Media Library attachment checked for VideoPress processing.', 'videohub360-studio' ) );
         }
 
@@ -88,6 +89,8 @@ class VH360_Studio_VideoPress_Provider implements VH360_Studio_Replay_Storage_Pr
             return $attachment_id;
         }
 
+        $this->copy_source_thumbnail_to_attachment( absint( $attachment_id ), $job );
+
         return $this->result_from_attachment( absint( $attachment_id ), __( 'Recording added to the Media Library. Waiting for VideoPress to return a GUID.', 'videohub360-studio' ) );
     }
 
@@ -103,6 +106,7 @@ class VH360_Studio_VideoPress_Provider implements VH360_Studio_Replay_Storage_Pr
             'supports_publish'   => $this->supports_publish(),
             'attachment_id'      => $attachment_id,
             'playback_url'       => $playback_url,
+            'poster_url'         => $attachment_id ? $this->attachment_poster_url( $attachment_id ) : '',
             'videopress_guid'    => $guid,
             'replay_video_id'    => ! empty( $job['replay_video_id'] ) ? absint( $job['replay_video_id'] ) : 0,
             'message'            => $guid ? __( 'VideoPress GUID detected.', 'videohub360-studio' ) : __( 'Waiting for VideoPress processing to provide a GUID.', 'videohub360-studio' ),
@@ -119,10 +123,50 @@ class VH360_Studio_VideoPress_Provider implements VH360_Studio_Replay_Storage_Pr
             'status'               => $guid ? 'published' : self::STATUS_ATTACHED_WAITING,
             'attachment_id'        => absint( $attachment_id ),
             'playback_url'         => $playback_url ? esc_url_raw( $playback_url ) : '',
+            'poster_url'           => $this->attachment_poster_url( $attachment_id ),
             'videopress_guid'      => $guid,
             'videopress_shortcode' => $guid ? '[videopress ' . $guid . ']' : '',
             'message'              => $guid ? __( 'Recording published through VideoPress.', 'videohub360-studio' ) : $message,
         );
+    }
+
+    private function source_thumbnail_id( array $job ) {
+        foreach ( array( 'live_video_id', 'replay_video_id' ) as $key ) {
+            $post_id = ! empty( $job[ $key ] ) ? absint( $job[ $key ] ) : 0;
+            if ( ! $post_id ) {
+                continue;
+            }
+            $thumbnail_id = get_post_thumbnail_id( $post_id );
+            if ( $thumbnail_id && 'attachment' === get_post_type( $thumbnail_id ) && 0 === strpos( (string) get_post_mime_type( $thumbnail_id ), 'image/' ) ) {
+                return absint( $thumbnail_id );
+            }
+        }
+        return 0;
+    }
+
+    private function copy_source_thumbnail_to_attachment( $attachment_id, array $job ) {
+        $attachment_id = absint( $attachment_id );
+        $thumbnail_id = $this->source_thumbnail_id( $job );
+        if ( ! $attachment_id || ! $thumbnail_id ) {
+            return;
+        }
+        set_post_thumbnail( $attachment_id, $thumbnail_id );
+        $poster_url = wp_get_attachment_image_url( $thumbnail_id, 'large' ) ?: wp_get_attachment_url( $thumbnail_id );
+        update_post_meta( $attachment_id, '_vh360_studio_poster_attachment_id', $thumbnail_id );
+        if ( $poster_url ) {
+            update_post_meta( $attachment_id, '_vh360_studio_poster_url', esc_url_raw( $poster_url ) );
+            update_post_meta( $attachment_id, '_vh360_poster', esc_url_raw( $poster_url ) );
+        }
+    }
+
+    private function attachment_poster_url( $attachment_id ) {
+        $attachment_id = absint( $attachment_id );
+        $poster_id = get_post_thumbnail_id( $attachment_id );
+        if ( $poster_id ) {
+            return esc_url_raw( wp_get_attachment_image_url( $poster_id, 'large' ) ?: wp_get_attachment_url( $poster_id ) );
+        }
+        $poster_url = get_post_meta( $attachment_id, '_vh360_studio_poster_url', true );
+        return $poster_url ? esc_url_raw( $poster_url ) : '';
     }
 
     private function has_videopress_integration() {

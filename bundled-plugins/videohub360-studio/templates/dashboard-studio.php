@@ -279,14 +279,15 @@ $friendly_job_status = static function( $job ) {
                         <div class="vh360-studio-cover-control" data-cover-control>
                             <label><?php esc_html_e( 'Cover Image / Featured Image', 'videohub360-studio' ); ?></label>
                             <input type="hidden" data-cover-image-id value="">
+                            <input type="file" accept="image/*" data-cover-image-file hidden>
                             <div class="vh360-studio-cover-preview" data-cover-image-preview hidden>
                                 <img src="" alt="<?php esc_attr_e( 'Selected cover image preview', 'videohub360-studio' ); ?>" data-cover-image-preview-img>
                             </div>
                             <div class="vh360-studio-actions vh360-studio-actions--compact">
-                                <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-select-cover-image><?php esc_html_e( 'Upload / Select Cover', 'videohub360-studio' ); ?></button>
+                                <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-select-cover-image><?php esc_html_e( 'Upload Cover Image', 'videohub360-studio' ); ?></button>
                                 <button type="button" class="vh360-studio-button" data-remove-cover-image hidden><?php esc_html_e( 'Remove Cover', 'videohub360-studio' ); ?></button>
                             </div>
-                            <p class="vh360-studio-help"><?php esc_html_e( 'Used as the video featured image and poster for the livestream and replay.', 'videohub360-studio' ); ?></p>
+                            <p class="vh360-studio-help"><?php esc_html_e( 'Upload an image from your device to use for the livestream, replay, and saved replay media attachment.', 'videohub360-studio' ); ?></p>
                         </div>
                         <p><label><?php esc_html_e( 'Mode', 'videohub360-studio' ); ?><select data-broadcast-mode><option value="broadcast"><?php esc_html_e( 'Broadcast', 'videohub360-studio' ); ?></option><option value="interactive"><?php esc_html_e( 'Interactive', 'videohub360-studio' ); ?></option></select></label></p>
                         <p><label><input type="checkbox" data-broadcast-viewer-count checked> <?php esc_html_e( 'Display viewer count', 'videohub360-studio' ); ?></label></p>
