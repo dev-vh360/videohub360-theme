@@ -62,6 +62,8 @@
         mediaSourceModalTrigger: null,
         publishPollTimer: null,
         publishPollAttempts: 0,
+        stopFailed: false,
+        serverStopConfirmed: false,
         featuredImageId: 0,
         featuredImageUrl: '',
         clearFeaturedImage: false,
@@ -2104,6 +2106,8 @@
             jobId = await ensureSetupJob();
             const mimeType = preferredMimeType();
             state.chunkIndex = 0;
+            state.stopFailed = false;
+            state.serverStopConfirmed = false;
             state.uploadedChunks.clear();
             state.failedChunks.clear();
             state.pendingUploads.clear();
@@ -2186,9 +2190,49 @@
         renderRecordingState();
     }
 
+    async function confirmServerStop() {
+        if (!state.activeJobId) {
+            return null;
+        }
+        const duration = Math.max(0, Math.round((Date.now() - state.recordingStartedAt) / 1000));
+        const job = await api('/jobs/' + state.activeJobId + '/recording/stop', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ duration_seconds: duration }) });
+        state.serverStopConfirmed = true;
+        state.stopFailed = false;
+        state.currentJobStatus = job.status || 'stopping';
+        return job;
+    }
+
+    async function retryServerStop() {
+        if (!state.activeJobId || !state.stopFailed) {
+            return;
+        }
+        try {
+            setRecordingStatus('Retrying server stop confirmation…', 'info');
+            await waitForUploads();
+            await confirmServerStop();
+            setRecordingStatus(strings.recordingSaved, 'success');
+        } catch (error) {
+            state.stopFailed = true;
+            state.serverStopConfirmed = false;
+            state.currentJobStatus = 'stop_failed';
+            setRecordingStatus((error && error.message) || 'Server stop confirmation failed. Retry stop before preparing the replay.', 'error');
+        } finally {
+            setShellClass('is-recording', false);
+            setRecorderButtons(false, false);
+            renderRecordingState();
+            updateOperatorStatus();
+        }
+    }
+
     async function stopRecording() {
-        if (!state.recorder) { return; }
+        if (!state.recorder) {
+            if (state.stopFailed) {
+                await retryServerStop();
+            }
+            return;
+        }
         const recorder = state.recorder;
+        let localStopSucceeded = false;
         try {
             if (recorder.state !== 'inactive') {
                 await new Promise((resolve, reject) => {
@@ -2205,18 +2249,27 @@
                     }
                 });
             }
+            localStopSucceeded = true;
             state.finalChunkCount = state.chunkIndex;
             await waitForUploads();
-            const duration = Math.max(0, Math.round((Date.now() - state.recordingStartedAt) / 1000));
-            await api('/jobs/' + state.activeJobId + '/recording/stop', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ duration_seconds: duration }) });
+            await confirmServerStop();
             setRecordingStatus(strings.recordingSaved, 'success');
         } catch (error) {
-            setRecordingStatus((error && error.message) || 'Recording could not be stopped cleanly. Retry the upload or prepare the replay if uploading has finished.', 'error');
+            if (localStopSucceeded) {
+                state.stopFailed = true;
+                state.serverStopConfirmed = false;
+                state.currentJobStatus = 'stop_failed';
+                setRecordingStatus((error && error.message) || 'Server stop confirmation failed. Retry stop before preparing the replay.', 'error');
+            } else {
+                setRecordingStatus((error && error.message) || 'Recording could not be stopped cleanly. Try stopping again.', 'error');
+            }
         } finally {
-            stopTimer();
-            state.recorder = null;
-            setShellClass('is-recording', false);
-            setRecorderButtons(false, state.activeJobId && !state.pendingUploads.size && !state.failedChunks.size);
+            if (localStopSucceeded) {
+                stopTimer();
+                state.recorder = null;
+                setShellClass('is-recording', false);
+            }
+            setRecorderButtons(false, state.serverStopConfirmed && state.activeJobId && !state.pendingUploads.size && !state.failedChunks.size);
             renderRecordingState();
             updateOperatorStatus();
         }
@@ -2234,6 +2287,10 @@
     }
 
     async function finalizeRecording() {
+        if (state.stopFailed || !state.serverStopConfirmed) {
+            setRecordingStatus('Confirm server stop before preparing the replay.', 'warning');
+            return;
+        }
         if (state.failedChunks.size || state.pendingUploads.size) {
             setRecordingStatus('Retry failed chunks during this session before preparing the replay.', 'warning');
             return;
@@ -2395,6 +2452,9 @@
     }
 
     function recordingSummaryStatus() {
+        if (state.stopFailed) {
+            return 'Stop confirmation failed';
+        }
         if (state.failedChunks.size) {
             return 'Needs attention';
         }
@@ -2409,6 +2469,9 @@
         }
         if (state.currentJobStatus === 'ready') {
             return 'Replay published';
+        }
+        if (state.finalChunkCount && !state.serverStopConfirmed) {
+            return 'Confirm stop before replay';
         }
         if (state.finalChunkCount) {
             return 'Ready to prepare replay';
@@ -2438,9 +2501,10 @@
         }
         const recording = isRecordingActive();
         const hasFailedUploads = Boolean(state.failedChunks.size);
-        const canPrepareReplay = Boolean(state.activeJobId && state.finalChunkCount && !state.pendingUploads.size && !hasFailedUploads && state.currentJobStatus !== 'processing' && state.currentJobStatus !== 'ready');
+        const canPrepareReplay = Boolean(state.activeJobId && state.serverStopConfirmed && state.finalChunkCount && !state.pendingUploads.size && !hasFailedUploads && state.currentJobStatus !== 'processing' && state.currentJobStatus !== 'ready');
         setButtonVisibility(els.startRecording, !recording && !state.activeJobId, true);
-        setButtonVisibility(els.stopRecording, recording, true);
+        if (els.stopRecording) { els.stopRecording.textContent = state.stopFailed ? 'Retry stop' : 'Stop recording'; }
+        setButtonVisibility(els.stopRecording, recording || state.stopFailed, true);
         setButtonVisibility(els.retryChunks, hasFailedUploads, hasFailedUploads);
         setButtonVisibility(els.finalizeRecording, canPrepareReplay, canPrepareReplay);
         updatePublishingButtons();
@@ -2448,8 +2512,9 @@
 
     function setRecorderButtons(recording, stopped) {
         setButtonVisibility(els.startRecording, !recording && !state.activeJobId, true);
-        setButtonVisibility(els.stopRecording, recording, true);
-        const canPrepareReplay = Boolean(stopped && state.activeJobId && state.finalChunkCount && !state.pendingUploads.size && !state.failedChunks.size && state.currentJobStatus !== 'processing' && state.currentJobStatus !== 'ready');
+        if (els.stopRecording) { els.stopRecording.textContent = state.stopFailed ? 'Retry stop' : 'Stop recording'; }
+        setButtonVisibility(els.stopRecording, recording || state.stopFailed, true);
+        const canPrepareReplay = Boolean(stopped && state.serverStopConfirmed && state.activeJobId && state.finalChunkCount && !state.pendingUploads.size && !state.failedChunks.size && state.currentJobStatus !== 'processing' && state.currentJobStatus !== 'ready');
         setButtonVisibility(els.finalizeRecording, canPrepareReplay, canPrepareReplay);
         setButtonVisibility(els.retryChunks, Boolean(state.failedChunks.size), Boolean(state.failedChunks.size));
         renderTransitionButtons();

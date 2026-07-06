@@ -34,6 +34,7 @@ class VH360_Studio_REST_Controller {
                 'methods'             => WP_REST_Server::CREATABLE,
                 'callback'            => array( $this, 'create_broadcast' ),
                 'permission_callback' => array( $this, 'permissions_check' ),
+                'args'                => $this->get_broadcast_args(),
             )
         );
 
@@ -74,6 +75,7 @@ class VH360_Studio_REST_Controller {
                     'methods'             => WP_REST_Server::CREATABLE,
                     'callback'            => array( $this, 'upload_media_source' ),
                     'permission_callback' => array( $this, 'permissions_check' ),
+                    'args'                => array( 'display_name' => $this->get_limited_text_arg( false, 120 ) ),
                 ),
             )
         );
@@ -494,7 +496,80 @@ class VH360_Studio_REST_Controller {
         );
     }
 
+    private function get_optional_id_arg() {
+        return array(
+            'required'          => false,
+            'sanitize_callback' => 'absint',
+            'validate_callback' => function( $value ) {
+                return null === $value || '' === $value || ( is_numeric( $value ) && 0 < absint( $value ) );
+            },
+        );
+    }
 
+    private function get_bool_arg( $required ) {
+        return array(
+            'required'          => (bool) $required,
+            'sanitize_callback' => 'rest_sanitize_boolean',
+            'validate_callback' => function( $value ) use ( $required ) {
+                if ( ! $required && ( null === $value || '' === $value ) ) {
+                    return true;
+                }
+                return is_bool( $value ) || in_array( $value, array( 0, 1, '0', '1', 'true', 'false', true, false ), true );
+            },
+        );
+    }
+
+    private function get_limited_text_arg( $required, $max_length ) {
+        return array(
+            'required'          => (bool) $required,
+            'sanitize_callback' => 'sanitize_text_field',
+            'validate_callback' => function( $value ) use ( $required, $max_length ) {
+                if ( ! $required && ( null === $value || '' === $value ) ) {
+                    return true;
+                }
+                return is_scalar( $value ) && strlen( (string) $value ) <= absint( $max_length );
+            },
+        );
+    }
+
+    private function get_limited_textarea_arg( $required, $max_length ) {
+        return array(
+            'required'          => (bool) $required,
+            'sanitize_callback' => 'sanitize_textarea_field',
+            'validate_callback' => function( $value ) use ( $required, $max_length ) {
+                if ( ! $required && ( null === $value || '' === $value ) ) {
+                    return true;
+                }
+                return is_scalar( $value ) && strlen( (string) $value ) <= absint( $max_length );
+            },
+        );
+    }
+
+    private function get_broadcast_args() {
+        return array(
+            'video_id'                 => $this->get_optional_id_arg(),
+            'title'                    => $this->get_limited_text_arg( false, 200 ),
+            'description'              => $this->get_limited_textarea_arg( false, 5000 ),
+            'agora_mode'               => array(
+                'required'          => false,
+                'sanitize_callback' => 'sanitize_key',
+                'validate_callback' => function( $value ) {
+                    return null === $value || '' === $value || in_array( sanitize_key( $value ), array( 'broadcast', 'interactive' ), true );
+                },
+            ),
+            'viewer_count'             => $this->get_bool_arg( false ),
+            'chat_enabled'             => $this->get_bool_arg( false ),
+            'agora_everyone_is_host'   => $this->get_bool_arg( false ),
+            'require_passcode'         => $this->get_bool_arg( false ),
+            'host_passcode'            => $this->get_limited_text_arg( false, 64 ),
+            'featured_image_id'        => $this->get_optional_id_arg(),
+            'clear_featured_image'     => $this->get_bool_arg( false ),
+            'quality_preset'           => array(
+                'required'          => false,
+                'sanitize_callback' => array( 'VH360_Studio_Quality_Presets', 'normalize' ),
+            ),
+        );
+    }
 
     private function get_mime_type_arg( $required ) {
         return array(
@@ -564,9 +639,9 @@ class VH360_Studio_REST_Controller {
                 'sanitize_callback' => 'sanitize_key',
                 'validate_callback' => array( $this, 'validate_source_type' ),
             ),
-            'source_id'        => array( 'required' => false, 'sanitize_callback' => 'sanitize_text_field' ),
-            'live_video_id'    => array( 'required' => false, 'sanitize_callback' => 'absint' ),
-            'room_id'          => array( 'required' => false, 'sanitize_callback' => 'sanitize_text_field' ),
+            'source_id'        => $this->get_limited_text_arg( false, 191 ),
+            'live_video_id'    => $this->get_optional_id_arg(),
+            'room_id'          => $this->get_limited_text_arg( false, 191 ),
             'recording_mode'   => array(
                 'required'          => false,
                 'sanitize_callback' => 'sanitize_key',
@@ -865,9 +940,28 @@ class VH360_Studio_REST_Controller {
         $files = $request->get_file_params();
         if ( empty( $files['chunk'] ) ) { return new WP_Error( 'vh360_studio_missing_chunk', __( 'Missing uploaded recording chunk.', 'videohub360-studio' ), array( 'status' => 400 ) ); }
         $summary = $this->chunks->store_uploaded_chunk( $job, $session, intval( $chunk_index ), $files['chunk'], $request->get_param( 'mime_type' ), $request->get_param( 'chunk_checksum' ) );
-        if ( is_wp_error( $summary ) ) { $this->jobs->mark_failed( $job['id'], get_current_user_id(), $summary->get_error_message() ); return $summary; }
+        if ( is_wp_error( $summary ) ) {
+            if ( ! $this->is_retryable_chunk_error( $summary ) ) {
+                $this->jobs->mark_failed( $job['id'], get_current_user_id(), $summary->get_error_message() );
+            }
+            return $summary;
+        }
         $summary['job_status'] = $job['status'];
         return rest_ensure_response( $summary );
+    }
+
+    private function is_retryable_chunk_error( WP_Error $error ) {
+        return in_array(
+            $error->get_error_code(),
+            array(
+                'vh360_studio_missing_chunk',
+                'vh360_studio_chunk_store_failed',
+                'vh360_studio_chunk_checksum_failed',
+                'vh360_studio_chunk_checksum_mismatch',
+                'vh360_studio_chunk_integrity_failed',
+            ),
+            true
+        );
     }
 
     public function list_chunks( WP_REST_Request $request ) {
@@ -882,6 +976,9 @@ class VH360_Studio_REST_Controller {
     public function stop_recording( WP_REST_Request $request ) {
         $job = $this->chunks->validate_job_ownership( absint( $request['id'] ), get_current_user_id() );
         if ( is_wp_error( $job ) ) { return $job; }
+        if ( VH360_Studio_Recording_Jobs::STATUS_STOPPING === $job['status'] ) {
+            return rest_ensure_response( $this->prepare_job_response( $job ) );
+        }
         if ( VH360_Studio_Recording_Jobs::STATUS_RECORDING !== $job['status'] ) { return new WP_Error( 'vh360_studio_invalid_status_transition', __( 'Recording can only stop from the recording status.', 'videohub360-studio' ), array( 'status' => 409 ) ); }
         return rest_ensure_response( $this->prepare_job_response( $this->jobs->mark_stopping( $job['id'], get_current_user_id(), $request->get_param( 'duration_seconds' ) ) ) );
     }

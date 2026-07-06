@@ -108,17 +108,31 @@ class VH360_Studio_Recording_Chunks {
             return $type_check;
         }
 
-        if ( ! $this->replace_validated_chunk( $validation_path, $path ) ) {
+        if ( ! file_exists( $validation_path ) || ! is_file( $validation_path ) || ! is_readable( $validation_path ) ) {
             @unlink( $validation_path );
-            return new WP_Error( 'vh360_studio_chunk_store_failed', __( 'Unable to store recording chunk.', 'videohub360-studio' ), array( 'status' => 500 ) );
+            return new WP_Error( 'vh360_studio_chunk_store_failed', __( 'Unable to validate the uploaded recording chunk. Retry this chunk upload.', 'videohub360-studio' ), array( 'status' => 500 ) );
         }
 
-        $checksum = hash_file( 'sha256', $path );
+        $checksum = hash_file( 'sha256', $validation_path );
+        if ( ! $checksum ) {
+            @unlink( $validation_path );
+            return new WP_Error( 'vh360_studio_chunk_checksum_failed', __( 'Unable to checksum the uploaded recording chunk. Retry this chunk upload.', 'videohub360-studio' ), array( 'status' => 500 ) );
+        }
         $declared_checksum = strtolower( sanitize_text_field( wp_unslash( $declared_checksum ) ) );
         if ( $declared_checksum && ( ! preg_match( '/^[a-f0-9]{64}$/', $declared_checksum ) || $checksum !== $declared_checksum ) ) {
-            @unlink( $path );
+            @unlink( $validation_path );
             return new WP_Error( 'vh360_studio_chunk_checksum_mismatch', __( 'Recording chunk checksum did not match. Retry this chunk upload.', 'videohub360-studio' ), array( 'status' => 409 ) );
         }
+
+        if ( ! $this->replace_validated_chunk( $validation_path, $path ) ) {
+            @unlink( $validation_path );
+            return new WP_Error( 'vh360_studio_chunk_store_failed', __( 'Unable to store recording chunk. Retry this chunk upload.', 'videohub360-studio' ), array( 'status' => 500 ) );
+        }
+
+        if ( ! file_exists( $path ) || ! is_file( $path ) || ! is_readable( $path ) || absint( filesize( $path ) ) !== absint( $size ) || hash_file( 'sha256', $path ) !== $checksum ) {
+            return new WP_Error( 'vh360_studio_chunk_integrity_failed', __( 'Stored recording chunk could not be verified. Retry this chunk upload.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
+
         $this->upsert_chunk( $job, $browser_session_id, $chunk_index, $size, $base_mime, $path, $checksum );
         return $this->received_summary( $job['id'], $browser_session_id );
     }
