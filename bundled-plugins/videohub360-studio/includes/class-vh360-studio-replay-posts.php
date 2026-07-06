@@ -85,6 +85,20 @@ class VH360_Studio_Replay_Posts {
         if ( $poster_url ) {
             update_post_meta( $post_id, 'poster_url', $poster_url );
             update_post_meta( $post_id, '_vh360_studio_poster_url', $poster_url );
+            if ( ! has_post_thumbnail( $post_id ) && ! get_post_meta( $post_id, '_vh360_poster', true ) ) {
+                update_post_meta( $post_id, '_vh360_poster', $poster_url );
+            }
+        }
+
+        if ( $live_video_id && $live_video_id !== $post_id ) {
+            $source_thumbnail_id = get_post_thumbnail_id( $live_video_id );
+            if ( $source_thumbnail_id && ! has_post_thumbnail( $post_id ) ) {
+                set_post_thumbnail( $post_id, $source_thumbnail_id );
+            }
+            $source_poster = get_post_meta( $live_video_id, '_vh360_poster', true );
+            if ( $source_poster && ! get_post_meta( $post_id, '_vh360_poster', true ) ) {
+                update_post_meta( $post_id, '_vh360_poster', esc_url_raw( $source_poster ) );
+            }
         }
 
         $custom_html = '';

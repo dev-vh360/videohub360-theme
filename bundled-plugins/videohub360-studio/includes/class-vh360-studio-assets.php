@@ -32,6 +32,8 @@ class VH360_Studio_Assets {
             $this->asset_version( $css_path )
         );
 
+        wp_enqueue_media();
+
         wp_enqueue_script( 'agora-rtc-sdk', 'https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js', array(), '4.20.0', true );
 
         wp_enqueue_script(

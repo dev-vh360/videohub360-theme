@@ -62,6 +62,8 @@
         mediaSourceModalTrigger: null,
         publishPollTimer: null,
         publishPollAttempts: 0,
+        featuredImageId: 0,
+        featuredImageUrl: '',
     };
 
     const els = {
@@ -132,6 +134,11 @@
         replayLink: root.querySelector('[data-replay-link]'),
         broadcastTitle: root.querySelector('[data-broadcast-title]'),
         broadcastDescription: root.querySelector('[data-broadcast-description]'),
+        coverImageId: root.querySelector('[data-cover-image-id]'),
+        coverImagePreview: root.querySelector('[data-cover-image-preview]'),
+        coverImagePreviewImg: root.querySelector('[data-cover-image-preview-img]'),
+        selectCoverImage: root.querySelector('[data-select-cover-image]'),
+        removeCoverImage: root.querySelector('[data-remove-cover-image]'),
         broadcastMode: root.querySelector('[data-broadcast-mode]'),
         broadcastViewerCount: root.querySelector('[data-broadcast-viewer-count]'),
         broadcastChat: root.querySelector('[data-broadcast-chat]'),
@@ -2603,6 +2610,45 @@
     }
 
 
+    function setCoverImage(attachmentId, imageUrl) {
+        state.featuredImageId = Number(attachmentId) || 0;
+        state.featuredImageUrl = imageUrl || '';
+        if (els.coverImageId) {
+            els.coverImageId.value = state.featuredImageId ? String(state.featuredImageId) : '';
+        }
+        if (els.coverImagePreview && els.coverImagePreviewImg) {
+            els.coverImagePreview.hidden = !state.featuredImageUrl;
+            els.coverImagePreviewImg.src = state.featuredImageUrl || '';
+        }
+        if (els.removeCoverImage) {
+            els.removeCoverImage.hidden = !state.featuredImageId;
+        }
+    }
+
+    function selectCoverImage() {
+        if (!window.wp || !window.wp.media) {
+            setBroadcastStatus('The WordPress media picker is unavailable.', 'error');
+            return;
+        }
+        const frame = window.wp.media({
+            title: 'Select cover image',
+            button: { text: 'Use this cover image' },
+            library: { type: 'image' },
+            multiple: false
+        });
+        frame.on('select', () => {
+            const attachment = frame.state().get('selection').first();
+            const data = attachment ? attachment.toJSON() : null;
+            if (!data || !data.id) {
+                return;
+            }
+            const sizes = data.sizes || {};
+            const imageUrl = (sizes.large && sizes.large.url) || (sizes.medium && sizes.medium.url) || data.url || '';
+            setCoverImage(data.id, imageUrl);
+        });
+        frame.open();
+    }
+
     function setBroadcastStatus(message, type) {
         if (els.broadcastStatus) {
             els.broadcastStatus.textContent = message;
@@ -2623,6 +2669,7 @@
             require_passcode: mode === 'interactive' && !!(els.broadcastRequirePasscode && els.broadcastRequirePasscode.checked),
             host_passcode: els.broadcastPasscode ? els.broadcastPasscode.value : '',
             quality_preset: els.qualitySelect ? els.qualitySelect.value : config.defaultQualityPreset,
+            featured_image_id: state.featuredImageId || (els.coverImageId ? Number(els.coverImageId.value) || 0 : 0),
         };
     }
 
@@ -2710,6 +2757,9 @@
             state.broadcastVideoId = broadcast.videoId;
             state.activeJobId = created.job && created.job.id ? created.job.id : state.activeJobId;
             state.viewerPermalink = broadcast.viewerPermalink || '';
+            if (broadcast.featuredImageId || broadcast.featuredImageUrl) {
+                setCoverImage(broadcast.featuredImageId || state.featuredImageId, broadcast.featuredImageUrl || state.featuredImageUrl);
+            }
             updateViewerLinkControls();
             const prepared = await api('/broadcasts/' + state.broadcastVideoId + '/prepare', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
             studioDebugLog('[VH360 Studio] Studio broadcaster UID', prepared.uid);
@@ -3035,6 +3085,8 @@
         if (els.finalizeRecording) { els.finalizeRecording.addEventListener('click', finalizeRecording); }
         if (els.publishReplay) { els.publishReplay.addEventListener('click', publishReplay); }
         if (els.broadcastMode) { els.broadcastMode.addEventListener('change', updateBroadcastRules); }
+        if (els.selectCoverImage) { els.selectCoverImage.addEventListener('click', selectCoverImage); }
+        if (els.removeCoverImage) { els.removeCoverImage.addEventListener('click', () => setCoverImage(0, '')); }
         if (els.broadcastEveryoneHost) { els.broadcastEveryoneHost.addEventListener('change', updateBroadcastRules); }
         if (els.broadcastRequirePasscode) { els.broadcastRequirePasscode.addEventListener('change', updateBroadcastRules); }
         if (els.goLive) { els.goLive.addEventListener('click', goLive); }

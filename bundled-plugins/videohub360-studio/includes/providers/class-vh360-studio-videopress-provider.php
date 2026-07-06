@@ -64,7 +64,8 @@ class VH360_Studio_VideoPress_Provider implements VH360_Studio_Replay_Storage_Pr
 
         $source = $recording['path'];
         $extension = 'video/mp4' === $recording['mime_type'] ? 'mp4' : 'webm';
-        $tmp = wp_tempnam( 'vh360-studio-replay-' . absint( $job['id'] ) . '.' . $extension );
+        $filename  = $this->attachment_filename( $job, $extension );
+        $tmp = wp_tempnam( $filename );
         if ( ! $tmp || ! copy( $source, $tmp ) ) {
             if ( $tmp ) {
                 @unlink( $tmp );
@@ -73,7 +74,7 @@ class VH360_Studio_VideoPress_Provider implements VH360_Studio_Replay_Storage_Pr
         }
 
         $file = array(
-            'name'     => sanitize_file_name( 'vh360-studio-replay-' . absint( $job['id'] ) . '.' . $extension ),
+            'name'     => $filename,
             'type'     => $recording['mime_type'],
             'tmp_name' => $tmp,
             'error'    => 0,
@@ -163,7 +164,14 @@ class VH360_Studio_VideoPress_Provider implements VH360_Studio_Replay_Storage_Pr
     }
 
     private function attachment_title( array $job ) {
-        return sprintf( __( 'VH360 Studio Replay #%d', 'videohub360-studio' ), absint( $job['id'] ) );
+        $live_video_id = ! empty( $job['live_video_id'] ) ? absint( $job['live_video_id'] ) : 0;
+        $title = $live_video_id ? get_the_title( $live_video_id ) : '';
+        return $title ? wp_strip_all_tags( $title ) : sprintf( __( 'Studio Replay #%d', 'videohub360-studio' ), absint( $job['id'] ) );
+    }
+
+    private function attachment_filename( array $job, $extension ) {
+        $base = $this->attachment_title( $job );
+        return sanitize_file_name( $base . '.' . sanitize_key( $extension ) );
     }
 
     private function detect_videopress_guid( $attachment_id ) {

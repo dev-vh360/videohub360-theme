@@ -127,6 +127,15 @@ class VideoHub360_Livestream_Service {
             update_post_meta( $saved_id, $key, $value );
         }
 
+        $featured_image_id = ! empty( $data['featured_image_id'] ) ? absint( $data['featured_image_id'] ) : 0;
+        if ( $featured_image_id && 'attachment' === get_post_type( $featured_image_id ) && 0 === strpos( (string) get_post_mime_type( $featured_image_id ), 'image/' ) ) {
+            set_post_thumbnail( $saved_id, $featured_image_id );
+            $poster_url = wp_get_attachment_image_url( $featured_image_id, 'large' );
+            if ( $poster_url ) {
+                update_post_meta( $saved_id, '_vh360_poster', esc_url_raw( $poster_url ) );
+            }
+        }
+
         if ( $require_passcode ) {
             $passcode = sanitize_text_field( $data['host_passcode'] ?? '' );
             if ( '' !== $passcode ) {
@@ -285,6 +294,7 @@ class VideoHub360_Livestream_Service {
     }
 
     public function get_livestream_data( $post_id ) {
+        $featured_image_id = get_post_thumbnail_id( $post_id );
         return array(
             'videoId' => absint( $post_id ),
             'channelName' => get_post_meta( $post_id, '_vh360_agora_channel_name', true ),
@@ -292,6 +302,8 @@ class VideoHub360_Livestream_Service {
             'viewerPermalink' => get_permalink( $post_id ),
             'streamLive' => 'yes' === get_post_meta( $post_id, '_vh360_agora_stream_live', true ),
             'clientMode' => 'interactive' === ( get_post_meta( $post_id, '_vh360_agora_mode', true ) ?: 'broadcast' ) ? 'rtc' : 'live',
+            'featuredImageId' => absint( $featured_image_id ),
+            'featuredImageUrl' => $featured_image_id ? ( wp_get_attachment_image_url( $featured_image_id, 'large' ) ?: wp_get_attachment_url( $featured_image_id ) ) : '',
         );
     }
 }
