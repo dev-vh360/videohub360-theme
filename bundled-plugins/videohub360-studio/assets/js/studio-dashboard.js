@@ -2775,8 +2775,7 @@
     function broadcastPayload() {
         const mode = els.broadcastMode ? els.broadcastMode.value : 'broadcast';
         const featuredImageId = state.featuredImageId || (els.coverImageId ? Number(els.coverImageId.value) || 0 : 0);
-        return {
-            video_id: state.broadcastVideoId || 0,
+        const payload = {
             title: els.broadcastTitle && els.broadcastTitle.value ? els.broadcastTitle.value : 'Studio Livestream',
             description: els.broadcastDescription ? els.broadcastDescription.value : '',
             agora_mode: mode,
@@ -2786,9 +2785,15 @@
             require_passcode: mode === 'interactive' && !!(els.broadcastRequirePasscode && els.broadcastRequirePasscode.checked),
             host_passcode: els.broadcastPasscode ? els.broadcastPasscode.value : '',
             quality_preset: getSelectedPresetKey(),
-            featured_image_id: featuredImageId,
             clear_featured_image: !featuredImageId && state.clearFeaturedImage,
         };
+        if (state.broadcastVideoId && Number(state.broadcastVideoId) > 0) {
+            payload.video_id = Number(state.broadcastVideoId);
+        }
+        if (featuredImageId && Number(featuredImageId) > 0) {
+            payload.featured_image_id = Number(featuredImageId);
+        }
+        return payload;
     }
 
     function updateBroadcastRules() {

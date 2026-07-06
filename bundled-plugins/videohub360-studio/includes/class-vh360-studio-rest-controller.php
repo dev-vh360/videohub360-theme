@@ -501,7 +501,7 @@ class VH360_Studio_REST_Controller {
             'required'          => false,
             'sanitize_callback' => 'absint',
             'validate_callback' => function( $value ) {
-                return null === $value || '' === $value || ( is_numeric( $value ) && 0 < absint( $value ) );
+                return null === $value || '' === $value || 0 === $value || '0' === $value || ( is_numeric( $value ) && 0 < absint( $value ) );
             },
         );
     }
