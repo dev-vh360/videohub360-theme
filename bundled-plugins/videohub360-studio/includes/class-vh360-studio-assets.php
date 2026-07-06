@@ -75,6 +75,7 @@ class VH360_Studio_Assets {
             'qualityPresets'            => VH360_Studio_Quality_Presets::get_presets(),
             'defaultQualityPreset'      => VH360_Studio_Quality_Presets::DEFAULT_PRESET,
             'uploadSettings'             => class_exists( 'VH360_Studio_Recording_Chunks' ) ? ( new VH360_Studio_Recording_Chunks( VH360_Studio_Plugin::instance()->jobs() ) )->upload_settings() : array(),
+            'publitioDirectUpload'      => $this->publitio_direct_upload_config(),
             'currentUserId'             => get_current_user_id(),
             'strings'                   => array(
                 'ready'                  => __( 'Ready', 'videohub360-studio' ),
@@ -110,6 +111,9 @@ class VH360_Studio_Assets {
                 'publishComplete'       => __( 'Replay published.', 'videohub360-studio' ),
                 'publishProcessing'     => __( 'Replay uploaded to Publitio. Waiting for processing.', 'videohub360-studio' ),
                 'publishFailed'         => __( 'Replay publishing failed. Please try again.', 'videohub360-studio' ),
+                'publitioDirectUploading' => __( 'Uploading directly to Publitio…', 'videohub360-studio' ),
+                'publitioDirectVerifying' => __( 'Publitio upload complete. Verifying replay…', 'videohub360-studio' ),
+                'publitioDirectFallback' => __( 'Direct upload failed. Using server relay fallback.', 'videohub360-studio' ),
                 'goLive'                => __( 'Go Live', 'videohub360-studio' ),
                 'goingLive'             => __( 'Joining Agora and publishing the Program output…', 'videohub360-studio' ),
                 'liveStarted'           => __( 'Live broadcast started.', 'videohub360-studio' ),
@@ -129,6 +133,22 @@ class VH360_Studio_Assets {
                 'canvasContext'    => __( 'Canvas drawing support', 'videohub360-studio' ),
                 'clipboardCopy'    => __( 'Clipboard copy support', 'videohub360-studio' ),
             ),
+        );
+    }
+
+    private function publitio_direct_upload_config() {
+        $chunks   = class_exists( 'VH360_Studio_Recording_Chunks' ) ? new VH360_Studio_Recording_Chunks( VH360_Studio_Plugin::instance()->jobs() ) : null;
+        $settings = $chunks ? $chunks->upload_settings() : array();
+        $mode     = sanitize_key( get_option( 'vh360_studio_publitio_upload_mode', 'server_relay' ) );
+        $preset   = sanitize_text_field( get_option( 'vh360_studio_publitio_upload_preset_id', '' ) );
+
+        return array(
+            'enabled'            => 'direct_browser' === $mode && '' !== $preset,
+            'upload_mode'        => $mode,
+            'upload_preset_id'   => $preset,
+            'upload_url_base'    => 'https://api.publit.io/v1/files/create/',
+            'allowed_mime_types' => array( 'video/mp4', 'video/webm' ),
+            'max_size'           => ! empty( $settings['max_total_recording_size'] ) ? absint( $settings['max_total_recording_size'] ) : 0,
         );
     }
 

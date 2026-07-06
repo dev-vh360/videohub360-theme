@@ -130,6 +130,46 @@ class VH360_Studio_Replay_Publisher {
         return $status;
     }
 
+    public function complete_verified_publish( array $job, array $published ) {
+        $provider = $this->get_provider( $job, false );
+        if ( is_wp_error( $provider ) ) {
+            return $provider;
+        }
+
+        $target_validation = $this->validate_replay_target_for_publish( $job );
+        if ( is_wp_error( $target_validation ) ) {
+            return $target_validation;
+        }
+
+        $recording = $this->build_recording_payload_for_status( $job );
+        if ( $this->provider_status_is_ready( $published ) ) {
+            return $this->complete_published_job( $job, $published, $recording, $provider );
+        }
+
+        $updated = $this->jobs->update( $job['id'], 0, array(
+            'publitio_file_id'        => ! empty( $published['publitio_file_id'] ) ? sanitize_text_field( $published['publitio_file_id'] ) : '',
+            'playback_url'            => ! empty( $published['playback_url'] ) ? esc_url_raw( $published['playback_url'] ) : ( ! empty( $published['embed_url'] ) ? esc_url_raw( $published['embed_url'] ) : '' ),
+            'poster_url'              => ! empty( $published['poster_url'] ) ? esc_url_raw( $published['poster_url'] ) : '',
+            'publish_attempted_at'    => current_time( 'mysql' ),
+            'publish_provider_status' => ! empty( $published['provider_status'] ) ? sanitize_key( $published['provider_status'] ) : ( ! empty( $published['status'] ) ? sanitize_key( $published['status'] ) : 'publitio_processing' ),
+            'error_message'           => '',
+        ) );
+        if ( is_wp_error( $updated ) ) {
+            return $updated;
+        }
+
+        return array(
+            'provider_id'             => $provider->get_id(),
+            'provider_label'          => $provider->get_label(),
+            'job_status'              => $updated['status'],
+            'publish_provider_status' => $updated['publish_provider_status'],
+            'publitio_file_id'        => ! empty( $updated['publitio_file_id'] ) ? sanitize_text_field( $updated['publitio_file_id'] ) : '',
+            'playback_url'            => $updated['playback_url'],
+            'poster_url'              => $updated['poster_url'],
+            'message'                 => ! empty( $published['message'] ) ? sanitize_text_field( $published['message'] ) : __( 'Publitio upload is verified and processing.', 'videohub360-studio' ),
+        );
+    }
+
     private function provider_status_is_ready( array $status ) {
         $provider_status = ! empty( $status['provider_status'] ) ? sanitize_key( $status['provider_status'] ) : ( ! empty( $status['status'] ) ? sanitize_key( $status['status'] ) : '' );
         return ( ! empty( $status['videopress_guid'] ) && ! empty( $status['attachment_id'] ) ) || ( ! empty( $status['publitio_file_id'] ) && ( ! empty( $status['playback_url'] ) || ! empty( $status['embed_url'] ) ) && in_array( $provider_status, array( 'publitio_ready', 'published', 'ready' ), true ) );

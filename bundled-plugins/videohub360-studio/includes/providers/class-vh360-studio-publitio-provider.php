@@ -92,6 +92,22 @@ class VH360_Studio_Publitio_Provider implements VH360_Studio_Replay_Storage_Prov
 
     public function test_connection() { return $this->client()->list_files( 1 ); }
 
+    public function supports_direct_browser_publish() {
+        return 'direct_browser' === sanitize_key( get_option( 'vh360_studio_publitio_upload_mode', 'server_relay' ) ) && '' !== sanitize_text_field( get_option( 'vh360_studio_publitio_upload_preset_id', '' ) );
+    }
+
+    public function verify_direct_upload_file( $file_id ) {
+        $file_id = sanitize_text_field( $file_id );
+        if ( '' === $file_id ) {
+            return new WP_Error( 'vh360_studio_publitio_missing_file_id', __( 'Publitio file ID is missing.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        }
+        $result = $this->client()->show_file( $file_id );
+        if ( is_wp_error( $result ) ) {
+            return $result;
+        }
+        return $this->result_from_response( $result, __( 'Publitio direct upload verified.', 'videohub360-studio' ) );
+    }
+
     private function client() { return new VH360_Studio_Publitio_Client(); }
 
     private function upload_params( array $job, array $recording ) {
@@ -128,6 +144,8 @@ class VH360_Studio_Publitio_Provider implements VH360_Studio_Replay_Storage_Prov
             'status'               => $ready ? self::STATUS_READY : self::STATUS_PROCESSING,
             'provider_status'      => $ready ? self::STATUS_READY : self::STATUS_PROCESSING,
             'publitio_file_id'     => sanitize_text_field( $file_id ),
+            'public_id'            => sanitize_text_field( $this->first_scalar( $file, array( 'public_id' ) ) ),
+            'file_size'            => absint( $this->first_scalar( $file, array( 'size', 'bytes', 'file_size' ) ) ),
             'playback_url'         => $playback,
             'poster_url'           => $poster,
             'embed_url'            => $embed,

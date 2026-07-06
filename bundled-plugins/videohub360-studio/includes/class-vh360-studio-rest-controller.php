@@ -233,6 +233,49 @@ class VH360_Studio_REST_Controller {
 
         register_rest_route(
             'vh360-studio/v1',
+            '/jobs/(?P<id>\d+)/publitio/direct-upload/authorize',
+            array(
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => array( $this, 'authorize_publitio_direct_upload' ),
+                'permission_callback' => array( $this, 'permissions_check' ),
+                'args'                => array( 'id' => $this->get_id_arg() ),
+            )
+        );
+
+        register_rest_route(
+            'vh360-studio/v1',
+            '/jobs/(?P<id>\d+)/publitio/direct-upload/complete',
+            array(
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => array( $this, 'complete_publitio_direct_upload' ),
+                'permission_callback' => array( $this, 'permissions_check' ),
+                'args'                => array(
+                    'id'                  => $this->get_id_arg(),
+                    'direct_upload_token' => $this->get_limited_text_arg( true, 128 ),
+                    'publitio_file_id'    => $this->get_limited_text_arg( true, 191 ),
+                    'playback_url'        => array(
+                        'required'          => false,
+                        'sanitize_callback' => 'esc_url_raw',
+                        'validate_callback' => array( $this, 'validate_optional_url' ),
+                    ),
+                    'poster_url'          => array(
+                        'required'          => false,
+                        'sanitize_callback' => 'esc_url_raw',
+                        'validate_callback' => array( $this, 'validate_optional_url' ),
+                    ),
+                    'embed_url'           => array(
+                        'required'          => false,
+                        'sanitize_callback' => 'esc_url_raw',
+                        'validate_callback' => array( $this, 'validate_optional_url' ),
+                    ),
+                    'file_size'           => $this->get_non_negative_int_arg( false ),
+                    'mime_type'           => $this->get_mime_type_arg( false ),
+                ),
+            )
+        );
+
+        register_rest_route(
+            'vh360-studio/v1',
             '/jobs/(?P<id>\d+)/cancel',
             array(
                 'methods'             => WP_REST_Server::CREATABLE,
@@ -574,7 +617,10 @@ class VH360_Studio_REST_Controller {
     private function get_mime_type_arg( $required ) {
         return array(
             'required'          => (bool) $required,
-            'validate_callback' => function( $value ) {
+            'validate_callback' => function( $value ) use ( $required ) {
+                if ( ! $required && ( null === $value || '' === $value ) ) {
+                    return true;
+                }
                 return $this->chunks->is_allowed_mime_type( $value );
             },
         );
@@ -748,7 +794,7 @@ class VH360_Studio_REST_Controller {
     }
 
     public function validate_optional_url( $value ) {
-        return '' === $value || false !== wp_http_validate_url( $value );
+        return null === $value || '' === $value || false !== wp_http_validate_url( $value );
     }
 
     public function permissions_check( WP_REST_Request $request ) {
@@ -1029,7 +1075,132 @@ class VH360_Studio_REST_Controller {
         return rest_ensure_response( $this->prepare_publish_response( $status, $job ) );
     }
 
+    public function authorize_publitio_direct_upload( WP_REST_Request $request ) {
+        $job = $this->chunks->validate_job_ownership( absint( $request['id'] ), get_current_user_id() );
+        if ( is_wp_error( $job ) ) { return $job; }
+        if ( VH360_Studio_Recording_Jobs::STATUS_PROCESSING !== $job['status'] ) {
+            return new WP_Error( 'vh360_studio_invalid_direct_upload_status', __( 'Direct Publitio upload requires a prepared processing job.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
+        if ( 'publitio' !== sanitize_key( $job['storage_provider'] ) ) {
+            return new WP_Error( 'vh360_studio_direct_upload_wrong_provider', __( 'Direct upload is only available for Publitio jobs.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        }
+        if ( 'direct_browser' !== sanitize_key( get_option( 'vh360_studio_publitio_upload_mode', 'server_relay' ) ) ) {
+            return new WP_Error( 'vh360_studio_direct_upload_disabled', __( 'Publitio direct browser upload is not enabled.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        }
+        $preset = sanitize_text_field( get_option( 'vh360_studio_publitio_upload_preset_id', '' ) );
+        if ( '' === $preset ) {
+            return new WP_Error( 'vh360_studio_direct_upload_preset_missing', __( 'Publitio Upload Preset ID is not configured.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        }
+        $mime = $this->chunks->base_mime_type( $job['mime_type'] );
+        if ( ! in_array( $mime, array( 'video/mp4', 'video/webm' ), true ) ) {
+            return new WP_Error( 'vh360_studio_direct_upload_invalid_type', __( 'Direct Publitio upload supports MP4 and WebM recordings only.', 'videohub360-studio' ), array( 'status' => 415 ) );
+        }
+        $settings = $this->chunks->upload_settings();
+        if ( ! empty( $settings['max_total_recording_size'] ) && absint( $job['file_size'] ) > absint( $settings['max_total_recording_size'] ) ) {
+            return new WP_Error( 'vh360_studio_direct_upload_too_large', __( 'Recording is too large for the configured Studio upload limit.', 'videohub360-studio' ), array( 'status' => 413 ) );
+        }
+
+        $public_id = sanitize_title( 'vh360-studio-replay-' . absint( $job['id'] ) . '-' . wp_generate_password( 6, false, false ) );
+        $token     = wp_generate_password( 40, false, false );
+        $expires   = time() + ( 30 * MINUTE_IN_SECONDS );
+        $meta      = array(
+            'job_id'       => absint( $job['id'] ),
+            'user_id'      => absint( $job['user_id'] ),
+            'mime_type'    => $mime,
+            'file_size'    => absint( $job['file_size'] ),
+            'public_id'    => $public_id,
+            'preset_id'    => $preset,
+            'expires'      => $expires,
+        );
+        set_transient( $this->publitio_direct_upload_transient_key( $job['id'], $token ), $meta, 30 * MINUTE_IN_SECONDS );
+
+        return rest_ensure_response( array(
+            'upload_url'           => esc_url_raw( 'https://api.publit.io/v1/files/create/' . rawurlencode( $preset ) ),
+            'upload_preset_id'     => $preset,
+            'public_id'            => $public_id,
+            'title'                => $this->direct_upload_title( $job ),
+            'description'          => $this->direct_upload_description( $job ),
+            'tags'                 => 'videohub360,studio,replay',
+            'folder'               => sanitize_text_field( get_option( 'vh360_studio_publitio_folder', '' ) ),
+            'privacy'              => 'private' === sanitize_key( get_option( 'vh360_studio_publitio_privacy', 'public' ) ) ? '0' : '1',
+            'option_download'      => get_option( 'vh360_studio_publitio_option_download', '0' ) ? '1' : '0',
+            'option_hls'           => get_option( 'vh360_studio_publitio_option_hls', '0' ) ? '1' : '0',
+            'option_ad'            => '0',
+            'direct_upload_token'  => $token,
+            'max_size'             => absint( $settings['max_total_recording_size'] ),
+            'expected_file_size'   => absint( $job['file_size'] ),
+            'allowed_mime_types'   => array( 'video/mp4', 'video/webm' ),
+        ) );
+    }
+
+    public function complete_publitio_direct_upload( WP_REST_Request $request ) {
+        $job = $this->chunks->validate_job_ownership( absint( $request['id'] ), get_current_user_id() );
+        if ( is_wp_error( $job ) ) { return $job; }
+        $token = sanitize_text_field( $request->get_param( 'direct_upload_token' ) );
+        $key   = $this->publitio_direct_upload_transient_key( $job['id'], $token );
+        $meta  = get_transient( $key );
+        if ( ! is_array( $meta ) || empty( $meta['job_id'] ) || absint( $meta['job_id'] ) !== absint( $job['id'] ) || absint( $meta['user_id'] ) !== absint( $job['user_id'] ) || time() > absint( $meta['expires'] ) ) {
+            return new WP_Error( 'vh360_studio_direct_upload_token_invalid', __( 'Direct upload token is invalid or expired.', 'videohub360-studio' ), array( 'status' => 403 ) );
+        }
+        delete_transient( $key );
+        if ( 'publitio' !== sanitize_key( $job['storage_provider'] ) || VH360_Studio_Recording_Jobs::STATUS_PROCESSING !== $job['status'] ) {
+            return new WP_Error( 'vh360_studio_direct_upload_job_invalid', __( 'This job is not ready for direct Publitio completion.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
+        $file_id = sanitize_text_field( $request->get_param( 'publitio_file_id' ) );
+        $provider = VH360_Studio_Plugin::instance()->registry()->get_storage_provider( 'publitio' );
+        if ( ! $provider || ! method_exists( $provider, 'verify_direct_upload_file' ) ) {
+            return new WP_Error( 'vh360_studio_publitio_unavailable', __( 'Publitio provider is unavailable for direct upload verification.', 'videohub360-studio' ), array( 'status' => 500 ) );
+        }
+        $verified = $provider->verify_direct_upload_file( $file_id );
+        if ( is_wp_error( $verified ) ) {
+            return $verified;
+        }
+        if ( empty( $verified['publitio_file_id'] ) || sanitize_text_field( $verified['publitio_file_id'] ) !== $file_id ) {
+            return new WP_Error( 'vh360_studio_direct_upload_verification_failed', __( 'Publitio verification did not confirm the uploaded file.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
+        if ( empty( $verified['public_id'] ) || sanitize_title( $verified['public_id'] ) !== sanitize_title( $meta['public_id'] ) ) {
+            return new WP_Error( 'vh360_studio_direct_upload_public_id_mismatch', __( 'Publitio verification did not match this Studio upload session.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
+        if ( ! empty( $verified['file_size'] ) && absint( $meta['file_size'] ) && absint( $verified['file_size'] ) !== absint( $meta['file_size'] ) ) {
+            return new WP_Error( 'vh360_studio_direct_upload_size_mismatch', __( 'Publitio verification did not match the expected recording size.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
+        if ( ! empty( $request['playback_url'] ) && empty( $verified['playback_url'] ) ) {
+            $verified['playback_url'] = esc_url_raw( $request['playback_url'] );
+        }
+        if ( ! empty( $request['poster_url'] ) && empty( $verified['poster_url'] ) ) {
+            $verified['poster_url'] = esc_url_raw( $request['poster_url'] );
+        }
+        if ( ! empty( $request['embed_url'] ) && empty( $verified['embed_url'] ) ) {
+            $verified['embed_url'] = esc_url_raw( $request['embed_url'] );
+        }
+        $completed = $this->publisher->complete_verified_publish( $job, $verified );
+        if ( is_wp_error( $completed ) ) {
+            return $completed;
+        }
+        return rest_ensure_response( $this->prepare_publish_response( $completed, $job ) );
+    }
+
     public function cancel_job( WP_REST_Request $request ) {
         return rest_ensure_response( $this->prepare_job_response( $this->jobs->cancel( absint( $request['id'] ), get_current_user_id() ) ) );
+    }
+
+    private function publitio_direct_upload_transient_key( $job_id, $token ) {
+        return 'vh360_studio_direct_publitio_upload_' . absint( $job_id ) . '_' . hash( 'sha256', (string) $token );
+    }
+
+    private function direct_upload_title( array $job ) {
+        if ( ! empty( $job['live_video_id'] ) ) {
+            $title = get_the_title( absint( $job['live_video_id'] ) );
+            if ( $title ) { return wp_strip_all_tags( $title ); }
+        }
+        return sprintf( __( 'Studio Replay #%d', 'videohub360-studio' ), absint( $job['id'] ) );
+    }
+
+    private function direct_upload_description( array $job ) {
+        if ( ! empty( $job['live_video_id'] ) ) {
+            $post = get_post( absint( $job['live_video_id'] ) );
+            if ( $post ) { return wp_strip_all_tags( $post->post_content ); }
+        }
+        return '';
     }
 }

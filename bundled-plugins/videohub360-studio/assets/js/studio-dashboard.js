@@ -24,10 +24,14 @@
         recorder: null,
         recordingStream: null,
         selectedMimeType: '',
+        currentStorageProvider: '',
         chunkIndex: 0,
         pendingUploads: new Set(),
         uploadedChunks: new Set(),
         failedChunks: new Map(),
+        directUploadParts: new Map(),
+        directUploadBytes: 0,
+        directUploadAvailable: true,
         recordingStartedAt: 0,
         recordingStoppedAt: null,
         recordingDurationSeconds: 0,
@@ -66,6 +70,7 @@
         mediaSourceModalTrigger: null,
         publishPollTimer: null,
         publishPollAttempts: 0,
+        directUploadInProgress: false,
         stopFailed: false,
         serverStopConfirmed: false,
         serverStopConfirming: false,
@@ -2071,6 +2076,7 @@
         }
         const job = await api('/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ recording_mode: 'browser', source_type: 'studio_setup', source_id: 'studio-recording-' + Date.now(), quality_preset: getSelectedPresetKey() }) });
         state.activeJobId = job.id;
+        state.currentStorageProvider = job.storage_provider || '';
         appendRecentJob(job);
         return job.id;
     }
@@ -2120,6 +2126,9 @@
             state.uploadedChunks.clear();
             state.failedChunks.clear();
             state.pendingUploads.clear();
+            state.directUploadParts.clear();
+            state.directUploadBytes = 0;
+            state.directUploadAvailable = true;
             state.recordingStartedAt = Date.now();
             state.recordingStoppedAt = null;
             state.recordingDurationSeconds = 0;
@@ -2196,8 +2205,25 @@
 
     function queueChunk(blob, index) {
         state.pendingUploads.add(index);
+        rememberDirectUploadPart(blob, index);
         uploadChunk(blob, index).catch(() => {});
         renderRecordingState();
+    }
+
+    function rememberDirectUploadPart(blob, index) {
+        const direct = config.publitioDirectUpload || {};
+        if (!direct.enabled || !state.directUploadAvailable || !blob || !blob.size) {
+            return;
+        }
+        const maxSize = Number(direct.max_size || 0);
+        if (maxSize > 0 && state.directUploadBytes + blob.size > maxSize) {
+            state.directUploadAvailable = false;
+            state.directUploadParts.clear();
+            state.directUploadBytes = 0;
+            return;
+        }
+        state.directUploadParts.set(Number(index), blob);
+        state.directUploadBytes += blob.size;
     }
 
 
@@ -2424,6 +2450,7 @@
             if (els.finalizeRecording) { els.finalizeRecording.disabled = true; }
             const job = await api('/jobs/' + state.activeJobId + '/recording/finalize', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ expected_chunks: state.finalChunkCount }) });
             state.currentJobStatus = job.status || 'processing';
+            state.currentStorageProvider = job.storage_provider || state.currentStorageProvider;
             setRecordingStatus('Replay prepared. You can publish it now.', 'success');
             appendRecentJob(job);
             updatePublishingButtons();
@@ -2506,6 +2533,106 @@
         state.publishPollTimer = window.setTimeout(poll, 5000);
     }
 
+    function canDirectUploadToPublitio() {
+        const direct = config.publitioDirectUpload || {};
+        return Boolean(direct.enabled && state.currentStorageProvider === 'publitio' && state.directUploadAvailable && state.directUploadParts.size && window.XMLHttpRequest && window.FormData);
+    }
+
+    function buildDirectUploadBlob() {
+        if (!state.directUploadParts.size) {
+            return null;
+        }
+        const ordered = Array.from(state.directUploadParts.entries()).sort((a, b) => Number(a[0]) - Number(b[0])).map((entry) => entry[1]);
+        return new Blob(ordered, { type: state.selectedMimeType || 'video/mp4' });
+    }
+
+    function publitioDirectUpload(url, form) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', url);
+            xhr.responseType = 'json';
+            xhr.upload.onprogress = (event) => {
+                if (event.lengthComputable) {
+                    setPublishingStatus((strings.publitioDirectUploading || 'Uploading directly to Publitio…') + ' ' + Math.round((event.loaded / event.total) * 100) + '%', 'info');
+                }
+            };
+            xhr.onload = () => {
+                const payload = xhr.response || {};
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    resolve(payload);
+                    return;
+                }
+                reject(new Error((payload && (payload.message || payload.error || payload.msg)) || 'Publitio direct upload failed.'));
+            };
+            xhr.onerror = () => reject(new Error('Publitio direct upload failed before completion.'));
+            xhr.ontimeout = () => reject(new Error('Publitio direct upload timed out.'));
+            xhr.send(form);
+        });
+    }
+
+    function findPublitioFilePayload(response) {
+        if (!response || typeof response !== 'object') {
+            return {};
+        }
+        if (response.file && typeof response.file === 'object') {
+            return response.file;
+        }
+        if (response.data && typeof response.data === 'object') {
+            return response.data;
+        }
+        return response;
+    }
+
+    async function publishReplayViaDirectPublitio() {
+        const blob = buildDirectUploadBlob();
+        if (!blob || !blob.size) {
+            throw new Error('Local recording data is unavailable for direct upload.');
+        }
+        const direct = config.publitioDirectUpload || {};
+        if (direct.max_size && blob.size > Number(direct.max_size)) {
+            throw new Error('Recording is too large for direct browser upload.');
+        }
+        const allowed = direct.allowed_mime_types || [];
+        const baseMime = (blob.type || state.selectedMimeType || '').split(';')[0].toLowerCase();
+        if (allowed.length && allowed.indexOf(baseMime) === -1) {
+            throw new Error('Recording type is not allowed for direct browser upload.');
+        }
+
+        setPublishingStatus(strings.publitioDirectUploading || 'Uploading directly to Publitio…', 'info');
+        const auth = await api('/jobs/' + state.activeJobId + '/publitio/direct-upload/authorize', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
+        const form = new FormData();
+        form.append('file', blob, 'vh360-studio-replay-' + state.activeJobId + recordingExtension(baseMime || blob.type || state.selectedMimeType));
+        ['public_id', 'title', 'description', 'tags', 'folder', 'privacy', 'option_download', 'option_hls', 'option_ad'].forEach((key) => {
+            if (auth[key]) {
+                form.append(key, String(auth[key]));
+            }
+        });
+        const uploaded = await publitioDirectUpload(auth.upload_url, form);
+        const file = findPublitioFilePayload(uploaded);
+        const fileId = file.id || file.file_id || uploaded.id || uploaded.file_id || '';
+        if (!fileId) {
+            throw new Error('Publitio direct upload did not return a file ID.');
+        }
+        setPublishingStatus(strings.publitioDirectVerifying || 'Publitio upload complete. Verifying replay…', 'info');
+        return api('/jobs/' + state.activeJobId + '/publitio/direct-upload/complete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce },
+            body: JSON.stringify({
+                direct_upload_token: auth.direct_upload_token,
+                publitio_file_id: fileId,
+                playback_url: file.url_preview || file.url_download || file.url || '',
+                poster_url: file.url_thumbnail || file.thumbnail_url || '',
+                embed_url: file.embed_url || file.url_embed || '',
+                file_size: file.size || file.bytes || blob.size,
+                mime_type: baseMime || blob.type || state.selectedMimeType
+            })
+        });
+    }
+
+    async function publishReplayViaServerRelay() {
+        return api('/jobs/' + state.activeJobId + '/publishing/publish', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
+    }
+
     async function publishReplay() {
         if (!state.activeJobId) {
             return;
@@ -2513,7 +2640,17 @@
         if (els.publishReplay) { els.publishReplay.disabled = true; }
         setPublishingStatus(strings.publishingReplay, 'info');
         try {
-            const result = await api('/jobs/' + state.activeJobId + '/publishing/publish', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
+            let result;
+            if (canDirectUploadToPublitio()) {
+                try {
+                    result = await publishReplayViaDirectPublitio();
+                } catch (directError) {
+                    setPublishingStatus(strings.publitioDirectFallback || 'Direct upload failed. Using server relay fallback.', 'warning');
+                    result = await publishReplayViaServerRelay();
+                }
+            } else {
+                result = await publishReplayViaServerRelay();
+            }
             state.currentJobStatus = result.job_status || 'ready';
             const replayUrl = result.replay_url || result.playback_url || '';
             setPublishingStatus(replayUrl ? strings.publishComplete : (result.message || strings.publishProcessing || 'Replay uploaded to Publitio. Waiting for processing.'), replayUrl ? 'success' : 'info');
@@ -3007,6 +3144,7 @@
             const broadcast = created.broadcast || {};
             state.broadcastVideoId = broadcast.videoId;
             state.activeJobId = created.job && created.job.id ? created.job.id : state.activeJobId;
+            state.currentStorageProvider = created.job && created.job.storage_provider ? created.job.storage_provider : state.currentStorageProvider;
             state.viewerPermalink = broadcast.viewerPermalink || '';
             if (broadcast.featuredImageId || broadcast.featuredImageUrl) {
                 setCoverImage(broadcast.featuredImageId || state.featuredImageId, broadcast.featuredImageUrl || state.featuredImageUrl, { clear: false });

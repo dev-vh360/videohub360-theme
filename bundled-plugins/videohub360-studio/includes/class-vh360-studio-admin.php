@@ -18,6 +18,7 @@ class VH360_Studio_Admin {
         add_action( 'admin_init', array( $this, 'register_settings' ) );
         add_action( 'admin_post_vh360_studio_test_publitio_connection', array( $this, 'test_publitio_connection' ) );
         add_action( 'admin_post_vh360_studio_test_publitio_upload', array( $this, 'test_publitio_upload' ) );
+        add_action( 'admin_post_vh360_studio_test_publitio_direct_upload_setup', array( $this, 'test_publitio_direct_upload_setup' ) );
         add_filter( 'vh360_studio_temp_recording_retention_days', array( $this, 'filter_retention_days' ) );
         add_filter( 'vh360_studio_max_total_recording_size', array( $this, 'filter_max_total_size' ) );
     }
@@ -36,6 +37,8 @@ class VH360_Studio_Admin {
             'vh360_studio_default_replay_storage_provider' => array( $this, 'sanitize_provider' ),
             'vh360_studio_publitio_api_key'               => array( $this, 'sanitize_api_key' ),
             'vh360_studio_publitio_api_secret'            => array( $this, 'sanitize_secret' ),
+            'vh360_studio_publitio_upload_mode'           => array( $this, 'sanitize_upload_mode' ),
+            'vh360_studio_publitio_upload_preset_id'      => 'sanitize_text_field',
             'vh360_studio_publitio_folder'                => 'sanitize_text_field',
             'vh360_studio_publitio_privacy'               => array( $this, 'sanitize_privacy' ),
             'vh360_studio_publitio_option_download'       => array( $this, 'sanitize_bool_option' ),
@@ -83,6 +86,7 @@ class VH360_Studio_Admin {
     }
 
     public function sanitize_privacy( $value ) { return 'private' === sanitize_key( $value ) ? 'private' : 'public'; }
+    public function sanitize_upload_mode( $value ) { return 'direct_browser' === sanitize_key( $value ) ? 'direct_browser' : 'server_relay'; }
     public function sanitize_bool_option( $value ) { return rest_sanitize_boolean( $value ) ? '1' : '0'; }
     public function sanitize_retention_days( $value ) { return max( 1, min( 30, absint( $value ) ) ); }
     public function filter_retention_days( $days ) { return absint( get_option( 'vh360_studio_temp_retention_days', $days ) ); }
@@ -134,6 +138,30 @@ class VH360_Studio_Admin {
         exit;
     }
 
+
+    public function test_publitio_direct_upload_setup() {
+        if ( ! current_user_can( 'manage_options' ) ) { wp_die( esc_html__( 'You are not allowed to manage Studio settings.', 'videohub360-studio' ) ); }
+        check_admin_referer( 'vh360_studio_test_publitio_direct_upload_setup' );
+        $status = 'failed';
+        $error  = '';
+        $preset = sanitize_text_field( get_option( 'vh360_studio_publitio_upload_preset_id', '' ) );
+        $client = new VH360_Studio_Publitio_Client();
+        if ( ! $preset ) {
+            $error = __( 'Publitio Upload Preset ID is required for direct browser uploads.', 'videohub360-studio' );
+        } elseif ( ! $client->has_credentials() ) {
+            $error = __( 'Publitio API credentials are required so WordPress can verify direct uploads.', 'videohub360-studio' );
+        } elseif ( 'success' !== sanitize_key( get_option( 'vh360_studio_publitio_last_status', '' ) ) ) {
+            $error = __( 'Run a successful Publitio connection test before enabling direct upload.', 'videohub360-studio' );
+        } else {
+            $status = 'success';
+        }
+        update_option( 'vh360_studio_publitio_direct_last_tested_at', current_time( 'mysql' ) );
+        update_option( 'vh360_studio_publitio_direct_last_status', $status );
+        update_option( 'vh360_studio_publitio_direct_last_error', sanitize_text_field( $error ) );
+        wp_safe_redirect( add_query_arg( array( 'page'=>'vh360-studio-settings', 'publitio_direct_test'=>$status ), admin_url( 'admin.php' ) ) );
+        exit;
+    }
+
     public function render_page() {
         if ( ! current_user_can( 'manage_options' ) ) { return; }
         $providers = $this->registry->get_storage_providers();
@@ -146,6 +174,8 @@ class VH360_Studio_Admin {
                 <table class="form-table" role="presentation"><tbody>
                     <tr><th><label for="vh360-default-provider"><?php esc_html_e( 'Default replay storage provider', 'videohub360-studio' ); ?></label></th><td><select id="vh360-default-provider" name="vh360_studio_default_replay_storage_provider"><?php foreach ( $providers as $id => $provider ) : ?><option value="<?php echo esc_attr( $id ); ?>" <?php selected( get_option( 'vh360_studio_default_replay_storage_provider', 'videopress' ), $id ); ?>><?php echo esc_html( $provider->get_label() ); ?></option><?php endforeach; ?></select></td></tr>
                     <?php $this->text_row( 'vh360_studio_publitio_api_key', __( 'Publitio API Key', 'videohub360-studio' ) ); ?>
+                    <tr><th><?php esc_html_e( 'Publitio upload mode', 'videohub360-studio' ); ?></th><td><select name="vh360_studio_publitio_upload_mode"><option value="server_relay" <?php selected( get_option( 'vh360_studio_publitio_upload_mode', 'server_relay' ), 'server_relay' ); ?>><?php esc_html_e( 'Server relay upload', 'videohub360-studio' ); ?></option><option value="direct_browser" <?php selected( get_option( 'vh360_studio_publitio_upload_mode', 'server_relay' ), 'direct_browser' ); ?>><?php esc_html_e( 'Direct browser upload', 'videohub360-studio' ); ?></option></select><p class="description"><?php esc_html_e( 'Server relay remains the fallback. Direct browser upload requires an unsigned Publitio Upload Preset.', 'videohub360-studio' ); ?></p></td></tr>
+                    <tr><th><label for="vh360_studio_publitio_upload_preset_id"><?php esc_html_e( 'Publitio Upload Preset ID', 'videohub360-studio' ); ?></label></th><td><input type="text" class="regular-text" id="vh360_studio_publitio_upload_preset_id" name="vh360_studio_publitio_upload_preset_id" value="<?php echo esc_attr( get_option( 'vh360_studio_publitio_upload_preset_id', '' ) ); ?>"><p class="description"><?php esc_html_e( 'Required for direct browser uploads. Create an Upload Preset in Publitio and enable unsigned uploads for that preset. The preset ID is visible to authorized Studio users; do not enter an API secret here.', 'videohub360-studio' ); ?></p></td></tr>
                     <tr><th><label for="vh360_studio_publitio_api_secret"><?php esc_html_e( 'Publitio API Secret', 'videohub360-studio' ); ?></label></th><td><input type="password" id="vh360_studio_publitio_api_secret" name="vh360_studio_publitio_api_secret" value="<?php echo esc_attr( get_option( 'vh360_studio_publitio_api_secret', '' ) ? '********' : '' ); ?>" autocomplete="new-password"><p class="description"><?php esc_html_e( 'Saved secrets are masked. Enter a new value only to replace it.', 'videohub360-studio' ); ?></p></td></tr>
                     <?php $this->text_row( 'vh360_studio_publitio_folder', __( 'Publitio Folder ID', 'videohub360-studio' ) ); ?>
                     <tr><th><?php esc_html_e( 'Publitio privacy', 'videohub360-studio' ); ?></th><td><select name="vh360_studio_publitio_privacy"><option value="public" <?php selected( get_option( 'vh360_studio_publitio_privacy', 'public' ), 'public' ); ?>><?php esc_html_e( 'Public', 'videohub360-studio' ); ?></option><option value="private" <?php selected( get_option( 'vh360_studio_publitio_privacy', 'public' ), 'private' ); ?>><?php esc_html_e( 'Private', 'videohub360-studio' ); ?></option></select></td></tr>
@@ -173,7 +203,8 @@ class VH360_Studio_Admin {
     private function render_connection_test() { ?>
         <h2><?php esc_html_e( 'Publitio Connection and Upload Tests', 'videohub360-studio' ); ?></h2>
         <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block;margin-right:12px;"><?php wp_nonce_field( 'vh360_studio_test_publitio_connection' ); ?><input type="hidden" name="action" value="vh360_studio_test_publitio_connection"><?php submit_button( __( 'Test Publitio Connection', 'videohub360-studio' ), 'secondary', 'submit', false ); ?></form>
-        <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block;"><?php wp_nonce_field( 'vh360_studio_test_publitio_upload' ); ?><input type="hidden" name="action" value="vh360_studio_test_publitio_upload"><?php submit_button( __( 'Test Publitio Upload', 'videohub360-studio' ), 'secondary', 'submit', false ); ?></form>
+        <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block;margin-right:12px;"><?php wp_nonce_field( 'vh360_studio_test_publitio_upload' ); ?><input type="hidden" name="action" value="vh360_studio_test_publitio_upload"><?php submit_button( __( 'Test Publitio Upload', 'videohub360-studio' ), 'secondary', 'submit', false ); ?></form>
+        <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block;"><?php wp_nonce_field( 'vh360_studio_test_publitio_direct_upload_setup' ); ?><input type="hidden" name="action" value="vh360_studio_test_publitio_direct_upload_setup"><?php submit_button( __( 'Test Publitio Direct Upload Setup', 'videohub360-studio' ), 'secondary', 'submit', false ); ?></form>
     <?php }
 
     private function render_provider_status() {
@@ -198,7 +229,12 @@ class VH360_Studio_Admin {
         $upload_last = get_option( 'vh360_studio_publitio_last_upload_tested_at', __( 'Never tested', 'videohub360-studio' ) );
         $upload_status = get_option( 'vh360_studio_publitio_last_upload_status', __( 'unknown', 'videohub360-studio' ) );
         $upload_error = get_option( 'vh360_studio_publitio_last_upload_error', '' );
-        return trim( $key . '. ' . $secret . '. ' . sprintf( __( 'Last connection test: %1$s (%2$s).', 'videohub360-studio' ), $last, $status ) . ' ' . ( $error ? sprintf( __( 'Last connection error: %s', 'videohub360-studio' ), wp_html_excerpt( $error, 160, '…' ) ) : '' ) . ' ' . sprintf( __( 'Last upload test: %1$s (%2$s).', 'videohub360-studio' ), $upload_last, $upload_status ) . ' ' . ( $upload_error ? sprintf( __( 'Last upload error: %s', 'videohub360-studio' ), wp_html_excerpt( $upload_error, 160, '…' ) ) : '' ) );
+        $direct_mode = 'direct_browser' === sanitize_key( get_option( 'vh360_studio_publitio_upload_mode', 'server_relay' ) ) ? __( 'Direct browser upload enabled', 'videohub360-studio' ) : __( 'Server relay upload enabled', 'videohub360-studio' );
+        $preset = get_option( 'vh360_studio_publitio_upload_preset_id', '' ) ? __( 'Upload preset ID saved', 'videohub360-studio' ) : __( 'Upload preset ID missing', 'videohub360-studio' );
+        $direct_last = get_option( 'vh360_studio_publitio_direct_last_tested_at', __( 'Never tested', 'videohub360-studio' ) );
+        $direct_status = get_option( 'vh360_studio_publitio_direct_last_status', __( 'unknown', 'videohub360-studio' ) );
+        $direct_error = get_option( 'vh360_studio_publitio_direct_last_error', '' );
+        return trim( $key . '. ' . $secret . '. ' . $direct_mode . '. ' . $preset . '. ' . sprintf( __( 'Last connection test: %1$s (%2$s).', 'videohub360-studio' ), $last, $status ) . ' ' . ( $error ? sprintf( __( 'Last connection error: %s', 'videohub360-studio' ), wp_html_excerpt( $error, 160, '…' ) ) : '' ) . ' ' . sprintf( __( 'Last upload test: %1$s (%2$s).', 'videohub360-studio' ), $upload_last, $upload_status ) . ' ' . ( $upload_error ? sprintf( __( 'Last upload error: %s', 'videohub360-studio' ), wp_html_excerpt( $upload_error, 160, '…' ) ) : '' ) . ' ' . sprintf( __( 'Last direct upload setup test: %1$s (%2$s).', 'videohub360-studio' ), $direct_last, $direct_status ) . ' ' . ( $direct_error ? sprintf( __( 'Last direct upload setup error: %s', 'videohub360-studio' ), wp_html_excerpt( $direct_error, 160, '…' ) ) : '' ) );
     }
 
     private function render_server_readiness() {
@@ -221,6 +257,9 @@ class VH360_Studio_Admin {
             __( 'cURL extension available', 'videohub360-studio' ) => function_exists( 'curl_init' ) ? __( 'Yes', 'videohub360-studio' ) : __( 'No', 'videohub360-studio' ),
             __( 'CURLFile available', 'videohub360-studio' ) => class_exists( 'CURLFile' ) ? __( 'Yes', 'videohub360-studio' ) : __( 'No', 'videohub360-studio' ),
             __( 'Publitio upload timeout', 'videohub360-studio' ) => sprintf( __( '%d seconds', 'videohub360-studio' ), (int) apply_filters( 'vh360_studio_publitio_upload_timeout', 300 ) ),
+            __( 'Publitio direct upload mode', 'videohub360-studio' ) => 'direct_browser' === sanitize_key( get_option( 'vh360_studio_publitio_upload_mode', 'server_relay' ) ) ? __( 'Enabled', 'videohub360-studio' ) : __( 'Disabled', 'videohub360-studio' ),
+            __( 'Publitio Upload Preset ID', 'videohub360-studio' ) => get_option( 'vh360_studio_publitio_upload_preset_id', '' ) ? __( 'Configured; visible to authorized Studio users', 'videohub360-studio' ) : __( 'Missing', 'videohub360-studio' ),
+            __( 'Direct upload fallback', 'videohub360-studio' ) => __( 'Server relay remains available when WordPress chunks are uploaded.', 'videohub360-studio' ),
         );
         foreach ( $rows as $label => $value ) { echo '<tr><th>' . esc_html( $label ) . '</th><td>' . esc_html( $value ) . '</td></tr>'; }
         echo '</tbody></table>';
