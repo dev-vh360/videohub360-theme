@@ -65,6 +65,9 @@ class VH360_Studio_Replay_Posts {
         $guid          = ! empty( $publish_result['videopress_guid'] ) ? sanitize_text_field( $publish_result['videopress_guid'] ) : '';
         $publitio_file_id = ! empty( $publish_result['publitio_file_id'] ) ? sanitize_text_field( $publish_result['publitio_file_id'] ) : '';
         $publitio_embed_url = ! empty( $publish_result['embed_url'] ) ? esc_url_raw( $publish_result['embed_url'] ) : '';
+        $publitio_public_id = ! empty( $publish_result['public_id'] ) ? sanitize_text_field( $publish_result['public_id'] ) : '';
+        $expected_public_id = ! empty( $publish_result['expected_public_id'] ) ? sanitize_text_field( $publish_result['expected_public_id'] ) : '';
+        $actual_public_id = ! empty( $publish_result['actual_public_id'] ) ? sanitize_text_field( $publish_result['actual_public_id'] ) : $publitio_public_id;
         $provider_status = ! empty( $publish_result['provider_status'] ) ? sanitize_key( $publish_result['provider_status'] ) : ( ! empty( $publish_result['status'] ) ? sanitize_key( $publish_result['status'] ) : '' );
         $attachment_id = ! empty( $publish_result['attachment_id'] ) ? absint( $publish_result['attachment_id'] ) : 0;
         $provider      = sanitize_key( $job['storage_provider'] );
@@ -82,6 +85,10 @@ class VH360_Studio_Replay_Posts {
         update_post_meta( $post_id, '_vh360_studio_publitio_file_id', $publitio_file_id );
         update_post_meta( $post_id, '_vh360_studio_publitio_playback_url', $playback_url );
         update_post_meta( $post_id, '_vh360_studio_publitio_embed_url', $publitio_embed_url );
+        update_post_meta( $post_id, '_vh360_studio_publitio_public_id', $actual_public_id );
+        update_post_meta( $post_id, '_vh360_studio_publitio_expected_public_id', $expected_public_id );
+        update_post_meta( $post_id, '_vh360_studio_publitio_actual_public_id', $actual_public_id );
+        update_post_meta( $post_id, '_vh360_studio_publitio_public_id_matches', ! empty( $publish_result['public_id_matches'] ) ? 'yes' : 'no' );
         update_post_meta( $post_id, '_vh360_studio_publitio_provider_status', $provider_status );
         update_post_meta( $post_id, '_vh360_studio_assembled_checksum', ! empty( $recording['assembled_checksum'] ) ? sanitize_text_field( $recording['assembled_checksum'] ) : '' );
         update_post_meta( $post_id, '_vh360_studio_replay_source_live_video_id', ! empty( $job['live_video_id'] ) ? absint( $job['live_video_id'] ) : 0 );

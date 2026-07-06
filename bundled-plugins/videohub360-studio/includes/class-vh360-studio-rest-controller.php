@@ -1145,6 +1145,9 @@ class VH360_Studio_REST_Controller {
             'mime_type'    => $mime,
             'file_size'    => $file_size,
             'public_id'    => $public_id,
+            'title'        => $this->direct_upload_title( $job ),
+            'tags'         => 'videohub360,studio,replay,vh360-job-' . absint( $job['id'] ),
+            'folder'       => sanitize_text_field( get_option( 'vh360_studio_publitio_folder', '' ) ),
             'preset_id'    => $preset,
             'expires'      => $expires,
         );
@@ -1154,10 +1157,10 @@ class VH360_Studio_REST_Controller {
             'upload_url'           => esc_url_raw( 'https://api.publit.io/v1/files/create/' . rawurlencode( $preset ) ),
             'upload_preset_id'     => $preset,
             'public_id'            => $public_id,
-            'title'                => $this->direct_upload_title( $job ),
+            'title'                => $meta['title'],
             'description'          => $this->direct_upload_description( $job ),
-            'tags'                 => 'videohub360,studio,replay',
-            'folder'               => sanitize_text_field( get_option( 'vh360_studio_publitio_folder', '' ) ),
+            'tags'                 => $meta['tags'],
+            'folder'               => $meta['folder'],
             'privacy'              => 'private' === sanitize_key( get_option( 'vh360_studio_publitio_privacy', 'public' ) ) ? '0' : '1',
             'option_download'      => get_option( 'vh360_studio_publitio_option_download', '0' ) ? '1' : '0',
             'option_hls'           => get_option( 'vh360_studio_publitio_option_hls', '0' ) ? '1' : '0',
@@ -1193,11 +1196,20 @@ class VH360_Studio_REST_Controller {
         if ( empty( $verified['publitio_file_id'] ) || sanitize_text_field( $verified['publitio_file_id'] ) !== $file_id ) {
             return new WP_Error( 'vh360_studio_direct_upload_verification_failed', __( 'Publitio verification did not confirm the uploaded file.', 'videohub360-studio' ), array( 'status' => 409 ) );
         }
-        if ( empty( $verified['public_id'] ) || sanitize_title( $verified['public_id'] ) !== sanitize_title( $meta['public_id'] ) ) {
-            return new WP_Error( 'vh360_studio_direct_upload_public_id_mismatch', __( 'Publitio verification did not match this Studio upload session.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        $expected_public_id = ! empty( $meta['public_id'] ) ? sanitize_text_field( $meta['public_id'] ) : '';
+        $actual_public_id   = ! empty( $verified['public_id'] ) ? sanitize_text_field( $verified['public_id'] ) : '';
+        $public_id_matches  = $expected_public_id && $actual_public_id && sanitize_title( $expected_public_id ) === sanitize_title( $actual_public_id );
+        $verified['expected_public_id'] = $expected_public_id;
+        $verified['actual_public_id']   = $actual_public_id;
+        $verified['public_id_matches']  = $public_id_matches ? 1 : 0;
+
+        $file_validation = $this->validate_publitio_direct_file_metadata( $verified, $meta, $request );
+        if ( is_wp_error( $file_validation ) ) {
+            return $file_validation;
         }
-        if ( ! empty( $verified['file_size'] ) && absint( $meta['file_size'] ) && absint( $verified['file_size'] ) !== absint( $meta['file_size'] ) ) {
-            return new WP_Error( 'vh360_studio_direct_upload_size_mismatch', __( 'Publitio verification did not match the expected recording size.', 'videohub360-studio' ), array( 'status' => 409 ) );
+
+        if ( ! $public_id_matches && $expected_public_id && $actual_public_id ) {
+            $verified['message'] = __( 'Publitio direct upload verified. Publitio changed the requested public ID.', 'videohub360-studio' );
         }
         if ( ! empty( $request['playback_url'] ) && empty( $verified['playback_url'] ) ) {
             $verified['playback_url'] = esc_url_raw( $request['playback_url'] );
@@ -1222,6 +1234,34 @@ class VH360_Studio_REST_Controller {
 
     private function publitio_direct_upload_transient_key( $job_id, $token ) {
         return 'vh360_studio_direct_publitio_upload_' . absint( $job_id ) . '_' . hash( 'sha256', (string) $token );
+    }
+
+    private function validate_publitio_direct_file_metadata( array $verified, array $meta, WP_REST_Request $request ) {
+        $expected_size = ! empty( $meta['file_size'] ) ? absint( $meta['file_size'] ) : absint( $request->get_param( 'file_size' ) );
+        $has_actual_size = array_key_exists( 'file_size', $verified ) && '' !== (string) $verified['file_size'];
+        $actual_size     = $has_actual_size ? absint( $verified['file_size'] ) : 0;
+        if ( $has_actual_size && 1 > $actual_size ) {
+            return new WP_Error( 'vh360_studio_direct_upload_empty_file', __( 'Publitio verification found an empty uploaded file.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
+        if ( $has_actual_size && $expected_size ) {
+            $allowed_delta = max( 1048576, (int) ceil( $expected_size * 0.05 ) );
+            if ( abs( $actual_size - $expected_size ) > $allowed_delta ) {
+                return new WP_Error( 'vh360_studio_direct_upload_size_mismatch', __( 'Publitio verification found a file size that does not match this Studio upload session.', 'videohub360-studio' ), array( 'status' => 409 ) );
+            }
+        }
+
+        $allowed_mimes = array( 'video/mp4', 'video/webm' );
+        $mime          = ! empty( $verified['mime_type'] ) ? $this->chunks->base_mime_type( $verified['mime_type'] ) : '';
+        if ( $mime && 'video' !== $mime && ! in_array( $mime, $allowed_mimes, true ) ) {
+            return new WP_Error( 'vh360_studio_direct_upload_invalid_verified_type', __( 'Publitio verification found a non-video uploaded file.', 'videohub360-studio' ), array( 'status' => 415 ) );
+        }
+
+        $extension = ! empty( $verified['extension'] ) ? strtolower( sanitize_key( $verified['extension'] ) ) : '';
+        if ( $extension && ! in_array( $extension, array( 'mp4', 'webm' ), true ) ) {
+            return new WP_Error( 'vh360_studio_direct_upload_invalid_verified_extension', __( 'Publitio verification found an unsupported uploaded file type.', 'videohub360-studio' ), array( 'status' => 415 ) );
+        }
+
+        return true;
     }
 
     private function direct_upload_title( array $job ) {

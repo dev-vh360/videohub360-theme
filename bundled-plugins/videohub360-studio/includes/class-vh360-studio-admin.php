@@ -270,13 +270,33 @@ class VH360_Studio_Admin {
 
     private function render_recent_jobs() {
         $jobs = $this->jobs->list( get_current_user_id(), 20 );
-        echo '<h2>' . esc_html__( 'Recent Publish Diagnostics', 'videohub360-studio' ) . '</h2><table class="widefat striped"><thead><tr><th>ID</th><th>' . esc_html__( 'Creator', 'videohub360-studio' ) . '</th><th>' . esc_html__( 'Provider', 'videohub360-studio' ) . '</th><th>' . esc_html__( 'Job Status', 'videohub360-studio' ) . '</th><th>' . esc_html__( 'Publish Status', 'videohub360-studio' ) . '</th><th>' . esc_html__( 'Created', 'videohub360-studio' ) . '</th><th>' . esc_html__( 'Updated', 'videohub360-studio' ) . '</th><th>' . esc_html__( 'Last Error', 'videohub360-studio' ) . '</th><th>' . esc_html__( 'Replay', 'videohub360-studio' ) . '</th></tr></thead><tbody>';
+        echo '<h2>' . esc_html__( 'Recent Publish Diagnostics', 'videohub360-studio' ) . '</h2><table class="widefat striped"><thead><tr><th>ID</th><th>' . esc_html__( 'Creator', 'videohub360-studio' ) . '</th><th>' . esc_html__( 'Provider', 'videohub360-studio' ) . '</th><th>' . esc_html__( 'Job Status', 'videohub360-studio' ) . '</th><th>' . esc_html__( 'Publish Status', 'videohub360-studio' ) . '</th><th>' . esc_html__( 'Publitio IDs', 'videohub360-studio' ) . '</th><th>' . esc_html__( 'Created', 'videohub360-studio' ) . '</th><th>' . esc_html__( 'Updated', 'videohub360-studio' ) . '</th><th>' . esc_html__( 'Last Error', 'videohub360-studio' ) . '</th><th>' . esc_html__( 'Replay', 'videohub360-studio' ) . '</th></tr></thead><tbody>';
         foreach ( $jobs as $job ) {
             if ( ! in_array( $job['status'], array( 'failed', 'processing', 'ready' ), true ) ) { continue; }
             $user = get_userdata( absint( $job['user_id'] ) );
             $replay = ! empty( $job['replay_video_id'] ) ? get_permalink( absint( $job['replay_video_id'] ) ) : '';
-            echo '<tr><td>' . esc_html( $job['id'] ) . '</td><td>' . esc_html( $user ? $user->display_name : $job['user_id'] ) . '</td><td>' . esc_html( $job['storage_provider'] ) . '</td><td>' . esc_html( $job['status'] ) . '</td><td>' . esc_html( $job['publish_provider_status'] ?: '—' ) . '</td><td>' . esc_html( $job['created_at'] ) . '</td><td>' . esc_html( $job['updated_at'] ) . '</td><td>' . esc_html( wp_html_excerpt( $job['error_message'] ?: '—', 120, '…' ) ) . '</td><td>' . ( $replay ? '<a href="' . esc_url( $replay ) . '">' . esc_html__( 'Open', 'videohub360-studio' ) . '</a>' : '—' ) . '</td></tr>';
+            $publitio_ids = $this->publitio_id_diagnostics( $job );
+            echo '<tr><td>' . esc_html( $job['id'] ) . '</td><td>' . esc_html( $user ? $user->display_name : $job['user_id'] ) . '</td><td>' . esc_html( $job['storage_provider'] ) . '</td><td>' . esc_html( $job['status'] ) . '</td><td>' . esc_html( $job['publish_provider_status'] ?: '—' ) . '</td><td>' . esc_html( $publitio_ids ) . '</td><td>' . esc_html( $job['created_at'] ) . '</td><td>' . esc_html( $job['updated_at'] ) . '</td><td>' . esc_html( wp_html_excerpt( $job['error_message'] ?: '—', 120, '…' ) ) . '</td><td>' . ( $replay ? '<a href="' . esc_url( $replay ) . '">' . esc_html__( 'Open', 'videohub360-studio' ) . '</a>' : '—' ) . '</td></tr>';
         }
         echo '</tbody></table>';
+    }
+
+    private function publitio_id_diagnostics( array $job ) {
+        if ( 'publitio' !== sanitize_key( $job['storage_provider'] ) ) {
+            return '—';
+        }
+
+        $post_id = ! empty( $job['replay_video_id'] ) ? absint( $job['replay_video_id'] ) : 0;
+        if ( ! $post_id && ! empty( $job['live_video_id'] ) ) {
+            $post_id = absint( $job['live_video_id'] );
+        }
+
+        $expected = $post_id ? sanitize_text_field( get_post_meta( $post_id, '_vh360_studio_publitio_expected_public_id', true ) ) : '';
+        $actual   = $post_id ? sanitize_text_field( get_post_meta( $post_id, '_vh360_studio_publitio_actual_public_id', true ) ) : '';
+        if ( $expected || $actual ) {
+            return sprintf( 'expected_public_id: %1$s; actual_public_id: %2$s', $expected ? $expected : '—', $actual ? $actual : '—' );
+        }
+
+        return ! empty( $job['publitio_file_id'] ) ? sprintf( 'file_id: %s', sanitize_text_field( $job['publitio_file_id'] ) ) : '—';
     }
 }
