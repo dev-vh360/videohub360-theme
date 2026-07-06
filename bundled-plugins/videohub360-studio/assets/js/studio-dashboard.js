@@ -62,6 +62,9 @@
         mediaSourceModalTrigger: null,
         publishPollTimer: null,
         publishPollAttempts: 0,
+        featuredImageId: 0,
+        featuredImageUrl: '',
+        clearFeaturedImage: false,
     };
 
     const els = {
@@ -132,6 +135,12 @@
         replayLink: root.querySelector('[data-replay-link]'),
         broadcastTitle: root.querySelector('[data-broadcast-title]'),
         broadcastDescription: root.querySelector('[data-broadcast-description]'),
+        coverImageId: root.querySelector('[data-cover-image-id]'),
+        coverImagePreview: root.querySelector('[data-cover-image-preview]'),
+        coverImagePreviewImg: root.querySelector('[data-cover-image-preview-img]'),
+        selectCoverImage: root.querySelector('[data-select-cover-image]'),
+        coverImageFile: root.querySelector('[data-cover-image-file]'),
+        removeCoverImage: root.querySelector('[data-remove-cover-image]'),
         broadcastMode: root.querySelector('[data-broadcast-mode]'),
         broadcastViewerCount: root.querySelector('[data-broadcast-viewer-count]'),
         broadcastChat: root.querySelector('[data-broadcast-chat]'),
@@ -2603,6 +2612,71 @@
     }
 
 
+    function setCoverImage(attachmentId, imageUrl, options = {}) {
+        state.featuredImageId = Number(attachmentId) || 0;
+        state.featuredImageUrl = imageUrl || '';
+        if (options.clear === true) {
+            state.clearFeaturedImage = true;
+        } else if (state.featuredImageId || options.clear === false) {
+            state.clearFeaturedImage = false;
+        }
+        if (els.coverImageId) {
+            els.coverImageId.value = state.featuredImageId ? String(state.featuredImageId) : '';
+        }
+        if (els.coverImagePreview && els.coverImagePreviewImg) {
+            els.coverImagePreview.hidden = !state.featuredImageUrl;
+            els.coverImagePreviewImg.src = state.featuredImageUrl || '';
+        }
+        if (els.removeCoverImage) {
+            els.removeCoverImage.hidden = !state.featuredImageId;
+        }
+    }
+
+    function selectCoverImage() {
+        if (!els.coverImageFile) {
+            setBroadcastStatus('Cover image upload is unavailable.', 'error');
+            return;
+        }
+        els.coverImageFile.click();
+    }
+
+    async function uploadSelectedCoverImage() {
+        const file = els.coverImageFile && els.coverImageFile.files && els.coverImageFile.files[0];
+        if (!file) {
+            return;
+        }
+
+        if (!file.type || file.type.indexOf('image/') !== 0) {
+            setBroadcastStatus('Choose a valid image file.', 'error');
+            els.coverImageFile.value = '';
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        if (els.selectCoverImage) {
+            els.selectCoverImage.disabled = true;
+        }
+        setBroadcastStatus('Uploading cover image…', 'info');
+
+        try {
+            const response = await api('/cover-image', { method: 'POST', body: formData });
+            setCoverImage(response.attachment_id || 0, response.url || response.thumbnail_url || '', { clear: false });
+            setBroadcastStatus('Cover image uploaded.', 'success');
+        } catch (error) {
+            setBroadcastStatus((error && error.message) || 'Cover image upload failed.', 'error');
+        } finally {
+            if (els.selectCoverImage) {
+                els.selectCoverImage.disabled = false;
+            }
+            if (els.coverImageFile) {
+                els.coverImageFile.value = '';
+            }
+        }
+    }
+
+
     function setBroadcastStatus(message, type) {
         if (els.broadcastStatus) {
             els.broadcastStatus.textContent = message;
@@ -2612,6 +2686,7 @@
 
     function broadcastPayload() {
         const mode = els.broadcastMode ? els.broadcastMode.value : 'broadcast';
+        const featuredImageId = state.featuredImageId || (els.coverImageId ? Number(els.coverImageId.value) || 0 : 0);
         return {
             video_id: state.broadcastVideoId || 0,
             title: els.broadcastTitle && els.broadcastTitle.value ? els.broadcastTitle.value : 'Studio Livestream',
@@ -2623,6 +2698,8 @@
             require_passcode: mode === 'interactive' && !!(els.broadcastRequirePasscode && els.broadcastRequirePasscode.checked),
             host_passcode: els.broadcastPasscode ? els.broadcastPasscode.value : '',
             quality_preset: els.qualitySelect ? els.qualitySelect.value : config.defaultQualityPreset,
+            featured_image_id: featuredImageId,
+            clear_featured_image: !featuredImageId && state.clearFeaturedImage,
         };
     }
 
@@ -2710,6 +2787,11 @@
             state.broadcastVideoId = broadcast.videoId;
             state.activeJobId = created.job && created.job.id ? created.job.id : state.activeJobId;
             state.viewerPermalink = broadcast.viewerPermalink || '';
+            if (broadcast.featuredImageId || broadcast.featuredImageUrl) {
+                setCoverImage(broadcast.featuredImageId || state.featuredImageId, broadcast.featuredImageUrl || state.featuredImageUrl, { clear: false });
+            } else {
+                state.clearFeaturedImage = false;
+            }
             updateViewerLinkControls();
             const prepared = await api('/broadcasts/' + state.broadcastVideoId + '/prepare', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
             studioDebugLog('[VH360 Studio] Studio broadcaster UID', prepared.uid);
@@ -3035,6 +3117,9 @@
         if (els.finalizeRecording) { els.finalizeRecording.addEventListener('click', finalizeRecording); }
         if (els.publishReplay) { els.publishReplay.addEventListener('click', publishReplay); }
         if (els.broadcastMode) { els.broadcastMode.addEventListener('change', updateBroadcastRules); }
+        if (els.selectCoverImage) { els.selectCoverImage.addEventListener('click', selectCoverImage); }
+        if (els.coverImageFile) { els.coverImageFile.addEventListener('change', uploadSelectedCoverImage); }
+        if (els.removeCoverImage) { els.removeCoverImage.addEventListener('click', () => setCoverImage(0, '', { clear: true })); }
         if (els.broadcastEveryoneHost) { els.broadcastEveryoneHost.addEventListener('change', updateBroadcastRules); }
         if (els.broadcastRequirePasscode) { els.broadcastRequirePasscode.addEventListener('change', updateBroadcastRules); }
         if (els.goLive) { els.goLive.addEventListener('click', goLive); }

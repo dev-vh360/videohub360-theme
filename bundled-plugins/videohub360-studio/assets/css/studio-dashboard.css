@@ -581,3 +581,23 @@
 .vh360-studio-recent-jobs .vh360-recent-replays-table {
     min-width: 0;
 }
+
+.vh360-studio-cover-control {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.vh360-studio-cover-preview {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--vh360-studio-panel-border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.vh360-studio-cover-preview img {
+    display: block;
+    height: auto;
+    max-height: 180px;
+    object-fit: cover;
+    width: 100%;
+}

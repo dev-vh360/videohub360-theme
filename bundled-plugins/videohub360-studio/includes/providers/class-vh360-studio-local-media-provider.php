@@ -74,7 +74,8 @@ class VH360_Studio_Local_Media_Replay_Storage_Provider implements VH360_Studio_R
         }
 
         $extension = 'video/mp4' === $recording['mime_type'] ? 'mp4' : 'webm';
-        $tmp       = wp_tempnam( 'vh360-studio-replay-' . absint( $job['id'] ) . '.' . $extension );
+        $filename  = $this->attachment_filename( $job, $extension );
+        $tmp       = wp_tempnam( $filename );
         if ( ! $tmp || ! copy( $recording['path'], $tmp ) ) {
             if ( $tmp ) {
                 @unlink( $tmp );
@@ -83,7 +84,7 @@ class VH360_Studio_Local_Media_Replay_Storage_Provider implements VH360_Studio_R
         }
 
         $file = array(
-            'name'     => sanitize_file_name( 'vh360-studio-replay-' . absint( $job['id'] ) . '.' . $extension ),
+            'name'     => $filename,
             'type'     => $recording['mime_type'],
             'tmp_name' => $tmp,
             'error'    => 0,
@@ -96,6 +97,8 @@ class VH360_Studio_Local_Media_Replay_Storage_Provider implements VH360_Studio_R
             @unlink( $tmp );
             return $attachment_id;
         }
+
+        $this->copy_source_thumbnail_to_attachment( absint( $attachment_id ), $job );
 
         $playback_url = wp_get_attachment_url( $attachment_id );
         if ( ! $playback_url ) {
@@ -133,7 +136,7 @@ class VH360_Studio_Local_Media_Replay_Storage_Provider implements VH360_Studio_R
             return array( 'provider_id' => $this->get_id(), 'provider_label' => $this->get_label(), 'status' => 'failed', 'supports_publish' => $this->supports_publish(), 'attachment_id' => $attachment_id, 'playback_url' => '', 'message' => __( 'The Local Media attachment does not have a valid playback URL.', 'videohub360-studio' ) );
         }
 
-        return array( 'provider_id' => $this->get_id(), 'provider_label' => $this->get_label(), 'status' => self::STATUS_READY, 'supports_publish' => $this->supports_publish(), 'attachment_id' => $attachment_id, 'playback_url' => $playback_url, 'replay_video_id' => ! empty( $job['replay_video_id'] ) ? absint( $job['replay_video_id'] ) : 0, 'message' => __( 'Local Media replay is ready.', 'videohub360-studio' ) );
+        return array( 'provider_id' => $this->get_id(), 'provider_label' => $this->get_label(), 'status' => self::STATUS_READY, 'supports_publish' => $this->supports_publish(), 'attachment_id' => $attachment_id, 'playback_url' => $playback_url, 'poster_url' => $this->poster_url( $attachment_id ), 'replay_video_id' => ! empty( $job['replay_video_id'] ) ? absint( $job['replay_video_id'] ) : 0, 'message' => __( 'Local Media replay is ready.', 'videohub360-studio' ) );
     }
 
     private function media_functions_available() {
@@ -161,10 +164,47 @@ class VH360_Studio_Local_Media_Replay_Storage_Provider implements VH360_Studio_R
     }
 
     private function poster_url( $attachment_id ) {
-        $poster_id = get_post_thumbnail_id( $attachment_id );
-        return $poster_id ? esc_url_raw( wp_get_attachment_url( $poster_id ) ) : '';
+        return $this->attachment_poster_url( $attachment_id );
     }
 
+    private function source_thumbnail_id( array $job ) {
+        foreach ( array( 'live_video_id', 'replay_video_id' ) as $key ) {
+            $post_id = ! empty( $job[ $key ] ) ? absint( $job[ $key ] ) : 0;
+            if ( ! $post_id ) {
+                continue;
+            }
+            $thumbnail_id = get_post_thumbnail_id( $post_id );
+            if ( $thumbnail_id && 'attachment' === get_post_type( $thumbnail_id ) && 0 === strpos( (string) get_post_mime_type( $thumbnail_id ), 'image/' ) ) {
+                return absint( $thumbnail_id );
+            }
+        }
+        return 0;
+    }
+
+    private function copy_source_thumbnail_to_attachment( $attachment_id, array $job ) {
+        $attachment_id = absint( $attachment_id );
+        $thumbnail_id = $this->source_thumbnail_id( $job );
+        if ( ! $attachment_id || ! $thumbnail_id ) {
+            return;
+        }
+        set_post_thumbnail( $attachment_id, $thumbnail_id );
+        $poster_url = wp_get_attachment_image_url( $thumbnail_id, 'large' ) ?: wp_get_attachment_url( $thumbnail_id );
+        update_post_meta( $attachment_id, '_vh360_studio_poster_attachment_id', $thumbnail_id );
+        if ( $poster_url ) {
+            update_post_meta( $attachment_id, '_vh360_studio_poster_url', esc_url_raw( $poster_url ) );
+            update_post_meta( $attachment_id, '_vh360_poster', esc_url_raw( $poster_url ) );
+        }
+    }
+
+    private function attachment_poster_url( $attachment_id ) {
+        $attachment_id = absint( $attachment_id );
+        $poster_id = get_post_thumbnail_id( $attachment_id );
+        if ( $poster_id ) {
+            return esc_url_raw( wp_get_attachment_image_url( $poster_id, 'large' ) ?: wp_get_attachment_url( $poster_id ) );
+        }
+        $poster_url = get_post_meta( $attachment_id, '_vh360_studio_poster_url', true );
+        return $poster_url ? esc_url_raw( $poster_url ) : '';
+    }
 
     private function resolve_attachment_parent_post_id( array $job ) {
         $live_video_id   = ! empty( $job['live_video_id'] ) ? absint( $job['live_video_id'] ) : 0;
@@ -182,6 +222,13 @@ class VH360_Studio_Local_Media_Replay_Storage_Provider implements VH360_Studio_R
     }
 
     private function attachment_title( array $job ) {
-        return sprintf( __( 'VH360 Studio Replay #%d', 'videohub360-studio' ), absint( $job['id'] ) );
+        $live_video_id = ! empty( $job['live_video_id'] ) ? absint( $job['live_video_id'] ) : 0;
+        $title = $live_video_id ? get_the_title( $live_video_id ) : '';
+        return $title ? wp_strip_all_tags( $title ) : sprintf( __( 'Studio Replay #%d', 'videohub360-studio' ), absint( $job['id'] ) );
+    }
+
+    private function attachment_filename( array $job, $extension ) {
+        $base = $this->attachment_title( $job );
+        return sanitize_file_name( $base . '.' . sanitize_key( $extension ) );
     }
 }
