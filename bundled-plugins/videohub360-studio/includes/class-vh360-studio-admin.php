@@ -33,7 +33,7 @@ class VH360_Studio_Admin {
     public function register_settings() {
         $settings = array(
             'vh360_studio_default_replay_storage_provider' => array( $this, 'sanitize_provider' ),
-            'vh360_studio_publitio_api_key'               => 'sanitize_text_field',
+            'vh360_studio_publitio_api_key'               => array( $this, 'sanitize_api_key' ),
             'vh360_studio_publitio_api_secret'            => array( $this, 'sanitize_secret' ),
             'vh360_studio_publitio_folder'                => 'sanitize_text_field',
             'vh360_studio_publitio_privacy'               => array( $this, 'sanitize_privacy' ),
@@ -55,12 +55,30 @@ class VH360_Studio_Admin {
         return $this->registry->has_storage_provider( $value ) ? $value : 'videopress';
     }
 
+    public function sanitize_api_key( $value ) {
+        $new = sanitize_text_field( $value );
+        if ( $new !== get_option( 'vh360_studio_publitio_api_key', '' ) ) {
+            $this->clear_publitio_connection_status();
+        }
+        return $new;
+    }
+
     public function sanitize_secret( $value ) {
         $value = (string) $value;
         if ( '' === trim( $value ) || '********' === $value ) {
             return get_option( 'vh360_studio_publitio_api_secret', '' );
         }
-        return sanitize_text_field( $value );
+        $new = sanitize_text_field( $value );
+        if ( $new !== get_option( 'vh360_studio_publitio_api_secret', '' ) ) {
+            $this->clear_publitio_connection_status();
+        }
+        return $new;
+    }
+
+    private function clear_publitio_connection_status() {
+        delete_option( 'vh360_studio_publitio_last_tested_at' );
+        delete_option( 'vh360_studio_publitio_last_status' );
+        delete_option( 'vh360_studio_publitio_last_error' );
     }
 
     public function sanitize_privacy( $value ) { return 'private' === sanitize_key( $value ) ? 'private' : 'public'; }
@@ -102,7 +120,7 @@ class VH360_Studio_Admin {
                     <tr><th><label for="vh360-default-provider"><?php esc_html_e( 'Default replay storage provider', 'videohub360-studio' ); ?></label></th><td><select id="vh360-default-provider" name="vh360_studio_default_replay_storage_provider"><?php foreach ( $providers as $id => $provider ) : ?><option value="<?php echo esc_attr( $id ); ?>" <?php selected( get_option( 'vh360_studio_default_replay_storage_provider', 'videopress' ), $id ); ?>><?php echo esc_html( $provider->get_label() ); ?></option><?php endforeach; ?></select></td></tr>
                     <?php $this->text_row( 'vh360_studio_publitio_api_key', __( 'Publitio API Key', 'videohub360-studio' ) ); ?>
                     <tr><th><label for="vh360_studio_publitio_api_secret"><?php esc_html_e( 'Publitio API Secret', 'videohub360-studio' ); ?></label></th><td><input type="password" id="vh360_studio_publitio_api_secret" name="vh360_studio_publitio_api_secret" value="<?php echo esc_attr( get_option( 'vh360_studio_publitio_api_secret', '' ) ? '********' : '' ); ?>" autocomplete="new-password"><p class="description"><?php esc_html_e( 'Saved secrets are masked. Enter a new value only to replace it.', 'videohub360-studio' ); ?></p></td></tr>
-                    <?php $this->text_row( 'vh360_studio_publitio_folder', __( 'Publitio Folder ID or Path', 'videohub360-studio' ) ); ?>
+                    <?php $this->text_row( 'vh360_studio_publitio_folder', __( 'Publitio Folder ID', 'videohub360-studio' ) ); ?>
                     <tr><th><?php esc_html_e( 'Publitio privacy', 'videohub360-studio' ); ?></th><td><select name="vh360_studio_publitio_privacy"><option value="public" <?php selected( get_option( 'vh360_studio_publitio_privacy', 'public' ), 'public' ); ?>><?php esc_html_e( 'Public', 'videohub360-studio' ); ?></option><option value="private" <?php selected( get_option( 'vh360_studio_publitio_privacy', 'public' ), 'private' ); ?>><?php esc_html_e( 'Private', 'videohub360-studio' ); ?></option></select></td></tr>
                     <?php $this->checkbox_row( 'vh360_studio_publitio_option_download', __( 'Publitio downloads enabled', 'videohub360-studio' ) ); ?>
                     <?php $this->checkbox_row( 'vh360_studio_publitio_option_hls', __( 'Publitio HLS enabled', 'videohub360-studio' ) ); ?>

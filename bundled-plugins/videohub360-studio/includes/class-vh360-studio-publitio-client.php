@@ -36,6 +36,14 @@ class VH360_Studio_Publitio_Client {
         return $this->request( 'GET', '/files/show/' . rawurlencode( $file_id ) );
     }
 
+    public function player_file( $file_id, array $params = array() ) {
+        $file_id = sanitize_text_field( $file_id );
+        if ( '' === $file_id ) {
+            return new WP_Error( 'vh360_studio_publitio_missing_file_id', __( 'Publitio file ID is missing.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        }
+        return $this->request( 'GET', '/files/player/' . rawurlencode( $file_id ), $params );
+    }
+
     public function create_file( $path, array $params = array() ) {
         if ( ! file_exists( $path ) || ! is_file( $path ) || ! is_readable( $path ) ) {
             return new WP_Error( 'vh360_studio_publitio_missing_file', __( 'Publitio upload file is unavailable.', 'videohub360-studio' ), array( 'status' => 410 ) );
@@ -94,7 +102,7 @@ class VH360_Studio_Publitio_Client {
 
     private function auth_params() {
         $timestamp = time();
-        $nonce     = wp_generate_password( 16, false, false );
+        $nonce     = (string) wp_rand( 10000000, 99999999 );
         return array(
             'api_key'       => $this->api_key,
             'api_timestamp' => $timestamp,
@@ -104,18 +112,36 @@ class VH360_Studio_Publitio_Client {
     }
 
     private function safe_error_message( $data, $code ) {
-        $message = '';
-        if ( is_array( $data ) ) {
-            foreach ( array( 'message', 'error', 'msg' ) as $key ) {
-                if ( ! empty( $data[ $key ] ) && is_scalar( $data[ $key ] ) ) {
-                    $message = sanitize_text_field( $data[ $key ] );
-                    break;
-                }
-            }
-        }
+        $message = $this->find_error_message( $data );
         if ( '' === $message ) {
             $message = sprintf( __( 'Publitio API request failed with HTTP %d.', 'videohub360-studio' ), absint( $code ) );
         }
-        return $message;
+        return wp_html_excerpt( sanitize_text_field( $message ), 240, '…' );
+    }
+
+    private function find_error_message( $data ) {
+        if ( is_scalar( $data ) ) {
+            return (string) $data;
+        }
+        if ( ! is_array( $data ) ) {
+            return '';
+        }
+        foreach ( array( 'message', 'msg' ) as $key ) {
+            if ( ! empty( $data[ $key ] ) && is_scalar( $data[ $key ] ) ) {
+                return (string) $data[ $key ];
+            }
+        }
+        if ( ! empty( $data['error'] ) ) {
+            if ( is_scalar( $data['error'] ) ) {
+                return (string) $data['error'];
+            }
+            if ( is_array( $data['error'] ) && ! empty( $data['error']['message'] ) && is_scalar( $data['error']['message'] ) ) {
+                return (string) $data['error']['message'];
+            }
+        }
+        if ( isset( $data[0] ) ) {
+            return $this->find_error_message( $data[0] );
+        }
+        return '';
     }
 }

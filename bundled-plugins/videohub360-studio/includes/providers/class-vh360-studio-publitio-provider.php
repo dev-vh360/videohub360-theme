@@ -101,15 +101,13 @@ class VH360_Studio_Publitio_Provider implements VH360_Studio_Replay_Storage_Prov
             'description'     => $this->description( $job ),
             'tags'            => 'videohub360,studio,replay',
             'public_id'       => sanitize_title( 'vh360-studio-replay-' . absint( $job['id'] ) ),
-            'privacy'         => $this->privacy(),
+            'privacy'         => 'private' === $this->privacy() ? '0' : '1',
             'option_download' => get_option( 'vh360_studio_publitio_option_download', '0' ) ? '1' : '0',
             'option_hls'      => get_option( 'vh360_studio_publitio_option_hls', '0' ) ? '1' : '0',
             'option_ad'       => '0',
         );
         $folder = sanitize_text_field( get_option( 'vh360_studio_publitio_folder', '' ) );
         if ( $folder ) { $params['folder'] = $folder; }
-        $adtag = sanitize_text_field( get_option( 'vh360_studio_publitio_adtag_id', '' ) );
-        if ( $adtag ) { $params['adtag_id'] = $adtag; }
         return $params;
     }
 
@@ -119,8 +117,9 @@ class VH360_Studio_Publitio_Provider implements VH360_Studio_Replay_Storage_Prov
         if ( ! $file_id ) {
             return new WP_Error( 'vh360_studio_publitio_missing_file_id', __( 'Publitio did not return a file ID.', 'videohub360-studio' ), array( 'status' => 502 ) );
         }
+        $player   = $this->player_payload( $file_id );
         $playback = $this->best_playback_url( $file );
-        $embed    = $this->best_embed_url( $file );
+        $embed    = $this->best_embed_url( $player ? $player : $file );
         $poster   = $this->best_poster_url( $file );
         $ready    = (bool) ( $playback || $embed );
         return array(
@@ -144,6 +143,23 @@ class VH360_Studio_Publitio_Provider implements VH360_Studio_Replay_Storage_Prov
         return $response;
     }
 
+    private function player_payload( $file_id ) {
+        $player_id = sanitize_text_field( get_option( 'vh360_studio_publitio_player_id', '' ) );
+        if ( ! $player_id ) {
+            return array();
+        }
+        $params = array( 'player' => $player_id );
+        $adtag  = sanitize_text_field( get_option( 'vh360_studio_publitio_adtag_id', '' ) );
+        if ( $adtag ) {
+            $params['adtag'] = $adtag;
+        }
+        $response = $this->client()->player_file( $file_id, $params );
+        if ( is_wp_error( $response ) ) {
+            return array();
+        }
+        return $this->find_file_payload( $response );
+    }
+
     private function best_playback_url( array $file ) {
         foreach ( array( 'url_preview', 'url_download', 'url', 'secure_url', 'url_stream' ) as $key ) {
             if ( ! empty( $file[ $key ] ) && wp_http_validate_url( $file[ $key ] ) ) { return esc_url_raw( $file[ $key ] ); }
@@ -153,9 +169,26 @@ class VH360_Studio_Publitio_Provider implements VH360_Studio_Replay_Storage_Prov
 
     private function best_embed_url( array $file ) {
         foreach ( array( 'embed_url', 'url_embed', 'player_url' ) as $key ) {
-            if ( ! empty( $file[ $key ] ) && wp_http_validate_url( $file[ $key ] ) ) { return esc_url_raw( $file[ $key ] ); }
+            if ( ! empty( $file[ $key ] ) ) {
+                $url = $this->normalize_url( $file[ $key ] );
+                if ( $url ) { return $url; }
+            }
+        }
+        foreach ( array( 'iframe_html', 'player_html', 'source_html' ) as $key ) {
+            if ( ! empty( $file[ $key ] ) && is_string( $file[ $key ] ) && preg_match( '/src=["\']([^"\']+)["\']/i', $file[ $key ], $matches ) ) {
+                $url = $this->normalize_url( $matches[1] );
+                if ( $url ) { return $url; }
+            }
         }
         return '';
+    }
+
+    private function normalize_url( $url ) {
+        $url = trim( (string) $url );
+        if ( 0 === strpos( $url, '//' ) ) {
+            $url = 'https:' . $url;
+        }
+        return wp_http_validate_url( $url ) ? esc_url_raw( $url ) : '';
     }
 
     private function best_poster_url( array $file ) {
