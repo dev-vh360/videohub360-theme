@@ -20,7 +20,15 @@ class VH360_Studio_Media_Admin {
     }
 
     public function prepare_attachment_for_js( $response, $attachment, $meta ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
-        $attachment_id = $this->attachment_id_from_value( $attachment );
+        if ( ! is_array( $response ) || empty( $response['id'] ) ) {
+            return $response;
+        }
+
+        $attachment_id = absint( $response['id'] );
+        if ( ! $attachment_id ) {
+            $attachment_id = $this->attachment_id_from_value( $attachment );
+        }
+
         if ( ! $this->is_studio_replay_video_attachment( $attachment_id ) ) {
             return $response;
         }
@@ -30,14 +38,17 @@ class VH360_Studio_Media_Admin {
             return $response;
         }
 
-        $response['icon']  = $poster['url'];
-        $response['image'] = $poster;
-        $response['thumb'] = $poster['url'];
+        $poster_url = esc_url_raw( $poster['url'] );
+        $width      = ! empty( $poster['width'] ) ? absint( $poster['width'] ) : 150;
+        $height     = ! empty( $poster['height'] ) ? absint( $poster['height'] ) : 150;
 
-        if ( empty( $response['sizes'] ) || ! is_array( $response['sizes'] ) ) {
-            $response['sizes'] = array();
-        }
-        $response['sizes']['thumbnail'] = $poster;
+        $response['icon']  = $poster_url;
+        $response['thumb'] = $poster_url;
+        $response['image'] = array(
+            'src'    => $poster_url,
+            'width'  => $width,
+            'height' => $height,
+        );
         $response['vh360StudioPoster'] = true;
 
         return $response;
