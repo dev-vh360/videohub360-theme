@@ -69,10 +69,10 @@ class VH360_Studio_Publitio_Provider implements VH360_Studio_Replay_Storage_Prov
         $prepared = $this->prepare_publish( $job, $recording );
         if ( is_wp_error( $prepared ) ) { return $prepared; }
         $params = $this->upload_params( $job, $recording );
-        $result = $this->client()->create_file( $recording['path'], $params );
+        $result = $this->client()->create_file( $recording['path'], $params, $recording['mime_type'], basename( $recording['path'] ) );
         if ( is_wp_error( $result ) && 'vh360_studio_publitio_api_error' === $result->get_error_code() ) {
             $params['public_id'] = $params['public_id'] . '-' . wp_generate_password( 6, false, false );
-            $result = $this->client()->create_file( $recording['path'], $params );
+            $result = $this->client()->create_file( $recording['path'], $params, $recording['mime_type'], basename( $recording['path'] ) );
         }
         if ( is_wp_error( $result ) ) { return $result; }
         return $this->result_from_response( $result, __( 'Recording uploaded to Publitio.', 'videohub360-studio' ) );

@@ -2126,7 +2126,7 @@
                 if (event.data && event.data.size) {
                     const finalMimeType = event.data.type || (state.recorder && state.recorder.mimeType) || state.selectedMimeType;
                     const chunk = event.data.type === finalMimeType ? event.data : new Blob([event.data], { type: finalMimeType });
-                    queueChunk(chunk, state.chunkIndex++);
+                    queueRecordingBlob(chunk);
                 }
             });
             state.recorder.start((config.uploadSettings && config.uploadSettings.preferred_chunk_duration) || 5000);
@@ -2149,6 +2149,35 @@
             setRecorderButtons(false, false);
             setRecordingStatus(error.message || strings.recorderUnavailable, 'error');
         }
+    }
+
+
+    function maxUploadChunkSize() {
+        const configured = Number(config.uploadSettings && config.uploadSettings.max_chunk_size);
+        return configured > 0 ? configured : 8 * 1024 * 1024;
+    }
+
+    function safeUploadChunkSize() {
+        return Math.max(1024 * 1024, maxUploadChunkSize() - (256 * 1024));
+    }
+
+    function queueRecordingBlob(blob) {
+        const maxSize = safeUploadChunkSize();
+        if (!blob || !blob.size) {
+            return;
+        }
+        if (blob.size <= maxSize) {
+            queueChunk(blob, state.chunkIndex++);
+            return;
+        }
+        let offset = 0;
+        while (offset < blob.size) {
+            const end = Math.min(offset + maxSize, blob.size);
+            const part = blob.slice(offset, end, blob.type || state.actualMimeType || state.selectedMimeType);
+            queueChunk(part, state.chunkIndex++);
+            offset = end;
+        }
+        setRecordingStatus('Large recording data was split into smaller upload chunks.', 'info');
     }
 
     function queueChunk(blob, index) {

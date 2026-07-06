@@ -78,7 +78,7 @@ class VH360_Studio_Recording_Chunks {
         }
         $size = filesize( $file['tmp_name'] );
         if ( false === $size || 0 >= $size || $size > $settings['max_chunk_size'] ) {
-            return new WP_Error( 'vh360_studio_chunk_too_large', __( 'Recording chunk size is not allowed.', 'videohub360-studio' ), array( 'status' => 413 ) );
+            return new WP_Error( 'vh360_studio_chunk_too_large', __( 'Recording chunk size is not allowed. Studio tried to split large browser data before upload; please retry the failed chunk or lower the recording preset if this continues.', 'videohub360-studio' ), array( 'status' => 413 ) );
         }
         $base_mime = $this->base_mime_type( $declared_mime_type ? $declared_mime_type : ( isset( $file['type'] ) ? $file['type'] : '' ) );
         if ( ! in_array( $base_mime, $settings['allowed_mime_types'], true ) ) {
