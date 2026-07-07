@@ -31,31 +31,31 @@ class VH360_Studio_Local_Media_Replay_Storage_Provider implements VH360_Studio_R
 
     public function prepare_publish( array $job, array $recording ) {
         if ( 'local_media' !== sanitize_key( $job['storage_provider'] ) ) {
-            return new WP_Error( 'vh360_studio_local_media_wrong_provider', __( 'This recording job is not configured for Local Media publishing.', 'videohub360-studio' ), array( 'status' => 400 ) );
+            return new WP_Error( 'vh360_studio_local_media_wrong_provider', __( 'This recording job is not configured for this replay storage method.', 'videohub360-studio' ), array( 'status' => 400 ) );
         }
 
         if ( VH360_Studio_Recording_Jobs::STATUS_PROCESSING !== $job['status'] ) {
-            return new WP_Error( 'vh360_studio_local_media_invalid_status', __( 'Local Media publishing requires a processing job.', 'videohub360-studio' ), array( 'status' => 409 ) );
+            return new WP_Error( 'vh360_studio_local_media_invalid_status', __( 'This replay storage method requires a processing job.', 'videohub360-studio' ), array( 'status' => 409 ) );
         }
 
         if ( ! current_user_can( 'upload_files' ) ) {
-            return new WP_Error( 'vh360_studio_local_media_upload_forbidden', __( 'Local Media publishing requires permission to upload media.', 'videohub360-studio' ), array( 'status' => 403 ) );
+            return new WP_Error( 'vh360_studio_local_media_upload_forbidden', __( 'This replay storage method requires permission to upload media.', 'videohub360-studio' ), array( 'status' => 403 ) );
         }
 
         if ( ! $this->uploads_directory_is_writable() ) {
-            return new WP_Error( 'vh360_studio_local_media_unavailable', __( 'Local Media publishing is unavailable because the uploads directory is not writable.', 'videohub360-studio' ), array( 'status' => 500 ) );
+            return new WP_Error( 'vh360_studio_local_media_unavailable', __( 'This replay storage method is unavailable because the uploads directory is not writable.', 'videohub360-studio' ), array( 'status' => 500 ) );
         }
 
         if ( empty( $recording['path'] ) || ! file_exists( $recording['path'] ) || ! is_file( $recording['path'] ) || ! is_readable( $recording['path'] ) ) {
-            return new WP_Error( 'vh360_studio_local_media_missing_file', __( 'The validated recording file is not available for Local Media publishing.', 'videohub360-studio' ), array( 'status' => 410 ) );
+            return new WP_Error( 'vh360_studio_local_media_missing_file', __( 'The validated recording file is not available for replay publishing.', 'videohub360-studio' ), array( 'status' => 410 ) );
         }
 
         if ( ! in_array( $recording['mime_type'], array( 'video/webm', 'video/mp4' ), true ) ) {
-            return new WP_Error( 'vh360_studio_local_media_invalid_type', __( 'Local Media publishing supports WebM and MP4 recordings only.', 'videohub360-studio' ), array( 'status' => 415 ) );
+            return new WP_Error( 'vh360_studio_local_media_invalid_type', __( 'This replay storage method supports WebM and MP4 recordings only.', 'videohub360-studio' ), array( 'status' => 415 ) );
         }
 
         if ( empty( $recording['file_size'] ) || 0 >= absint( $recording['file_size'] ) ) {
-            return new WP_Error( 'vh360_studio_local_media_empty_file', __( 'Local Media publishing requires a non-empty recording file.', 'videohub360-studio' ), array( 'status' => 400 ) );
+            return new WP_Error( 'vh360_studio_local_media_empty_file', __( 'This replay storage method requires a non-empty recording file.', 'videohub360-studio' ), array( 'status' => 400 ) );
         }
 
         $this->load_media_functions();
@@ -64,7 +64,7 @@ class VH360_Studio_Local_Media_Replay_Storage_Provider implements VH360_Studio_R
             'provider_id'    => $this->get_id(),
             'provider_label' => $this->get_label(),
             'status'         => 'prepared',
-            'message'        => __( 'Local Media is ready to save this replay to the WordPress Media Library.', 'videohub360-studio' ),
+            'message'        => __( 'Local replay fallback is ready to save this replay.', 'videohub360-studio' ),
         );
     }
 
@@ -81,7 +81,7 @@ class VH360_Studio_Local_Media_Replay_Storage_Provider implements VH360_Studio_R
             if ( $tmp ) {
                 @unlink( $tmp );
             }
-            return new WP_Error( 'vh360_studio_local_media_copy_failed', __( 'Unable to prepare the recording for Media Library handoff.', 'videohub360-studio' ), array( 'status' => 500 ) );
+            return new WP_Error( 'vh360_studio_local_media_copy_failed', __( 'Unable to prepare the recording for local replay handoff.', 'videohub360-studio' ), array( 'status' => 500 ) );
         }
 
         $file = array(
@@ -103,7 +103,7 @@ class VH360_Studio_Local_Media_Replay_Storage_Provider implements VH360_Studio_R
 
         $playback_url = wp_get_attachment_url( $attachment_id );
         if ( ! $playback_url ) {
-            return new WP_Error( 'vh360_studio_local_media_missing_url', __( 'The Media Library attachment was created but no playback URL is available.', 'videohub360-studio' ), array( 'status' => 500, 'attachment_id' => absint( $attachment_id ) ) );
+            return new WP_Error( 'vh360_studio_local_media_missing_url', __( 'The replay attachment was created but no playback URL is available.', 'videohub360-studio' ), array( 'status' => 500, 'attachment_id' => absint( $attachment_id ) ) );
         }
 
         return array(
@@ -118,7 +118,7 @@ class VH360_Studio_Local_Media_Replay_Storage_Provider implements VH360_Studio_R
             'videopress_guid'            => '',
             'videopress_processing_done' => 0,
             'embed_code'                 => '',
-            'message'                    => __( 'Replay saved to the WordPress Media Library.', 'videohub360-studio' ),
+            'message'                    => __( 'Replay saved to local replay storage.', 'videohub360-studio' ),
         );
     }
 
