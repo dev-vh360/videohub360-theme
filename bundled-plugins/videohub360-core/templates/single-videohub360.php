@@ -141,7 +141,8 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
         || ((int) get_post_field('post_author', get_the_ID()) === (int) get_current_user_id())
         || current_user_can('edit_post', get_the_ID())
     );
-    $can_live_moderate = $can_moderate && !$is_stopped_livestream_replay;
+    $is_stream_stopped = (($livestream_fields['stream_stopped'] ?? 'no') === 'yes');
+    $can_live_moderate = $can_moderate && !$is_stream_stopped;
 ?>
 
     <div class="videohub360-main-wrapper <?php echo ($video_layout === 'full-width') ? 'videohub360-full-width' : 'videohub360-sidebar-layout'; ?>">
