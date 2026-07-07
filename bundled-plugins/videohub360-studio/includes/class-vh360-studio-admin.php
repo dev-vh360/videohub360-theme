@@ -54,8 +54,7 @@ class VH360_Studio_Admin {
             'vh360_studio_bunny_stream_cdn_hostname'     => array( $this, 'sanitize_bunny_hostname' ),
             'vh360_studio_bunny_stream_collection_id'    => array( $this, 'sanitize_bunny_text_option' ),
             'vh360_studio_bunny_stream_thumbnail_time'   => array( $this, 'sanitize_bunny_absint_option' ),
-            'vh360_studio_bunny_stream_enabled_resolutions' => array( $this, 'sanitize_bunny_text_option' ),
-            'vh360_studio_bunny_stream_mp4_fallback_enabled' => array( $this, 'sanitize_bunny_bool_option' ),
+            'vh360_studio_bunny_stream_enabled_resolutions' => array( $this, 'sanitize_bunny_resolutions' ),
             'vh360_studio_temp_retention_days'            => array( $this, 'sanitize_retention_days' ),
             'vh360_studio_max_total_recording_size'       => 'absint',
         );
@@ -109,6 +108,14 @@ class VH360_Studio_Admin {
     public function sanitize_bunny_absint_option( $value ) { $new = absint( $value ); $this->clear_bunny_connection_status(); return $new; }
     public function sanitize_bunny_bool_option( $value ) { $new = rest_sanitize_boolean( $value ) ? '1' : '0'; $this->clear_bunny_connection_status(); return $new; }
     public function sanitize_bunny_hostname( $value ) { $value = preg_replace( '#^https?://#i', '', trim( (string) $value ) ); $value = strtok( $value, '/' ); $new = $value && preg_match( '/^[a-z0-9.-]+$/i', $value ) ? sanitize_text_field( $value ) : ''; $this->clear_bunny_connection_status(); return $new; }
+    public function sanitize_bunny_resolutions( $value ) {
+        $allowed = array( '240p', '360p', '480p', '720p', '1080p', '1440p', '2160p' );
+        $raw = preg_split( '/[\s,]+/', strtolower( (string) $value ) );
+        $clean = array_values( array_unique( array_intersect( array_filter( array_map( 'sanitize_text_field', $raw ) ), $allowed ) ) );
+        $new = implode( ',', $clean );
+        if ( $new !== get_option( 'vh360_studio_bunny_stream_enabled_resolutions', '' ) ) { $this->clear_bunny_connection_status(); }
+        return $new;
+    }
     private function clear_bunny_connection_status() { delete_option( 'vh360_studio_bunny_stream_last_tested_at' ); delete_option( 'vh360_studio_bunny_stream_last_status' ); delete_option( 'vh360_studio_bunny_stream_last_error' ); }
 
     public function sanitize_privacy( $value ) { return 'private' === sanitize_key( $value ) ? 'private' : 'public'; }
@@ -232,7 +239,6 @@ class VH360_Studio_Admin {
                     <?php $this->text_row( 'vh360_studio_bunny_stream_collection_id', __( 'Bunny Stream Collection ID', 'videohub360-studio' ) ); ?>
                     <?php $this->text_row( 'vh360_studio_bunny_stream_thumbnail_time', __( 'Bunny Stream thumbnail time', 'videohub360-studio' ) ); ?>
                     <?php $this->text_row( 'vh360_studio_bunny_stream_enabled_resolutions', __( 'Bunny Stream enabled resolutions', 'videohub360-studio' ) ); ?>
-                    <?php $this->checkbox_row( 'vh360_studio_bunny_stream_mp4_fallback_enabled', __( 'Bunny Stream MP4 fallback enabled', 'videohub360-studio' ) ); ?>
                     <?php $this->checkbox_row( 'vh360_studio_local_media_fallback_enabled', __( 'Local Media fallback enabled', 'videohub360-studio' ), true ); ?>
                     <tr><th><label for="vh360_studio_temp_retention_days"><?php esc_html_e( 'Temporary recording retention days', 'videohub360-studio' ); ?></label></th><td><input type="number" min="1" max="30" id="vh360_studio_temp_retention_days" name="vh360_studio_temp_retention_days" value="<?php echo esc_attr( get_option( 'vh360_studio_temp_retention_days', 3 ) ); ?>"></td></tr>
                     <tr><th><label for="vh360_studio_max_total_recording_size"><?php esc_html_e( 'Maximum Studio recording upload size (bytes)', 'videohub360-studio' ); ?></label></th><td><input type="number" min="1048576" id="vh360_studio_max_total_recording_size" name="vh360_studio_max_total_recording_size" value="<?php echo esc_attr( get_option( 'vh360_studio_max_total_recording_size', '' ) ); ?>"><p class="description"><?php esc_html_e( 'Leave blank to use the Studio default.', 'videohub360-studio' ); ?></p></td></tr>

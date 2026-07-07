@@ -781,6 +781,10 @@ class VH360_Studio_REST_Controller {
             return 'publitio';
         }
 
+        if ( $this->storage_provider_is_available( $registry, 'bunny_stream' ) ) {
+            return 'bunny_stream';
+        }
+
         if ( $this->storage_provider_is_available( $registry, 'local_media' ) ) {
             return 'local_media';
         }

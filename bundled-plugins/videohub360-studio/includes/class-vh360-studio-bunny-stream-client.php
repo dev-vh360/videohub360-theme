@@ -53,6 +53,10 @@ class VH360_Studio_Bunny_Stream_Client {
             return new WP_Error( 'vh360_studio_bunny_stream_file_open_failed', __( 'Cloud upload file is unavailable.', 'videohub360-studio' ), array( 'status' => 410 ) );
         }
         $url  = self::API_BASE . '/library/' . rawurlencode( $this->library_id ) . '/videos/' . rawurlencode( $video_id );
+        $resolutions = $this->enabled_resolutions();
+        if ( $resolutions ) {
+            $url = add_query_arg( 'enabledResolutions', implode( ',', $resolutions ), $url );
+        }
         $curl = curl_init( $url );
         if ( ! $curl ) {
             fclose( $handle );
@@ -93,8 +97,8 @@ class VH360_Studio_Bunny_Stream_Client {
             return '';
         }
         $custom = $this->custom_embed_hostname();
-        $url    = $custom ? 'https://' . $custom . '/embed/' . rawurlencode( $library ) . '/' . rawurlencode( $video_id ) : 'https://iframe.mediadelivery.net/embed/' . rawurlencode( $library ) . '/' . rawurlencode( $video_id );
-        return wp_http_validate_url( $url ) ? esc_url_raw( $url ) : esc_url_raw( 'https://iframe.mediadelivery.net/embed/' . rawurlencode( $library ) . '/' . rawurlencode( $video_id ) );
+        $url    = $custom ? 'https://' . $custom . '/embed/' . rawurlencode( $library ) . '/' . rawurlencode( $video_id ) : 'https://player.mediadelivery.net/embed/' . rawurlencode( $library ) . '/' . rawurlencode( $video_id );
+        return wp_http_validate_url( $url ) ? esc_url_raw( $url ) : esc_url_raw( 'https://player.mediadelivery.net/embed/' . rawurlencode( $library ) . '/' . rawurlencode( $video_id ) );
     }
 
     public function thumbnail_url_from_video( array $video ) {
@@ -116,6 +120,9 @@ class VH360_Studio_Bunny_Stream_Client {
         }
         if ( 200 > $code || 300 <= $code ) {
             return new WP_Error( 'vh360_studio_bunny_stream_api_error', $this->safe_error_message( $data, $code ), array( 'status' => 502 ) );
+        }
+        if ( is_array( $data ) && isset( $data['success'] ) && false === rest_sanitize_boolean( $data['success'] ) ) {
+            return new WP_Error( 'vh360_studio_bunny_stream_api_error', sprintf( __( 'Cloud replay storage rejected the upload: %s', 'videohub360-studio' ), $this->safe_error_message( $data, $code ) ), array( 'status' => 502 ) );
         }
         return is_array( $data ) ? $data : array();
     }
@@ -160,6 +167,12 @@ class VH360_Studio_Bunny_Stream_Client {
             return new WP_Error( 'vh360_studio_bunny_stream_request_failed', __( 'Cloud replay storage request failed.', 'videohub360-studio' ), array( 'status' => 502 ) );
         }
         return $this->parse_response_body( wp_remote_retrieve_body( $response ), absint( wp_remote_retrieve_response_code( $response ) ) );
+    }
+
+    private function enabled_resolutions() {
+        $allowed = array( '240p', '360p', '480p', '720p', '1080p', '1440p', '2160p' );
+        $raw = preg_split( '/[\s,]+/', strtolower( (string) get_option( 'vh360_studio_bunny_stream_enabled_resolutions', '' ) ) );
+        return array_values( array_unique( array_intersect( array_filter( array_map( 'sanitize_text_field', $raw ) ), $allowed ) ) );
     }
 
     private function custom_embed_hostname() {

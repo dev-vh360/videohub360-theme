@@ -16,9 +16,9 @@ class VH360_Studio_Bunny_Stream_Provider implements VH360_Studio_Replay_Storage_
     public function get_label() { return __( 'Bunny Stream', 'videohub360-studio' ); }
     public function is_available() {
         $last = sanitize_key( get_option( 'vh360_studio_bunny_stream_last_status', '' ) );
-        return (bool) apply_filters( 'vh360_studio_bunny_stream_available', '1' === get_option( 'vh360_studio_bunny_stream_enabled', '0' ) && $this->client()->has_credentials() && ( '' === $last || 'success' === $last ), $this );
+        return (bool) apply_filters( 'vh360_studio_bunny_stream_available', function_exists( 'curl_init' ) && '1' === get_option( 'vh360_studio_bunny_stream_enabled', '0' ) && $this->client()->has_credentials() && ( '' === $last || 'success' === $last ), $this );
     }
-    public function supports_publish() { return $this->is_available() && current_user_can( 'upload_files' ); }
+    public function supports_publish() { return function_exists( 'curl_init' ) && $this->is_available() && current_user_can( 'upload_files' ); }
 
     public function prepare_publish( array $job, array $recording ) {
         if ( 'bunny_stream' !== sanitize_key( $job['storage_provider'] ) ) {
@@ -32,6 +32,9 @@ class VH360_Studio_Bunny_Stream_Provider implements VH360_Studio_Replay_Storage_
         }
         if ( '1' !== get_option( 'vh360_studio_bunny_stream_enabled', '0' ) || ! $this->client()->has_credentials() ) {
             return new WP_Error( 'vh360_studio_bunny_stream_credentials_missing', __( 'Cloud replay credentials are required.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        }
+        if ( ! function_exists( 'curl_init' ) ) {
+            return new WP_Error( 'vh360_studio_bunny_stream_curl_missing', __( 'Cloud uploads require the PHP cURL extension.', 'videohub360-studio' ), array( 'status' => 500 ) );
         }
         if ( empty( $recording['path'] ) || ! file_exists( $recording['path'] ) || ! is_file( $recording['path'] ) || ! is_readable( $recording['path'] ) ) {
             return new WP_Error( 'vh360_studio_bunny_stream_missing_file', __( 'Cloud upload file is unavailable.', 'videohub360-studio' ), array( 'status' => 410 ) );
