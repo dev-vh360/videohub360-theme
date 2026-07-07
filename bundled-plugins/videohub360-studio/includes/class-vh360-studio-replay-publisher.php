@@ -81,13 +81,16 @@ class VH360_Studio_Replay_Publisher {
             return $published;
         }
 
-        if ( isset( $published['status'] ) && ! in_array( $published['status'], array( 'published', 'local_media_ready', 'publitio_ready' ), true ) ) {
+        if ( isset( $published['status'] ) && ! in_array( $published['status'], array( 'published', 'local_media_ready', 'publitio_ready', 'bunny_stream_ready' ), true ) ) {
             $updated = $this->jobs->update( $job['id'], 0, array(
                 'wp_attachment_id'        => ! empty( $published['attachment_id'] ) ? absint( $published['attachment_id'] ) : 0,
                 'publitio_file_id'        => ! empty( $published['publitio_file_id'] ) ? sanitize_text_field( $published['publitio_file_id'] ) : '',
+                'provider_file_id'     => ! empty( $published['provider_file_id'] ) ? sanitize_text_field( $published['provider_file_id'] ) : '',
+                'provider_embed_url'   => ! empty( $published['embed_url'] ) ? esc_url_raw( $published['embed_url'] ) : '',
+                'provider_metadata'    => wp_json_encode( $published ),
                 'playback_url'            => ! empty( $published['playback_url'] ) ? esc_url_raw( $published['playback_url'] ) : ( ! empty( $published['embed_url'] ) ? esc_url_raw( $published['embed_url'] ) : '' ),
                 'publish_attempted_at'    => current_time( 'mysql' ),
-                'publish_provider_status' => sanitize_key( $published['status'] ),
+                'publish_provider_status' => ! empty( $published['provider_status'] ) ? sanitize_key( $published['provider_status'] ) : sanitize_key( $published['status'] ),
                 'error_message'           => '',
             ) );
             if ( is_wp_error( $updated ) ) {
@@ -104,6 +107,8 @@ class VH360_Studio_Replay_Publisher {
                 'publish_provider_status' => $updated['publish_provider_status'],
                 'attachment_id'           => absint( $updated['wp_attachment_id'] ),
                 'publitio_file_id'        => ! empty( $updated['publitio_file_id'] ) ? sanitize_text_field( $updated['publitio_file_id'] ) : '',
+                'provider_file_id'     => ! empty( $updated['provider_file_id'] ) ? sanitize_text_field( $updated['provider_file_id'] ) : '',
+                'provider_embed_url'   => ! empty( $updated['provider_embed_url'] ) ? esc_url_raw( $updated['provider_embed_url'] ) : '',
                 'playback_url'            => $updated['playback_url'],
                 'replay_video_id'         => ! empty( $updated['replay_video_id'] ) ? absint( $updated['replay_video_id'] ) : 0,
                 'message'                 => ! empty( $published['message'] ) ? $published['message'] : __( 'Recording uploaded and waiting for replay processing.', 'videohub360-studio' ),
@@ -153,6 +158,9 @@ class VH360_Studio_Replay_Publisher {
 
         $updated = $this->jobs->update( $job['id'], 0, array(
             'publitio_file_id'        => ! empty( $published['publitio_file_id'] ) ? sanitize_text_field( $published['publitio_file_id'] ) : '',
+            'provider_file_id'     => ! empty( $published['provider_file_id'] ) ? sanitize_text_field( $published['provider_file_id'] ) : '',
+            'provider_embed_url'   => ! empty( $published['embed_url'] ) ? esc_url_raw( $published['embed_url'] ) : '',
+            'provider_metadata'    => wp_json_encode( $published ),
             'playback_url'            => ! empty( $published['playback_url'] ) ? esc_url_raw( $published['playback_url'] ) : ( ! empty( $published['embed_url'] ) ? esc_url_raw( $published['embed_url'] ) : '' ),
             'poster_url'              => ! empty( $published['poster_url'] ) ? esc_url_raw( $published['poster_url'] ) : '',
             'publish_attempted_at'    => current_time( 'mysql' ),
@@ -169,6 +177,8 @@ class VH360_Studio_Replay_Publisher {
             'job_status'              => $updated['status'],
             'publish_provider_status' => $updated['publish_provider_status'],
             'publitio_file_id'        => ! empty( $updated['publitio_file_id'] ) ? sanitize_text_field( $updated['publitio_file_id'] ) : '',
+            'provider_file_id'     => ! empty( $updated['provider_file_id'] ) ? sanitize_text_field( $updated['provider_file_id'] ) : '',
+            'provider_embed_url'   => ! empty( $updated['provider_embed_url'] ) ? esc_url_raw( $updated['provider_embed_url'] ) : '',
             'playback_url'            => $updated['playback_url'],
             'poster_url'              => $updated['poster_url'],
             'message'                 => ! empty( $published['message'] ) ? sanitize_text_field( $published['message'] ) : __( 'Cloud upload is verified and processing.', 'videohub360-studio' ),
@@ -177,7 +187,10 @@ class VH360_Studio_Replay_Publisher {
 
     private function provider_status_is_ready( array $status ) {
         $provider_status = ! empty( $status['provider_status'] ) ? sanitize_key( $status['provider_status'] ) : ( ! empty( $status['status'] ) ? sanitize_key( $status['status'] ) : '' );
-        return ( ! empty( $status['videopress_guid'] ) && ! empty( $status['attachment_id'] ) ) || ( ! empty( $status['publitio_file_id'] ) && ( ! empty( $status['playback_url'] ) || ! empty( $status['embed_url'] ) ) && in_array( $provider_status, array( 'publitio_ready', 'publitio_direct_ready', 'published', 'ready' ), true ) );
+        $provider_id = ! empty( $status['provider_id'] ) ? sanitize_key( $status['provider_id'] ) : '';
+        $generic_id = ! empty( $status['provider_file_id'] ) || ! empty( $status['bunny_video_id'] );
+        $generic_url = ! empty( $status['provider_embed_url'] ) || ! empty( $status['embed_url'] ) || ! empty( $status['playback_url'] );
+        return ( ! empty( $status['videopress_guid'] ) && ! empty( $status['attachment_id'] ) ) || ( ! empty( $status['publitio_file_id'] ) && ( ! empty( $status['playback_url'] ) || ! empty( $status['embed_url'] ) ) && in_array( $provider_status, array( 'publitio_ready', 'publitio_direct_ready', 'published', 'ready' ), true ) ) || ( 'bunny_stream' === $provider_id && $generic_id && $generic_url && in_array( $provider_status, array( 'bunny_stream_ready', 'published', 'ready' ), true ) );
     }
 
     private function complete_published_job( array $job, array $published, array $recording, VH360_Studio_Replay_Storage_Provider $provider ) {
@@ -191,6 +204,9 @@ class VH360_Studio_Replay_Publisher {
             'wp_attachment_id'        => ! empty( $published['attachment_id'] ) ? absint( $published['attachment_id'] ) : 0,
             'publitio_file_id'        => ! empty( $published['publitio_file_id'] ) ? sanitize_text_field( $published['publitio_file_id'] ) : '',
             'videopress_guid'         => ! empty( $published['videopress_guid'] ) ? sanitize_text_field( $published['videopress_guid'] ) : '',
+            'provider_file_id'     => ! empty( $published['provider_file_id'] ) ? sanitize_text_field( $published['provider_file_id'] ) : '',
+            'provider_embed_url'   => ! empty( $published['embed_url'] ) ? esc_url_raw( $published['embed_url'] ) : '',
+            'provider_metadata'    => wp_json_encode( $published ),
             'videopress_processing_done' => isset( $published['videopress_processing_done'] ) ? absint( $published['videopress_processing_done'] ) : 1,
             'playback_url'            => ! empty( $published['playback_url'] ) ? esc_url_raw( $published['playback_url'] ) : '',
             'poster_url'              => ! empty( $published['poster_url'] ) ? esc_url_raw( $published['poster_url'] ) : '',
@@ -214,6 +230,8 @@ class VH360_Studio_Replay_Publisher {
             'attachment_id'           => absint( $ready['wp_attachment_id'] ),
             'publitio_file_id'        => ! empty( $ready['publitio_file_id'] ) ? sanitize_text_field( $ready['publitio_file_id'] ) : '',
             'videopress_guid'         => $ready['videopress_guid'],
+            'provider_file_id'        => ! empty( $ready['provider_file_id'] ) ? sanitize_text_field( $ready['provider_file_id'] ) : '',
+            'provider_embed_url'      => ! empty( $ready['provider_embed_url'] ) ? esc_url_raw( $ready['provider_embed_url'] ) : '',
             'playback_url'            => $ready['playback_url'],
             'replay_video_id'         => absint( $ready['replay_video_id'] ),
             'replay_url'              => $replay['replay_url'],
