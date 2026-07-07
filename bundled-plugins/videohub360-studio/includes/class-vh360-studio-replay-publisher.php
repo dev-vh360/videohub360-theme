@@ -88,7 +88,7 @@ class VH360_Studio_Replay_Publisher {
                 'provider_file_id'     => ! empty( $published['provider_file_id'] ) ? sanitize_text_field( $published['provider_file_id'] ) : '',
                 'provider_embed_url'   => ! empty( $published['embed_url'] ) ? esc_url_raw( $published['embed_url'] ) : '',
                 'provider_metadata'    => wp_json_encode( $published ),
-                'playback_url'            => ! empty( $published['playback_url'] ) ? esc_url_raw( $published['playback_url'] ) : ( ! empty( $published['embed_url'] ) ? esc_url_raw( $published['embed_url'] ) : '' ),
+                'playback_url'            => $this->provider_playback_url_for_job( $published ),
                 'publish_attempted_at'    => current_time( 'mysql' ),
                 'publish_provider_status' => ! empty( $published['provider_status'] ) ? sanitize_key( $published['provider_status'] ) : sanitize_key( $published['status'] ),
                 'error_message'           => '',
@@ -161,7 +161,7 @@ class VH360_Studio_Replay_Publisher {
             'provider_file_id'     => ! empty( $published['provider_file_id'] ) ? sanitize_text_field( $published['provider_file_id'] ) : '',
             'provider_embed_url'   => ! empty( $published['embed_url'] ) ? esc_url_raw( $published['embed_url'] ) : '',
             'provider_metadata'    => wp_json_encode( $published ),
-            'playback_url'            => ! empty( $published['playback_url'] ) ? esc_url_raw( $published['playback_url'] ) : ( ! empty( $published['embed_url'] ) ? esc_url_raw( $published['embed_url'] ) : '' ),
+            'playback_url'            => $this->provider_playback_url_for_job( $published ),
             'poster_url'              => ! empty( $published['poster_url'] ) ? esc_url_raw( $published['poster_url'] ) : '',
             'publish_attempted_at'    => current_time( 'mysql' ),
             'publish_provider_status' => ! empty( $published['provider_status'] ) ? sanitize_key( $published['provider_status'] ) : ( ! empty( $published['status'] ) ? sanitize_key( $published['status'] ) : 'publitio_processing' ),
@@ -183,6 +183,12 @@ class VH360_Studio_Replay_Publisher {
             'poster_url'              => $updated['poster_url'],
             'message'                 => ! empty( $published['message'] ) ? sanitize_text_field( $published['message'] ) : __( 'Cloud upload is verified and processing.', 'videohub360-studio' ),
         );
+    }
+
+    private function provider_playback_url_for_job( array $published ) {
+        if ( ! empty( $published['playback_url'] ) ) { return esc_url_raw( $published['playback_url'] ); }
+        if ( ! empty( $published['provider_id'] ) && 'bunny_stream' === sanitize_key( $published['provider_id'] ) ) { return ''; }
+        return ! empty( $published['embed_url'] ) ? esc_url_raw( $published['embed_url'] ) : '';
     }
 
     private function provider_status_is_ready( array $status ) {

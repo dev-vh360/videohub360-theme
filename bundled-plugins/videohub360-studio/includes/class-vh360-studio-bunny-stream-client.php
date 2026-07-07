@@ -96,9 +96,8 @@ class VH360_Studio_Bunny_Stream_Client {
         if ( ! $video_id || ! $library ) {
             return '';
         }
-        $custom = $this->custom_embed_hostname();
-        $url    = $custom ? 'https://' . $custom . '/embed/' . rawurlencode( $library ) . '/' . rawurlencode( $video_id ) : 'https://player.mediadelivery.net/embed/' . rawurlencode( $library ) . '/' . rawurlencode( $video_id );
-        return wp_http_validate_url( $url ) ? esc_url_raw( $url ) : esc_url_raw( 'https://player.mediadelivery.net/embed/' . rawurlencode( $library ) . '/' . rawurlencode( $video_id ) );
+        $url = 'https://player.mediadelivery.net/embed/' . rawurlencode( $library ) . '/' . rawurlencode( $video_id );
+        return esc_url_raw( $url );
     }
 
     public function thumbnail_url_from_video( array $video ) {

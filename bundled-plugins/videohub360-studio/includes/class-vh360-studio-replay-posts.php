@@ -75,6 +75,10 @@ class VH360_Studio_Replay_Posts {
         $provider_status = ! empty( $publish_result['provider_status'] ) ? sanitize_key( $publish_result['provider_status'] ) : ( ! empty( $publish_result['status'] ) ? sanitize_key( $publish_result['status'] ) : '' );
         $attachment_id = ! empty( $publish_result['attachment_id'] ) ? absint( $publish_result['attachment_id'] ) : 0;
         $provider      = sanitize_key( $job['storage_provider'] );
+        if ( 'bunny_stream' === $provider ) {
+            $provider_embed_url = $this->normalize_bunny_embed_url( $provider_embed_url, $bunny_library_id, $bunny_video_id );
+            $publitio_embed_url = '';
+        }
 
         update_post_meta( $post_id, 'video_url', $playback_url );
         update_post_meta( $post_id, '_vh360_is_live', $is_live_conversion ? 'yes' : 'no' );
@@ -193,6 +197,15 @@ class VH360_Studio_Replay_Posts {
         }
 
         return new WP_Error( 'vh360_studio_live_replay_target_forbidden', __( 'You are not allowed to update the original livestream post.', 'videohub360-studio' ), array( 'status' => 403 ) );
+    }
+
+    private function normalize_bunny_embed_url( $url, $library_id, $video_id ) {
+        $url = esc_url_raw( $url );
+        if ( $url && false === strpos( $url, 'b-cdn.net/embed/' ) ) { return $url; }
+        $library_id = sanitize_text_field( $library_id );
+        $video_id   = sanitize_text_field( $video_id );
+        if ( ! $library_id || ! $video_id ) { return $url; }
+        return esc_url_raw( 'https://player.mediadelivery.net/embed/' . rawurlencode( $library_id ) . '/' . rawurlencode( $video_id ) );
     }
 
     private function render_safe_iframe_embed( $url, $title ) {

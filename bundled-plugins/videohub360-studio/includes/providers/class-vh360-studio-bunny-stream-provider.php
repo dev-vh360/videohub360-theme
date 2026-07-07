@@ -56,10 +56,18 @@ class VH360_Studio_Bunny_Stream_Provider implements VH360_Studio_Replay_Storage_
         $prepared = $this->prepare_publish( $job, $recording );
         if ( is_wp_error( $prepared ) ) { return $prepared; }
         $client = $this->client();
+        $existing_video_id = $this->existing_video_id( $job );
+        if ( $existing_video_id ) {
+            $video = $client->get_video( $existing_video_id );
+            if ( is_wp_error( $video ) ) { return $video; }
+            return $this->result_from_video( is_array( $video ) ? $video : array(), $recording, __( 'Replay is already processing in cloud replay storage.', 'videohub360-studio' ), $existing_video_id );
+        }
         $created = $client->create_video( $this->title( $job ) );
         if ( is_wp_error( $created ) ) { return new WP_Error( 'vh360_studio_bunny_stream_create_failed', $created->get_error_message(), $created->get_error_data() ); }
         $video_id = ! empty( $created['guid'] ) ? sanitize_text_field( $created['guid'] ) : '';
         if ( ! $video_id ) { return new WP_Error( 'vh360_studio_bunny_stream_create_failed', __( 'Cloud replay storage returned an invalid response.', 'videohub360-studio' ), array( 'status' => 502 ) ); }
+        $created_result = $this->result_from_video( $created, $recording, __( 'Replay is already processing in cloud replay storage.', 'videohub360-studio' ), $video_id );
+        $this->persist_created_video( $job, $created_result );
         $uploaded = $client->upload_video( $video_id, $recording['path'], $recording['mime_type'] );
         if ( is_wp_error( $uploaded ) ) { return new WP_Error( 'vh360_studio_bunny_stream_upload_failed', sprintf( __( 'Cloud replay storage rejected the upload: %s', 'videohub360-studio' ), $uploaded->get_error_message() ), $uploaded->get_error_data() ); }
         $video = $client->get_video( $video_id );
@@ -68,11 +76,7 @@ class VH360_Studio_Bunny_Stream_Provider implements VH360_Studio_Replay_Storage_
     }
 
     public function get_publish_status( array $job ) {
-        $video_id = ! empty( $job['provider_file_id'] ) ? sanitize_text_field( $job['provider_file_id'] ) : '';
-        if ( ! $video_id && ! empty( $job['provider_metadata'] ) ) {
-            $meta = json_decode( (string) $job['provider_metadata'], true );
-            $video_id = ! empty( $meta['bunny_video_id'] ) ? sanitize_text_field( $meta['bunny_video_id'] ) : '';
-        }
+        $video_id = $this->existing_video_id( $job );
         if ( ! $video_id ) {
             return array( 'provider_id'=>$this->get_id(), 'provider_label'=>$this->get_label(), 'status'=>'pending', 'supports_publish'=>$this->supports_publish(), 'message'=>__( 'Cloud replay file has not been uploaded yet.', 'videohub360-studio' ) );
         }
@@ -85,6 +89,34 @@ class VH360_Studio_Bunny_Stream_Provider implements VH360_Studio_Replay_Storage_
 
     public function test_connection() { return $this->client()->list_videos( 1, 1 ); }
 
+    private function existing_video_id( array $job ) {
+        if ( ! empty( $job['provider_file_id'] ) ) { return sanitize_text_field( $job['provider_file_id'] ); }
+        if ( ! empty( $job['provider_metadata'] ) ) {
+            $meta = json_decode( (string) $job['provider_metadata'], true );
+            if ( is_array( $meta ) && ! empty( $meta['bunny_video_id'] ) ) { return sanitize_text_field( $meta['bunny_video_id'] ); }
+        }
+        foreach ( array( 'replay_video_id', 'live_video_id' ) as $post_key ) {
+            if ( empty( $job[ $post_key ] ) ) { continue; }
+            $video_id = sanitize_text_field( get_post_meta( absint( $job[ $post_key ] ), '_vh360_studio_bunny_video_id', true ) );
+            if ( $video_id ) { return $video_id; }
+        }
+        return '';
+    }
+
+    private function persist_created_video( array $job, array $result ) {
+        if ( empty( $job['id'] ) || empty( $result['provider_file_id'] ) ) { return; }
+        $jobs = new VH360_Studio_Recording_Jobs( VH360_Studio_Plugin::instance()->registry() );
+        $jobs->update( absint( $job['id'] ), 0, array(
+            'provider_file_id'        => sanitize_text_field( $result['provider_file_id'] ),
+            'provider_embed_url'      => ! empty( $result['embed_url'] ) ? esc_url_raw( $result['embed_url'] ) : '',
+            'provider_metadata'       => wp_json_encode( $result ),
+            'playback_url'            => '',
+            'publish_attempted_at'    => current_time( 'mysql' ),
+            'publish_provider_status' => ! empty( $result['provider_status'] ) ? sanitize_key( $result['provider_status'] ) : self::STATUS_PROCESSING,
+            'error_message'           => '',
+        ) );
+    }
+
     private function result_from_video( array $video, array $recording, $message, $fallback_id = '' ) {
         $video_id = ! empty( $video['guid'] ) ? sanitize_text_field( $video['guid'] ) : sanitize_text_field( $fallback_id );
         $status   = $this->map_status( $video );
@@ -94,7 +126,7 @@ class VH360_Studio_Bunny_Stream_Provider implements VH360_Studio_Replay_Storage_
         return array(
             'provider_id'      => $this->get_id(), 'provider_label' => $this->get_label(), 'status' => $status, 'provider_status' => $status,
             'provider_file_id' => $video_id, 'bunny_video_id' => $video_id, 'bunny_library_id' => $library,
-            'playback_url'     => $embed, 'embed_url' => $embed, 'poster_url' => $poster,
+            'playback_url'     => '', 'embed_url' => $embed, 'poster_url' => $poster,
             'file_size'        => ! empty( $recording['file_size'] ) ? absint( $recording['file_size'] ) : 0,
             'mime_type'        => ! empty( $recording['mime_type'] ) ? sanitize_mime_type( $recording['mime_type'] ) : '',
             'title'            => ! empty( $video['title'] ) ? sanitize_text_field( $video['title'] ) : '',
