@@ -106,7 +106,7 @@ class VH360_Studio_Replay_Publisher {
                 'publitio_file_id'        => ! empty( $updated['publitio_file_id'] ) ? sanitize_text_field( $updated['publitio_file_id'] ) : '',
                 'playback_url'            => $updated['playback_url'],
                 'replay_video_id'         => ! empty( $updated['replay_video_id'] ) ? absint( $updated['replay_video_id'] ) : 0,
-                'message'                 => ! empty( $published['message'] ) ? $published['message'] : __( 'Recording uploaded and waiting for provider processing.', 'videohub360-studio' ),
+                'message'                 => ! empty( $published['message'] ) ? $published['message'] : __( 'Recording uploaded and waiting for replay processing.', 'videohub360-studio' ),
             );
         }
 
@@ -171,7 +171,7 @@ class VH360_Studio_Replay_Publisher {
             'publitio_file_id'        => ! empty( $updated['publitio_file_id'] ) ? sanitize_text_field( $updated['publitio_file_id'] ) : '',
             'playback_url'            => $updated['playback_url'],
             'poster_url'              => $updated['poster_url'],
-            'message'                 => ! empty( $published['message'] ) ? sanitize_text_field( $published['message'] ) : __( 'Publitio upload is verified and processing.', 'videohub360-studio' ),
+            'message'                 => ! empty( $published['message'] ) ? sanitize_text_field( $published['message'] ) : __( 'Cloud upload is verified and processing.', 'videohub360-studio' ),
         );
     }
 

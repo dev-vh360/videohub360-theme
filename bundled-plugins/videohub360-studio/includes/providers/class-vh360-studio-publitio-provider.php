@@ -29,39 +29,39 @@ class VH360_Studio_Publitio_Provider implements VH360_Studio_Replay_Storage_Prov
 
     public function prepare_publish( array $job, array $recording ) {
         if ( 'publitio' !== sanitize_key( $job['storage_provider'] ) ) {
-            return new WP_Error( 'vh360_studio_publitio_wrong_provider', __( 'This recording job is not configured for Publitio publishing.', 'videohub360-studio' ), array( 'status' => 400 ) );
+            return new WP_Error( 'vh360_studio_publitio_wrong_provider', __( 'This recording job is not configured for this replay storage method.', 'videohub360-studio' ), array( 'status' => 400 ) );
         }
         if ( VH360_Studio_Recording_Jobs::STATUS_PROCESSING !== $job['status'] ) {
-            return new WP_Error( 'vh360_studio_publitio_invalid_status', __( 'Publitio publishing requires a processing job.', 'videohub360-studio' ), array( 'status' => 409 ) );
+            return new WP_Error( 'vh360_studio_publitio_invalid_status', __( 'This replay storage method requires a processing job.', 'videohub360-studio' ), array( 'status' => 409 ) );
         }
         if ( ! current_user_can( 'upload_files' ) ) {
-            return new WP_Error( 'vh360_studio_publitio_upload_forbidden', __( 'Publitio publishing requires permission to upload media.', 'videohub360-studio' ), array( 'status' => 403 ) );
+            return new WP_Error( 'vh360_studio_publitio_upload_forbidden', __( 'Replay publishing requires permission to upload media.', 'videohub360-studio' ), array( 'status' => 403 ) );
         }
         if ( ! function_exists( 'wp_remote_request' ) ) {
-            return new WP_Error( 'vh360_studio_publitio_http_unavailable', __( 'WordPress HTTP API is unavailable for Publitio publishing.', 'videohub360-studio' ), array( 'status' => 500 ) );
+            return new WP_Error( 'vh360_studio_publitio_http_unavailable', __( 'Replay publishing is unavailable because the HTTP API is not available.', 'videohub360-studio' ), array( 'status' => 500 ) );
         }
         if ( ! $this->client()->has_credentials() ) {
-            return new WP_Error( 'vh360_studio_publitio_credentials_missing', __( 'Publitio credentials are missing. Ask an administrator to configure Studio replay providers.', 'videohub360-studio' ), array( 'status' => 400 ) );
+            return new WP_Error( 'vh360_studio_publitio_credentials_missing', __( 'Cloud replay storage is not configured. Ask an administrator to check Studio replay settings.', 'videohub360-studio' ), array( 'status' => 400 ) );
         }
         if ( empty( $recording['path'] ) || ! file_exists( $recording['path'] ) || ! is_file( $recording['path'] ) || ! is_readable( $recording['path'] ) ) {
-            return new WP_Error( 'vh360_studio_publitio_missing_file', __( 'The validated recording file is not available for Publitio publishing.', 'videohub360-studio' ), array( 'status' => 410 ) );
+            return new WP_Error( 'vh360_studio_publitio_missing_file', __( 'The validated recording file is not available for replay publishing.', 'videohub360-studio' ), array( 'status' => 410 ) );
         }
         $chunks = new VH360_Studio_Recording_Chunks( new VH360_Studio_Recording_Jobs( VH360_Studio_Plugin::instance()->registry() ) );
         if ( ! $chunks->is_path_in_base_directory( $recording['path'] ) ) {
-            return new WP_Error( 'vh360_studio_publitio_invalid_path', __( 'The validated recording path is not allowed for Publitio publishing.', 'videohub360-studio' ), array( 'status' => 500 ) );
+            return new WP_Error( 'vh360_studio_publitio_invalid_path', __( 'The validated recording path is not allowed for replay publishing.', 'videohub360-studio' ), array( 'status' => 500 ) );
         }
         if ( ! in_array( $this->base_mime_type( $recording['mime_type'] ), array( 'video/mp4', 'video/webm' ), true ) ) {
-            return new WP_Error( 'vh360_studio_publitio_invalid_type', __( 'Publitio publishing supports MP4 and WebM recordings only.', 'videohub360-studio' ), array( 'status' => 415 ) );
+            return new WP_Error( 'vh360_studio_publitio_invalid_type', __( 'Replay publishing supports MP4 and WebM recordings only.', 'videohub360-studio' ), array( 'status' => 415 ) );
         }
         if ( empty( $recording['file_size'] ) || 0 >= absint( $recording['file_size'] ) ) {
-            return new WP_Error( 'vh360_studio_publitio_empty_file', __( 'Publitio publishing requires a non-empty recording file.', 'videohub360-studio' ), array( 'status' => 400 ) );
+            return new WP_Error( 'vh360_studio_publitio_empty_file', __( 'Replay publishing requires a non-empty recording file.', 'videohub360-studio' ), array( 'status' => 400 ) );
         }
         return array(
             'provider_id'      => $this->get_id(),
             'provider_label'   => $this->get_label(),
             'status'           => 'prepared',
             'supports_publish' => $this->supports_publish(),
-            'message'          => __( 'Publitio is configured and ready to upload this replay.', 'videohub360-studio' ),
+            'message'          => __( 'Cloud replay storage is configured and ready to upload this replay.', 'videohub360-studio' ),
         );
     }
 
@@ -75,19 +75,19 @@ class VH360_Studio_Publitio_Provider implements VH360_Studio_Replay_Storage_Prov
             $result = $this->client()->create_file( $recording['path'], $params, $recording['mime_type'], basename( $recording['path'] ) );
         }
         if ( is_wp_error( $result ) ) { return $result; }
-        return $this->result_from_response( $result, __( 'Recording uploaded to Publitio.', 'videohub360-studio' ) );
+        return $this->result_from_response( $result, __( 'Recording uploaded to cloud replay storage.', 'videohub360-studio' ) );
     }
 
     public function get_publish_status( array $job ) {
         $file_id = ! empty( $job['publitio_file_id'] ) ? sanitize_text_field( $job['publitio_file_id'] ) : '';
         if ( ! $file_id ) {
-            return array( 'provider_id'=>$this->get_id(), 'provider_label'=>$this->get_label(), 'status'=>'pending', 'supports_publish'=>$this->supports_publish(), 'publitio_file_id'=>'', 'playback_url'=>'', 'poster_url'=>'', 'message'=>__( 'Publitio file has not been uploaded yet.', 'videohub360-studio' ) );
+            return array( 'provider_id'=>$this->get_id(), 'provider_label'=>$this->get_label(), 'status'=>'pending', 'supports_publish'=>$this->supports_publish(), 'publitio_file_id'=>'', 'playback_url'=>'', 'poster_url'=>'', 'message'=>__( 'Cloud replay file has not been uploaded yet.', 'videohub360-studio' ) );
         }
         $result = $this->client()->show_file( $file_id );
         if ( is_wp_error( $result ) ) {
             return array( 'provider_id'=>$this->get_id(), 'provider_label'=>$this->get_label(), 'status'=>'failed', 'supports_publish'=>$this->supports_publish(), 'publitio_file_id'=>$file_id, 'playback_url'=>'', 'poster_url'=>'', 'message'=>$result->get_error_message() );
         }
-        return $this->result_from_response( $result, __( 'Publitio replay status checked.', 'videohub360-studio' ) );
+        return $this->result_from_response( $result, __( 'Cloud replay status checked.', 'videohub360-studio' ) );
     }
 
     public function test_connection() { return $this->client()->list_files( 1 ); }
@@ -99,13 +99,13 @@ class VH360_Studio_Publitio_Provider implements VH360_Studio_Replay_Storage_Prov
     public function verify_direct_upload_file( $file_id ) {
         $file_id = sanitize_text_field( $file_id );
         if ( '' === $file_id ) {
-            return new WP_Error( 'vh360_studio_publitio_missing_file_id', __( 'Publitio file ID is missing.', 'videohub360-studio' ), array( 'status' => 400 ) );
+            return new WP_Error( 'vh360_studio_publitio_missing_file_id', __( 'Cloud upload file ID is missing.', 'videohub360-studio' ), array( 'status' => 400 ) );
         }
         $result = $this->client()->show_file( $file_id );
         if ( is_wp_error( $result ) ) {
             return $result;
         }
-        $verified = $this->result_from_response( $result, __( 'Publitio direct upload verified.', 'videohub360-studio' ) );
+        $verified = $this->result_from_response( $result, __( 'Cloud upload verified.', 'videohub360-studio' ) );
         if ( is_array( $verified ) ) {
             $verified['status']          = self::STATUS_READY === $verified['status'] ? 'publitio_direct_ready' : 'publitio_direct_processing';
             $verified['provider_status'] = $verified['status'];
@@ -136,7 +136,7 @@ class VH360_Studio_Publitio_Provider implements VH360_Studio_Replay_Storage_Prov
         $file = $this->find_file_payload( $response );
         $file_id = $this->first_scalar( $file, array( 'id', 'file_id' ) );
         if ( ! $file_id ) {
-            return new WP_Error( 'vh360_studio_publitio_missing_file_id', __( 'Publitio did not return a file ID.', 'videohub360-studio' ), array( 'status' => 502 ) );
+            return new WP_Error( 'vh360_studio_publitio_missing_file_id', __( 'Cloud upload did not return a valid file reference.', 'videohub360-studio' ), array( 'status' => 502 ) );
         }
         $player   = $this->player_payload( $file_id );
         $playback = $this->best_playback_url( $file );
@@ -160,7 +160,7 @@ class VH360_Studio_Publitio_Provider implements VH360_Studio_Replay_Storage_Prov
             'poster_url'           => $poster,
             'embed_url'            => $embed,
             'supports_publish'     => $this->supports_publish(),
-            'message'              => $ready ? $message : __( 'Publitio upload succeeded and is processing playback URLs.', 'videohub360-studio' ),
+            'message'              => $ready ? $message : __( 'Cloud upload succeeded and is processing playback URLs.', 'videohub360-studio' ),
         );
     }
 

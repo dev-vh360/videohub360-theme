@@ -1537,7 +1537,7 @@
 
         if (els.mediaSourceModalHelp) {
             els.mediaSourceModalHelp.textContent = state.mediaSourceModalMode === 'local'
-                ? 'Local media is available for this Studio session only and is not uploaded to WordPress.'
+                ? 'Local media is available for this Studio session only and is not uploaded to your media library.'
                 : 'Uploaded media will be saved to Studio and remain available until you delete it.';
         }
 
@@ -2339,7 +2339,7 @@
             state.directUploadAvailable = false;
             state.directUploadParts.clear();
             state.directUploadBytes = 0;
-            setRecordingStatus('Direct Publitio upload limit was exceeded. Use server relay mode for very long recordings.', 'warning');
+            setRecordingStatus('Fast cloud upload limit was exceeded. Use server relay mode for very long recordings.', 'warning');
             return;
         }
         state.directUploadParts.set(Number(index), blob);
@@ -2469,7 +2469,7 @@
             state.recorder = null;
             unlockRecordingCanvasSize();
             setShellClass('is-recording', false);
-            setRecordingStatus(isPublitioDirectMode() ? 'Recording stopped. Ready to upload directly to Publitio.' : strings.uploadingChunk, 'info');
+            setRecordingStatus(isPublitioDirectMode() ? 'Recording stopped. Ready for fast cloud upload.' : strings.uploadingChunk, 'info');
             renderRecordingState();
             updateOperatorStatus();
             return true;
@@ -2496,7 +2496,7 @@
         if (isPublitioDirectMode()) {
             try {
                 const job = await confirmServerStop();
-                setRecordingStatus('Recording stopped. Ready to upload directly to Publitio.', 'success');
+                setRecordingStatus('Recording stopped. Ready for fast cloud upload.', 'success');
                 return job;
             } catch (error) {
                 state.stopFailed = true;
@@ -2736,7 +2736,7 @@
             xhr.responseType = 'json';
             xhr.upload.onprogress = (event) => {
                 if (event.lengthComputable) {
-                    setPublishingStatus((strings.publitioDirectUploading || 'Uploading directly to Publitio…') + ' ' + Math.round((event.loaded / event.total) * 100) + '%', 'info');
+                    setPublishingStatus((strings.publitioDirectUploading || 'Uploading through fast cloud upload…') + ' ' + Math.round((event.loaded / event.total) * 100) + '%', 'info');
                 }
             };
             xhr.onload = () => {
@@ -2745,10 +2745,10 @@
                     resolve(payload);
                     return;
                 }
-                reject(new Error((payload && (payload.message || payload.error || payload.msg)) || 'Publitio direct upload failed.'));
+                reject(new Error((payload && (payload.message || payload.error || payload.msg)) || 'Fast cloud upload failed.'));
             };
-            xhr.onerror = () => reject(new Error('Publitio direct upload failed before completion.'));
-            xhr.ontimeout = () => reject(new Error('Publitio direct upload timed out.'));
+            xhr.onerror = () => reject(new Error('Fast cloud upload failed before completion.'));
+            xhr.ontimeout = () => reject(new Error('Fast cloud upload timed out.'));
             xhr.send(form);
         });
     }
@@ -2769,7 +2769,7 @@
     async function publishReplayViaDirectPublitio() {
         const blob = buildDirectUploadBlob();
         if (!blob || !blob.size) {
-            throw new Error('Local recording data is unavailable for direct upload.');
+            throw new Error('Local recording data is unavailable for fast cloud upload.');
         }
         const direct = config.publitioDirectUpload || {};
         if (direct.max_size && blob.size > Number(direct.max_size)) {
@@ -2781,7 +2781,7 @@
             throw new Error('Recording type is not allowed for direct browser upload.');
         }
 
-        setPublishingStatus(strings.publitioDirectUploading || 'Uploading directly to Publitio…', 'info');
+        setPublishingStatus(strings.publitioDirectUploading || 'Uploading through fast cloud upload…', 'info');
         const auth = await api('/jobs/' + state.activeJobId + '/publitio/direct-upload/authorize', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ mime_type: baseMime || blob.type || state.selectedMimeType, file_size: blob.size, duration_seconds: state.recordingDurationSeconds || 0 }) });
         const form = new FormData();
         form.append('file', blob, 'vh360-studio-replay-' + state.activeJobId + recordingExtension(baseMime || blob.type || state.selectedMimeType));
@@ -2794,9 +2794,9 @@
         const file = findPublitioFilePayload(uploaded);
         const fileId = file.id || file.file_id || uploaded.id || uploaded.file_id || '';
         if (!fileId) {
-            throw new Error('Publitio direct upload did not return a file ID.');
+            throw new Error('Cloud upload did not return a valid file reference.');
         }
-        setPublishingStatus(strings.publitioDirectVerifying || 'Publitio upload complete. Verifying replay…', 'info');
+        setPublishingStatus(strings.publitioDirectVerifying || 'Cloud upload complete. Verifying replay…', 'info');
         return api('/jobs/' + state.activeJobId + '/publitio/direct-upload/complete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce },
@@ -2830,7 +2830,7 @@
                 state.directUploadParts.clear();
                 state.directUploadBytes = 0;
             } else if (isPublitioDirectMode()) {
-                throw new Error('Direct Publitio upload is enabled, but the local recording Blob is unavailable or over the direct upload limit. Retry while the recording is still in this browser, or switch to server relay for the next recording.');
+                throw new Error('Fast cloud upload is enabled, but the local recording Blob is unavailable or over the upload limit. Retry while the recording is still in this browser, or switch to server relay for the next recording.');
             } else {
                 result = await publishReplayViaServerRelay();
             }
@@ -2846,7 +2846,7 @@
             } else if (failed) {
                 setPublishingStatus(result.error_message || result.message || strings.publishFailed, 'error');
             } else {
-                setPublishingStatus(result.message || strings.publishProcessing || 'Replay uploaded. Waiting for provider processing.', 'info');
+                setPublishingStatus(result.message || strings.publishProcessing || 'Replay uploaded. Waiting for replay processing.', 'info');
             }
             appendRecentJob(Object.assign({}, result, { id: result.id || result.job_id || state.activeJobId, status: state.currentJobStatus, replay_url: publicReplayUrl, playback_url: rawPlaybackUrl }));
             if (shouldPollPublishStatus(result)) {
@@ -2887,7 +2887,7 @@
             } else if (isPublishFailure(result)) {
                 setPublishingStatus(result.error_message || result.message || strings.publishFailed, 'error');
             } else if (shouldPollPublishStatus(result)) {
-                setPublishingStatus(result.message || strings.publishProcessing || 'Replay uploaded. Waiting for provider processing.', 'info');
+                setPublishingStatus(result.message || strings.publishProcessing || 'Replay uploaded. Waiting for replay processing.', 'info');
             } else {
                 setPublishingStatus(result.error_message || result.message || result.publish_provider_status || result.status || 'pending', 'info');
             }
@@ -3333,7 +3333,7 @@
             return;
         }
         if (isRecordingActive()) {
-            setBroadcastStatus('Stop browser recording before going live, then start recording again after Agora is live so Studio can record the active broadcast tracks.', 'error');
+            setBroadcastStatus('Stop browser recording before going live, then start recording again after the live connection is active so Studio can record the active broadcast tracks.', 'error');
             return;
         }
         if (!state.broadcastVideoId && els.broadcastMode && els.broadcastMode.value === 'interactive' && els.broadcastRequirePasscode && els.broadcastRequirePasscode.checked && (!els.broadcastPasscode || !els.broadcastPasscode.value.trim())) {
@@ -3440,11 +3440,11 @@
                 return;
             }
             if (state.recordingStoppedAt && !state.serverStopConfirmed) {
-                setRecordingStatus(isPublitioDirectMode() ? 'Recording stopped. Ready to upload directly to Publitio.' : strings.uploadingChunk, 'info');
+                setRecordingStatus(isPublitioDirectMode() ? 'Recording stopped. Ready for fast cloud upload.' : strings.uploadingChunk, 'info');
                 finishRecordingUploadsAndConfirmStop().catch(() => {});
             }
         } else if (state.recordingStoppedAt && !state.serverStopConfirmed) {
-            setRecordingStatus(isPublitioDirectMode() ? 'Recording stopped. Ready to upload directly to Publitio.' : strings.uploadingChunk, 'info');
+            setRecordingStatus(isPublitioDirectMode() ? 'Recording stopped. Ready for fast cloud upload.' : strings.uploadingChunk, 'info');
             finishRecordingUploadsAndConfirmStop().catch(() => {});
         }
         if (state.heartbeatTimer) {
@@ -3464,7 +3464,7 @@
                 state.broadcastEnding = false;
                 if (els.goLive) els.goLive.disabled = false;
                 if (els.endLive) els.endLive.disabled = true;
-                setBroadcastStatus('Local broadcast stopped, but WordPress could not mark the public livestream ended: ' + ((error && error.message) || 'Unknown error'), 'error');
+                setBroadcastStatus('Local broadcast stopped, but Videohub360 could not mark the public livestream ended: ' + ((error && error.message) || 'Unknown error'), 'error');
                 return;
             }
         }
@@ -3726,7 +3726,7 @@
                 state.lastAgoraConnectionState = detail.current;
                 state.broadcastReady = Boolean(state.broadcastSession) && detail.current === 'CONNECTED';
                 renderTransitionButtons();
-                setBroadcastStatus('Agora connection: ' + detail.current + (detail.reason ? ' (' + detail.reason + ')' : ''), detail.current === 'CONNECTED' ? 'success' : 'info');
+                setBroadcastStatus('Live connection: ' + detail.current + (detail.reason ? ' (' + detail.reason + ')' : ''), detail.current === 'CONNECTED' ? 'success' : 'info');
             }
         });
         window.addEventListener('pagehide', () => {

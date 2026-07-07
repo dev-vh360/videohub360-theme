@@ -279,7 +279,7 @@ $live_rooms_query = new WP_Query(array(
                     <option value="broadcast"><?php esc_html_e('Broadcast (host speaks, audience watches)', 'videohub360-theme'); ?></option>
                 </select>
                 <p class="vh360-form-help">
-                    <?php esc_html_e('These options map directly to the Agora interactive/broadcast modes used on single video pages.', 'videohub360-theme'); ?>
+                    <?php esc_html_e('These options control how viewers and presenters join the livestream.', 'videohub360-theme'); ?>
                 </p>
             
             <div class="vh360-form-group">
@@ -364,10 +364,10 @@ $live_rooms_query = new WP_Query(array(
 </div>
 
             <div class="vh360-form-group">
-                <label for="vh360_live_room_channel"><?php esc_html_e('Agora Channel Name (optional)', 'videohub360-theme'); ?></label>
+                <label for="vh360_live_room_channel"><?php esc_html_e('Live Channel Name (optional)', 'videohub360-theme'); ?></label>
                 <input type="text" id="vh360_live_room_channel" name="vh360_live_room_channel" class="vh360-input" placeholder="<?php esc_attr_e('Leave blank to auto-generate a secure channel name.', 'videohub360-theme'); ?>">
                 <p class="vh360-form-help">
-                    <?php esc_html_e('Requires Agora to be configured in the Videohub360 plugin settings. Channel name identifies this Live Room session.', 'videohub360-theme'); ?>
+                    <?php esc_html_e('Requires live connection settings to be configured. The channel name identifies this Live Room session.', 'videohub360-theme'); ?>
                 </p>
             </div>
 

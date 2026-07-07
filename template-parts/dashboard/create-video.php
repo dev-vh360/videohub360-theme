@@ -504,7 +504,7 @@ $locations = get_terms(array(
                 <div class="vh360-form-help" style="background: color-mix(in srgb, var(--info-color, #3b82f6) 12%, var(--surface-1, #ffffff)); padding: 12px; border-radius: 4px; border-left: 4px solid var(--info-color, #3b82f6); margin-bottom: 15px;">
                     <strong>💡 Quick Setup Guide:</strong><br>
                     1. Set "Currently Live Status" to "Yes" to enable livestream mode<br>
-                    2. Choose your "Stream Source Type" (Agora.io recommended for interactive streaming)<br>
+                    2. Choose your "Stream Source Type" (Videohub360 Live Connection recommended for interactive streaming)<br>
                     3. Configure source-specific settings below<br>
                     4. Save to enable livestream functionality
                 </div>
@@ -533,10 +533,10 @@ $locations = get_terms(array(
                         <option value="embed"><?php esc_html_e('Embed (YouTube Live, Twitch, etc.)', 'videohub360-theme'); ?></option>
                         <option value="selfhosted"><?php esc_html_e('Self-Hosted HLS/DASH', 'videohub360-theme'); ?></option>
                         <option value="api"><?php esc_html_e('Streaming API Platform', 'videohub360-theme'); ?></option>
-                        <option value="agora" selected><?php esc_html_e('Agora.io WebRTC (Recommended for Interactive)', 'videohub360-theme'); ?></option>
+                        <option value="agora" selected><?php esc_html_e('Videohub360 Live Connection (recommended for interactive livestreams)', 'videohub360-theme'); ?></option>
                     </select>
                     <p class="vh360-form-help">
-                        <strong><?php esc_html_e('Agora.io', 'videohub360-theme'); ?></strong> <?php esc_html_e('offers the best experience for interactive livestreams with audience participation, built-in chat, and real-time engagement.', 'videohub360-theme'); ?>
+                        <strong><?php esc_html_e('Videohub360 Live Connection', 'videohub360-theme'); ?></strong> <?php esc_html_e('supports interactive livestreams with audience participation, live chat, and real-time engagement.', 'videohub360-theme'); ?>
                     </p>
                 </div>
 
@@ -624,7 +624,7 @@ $locations = get_terms(array(
                                 placeholder="<?php esc_attr_e('Leave blank to auto-generate a secure channel name', 'videohub360-theme'); ?>"
                             >
                             <p class="vh360-form-help">
-                                <?php esc_html_e('The Agora channel name for this specific livestream. Leave blank to auto-generate. Use alphanumeric characters only if providing your own.', 'videohub360-theme'); ?>
+                                <?php esc_html_e('The live channel name for this livestream. Leave blank to auto-generate. Use alphanumeric characters only if providing your own.', 'videohub360-theme'); ?>
                             </p>
                         </div>
 

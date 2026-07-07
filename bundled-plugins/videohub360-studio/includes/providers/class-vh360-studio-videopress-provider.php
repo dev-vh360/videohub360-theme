@@ -30,15 +30,15 @@ class VH360_Studio_VideoPress_Provider implements VH360_Studio_Replay_Storage_Pr
 
     public function prepare_publish( array $job, array $recording ) {
         if ( ! current_user_can( 'upload_files' ) ) {
-            return new WP_Error( 'vh360_studio_videopress_upload_forbidden', __( 'VideoPress publishing requires permission to upload media.', 'videohub360-studio' ), array( 'status' => 403 ) );
+            return new WP_Error( 'vh360_studio_videopress_upload_forbidden', __( 'Cloud replay publishing requires permission to upload media.', 'videohub360-studio' ), array( 'status' => 403 ) );
         }
 
         if ( ! $this->is_available() ) {
-            return new WP_Error( 'vh360_studio_videopress_unavailable', __( 'VideoPress publishing requires Jetpack/VideoPress to be active and available.', 'videohub360-studio' ), array( 'status' => 501 ) );
+            return new WP_Error( 'vh360_studio_videopress_unavailable', __( 'Cloud replay storage is not available. Ask an administrator to check Studio replay settings.', 'videohub360-studio' ), array( 'status' => 501 ) );
         }
 
         if ( empty( $recording['path'] ) || ! is_readable( $recording['path'] ) || ! is_file( $recording['path'] ) ) {
-            return new WP_Error( 'vh360_studio_videopress_missing_file', __( 'The validated recording file is not available for VideoPress publishing.', 'videohub360-studio' ), array( 'status' => 410 ) );
+            return new WP_Error( 'vh360_studio_videopress_missing_file', __( 'The validated recording file is not available for cloud replay publishing.', 'videohub360-studio' ), array( 'status' => 410 ) );
         }
 
         $this->load_media_functions();
@@ -47,7 +47,7 @@ class VH360_Studio_VideoPress_Provider implements VH360_Studio_Replay_Storage_Pr
             'provider_id'    => $this->get_id(),
             'provider_label' => $this->get_label(),
             'status'         => 'prepared',
-            'message'        => __( 'VideoPress is available. The recording can be handed off through the WordPress Media Library.', 'videohub360-studio' ),
+            'message'        => __( 'Cloud replay storage is available. The recording can be handed off for processing.', 'videohub360-studio' ),
         );
     }
 
@@ -60,7 +60,7 @@ class VH360_Studio_VideoPress_Provider implements VH360_Studio_Replay_Storage_Pr
         $existing_attachment_id = ! empty( $job['wp_attachment_id'] ) ? absint( $job['wp_attachment_id'] ) : 0;
         if ( $existing_attachment_id && 'attachment' === get_post_type( $existing_attachment_id ) ) {
             $this->copy_source_thumbnail_to_attachment( $existing_attachment_id, $job );
-            return $this->result_from_attachment( $existing_attachment_id, __( 'Existing Media Library attachment checked for VideoPress processing.', 'videohub360-studio' ) );
+            return $this->result_from_attachment( $existing_attachment_id, __( 'Existing media attachment checked for cloud replay processing.', 'videohub360-studio' ) );
         }
 
         $source = $recording['path'];
@@ -71,7 +71,7 @@ class VH360_Studio_VideoPress_Provider implements VH360_Studio_Replay_Storage_Pr
             if ( $tmp ) {
                 @unlink( $tmp );
             }
-            return new WP_Error( 'vh360_studio_videopress_copy_failed', __( 'Unable to prepare the recording for Media Library handoff.', 'videohub360-studio' ), array( 'status' => 500 ) );
+            return new WP_Error( 'vh360_studio_videopress_copy_failed', __( 'Unable to prepare the recording for cloud replay handoff.', 'videohub360-studio' ), array( 'status' => 500 ) );
         }
 
         $file = array(
@@ -91,7 +91,7 @@ class VH360_Studio_VideoPress_Provider implements VH360_Studio_Replay_Storage_Pr
 
         $this->copy_source_thumbnail_to_attachment( absint( $attachment_id ), $job );
 
-        return $this->result_from_attachment( absint( $attachment_id ), __( 'Recording added to the Media Library. Waiting for VideoPress to return a GUID.', 'videohub360-studio' ) );
+        return $this->result_from_attachment( absint( $attachment_id ), __( 'Recording added for replay processing.', 'videohub360-studio' ) );
     }
 
     public function get_publish_status( array $job ) {
@@ -109,7 +109,7 @@ class VH360_Studio_VideoPress_Provider implements VH360_Studio_Replay_Storage_Pr
             'poster_url'         => $attachment_id ? $this->attachment_poster_url( $attachment_id ) : '',
             'videopress_guid'    => $guid,
             'replay_video_id'    => ! empty( $job['replay_video_id'] ) ? absint( $job['replay_video_id'] ) : 0,
-            'message'            => $guid ? __( 'VideoPress GUID detected.', 'videohub360-studio' ) : __( 'Waiting for VideoPress processing to provide a GUID.', 'videohub360-studio' ),
+            'message'            => $guid ? __( 'Cloud replay GUID detected.', 'videohub360-studio' ) : __( 'Waiting for cloud replay processing.', 'videohub360-studio' ),
         );
     }
 
@@ -126,7 +126,7 @@ class VH360_Studio_VideoPress_Provider implements VH360_Studio_Replay_Storage_Pr
             'poster_url'           => $this->attachment_poster_url( $attachment_id ),
             'videopress_guid'      => $guid,
             'videopress_shortcode' => $guid ? '[videopress ' . $guid . ']' : '',
-            'message'              => $guid ? __( 'Recording published through VideoPress.', 'videohub360-studio' ) : $message,
+            'message'              => $guid ? __( 'Recording published through cloud replay storage.', 'videohub360-studio' ) : $message,
         );
     }
 

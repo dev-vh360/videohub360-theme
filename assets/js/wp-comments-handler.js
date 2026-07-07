@@ -87,7 +87,7 @@
                 e.preventDefault();
                 vh360Log('Edit comment:', $(this).data('comment-id'));
                 // TODO: Implement inline editing if needed
-                alert('Edit functionality would be implemented here. For now, please use the WordPress admin.');
+                alert('Edit functionality would be implemented here. For now, please use the site admin area.');
             });
             
             // Delete button
@@ -283,7 +283,7 @@
             if (typeof vh360CommentsData !== 'undefined' && vh360CommentsData.adminUrl) {
                 window.location.href = vh360CommentsData.adminUrl + 'comment.php?action=deletecomment&c=' + commentId;
             } else {
-                alert('Delete functionality requires admin access. Please use the WordPress admin panel.');
+                alert('Delete functionality requires admin access. Please use the admin panel.');
             }
         },
         
