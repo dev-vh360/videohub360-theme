@@ -813,8 +813,9 @@ class VideoHub360_Frontend {
             return false;
         }
 
-        return ($this->is_live_post($post_id) || $this->is_agora_post($post_id) || $this->is_chat_enabled($post_id))
-            && $this->user_can_moderate($post_id);
+        $state = $this->get_livestream_state($post_id);
+
+        return $state['is_active_livestream_runtime'] && $this->user_can_moderate($post_id);
     }
 
     /**

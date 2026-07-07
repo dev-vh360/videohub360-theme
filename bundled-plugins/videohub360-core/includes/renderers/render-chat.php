@@ -15,13 +15,8 @@ if (!defined('ABSPATH')) exit;
 if (!function_exists('videohub360_render_chat_container')) {
     function videohub360_render_chat_container($chat_placement, $is_user_logged_in, $user_avatar, $user_display_name, $user_logout_url, $can_moderate, $livestream_fields) {
         $chat_html = '';
-        $studio_replay_ready = get_post_meta(get_the_ID(), '_vh360_studio_replay_ready', true) === 'yes';
-        $is_ended_livestream_replay = (
-            ($livestream_fields['is_live'] ?? 'no') === 'yes'
-            && ($livestream_fields['stream_stopped'] ?? 'no') === 'yes'
-            && $studio_replay_ready
-        );
-        $allow_chat_posting = !$is_ended_livestream_replay;
+        $is_stream_stopped = ($livestream_fields['stream_stopped'] ?? 'no') === 'yes';
+        $allow_chat_posting = !$is_stream_stopped;
         
         if ($chat_placement === 'popup') {
             // Popup chat - rendered as modal overlay
