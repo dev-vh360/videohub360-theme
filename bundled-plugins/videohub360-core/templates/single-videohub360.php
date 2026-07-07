@@ -26,6 +26,18 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
     $views = $views ? $views : 0;
     $views_display = number_format( $views );
     $custom_html = get_post_meta( get_the_ID(), 'videohub360_custom_html', true );
+    $studio_storage_provider = get_post_meta( get_the_ID(), '_vh360_studio_storage_provider', true );
+    if ( ! $studio_storage_provider ) {
+        $studio_storage_provider = get_post_meta( get_the_ID(), '_vh360_studio_provider', true );
+    }
+    $is_local_media_studio_replay = (
+        'local_media' === $studio_storage_provider
+        && get_post_meta( get_the_ID(), '_vh360_studio_replay_ready', true ) === 'yes'
+        && ! empty( $video_url )
+    );
+    if ( $is_local_media_studio_replay ) {
+        $custom_html = '';
+    }
     $poster = get_the_post_thumbnail_url( get_the_ID(), 'large' );
     $permalink = get_permalink();
     $title = get_the_title();
