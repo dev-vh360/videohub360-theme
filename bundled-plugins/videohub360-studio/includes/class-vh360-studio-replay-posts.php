@@ -117,7 +117,7 @@ class VH360_Studio_Replay_Posts {
 
         $custom_html = '';
         if ( 'publitio' === $provider && $publitio_embed_url ) {
-            $custom_html = $this->render_safe_iframe_embed( $publitio_embed_url, __( 'Publitio replay', 'videohub360-studio' ) );
+            $custom_html = $this->render_safe_iframe_embed( $publitio_embed_url, __( 'Cloud replay', 'videohub360-studio' ) );
         } elseif ( $guid ) {
             $custom_html = $this->render_videopress_embed_html( $guid );
         }
