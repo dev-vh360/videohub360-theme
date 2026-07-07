@@ -15,6 +15,8 @@ if (!defined('ABSPATH')) exit;
 if (!function_exists('videohub360_render_chat_container')) {
     function videohub360_render_chat_container($chat_placement, $is_user_logged_in, $user_avatar, $user_display_name, $user_logout_url, $can_moderate, $livestream_fields) {
         $chat_html = '';
+        $is_stream_stopped = ($livestream_fields['stream_stopped'] ?? 'no') === 'yes';
+        $allow_chat_posting = !$is_stream_stopped;
         
         if ($chat_placement === 'popup') {
             // Popup chat - rendered as modal overlay
@@ -27,7 +29,9 @@ if (!function_exists('videohub360_render_chat_container')) {
         
         $chat_html .= '<div class="videohub360-live-chat">';
         $chat_html .= '<div class="videohub360-chat-header">';
-        $chat_title = ($livestream_fields['is_live'] === 'yes') ? esc_html__('Live Chat', 'videohub360') : esc_html__('Chat', 'videohub360');
+        $chat_title = (($livestream_fields['stream_stopped'] ?? 'no') === 'yes')
+            ? esc_html__('Live Chat Replay', 'videohub360')
+            : (($livestream_fields['is_live'] === 'yes') ? esc_html__('Live Chat', 'videohub360') : esc_html__('Chat', 'videohub360'));
         $chat_html .= '<h2>' . esc_html($chat_title) . '</h2>';
         $chat_html .= '<div class="videohub360-chat-header-buttons">';
         if ($can_moderate) {
@@ -44,17 +48,23 @@ if (!function_exists('videohub360_render_chat_container')) {
         $chat_html .= '</div>';
         $chat_html .= '<div class="videohub360-chat-messages" id="vh360-chat-messages"></div>';
         $chat_html .= '<div class="videohub360-chat-input-container">';
-        if (!$is_user_logged_in) {
-            $chat_html .= '<div class="videohub360-chat-login-prompt">';
-            $chat_html .= '<p>' . esc_html__('Please log in to participate in the chat', 'videohub360') . '</p>';
-            $chat_html .= '<button type="button" class="videohub360-chat-login-btn videohub360-chat-login-trigger">' . esc_html__('Log In to Chat', 'videohub360') . '</button>';
+        if ($allow_chat_posting) {
+            if (!$is_user_logged_in) {
+                $chat_html .= '<div class="videohub360-chat-login-prompt">';
+                $chat_html .= '<p>' . esc_html__('Please log in to participate in the chat', 'videohub360') . '</p>';
+                $chat_html .= '<button type="button" class="videohub360-chat-login-btn videohub360-chat-login-trigger">' . esc_html__('Log In to Chat', 'videohub360') . '</button>';
+                $chat_html .= '</div>';
+            }
+            $chat_html .= '<form class="videohub360-chat-form" id="vh360-chat-form" action="javascript:void(0);" onsubmit="return false;">';
+            $chat_html .= '<input type="text" class="videohub360-chat-input" id="vh360-chat-input" placeholder="' . ($is_user_logged_in ? esc_attr__('Type a message...', 'videohub360') : esc_attr__('Please log in to chat', 'videohub360')) . '" maxlength="' . intval(get_option('videohub360_chat_message_limit', 500)) . '" ' . (!$is_user_logged_in ? 'disabled' : '') . '>';
+            $chat_html .= '<button type="button" class="videohub360-chat-send-btn" id="vh360-chat-send-btn" title="' . esc_attr__('Send message', 'videohub360') . '" aria-label="' . esc_attr__('Send message', 'videohub360') . '" ' . (!$is_user_logged_in ? 'disabled' : '') . '>➤</button>';
+            $chat_html .= '<button type="button" class="videohub360-emoji-btn" id="vh360-chat-emoji-btn" title="' . esc_attr__('Add emoji', 'videohub360') . '" aria-label="' . esc_attr__('Add emoji', 'videohub360') . '" ' . (!$is_user_logged_in ? 'disabled' : '') . '>😊</button>';
+            $chat_html .= '</form>';
+        } else {
+            $chat_html .= '<div class="videohub360-chat-closed-message">';
+            $chat_html .= '<p>' . esc_html__('Chat is closed for this replay.', 'videohub360') . '</p>';
             $chat_html .= '</div>';
         }
-        $chat_html .= '<form class="videohub360-chat-form" id="vh360-chat-form" action="javascript:void(0);" onsubmit="return false;">';
-        $chat_html .= '<input type="text" class="videohub360-chat-input" id="vh360-chat-input" placeholder="' . ($is_user_logged_in ? esc_attr__('Type a message...', 'videohub360') : esc_attr__('Please log in to chat', 'videohub360')) . '" maxlength="' . intval(get_option('videohub360_chat_message_limit', 500)) . '" ' . (!$is_user_logged_in ? 'disabled' : '') . '>';
-        $chat_html .= '<button type="button" class="videohub360-chat-send-btn" id="vh360-chat-send-btn" title="' . esc_attr__('Send message', 'videohub360') . '" aria-label="' . esc_attr__('Send message', 'videohub360') . '" ' . (!$is_user_logged_in ? 'disabled' : '') . '>➤</button>';
-        $chat_html .= '<button type="button" class="videohub360-emoji-btn" id="vh360-chat-emoji-btn" title="' . esc_attr__('Add emoji', 'videohub360') . '" aria-label="' . esc_attr__('Add emoji', 'videohub360') . '" ' . (!$is_user_logged_in ? 'disabled' : '') . '>😊</button>';
-        $chat_html .= '</form>';
         $chat_html .= '<div class="videohub360-chat-user-info ' . ($is_user_logged_in ? 'logged-in' : '') . '" id="vh360-chat-user-info">';
         if ($is_user_logged_in) {
             $chat_html .= $user_avatar;

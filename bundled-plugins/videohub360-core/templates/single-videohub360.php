@@ -141,6 +141,8 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
         || ((int) get_post_field('post_author', get_the_ID()) === (int) get_current_user_id())
         || current_user_can('edit_post', get_the_ID())
     );
+    $is_stream_stopped = (($livestream_fields['stream_stopped'] ?? 'no') === 'yes');
+    $can_live_moderate = $can_moderate && !$is_stream_stopped;
 ?>
 
     <div class="videohub360-main-wrapper <?php echo ($video_layout === 'full-width') ? 'videohub360-full-width' : 'videohub360-sidebar-layout'; ?>">
@@ -600,15 +602,15 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                 if ($chat_placement === 'inline'): ?>
                     <!-- Inline Chat Section -->
                     <div class="videohub360-chat-section">
-                        <?php echo videohub360_render_chat_container('inline', $is_user_logged_in, $user_avatar, $user_display_name, $user_logout_url, $can_moderate, $livestream_fields); ?>
+                        <?php echo videohub360_render_chat_container('inline', $is_user_logged_in, $user_avatar, $user_display_name, $user_logout_url, $can_live_moderate, $livestream_fields); ?>
                     </div>
                 <?php elseif ($chat_placement === 'popup'): ?>
                     <!-- Popup Chat - render outside the main content flow -->
-                    <?php echo videohub360_render_chat_container('popup', $is_user_logged_in, $user_avatar, $user_display_name, $user_logout_url, $can_moderate, $livestream_fields); ?>
+                    <?php echo videohub360_render_chat_container('popup', $is_user_logged_in, $user_avatar, $user_display_name, $user_logout_url, $can_live_moderate, $livestream_fields); ?>
                 <?php elseif ($chat_placement === 'sidebar' && $video_layout === 'full-width'): ?>
                     <!-- Sidebar placement fallback for full-width layout -->
                     <div class="videohub360-chat-section">
-                        <?php echo videohub360_render_chat_container('inline', $is_user_logged_in, $user_avatar, $user_display_name, $user_logout_url, $can_moderate, $livestream_fields); ?>
+                        <?php echo videohub360_render_chat_container('inline', $is_user_logged_in, $user_avatar, $user_display_name, $user_logout_url, $can_live_moderate, $livestream_fields); ?>
                     </div>
                 <?php endif;
             endif; ?>
@@ -628,13 +630,13 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
             <?php endif; ?>
         </div>
         <?php if ($video_layout !== 'full-width'): ?>
-            <?php echo videohub360_render_single_video_sidebar(get_the_ID(), $chat_enabled, $chat_placement, $is_user_logged_in, $user_avatar, $user_display_name, $user_logout_url, $can_moderate, $livestream_fields); ?>
+            <?php echo videohub360_render_single_video_sidebar(get_the_ID(), $chat_enabled, $chat_placement, $is_user_logged_in, $user_avatar, $user_display_name, $user_logout_url, $can_live_moderate, $livestream_fields); ?>
         <?php endif; // End if video layout is not full-width ?>
     </div>
 
 
 
-    <?php echo videohub360_render_single_video_modals(get_the_ID(), $permalink, $title, $is_user_logged_in, $user_display_name, $user_login_url, $can_moderate); ?>
+    <?php echo videohub360_render_single_video_modals(get_the_ID(), $permalink, $title, $is_user_logged_in, $user_display_name, $user_login_url, $can_live_moderate); ?>
 
 <?php
 endwhile; endif;

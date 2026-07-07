@@ -43,13 +43,13 @@ class VideoHub360_Frontend {
         }
 
         $post_id = $this->get_current_post_id();
+        $state = $this->get_livestream_state($post_id);
         $is_single_video = $this->is_single_video_context($post_id);
-        $is_live = $is_single_video && $this->is_live_post($post_id);
-        $is_agora = $is_single_video && $this->is_agora_post($post_id);
+        $is_live = $is_single_video && $state['has_livestream_identity'];
         $is_selfhosted_or_api_live = $is_live && $this->is_selfhosted_or_api_livestream($post_id);
         $needs_single_player = $is_single_video;
-        $needs_interactive_layout = $is_agora;
-        $needs_chat = $this->has_chat_enabled_surface($post_id);
+        $needs_interactive_layout = $state['allow_agora_runtime'];
+        $needs_chat = $state['chat_mode'] !== 'disabled';
         $needs_moderation = $this->has_moderation_enabled_surface($post_id);
 
         try {
@@ -66,8 +66,8 @@ class VideoHub360_Frontend {
                 $this->enqueue_video_player_assets($is_selfhosted_or_api_live);
             }
 
-            if ($is_live || $is_agora) {
-                $this->enqueue_livestream_assets($is_agora);
+            if ($state['is_active_livestream_runtime']) {
+                $this->enqueue_livestream_assets($state['allow_agora_sdk']);
             }
 
             if ($needs_chat) {
@@ -326,7 +326,7 @@ class VideoHub360_Frontend {
         wp_enqueue_script(
             'vh360-chat',
             $js_url,
-            array('vh360-frontend'),
+            array('vh360-frontend-core'),
             $js_version,
             true
         );
@@ -449,6 +449,7 @@ class VideoHub360_Frontend {
         
         // Get post ID reliably
         $post_id = $this->get_current_post_id();
+        $state = $this->get_livestream_state($post_id);
         
         $data = array(
             'ajaxUrl' => admin_url('admin-ajax.php'),
@@ -498,6 +499,16 @@ class VideoHub360_Frontend {
             // Watch progress nonce
             'watchNonce' => wp_create_nonce('vh360_watch_progress_nonce')
         );
+
+        $data['isStreamStopped'] = $state['is_stream_stopped'];
+        $data['isStudioReplayReady'] = $state['is_studio_replay_ready'];
+        $data['isEndedLivestreamReplay'] = $state['is_ended_livestream_replay'];
+        $data['chatMode'] = $state['chat_mode'];
+        $data['allowChatPolling'] = $state['allow_chat_polling'];
+        $data['allowChatPosting'] = $state['allow_chat_posting'];
+        $data['allowAgoraRuntime'] = $state['allow_agora_runtime'];
+        $data['isLiveIdentity'] = $state['has_livestream_identity'];
+        $data['isActiveLivestreamRuntime'] = $state['is_active_livestream_runtime'];
         
         // Add built-in login form strings
         $data['loginText'] = __('Log In', 'videohub360');
@@ -512,7 +523,7 @@ class VideoHub360_Frontend {
         );
         
         // Add livestream data if it's a live post
-        if ($post && ($this->is_live_post($post->ID) || $this->is_agora_post($post->ID))) {
+        if ($post && $state['allow_agora_runtime']) {
             $data = array_merge($data, $this->get_livestream_data($post->ID));
         }
         
@@ -569,6 +580,59 @@ class VideoHub360_Frontend {
             'allowEveryoneIsHost' => get_post_meta($post_id, '_vh360_agora_everyone_is_host', true) === 'yes',
             'streamLive' => get_post_meta($post_id, '_vh360_agora_stream_live', true) === 'yes',
             'liveStartTime' => get_post_meta($post_id, '_vh360_live_start_time', true)
+        );
+    }
+
+    /**
+     * Build the current livestream/chat state for a post.
+     */
+    private function get_livestream_state($post_id = null) {
+        if (!$post_id) {
+            $post_id = $this->get_current_post_id();
+        }
+
+        $is_live_identity = $post_id && get_post_meta($post_id, '_vh360_is_live', true) === 'yes';
+        $stream_stopped = $post_id && get_post_meta($post_id, '_vh360_stream_stopped', true) === 'yes';
+        $studio_replay_ready = $post_id && get_post_meta($post_id, '_vh360_studio_replay_ready', true) === 'yes';
+        $legacy_studio_replay = $post_id
+            && get_post_meta($post_id, '_vh360_studio_converted_live_to_replay', true) === 'yes'
+            && $studio_replay_ready
+            && (int) get_post_meta($post_id, '_vh360_studio_replay_source_live_video_id', true) === (int) $post_id;
+
+        $has_livestream_identity = $is_live_identity || $legacy_studio_replay;
+        $is_ended_livestream_replay = $is_live_identity && $stream_stopped && $studio_replay_ready;
+        $is_active_livestream_runtime = $has_livestream_identity && !$stream_stopped;
+        $is_agora_identity = $post_id && get_post_meta($post_id, '_vh360_type', true) === 'agora';
+        $allow_agora_runtime = $is_active_livestream_runtime && $is_agora_identity;
+
+        $chat_enabled = false;
+        if ($has_livestream_identity) {
+            $per_video_chat = get_post_meta($post_id, '_vh360_chat_enabled', true);
+            if ($per_video_chat === 'yes') {
+                $chat_enabled = true;
+            } elseif ($per_video_chat === 'no') {
+                $chat_enabled = false;
+            } else {
+                $chat_enabled = (bool) get_option('videohub360_chat_enabled', 1);
+            }
+        }
+
+        $chat_mode = 'disabled';
+        if ($chat_enabled) {
+            $chat_mode = $stream_stopped ? 'archive' : 'active';
+        }
+
+        return array(
+            'has_livestream_identity' => $has_livestream_identity,
+            'is_stream_stopped' => $stream_stopped,
+            'is_studio_replay_ready' => $studio_replay_ready,
+            'is_ended_livestream_replay' => $is_ended_livestream_replay,
+            'is_active_livestream_runtime' => $is_active_livestream_runtime,
+            'allow_agora_runtime' => $allow_agora_runtime,
+            'allow_agora_sdk' => $allow_agora_runtime,
+            'allow_chat_polling' => $chat_enabled && !$stream_stopped,
+            'allow_chat_posting' => $chat_enabled && !$stream_stopped,
+            'chat_mode' => $chat_mode,
         );
     }
     
@@ -738,7 +802,7 @@ class VideoHub360_Frontend {
      * Check whether the current surface renders live chat UI.
      */
     private function has_chat_enabled_surface($post_id = 0) {
-        return $post_id && is_singular('videohub360') && $this->is_chat_enabled($post_id);
+        return $post_id && is_singular('videohub360') && $this->get_livestream_state($post_id)['chat_mode'] !== 'disabled';
     }
 
     /**
@@ -749,8 +813,9 @@ class VideoHub360_Frontend {
             return false;
         }
 
-        return ($this->is_live_post($post_id) || $this->is_agora_post($post_id) || $this->is_chat_enabled($post_id))
-            && $this->user_can_moderate($post_id);
+        $state = $this->get_livestream_state($post_id);
+
+        return $state['is_active_livestream_runtime'] && $this->user_can_moderate($post_id);
     }
 
     /**
@@ -762,7 +827,7 @@ class VideoHub360_Frontend {
             $post_id = $post ? $post->ID : 0;
         }
         
-        return get_post_meta($post_id, '_vh360_is_live', true) === 'yes' || $this->is_studio_stopped_livestream_replay($post_id);
+        return $this->get_livestream_state($post_id)['has_livestream_identity'];
     }
 
     /**
@@ -774,10 +839,7 @@ class VideoHub360_Frontend {
             $post_id = $post ? $post->ID : 0;
         }
 
-        return $post_id
-            && get_post_meta($post_id, '_vh360_studio_converted_live_to_replay', true) === 'yes'
-            && get_post_meta($post_id, '_vh360_studio_replay_ready', true) === 'yes'
-            && (int) get_post_meta($post_id, '_vh360_studio_replay_source_live_video_id', true) === (int) $post_id;
+        return $this->get_livestream_state($post_id)['is_ended_livestream_replay'];
     }
     
     /**

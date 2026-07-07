@@ -165,6 +165,12 @@ if (typeof window !== 'undefined') {
     var ajaxUrl = vh360Data.ajaxUrl;
     var chatNonce = vh360Data.chatNonce;
     var chatMessageLimit = vh360Data.chatMessageLimit || 500;
+    var allowChatPolling = !!vh360Data.allowChatPolling;
+    var allowChatPosting = !!vh360Data.allowChatPosting;
+    var chatRuntimeMode = vh360Data.chatMode || 'active';
+    if (window.__VH360_DEBUG) {
+        window.vh360Log('VideoHub360: Chat runtime mode:', chatRuntimeMode, 'polling:', allowChatPolling, 'posting:', allowChatPosting);
+    }
 
     var messages = [];
     var lastMessageId = 0;
@@ -437,6 +443,9 @@ if (typeof window !== 'undefined') {
     
     // Actual message sending function
     function sendChatMessage(message) {
+        if (!allowChatPosting) {
+            return;
+        }
         // Test if this is a reply attempt
         if (replyingTo) {
             if (window.__VH360_DEBUG) console.log('VideoHub360 Debug: This is a REPLY attempt. ReplyingTo message ID:', replyingTo);
@@ -551,7 +560,9 @@ if (typeof window !== 'undefined') {
                 }
                 
                 // Start polling after successful initial load
-                startPolling();
+                if (allowChatPolling) {
+                    startPolling();
+                }
             } else {
                 throw new Error(data.data || 'Failed to fetch messages');
             }
@@ -744,6 +755,9 @@ if (typeof window !== 'undefined') {
         }, 5000);
     }
     function startPolling() {
+        if (!allowChatPolling) {
+            return;
+        }
         if (isPolling) return;
         isPolling = true;
         pollInterval = setInterval(function() { fetchMessagesFromServer(); }, 2000);
@@ -1463,6 +1477,9 @@ if (typeof window !== 'undefined') {
     if (chatForm) {
         chatForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            if (!allowChatPosting) {
+                return;
+            }
             if (!isUserLoggedIn) {
                 showLoginModal();
                 return;
@@ -1478,7 +1495,7 @@ if (typeof window !== 'undefined') {
     }
     
     // Click handler for non-logged in users
-    if (chatInput && !isUserLoggedIn) {
+    if (chatInput && !isUserLoggedIn && allowChatPosting) {
         chatInput.addEventListener('click', function(e) {
             e.preventDefault();
             showLoginModal();
@@ -1488,6 +1505,9 @@ if (typeof window !== 'undefined') {
     // Keydown handler for chat input
     if (chatInput) {
         chatInput.addEventListener('keydown', function(e) {
+            if (!allowChatPosting) {
+                return;
+            }
             if (window.__VH360_DEBUG) console.log('VideoHub360 Debug: chatInput keydown event:', e.key, 'replyingTo:', replyingTo);
             
             if (e.key === 'Escape' && replyingTo) {
@@ -2046,6 +2066,9 @@ if (typeof window !== 'undefined') {
     if (chatEmojiBtn) {
         chatEmojiBtn.addEventListener('click', function(e) {
             e.preventDefault();
+            if (!allowChatPosting) {
+                return;
+            }
             if (window.__VH360_DEBUG) console.log('VideoHub360 Debug: Agora emoji button clicked');
             if (!isUserLoggedIn) {
                 if (window.__VH360_DEBUG) console.log('VideoHub360 Debug: Agora user not logged in for emoji');
@@ -2060,6 +2083,9 @@ if (typeof window !== 'undefined') {
     if (chatSendBtn) {
         chatSendBtn.addEventListener('click', function(e) {
             e.preventDefault();
+            if (!allowChatPosting) {
+                return;
+            }
             if (window.__VH360_DEBUG) console.log('VideoHub360 Debug: Agora send button clicked');
             if (!isUserLoggedIn) {
                 if (window.__VH360_DEBUG) console.log('VideoHub360 Debug: Agora user not logged in for send button');
@@ -2132,16 +2158,18 @@ if (typeof window !== 'undefined') {
     document.addEventListener('visibilitychange', function() {
         if (document.hidden) stopPolling();
         else {
-            // When page becomes visible again, refresh messages and resume polling
-            if (!isPolling) {
+            // When page becomes visible again, refresh messages and resume polling only for active chat.
+            if (allowChatPolling && !isPolling) {
                 fetchMessagesFromServer();
                 startPolling();
+            } else if (!allowChatPolling) {
+                fetchMessagesFromServer();
             }
         }
     });
-    
+
     // Initialize chat features check and load initial messages
-    // Note: loadInitialMessages() will call startPolling() after successful load
+    // Note: loadInitialMessages() only starts polling for active chat mode.
     checkChatFeatures();
     loadInitialMessages();
 })();
