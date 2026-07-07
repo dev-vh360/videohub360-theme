@@ -68,7 +68,7 @@ class VH360_Studio_Recording_Jobs {
         return isset( $map[ $from_status ] ) && in_array( $to_status, $map[ $from_status ], true );
     }
 
-    public function validate_payload( $data, $partial = false, $existing = null ) {
+    public function validate_payload( $data, $partial = false, $existing = null, $allow_invalid_transition = false ) {
         $out = array();
 
         foreach ( array( 'source_type', 'recording_mode', 'quality_preset', 'storage_provider', 'status', 'publish_provider_status' ) as $key ) {
@@ -136,7 +136,7 @@ class VH360_Studio_Recording_Jobs {
             return new WP_Error( 'vh360_studio_invalid_initial_status', __( 'New recording jobs must start in the created status.', 'videohub360-studio' ), array( 'status' => 400 ) );
         }
 
-        if ( $existing && isset( $out['status'] ) && ! $this->can_transition( $existing['status'], $out['status'] ) ) {
+        if ( $existing && isset( $out['status'] ) && ! $allow_invalid_transition && ! $this->can_transition( $existing['status'], $out['status'] ) ) {
             return new WP_Error( 'vh360_studio_invalid_status_transition', __( 'Invalid recording job status transition.', 'videohub360-studio' ), array( 'status' => 409 ) );
         }
 
@@ -216,7 +216,7 @@ class VH360_Studio_Recording_Jobs {
         return $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . VH360_Studio_Database::table_name() . ' WHERE user_id = %d ORDER BY created_at DESC LIMIT %d', absint( $user_id ), $limit ), ARRAY_A );
     }
 
-    public function update( $id, $user_id, $data ) {
+    private function update_record( $id, $user_id, $data, $allow_invalid_transition = false ) {
         global $wpdb;
 
         $existing = $this->get( $id, $user_id );
@@ -224,7 +224,7 @@ class VH360_Studio_Recording_Jobs {
             return new WP_Error( 'vh360_studio_not_found', __( 'Recording job not found.', 'videohub360-studio' ), array( 'status' => 404 ) );
         }
 
-        $data = $this->validate_payload( $data, true, $existing );
+        $data = $this->validate_payload( $data, true, $existing, $allow_invalid_transition );
         if ( is_wp_error( $data ) ) {
             return $data;
         }
@@ -233,6 +233,10 @@ class VH360_Studio_Recording_Jobs {
         $wpdb->update( VH360_Studio_Database::table_name(), $data, array( 'id' => absint( $id ) ) );
 
         return $this->get( $id, $user_id );
+    }
+
+    public function update( $id, $user_id, $data ) {
+        return $this->update_record( $id, $user_id, $data );
     }
 
     public function start_recording( $id, $user_id, $browser_session_id, $mime_type ) {
@@ -253,6 +257,18 @@ class VH360_Studio_Recording_Jobs {
 
     public function mark_uploading( $id, $user_id ) {
         return $this->update( $id, $user_id, array( 'status' => self::STATUS_UPLOADING ) );
+    }
+
+    public function mark_finalize_retryable( $id, $user_id, $message = '' ) {
+        return $this->update_record(
+            $id,
+            $user_id,
+            array(
+                'status'        => self::STATUS_STOPPING,
+                'error_message' => sanitize_textarea_field( $message ),
+            ),
+            true
+        );
     }
 
     public function mark_processing( $id, $user_id, $data = array() ) {
@@ -279,4 +295,3 @@ class VH360_Studio_Recording_Jobs {
         return $job;
     }
 }
-

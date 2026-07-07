@@ -1055,6 +1055,8 @@ class VH360_Studio_REST_Controller {
         if ( is_wp_error( $assembled ) ) {
             if ( $this->should_mark_finalize_failed( $assembled ) ) {
                 $this->jobs->mark_failed( $job['id'], get_current_user_id(), $assembled->get_error_message() );
+            } else {
+                $this->jobs->mark_finalize_retryable( $job['id'], get_current_user_id(), $assembled->get_error_message() );
             }
             return $assembled;
         }
@@ -1063,6 +1065,8 @@ class VH360_Studio_REST_Controller {
         if ( is_wp_error( $recording ) ) {
             if ( $this->should_mark_finalize_failed( $recording ) ) {
                 $this->jobs->mark_failed( $job['id'], get_current_user_id(), $recording->get_error_message() );
+            } else {
+                $this->jobs->mark_finalize_retryable( $job['id'], get_current_user_id(), $recording->get_error_message() );
             }
             return $recording;
         }

@@ -2772,6 +2772,8 @@
             if (canDirectUploadToPublitio()) {
                 state.directUploadInProgress = true;
                 result = await publishReplayViaDirectPublitio();
+                state.directUploadParts.clear();
+                state.directUploadBytes = 0;
             } else if (isPublitioDirectMode()) {
                 throw new Error('Direct Publitio upload is enabled, but the local recording Blob is unavailable or over the direct upload limit. Retry while the recording is still in this browser, or switch to server relay for the next recording.');
             } else {
