@@ -36,8 +36,13 @@ class VH360_Studio_Replay_Publisher {
         }
 
         $prepared = $provider->prepare_publish( $job, $recording );
-        $status   = is_wp_error( $prepared ) ? 'not_implemented' : 'prepared';
-        $this->jobs->update( $job['id'], 0, array( 'publish_attempted_at' => current_time( 'mysql' ), 'publish_provider_status' => $status ) );
+        $status   = is_wp_error( $prepared ) ? 'prepare_failed' : 'prepared';
+        if ( is_wp_error( $prepared ) ) {
+            $this->record_publish_failure( $job, $status, $prepared->get_error_message() );
+            return $prepared;
+        }
+
+        $this->jobs->update( $job['id'], 0, array( 'publish_attempted_at' => current_time( 'mysql' ), 'publish_provider_status' => $status, 'error_message' => '' ) );
 
         return array(
             'provider_id'             => $provider->get_id(),
@@ -72,7 +77,7 @@ class VH360_Studio_Replay_Publisher {
 
         $published = $provider->publish_recording( $job, $recording );
         if ( is_wp_error( $published ) ) {
-            $this->jobs->update( $job['id'], 0, array( 'publish_attempted_at' => current_time( 'mysql' ), 'publish_provider_status' => 'publish_failed' ) );
+            $this->record_publish_failure( $job, 'publish_failed', $published->get_error_message() );
             return $published;
         }
 
@@ -178,7 +183,7 @@ class VH360_Studio_Replay_Publisher {
     private function complete_published_job( array $job, array $published, array $recording, VH360_Studio_Replay_Storage_Provider $provider ) {
         $replay = $this->replay_posts->create_or_update_replay_post( $job, $published, $recording );
         if ( is_wp_error( $replay ) ) {
-            $this->jobs->update( $job['id'], 0, array( 'publish_attempted_at' => current_time( 'mysql' ), 'publish_provider_status' => 'replay_post_failed' ) );
+            $this->record_publish_failure( $job, 'replay_post_failed', $replay->get_error_message() );
             return $replay;
         }
 
@@ -227,7 +232,7 @@ class VH360_Studio_Replay_Publisher {
         if ( $live_video_id && 'videohub360' === get_post_type( $live_video_id ) ) {
             $converted = get_post_meta( $live_video_id, '_vh360_studio_converted_live_to_replay', true );
             $ready     = get_post_meta( $live_video_id, '_vh360_studio_replay_ready', true );
-            if ( 'yes' === $converted || 'yes' === $ready || ! empty( $job['playback_url'] ) ) {
+            if ( 'yes' === $converted || 'yes' === $ready ) {
                 return $live_video_id;
             }
         }
@@ -268,6 +273,14 @@ class VH360_Studio_Replay_Publisher {
         }
 
         return new WP_Error( 'vh360_studio_live_replay_target_forbidden', __( 'You are not allowed to update the original livestream post.', 'videohub360-studio' ), array( 'status' => 403 ) );
+    }
+
+    private function record_publish_failure( array $job, $status, $error_message ) {
+        $this->jobs->update( $job['id'], 0, array(
+            'publish_attempted_at'    => current_time( 'mysql' ),
+            'publish_provider_status' => sanitize_key( $status ),
+            'error_message'           => sanitize_textarea_field( $error_message ),
+        ) );
     }
 
     private function get_provider( array $job, $require_processing = true ) {

@@ -63,14 +63,55 @@ class VH360_Studio_Recording_Cleanup {
                 $this->delete_temp_for_job( $job );
             }
 
-            if ( in_array( $job['status'], array( 'processing', 'ready' ), true ) && ! empty( $job['temp_expires_at'] ) && $this->mysql_timestamp( $job['temp_expires_at'] ) < $now ) {
-                $this->delete_temp_for_job( $job );
+            if ( in_array( $job['status'], array( 'processing', 'ready' ), true ) ) {
+                if ( $this->job_has_safe_handoff( $job ) ) {
+                    $this->delete_temp_for_job( $job );
+                    continue;
+                }
+
+                if ( 'processing' === $job['status'] && ! empty( $job['temp_expires_at'] ) && $this->mysql_timestamp( $job['temp_expires_at'] ) < $now ) {
+                    $this->jobs->update(
+                        $job['id'],
+                        0,
+                        array(
+                            'status'                  => VH360_Studio_Recording_Jobs::STATUS_FAILED,
+                            'publish_provider_status' => 'expired',
+                            'error_message'           => __( 'Temporary recording expired before replay publishing completed.', 'videohub360-studio' ),
+                        )
+                    );
+                    $this->delete_temp_for_job( $job );
+                }
             }
         }
     }
 
     public function delete_temp_for_job( array $job ) {
         $this->chunks->delete_job_chunks( $job['id'] );
+    }
+
+    private function job_has_safe_handoff( array $job ) {
+        $provider_status  = ! empty( $job['publish_provider_status'] ) ? sanitize_key( $job['publish_provider_status'] ) : '';
+        $storage_provider = ! empty( $job['storage_provider'] ) ? sanitize_key( $job['storage_provider'] ) : '';
+        $wp_attachment_id = ! empty( $job['wp_attachment_id'] ) ? absint( $job['wp_attachment_id'] ) : 0;
+        $videopress_guid  = ! empty( $job['videopress_guid'] ) ? sanitize_text_field( $job['videopress_guid'] ) : '';
+        $publitio_file_id = ! empty( $job['publitio_file_id'] ) ? sanitize_text_field( $job['publitio_file_id'] ) : '';
+        $replay_video_id  = ! empty( $job['replay_video_id'] ) ? absint( $job['replay_video_id'] ) : 0;
+
+        if ( 'videopress' === $storage_provider ) {
+            return ( $wp_attachment_id && $videopress_guid ) || ( $wp_attachment_id && in_array( $provider_status, array( 'media_attached_waiting_videopress', 'published', 'ready' ), true ) );
+        }
+
+        if ( 'publitio' === $storage_provider ) {
+            return $publitio_file_id && in_array( $provider_status, array( 'publitio_processing', 'publitio_ready', 'publitio_direct_processing', 'publitio_direct_ready', 'published', 'ready' ), true );
+        }
+
+        if ( 'local_media' === $storage_provider ) {
+            return $wp_attachment_id && in_array( $provider_status, array( 'local_media_ready', 'published', 'ready' ), true );
+        }
+
+        return ( $wp_attachment_id && in_array( $provider_status, array( 'media_attached_waiting_videopress', 'local_media_ready', 'published', 'ready' ), true ) )
+            || ( $publitio_file_id && in_array( $provider_status, array( 'publitio_processing', 'publitio_ready', 'publitio_direct_processing', 'publitio_direct_ready', 'published', 'ready' ), true ) )
+            || ( $replay_video_id && in_array( $provider_status, array( 'published', 'ready' ), true ) );
     }
 
     private function mysql_timestamp( $value ) {

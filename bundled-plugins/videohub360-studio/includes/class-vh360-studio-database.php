@@ -38,6 +38,7 @@ class VH360_Studio_Database {
         // unapproved scaffold schema cleanly if it was activated during review.
         if ( '1.0.0' === get_option( 'vh360_studio_db_version' ) ) {
             $wpdb->query( "DROP TABLE IF EXISTS {$table_name}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+            $wpdb->query( "DROP TABLE IF EXISTS {$chunks_table_name}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         }
 
         $sql = "CREATE TABLE {$table_name} (

@@ -1041,16 +1041,49 @@ class VH360_Studio_REST_Controller {
     public function finalize_recording( WP_REST_Request $request ) {
         $job = $this->chunks->validate_job_ownership( absint( $request['id'] ), get_current_user_id() );
         if ( is_wp_error( $job ) ) { return $job; }
+        if ( VH360_Studio_Recording_Jobs::STATUS_UPLOADING === $job['status'] ) {
+            return rest_ensure_response( array_merge( array( 'message' => __( 'Finalize is already in progress.', 'videohub360-studio' ) ), $this->prepare_job_response( $job ) ) );
+        }
+        if ( in_array( $job['status'], array( VH360_Studio_Recording_Jobs::STATUS_PROCESSING, VH360_Studio_Recording_Jobs::STATUS_READY ), true ) ) {
+            return rest_ensure_response( array_merge( array( 'message' => __( 'Recording finalization has already completed.', 'videohub360-studio' ) ), $this->prepare_job_response( $job ) ) );
+        }
         if ( VH360_Studio_Recording_Jobs::STATUS_STOPPING !== $job['status'] ) { return new WP_Error( 'vh360_studio_invalid_status_transition', __( 'Recording can only finalize from the stopping status.', 'videohub360-studio' ), array( 'status' => 409 ) ); }
         $uploading = $this->jobs->mark_uploading( $job['id'], get_current_user_id() );
         if ( is_wp_error( $uploading ) ) { return $uploading; }
         $expected_chunks = $request->get_param( 'expected_chunks' );
         $assembled = $this->chunks->assemble_chunks( $uploading, $job['browser_session_id'], $expected_chunks, $job['mime_type'] );
-        if ( is_wp_error( $assembled ) ) { $this->jobs->mark_failed( $job['id'], get_current_user_id(), $assembled->get_error_message() ); return $assembled; }
+        if ( is_wp_error( $assembled ) ) {
+            if ( $this->should_mark_finalize_failed( $assembled ) ) {
+                $this->jobs->mark_failed( $job['id'], get_current_user_id(), $assembled->get_error_message() );
+            } else {
+                $this->jobs->mark_finalize_retryable( $job['id'], get_current_user_id(), $assembled->get_error_message() );
+            }
+            return $assembled;
+        }
         $summary = $this->chunks->received_summary( $job['id'], $job['browser_session_id'] );
         $recording = $this->validator->validate_assembled_recording( $uploading, $assembled, $summary, $expected_chunks );
-        if ( is_wp_error( $recording ) ) { $this->jobs->mark_failed( $job['id'], get_current_user_id(), $recording->get_error_message() ); return $recording; }
-        return rest_ensure_response( $this->prepare_job_response( $this->jobs->mark_processing( $job['id'], get_current_user_id(), array( 'file_size' => absint( $recording['file_size'] ), 'local_temp_path' => $recording['path'], 'mime_type' => $recording['mime_type'], 'expected_chunks' => $recording['expected_chunks'], 'received_chunks' => $recording['received_chunks'], 'assembled_checksum' => $recording['assembled_checksum'], 'assembled_at' => $recording['assembled_at'], 'temp_expires_at' => $recording['temp_expires_at'] ) ) ) );
+        if ( is_wp_error( $recording ) ) {
+            if ( $this->should_mark_finalize_failed( $recording ) ) {
+                $this->jobs->mark_failed( $job['id'], get_current_user_id(), $recording->get_error_message() );
+            } else {
+                $this->jobs->mark_finalize_retryable( $job['id'], get_current_user_id(), $recording->get_error_message() );
+            }
+            return $recording;
+        }
+        $processed = $this->jobs->mark_processing( $job['id'], get_current_user_id(), array( 'file_size' => absint( $recording['file_size'] ), 'local_temp_path' => $recording['path'], 'mime_type' => $recording['mime_type'], 'expected_chunks' => $recording['expected_chunks'], 'received_chunks' => $recording['received_chunks'], 'assembled_checksum' => $recording['assembled_checksum'], 'assembled_at' => $recording['assembled_at'], 'temp_expires_at' => $recording['temp_expires_at'] ) );
+        if ( is_wp_error( $processed ) ) {
+            return $processed;
+        }
+        return rest_ensure_response( $this->prepare_job_response( $processed ) );
+    }
+
+    private function should_mark_finalize_failed( WP_Error $error ) {
+        $recoverable = array(
+            'vh360_studio_assembly_failed',
+            'vh360_studio_checksum_failed',
+        );
+
+        return ! in_array( $error->get_error_code(), $recoverable, true );
     }
 
     public function prepare_publishing( WP_REST_Request $request ) {
