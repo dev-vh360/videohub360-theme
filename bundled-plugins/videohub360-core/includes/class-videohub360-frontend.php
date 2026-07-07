@@ -326,7 +326,7 @@ class VideoHub360_Frontend {
         wp_enqueue_script(
             'vh360-chat',
             $js_url,
-            array('vh360-frontend'),
+            array('vh360-frontend-core'),
             $js_version,
             true
         );
