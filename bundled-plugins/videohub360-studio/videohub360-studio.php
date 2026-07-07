@@ -69,6 +69,7 @@ function vh360_studio_load_files() {
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-recording-cleanup.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-replay-posts.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-replay-publisher.php';
+    require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-publitio-client.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-assets.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-media-admin.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'providers/interface-vh360-studio-live-engine-provider.php';
@@ -76,9 +77,11 @@ function vh360_studio_load_files() {
     require_once VH360_STUDIO_INCLUDES_DIR . 'providers/interface-vh360-studio-replay-storage-provider.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'providers/class-vh360-studio-placeholder-providers.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'providers/class-vh360-studio-videopress-provider.php';
+    require_once VH360_STUDIO_INCLUDES_DIR . 'providers/class-vh360-studio-publitio-provider.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'providers/class-vh360-studio-local-media-provider.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-provider-registry.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-rest-controller.php';
+    require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-admin.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-plugin.php';
 }
 

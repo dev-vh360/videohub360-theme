@@ -75,6 +75,7 @@ class VH360_Studio_Assets {
             'qualityPresets'            => VH360_Studio_Quality_Presets::get_presets(),
             'defaultQualityPreset'      => VH360_Studio_Quality_Presets::DEFAULT_PRESET,
             'uploadSettings'             => class_exists( 'VH360_Studio_Recording_Chunks' ) ? ( new VH360_Studio_Recording_Chunks( VH360_Studio_Plugin::instance()->jobs() ) )->upload_settings() : array(),
+            'publitioDirectUpload'      => $this->publitio_direct_upload_config(),
             'currentUserId'             => get_current_user_id(),
             'strings'                   => array(
                 'ready'                  => __( 'Ready', 'videohub360-studio' ),
@@ -96,20 +97,23 @@ class VH360_Studio_Assets {
                 'notSupported'           => __( 'Not supported', 'videohub360-studio' ),
                 'startRecording'        => __( 'Start recording', 'videohub360-studio' ),
                 'stopRecording'         => __( 'Stop recording', 'videohub360-studio' ),
-                'recordingActive'       => __( 'Recording active. Uploading to WordPress.', 'videohub360-studio' ),
-                'uploadingChunk'        => __( 'Uploading recording…', 'videohub360-studio' ),
+                'recordingActive'       => __( 'Recording active.', 'videohub360-studio' ),
+                'uploadingChunk'        => __( 'Recording stopped. Uploading remaining chunks to WordPress.', 'videohub360-studio' ),
                 'uploadRetry'           => __( 'Retrying upload…', 'videohub360-studio' ),
                 'finalizing'            => __( 'Preparing replay…', 'videohub360-studio' ),
-                'recordingSaved'        => __( 'Recording saved for processing.', 'videohub360-studio' ),
-                'chunkUploadFailed'     => __( 'A recording upload failed. Retry the upload before preparing the replay.', 'videohub360-studio' ),
+                'recordingSaved'        => __( 'Recording saved. Prepare replay when ready.', 'videohub360-studio' ),
+                'chunkUploadFailed'     => __( 'Some chunks failed to upload. Retry failed chunks before preparing the replay.', 'videohub360-studio' ),
                 'recorderUnavailable'   => __( 'Browser recorder is unavailable.', 'videohub360-studio' ),
                 'recordingCancelled'    => __( 'Recording cancelled.', 'videohub360-studio' ),
                 'publishReplay'         => __( 'Publish replay', 'videohub360-studio' ),
-                'publishingReplay'      => __( 'Publishing replay…', 'videohub360-studio' ),
+                'publishingReplay'      => __( 'Uploading replay to Publitio. This may take a moment.', 'videohub360-studio' ),
                 'publishStatusChecking' => __( 'Checking publishing status…', 'videohub360-studio' ),
                 'publishComplete'       => __( 'Replay published.', 'videohub360-studio' ),
-                'publishProcessing'     => __( 'Replay is still processing. We’ll keep checking.', 'videohub360-studio' ),
+                'publishProcessing'     => __( 'Replay uploaded to Publitio. Waiting for processing.', 'videohub360-studio' ),
                 'publishFailed'         => __( 'Replay publishing failed. Please try again.', 'videohub360-studio' ),
+                'publitioDirectUploading' => __( 'Uploading directly to Publitio…', 'videohub360-studio' ),
+                'publitioDirectVerifying' => __( 'Publitio upload complete. Verifying replay…', 'videohub360-studio' ),
+                'publitioDirectFallback' => __( 'Direct upload failed. Using server relay fallback.', 'videohub360-studio' ),
                 'goLive'                => __( 'Go Live', 'videohub360-studio' ),
                 'goingLive'             => __( 'Joining Agora and publishing the Program output…', 'videohub360-studio' ),
                 'liveStarted'           => __( 'Live broadcast started.', 'videohub360-studio' ),
@@ -129,6 +133,21 @@ class VH360_Studio_Assets {
                 'canvasContext'    => __( 'Canvas drawing support', 'videohub360-studio' ),
                 'clipboardCopy'    => __( 'Clipboard copy support', 'videohub360-studio' ),
             ),
+        );
+    }
+
+    private function publitio_direct_upload_config() {
+        $mode     = sanitize_key( get_option( 'vh360_studio_publitio_upload_mode', 'server_relay' ) );
+        $preset   = sanitize_text_field( get_option( 'vh360_studio_publitio_upload_preset_id', '' ) );
+        $max_size = absint( get_option( 'vh360_studio_publitio_direct_max_size', 314572800 ) );
+
+        return array(
+            'enabled'            => 'direct_browser' === $mode && '' !== $preset,
+            'upload_mode'        => $mode,
+            'upload_preset_id'   => $preset,
+            'upload_url_base'    => 'https://api.publit.io/v1/files/create/',
+            'allowed_mime_types' => array( 'video/mp4', 'video/webm' ),
+            'max_size'           => $max_size ? $max_size : 314572800,
         );
     }
 

@@ -140,8 +140,8 @@ class VH360_Studio_Recording_Jobs {
             return new WP_Error( 'vh360_studio_invalid_status_transition', __( 'Invalid recording job status transition.', 'videohub360-studio' ), array( 'status' => 409 ) );
         }
 
-        if ( isset( $out['quality_preset'] ) && ! VH360_Studio_Quality_Presets::exists( $out['quality_preset'] ) ) {
-            return new WP_Error( 'vh360_studio_invalid_quality_preset', __( 'Invalid quality preset.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        if ( isset( $out['quality_preset'] ) ) {
+            $out['quality_preset'] = VH360_Studio_Quality_Presets::normalize( $out['quality_preset'] );
         }
 
         if ( isset( $out['storage_provider'] ) && ! $this->registry->has_storage_provider( $out['storage_provider'] ) ) {

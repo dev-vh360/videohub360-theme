@@ -22,7 +22,7 @@ class VH360_Studio_Provider_Registry {
         $this->register_live_engine( new VH360_Studio_Placeholder_Live_Engine_Provider( 'agora_browser', __( 'Agora / Browser Live Flow', 'videohub360-studio' ), true ) );
         $this->register_recording_provider( new VH360_Studio_Placeholder_Recording_Provider( 'browser_recording', __( 'Browser Recording', 'videohub360-studio' ), true ) );
         $this->register_storage_provider( new VH360_Studio_VideoPress_Provider() );
-        $this->register_storage_provider( new VH360_Studio_Placeholder_Replay_Storage_Provider( 'publitio', __( 'Publitio', 'videohub360-studio' ), false ) );
+        $this->register_storage_provider( new VH360_Studio_Publitio_Provider() );
         $this->register_storage_provider( new VH360_Studio_Local_Media_Replay_Storage_Provider() );
     }
 

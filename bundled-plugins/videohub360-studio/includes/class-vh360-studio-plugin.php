@@ -27,6 +27,7 @@ class VH360_Studio_Plugin {
         $this->jobs     = new VH360_Studio_Recording_Jobs( $this->registry );
         new VH360_Studio_Assets( $this->registry );
         new VH360_Studio_Media_Admin();
+        new VH360_Studio_Admin( $this->registry, $this->jobs );
 
         add_filter( 'vh360_dashboard_tabs_registry', array( $this, 'register_dashboard_tab' ), 20, 2 );
         VH360_Studio_Recording_Cleanup::schedule();

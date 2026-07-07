@@ -24,11 +24,19 @@
         recorder: null,
         recordingStream: null,
         selectedMimeType: '',
+        currentStorageProvider: '',
         chunkIndex: 0,
         pendingUploads: new Set(),
         uploadedChunks: new Set(),
         failedChunks: new Map(),
+        directUploadParts: new Map(),
+        directUploadBytes: 0,
+        directUploadAvailable: true,
         recordingStartedAt: 0,
+        recordingStoppedAt: null,
+        recordingDurationSeconds: 0,
+        recordingStopPromise: null,
+        recordingStopRequested: false,
         durationTimer: null,
         finalChunkCount: 0,
         currentJobStatus: '',
@@ -62,6 +70,12 @@
         mediaSourceModalTrigger: null,
         publishPollTimer: null,
         publishPollAttempts: 0,
+        directUploadInProgress: false,
+        stopFailed: false,
+        serverStopConfirmed: false,
+        serverStopConfirming: false,
+        serverStopPromise: null,
+        finalizeInProgress: false,
         featuredImageId: 0,
         featuredImageUrl: '',
         clearFeaturedImage: false,
@@ -1902,12 +1916,10 @@
         if (!els.qualityDetails || !els.qualitySelect) {
             return;
         }
-        const preset = (config.qualityPresets || {})[els.qualitySelect.value];
-        if (!preset) {
-            return;
-        }
+        const preset = getSelectedPreset();
         const resolution = preset.resolution ? preset.resolution.width + '×' + preset.resolution.height : '';
-        els.qualityDetails.textContent = preset.label + ' · ' + resolution + ' · ' + preset.fps + 'fps';
+        const bitrate = preset.video_bitrate ? ' · ~' + Math.round(Number(preset.video_bitrate) / 1000000 * 10) / 10 + ' Mbps video' : '';
+        els.qualityDetails.textContent = preset.label + ' · ' + resolution + ' · ' + preset.fps + 'fps' + bitrate + '. Higher quality creates larger files and longer uploads.';
     }
 
 
@@ -1957,8 +1969,15 @@
         renderSelectedMediaControls();
     }
 
+    function getSelectedPresetKey() {
+        const presets = config.qualityPresets || {};
+        const selected = els.qualitySelect ? els.qualitySelect.value : config.defaultQualityPreset;
+        return presets[selected] ? selected : (presets[config.defaultQualityPreset] ? config.defaultQualityPreset : Object.keys(presets)[0]);
+    }
+
     function getSelectedPreset() {
-        return (config.qualityPresets || {})[els.qualitySelect ? els.qualitySelect.value : config.defaultQualityPreset] || (config.qualityPresets || {})[config.defaultQualityPreset] || {};
+        const presets = config.qualityPresets || {};
+        return presets[getSelectedPresetKey()] || {};
     }
 
     function buildVideoConstraints(preset) {
@@ -2055,14 +2074,25 @@
         if (state.activeJobId) {
             return state.activeJobId;
         }
-        const job = await api('/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ recording_mode: 'browser', source_type: 'studio_setup', source_id: 'studio-recording-' + Date.now(), quality_preset: els.qualitySelect ? els.qualitySelect.value : config.defaultQualityPreset }) });
+        const job = await api('/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ recording_mode: 'browser', source_type: 'studio_setup', source_id: 'studio-recording-' + Date.now(), quality_preset: getSelectedPresetKey() }) });
         state.activeJobId = job.id;
+        state.currentStorageProvider = job.storage_provider || '';
         appendRecentJob(job);
         return job.id;
     }
 
     function isRecordingActive() {
         return state.recorder && state.recorder.state === 'recording';
+    }
+
+    function isPublitioDirectMode() {
+        const direct = config.publitioDirectUpload || {};
+        return Boolean(
+            state.currentStorageProvider === 'publitio' &&
+            direct.enabled &&
+            direct.upload_mode === 'direct_browser' &&
+            direct.upload_preset_id
+        );
     }
 
     async function startRecording() {
@@ -2098,26 +2128,38 @@
             }
             jobId = await ensureSetupJob();
             const mimeType = preferredMimeType();
-            const start = await api('/jobs/' + jobId + '/recording/start', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ mime_type: mimeType }) });
-            serverRecordingStarted = true;
-            state.browserSessionId = start.browser_session_id;
-            state.selectedMimeType = mimeType;
             state.chunkIndex = 0;
+            state.stopFailed = false;
+            state.serverStopConfirmed = false;
+            state.serverStopConfirming = false;
+            state.serverStopPromise = null;
             state.uploadedChunks.clear();
             state.failedChunks.clear();
             state.pendingUploads.clear();
+            state.directUploadParts.clear();
+            state.directUploadBytes = 0;
+            state.directUploadAvailable = true;
             state.recordingStartedAt = Date.now();
+            state.recordingStoppedAt = null;
+            state.recordingDurationSeconds = 0;
+            state.recordingStopPromise = null;
+            state.recordingStopRequested = false;
+            state.finalChunkCount = 0;
             const preset = getSelectedPreset();
             const options = { mimeType: mimeType };
-            if (preset.video_bitrate) { options.videoBitsPerSecond = preset.video_bitrate; }
-            if (preset.audio_bitrate) { options.audioBitsPerSecond = preset.audio_bitrate; }
+            if (preset.video_bitrate) { options.videoBitsPerSecond = Number(preset.video_bitrate); }
+            if (preset.audio_bitrate) { options.audioBitsPerSecond = Number(preset.audio_bitrate); }
             state.recorder = new window.MediaRecorder(state.recordingStream, options);
-            state.selectedMimeType = state.recorder.mimeType || mimeType || start.mime_type;
+            state.selectedMimeType = state.recorder.mimeType || mimeType;
+            const start = await api('/jobs/' + jobId + '/recording/start', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ mime_type: state.selectedMimeType }) });
+            serverRecordingStarted = true;
+            state.browserSessionId = start.browser_session_id;
+            state.selectedMimeType = start.mime_type || state.selectedMimeType;
             state.recorder.addEventListener('dataavailable', (event) => {
                 if (event.data && event.data.size) {
                     const finalMimeType = event.data.type || (state.recorder && state.recorder.mimeType) || state.selectedMimeType;
                     const chunk = event.data.type === finalMimeType ? event.data : new Blob([event.data], { type: finalMimeType });
-                    queueChunk(chunk, state.chunkIndex++);
+                    handleRecordingBlob(chunk);
                 }
             });
             state.recorder.start((config.uploadSettings && config.uploadSettings.preferred_chunk_duration) || 5000);
@@ -2142,20 +2184,87 @@
         }
     }
 
+
+    function maxUploadChunkSize() {
+        const configured = Number(config.uploadSettings && config.uploadSettings.max_chunk_size);
+        return configured > 0 ? configured : 8 * 1024 * 1024;
+    }
+
+    function safeUploadChunkSize() {
+        return Math.max(1024 * 1024, maxUploadChunkSize() - (256 * 1024));
+    }
+
+    function queueRecordingBlob(blob) {
+        const maxSize = safeUploadChunkSize();
+        if (!blob || !blob.size) {
+            return;
+        }
+        if (blob.size <= maxSize) {
+            queueChunk(blob, state.chunkIndex++);
+            return;
+        }
+        let offset = 0;
+        while (offset < blob.size) {
+            const end = Math.min(offset + maxSize, blob.size);
+            const part = blob.slice(offset, end, blob.type || state.actualMimeType || state.selectedMimeType);
+            queueChunk(part, state.chunkIndex++);
+            offset = end;
+        }
+        setRecordingStatus('Large recording data was split into smaller upload chunks.', 'info');
+    }
+
+    function handleRecordingBlob(blob) {
+        if (isPublitioDirectMode()) {
+            rememberDirectUploadPart(blob, state.chunkIndex++);
+            renderRecordingState();
+            return;
+        }
+
+        queueRecordingBlob(blob);
+    }
+
     function queueChunk(blob, index) {
         state.pendingUploads.add(index);
         uploadChunk(blob, index).catch(() => {});
         renderRecordingState();
     }
 
+    function rememberDirectUploadPart(blob, index) {
+        const direct = config.publitioDirectUpload || {};
+        if (!isPublitioDirectMode() || !state.directUploadAvailable || !blob || !blob.size) {
+            return;
+        }
+        const maxSize = Number(direct.max_size || 0);
+        if (maxSize > 0 && state.directUploadBytes + blob.size > maxSize) {
+            state.directUploadAvailable = false;
+            state.directUploadParts.clear();
+            state.directUploadBytes = 0;
+            setRecordingStatus('Direct Publitio upload limit was exceeded. Use server relay mode for very long recordings.', 'warning');
+            return;
+        }
+        state.directUploadParts.set(Number(index), blob);
+        state.directUploadBytes += blob.size;
+    }
+
+
+    async function sha256Blob(blob) {
+        if (!window.crypto || !window.crypto.subtle || !blob || typeof blob.arrayBuffer !== 'function') {
+            return '';
+        }
+        const digest = await window.crypto.subtle.digest('SHA-256', await blob.arrayBuffer());
+        return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+    }
+
     async function uploadChunk(blob, index) {
         try {
-            setRecordingStatus(strings.uploadingChunk, 'info');
+            setRecordingStatus(state.recordingStoppedAt ? strings.uploadingChunk : strings.recordingActive, 'info');
             const form = new FormData();
             form.append('browser_session_id', state.browserSessionId);
             form.append('chunk_index', String(index));
             const finalMimeType = blob.type || state.selectedMimeType;
             form.append('mime_type', finalMimeType);
+            const checksum = await sha256Blob(blob);
+            if (checksum) { form.append('chunk_checksum', checksum); }
             form.append('chunk', blob, 'chunk-' + index + recordingExtension(finalMimeType));
             const summary = await api('/jobs/' + state.activeJobId + '/chunks', { method: 'POST', body: form });
             state.pendingUploads.delete(index);
@@ -2165,15 +2274,81 @@
         } catch (error) {
             state.pendingUploads.delete(index);
             state.failedChunks.set(index, blob);
-            setRecordingStatus(strings.chunkUploadFailed, 'error');
+            setRecordingStatus((error && error.message) || strings.chunkUploadFailed, 'error');
         }
         renderRecordingState();
+        if (state.recordingStoppedAt && !state.pendingUploads.size && !state.failedChunks.size && !state.serverStopConfirmed && !state.serverStopConfirming) {
+            finishRecordingUploadsAndConfirmStop().catch(() => {});
+        }
     }
 
-    async function stopRecording() {
-        if (!state.recorder) { return; }
-        const recorder = state.recorder;
+    async function confirmServerStop() {
+        if (!state.activeJobId) {
+            return null;
+        }
+        if (state.serverStopPromise) {
+            return state.serverStopPromise;
+        }
+        state.serverStopConfirming = true;
+        state.serverStopPromise = (async () => {
+            const duration = Math.max(0, Math.round(state.recordingDurationSeconds || 0));
+            const job = await api('/jobs/' + state.activeJobId + '/recording/stop', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ duration_seconds: duration }) });
+            state.serverStopConfirmed = true;
+            state.stopFailed = false;
+            state.currentJobStatus = job.status || 'stopping';
+            return job;
+        })();
         try {
+            return await state.serverStopPromise;
+        } finally {
+            state.serverStopConfirming = false;
+            state.serverStopPromise = null;
+        }
+    }
+
+    async function retryServerStop() {
+        if (!state.activeJobId || !state.stopFailed) {
+            return;
+        }
+        try {
+            setRecordingStatus('Retrying server stop confirmation…', 'info');
+            await finishRecordingUploadsAndConfirmStop();
+        } catch (error) {
+            state.stopFailed = true;
+            state.serverStopConfirmed = false;
+            state.currentJobStatus = 'stop_failed';
+            setRecordingStatus((error && error.message) || 'Server stop confirmation failed. Retry stop before preparing the replay.', 'error');
+        } finally {
+            setShellClass('is-recording', false);
+            setRecorderButtons(false, false);
+            renderRecordingState();
+            updateOperatorStatus();
+        }
+    }
+
+    function freezeRecordingDuration() {
+        if (!state.recordingStartedAt) {
+            state.recordingDurationSeconds = 0;
+            return;
+        }
+        state.recordingStoppedAt = state.recordingStoppedAt || Date.now();
+        state.recordingDurationSeconds = Math.max(0, Math.round((state.recordingStoppedAt - state.recordingStartedAt) / 1000));
+        stopTimer();
+    }
+
+    async function stopLocalRecording() {
+        if (state.recordingStopPromise) {
+            return state.recordingStopPromise;
+        }
+        if (!state.recorder) {
+            if (state.recordingStartedAt && !state.recordingStoppedAt) {
+                freezeRecordingDuration();
+            }
+            return null;
+        }
+        const recorder = state.recorder;
+        state.recordingStopRequested = true;
+        state.recordingStopPromise = (async () => {
             if (recorder.state !== 'inactive') {
                 await new Promise((resolve, reject) => {
                     const timeout = window.setTimeout(resolve, 3000);
@@ -2189,20 +2364,88 @@
                     }
                 });
             }
+            freezeRecordingDuration();
             state.finalChunkCount = state.chunkIndex;
-            await waitForUploads();
-            const duration = Math.max(0, Math.round((Date.now() - state.recordingStartedAt) / 1000));
-            await api('/jobs/' + state.activeJobId + '/recording/stop', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ duration_seconds: duration }) });
-            setRecordingStatus(strings.recordingSaved, 'success');
-        } catch (error) {
-            setRecordingStatus((error && error.message) || 'Recording could not be stopped cleanly. Retry the upload or prepare the replay if uploading has finished.', 'error');
-        } finally {
-            stopTimer();
             state.recorder = null;
             setShellClass('is-recording', false);
-            setRecorderButtons(false, state.activeJobId && !state.pendingUploads.size && !state.failedChunks.size);
+            setRecordingStatus(isPublitioDirectMode() ? 'Recording stopped. Ready to upload directly to Publitio.' : strings.uploadingChunk, 'info');
             renderRecordingState();
             updateOperatorStatus();
+            return true;
+        })();
+        try {
+            return await state.recordingStopPromise;
+        } catch (error) {
+            state.recordingStopRequested = false;
+            state.recordingStopPromise = null;
+            setRecordingStatus((error && error.message) || 'Recording could not be stopped cleanly. Try stopping again.', 'error');
+            renderRecordingState();
+            updateOperatorStatus();
+            throw error;
+        }
+    }
+
+    async function finishRecordingUploadsAndConfirmStop() {
+        if (!state.activeJobId || state.serverStopConfirmed) {
+            return null;
+        }
+        if (!state.recordingStoppedAt) {
+            await stopLocalRecording();
+        }
+        if (isPublitioDirectMode()) {
+            try {
+                const job = await confirmServerStop();
+                setRecordingStatus('Recording stopped. Ready to upload directly to Publitio.', 'success');
+                return job;
+            } catch (error) {
+                state.stopFailed = true;
+                state.serverStopConfirmed = false;
+                state.currentJobStatus = 'stop_failed';
+                setRecordingStatus((error && error.message) || 'Server stop confirmation failed. Retry stop before publishing.', 'error');
+                throw error;
+            } finally {
+                renderRecordingState();
+                updateOperatorStatus();
+            }
+        }
+        if (state.failedChunks.size) {
+            setRecordingStatus('Some chunks failed to upload. Retry failed chunks before preparing the replay.', 'warning');
+            return null;
+        }
+        await waitForUploads();
+        if (state.failedChunks.size) {
+            setRecordingStatus('Some chunks failed to upload. Retry failed chunks before preparing the replay.', 'warning');
+            return null;
+        }
+        try {
+            const job = await confirmServerStop();
+            setRecordingStatus(strings.recordingSaved, 'success');
+            return job;
+        } catch (error) {
+            state.stopFailed = true;
+            state.serverStopConfirmed = false;
+            state.currentJobStatus = 'stop_failed';
+            setRecordingStatus((error && error.message) || 'Server stop confirmation failed. Retry stop before preparing the replay.', 'error');
+            throw error;
+        } finally {
+            setRecorderButtons(false, state.serverStopConfirmed && state.activeJobId && !state.pendingUploads.size && !state.failedChunks.size);
+            renderRecordingState();
+            updateOperatorStatus();
+        }
+    }
+
+    async function stopRecording() {
+        if (state.stopFailed) {
+            await retryServerStop();
+            return;
+        }
+        try {
+            await stopLocalRecording();
+            await finishRecordingUploadsAndConfirmStop();
+        } catch (error) {
+            if (!state.recordingStoppedAt) {
+                setRecordingStatus((error && error.message) || 'Recording could not be stopped cleanly. Try stopping again.', 'error');
+            }
         }
     }
 
@@ -2214,16 +2457,36 @@
 
     function retryFailedChunks() {
         setRecordingStatus(strings.uploadRetry, 'info');
-        Array.from(state.failedChunks.entries()).forEach(([index, blob]) => uploadChunk(blob, index));
+        Array.from(state.failedChunks.entries()).forEach(([index, blob]) => {
+            state.pendingUploads.add(index);
+            uploadChunk(blob, index).catch(() => {});
+        });
+        renderRecordingState();
     }
 
     async function finalizeRecording() {
-        if (state.failedChunks.size || state.pendingUploads.size) { return; }
+        if (state.finalizeInProgress) {
+            return;
+        }
+        if (state.stopFailed || !state.serverStopConfirmed) {
+            setRecordingStatus('Confirm server stop before preparing the replay.', 'warning');
+            return;
+        }
+        if (state.failedChunks.size || state.pendingUploads.size) {
+            setRecordingStatus('Retry failed chunks during this session before preparing the replay.', 'warning');
+            return;
+        }
+        if (!state.finalChunkCount) {
+            setRecordingStatus('No recording chunks were captured. Start a new recording and try again.', 'error');
+            return;
+        }
         try {
+            state.finalizeInProgress = true;
             if (els.recordingFinalizeStatus) { els.recordingFinalizeStatus.textContent = strings.finalizing; }
             if (els.finalizeRecording) { els.finalizeRecording.disabled = true; }
             const job = await api('/jobs/' + state.activeJobId + '/recording/finalize', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ expected_chunks: state.finalChunkCount }) });
             state.currentJobStatus = job.status || 'processing';
+            state.currentStorageProvider = job.storage_provider || state.currentStorageProvider;
             setRecordingStatus('Replay prepared. You can publish it now.', 'success');
             appendRecentJob(job);
             updatePublishingButtons();
@@ -2232,6 +2495,7 @@
             setRecordingStatus(error.message || strings.chunkUploadFailed, 'error');
             if (els.recordingFinalizeStatus) { els.recordingFinalizeStatus.textContent = error.message || strings.chunkUploadFailed; }
         } finally {
+            state.finalizeInProgress = false;
             renderRecordingState();
         }
     }
@@ -2263,7 +2527,8 @@
     }
 
     function updatePublishingButtons() {
-        const canPublish = Boolean(state.activeJobId) && state.currentJobStatus === 'processing';
+        const directReady = isPublitioDirectMode() && state.recordingStoppedAt && state.serverStopConfirmed && state.directUploadParts.size && state.directUploadAvailable && state.currentJobStatus !== 'ready';
+        const canPublish = Boolean(state.activeJobId) && (state.currentJobStatus === 'processing' || directReady);
         if (els.publishReplay) {
             els.publishReplay.hidden = !canPublish;
             els.publishReplay.disabled = !canPublish;
@@ -2305,6 +2570,106 @@
         state.publishPollTimer = window.setTimeout(poll, 5000);
     }
 
+    function canDirectUploadToPublitio() {
+        const direct = config.publitioDirectUpload || {};
+        return Boolean(isPublitioDirectMode() && state.recordingStoppedAt && state.serverStopConfirmed && state.directUploadAvailable && state.directUploadParts.size && window.XMLHttpRequest && window.FormData);
+    }
+
+    function buildDirectUploadBlob() {
+        if (!state.directUploadParts.size) {
+            return null;
+        }
+        const ordered = Array.from(state.directUploadParts.entries()).sort((a, b) => Number(a[0]) - Number(b[0])).map((entry) => entry[1]);
+        return new Blob(ordered, { type: state.selectedMimeType || 'video/mp4' });
+    }
+
+    function publitioDirectUpload(url, form) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', url);
+            xhr.responseType = 'json';
+            xhr.upload.onprogress = (event) => {
+                if (event.lengthComputable) {
+                    setPublishingStatus((strings.publitioDirectUploading || 'Uploading directly to Publitio…') + ' ' + Math.round((event.loaded / event.total) * 100) + '%', 'info');
+                }
+            };
+            xhr.onload = () => {
+                const payload = xhr.response || {};
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    resolve(payload);
+                    return;
+                }
+                reject(new Error((payload && (payload.message || payload.error || payload.msg)) || 'Publitio direct upload failed.'));
+            };
+            xhr.onerror = () => reject(new Error('Publitio direct upload failed before completion.'));
+            xhr.ontimeout = () => reject(new Error('Publitio direct upload timed out.'));
+            xhr.send(form);
+        });
+    }
+
+    function findPublitioFilePayload(response) {
+        if (!response || typeof response !== 'object') {
+            return {};
+        }
+        if (response.file && typeof response.file === 'object') {
+            return response.file;
+        }
+        if (response.data && typeof response.data === 'object') {
+            return response.data;
+        }
+        return response;
+    }
+
+    async function publishReplayViaDirectPublitio() {
+        const blob = buildDirectUploadBlob();
+        if (!blob || !blob.size) {
+            throw new Error('Local recording data is unavailable for direct upload.');
+        }
+        const direct = config.publitioDirectUpload || {};
+        if (direct.max_size && blob.size > Number(direct.max_size)) {
+            throw new Error('Recording is too large for direct browser upload.');
+        }
+        const allowed = direct.allowed_mime_types || [];
+        const baseMime = (blob.type || state.selectedMimeType || '').split(';')[0].toLowerCase();
+        if (allowed.length && allowed.indexOf(baseMime) === -1) {
+            throw new Error('Recording type is not allowed for direct browser upload.');
+        }
+
+        setPublishingStatus(strings.publitioDirectUploading || 'Uploading directly to Publitio…', 'info');
+        const auth = await api('/jobs/' + state.activeJobId + '/publitio/direct-upload/authorize', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ mime_type: baseMime || blob.type || state.selectedMimeType, file_size: blob.size, duration_seconds: state.recordingDurationSeconds || 0 }) });
+        const form = new FormData();
+        form.append('file', blob, 'vh360-studio-replay-' + state.activeJobId + recordingExtension(baseMime || blob.type || state.selectedMimeType));
+        ['public_id', 'title', 'description', 'tags', 'folder', 'privacy', 'option_download', 'option_hls', 'option_ad'].forEach((key) => {
+            if (auth[key]) {
+                form.append(key, String(auth[key]));
+            }
+        });
+        const uploaded = await publitioDirectUpload(auth.upload_url, form);
+        const file = findPublitioFilePayload(uploaded);
+        const fileId = file.id || file.file_id || uploaded.id || uploaded.file_id || '';
+        if (!fileId) {
+            throw new Error('Publitio direct upload did not return a file ID.');
+        }
+        setPublishingStatus(strings.publitioDirectVerifying || 'Publitio upload complete. Verifying replay…', 'info');
+        return api('/jobs/' + state.activeJobId + '/publitio/direct-upload/complete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce },
+            body: JSON.stringify({
+                direct_upload_token: auth.direct_upload_token,
+                publitio_file_id: fileId,
+                playback_url: file.url_preview || file.url_download || file.url || '',
+                poster_url: file.url_thumbnail || file.thumbnail_url || '',
+                embed_url: file.embed_url || file.url_embed || '',
+                file_size: file.size || file.bytes || blob.size,
+                mime_type: baseMime || blob.type || state.selectedMimeType
+            })
+        });
+    }
+
+    async function publishReplayViaServerRelay() {
+        return api('/jobs/' + state.activeJobId + '/publishing/publish', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
+    }
+
     async function publishReplay() {
         if (!state.activeJobId) {
             return;
@@ -2312,10 +2677,17 @@
         if (els.publishReplay) { els.publishReplay.disabled = true; }
         setPublishingStatus(strings.publishingReplay, 'info');
         try {
-            const result = await api('/jobs/' + state.activeJobId + '/publishing/publish', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
+            let result;
+            if (canDirectUploadToPublitio()) {
+                result = await publishReplayViaDirectPublitio();
+            } else if (isPublitioDirectMode()) {
+                throw new Error('Direct Publitio upload is enabled, but the local recording Blob is unavailable or over the direct upload limit. Retry while the recording is still in this browser, or switch to server relay for the next recording.');
+            } else {
+                result = await publishReplayViaServerRelay();
+            }
             state.currentJobStatus = result.job_status || 'ready';
             const replayUrl = result.replay_url || result.playback_url || '';
-            setPublishingStatus(replayUrl ? strings.publishComplete : (result.message || strings.publishProcessing || 'Replay is still processing. We’ll keep checking.'), replayUrl ? 'success' : 'info');
+            setPublishingStatus(replayUrl ? strings.publishComplete : (result.message || strings.publishProcessing || 'Replay uploaded to Publitio. Waiting for processing.'), replayUrl ? 'success' : 'info');
             renderReplayLink(replayUrl);
             appendRecentJob(Object.assign({}, result, { id: result.id || result.job_id || state.activeJobId, status: state.currentJobStatus, replay_url: replayUrl || result.replay_url || result.playback_url || '' }));
             if (shouldPollPublishStatus(result)) {
@@ -2345,7 +2717,7 @@
                 setPublishingStatus(strings.publishComplete, 'success');
                 appendRecentJob(Object.assign({}, result, { id: result.id || result.job_id || state.activeJobId, status: result.job_status || 'ready', replay_url: replayUrl || result.replay_url || result.playback_url || '' }));
             } else if (shouldPollPublishStatus(result)) {
-                setPublishingStatus(strings.publishProcessing || 'Replay is still processing. We’ll keep checking.', 'info');
+                setPublishingStatus(strings.publishProcessing || 'Replay uploaded to Publitio. Waiting for processing.', 'info');
             } else if (result.status === 'failed' || result.publish_provider_status === 'publish_failed') {
                 setPublishingStatus(strings.publishFailed, 'error');
             } else {
@@ -2372,6 +2744,9 @@
     }
 
     function recordingSummaryStatus() {
+        if (state.stopFailed) {
+            return 'Stop confirmation failed';
+        }
         if (state.failedChunks.size) {
             return 'Needs attention';
         }
@@ -2379,13 +2754,16 @@
             return 'Recording';
         }
         if (state.pendingUploads.size) {
-            return 'Uploading recording';
+            return 'Uploading chunks';
         }
         if (state.currentJobStatus === 'processing') {
             return 'Replay ready to publish';
         }
         if (state.currentJobStatus === 'ready') {
             return 'Replay published';
+        }
+        if (state.finalChunkCount && !state.serverStopConfirmed) {
+            return 'Confirm stop before replay';
         }
         if (state.finalChunkCount) {
             return 'Ready to prepare replay';
@@ -2402,7 +2780,12 @@
         if (els.recordingFailed) { els.recordingFailed.textContent = String(state.failedChunks.size); }
         if (els.recordingSummaryStatus) { els.recordingSummaryStatus.textContent = recordingSummaryStatus(); }
         if (els.recordingTimer) {
-            const seconds = state.recordingStartedAt ? Math.max(0, Math.floor((Date.now() - state.recordingStartedAt) / 1000)) : 0;
+            let seconds = 0;
+            if (state.recordingStoppedAt) {
+                seconds = Math.max(0, state.recordingDurationSeconds || 0);
+            } else if (state.recordingStartedAt) {
+                seconds = Math.max(0, Math.floor((Date.now() - state.recordingStartedAt) / 1000));
+            }
             els.recordingTimer.textContent = String(Math.floor(seconds / 60)).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0');
         }
         const total = Math.max(state.chunkIndex, state.finalChunkCount, 1);
@@ -2414,19 +2797,23 @@
             els.recordingProgressLabel.textContent = progress + '%';
         }
         const recording = isRecordingActive();
+        const stopping = Boolean(state.recordingStopRequested && !state.recordingStoppedAt);
         const hasFailedUploads = Boolean(state.failedChunks.size);
-        const canPrepareReplay = Boolean(state.activeJobId && state.finalChunkCount && !state.pendingUploads.size && !hasFailedUploads && state.currentJobStatus !== 'processing' && state.currentJobStatus !== 'ready');
-        setButtonVisibility(els.startRecording, !recording && !state.activeJobId, true);
-        setButtonVisibility(els.stopRecording, recording, true);
+        const canPrepareReplay = Boolean(!isPublitioDirectMode() && state.activeJobId && state.serverStopConfirmed && state.finalChunkCount && !state.pendingUploads.size && !hasFailedUploads && !state.finalizeInProgress && state.currentJobStatus !== 'processing' && state.currentJobStatus !== 'ready');
+        setButtonVisibility(els.startRecording, !recording && !stopping && !state.activeJobId, true);
+        if (els.stopRecording) { els.stopRecording.textContent = state.stopFailed ? 'Retry stop' : 'Stop recording'; }
+        setButtonVisibility(els.stopRecording, recording || stopping || state.stopFailed, !stopping);
         setButtonVisibility(els.retryChunks, hasFailedUploads, hasFailedUploads);
         setButtonVisibility(els.finalizeRecording, canPrepareReplay, canPrepareReplay);
         updatePublishingButtons();
     }
 
     function setRecorderButtons(recording, stopped) {
-        setButtonVisibility(els.startRecording, !recording && !state.activeJobId, true);
-        setButtonVisibility(els.stopRecording, recording, true);
-        const canPrepareReplay = Boolean(stopped && state.activeJobId && state.finalChunkCount && !state.pendingUploads.size && !state.failedChunks.size && state.currentJobStatus !== 'processing' && state.currentJobStatus !== 'ready');
+        const stopping = Boolean(state.recordingStopRequested && !state.recordingStoppedAt);
+        setButtonVisibility(els.startRecording, !recording && !stopping && !state.activeJobId, true);
+        if (els.stopRecording) { els.stopRecording.textContent = state.stopFailed ? 'Retry stop' : 'Stop recording'; }
+        setButtonVisibility(els.stopRecording, recording || stopping || state.stopFailed, !stopping);
+        const canPrepareReplay = Boolean(!isPublitioDirectMode() && stopped && state.serverStopConfirmed && state.activeJobId && state.finalChunkCount && !state.pendingUploads.size && !state.failedChunks.size && !state.finalizeInProgress && state.currentJobStatus !== 'processing' && state.currentJobStatus !== 'ready');
         setButtonVisibility(els.finalizeRecording, canPrepareReplay, canPrepareReplay);
         setButtonVisibility(els.retryChunks, Boolean(state.failedChunks.size), Boolean(state.failedChunks.size));
         renderTransitionButtons();
@@ -2687,8 +3074,7 @@
     function broadcastPayload() {
         const mode = els.broadcastMode ? els.broadcastMode.value : 'broadcast';
         const featuredImageId = state.featuredImageId || (els.coverImageId ? Number(els.coverImageId.value) || 0 : 0);
-        return {
-            video_id: state.broadcastVideoId || 0,
+        const payload = {
             title: els.broadcastTitle && els.broadcastTitle.value ? els.broadcastTitle.value : 'Studio Livestream',
             description: els.broadcastDescription ? els.broadcastDescription.value : '',
             agora_mode: mode,
@@ -2697,10 +3083,16 @@
             agora_everyone_is_host: mode === 'interactive' && !!(els.broadcastEveryoneHost && els.broadcastEveryoneHost.checked),
             require_passcode: mode === 'interactive' && !!(els.broadcastRequirePasscode && els.broadcastRequirePasscode.checked),
             host_passcode: els.broadcastPasscode ? els.broadcastPasscode.value : '',
-            quality_preset: els.qualitySelect ? els.qualitySelect.value : config.defaultQualityPreset,
-            featured_image_id: featuredImageId,
+            quality_preset: getSelectedPresetKey(),
             clear_featured_image: !featuredImageId && state.clearFeaturedImage,
         };
+        if (state.broadcastVideoId && Number(state.broadcastVideoId) > 0) {
+            payload.video_id = Number(state.broadcastVideoId);
+        }
+        if (featuredImageId && Number(featuredImageId) > 0) {
+            payload.featured_image_id = Number(featuredImageId);
+        }
+        return payload;
     }
 
     function updateBroadcastRules() {
@@ -2786,6 +3178,7 @@
             const broadcast = created.broadcast || {};
             state.broadcastVideoId = broadcast.videoId;
             state.activeJobId = created.job && created.job.id ? created.job.id : state.activeJobId;
+            state.currentStorageProvider = created.job && created.job.storage_provider ? created.job.storage_provider : state.currentStorageProvider;
             state.viewerPermalink = broadcast.viewerPermalink || '';
             if (broadcast.featuredImageId || broadcast.featuredImageUrl) {
                 setCoverImage(broadcast.featuredImageId || state.featuredImageId, broadcast.featuredImageUrl || state.featuredImageUrl, { clear: false });
@@ -2850,14 +3243,32 @@
     }
 
     async function endLive() {
+        if (state.broadcastEnding) {
+            return;
+        }
         state.broadcastEnding = true;
         state.broadcastReady = false;
         renderTransitionButtons();
-        if (state.recorder) {
-            setBroadcastStatus(strings.recordingActive, 'info');
-            await stopRecording().catch((error) => {
+        if (state.recorder || state.recordingStopPromise) {
+            setBroadcastStatus('Stopping local recording before ending live…', 'info');
+            const localStopError = await stopLocalRecording().then(() => null).catch((error) => {
                 setRecordingStatus((error && error.message) || strings.chunkUploadFailed, 'error');
+                return error || new Error(strings.chunkUploadFailed);
             });
+            if (localStopError) {
+                state.broadcastEnding = false;
+                state.broadcastReady = Boolean(state.broadcastSession);
+                renderTransitionButtons();
+                setBroadcastStatus('Recording could not be stopped cleanly. Stop recording before ending live.', 'error');
+                return;
+            }
+            if (state.recordingStoppedAt && !state.serverStopConfirmed) {
+                setRecordingStatus(isPublitioDirectMode() ? 'Recording stopped. Ready to upload directly to Publitio.' : strings.uploadingChunk, 'info');
+                finishRecordingUploadsAndConfirmStop().catch(() => {});
+            }
+        } else if (state.recordingStoppedAt && !state.serverStopConfirmed) {
+            setRecordingStatus(isPublitioDirectMode() ? 'Recording stopped. Ready to upload directly to Publitio.' : strings.uploadingChunk, 'info');
+            finishRecordingUploadsAndConfirmStop().catch(() => {});
         }
         if (state.heartbeatTimer) {
             window.clearInterval(state.heartbeatTimer);
@@ -2873,6 +3284,7 @@
             try {
                 await api('/broadcasts/' + state.broadcastVideoId + '/end', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
             } catch (error) {
+                state.broadcastEnding = false;
                 if (els.goLive) els.goLive.disabled = false;
                 if (els.endLive) els.endLive.disabled = true;
                 setBroadcastStatus('Local broadcast stopped, but WordPress could not mark the public livestream ended: ' + ((error && error.message) || 'Unknown error'), 'error');
@@ -2885,7 +3297,7 @@
         if (els.endLive) els.endLive.disabled = true;
         setShellClass('is-live', false);
         renderTransitionButtons();
-        setBroadcastStatus(strings.liveEnded, 'success');
+        setBroadcastStatus((state.recordingStoppedAt && !state.serverStopConfirmed) ? 'Live ended. Recording upload is still finishing.' : strings.liveEnded, 'success');
     }
 
 

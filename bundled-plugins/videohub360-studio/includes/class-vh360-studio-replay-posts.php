@@ -63,6 +63,12 @@ class VH360_Studio_Replay_Posts {
         $playback_url  = ! empty( $publish_result['playback_url'] ) ? esc_url_raw( $publish_result['playback_url'] ) : '';
         $poster_url    = ! empty( $publish_result['poster_url'] ) ? esc_url_raw( $publish_result['poster_url'] ) : '';
         $guid          = ! empty( $publish_result['videopress_guid'] ) ? sanitize_text_field( $publish_result['videopress_guid'] ) : '';
+        $publitio_file_id = ! empty( $publish_result['publitio_file_id'] ) ? sanitize_text_field( $publish_result['publitio_file_id'] ) : '';
+        $publitio_embed_url = ! empty( $publish_result['embed_url'] ) ? esc_url_raw( $publish_result['embed_url'] ) : '';
+        $publitio_public_id = ! empty( $publish_result['public_id'] ) ? sanitize_text_field( $publish_result['public_id'] ) : '';
+        $expected_public_id = ! empty( $publish_result['expected_public_id'] ) ? sanitize_text_field( $publish_result['expected_public_id'] ) : '';
+        $actual_public_id = ! empty( $publish_result['actual_public_id'] ) ? sanitize_text_field( $publish_result['actual_public_id'] ) : $publitio_public_id;
+        $provider_status = ! empty( $publish_result['provider_status'] ) ? sanitize_key( $publish_result['provider_status'] ) : ( ! empty( $publish_result['status'] ) ? sanitize_key( $publish_result['status'] ) : '' );
         $attachment_id = ! empty( $publish_result['attachment_id'] ) ? absint( $publish_result['attachment_id'] ) : 0;
         $provider      = sanitize_key( $job['storage_provider'] );
 
@@ -76,6 +82,14 @@ class VH360_Studio_Replay_Posts {
         update_post_meta( $post_id, '_vh360_studio_attachment_id', $attachment_id );
         update_post_meta( $post_id, '_vh360_studio_wp_attachment_id', $attachment_id );
         update_post_meta( $post_id, '_vh360_studio_videopress_guid', $guid );
+        update_post_meta( $post_id, '_vh360_studio_publitio_file_id', $publitio_file_id );
+        update_post_meta( $post_id, '_vh360_studio_publitio_playback_url', $playback_url );
+        update_post_meta( $post_id, '_vh360_studio_publitio_embed_url', $publitio_embed_url );
+        update_post_meta( $post_id, '_vh360_studio_publitio_public_id', $actual_public_id );
+        update_post_meta( $post_id, '_vh360_studio_publitio_expected_public_id', $expected_public_id );
+        update_post_meta( $post_id, '_vh360_studio_publitio_actual_public_id', $actual_public_id );
+        update_post_meta( $post_id, '_vh360_studio_publitio_public_id_matches', ! empty( $publish_result['public_id_matches'] ) ? 'yes' : 'no' );
+        update_post_meta( $post_id, '_vh360_studio_publitio_provider_status', $provider_status );
         update_post_meta( $post_id, '_vh360_studio_assembled_checksum', ! empty( $recording['assembled_checksum'] ) ? sanitize_text_field( $recording['assembled_checksum'] ) : '' );
         update_post_meta( $post_id, '_vh360_studio_replay_source_live_video_id', ! empty( $job['live_video_id'] ) ? absint( $job['live_video_id'] ) : 0 );
         update_post_meta( $post_id, '_vh360_studio_replay_published_at', current_time( 'mysql' ) );
@@ -102,8 +116,10 @@ class VH360_Studio_Replay_Posts {
         }
 
         $custom_html = '';
-        if ( 'local_media' === $provider && 'video/webm' === $this->recording_mime_type( $recording ) ) {
-            $custom_html = $this->render_local_media_iframe( $playback_url );
+        if ( 'local_media' === $provider ) {
+            $custom_html = $this->render_local_media_video( $playback_url, $poster_url, $this->recording_mime_type( $recording ) );
+        } elseif ( 'publitio' === $provider && $publitio_embed_url ) {
+            $custom_html = $this->render_safe_iframe_embed( $publitio_embed_url, __( 'Publitio replay', 'videohub360-studio' ) );
         } elseif ( $guid ) {
             $custom_html = $this->render_videopress_embed_html( $guid );
         }
@@ -164,37 +180,76 @@ class VH360_Studio_Replay_Posts {
         return new WP_Error( 'vh360_studio_live_replay_target_forbidden', __( 'You are not allowed to update the original livestream post.', 'videohub360-studio' ), array( 'status' => 403 ) );
     }
 
-    private function render_local_media_iframe( $playback_url ) {
+    private function render_safe_iframe_embed( $url, $title ) {
+        $url = esc_url_raw( $url );
+        if ( ! $url ) {
+            return '';
+        }
+        $html = sprintf(
+            '<iframe class="vh360-studio-provider-embed" src="%s" title="%s" loading="lazy" allow="fullscreen; autoplay; encrypted-media; picture-in-picture" allowfullscreen style="width:100%%;aspect-ratio:16/9;border:0;"></iframe>',
+            esc_url( $url ),
+            esc_attr( $title )
+        );
+        return wp_kses( $html, $this->allowed_provider_iframe_html() );
+    }
+
+    private function allowed_provider_iframe_html() {
+        return array(
+            'iframe' => array(
+                'src'             => true,
+                'title'           => true,
+                'loading'         => true,
+                'allow'           => true,
+                'allowfullscreen' => true,
+                'style'           => true,
+                'class'           => true,
+            ),
+        );
+    }
+
+    private function render_local_media_video( $playback_url, $poster_url = '', $mime_type = '' ) {
         $playback_url = esc_url_raw( $playback_url );
+        $poster_url   = esc_url_raw( $poster_url );
+        $mime_type    = in_array( $mime_type, array( 'video/mp4', 'video/webm' ), true ) ? $mime_type : '';
         if ( ! $playback_url ) {
             return '';
         }
 
-        $iframe = sprintf(
-            '<iframe class="vh360-studio-local-media-embed" src="%s" title="%s" loading="lazy" allow="fullscreen" allowfullscreen style="width:100%%;aspect-ratio:16/9;border:0;"></iframe>',
+        $poster_attr = $poster_url ? ' poster="' . esc_url( $poster_url ) . '"' : '';
+        $type_attr   = $mime_type ? ' type="' . esc_attr( $mime_type ) . '"' : '';
+        $html        = sprintf(
+            '<video class="vh360-studio-local-media-embed" controls playsinline preload="metadata"%1$s style="width:100%%;height:auto;aspect-ratio:16/9;background:#000;"><source src="%2$s"%3$s><a href="%2$s" target="_blank" rel="noopener noreferrer">%4$s</a></video>',
+            $poster_attr,
             esc_url( $playback_url ),
-            esc_attr__( 'Local Media replay', 'videohub360-studio' )
+            $type_attr,
+            esc_html__( 'Open local replay file', 'videohub360-studio' )
         );
 
-        return wp_kses( $iframe, $this->allowed_local_media_embed_html() );
+        return wp_kses( $html, $this->allowed_local_media_embed_html() );
     }
 
     private function allowed_local_media_embed_html() {
         return apply_filters(
             'vh360_studio_allowed_local_media_embed_html',
             array(
-                'iframe' => array(
-                    'src'             => true,
-                    'width'           => true,
-                    'height'          => true,
-                    'frameborder'     => true,
-                    'allow'           => true,
-                    'allowfullscreen' => true,
-                    'title'           => true,
-                    'loading'         => true,
-                    'referrerpolicy'  => true,
-                    'style'           => true,
-                    'class'           => true,
+                'video'  => array_merge(
+                    $this->global_embed_attributes(),
+                    array(
+                        'controls'    => true,
+                        'playsinline' => true,
+                        'poster'      => true,
+                        'preload'     => true,
+                        'style'       => true,
+                    )
+                ),
+                'source' => array(
+                    'src'  => true,
+                    'type' => true,
+                ),
+                'a'      => array(
+                    'href'   => true,
+                    'target' => true,
+                    'rel'    => true,
                 ),
             )
         );
