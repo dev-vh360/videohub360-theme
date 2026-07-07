@@ -115,12 +115,9 @@ $vh360_create_labels = array(
     'direct_url_help' => $vh360_create_context_is_lesson ? __('Direct link to your lesson video file (MP4, WebM, etc.)', 'videohub360-theme') : __('Direct link to your video file (MP4, WebM, etc.)', 'videohub360-theme'),
     'upload_file_help' => $vh360_create_context_is_lesson ? __('Upload a lesson video file from your computer. Maximum size: %d MB. Allowed formats: %s', 'videohub360-theme') : __('Upload a video file from your computer. Maximum size: %d MB. Allowed formats: %s', 'videohub360-theme'),
     'embed_help' => $vh360_create_context_is_lesson ? __('Paste embed code from YouTube, Vimeo, or other lesson video platforms.', 'videohub360-theme') : __('Paste embed code from YouTube, Vimeo, or other video platforms.', 'videohub360-theme'),
-    'regular_mode_option' => $vh360_create_context_is_lesson ? __('No - Regular Lesson Mode', 'videohub360-theme') : __('No - Regular Video Mode', 'videohub360-theme'),
-    'chat_placement_help' => $vh360_create_context_is_lesson ? __('Override the global chat placement setting for this specific lesson.', 'videohub360-theme') : __('Override the global chat placement setting for this specific video.', 'videohub360-theme'),
     'quality_help' => $vh360_create_context_is_lesson ? __('Enable custom quality and mirror settings for this lesson video', 'videohub360-theme') : __('Enable custom quality and mirror settings for this video', 'videohub360-theme'),
     'poster_help' => $vh360_create_context_is_lesson ? __('Direct URL to a custom lesson video poster image (alternative to lesson thumbnail)', 'videohub360-theme') : __('Direct URL to a custom video poster image (alternative to featured image)', 'videohub360-theme'),
     'lesson_details_help' => $vh360_create_context_is_lesson ? __('Use these fields when this lesson is part of a course or learning track.', 'videohub360-theme') : __('Use these fields when this video is part of a course or learning track.', 'videohub360-theme'),
-    'chat_enabled_label' => $vh360_create_context_is_lesson ? __('Enable live chat for this lesson', 'videohub360-theme') : __('Enable live chat for this video', 'videohub360-theme'),
     'ad_preroll_help' => $vh360_create_context_is_lesson ? __('Ad to play before the lesson video starts', 'videohub360-theme') : __('Video to play before the main video starts', 'videohub360-theme'),
     'ad_midroll_help' => $vh360_create_context_is_lesson ? __('Ad to play during the lesson video', 'videohub360-theme') : __('Video to play during the main video', 'videohub360-theme'),
     'ad_postroll_help' => $vh360_create_context_is_lesson ? __('Ad to play after the lesson video ends', 'videohub360-theme') : __('Video to play after the main video ends', 'videohub360-theme'),
@@ -130,10 +127,6 @@ $vh360_create_labels = array(
     'alternative_source_help' => $vh360_create_context_is_lesson ? __('Alternative lesson video source/CDN', 'videohub360-theme') : __('Alternative video source/CDN', 'videohub360-theme'),
 );
 
-$show_livestream_settings = function_exists('vh360_create_form_section_enabled') ? vh360_create_form_section_enabled('livestream_settings') : true;
-if ($vh360_create_context_is_lesson && function_exists('vh360_create_form_section_enabled') && vh360_create_form_section_enabled('hide_livestream_in_course_mode')) {
-    $show_livestream_settings = false;
-}
 $show_ad_settings = function_exists('vh360_create_form_section_enabled') ? vh360_create_form_section_enabled('ad_settings') : true;
 $show_advanced_settings = function_exists('vh360_create_form_section_enabled') ? vh360_create_form_section_enabled('advanced_settings') : true;
 $vh360_edit_post_status = $edit_mode && isset($video_data['status']) ? $video_data['status'] : '';
@@ -203,6 +196,25 @@ $locations = get_terms(array(
     'taxonomy' => 'videohub360_location',
     'hide_empty' => false,
 ));
+
+$vh360_show_studio_notice = false;
+$vh360_studio_url = '';
+if ( class_exists( 'VH360_Studio_Permissions' ) && VH360_Studio_Permissions::user_can_access_studio( $current_user_id ) ) {
+    $vh360_show_studio_notice = true;
+}
+if ( function_exists( 'vh360_get_dashboard_tabs_registry' ) ) {
+    $vh360_dashboard_tabs = vh360_get_dashboard_tabs_registry( $current_user_id );
+    if ( isset( $vh360_dashboard_tabs['studio'] ) ) {
+        $vh360_studio_tab = $vh360_dashboard_tabs['studio'];
+        $vh360_studio_show_callback = isset( $vh360_studio_tab['show_callback'] ) ? $vh360_studio_tab['show_callback'] : null;
+        $vh360_show_studio_notice = ! is_callable( $vh360_studio_show_callback ) || (bool) call_user_func( $vh360_studio_show_callback, $current_user_id );
+    }
+}
+if ( $vh360_show_studio_notice ) {
+    $vh360_studio_url = function_exists( 'vh360_get_dashboard_tab_url' )
+        ? vh360_get_dashboard_tab_url( 'studio' )
+        : add_query_arg( 'tab', 'studio', home_url( '/dashboard/' ) );
+}
 ?>
 
 <div class="vh360-dashboard-create-video">
@@ -228,6 +240,15 @@ $locations = get_terms(array(
             <?php echo esc_html($vh360_create_labels['permission_denied_message']); ?>
         </div>
     <?php else : ?>
+
+    <div class="vh360-dashboard-notice vh360-dashboard-notice-info vh360-studio-redirect-notice">
+        <span><?php esc_html_e('Want to go live? Use VH360 Studio to start a livestream, record, and publish replays.', 'videohub360-theme'); ?></span>
+        <?php if ($vh360_show_studio_notice && !empty($vh360_studio_url)) : ?>
+            <a href="<?php echo esc_url($vh360_studio_url); ?>" class="vh360-dashboard-btn vh360-dashboard-btn-secondary vh360-dashboard-tab" data-tab="studio">
+                <?php esc_html_e('Open Studio', 'videohub360-theme'); ?>
+            </a>
+        <?php endif; ?>
+    </div>
 
     <!-- Video Creation Form -->
     <form method="post" enctype="multipart/form-data" class="vh360-create-video-form" id="vh360-create-video-form">
@@ -489,311 +510,6 @@ $locations = get_terms(array(
                 </p>
             </div>
         </div>
-
-        <?php if ($show_livestream_settings) : ?>
-        <!-- Livestream Settings Section (Collapsible) -->
-        <div class="vh360-form-section vh360-form-section-collapsible">
-            <h3 class="vh360-form-section-title vh360-section-toggle">
-                <span><?php esc_html_e('🔴 Livestream Settings (Optional)', 'videohub360-theme'); ?></span>
-                <svg class="vh360-toggle-icon rotated" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-            </h3>
-            <div class="vh360-section-content">
-                
-                <div class="vh360-form-help" style="background: color-mix(in srgb, var(--info-color, #3b82f6) 12%, var(--surface-1, #ffffff)); padding: 12px; border-radius: 4px; border-left: 4px solid var(--info-color, #3b82f6); margin-bottom: 15px;">
-                    <strong>💡 Quick Setup Guide:</strong><br>
-                    1. Set "Currently Live Status" to "Yes" to enable livestream mode<br>
-                    2. Choose your "Stream Source Type" (Videohub360 Live Connection recommended for interactive streaming)<br>
-                    3. Configure source-specific settings below<br>
-                    4. Save to enable livestream functionality
-                </div>
-
-                <!-- Usage Context (Hidden - Always "default") -->
-                <input type="hidden" name="vh360_context" value="default">
-
-                <div class="vh360-form-field">
-                    <label for="vh360_is_live" class="vh360-form-label">
-                        <?php esc_html_e('Currently Live Status', 'videohub360-theme'); ?>
-                    </label>
-                    <select id="vh360_is_live" name="vh360_is_live" class="vh360-select">
-                        <option value="no" selected><?php echo esc_html($vh360_create_labels['regular_mode_option']); ?></option>
-                        <option value="yes"><?php esc_html_e('Yes - Livestream Mode', 'videohub360-theme'); ?></option>
-                    </select>
-                    <p class="vh360-form-help">
-                        <?php esc_html_e('When set to "Yes", this video will display livestream functionality instead of regular video player.', 'videohub360-theme'); ?>
-                    </p>
-                </div>
-
-                <div class="vh360-form-field">
-                    <label for="vh360_type" class="vh360-form-label">
-                        <?php esc_html_e('Stream Source Type', 'videohub360-theme'); ?>
-                    </label>
-                    <select id="vh360_type" name="vh360_type" class="vh360-select">
-                        <option value="embed"><?php esc_html_e('Embed (YouTube Live, Twitch, etc.)', 'videohub360-theme'); ?></option>
-                        <option value="selfhosted"><?php esc_html_e('Self-Hosted HLS/DASH', 'videohub360-theme'); ?></option>
-                        <option value="api"><?php esc_html_e('Streaming API Platform', 'videohub360-theme'); ?></option>
-                        <option value="agora" selected><?php esc_html_e('Videohub360 Live Connection (recommended for interactive livestreams)', 'videohub360-theme'); ?></option>
-                    </select>
-                    <p class="vh360-form-help">
-                        <strong><?php esc_html_e('Videohub360 Live Connection', 'videohub360-theme'); ?></strong> <?php esc_html_e('supports interactive livestreams with audience participation, live chat, and real-time engagement.', 'videohub360-theme'); ?>
-                    </p>
-                </div>
-
-                <!-- Stream Source Type Specific Fields -->
-                <div id="vh360-stream-type-fields">
-                    
-                    <!-- Embed Fields -->
-                    <div class="vh360-stream-type-field" data-type="embed" style="display: none;">
-                        <div class="vh360-form-field">
-                            <label for="vh360_embed_code" class="vh360-form-label">
-                                <?php esc_html_e('Embed Code', 'videohub360-theme'); ?>
-                            </label>
-                            <textarea 
-                                id="vh360_embed_code" 
-                                name="vh360_embed_code" 
-                                class="vh360-textarea" 
-                                rows="4"
-                                placeholder="<?php esc_attr_e('Paste your iframe/embed HTML here (YouTube Live, Twitch, etc.)', 'videohub360-theme'); ?>"
-                            ></textarea>
-                        </div>
-                    </div>
-
-                    <!-- Self-Hosted Fields -->
-                    <div class="vh360-stream-type-field" data-type="selfhosted" style="display: none;">
-                        <div class="vh360-form-field">
-                            <label for="vh360_stream_url" class="vh360-form-label">
-                                <?php esc_html_e('Self-Hosted Stream URL (HLS/DASH)', 'videohub360-theme'); ?>
-                            </label>
-                            <input 
-                                type="url" 
-                                id="vh360_stream_url" 
-                                name="vh360_stream_url" 
-                                class="vh360-input"
-                                placeholder="<?php esc_attr_e('https://example.com/stream.m3u8', 'videohub360-theme'); ?>"
-                            >
-                            <p class="vh360-form-help">
-                                <?php esc_html_e('HLS (.m3u8) or DASH (.mpd) stream URL.', 'videohub360-theme'); ?>
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- API Platform Fields -->
-                    <div class="vh360-stream-type-field" data-type="api" style="display: none;">
-                        <div class="vh360-form-field">
-                            <label for="vh360_api_url" class="vh360-form-label">
-                                <?php esc_html_e('API Playback URL (HLS/DASH)', 'videohub360-theme'); ?>
-                            </label>
-                            <input 
-                                type="url" 
-                                id="vh360_api_url" 
-                                name="vh360_api_url" 
-                                class="vh360-input"
-                                placeholder="<?php esc_attr_e('https://api.example.com/stream.m3u8', 'videohub360-theme'); ?>"
-                            >
-                            <p class="vh360-form-help">
-                                <?php esc_html_e('API-provided playback URL for platforms like Mux, AWS IVS.', 'videohub360-theme'); ?>
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Agora Fields -->
-                    <div class="vh360-stream-type-field" data-type="agora">
-                        <div class="vh360-form-field">
-                            <label for="vh360_agora_mode" class="vh360-form-label">
-                                <?php esc_html_e('Streaming Mode', 'videohub360-theme'); ?>
-                            </label>
-                            <select id="vh360_agora_mode" name="vh360_agora_mode" class="vh360-select">
-                                <option value="interactive"><?php esc_html_e('Interactive Mode', 'videohub360-theme'); ?></option>
-                                <option value="broadcast"><?php esc_html_e('Broadcast Mode', 'videohub360-theme'); ?></option>
-                            </select>
-                            <p class="vh360-form-help">
-                                <strong><?php esc_html_e('Interactive Mode:', 'videohub360-theme'); ?></strong> <?php esc_html_e('Allows audience members to request to join as hosts and interact in real-time.', 'videohub360-theme'); ?>
-                            </p>
-                        </div>
-
-                        <div class="vh360-form-field">
-                            <label for="vh360_agora_channel_name" class="vh360-form-label">
-                                <?php esc_html_e('Channel Name', 'videohub360-theme'); ?>
-                            </label>
-                            <input 
-                                type="text" 
-                                id="vh360_agora_channel_name" 
-                                name="vh360_agora_channel_name" 
-                                class="vh360-input"
-                                placeholder="<?php esc_attr_e('Leave blank to auto-generate a secure channel name', 'videohub360-theme'); ?>"
-                            >
-                            <p class="vh360-form-help">
-                                <?php esc_html_e('The live channel name for this livestream. Leave blank to auto-generate. Use alphanumeric characters only if providing your own.', 'videohub360-theme'); ?>
-                            </p>
-                        </div>
-
-                        <div class="vh360-form-field">
-                            <label class="vh360-checkbox-label">
-                                <input 
-                                    type="checkbox" 
-                                    id="vh360_agora_everyone_is_host" 
-                                    name="vh360_agora_everyone_is_host" 
-                                    value="yes"
-                                >
-                                <span><?php esc_html_e('Allow Everyone to be Host', 'videohub360-theme'); ?></span>
-                            </label>
-                            <p class="vh360-form-help">
-                                <?php esc_html_e('When enabled, all viewers can directly join as hosts. Cannot be used with passcode requirement.', 'videohub360-theme'); ?>
-                            </p>
-                        </div>
-
-                        <div class="vh360-form-field" style="border-left: 3px solid var(--info-color, #3b82f6); padding-left: 15px; margin-left: 10px;">
-                            <h4 style="margin: 0 0 10px 0; color: var(--info-color, #3b82f6);"><?php esc_html_e('Access Control', 'videohub360-theme'); ?></h4>
-                            <label class="vh360-checkbox-label">
-                                <input 
-                                    type="checkbox" 
-                                    id="vh360_require_passcode" 
-                                    name="vh360_require_passcode" 
-                                    value="yes"
-                                >
-                                <span><?php esc_html_e('Require Passcode To Join', 'videohub360-theme'); ?></span>
-                            </label>
-                            <p class="vh360-form-help">
-                                <?php esc_html_e('When enabled, viewers must enter a passcode to join as presenters. Cannot be used with "Allow Everyone to be Host".', 'videohub360-theme'); ?>
-                            </p>
-                            <div id="vh360-passcode-field" style="margin-top: 10px; display: none;">
-                                <label for="vh360_host_passcode" class="vh360-form-label">
-                                    <?php esc_html_e('Host Passcode', 'videohub360-theme'); ?>
-                                </label>
-                                <input 
-                                    type="password" 
-                                    id="vh360_host_passcode" 
-                                    name="vh360_host_passcode" 
-                                    class="vh360-input"
-                                    placeholder="<?php esc_attr_e('Enter passcode', 'videohub360-theme'); ?>"
-                                    style="font-family: monospace; font-weight: bold;"
-                                    autocomplete="new-password"
-                                >
-                                <p class="vh360-form-help">
-                                    <?php esc_html_e('Viewers will need to enter this passcode to join as presenters.', 'videohub360-theme'); ?>
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-
-                <div class="vh360-form-field">
-                    <label for="vh360_live_start_time" class="vh360-form-label">
-                        <?php esc_html_e('Live Start Time', 'videohub360-theme'); ?>
-                    </label>
-                    <input 
-                        type="datetime-local" 
-                        id="vh360_live_start_time" 
-                        name="vh360_live_start_time" 
-                        class="vh360-input"
-                    >
-                    <p class="vh360-form-help">
-                        <?php esc_html_e('Set the date and time when the livestream started (for "Started streaming X minutes ago" display).', 'videohub360-theme'); ?>
-                    </p>
-                </div>
-
-                <div class="vh360-form-field">
-                    <label for="vh360_offline_message" class="vh360-form-label">
-                        <?php esc_html_e('Offline Message or Placeholder', 'videohub360-theme'); ?>
-                    </label>
-                    <textarea 
-                        id="vh360_offline_message" 
-                        name="vh360_offline_message" 
-                        class="vh360-textarea" 
-                        rows="3"
-                        placeholder="<?php esc_attr_e('Stream will begin shortly...', 'videohub360-theme'); ?>"
-                    ></textarea>
-                    <p class="vh360-form-help">
-                        <?php esc_html_e('Shown when livestream status is "No" or when livestream is offline. You can use text, HTML, or an image tag.', 'videohub360-theme'); ?>
-                    </p>
-                </div>
-
-                <div class="vh360-form-field">
-                    <label class="vh360-checkbox-label">
-                        <input 
-                            type="checkbox" 
-                            id="vh360_viewer_count" 
-                            name="vh360_viewer_count" 
-                            value="yes"
-                        >
-                        <span><?php esc_html_e('Show Viewer Count', 'videohub360-theme'); ?></span>
-                    </label>
-                </div>
-
-                <div class="vh360-form-field">
-                    <label class="vh360-checkbox-label">
-                        <input 
-                            type="checkbox" 
-                            id="vh360_chat_enabled" 
-                            name="vh360_chat_enabled" 
-                            value="yes"
-                        >
-                        <span><?php echo esc_html($vh360_create_labels['chat_enabled_label']); ?></span>
-                    </label>
-                    <p class="vh360-form-help">
-                        <?php esc_html_e('When checked, live chat will be available for this livestream regardless of global settings.', 'videohub360-theme'); ?>
-                    </p>
-                </div>
-
-                <div class="vh360-form-field">
-                    <label for="vh360_chat_placement" class="vh360-form-label">
-                        <?php esc_html_e('Chat Placement Override', 'videohub360-theme'); ?>
-                    </label>
-                    <select id="vh360_chat_placement" name="vh360_chat_placement" class="vh360-select">
-                        <option value=""><?php esc_html_e('Use Global Default', 'videohub360-theme'); ?></option>
-                        <option value="inline"><?php esc_html_e('Inline (replaces comments)', 'videohub360-theme'); ?></option>
-                        <option value="popup"><?php esc_html_e('Popup (button opens overlay)', 'videohub360-theme'); ?></option>
-                        <option value="sidebar"><?php esc_html_e('Sidebar (YouTube-style)', 'videohub360-theme'); ?></option>
-                        <option value="off"><?php esc_html_e('Off (hide chat)', 'videohub360-theme'); ?></option>
-                    </select>
-                    <p class="vh360-form-help">
-                        <?php echo esc_html($vh360_create_labels['chat_placement_help']); ?>
-                    </p>
-                </div>
-
-                <div class="vh360-form-field">
-                    <label class="vh360-checkbox-label">
-                        <input 
-                            type="checkbox" 
-                            id="vh360_live_badge" 
-                            name="vh360_live_badge" 
-                            value="yes"
-                        >
-                        <span><?php esc_html_e('Show Live Badge', 'videohub360-theme'); ?></span>
-                    </label>
-                </div>
-
-                <div class="vh360-form-field">
-                    <label for="vh360_badge_text" class="vh360-form-label">
-                        <?php esc_html_e('Live Badge Text', 'videohub360-theme'); ?>
-                    </label>
-                    <input 
-                        type="text" 
-                        id="vh360_badge_text" 
-                        name="vh360_badge_text" 
-                        class="vh360-input"
-                        placeholder="<?php esc_attr_e('LIVE', 'videohub360-theme'); ?>"
-                    >
-                </div>
-
-                <div class="vh360-form-field">
-                    <label for="vh360_badge_color" class="vh360-form-label">
-                        <?php esc_html_e('Live Badge Color', 'videohub360-theme'); ?>
-                    </label>
-                    <input 
-                        type="color" 
-                        id="vh360_badge_color" 
-                        name="vh360_badge_color" 
-                        class="vh360-input"
-                        value="#e53935"
-                    >
-                </div>
-
-            </div>
-        </div>
-        <?php endif; ?>
 
         <!-- Taxonomy Section -->
         <div class="vh360-form-section">

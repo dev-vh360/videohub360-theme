@@ -40,7 +40,7 @@ function vh360_get_dashboard_tabs_registry( $user_id = null ) {
             'icon_svg' => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13h8V3H3v10zM13 21h8V11h-8v10zM13 3v6h8V3h-8zM3 21h8v-6H3v6z"/></svg>',
         ),
         'create-video' => array(
-            'label' => __( '+ Create', 'videohub360-theme' ),
+            'label' => __( '+ Upload', 'videohub360-theme' ),
             'label_callback' => null,
             'show_callback' => '__return_true',
             'icon_svg' => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>',
