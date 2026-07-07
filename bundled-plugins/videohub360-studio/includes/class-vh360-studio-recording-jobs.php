@@ -77,7 +77,7 @@ class VH360_Studio_Recording_Jobs {
             }
         }
 
-        foreach ( array( 'source_id', 'room_id', 'browser_session_id', 'videopress_guid', 'publitio_file_id', 'local_temp_path' ) as $key ) {
+        foreach ( array( 'source_id', 'room_id', 'browser_session_id', 'videopress_guid', 'publitio_file_id', 'provider_file_id', 'local_temp_path' ) as $key ) {
             if ( isset( $data[ $key ] ) ) {
                 $out[ $key ] = sanitize_text_field( wp_unslash( $data[ $key ] ) );
             }
@@ -87,7 +87,7 @@ class VH360_Studio_Recording_Jobs {
             $out['mime_type'] = sanitize_mime_type( wp_unslash( $data['mime_type'] ) );
         }
 
-        foreach ( array( 'playback_url', 'poster_url' ) as $key ) {
+        foreach ( array( 'playback_url', 'poster_url', 'provider_embed_url' ) as $key ) {
             if ( isset( $data[ $key ] ) ) {
                 $out[ $key ] = esc_url_raw( wp_unslash( $data[ $key ] ) );
             }
@@ -95,6 +95,15 @@ class VH360_Studio_Recording_Jobs {
 
         if ( isset( $data['error_message'] ) ) {
             $out['error_message'] = sanitize_textarea_field( wp_unslash( $data['error_message'] ) );
+        }
+        if ( isset( $data['provider_metadata'] ) ) {
+            $metadata = wp_unslash( $data['provider_metadata'] );
+            if ( is_array( $metadata ) ) {
+                $out['provider_metadata'] = wp_json_encode( $metadata );
+            } else {
+                json_decode( (string) $metadata, true );
+                $out['provider_metadata'] = JSON_ERROR_NONE === json_last_error() ? (string) $metadata : sanitize_textarea_field( $metadata );
+            }
         }
 
         foreach ( array( 'live_video_id', 'duration_seconds', 'file_size', 'wp_attachment_id', 'retry_count', 'expected_chunks', 'received_chunks', 'replay_video_id' ) as $key ) {

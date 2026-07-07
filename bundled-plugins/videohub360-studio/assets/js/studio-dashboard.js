@@ -77,6 +77,8 @@
         publishPollTimer: null,
         publishPollAttempts: 0,
         publishStatusCheckInFlight: false,
+        publishInFlight: false,
+        currentPublishResult: null,
         directUploadInProgress: false,
         stopFailed: false,
         serverStopConfirmed: false,
@@ -2655,17 +2657,23 @@
         return Boolean(result && (result.error_message || 'failed' === status || 'publish_failed' === result.publish_provider_status || 'prepare_failed' === result.publish_provider_status || 'replay_post_failed' === result.publish_provider_status));
     }
 
+    function hasProviderProcessingReference(result) {
+        const providerStatus = String((result && (result.provider_status || result.publish_provider_status || result.status || '')) || '').toLowerCase();
+        return Boolean(result && (result.provider_file_id || result.bunny_video_id || providerStatus.indexOf('processing') !== -1));
+    }
+
     function updatePublishingButtons() {
         const directReady = isPublitioDirectMode() && state.recordingStoppedAt && state.serverStopConfirmed && state.directUploadParts.size && state.directUploadAvailable && state.currentJobStatus !== 'ready';
-        const canPublish = Boolean(state.activeJobId) && (state.currentJobStatus === 'processing' || directReady);
+        const providerProcessing = hasProviderProcessingReference(state.currentPublishResult);
+        const canPublish = Boolean(state.activeJobId) && !state.publishInFlight && !providerProcessing && (state.currentJobStatus === 'processing' || directReady);
         if (els.publishReplay) {
             els.publishReplay.hidden = !canPublish;
-            els.publishReplay.disabled = !canPublish;
+            els.publishReplay.disabled = !canPublish || state.publishInFlight;
         }
         if (els.checkReplayStatus) {
-            const canCheck = Boolean(state.activeJobId);
+            const canCheck = Boolean(state.activeJobId) && (providerProcessing || state.currentJobStatus === 'processing' || state.currentJobStatus === 'ready');
             els.checkReplayStatus.hidden = !canCheck;
-            els.checkReplayStatus.disabled = !canCheck || state.publishStatusCheckInFlight;
+            els.checkReplayStatus.disabled = !canCheck || state.publishStatusCheckInFlight || state.publishInFlight;
         }
     }
 
@@ -2817,11 +2825,12 @@
     }
 
     async function publishReplay() {
-        if (!state.activeJobId) {
+        if (!state.activeJobId || state.publishInFlight) {
             return;
         }
+        state.publishInFlight = true;
         if (els.publishReplay) { els.publishReplay.disabled = true; }
-        setPublishingStatus(strings.publishingReplay, 'info');
+        setPublishingStatus(strings.publishingReplay || 'Publishing replay…', 'info');
         try {
             let result;
             if (canDirectUploadToPublitio()) {
@@ -2834,6 +2843,7 @@
             } else {
                 result = await publishReplayViaServerRelay();
             }
+            state.currentPublishResult = result;
             const rawPlaybackUrl = result.playback_url || '';
             const publicReplayUrl = resolvePublicReplayUrl(result);
             const published = hasPublicReplay(result);
@@ -2846,7 +2856,7 @@
             } else if (failed) {
                 setPublishingStatus(result.error_message || result.message || strings.publishFailed, 'error');
             } else {
-                setPublishingStatus(result.message || strings.publishProcessing || 'Replay uploaded. Waiting for replay processing.', 'info');
+                setPublishingStatus(result.message || strings.publishProcessing || 'Replay processing…', 'info');
             }
             appendRecentJob(Object.assign({}, result, { id: result.id || result.job_id || state.activeJobId, status: state.currentJobStatus, replay_url: publicReplayUrl, playback_url: rawPlaybackUrl }));
             if (shouldPollPublishStatus(result)) {
@@ -2857,6 +2867,7 @@
             setPublishingStatus(error.message || strings.publishFailed, 'error');
         } finally {
             state.directUploadInProgress = false;
+            state.publishInFlight = false;
             updatePublishingButtons();
         }
     }
@@ -2875,6 +2886,7 @@
         }
         try {
             const result = await api('/jobs/' + state.activeJobId + '/publishing/status', { method: 'GET' });
+            state.currentPublishResult = result;
             const rawPlaybackUrl = result.playback_url || '';
             const publicReplayUrl = resolvePublicReplayUrl(result);
             const published = hasPublicReplay(result);
@@ -2887,7 +2899,7 @@
             } else if (isPublishFailure(result)) {
                 setPublishingStatus(result.error_message || result.message || strings.publishFailed, 'error');
             } else if (shouldPollPublishStatus(result)) {
-                setPublishingStatus(result.message || strings.publishProcessing || 'Replay uploaded. Waiting for replay processing.', 'info');
+                setPublishingStatus(result.message || strings.publishProcessing || 'Replay processing…', 'info');
             } else {
                 setPublishingStatus(result.error_message || result.message || result.publish_provider_status || result.status || 'pending', 'info');
             }

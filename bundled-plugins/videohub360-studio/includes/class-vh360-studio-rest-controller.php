@@ -781,6 +781,10 @@ class VH360_Studio_REST_Controller {
             return 'publitio';
         }
 
+        if ( $this->storage_provider_is_available( $registry, 'bunny_stream' ) ) {
+            return 'bunny_stream';
+        }
+
         if ( $this->storage_provider_is_available( $registry, 'local_media' ) ) {
             return 'local_media';
         }
@@ -1097,7 +1101,24 @@ class VH360_Studio_REST_Controller {
     public function publish_recording( WP_REST_Request $request ) {
         $job = $this->chunks->validate_job_ownership( absint( $request['id'] ), get_current_user_id() );
         if ( is_wp_error( $job ) ) { return $job; }
-        $published = $this->publisher->publish( $job );
+        $lock_key = 'vh360_studio_publish_lock_' . absint( $job['id'] );
+        if ( get_transient( $lock_key ) ) {
+            $status = $this->publisher->status( $job );
+            if ( is_wp_error( $status ) ) {
+                $status = array();
+            }
+            $status['status']                  = $job['status'];
+            $status['job_status']              = $job['status'];
+            $status['publish_provider_status'] = 'publishing';
+            $status['message']                 = __( 'Replay publishing is already in progress.', 'videohub360-studio' );
+            return rest_ensure_response( $this->prepare_publish_response( $status, $job ) );
+        }
+        set_transient( $lock_key, array( 'user_id' => get_current_user_id(), 'started_at' => time() ), (int) apply_filters( 'vh360_studio_publish_lock_ttl', 2 * HOUR_IN_SECONDS, $job ) );
+        try {
+            $published = $this->publisher->publish( $job );
+        } finally {
+            delete_transient( $lock_key );
+        }
         if ( is_wp_error( $published ) ) { return $published; }
         return rest_ensure_response( $this->prepare_publish_response( $published, $job ) );
     }
