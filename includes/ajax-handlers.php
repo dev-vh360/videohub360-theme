@@ -944,7 +944,7 @@ class VH360_Ajax_Handlers {
         
         // No validation for video source - matching backend behavior
         // Backend save_meta_boxes() method does not validate video_url or custom_html
-        // This allows flexibility for all content types including Agora livestreams
+        // This mirrors backend behavior by allowing regular URL, upload, or embed video sources.
         
         // Determine post status. Preserve an existing post's verified status when
         // frontend JavaScript fails to submit a valid action during edit mode.
@@ -1020,8 +1020,10 @@ class VH360_Ajax_Handlers {
             update_post_meta($post_id, '_vh360_is_live', 'no');
         }
         
-        // Ensure context is always 'default' for frontend created videos (not live_room)
-        update_post_meta($post_id, '_vh360_context', 'default');
+        // Ensure context is set only for newly-created frontend videos; edits preserve existing contexts.
+        if (!$edit_mode) {
+            update_post_meta($post_id, '_vh360_context', 'default');
+        }
         
         // Handle taxonomies
         // Categories

@@ -56,14 +56,6 @@ function vh360_video_upload_settings_init() {
     );
 
     add_settings_field(
-        'show_livestream_settings',
-        __('Show Livestream Settings', 'videohub360-theme'),
-        'vh360_create_form_show_livestream_render',
-        'vh360_video_upload',
-        'vh360_create_form_sections'
-    );
-
-    add_settings_field(
         'show_ad_settings',
         __('Show Ad Settings', 'videohub360-theme'),
         'vh360_create_form_show_ads_render',
@@ -75,14 +67,6 @@ function vh360_video_upload_settings_init() {
         'show_advanced_settings',
         __('Show Advanced Settings', 'videohub360-theme'),
         'vh360_create_form_show_advanced_render',
-        'vh360_video_upload',
-        'vh360_create_form_sections'
-    );
-
-    add_settings_field(
-        'hide_livestream_in_course_mode',
-        __('Automatically Hide Livestream Settings in Course Mode', 'videohub360-theme'),
-        'vh360_create_form_hide_livestream_course_render',
         'vh360_video_upload',
         'vh360_create_form_sections'
     );
@@ -126,10 +110,8 @@ add_action('admin_init', 'vh360_video_upload_settings_init');
  */
 function vh360_create_form_sanitize_options($input) {
     return array(
-        'show_livestream_settings' => !empty($input['show_livestream_settings']) ? 1 : 0,
         'show_ad_settings' => !empty($input['show_ad_settings']) ? 1 : 0,
         'show_advanced_settings' => !empty($input['show_advanced_settings']) ? 1 : 0,
-        'hide_livestream_in_course_mode' => !empty($input['hide_livestream_in_course_mode']) ? 1 : 0,
     );
 }
 
@@ -138,17 +120,7 @@ function vh360_create_form_sanitize_options($input) {
  */
 function vh360_create_form_sections_callback() {
     ?>
-    <p><?php esc_html_e('Control which optional sections appear in the frontend Create Video / Lesson form.', 'videohub360-theme'); ?></p>
-    <?php
-}
-
-function vh360_create_form_show_livestream_render() {
-    $options = vh360_get_create_form_options();
-    ?>
-    <label>
-        <input type="checkbox" name="vh360_create_form_options[show_livestream_settings]" value="1" <?php checked($options['show_livestream_settings'], 1); ?>>
-        <?php esc_html_e('Display the Livestream Settings section in the frontend Create form.', 'videohub360-theme'); ?>
-    </label>
+    <p><?php esc_html_e('Control whether Ad Settings and Advanced Settings appear in the frontend Create Video / Lesson form.', 'videohub360-theme'); ?></p>
     <?php
 }
 
@@ -168,16 +140,6 @@ function vh360_create_form_show_advanced_render() {
     <label>
         <input type="checkbox" name="vh360_create_form_options[show_advanced_settings]" value="1" <?php checked($options['show_advanced_settings'], 1); ?>>
         <?php esc_html_e('Display the Advanced Settings section in the frontend Create form.', 'videohub360-theme'); ?>
-    </label>
-    <?php
-}
-
-function vh360_create_form_hide_livestream_course_render() {
-    $options = vh360_get_create_form_options();
-    ?>
-    <label>
-        <input type="checkbox" name="vh360_create_form_options[hide_livestream_in_course_mode]" value="1" <?php checked($options['hide_livestream_in_course_mode'], 1); ?>>
-        <?php esc_html_e('When Course Mode is active, hide Livestream Settings from the frontend Create form so instructors see a cleaner lesson creation workflow.', 'videohub360-theme'); ?>
     </label>
     <?php
 }
