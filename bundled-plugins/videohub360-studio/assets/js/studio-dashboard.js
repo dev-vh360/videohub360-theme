@@ -70,6 +70,7 @@
         mediaSourceModalTrigger: null,
         publishPollTimer: null,
         publishPollAttempts: 0,
+        publishStatusCheckInFlight: false,
         directUploadInProgress: false,
         stopFailed: false,
         serverStopConfirmed: false,
@@ -144,6 +145,7 @@
         recordingSummaryStatus: root.querySelector('[data-recording-summary-status]'),
         replayRawUrl: root.querySelector('[data-replay-raw-url]'),
         publishReplay: root.querySelector('[data-publish-replay]'),
+        checkReplayStatus: root.querySelector('[data-check-replay-status]'),
         publishingStatus: root.querySelector('[data-publishing-status]'),
         replayLinkWrap: root.querySelector('[data-replay-link-wrap]'),
         replayLink: root.querySelector('[data-replay-link]'),
@@ -2510,9 +2512,6 @@
     }
 
     function renderReplayLink(url) {
-        if (els.replayRawUrl) {
-            els.replayRawUrl.textContent = url || '—';
-        }
         if (!els.replayLink || !els.replayLinkWrap) {
             return;
         }
@@ -2526,12 +2525,44 @@
         els.replayLinkWrap.hidden = false;
     }
 
+    function renderReplayRawUrl(url) {
+        if (els.replayRawUrl) {
+            els.replayRawUrl.textContent = url || '—';
+        }
+    }
+
+    function normalizePublishStatus(result) {
+        return String((result && (result.job_status || result.status || result.publish_provider_status || '')) || '').toLowerCase();
+    }
+
+    function hasPublicReplay(result) {
+        const status = normalizePublishStatus(result);
+        return Boolean(result && (result.replay_url || result.replay_video_id || 'ready' === status));
+    }
+
+    function resolvePublicReplayUrl(result) {
+        if (!hasPublicReplay(result)) {
+            return '';
+        }
+        return result.replay_url || result.permalink || '';
+    }
+
+    function isPublishFailure(result) {
+        const status = normalizePublishStatus(result);
+        return Boolean(result && (result.error_message || 'failed' === status || 'publish_failed' === result.publish_provider_status || 'prepare_failed' === result.publish_provider_status || 'replay_post_failed' === result.publish_provider_status));
+    }
+
     function updatePublishingButtons() {
         const directReady = isPublitioDirectMode() && state.recordingStoppedAt && state.serverStopConfirmed && state.directUploadParts.size && state.directUploadAvailable && state.currentJobStatus !== 'ready';
         const canPublish = Boolean(state.activeJobId) && (state.currentJobStatus === 'processing' || directReady);
         if (els.publishReplay) {
             els.publishReplay.hidden = !canPublish;
             els.publishReplay.disabled = !canPublish;
+        }
+        if (els.checkReplayStatus) {
+            const canCheck = Boolean(state.activeJobId);
+            els.checkReplayStatus.hidden = !canCheck;
+            els.checkReplayStatus.disabled = !canCheck || state.publishStatusCheckInFlight;
         }
     }
 
@@ -2556,12 +2587,24 @@
         const maxAttempts = 24;
         const poll = async () => {
             if (!state.activeJobId || state.publishPollAttempts >= maxAttempts) {
+                if (state.publishPollAttempts >= maxAttempts) {
+                    setPublishingStatus(strings.publishPollingTimeout || 'Replay is still processing. You can check status again later.', 'info');
+                }
                 stopPublishPolling();
                 return;
             }
             state.publishPollAttempts += 1;
             const result = await checkPublishingStatus(true);
+            if (result && 'busy' === result.status) {
+                state.publishPollTimer = window.setTimeout(poll, 5000);
+                return;
+            }
             if (result && shouldPollPublishStatus(result)) {
+                if (state.publishPollAttempts >= maxAttempts) {
+                    setPublishingStatus(strings.publishPollingTimeout || 'Replay is still processing. You can check status again later.', 'info');
+                    stopPublishPolling();
+                    return;
+                }
                 state.publishPollTimer = window.setTimeout(poll, 5000);
             } else {
                 stopPublishPolling();
@@ -2685,11 +2728,21 @@
             } else {
                 result = await publishReplayViaServerRelay();
             }
-            state.currentJobStatus = result.job_status || 'ready';
-            const replayUrl = result.replay_url || result.playback_url || '';
-            setPublishingStatus(replayUrl ? strings.publishComplete : (result.message || strings.publishProcessing || 'Replay uploaded to Publitio. Waiting for processing.'), replayUrl ? 'success' : 'info');
-            renderReplayLink(replayUrl);
-            appendRecentJob(Object.assign({}, result, { id: result.id || result.job_id || state.activeJobId, status: state.currentJobStatus, replay_url: replayUrl || result.replay_url || result.playback_url || '' }));
+            const rawPlaybackUrl = result.playback_url || '';
+            const publicReplayUrl = resolvePublicReplayUrl(result);
+            const published = hasPublicReplay(result);
+            const failed = isPublishFailure(result);
+            state.currentJobStatus = published ? 'ready' : (failed ? 'failed' : (result.job_status || result.status || result.publish_provider_status || state.currentJobStatus));
+            renderReplayRawUrl(rawPlaybackUrl);
+            renderReplayLink(publicReplayUrl);
+            if (published) {
+                setPublishingStatus(strings.publishComplete, 'success');
+            } else if (failed) {
+                setPublishingStatus(result.error_message || result.message || strings.publishFailed, 'error');
+            } else {
+                setPublishingStatus(result.message || strings.publishProcessing || 'Replay uploaded to Publitio. Waiting for processing.', 'info');
+            }
+            appendRecentJob(Object.assign({}, result, { id: result.id || result.job_id || state.activeJobId, status: state.currentJobStatus, replay_url: publicReplayUrl, playback_url: rawPlaybackUrl }));
             if (shouldPollPublishStatus(result)) {
                 startPublishPolling();
             }
@@ -2705,32 +2758,49 @@
         if (!state.activeJobId) {
             return null;
         }
+        if (state.publishStatusCheckInFlight) {
+            return { status: 'busy' };
+        }
+        state.publishStatusCheckInFlight = true;
+        updatePublishingButtons();
         if (!isAutomatic) {
             setPublishingStatus(strings.publishStatusChecking, 'info');
         }
         try {
             const result = await api('/jobs/' + state.activeJobId + '/publishing/status', { method: 'GET' });
-            state.currentJobStatus = result.job_status || state.currentJobStatus;
-            const replayUrl = result.replay_url || result.playback_url || '';
-            renderReplayLink(replayUrl);
-            if (replayUrl || result.replay_video_id) {
+            const rawPlaybackUrl = result.playback_url || '';
+            const publicReplayUrl = resolvePublicReplayUrl(result);
+            const published = hasPublicReplay(result);
+            state.currentJobStatus = published ? 'ready' : (isPublishFailure(result) ? 'failed' : (result.job_status || result.status || result.publish_provider_status || state.currentJobStatus));
+            renderReplayRawUrl(rawPlaybackUrl);
+            renderReplayLink(publicReplayUrl);
+            if (published) {
                 setPublishingStatus(strings.publishComplete, 'success');
-                appendRecentJob(Object.assign({}, result, { id: result.id || result.job_id || state.activeJobId, status: result.job_status || 'ready', replay_url: replayUrl || result.replay_url || result.playback_url || '' }));
+                appendRecentJob(Object.assign({}, result, { id: result.id || result.job_id || state.activeJobId, status: 'ready', replay_url: publicReplayUrl, playback_url: rawPlaybackUrl }));
+            } else if (isPublishFailure(result)) {
+                setPublishingStatus(result.error_message || result.message || strings.publishFailed, 'error');
             } else if (shouldPollPublishStatus(result)) {
-                setPublishingStatus(strings.publishProcessing || 'Replay uploaded to Publitio. Waiting for processing.', 'info');
-            } else if (result.status === 'failed' || result.publish_provider_status === 'publish_failed') {
-                setPublishingStatus(strings.publishFailed, 'error');
+                setPublishingStatus(result.message || strings.publishProcessing || 'Replay uploaded to Publitio. Waiting for processing.', 'info');
             } else {
-                setPublishingStatus(result.message || result.publish_provider_status || result.status || 'pending', 'info');
+                setPublishingStatus(result.error_message || result.message || result.publish_provider_status || result.status || 'pending', 'info');
             }
             updatePublishingButtons();
             return result;
         } catch (error) {
-            stopPublishPolling();
             setPublishingStatus(error.message || strings.publishFailed, 'error');
             updatePublishingButtons();
             return { status: 'failed' };
+        } finally {
+            state.publishStatusCheckInFlight = false;
+            updatePublishingButtons();
         }
+    }
+
+    async function checkReplayStatus() {
+        if (!state.activeJobId) {
+            return null;
+        }
+        return checkPublishingStatus(false);
     }
 
     function startTimer() {
@@ -2826,7 +2896,7 @@
         if (job.error_message || job.status === 'failed') {
             return 'Needs attention';
         }
-        if (job.replay_video_id || job.replay_url || job.playback_url) {
+        if (job.replay_video_id || job.replay_url || 'ready' === String(job.status || job.job_status || '').toLowerCase()) {
             return 'Published';
         }
         const status = job.status || job.job_status || '';
@@ -2906,7 +2976,7 @@
             return;
         }
         const rowId = String(job.id || '');
-        const replayUrl = job.replay_url || job.playback_url || job.permalink || '';
+        const replayUrl = job.replay_url || job.permalink || '';
 
         if (els.recentReplaysBody) {
             let row = findJobRow(els.recentReplaysBody, rowId) || document.createElement('tr');
@@ -2938,9 +3008,9 @@
             if (rowId) {
                 row.dataset.jobId = rowId;
             }
-            const replayCell = job.replay_video_id
-                ? (replayUrl ? '<a href="' + escapeHtml(replayUrl) + '">' + escapeHtml(String(job.replay_video_id)) + '</a>' : escapeHtml(String(job.replay_video_id)))
-                : '—';
+            const replayCell = replayUrl
+                ? '<a href="' + escapeHtml(replayUrl) + '">' + escapeHtml(job.replay_video_id ? String(job.replay_video_id) : 'Open replay') + '</a>'
+                : (job.replay_video_id && 'ready' === String(job.status || job.job_status || '').toLowerCase() ? escapeHtml(String(job.replay_video_id)) : '—');
             row.innerHTML = '<td>' + escapeHtml(String(job.id || '')) + '</td>' +
                 '<td>' + escapeHtml(job.room_id || '') + '</td>' +
                 '<td>' + escapeHtml(job.status || job.job_status || '') + '</td>' +
@@ -3528,6 +3598,7 @@
         if (els.retryChunks) { els.retryChunks.addEventListener('click', retryFailedChunks); }
         if (els.finalizeRecording) { els.finalizeRecording.addEventListener('click', finalizeRecording); }
         if (els.publishReplay) { els.publishReplay.addEventListener('click', publishReplay); }
+        if (els.checkReplayStatus) { els.checkReplayStatus.addEventListener('click', checkReplayStatus); }
         if (els.broadcastMode) { els.broadcastMode.addEventListener('change', updateBroadcastRules); }
         if (els.selectCoverImage) { els.selectCoverImage.addEventListener('click', selectCoverImage); }
         if (els.coverImageFile) { els.coverImageFile.addEventListener('change', uploadSelectedCoverImage); }

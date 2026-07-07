@@ -110,6 +110,7 @@ class VH360_Studio_Assets {
                 'publishStatusChecking' => __( 'Checking publishing status…', 'videohub360-studio' ),
                 'publishComplete'       => __( 'Replay published.', 'videohub360-studio' ),
                 'publishProcessing'     => __( 'Replay uploaded to Publitio. Waiting for processing.', 'videohub360-studio' ),
+                'publishPollingTimeout'  => __( 'Replay is still processing. You can check status again later.', 'videohub360-studio' ),
                 'publishFailed'         => __( 'Replay publishing failed. Please try again.', 'videohub360-studio' ),
                 'publitioDirectUploading' => __( 'Uploading directly to Publitio…', 'videohub360-studio' ),
                 'publitioDirectVerifying' => __( 'Publitio upload complete. Verifying replay…', 'videohub360-studio' ),

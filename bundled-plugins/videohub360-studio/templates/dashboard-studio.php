@@ -45,11 +45,23 @@ $format_replay_created_at = static function( $value ) {
     }
     return wp_date( 'M j, Y', $timestamp );
 };
+$public_replay_url = static function( $job ) {
+    if ( ! empty( $job['replay_url'] ) ) {
+        return $job['replay_url'];
+    }
+    if ( ! empty( $job['permalink'] ) ) {
+        return $job['permalink'];
+    }
+    if ( ! empty( $job['replay_video_id'] ) ) {
+        return get_permalink( absint( $job['replay_video_id'] ) );
+    }
+    return '';
+};
 $friendly_job_status = static function( $job ) {
     if ( ! empty( $job['error_message'] ) || ( isset( $job['status'] ) && 'failed' === $job['status'] ) ) {
         return __( 'Needs attention', 'videohub360-studio' );
     }
-    if ( ! empty( $job['replay_video_id'] ) || ! empty( $job['replay_url'] ) ) {
+    if ( ! empty( $job['replay_video_id'] ) || ! empty( $job['replay_url'] ) || ( isset( $job['status'] ) && 'ready' === $job['status'] ) ) {
         return __( 'Published', 'videohub360-studio' );
     }
     $labels = array(
@@ -323,6 +335,7 @@ $friendly_job_status = static function( $job ) {
                     <div class="vh360-studio-job-result" aria-live="polite" data-recording-status></div>
                     <div class="vh360-studio-actions">
                         <button type="button" class="vh360-studio-button vh360-studio-button--primary" data-publish-replay hidden disabled><?php esc_html_e( 'Publish replay', 'videohub360-studio' ); ?></button>
+                        <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-check-replay-status hidden disabled><?php esc_html_e( 'Check replay status', 'videohub360-studio' ); ?></button>
                     </div>
                     <div class="vh360-studio-publish-status" aria-live="polite" data-publishing-status></div>
                     <p class="vh360-studio-replay-link" data-replay-link-wrap hidden><strong><?php esc_html_e( 'Replay published.', 'videohub360-studio' ); ?></strong> <a href="#" class="vh360-studio-button vh360-studio-button--secondary" data-replay-link target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Open replay', 'videohub360-studio' ); ?></a></p>
@@ -379,7 +392,7 @@ $friendly_job_status = static function( $job ) {
                 <thead><tr><th><?php esc_html_e( 'Recording', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Status', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Created', 'videohub360-studio' ); ?></th><th><?php esc_html_e( 'Replay', 'videohub360-studio' ); ?></th></tr></thead>
                 <tbody data-recent-replays-body>
                     <?php foreach ( $jobs as $job ) : ?>
-                        <?php $replay_url = ! empty( $job['replay_video_id'] ) ? get_permalink( absint( $job['replay_video_id'] ) ) : ''; ?>
+                <?php $replay_url = $public_replay_url( $job ); ?>
                         <tr data-job-id="<?php echo esc_attr( $job['id'] ); ?>"><td><?php echo esc_html( $display_job_title( $job ) ); ?></td><td><?php echo esc_html( $friendly_job_status( $job ) ); ?></td><td><?php echo esc_html( $format_replay_created_at( $job['created_at'] ) ); ?></td><td><?php if ( $replay_url ) : ?><a href="<?php echo esc_url( $replay_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Open replay', 'videohub360-studio' ); ?></a><?php else : ?><?php echo esc_html( '—' ); ?><?php endif; ?></td></tr>
                     <?php endforeach; ?>
                 </tbody>
