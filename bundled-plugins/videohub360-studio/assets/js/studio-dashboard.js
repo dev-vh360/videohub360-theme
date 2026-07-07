@@ -2791,7 +2791,7 @@
             } else if (failed) {
                 setPublishingStatus(result.error_message || result.message || strings.publishFailed, 'error');
             } else {
-                setPublishingStatus(result.message || strings.publishProcessing || 'Replay uploaded to Publitio. Waiting for processing.', 'info');
+                setPublishingStatus(result.message || strings.publishProcessing || 'Replay uploaded. Waiting for provider processing.', 'info');
             }
             appendRecentJob(Object.assign({}, result, { id: result.id || result.job_id || state.activeJobId, status: state.currentJobStatus, replay_url: publicReplayUrl, playback_url: rawPlaybackUrl }));
             if (shouldPollPublishStatus(result)) {
@@ -2832,7 +2832,7 @@
             } else if (isPublishFailure(result)) {
                 setPublishingStatus(result.error_message || result.message || strings.publishFailed, 'error');
             } else if (shouldPollPublishStatus(result)) {
-                setPublishingStatus(result.message || strings.publishProcessing || 'Replay uploaded to Publitio. Waiting for processing.', 'info');
+                setPublishingStatus(result.message || strings.publishProcessing || 'Replay uploaded. Waiting for provider processing.', 'info');
             } else {
                 setPublishingStatus(result.error_message || result.message || result.publish_provider_status || result.status || 'pending', 'info');
             }
