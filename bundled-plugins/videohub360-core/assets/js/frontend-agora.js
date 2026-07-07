@@ -3464,7 +3464,7 @@ window.initializeAgoraPlayer = function(config) {
      */
     async function rejoinWithHostToken(tokenResponse) {
         if (!client || !tokenResponse || !tokenResponse.token) {
-            throw new Error('Missing Agora client or host token for rejoin.');
+            throw new Error('Missing live connection session or presenter authorization for rejoin.');
         }
 
         // Stop and release any existing local tracks before leaving.
@@ -3984,7 +3984,7 @@ window.initializeAgoraPlayer = function(config) {
         const normalizedUid = Number(uid);
 
         if (!Number.isInteger(normalizedUid) || normalizedUid <= 0) {
-            throw new Error('Invalid Agora UID for token request');
+            throw new Error('Invalid livestream session identity for token request.');
         }
 
         window.vh360Log('VideoHub360: Requesting token with role:', role);
@@ -4394,7 +4394,7 @@ window.initializeAgoraPlayer = function(config) {
             const normalizedUid = Number(config.uid);
 
             if (!Number.isInteger(normalizedUid) || normalizedUid <= 0) {
-                throw new Error('Missing or invalid Agora UID in livestream config');
+                throw new Error('Missing or invalid livestream session identity.');
             }
 
             window.vh360Log('VideoHub360: Using Agora UID for join/token flow:', normalizedUid);
@@ -4425,7 +4425,7 @@ window.initializeAgoraPlayer = function(config) {
 
             // Fail closed: if tokens are required and none was issued, stop the join.
             if (config.requireAgoraTokens && !token) {
-                throw new Error('Unable to join livestream because a valid Agora token was not issued.');
+                throw new Error('Unable to join livestream because valid live connection authorization was not issued.');
             }
 
             // The server is the authority on the approved role.
