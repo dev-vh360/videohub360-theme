@@ -58,21 +58,35 @@ class VH360_Studio_Bunny_Stream_Provider implements VH360_Studio_Replay_Storage_
         $client = $this->client();
         $existing_video_id = $this->existing_video_id( $job );
         if ( $existing_video_id ) {
+            if ( true === $this->existing_upload_completed( $job ) ) {
+                $video = $client->get_video( $existing_video_id );
+                if ( is_wp_error( $video ) ) { return $video; }
+                return $this->result_from_video( is_array( $video ) ? $video : array(), $recording, __( 'Replay is already processing in cloud replay storage.', 'videohub360-studio' ), $existing_video_id );
+            }
+            $attempted_at = current_time( 'mysql' );
+            $this->persist_video_metadata( $job, $this->with_upload_metadata( $this->result_from_video( array(), $recording, __( 'Replay is already processing in cloud replay storage.', 'videohub360-studio' ), $existing_video_id ), false, $attempted_at, '' ) );
+            $uploaded = $client->upload_video( $existing_video_id, $recording['path'], $recording['mime_type'] );
+            if ( is_wp_error( $uploaded ) ) { return new WP_Error( 'vh360_studio_bunny_stream_upload_failed', sprintf( __( 'Cloud replay storage rejected the upload: %s', 'videohub360-studio' ), $uploaded->get_error_message() ), $uploaded->get_error_data() ); }
             $video = $client->get_video( $existing_video_id );
-            if ( is_wp_error( $video ) ) { return $video; }
-            return $this->result_from_video( is_array( $video ) ? $video : array(), $recording, __( 'Replay is already processing in cloud replay storage.', 'videohub360-studio' ), $existing_video_id );
+            if ( is_wp_error( $video ) ) { $video = array(); }
+            $result = $this->with_upload_metadata( $this->result_from_video( is_array( $video ) ? $video : array(), $recording, __( 'Recording uploaded to cloud replay storage.', 'videohub360-studio' ), $existing_video_id ), true, $attempted_at, current_time( 'mysql' ) );
+            $this->persist_video_metadata( $job, $result );
+            return $result;
         }
         $created = $client->create_video( $this->title( $job ) );
         if ( is_wp_error( $created ) ) { return new WP_Error( 'vh360_studio_bunny_stream_create_failed', $created->get_error_message(), $created->get_error_data() ); }
         $video_id = ! empty( $created['guid'] ) ? sanitize_text_field( $created['guid'] ) : '';
         if ( ! $video_id ) { return new WP_Error( 'vh360_studio_bunny_stream_create_failed', __( 'Cloud replay storage returned an invalid response.', 'videohub360-studio' ), array( 'status' => 502 ) ); }
-        $created_result = $this->result_from_video( $created, $recording, __( 'Replay is already processing in cloud replay storage.', 'videohub360-studio' ), $video_id );
-        $this->persist_created_video( $job, $created_result );
+        $attempted_at = current_time( 'mysql' );
+        $created_result = $this->with_upload_metadata( $this->result_from_video( $created, $recording, __( 'Replay is already processing in cloud replay storage.', 'videohub360-studio' ), $video_id ), false, $attempted_at, '' );
+        $this->persist_video_metadata( $job, $created_result );
         $uploaded = $client->upload_video( $video_id, $recording['path'], $recording['mime_type'] );
         if ( is_wp_error( $uploaded ) ) { return new WP_Error( 'vh360_studio_bunny_stream_upload_failed', sprintf( __( 'Cloud replay storage rejected the upload: %s', 'videohub360-studio' ), $uploaded->get_error_message() ), $uploaded->get_error_data() ); }
         $video = $client->get_video( $video_id );
         if ( is_wp_error( $video ) ) { $video = $created; }
-        return $this->result_from_video( is_array( $video ) ? $video : $created, $recording, __( 'Recording uploaded to cloud replay storage.', 'videohub360-studio' ), $video_id );
+        $result = $this->with_upload_metadata( $this->result_from_video( is_array( $video ) ? $video : $created, $recording, __( 'Recording uploaded to cloud replay storage.', 'videohub360-studio' ), $video_id ), true, $attempted_at, current_time( 'mysql' ) );
+        $this->persist_video_metadata( $job, $result );
+        return $result;
     }
 
     public function get_publish_status( array $job ) {
@@ -103,7 +117,29 @@ class VH360_Studio_Bunny_Stream_Provider implements VH360_Studio_Replay_Storage_
         return '';
     }
 
-    private function persist_created_video( array $job, array $result ) {
+    private function existing_upload_completed( array $job ) {
+        $metadata = $this->provider_metadata( $job );
+        if ( array_key_exists( 'bunny_upload_completed', $metadata ) ) {
+            return rest_sanitize_boolean( $metadata['bunny_upload_completed'] );
+        }
+        return null;
+    }
+
+    private function provider_metadata( array $job ) {
+        if ( empty( $job['provider_metadata'] ) ) { return array(); }
+        $metadata = json_decode( (string) $job['provider_metadata'], true );
+        return is_array( $metadata ) ? $metadata : array();
+    }
+
+    private function with_upload_metadata( array $result, $completed, $attempted_at = '', $completed_at = '' ) {
+        $result['bunny_video_created']      = true;
+        $result['bunny_upload_completed']  = (bool) $completed;
+        $result['bunny_upload_attempted_at'] = $attempted_at ? sanitize_text_field( $attempted_at ) : current_time( 'mysql' );
+        $result['bunny_upload_completed_at'] = $completed ? ( $completed_at ? sanitize_text_field( $completed_at ) : current_time( 'mysql' ) ) : '';
+        return $result;
+    }
+
+    private function persist_video_metadata( array $job, array $result ) {
         if ( empty( $job['id'] ) || empty( $result['provider_file_id'] ) ) { return; }
         $jobs = new VH360_Studio_Recording_Jobs( VH360_Studio_Plugin::instance()->registry() );
         $jobs->update( absint( $job['id'] ), 0, array(

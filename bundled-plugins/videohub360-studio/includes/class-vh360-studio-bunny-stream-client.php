@@ -174,10 +174,4 @@ class VH360_Studio_Bunny_Stream_Client {
         return array_values( array_unique( array_intersect( array_filter( array_map( 'sanitize_text_field', $raw ) ), $allowed ) ) );
     }
 
-    private function custom_embed_hostname() {
-        $host = trim( (string) get_option( 'vh360_studio_bunny_stream_cdn_hostname', '' ) );
-        $host = preg_replace( '#^https?://#i', '', $host );
-        $host = strtok( $host, '/' );
-        return $host && preg_match( '/^[a-z0-9.-]+$/i', $host ) ? $host : '';
-    }
 }
