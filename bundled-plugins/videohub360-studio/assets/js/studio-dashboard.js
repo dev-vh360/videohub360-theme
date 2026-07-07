@@ -9,6 +9,7 @@
     const config = window.vh360StudioDashboard;
     const strings = config.strings || {};
     const supportLabels = config.supportLabels || {};
+    const CHUNK_UPLOAD_CONCURRENCY = 2;
     const state = {
         cameraStream: null,
         screenStream: null,
@@ -27,6 +28,8 @@
         currentStorageProvider: '',
         chunkIndex: 0,
         pendingUploads: new Set(),
+        uploadQueue: [],
+        activeUploadCount: 0,
         uploadedChunks: new Set(),
         failedChunks: new Map(),
         directUploadParts: new Map(),
@@ -2087,6 +2090,25 @@
         return state.recorder && state.recorder.state === 'recording';
     }
 
+    function isTerminalJobStatus(status) {
+        return ['ready', 'failed', 'cancelled'].indexOf(String(status || '').toLowerCase()) !== -1;
+    }
+
+    function hasUnsafeRecordingWork() {
+        const jobStatus = String(state.currentJobStatus || '').toLowerCase();
+        const hasPendingUploadWork = Boolean(state.pendingUploads.size || state.failedChunks.size);
+        const hasDirectUploadMemory = Boolean(state.activeJobId && state.directUploadParts.size && !isTerminalJobStatus(jobStatus));
+
+        return Boolean(
+            isRecordingActive() ||
+            state.finalizeInProgress ||
+            state.directUploadInProgress ||
+            ['stopping', 'uploading'].indexOf(jobStatus) !== -1 ||
+            (hasPendingUploadWork && !isTerminalJobStatus(jobStatus)) ||
+            hasDirectUploadMemory
+        );
+    }
+
     function isPublitioDirectMode() {
         const direct = config.publitioDirectUpload || {};
         return Boolean(
@@ -2138,6 +2160,8 @@
             state.uploadedChunks.clear();
             state.failedChunks.clear();
             state.pendingUploads.clear();
+            state.uploadQueue.length = 0;
+            state.activeUploadCount = 0;
             state.directUploadParts.clear();
             state.directUploadBytes = 0;
             state.directUploadAvailable = true;
@@ -2215,6 +2239,25 @@
         setRecordingStatus('Large recording data was split into smaller upload chunks.', 'info');
     }
 
+    function scheduleChunkUploads() {
+        if (!state.activeJobId) {
+            return;
+        }
+
+        while (state.activeUploadCount < CHUNK_UPLOAD_CONCURRENCY && state.uploadQueue.length) {
+            const task = state.uploadQueue.shift();
+            if (!task || !state.pendingUploads.has(task.index)) {
+                continue;
+            }
+
+            state.activeUploadCount += 1;
+            Promise.resolve(uploadChunk(task.blob, task.index)).catch(() => {}).finally(() => {
+                state.activeUploadCount = Math.max(0, state.activeUploadCount - 1);
+                scheduleChunkUploads();
+            });
+        }
+    }
+
     function handleRecordingBlob(blob) {
         if (isPublitioDirectMode()) {
             rememberDirectUploadPart(blob, state.chunkIndex++);
@@ -2227,7 +2270,8 @@
 
     function queueChunk(blob, index) {
         state.pendingUploads.add(index);
-        uploadChunk(blob, index).catch(() => {});
+        state.uploadQueue.push({ blob: blob, index: index });
+        scheduleChunkUploads();
         renderRecordingState();
     }
 
@@ -2452,7 +2496,7 @@
     }
 
     async function waitForUploads() {
-        while (state.pendingUploads.size) {
+        while (state.pendingUploads.size || state.uploadQueue.length || state.activeUploadCount) {
             await new Promise((resolve) => window.setTimeout(resolve, 250));
         }
     }
@@ -2460,9 +2504,13 @@
     function retryFailedChunks() {
         setRecordingStatus(strings.uploadRetry, 'info');
         Array.from(state.failedChunks.entries()).forEach(([index, blob]) => {
+            if (state.pendingUploads.has(index)) {
+                return;
+            }
             state.pendingUploads.add(index);
-            uploadChunk(blob, index).catch(() => {});
+            state.uploadQueue.push({ blob: blob, index: index });
         });
+        scheduleChunkUploads();
         renderRecordingState();
     }
 
@@ -2722,6 +2770,7 @@
         try {
             let result;
             if (canDirectUploadToPublitio()) {
+                state.directUploadInProgress = true;
                 result = await publishReplayViaDirectPublitio();
             } else if (isPublitioDirectMode()) {
                 throw new Error('Direct Publitio upload is enabled, but the local recording Blob is unavailable or over the direct upload limit. Retry while the recording is still in this browser, or switch to server relay for the next recording.');
@@ -2750,6 +2799,7 @@
             stopPublishPolling();
             setPublishingStatus(error.message || strings.publishFailed, 'error');
         } finally {
+            state.directUploadInProgress = false;
             updatePublishingButtons();
         }
     }
@@ -3629,7 +3679,7 @@
             }
         });
         window.addEventListener('beforeunload', (event) => {
-            if (isRecordingActive()) {
+            if (hasUnsafeRecordingWork()) {
                 event.preventDefault();
                 event.returnValue = '';
                 return;
