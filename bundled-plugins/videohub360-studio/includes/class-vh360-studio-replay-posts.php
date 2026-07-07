@@ -116,15 +116,18 @@ class VH360_Studio_Replay_Posts {
         }
 
         $custom_html = '';
-        if ( 'local_media' === $provider ) {
-            $custom_html = $this->render_local_media_video( $playback_url, $poster_url, $this->recording_mime_type( $recording ) );
-        } elseif ( 'publitio' === $provider && $publitio_embed_url ) {
+        if ( 'publitio' === $provider && $publitio_embed_url ) {
             $custom_html = $this->render_safe_iframe_embed( $publitio_embed_url, __( 'Publitio replay', 'videohub360-studio' ) );
         } elseif ( $guid ) {
             $custom_html = $this->render_videopress_embed_html( $guid );
         }
 
-        update_post_meta( $post_id, '_vh360_studio_replay_playback_type', $custom_html ? 'embed' : 'direct_video' );
+        if ( 'local_media' === $provider ) {
+            update_post_meta( $post_id, '_vh360_studio_replay_playback_type', 'direct_video' );
+        } else {
+            update_post_meta( $post_id, '_vh360_studio_replay_playback_type', $custom_html ? 'embed' : 'direct_video' );
+        }
+
         if ( $custom_html ) {
             if ( ! $is_live_conversion ) {
                 update_post_meta( $post_id, '_vh360_type', 'embed' );

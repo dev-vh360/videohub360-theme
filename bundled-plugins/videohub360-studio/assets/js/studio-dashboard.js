@@ -61,6 +61,9 @@
         programFrameRate: 30,
         programWidth: 1920,
         programHeight: 1080,
+        recordingCanvasLocked: false,
+        recordingCanvasWidth: 0,
+        recordingCanvasHeight: 0,
         transitioning: false,
         broadcastStarting: false,
         broadcastReady: false,
@@ -572,6 +575,54 @@
             width: state.programWidth || 1920,
             height: state.programHeight || 1080,
         };
+    }
+
+    function getRecordingOutputSize() {
+        if (isRecordingCanvasLocked() && state.recordingCanvasWidth && state.recordingCanvasHeight) {
+            return {
+                width: state.recordingCanvasWidth,
+                height: state.recordingCanvasHeight,
+                fps: state.programFrameRate || 30,
+            };
+        }
+
+        const preset = getSelectedPreset();
+        const resolution = preset && preset.resolution ? preset.resolution : {};
+
+        return {
+            width: Number(resolution.width) || 1920,
+            height: Number(resolution.height) || 1080,
+            fps: Number(preset && preset.fps) || 30,
+        };
+    }
+
+    function isRecordingCanvasLocked() {
+        return Boolean(state.recordingCanvasLocked);
+    }
+
+    function lockRecordingCanvasSize() {
+        const outputSize = getRecordingOutputSize();
+
+        state.recordingCanvasLocked = true;
+        state.recordingCanvasWidth = outputSize.width;
+        state.recordingCanvasHeight = outputSize.height;
+        state.programWidth = outputSize.width;
+        state.programHeight = outputSize.height;
+        state.programFrameRate = outputSize.fps;
+
+        if (state.programCanvas) {
+            state.programCanvas.width = state.programWidth;
+            state.programCanvas.height = state.programHeight;
+        }
+
+        renderPreviewMediaTransform();
+        renderSelectedMediaControls();
+    }
+
+    function unlockRecordingCanvasSize() {
+        state.recordingCanvasLocked = false;
+        state.recordingCanvasWidth = 0;
+        state.recordingCanvasHeight = 0;
     }
 
     function renderPreviewMediaTransform() {
@@ -1929,29 +1980,11 @@
 
 
 
-    function getPresetResolution() {
-        const preset = getSelectedPreset();
-
-        if (preset && preset.resolution && preset.resolution.width && preset.resolution.height) {
-            return {
-                width: Number(preset.resolution.width) || 1920,
-                height: Number(preset.resolution.height) || 1080,
-                fps: Number(preset.fps) || 30,
-            };
-        }
-
-        return {
-            width: 1920,
-            height: 1080,
-            fps: 30,
-        };
-    }
-
     function applyProgramCanvasResolution(options = {}) {
-        const resolution = getPresetResolution();
+        const resolution = getRecordingOutputSize();
         const activeOutput = state.broadcastSession || isRecordingActive();
 
-        if (activeOutput && !options.force) {
+        if ((activeOutput || isRecordingCanvasLocked()) && !options.force) {
             return;
         }
 
@@ -2006,6 +2039,8 @@
 
     function recordingMimeCandidates() {
         return [
+            'video/mp4;codecs="avc3.640028,mp4a.40.2"',
+            'video/mp4;codecs="avc3.42E01E,mp4a.40.2"',
             'video/mp4;codecs="avc1.424028,mp4a.40.2"',
             'video/mp4;codecs="avc1.42E01E,mp4a.40.2"',
             'video/mp4;codecs="avc1.640028,mp4a.40.2"',
@@ -2133,19 +2168,38 @@
         let jobId = null;
         let serverRecordingStarted = false;
         try {
-            if (hasProgramOutput()) {
-                applyProgramCanvasResolution();
-                state.recordingStream = await buildRecordingStreamFromProgram();
-            } else if (state.broadcastSession) {
-                state.recordingStream = state.broadcastSession.getLocalMediaStream ? state.broadcastSession.getLocalMediaStream() : null;
-                if (!state.recordingStream) {
-                    throw new Error('The active broadcast tracks are unavailable for recording.');
+            const preset = getSelectedPreset();
+            lockRecordingCanvasSize();
+            if (!state.programSource) {
+                if (state.previewSource) {
+                    state.programSource = state.previewSource;
+                } else {
+                    await setPreviewSource('camera');
+                    state.programSource = state.previewSource || 'camera';
                 }
-            } else if (state.cameraStream) {
-                state.recordingStream = state.cameraStream;
-            } else {
+            }
+            if (state.programSource === 'camera') {
+                state.programStream = await getSourceStream('camera');
+            } else if (state.programSource === 'screen') {
+                state.programStream = await getSourceStream('screen');
+            } else if (isMediaSource(state.programSource)) {
+                const mediaSource = getMediaSource(state.programSource);
+                if (mediaSource && mediaSource.type === 'video') {
+                    await mediaSource.element.play().catch(() => {});
+                }
+                state.programStream = null;
+            }
+            renderProgramState();
+            applyProgramCanvasResolution({ force: true });
+            ensureProgramCompositor();
+            state.recordingStream = await buildRecordingStreamFromProgram();
+            if (!state.recordingStream) {
                 await setPreviewSource('camera');
-                state.recordingStream = state.programStream || state.cameraStream;
+                state.programSource = state.previewSource || 'camera';
+                state.programStream = await getSourceStream('camera');
+                renderProgramState();
+                ensureProgramCompositor();
+                state.recordingStream = await buildRecordingStreamFromProgram();
             }
             if (!state.recordingStream) {
                 throw new Error('Choose a Program source before recording.');
@@ -2171,7 +2225,6 @@
             state.recordingStopPromise = null;
             state.recordingStopRequested = false;
             state.finalChunkCount = 0;
-            const preset = getSelectedPreset();
             const options = { mimeType: mimeType };
             if (preset.video_bitrate) { options.videoBitsPerSecond = Number(preset.video_bitrate); }
             if (preset.audio_bitrate) { options.audioBitsPerSecond = Number(preset.audio_bitrate); }
@@ -2205,6 +2258,7 @@
                 state.browserSessionId = '';
             }
             state.recorder = null;
+            unlockRecordingCanvasSize();
             setRecorderButtons(false, false);
             setRecordingStatus(error.message || strings.recorderUnavailable, 'error');
         }
@@ -2413,6 +2467,7 @@
             freezeRecordingDuration();
             state.finalChunkCount = state.chunkIndex;
             state.recorder = null;
+            unlockRecordingCanvasSize();
             setShellClass('is-recording', false);
             setRecordingStatus(isPublitioDirectMode() ? 'Recording stopped. Ready to upload directly to Publitio.' : strings.uploadingChunk, 'info');
             renderRecordingState();
