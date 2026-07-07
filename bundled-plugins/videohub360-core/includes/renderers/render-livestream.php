@@ -90,8 +90,8 @@ if (!function_exists('videohub360_render_livestream')) {
                 if (current_user_can('manage_options')) {
                     $player_html .= '<div class="vh360-error-message">';
                     $player_html .= '<h3 class="vh360-error-title">' . esc_html__('🔴 Livestream Not Available', 'videohub360') . '</h3>';
-                    $player_html .= '<p class="vh360-error-text">' . esc_html__('Agora App ID is not configured.', 'videohub360') . '</p>';
-                    $player_html .= '<p class="vh360-error-hint">' . esc_html__('Please configure the global Agora App ID in VideoHub360 Settings.', 'videohub360') . '</p>';
+                    $player_html .= '<p class="vh360-error-text">' . esc_html__('Live connection settings are not configured.', 'videohub360') . '</p>';
+                    $player_html .= '<p class="vh360-error-hint">' . esc_html__('Please configure the global live connection settings in VideoHub360 Settings.', 'videohub360') . '</p>';
                     $player_html .= '</div>';
                 } elseif (!empty($fields['offline_message'])) {
                     $player_html .= '<div class="vh360-offline-message">' . wp_kses_post($fields['offline_message']) . '</div>';
@@ -292,7 +292,7 @@ $player_html .= '</div>';
                 if (current_user_can('manage_options')) {
                     $player_html .= '<div class="vh360-error-message">';
                     $player_html .= '<h3 class="vh360-error-title">' . esc_html__('🔴 Livestream Not Available', 'videohub360') . '</h3>';
-                    $player_html .= '<p class="vh360-error-text">' . esc_html__('This Agora livestream is not properly configured.', 'videohub360') . '</p>';
+                    $player_html .= '<p class="vh360-error-text">' . esc_html__('This livestream is not properly configured.', 'videohub360') . '</p>';
                     $player_html .= '<p class="vh360-error-hint">' . esc_html__('Missing: Channel Name', 'videohub360') . '</p>';
                     $player_html .= '</div>';
                 } elseif (!empty($fields['offline_message'])) {

@@ -4520,7 +4520,7 @@ window.initializeAgoraPlayer = function(config) {
 
             // Provide specific error messages based on error type
             if (error.code === 'INVALID_VENDOR_KEY') {
-                errorMessage = "Invalid Agora credentials. Please contact the administrator.";
+                errorMessage = "Invalid live connection settings. Please contact the administrator.";
             } else if (error.code === 'INVALID_CHANNEL_NAME') {
                 errorMessage = "Invalid channel configuration. Please contact the administrator.";
             } else if (error.code === 'OPERATION_ABORTED' || error.code === 'NETWORK_ERROR') {

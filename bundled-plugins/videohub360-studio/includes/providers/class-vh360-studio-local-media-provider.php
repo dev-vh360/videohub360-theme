@@ -17,7 +17,7 @@ class VH360_Studio_Local_Media_Replay_Storage_Provider implements VH360_Studio_R
     }
 
     public function get_label() {
-        return __( 'Local Media Fallback', 'videohub360-studio' );
+        return __( 'Local Replay Fallback', 'videohub360-studio' );
     }
 
     public function is_available() {
@@ -125,19 +125,19 @@ class VH360_Studio_Local_Media_Replay_Storage_Provider implements VH360_Studio_R
     public function get_publish_status( array $job ) {
         $attachment_id = ! empty( $job['wp_attachment_id'] ) ? absint( $job['wp_attachment_id'] ) : 0;
         if ( ! $attachment_id ) {
-            return array( 'provider_id' => $this->get_id(), 'provider_label' => $this->get_label(), 'status' => 'pending', 'supports_publish' => $this->supports_publish(), 'attachment_id' => 0, 'playback_url' => '', 'message' => __( 'Local Media replay has not been published yet.', 'videohub360-studio' ) );
+            return array( 'provider_id' => $this->get_id(), 'provider_label' => $this->get_label(), 'status' => 'pending', 'supports_publish' => $this->supports_publish(), 'attachment_id' => 0, 'playback_url' => '', 'message' => __( 'Local replay fallback has not been published yet.', 'videohub360-studio' ) );
         }
 
         if ( 'attachment' !== get_post_type( $attachment_id ) ) {
-            return array( 'provider_id' => $this->get_id(), 'provider_label' => $this->get_label(), 'status' => 'missing_attachment', 'supports_publish' => $this->supports_publish(), 'attachment_id' => $attachment_id, 'playback_url' => '', 'message' => __( 'The Local Media attachment no longer exists.', 'videohub360-studio' ) );
+            return array( 'provider_id' => $this->get_id(), 'provider_label' => $this->get_label(), 'status' => 'missing_attachment', 'supports_publish' => $this->supports_publish(), 'attachment_id' => $attachment_id, 'playback_url' => '', 'message' => __( 'The local replay attachment no longer exists.', 'videohub360-studio' ) );
         }
 
         $playback_url = ! empty( $job['playback_url'] ) ? esc_url_raw( $job['playback_url'] ) : wp_get_attachment_url( $attachment_id );
         if ( ! $playback_url ) {
-            return array( 'provider_id' => $this->get_id(), 'provider_label' => $this->get_label(), 'status' => 'failed', 'supports_publish' => $this->supports_publish(), 'attachment_id' => $attachment_id, 'playback_url' => '', 'message' => __( 'The Local Media attachment does not have a valid playback URL.', 'videohub360-studio' ) );
+            return array( 'provider_id' => $this->get_id(), 'provider_label' => $this->get_label(), 'status' => 'failed', 'supports_publish' => $this->supports_publish(), 'attachment_id' => $attachment_id, 'playback_url' => '', 'message' => __( 'The local replay attachment does not have a valid playback URL.', 'videohub360-studio' ) );
         }
 
-        return array( 'provider_id' => $this->get_id(), 'provider_label' => $this->get_label(), 'status' => self::STATUS_READY, 'supports_publish' => $this->supports_publish(), 'attachment_id' => $attachment_id, 'playback_url' => $playback_url, 'poster_url' => $this->poster_url( $attachment_id ), 'replay_video_id' => ! empty( $job['replay_video_id'] ) ? absint( $job['replay_video_id'] ) : 0, 'message' => __( 'Local Media replay is ready.', 'videohub360-studio' ) );
+        return array( 'provider_id' => $this->get_id(), 'provider_label' => $this->get_label(), 'status' => self::STATUS_READY, 'supports_publish' => $this->supports_publish(), 'attachment_id' => $attachment_id, 'playback_url' => $playback_url, 'poster_url' => $this->poster_url( $attachment_id ), 'replay_video_id' => ! empty( $job['replay_video_id'] ) ? absint( $job['replay_video_id'] ) : 0, 'message' => __( 'Local replay fallback is ready.', 'videohub360-studio' ) );
     }
 
     private function media_functions_available() {
