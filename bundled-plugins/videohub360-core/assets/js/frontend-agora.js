@@ -602,7 +602,6 @@ window.initializeAgoraPlayer = function(config) {
         currentRole = 'audience';
         config.isHost = false;
         config.role = 'audience';
-        config.allowEveryoneIsHost = false;
     }
 
     // Initialize stream started flag - controls should not show until stream begins
@@ -3099,8 +3098,8 @@ window.initializeAgoraPlayer = function(config) {
 
     // -- Publishing (Host) --
     async function startPublishing() {
-        if (config.studioControlled) {
-            window.vh360Log('Studio-controlled broadcast: public page publishing disabled.');
+        if (config.studioControlled && config.agoraMode !== 'interactive') {
+            window.vh360Log('Studio-controlled broadcast stream: public page publishing disabled.');
             return;
         }
         try {
@@ -3302,8 +3301,8 @@ window.initializeAgoraPlayer = function(config) {
                 showAgoraError('Please log in to join as a presenter.');
                 return;
             }
-            if (config.studioControlled) {
-                window.vh360Log('Studio-controlled broadcast: public page publishing disabled.');
+            if (config.studioControlled && config.agoraMode !== 'interactive') {
+                window.vh360Log('Studio-controlled broadcast stream: public page publishing disabled.');
                 return;
             }
             if (isOriginalHost) {
@@ -4807,8 +4806,8 @@ window.initializeAgoraPlayer = function(config) {
     // Simple join livestream button functionality
     function handleJoinLivestream() {
         window.vh360Log('VideoHub360: handleJoinLivestream() called');
-        if (config.studioControlled) {
-            window.vh360Log('Studio-controlled broadcast: public page publishing disabled.');
+        if (config.studioControlled && config.agoraMode !== 'interactive') {
+            window.vh360Log('Studio-controlled broadcast stream: public page publishing disabled.');
         }
         window.vh360Log('VideoHub360: Current role at button click:', currentRole);
         window.vh360Log('VideoHub360: isOriginalHost:', isOriginalHost);
@@ -4828,7 +4827,7 @@ window.initializeAgoraPlayer = function(config) {
             window.location.href = vh360Data.userLoginUrl;
             return;
         }
-        if (config.studioControlled) {
+        if (config.studioControlled && config.agoraMode !== 'interactive') {
             if (joinOverlay) {
                 joinOverlay.style.display = 'none';
             }

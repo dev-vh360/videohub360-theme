@@ -161,15 +161,22 @@ class VideoHub360_Ajax {
             'requires_login' => false,
         );
 
-        $is_logged_in    = is_user_logged_in();
-        $current_user_id = $is_logged_in ? (int) get_current_user_id() : 0;
+        $is_logged_in         = is_user_logged_in();
+        $current_user_id      = $is_logged_in ? (int) get_current_user_id() : 0;
+        $requested_role       = sanitize_text_field($requested_role);
+        $is_studio_controlled = 'yes' === get_post_meta($post_id, '_vh360_studio_controlled_live', true);
+        $agora_mode           = get_post_meta($post_id, '_vh360_agora_mode', true) ?: 'broadcast';
 
-        if ( 'yes' === get_post_meta( $post_id, '_vh360_studio_controlled_live', true ) ) {
+        if ($requested_role !== 'host') {
             return $result;
         }
 
-        // Rule 1: Room manager / owner / admin may always publish.
-        if ($this->user_can_manage_live_room($post_id)) {
+        if ($is_studio_controlled && $agora_mode !== 'interactive') {
+            return $result;
+        }
+
+        // Rule 1: Room manager / owner / admin may always publish on non-Studio streams.
+        if (!$is_studio_controlled && $this->user_can_manage_live_room($post_id)) {
             $result['can_publish'] = true;
             $result['role']        = 'host';
             return $result;

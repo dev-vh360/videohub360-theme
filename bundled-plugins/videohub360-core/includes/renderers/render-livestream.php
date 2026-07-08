@@ -209,12 +209,20 @@ if ($is_appointment && function_exists('vh360_get_appointment_session_state')) {
     $player_html .= '<button id="vh360-join-livestream-btn" class="vh360-overlay-btn">Start Live Stream</button>';
     $player_html .= '<div class="vh360-overlay-hint">Click to start the live stream</div>';
 } else {
-    // Regular live room - check if everyone can join as host in interactive mode (Zoom-style)
+    // Regular/Studio viewer flow. Studio controls Start/End ownership, but interactive
+    // presenter permissions still come from everyone-host/passcode settings.
+    $has_presenter_flow = $fields['agora_mode'] === 'interactive'
+        && (!empty($fields['host_passcode']) || $fields['agora_everyone_is_host'] === 'yes');
+
     if ($fields['agora_everyone_is_host'] === 'yes' && $fields['agora_mode'] === 'interactive') {
         $player_html .= '<h3 class="vh360-overlay-title">Join Live Stream</h3>';
         $player_html .= '<p class="vh360-overlay-description">Click to join as host</p>';
         $player_html .= '<button id="vh360-join-livestream-btn" class="vh360-overlay-btn">Join Livestream</button>';
         $player_html .= '<div class="vh360-overlay-hint">You can join immediately as a host</div>';
+    } elseif ($has_presenter_flow) {
+        $player_html .= '<h3 class="vh360-overlay-title">Join Live Stream</h3>';
+        $player_html .= '<p class="vh360-overlay-description">Join as a viewer, then use Go Live to request presenter access.</p>';
+        $player_html .= '<button id="vh360-join-livestream-btn" class="vh360-overlay-btn">Join Livestream</button>';
     } else {
         $player_html .= '<div class="vh360-overlay-waiting">Waiting for the host to start the live stream</div>';
     }
