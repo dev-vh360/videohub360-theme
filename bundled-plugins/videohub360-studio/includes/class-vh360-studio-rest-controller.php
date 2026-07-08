@@ -1337,10 +1337,19 @@ class VH360_Studio_REST_Controller {
     }
 
     public function cancel_job( WP_REST_Request $request ) {
-        $job = $this->jobs->cancel( absint( $request['id'] ), get_current_user_id() );
+        $job_id       = absint( $request['id'] );
+        $existing_job = $this->jobs->get( $job_id, get_current_user_id() );
+        $job          = $this->jobs->cancel( $job_id, get_current_user_id() );
+
         if ( ! is_wp_error( $job ) ) {
-            $this->update_live_replay_lifecycle( $job, 'cancelled', 'no', 'no', 'yes' );
+            $recording_started = is_array( $existing_job ) && ! in_array(
+                ! empty( $existing_job['status'] ) ? $existing_job['status'] : '',
+                array( VH360_Studio_Recording_Jobs::STATUS_CREATED, VH360_Studio_Recording_Jobs::STATUS_CANCELLED ),
+                true
+            );
+            $this->update_live_replay_lifecycle( $job, 'cancelled', 'no', 'no', $recording_started ? 'yes' : 'no' );
         }
+
         return rest_ensure_response( $this->prepare_job_response( $job ) );
     }
 
