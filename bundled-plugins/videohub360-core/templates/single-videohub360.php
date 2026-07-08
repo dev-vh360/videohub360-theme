@@ -80,6 +80,13 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
         && (int) get_post_meta(get_the_ID(), '_vh360_studio_replay_source_live_video_id', true) === (int) get_the_ID()
     );
 
+    $is_studio_replay_processing = (
+        $livestream_fields['stream_stopped'] === 'yes'
+        && get_post_meta(get_the_ID(), '_vh360_studio_controlled_live', true) === 'yes'
+        && get_post_meta(get_the_ID(), '_vh360_studio_replay_ready', true) !== 'yes'
+        && get_post_meta(get_the_ID(), '_vh360_studio_job_id', true) !== ''
+    );
+
     $has_studio_replay_playback = (
         get_post_meta(get_the_ID(), '_vh360_studio_replay_ready', true) === 'yes'
         && (
@@ -247,6 +254,10 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                         <?php if (!empty($livestream_fields['offline_message'])) : ?>
                             <div class="vh360-offline-message">
                                 <?php echo wp_kses_post($livestream_fields['offline_message']); ?>
+                            </div>
+                        <?php elseif ($is_studio_replay_processing) : ?>
+                            <div class="vh360-offline-message">
+                                <?php echo wp_kses_post(vh360_get_stream_replay_processing_html()); ?>
                             </div>
                         <?php else : ?>
                             <div class="vh360-offline-message">

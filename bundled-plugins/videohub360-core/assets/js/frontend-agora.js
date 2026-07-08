@@ -2747,7 +2747,7 @@ window.initializeAgoraPlayer = function(config) {
         }
 
         if (currentRole === 'audience' && Object.keys(remoteUsers).length === 0) {
-            setTimeout(() => showAudienceWaitingMessage(), 100);
+            setTimeout(() => handleAudienceNoRemoteUsers(), 100);
         }
     });
 
@@ -3871,6 +3871,75 @@ window.initializeAgoraPlayer = function(config) {
             }
         });
     }
+
+    function isStudioReplayProcessingStatus(status) {
+        const data = status || {};
+        const hasStudioJob = !!(data.studio_job_id || vh360Data?.studioJobId || config?.studioJobId);
+        const isStudioControlled = data.studio_controlled === true || vh360Data?.studioControlled === true || config?.studioControlled === true;
+        const replayReady = data.studio_replay_ready === true || vh360Data?.studioReplayReady === true || config?.studioReplayReady === true;
+        return isStudioControlled && hasStudioJob && !replayReady;
+    }
+
+    function showStreamEndedMessage(status) {
+        clearAllParticipantTiles();
+        remoteUsers = {};
+        window.vh360StreamStarted = false;
+
+        const liveControls = document.getElementById('vh360-agora-controls');
+        if (liveControls) {
+            liveControls.style.display = 'none';
+        }
+
+        const localPlayer = document.getElementById("vh360-agora-local-player");
+        if (!localPlayer) return;
+
+        const replayProcessing = isStudioReplayProcessingStatus(status);
+        const endedHtml = replayProcessing
+            ? vh360Data?.livestreamMessages?.replayProcessingHtml
+            : vh360Data?.livestreamMessages?.endedDefaultHtml;
+
+        localPlayer.replaceChildren();
+        const messageContainer = document.createElement('div');
+        messageContainer.className = 'vh360-stream-ended-message vh360-offline-message';
+        messageContainer.innerHTML = endedHtml || (replayProcessing
+            ? '<div class="vh360-stream-ended-content"><div class="vh360-stream-ended-icon">📴</div><h3 class="vh360-stream-ended-title">Stream Ended</h3><p class="vh360-stream-ended-text">Thanks for watching. The replay is being prepared and will be available here soon.</p></div>'
+            : '<div class="vh360-stream-ended-content"><div class="vh360-stream-ended-icon">📴</div><h3 class="vh360-stream-ended-title">Stream Ended</h3><p class="vh360-stream-ended-text">This livestream has ended.</p></div>');
+        localPlayer.appendChild(messageContainer);
+    }
+
+    function fetchStreamStatus() {
+        if (!vh360Data || !vh360Data.postId) return Promise.reject('No post ID available');
+
+        var formData = new FormData();
+        formData.append('action', 'vh360_get_stream_status');
+        formData.append('post_id', vh360Data.postId);
+
+        return fetch(vh360Data.ajaxUrl, {
+            method: 'POST',
+            body: formData
+        }).then(function(response) { return response.json(); });
+    }
+
+    function handleAudienceNoRemoteUsers() {
+        fetchStreamStatus()
+            .then(function(data) {
+                if (!data.success) {
+                    window.vh360Warn('VideoHub360: Stream status check failed after host left:', data.data);
+                    return;
+                }
+
+                if (data.data.stream_stopped === true) {
+                    stopStreamStatusPolling();
+                    showStreamEndedMessage(data.data);
+                } else if (data.data.stream_live === false) {
+                    showAudienceWaitingMessage();
+                }
+            })
+            .catch(function(error) {
+                window.vh360Warn('VideoHub360: Stream status check failed after host left:', error);
+            });
+    }
+
     function showAudienceWaitingMessage() {
         clearAllParticipantTiles();
         const localPlayer = document.getElementById("vh360-agora-local-player");
@@ -4684,17 +4753,16 @@ window.initializeAgoraPlayer = function(config) {
     function checkStreamStatus() {
         if (!vh360Data || !vh360Data.postId) return;
 
-        var formData = new FormData();
-        formData.append('action', 'vh360_get_stream_status');
-        formData.append('post_id', vh360Data.postId);
-
-        fetch(vh360Data.ajaxUrl, {
-            method: 'POST',
-            body: formData
-        })
-        .then(function(response) { return response.json(); })
+        fetchStreamStatus()
         .then(function(data) {
             if (data.success) {
+                if (data.data.stream_stopped === true) {
+                    window.vh360Log('VideoHub360: Stream detected as stopped');
+                    stopStreamStatusPolling();
+                    showStreamEndedMessage(data.data);
+                    return;
+                }
+
                 if (data.data.is_live) {
                     // Stream is now live
                     window.vh360Log('VideoHub360: Stream detected as live');

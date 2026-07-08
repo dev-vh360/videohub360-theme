@@ -35,7 +35,7 @@ function vh360_get_default_stream_ended_html() {
         '<div class="vh360-stream-ended-content">
             <div class="vh360-stream-ended-icon">%s</div>
             <h3 class="vh360-stream-ended-title">Stream Ended</h3>
-            <p class="vh360-stream-ended-text">This stream has ended. Check back later for more content.</p>
+            <p class="vh360-stream-ended-text">This livestream has ended.</p>
         </div>',
         esc_html($icon)
     );
@@ -107,6 +107,26 @@ function vh360_get_stream_ended_needs_restart_html() {
         <div class="vh360-stream-ended-icon">📴</div>
         <h3 class="vh360-stream-ended-title">Stream Ended</h3>
         <p class="vh360-stream-ended-text">This stream has ended. The host needs to restart it to go live again.</p>
+    </div>';
+}
+
+
+/**
+ * Get the Studio replay processing HTML for ended Studio livestreams.
+ *
+ * @return string HTML for replay processing message
+ */
+function vh360_get_stream_replay_processing_html() {
+    $html = get_option('vh360_stream_replay_processing_html', '');
+
+    if (!empty($html)) {
+        return $html;
+    }
+
+    return '<div class="vh360-stream-ended-content">
+        <div class="vh360-stream-ended-icon">📴</div>
+        <h3 class="vh360-stream-ended-title">Stream Ended</h3>
+        <p class="vh360-stream-ended-text">Thanks for watching. The replay is being prepared and will be available here soon.</p>
     </div>';
 }
 
