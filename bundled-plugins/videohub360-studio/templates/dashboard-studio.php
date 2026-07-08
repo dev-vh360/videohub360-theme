@@ -205,6 +205,14 @@ $friendly_job_status = static function( $job ) {
                     <div data-agora-local-preview class="vh360-studio-agora-preview"></div>
                     <span class="vh360-studio-monitor-empty" data-program-empty><?php esc_html_e( 'Choose a Preview source, then use Cut or Fade to send it to Program.', 'videohub360-studio' ); ?></span>
                 </div>
+                <div class="vh360-studio-program-live-controls" aria-label="<?php esc_attr_e( 'Live Program controls', 'videohub360-studio' ); ?>">
+                    <span class="vh360-studio-program-live-status" data-studio-program-live-status><?php esc_html_e( 'Not live', 'videohub360-studio' ); ?></span>
+                    <div class="vh360-studio-program-live-actions">
+                        <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-studio-toggle-mic disabled><?php esc_html_e( 'Mute', 'videohub360-studio' ); ?></button>
+                        <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-studio-toggle-video disabled><?php esc_html_e( 'Video Off', 'videohub360-studio' ); ?></button>
+                        <button type="button" class="vh360-studio-button vh360-studio-button--danger" data-program-end-live disabled><?php esc_html_e( 'End Live', 'videohub360-studio' ); ?></button>
+                    </div>
+                </div>
             </section>
         </div>
 
