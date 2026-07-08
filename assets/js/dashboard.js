@@ -99,7 +99,8 @@
             }
             
             // After sanitization, tabId is safe to use in jQuery selectors (no escaping needed)
-            var $targetTab = $('.vh360-dashboard-tab[data-tab="' + tabId + '"]');
+            var navTabId = tabId === 'create-video' ? 'videos' : tabId;
+            var $targetTab = $('.vh360-dashboard-tab[data-tab="' + navTabId + '"]');
             var $targetContent = $(document.getElementById(tabId));
 
             // Require at least a matching content pane to activate.

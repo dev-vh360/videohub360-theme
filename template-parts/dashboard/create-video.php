@@ -244,14 +244,14 @@ if ( $vh360_show_studio_notice ) {
         </div>
     <?php else : ?>
 
-    <div class="vh360-dashboard-notice vh360-dashboard-notice-info vh360-studio-redirect-notice">
-        <span><?php echo esc_html( sprintf( __( 'Want to go live? Use %s to start a livestream, record, and publish replays.', 'videohub360-theme' ), $vh360_studio_display_name ) ); ?></span>
-        <?php if ($vh360_show_studio_notice && !empty($vh360_studio_url)) : ?>
+    <?php if ($vh360_show_studio_notice && !empty($vh360_studio_url)) : ?>
+        <div class="vh360-dashboard-notice vh360-dashboard-notice-info vh360-studio-redirect-notice">
+            <span><?php echo esc_html( sprintf( __( 'Want to go live? Use %s to start a livestream, record, and publish replays.', 'videohub360-theme' ), $vh360_studio_display_name ) ); ?></span>
             <a href="<?php echo esc_url($vh360_studio_url); ?>" class="vh360-dashboard-btn vh360-dashboard-btn-secondary vh360-dashboard-tab" data-tab="studio">
                 <?php esc_html_e('Open Studio', 'videohub360-theme'); ?>
             </a>
-        <?php endif; ?>
-    </div>
+        </div>
+    <?php endif; ?>
 
     <!-- Video Creation Form -->
     <form method="post" enctype="multipart/form-data" class="vh360-create-video-form" id="vh360-create-video-form">
