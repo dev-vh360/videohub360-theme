@@ -38,6 +38,25 @@ function vh360_studio_load_textdomain() {
 }
 add_action( 'plugins_loaded', 'vh360_studio_load_textdomain' );
 
+
+/**
+ * Get the frontend Studio display name.
+ *
+ * @return string
+ */
+function vh360_studio_get_display_name() {
+    $display_name = trim( (string) get_option( 'vh360_studio_display_name', '' ) );
+
+    if ( '' === $display_name ) {
+        $site_title = trim( (string) get_bloginfo( 'name' ) );
+        $display_name = '' !== $site_title
+            ? sprintf( __( '%s Studio', 'videohub360-studio' ), $site_title )
+            : __( 'Studio', 'videohub360-studio' );
+    }
+
+    return apply_filters( 'vh360_studio_display_name', $display_name );
+}
+
 /**
  * Determine whether VideoHub360 Core is available.
  *

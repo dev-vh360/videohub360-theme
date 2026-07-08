@@ -40,27 +40,24 @@ function vh360_get_dashboard_tabs_registry( $user_id = null ) {
             'icon_svg' => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13h8V3H3v10zM13 21h8V11h-8v10zM13 3v6h8V3h-8zM3 21h8v-6H3v6z"/></svg>',
         ),
         'create-video' => array(
-            'label' => __( '+ Create', 'videohub360-theme' ),
+            'label' => __( 'Add Video', 'videohub360-theme' ),
             'label_callback' => null,
             'show_callback' => '__return_true',
+            'show_in_dashboard_nav' => false,
             'icon_svg' => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>',
         ),
         'videos' => array(
-            'label' => __( 'My Videos', 'videohub360-theme' ),
+            'label' => __( 'Videos', 'videohub360-theme' ),
             'label_callback' => function( $user_id ) {
                 if ( function_exists( 'vh360_dashboard_uses_lesson_labels' ) && vh360_dashboard_uses_lesson_labels( $user_id ) ) {
                     $lesson_label = function_exists( 'vh360_get_lesson_label' )
                         ? vh360_get_lesson_label( true )
                         : __( 'Lessons', 'videohub360-theme' );
 
-                    return sprintf(
-                        /* translators: %s = plural lesson label */
-                        __( 'My %s', 'videohub360-theme' ),
-                        $lesson_label
-                    );
+                    return $lesson_label;
                 }
 
-                return __( 'My Videos', 'videohub360-theme' );
+                return __( 'Videos', 'videohub360-theme' );
             },
             'show_callback' => '__return_true',
             'icon_svg' => '<svg class="vh360-dashboard-nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>',
@@ -271,6 +268,14 @@ function vh360_get_dashboard_surface_item_definitions( $url_format = 'fragment',
     $is_menu_builder = ( 'menu_builder' === $context );
 
     foreach ( $registry as $tab_id => $tab_config ) {
+        if ( isset( $tab_config['show_in_dashboard_nav'] ) && false === $tab_config['show_in_dashboard_nav'] ) {
+            continue;
+        }
+
+        if ( ! empty( $tab_config['nav_hidden'] ) ) {
+            continue;
+        }
+
         if ( $is_menu_builder ) {
             if ( isset( $tab_config['menu_builder_callback'] ) && is_callable( $tab_config['menu_builder_callback'] ) ) {
                 if ( ! call_user_func( $tab_config['menu_builder_callback'], $user_id ) ) {

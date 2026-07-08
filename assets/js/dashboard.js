@@ -99,7 +99,8 @@
             }
             
             // After sanitization, tabId is safe to use in jQuery selectors (no escaping needed)
-            var $targetTab = $('.vh360-dashboard-tab[data-tab="' + tabId + '"]');
+            var navTabId = tabId === 'create-video' ? 'videos' : tabId;
+            var $targetTab = $('.vh360-dashboard-tab[data-tab="' + navTabId + '"]');
             var $targetContent = $(document.getElementById(tabId));
 
             // Require at least a matching content pane to activate.
@@ -732,39 +733,6 @@
                     $('#vh360-quality-fields').slideDown(300);
                 } else {
                     $('#vh360-quality-fields').slideUp(300);
-                }
-            });
-
-            // Livestream settings: Show/hide stream type specific fields
-            function toggleStreamTypeFields() {
-                var selectedType = $('#vh360_type').val();
-                $('.vh360-stream-type-field').hide();
-                $('.vh360-stream-type-field[data-type="' + selectedType + '"]').show();
-            }
-            
-            $('#vh360_type').on('change', toggleStreamTypeFields);
-            toggleStreamTypeFields(); // Initialize on load
-
-            // Livestream settings: Passcode field toggle
-            $('#vh360_require_passcode').on('change', function() {
-                if ($(this).is(':checked')) {
-                    $('#vh360-passcode-field').slideDown(300);
-                } else {
-                    $('#vh360-passcode-field').slideUp(300);
-                }
-            });
-
-            // Livestream settings: Mutual exclusivity for everyone_is_host and passcode
-            $('#vh360_agora_everyone_is_host').on('change', function() {
-                if ($(this).is(':checked')) {
-                    $('#vh360_require_passcode').prop('checked', false);
-                    $('#vh360-passcode-field').slideUp(300);
-                }
-            });
-
-            $('#vh360_require_passcode').on('change', function() {
-                if ($(this).is(':checked')) {
-                    $('#vh360_agora_everyone_is_host').prop('checked', false);
                 }
             });
 

@@ -35,6 +35,7 @@ class VH360_Studio_Admin {
 
     public function register_settings() {
         $settings = array(
+            'vh360_studio_display_name'                    => 'sanitize_text_field',
             'vh360_studio_default_replay_storage_provider' => array( $this, 'sanitize_provider' ),
             'vh360_studio_publitio_api_key'               => array( $this, 'sanitize_api_key' ),
             'vh360_studio_publitio_api_secret'            => array( $this, 'sanitize_secret' ),
@@ -217,6 +218,10 @@ class VH360_Studio_Admin {
             <h1><?php esc_html_e( 'VH360 Studio Settings', 'videohub360-studio' ); ?></h1>
             <form method="post" action="options.php">
                 <?php settings_fields( 'vh360_studio_settings' ); ?>
+                <h2><?php esc_html_e( 'Studio Display', 'videohub360-studio' ); ?></h2>
+                <table class="form-table" role="presentation"><tbody>
+                    <tr><th><label for="vh360_studio_display_name"><?php esc_html_e( 'Studio Display Name', 'videohub360-studio' ); ?></label></th><td><input type="text" class="regular-text" id="vh360_studio_display_name" name="vh360_studio_display_name" value="<?php echo esc_attr( get_option( 'vh360_studio_display_name', '' ) ); ?>"><p class="description"><?php esc_html_e( 'Controls the Studio name shown on the frontend dashboard. Leave blank to use {Site Title} Studio.', 'videohub360-studio' ); ?></p></td></tr>
+                </tbody></table>
                 <h2><?php esc_html_e( 'Replay Provider Settings', 'videohub360-studio' ); ?></h2>
                 <table class="form-table" role="presentation"><tbody>
                     <tr><th><label for="vh360-default-provider"><?php esc_html_e( 'Default replay storage provider', 'videohub360-studio' ); ?></label></th><td><select id="vh360-default-provider" name="vh360_studio_default_replay_storage_provider"><?php foreach ( $providers as $id => $provider ) : ?><option value="<?php echo esc_attr( $id ); ?>" <?php selected( get_option( 'vh360_studio_default_replay_storage_provider', 'videopress' ), $id ); ?>><?php echo esc_html( $provider->get_label() ); ?></option><?php endforeach; ?></select></td></tr>

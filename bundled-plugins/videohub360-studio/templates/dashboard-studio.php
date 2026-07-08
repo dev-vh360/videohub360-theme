@@ -79,7 +79,7 @@ $friendly_job_status = static function( $job ) {
     <header class="vh360-studio-topbar">
         <div>
             <p class="vh360-studio-kicker"><?php esc_html_e( 'Production console', 'videohub360-studio' ); ?></p>
-            <h2><?php esc_html_e( 'VH360 Studio', 'videohub360-studio' ); ?></h2>
+            <h2><?php echo esc_html( function_exists( 'vh360_studio_get_display_name' ) ? vh360_studio_get_display_name() : __( 'Studio', 'videohub360-studio' ) ); ?></h2>
         </div>
         <div class="vh360-studio-screen-reader-status" aria-live="polite" data-studio-status>
             <?php esc_html_e( 'Checking browser support…', 'videohub360-studio' ); ?>

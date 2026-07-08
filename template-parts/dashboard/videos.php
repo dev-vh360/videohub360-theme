@@ -25,11 +25,10 @@ $vh360_items_label = $vh360_is_lesson_context
     ? ( function_exists( 'vh360_get_lesson_label' ) ? vh360_get_lesson_label( true ) : __( 'Lessons', 'videohub360-theme' ) )
     : __( 'Videos', 'videohub360-theme' );
 
-$vh360_my_items_label = sprintf(
-    /* translators: %s = plural content label */
-    __( 'My %s', 'videohub360-theme' ),
-    $vh360_items_label
-);
+$vh360_my_items_label = $vh360_items_label;
+$vh360_add_item_label = $vh360_is_lesson_context
+    ? __( 'Add Lesson', 'videohub360-theme' )
+    : __( 'Add Video', 'videohub360-theme' );
 
 
 $vh360_is_licensed = ( function_exists('vh360_theme_is_license_valid') ? vh360_theme_is_license_valid() : ( function_exists('videohub360_license_is_valid') && videohub360_license_is_valid() ) );
@@ -109,6 +108,9 @@ $videos_query = new WP_Query($args);
     <!-- Header -->
     <div class="vh360-dashboard-header">
         <h1 class="vh360-dashboard-title"><?php echo esc_html( $vh360_my_items_label ); ?></h1>
+        <a href="<?php echo esc_url( function_exists( 'vh360_get_dashboard_tab_url' ) ? vh360_get_dashboard_tab_url( 'create-video' ) : add_query_arg( 'tab', 'create-video' ) ); ?>" class="vh360-dashboard-btn vh360-dashboard-tab <?php echo ! $vh360_is_licensed ? 'vh360-locked' : ''; ?>" data-tab="create-video" aria-disabled="<?php echo ! $vh360_is_licensed ? 'true' : 'false'; ?>" title="<?php echo ! $vh360_is_licensed ? esc_attr( $vh360_is_lesson_context ? __( 'Activate your license to add lessons.', 'videohub360-theme' ) : __( 'Activate your license to add videos.', 'videohub360-theme' ) ) : ''; ?>">
+            <?php echo esc_html( $vh360_add_item_label ); ?>
+        </a>
     </div>
 
     <div class="vh360-dashboard-filters">
@@ -294,18 +296,18 @@ $videos_query = new WP_Query($args);
                 } else {
                     echo esc_html(
                         $vh360_is_lesson_context
-                            ? __( 'Create your first lesson to get started!', 'videohub360-theme' )
-                            : __( 'Upload your first video to get started!', 'videohub360-theme' )
+                            ? __( 'Add your first lesson to get started!', 'videohub360-theme' )
+                            : __( 'Add your first video to get started!', 'videohub360-theme' )
                     );
                 }
                 ?>
             </p>
             <?php if (empty($search)) : ?>
-                <a href="<?php echo esc_url( function_exists( 'vh360_get_dashboard_tab_url' ) ? vh360_get_dashboard_tab_url( 'create-video' ) : add_query_arg( 'tab', 'create-video' ) ); ?>" class="vh360-dashboard-btn vh360-dashboard-tab <?php echo !$vh360_is_licensed ? 'vh360-locked' : ''; ?>" data-tab="create-video" aria-disabled="<?php echo !$vh360_is_licensed ? 'true' : 'false'; ?>" title="<?php echo !$vh360_is_licensed ? esc_attr( $vh360_is_lesson_context ? __( 'Activate your license to create lessons.', 'videohub360-theme' ) : __( 'Activate your license to upload new videos.', 'videohub360-theme' ) ) : ''; ?>">
+                <a href="<?php echo esc_url( function_exists( 'vh360_get_dashboard_tab_url' ) ? vh360_get_dashboard_tab_url( 'create-video' ) : add_query_arg( 'tab', 'create-video' ) ); ?>" class="vh360-dashboard-btn vh360-dashboard-tab <?php echo !$vh360_is_licensed ? 'vh360-locked' : ''; ?>" data-tab="create-video" aria-disabled="<?php echo !$vh360_is_licensed ? 'true' : 'false'; ?>" title="<?php echo !$vh360_is_licensed ? esc_attr( $vh360_is_lesson_context ? __( 'Activate your license to add lessons.', 'videohub360-theme' ) : __( 'Activate your license to add videos.', 'videohub360-theme' ) ) : ''; ?>">
                     <?php echo esc_html(
                         $vh360_is_lesson_context
-                            ? __( 'Create Lesson', 'videohub360-theme' )
-                            : __( 'Upload Video', 'videohub360-theme' )
+                            ? __( 'Add Lesson', 'videohub360-theme' )
+                            : __( 'Add Video', 'videohub360-theme' )
                     ); ?>
                 </a>
             <?php endif; ?>

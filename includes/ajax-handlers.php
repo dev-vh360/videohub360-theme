@@ -932,35 +932,8 @@ class VH360_Ajax_Handlers {
         // Tags
         $tags = isset($_POST['vh360_tags']) ? sanitize_text_field($_POST['vh360_tags']) : '';
         
-        // Livestream settings (moved here for validation logic)
-        $is_live = isset($_POST['vh360_is_live']) ? sanitize_text_field($_POST['vh360_is_live']) : 'no';
-        $stream_type = isset($_POST['vh360_type']) ? sanitize_text_field($_POST['vh360_type']) : 'embed';
-        $live_start_time = isset($_POST['vh360_live_start_time']) ? sanitize_text_field($_POST['vh360_live_start_time']) : '';
-        $offline_message = isset($_POST['vh360_offline_message']) ? wp_kses_post($_POST['vh360_offline_message']) : '';
-        $viewer_count = isset($_POST['vh360_viewer_count']) ? 'yes' : 'no';
-        $chat_enabled = isset($_POST['vh360_chat_enabled']) ? 'yes' : 'no';
-        $chat_placement = isset($_POST['vh360_chat_placement']) ? sanitize_text_field($_POST['vh360_chat_placement']) : '';
-        $live_badge = isset($_POST['vh360_live_badge']) ? 'yes' : 'no';
-        $badge_text = isset($_POST['vh360_badge_text']) ? sanitize_text_field($_POST['vh360_badge_text']) : 'LIVE';
-        $badge_color = isset($_POST['vh360_badge_color']) ? sanitize_hex_color($_POST['vh360_badge_color']) : '#e53935';
-        
-        // Stream type specific fields
-        $embed_code = isset($_POST['vh360_embed_code']) ? vh360_sanitize_embed_code($_POST['vh360_embed_code']) : '';
-        $stream_url = isset($_POST['vh360_stream_url']) ? esc_url_raw($_POST['vh360_stream_url']) : '';
-        $api_url = isset($_POST['vh360_api_url']) ? esc_url_raw($_POST['vh360_api_url']) : '';
-        
-        // Agora specific fields
-        $agora_mode = isset($_POST['vh360_agora_mode']) ? sanitize_text_field($_POST['vh360_agora_mode']) : 'interactive';
-        $agora_channel_name = isset($_POST['vh360_agora_channel_name']) ? sanitize_text_field($_POST['vh360_agora_channel_name']) : '';
-        
-        // Auto-generate Agora channel name if empty (like go-live implementation)
-        if (empty($agora_channel_name) && $stream_type === 'agora') {
-            $agora_channel_name = 'video-' . get_current_user_id() . '-' . time();
-        }
-        
-        $agora_everyone_is_host = isset($_POST['vh360_agora_everyone_is_host']) ? 'yes' : 'no';
-        $require_passcode = isset($_POST['vh360_require_passcode']) ? 'yes' : 'no';
-        $new_passcode = ($require_passcode === 'yes') ? sanitize_text_field($_POST['vh360_host_passcode'] ?? '') : '';
+        // Livestream fields are intentionally not accepted from the legacy Add Video form.
+        // Studio and authorized core/admin workflows own livestream metadata updates.
         
         // Validate required fields
         if (empty($title)) {
@@ -971,7 +944,7 @@ class VH360_Ajax_Handlers {
         
         // No validation for video source - matching backend behavior
         // Backend save_meta_boxes() method does not validate video_url or custom_html
-        // This allows flexibility for all content types including Agora livestreams
+        // This mirrors backend behavior by allowing regular URL, upload, or embed video sources.
         
         // Determine post status. Preserve an existing post's verified status when
         // frontend JavaScript fails to submit a valid action during edit mode.
@@ -1043,37 +1016,14 @@ class VH360_Ajax_Handlers {
             update_post_meta($post_id, '_videohub360_post_views_count', 0);
         }
 
-        $livestream_settings_submitted = isset($_POST['vh360_is_live']) || isset($_POST['vh360_type']) || isset($_POST['vh360_live_start_time']) || isset($_POST['vh360_offline_message']) || isset($_POST['vh360_embed_code']) || isset($_POST['vh360_stream_url']) || isset($_POST['vh360_api_url']) || isset($_POST['vh360_agora_mode']) || isset($_POST['vh360_agora_channel_name']);
-        if (!$edit_mode || $livestream_settings_submitted) {
-            // Save livestream meta fields
-            update_post_meta($post_id, '_vh360_is_live', $is_live);
-            update_post_meta($post_id, '_vh360_type', $stream_type);
-            update_post_meta($post_id, '_vh360_live_start_time', $live_start_time);
-            update_post_meta($post_id, '_vh360_offline_message', $offline_message);
-            update_post_meta($post_id, '_vh360_viewer_count', $viewer_count);
-            update_post_meta($post_id, '_vh360_chat_enabled', $chat_enabled);
-            update_post_meta($post_id, '_vh360_chat_placement', $chat_placement);
-            update_post_meta($post_id, '_vh360_live_badge', $live_badge);
-            update_post_meta($post_id, '_vh360_badge_text', $badge_text);
-            update_post_meta($post_id, '_vh360_badge_color', $badge_color);
-            update_post_meta($post_id, '_vh360_embed_code', $embed_code);
-            update_post_meta($post_id, '_vh360_stream_url', $stream_url);
-            update_post_meta($post_id, '_vh360_api_url', $api_url);
-            update_post_meta($post_id, '_vh360_agora_mode', $agora_mode);
-            update_post_meta($post_id, '_vh360_agora_channel_name', $agora_channel_name);
-            update_post_meta($post_id, '_vh360_agora_everyone_is_host', $agora_everyone_is_host);
-            // Hash passcode before storing; clear if requirement is disabled; keep existing if blank.
-            if ($require_passcode !== 'yes') {
-                update_post_meta($post_id, '_vh360_host_passcode', '');
-            } elseif ($new_passcode !== '') {
-                update_post_meta($post_id, '_vh360_host_passcode', wp_hash_password($new_passcode));
-            }
-            // If require_passcode is yes and the field is blank, keep the existing passcode.
-            update_post_meta($post_id, '_vh360_stream_stopped', 'no');
+        if (!$edit_mode) {
+            update_post_meta($post_id, '_vh360_is_live', 'no');
         }
         
-        // Ensure context is always 'default' for frontend created videos (not live_room)
-        update_post_meta($post_id, '_vh360_context', 'default');
+        // Ensure context is set only for newly-created frontend videos; edits preserve existing contexts.
+        if (!$edit_mode) {
+            update_post_meta($post_id, '_vh360_context', 'default');
+        }
         
         // Handle taxonomies
         // Categories

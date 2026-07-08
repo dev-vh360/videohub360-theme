@@ -63,7 +63,7 @@ class VH360_Studio_Plugin {
 
     public function render_dashboard_tab( $user_id ) {
         if ( ! VH360_Studio_Permissions::user_can_access_studio( $user_id ) ) {
-            echo '<p>' . esc_html__( 'You do not have permission to access VH360 Studio.', 'videohub360-studio' ) . '</p>';
+            printf( '<p>%s</p>', esc_html( sprintf( __( 'You do not have permission to access %s.', 'videohub360-studio' ), function_exists( 'vh360_studio_get_display_name' ) ? vh360_studio_get_display_name() : __( 'Studio', 'videohub360-studio' ) ) ) );
             return;
         }
 
