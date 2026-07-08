@@ -117,6 +117,11 @@ if (!function_exists('videohub360_render_livestream')) {
             $can_moderate = $is_original_host || current_user_can('moderate_comments') || current_user_can('manage_options');
             $is_studio_controlled = 'yes' === get_post_meta(get_the_ID(), '_vh360_studio_controlled_live', true);
             $is_logged_in = is_user_logged_in();
+            $studio_host_user_id = $is_studio_controlled ? absint(get_post_meta(get_the_ID(), '_vh360_studio_host_user_id', true)) : 0;
+            $is_studio_host_viewer = $is_studio_controlled
+                && $studio_host_user_id
+                && $is_logged_in
+                && (int) get_current_user_id() === $studio_host_user_id;
 
             // Debug info — intentionally omits sensitive data (user roles, capabilities).
             $current_user = wp_get_current_user();
@@ -216,9 +221,14 @@ if ($is_appointment && function_exists('vh360_get_appointment_session_state')) {
 
     if ($fields['agora_everyone_is_host'] === 'yes' && $fields['agora_mode'] === 'interactive') {
         $player_html .= '<h3 class="vh360-overlay-title">Join Live Stream</h3>';
-        $player_html .= '<p class="vh360-overlay-description">Click to join as host</p>';
-        $player_html .= '<button id="vh360-join-livestream-btn" class="vh360-overlay-btn">Join Livestream</button>';
-        $player_html .= '<div class="vh360-overlay-hint">You can join immediately as a host</div>';
+        if ($is_studio_host_viewer) {
+            $player_html .= '<p class="vh360-overlay-description">Join as a viewer. Studio is already publishing your live feed.</p>';
+            $player_html .= '<button id="vh360-join-livestream-btn" class="vh360-overlay-btn">View Livestream</button>';
+        } else {
+            $player_html .= '<p class="vh360-overlay-description">Click to join as host</p>';
+            $player_html .= '<button id="vh360-join-livestream-btn" class="vh360-overlay-btn">Join Livestream</button>';
+            $player_html .= '<div class="vh360-overlay-hint">You can join immediately as a host</div>';
+        }
     } elseif ($has_presenter_flow) {
         $player_html .= '<h3 class="vh360-overlay-title">Join Live Stream</h3>';
         $player_html .= '<p class="vh360-overlay-description">Join as a viewer, then use Go Live to request presenter access.</p>';
