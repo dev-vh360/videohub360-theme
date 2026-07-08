@@ -69,6 +69,8 @@
         broadcastReady: false,
         broadcastEnding: false,
         programSwitching: false,
+        liveAudioMuted: false,
+        liveVideoMuted: false,
         lastAgoraConnectionState: '',
         mediaControlsExpanded: false,
         lastRestError: '',
@@ -175,6 +177,10 @@
         interactiveOnly: root.querySelectorAll('[data-interactive-only]'),
         goLive: root.querySelector('[data-go-live]'),
         endLive: root.querySelector('[data-end-live]'),
+        programEndLive: root.querySelector('[data-program-end-live]'),
+        toggleMic: root.querySelector('[data-studio-toggle-mic]'),
+        toggleVideo: root.querySelector('[data-studio-toggle-video]'),
+        programLiveStatus: root.querySelector('[data-studio-program-live-status]'),
         broadcastStatus: root.querySelector('[data-broadcast-status]'),
         agoraLocalPreview: root.querySelector('[data-agora-local-preview]'),
         viewerLinkWrap: root.querySelector('[data-viewer-link-wrap]'),
@@ -423,6 +429,7 @@
         renderMediaPlaybackControls();
         renderSelectedMediaControls();
         updateOperatorStatus();
+        renderProgramLiveControls();
     }
 
     function selectSceneSource(sourceId) {
@@ -718,6 +725,15 @@
         const height = state.programCanvas.height;
         context.fillStyle = '#020617';
         context.fillRect(0, 0, width, height);
+        if (state.liveVideoMuted) {
+            context.fillStyle = '#e5e7eb';
+            context.font = '700 ' + Math.max(20, Math.round(width * 0.035)) + 'px sans-serif';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText('Program video off', width / 2, height / 2);
+            state.programAnimationFrame = window.requestAnimationFrame(drawProgramFrame);
+            return;
+        }
         if (state.programSource === 'camera') {
             if (els.cameraPreview && els.cameraPreview.readyState >= 2) {
                 drawVideoContain(context, els.cameraPreview, width, height, true);
@@ -824,6 +840,97 @@
         const x = (width - drawWidth) / 2;
         const y = (height - drawHeight) / 2;
         context.drawImage(video, x, y, drawWidth, drawHeight);
+    }
+
+
+    function isBroadcastLiveReady() {
+        return Boolean(state.broadcastSession && state.broadcastReady && !state.broadcastStarting && !state.broadcastEnding);
+    }
+
+    function renderProgramLiveControls() {
+        const liveReady = isBroadcastLiveReady();
+        const disabled = !liveReady;
+
+        if (els.toggleMic) {
+            els.toggleMic.disabled = disabled;
+            els.toggleMic.textContent = state.liveAudioMuted ? 'Unmute' : 'Mute';
+            els.toggleMic.setAttribute('aria-pressed', state.liveAudioMuted ? 'true' : 'false');
+        }
+        if (els.toggleVideo) {
+            els.toggleVideo.disabled = disabled;
+            els.toggleVideo.textContent = state.liveVideoMuted ? 'Video On' : 'Video Off';
+            els.toggleVideo.setAttribute('aria-pressed', state.liveVideoMuted ? 'true' : 'false');
+        }
+        if (els.programEndLive) {
+            els.programEndLive.disabled = !state.broadcastSession || state.broadcastEnding;
+        }
+        if (els.programLiveStatus) {
+            if (!state.broadcastSession) {
+                els.programLiveStatus.textContent = 'Not live';
+            } else if (!state.broadcastReady) {
+                els.programLiveStatus.textContent = state.broadcastEnding ? 'Ending live…' : 'Connecting…';
+            } else {
+                const statuses = ['Live'];
+                if (state.liveAudioMuted) { statuses.push('Mic muted'); }
+                if (state.liveVideoMuted) { statuses.push('Video off'); }
+                els.programLiveStatus.textContent = statuses.join(' · ');
+            }
+        }
+        root.classList.toggle('is-program-video-muted', state.liveVideoMuted);
+    }
+
+    function resetProgramLiveControlState() {
+        state.liveAudioMuted = false;
+        state.liveVideoMuted = false;
+        renderProgramLiveControls();
+    }
+
+    async function toggleLiveAudio() {
+        if (!isBroadcastLiveReady()) {
+            setBroadcastStatus('Live microphone controls are available after the broadcast connects.', 'warning');
+            return;
+        }
+        if (!state.broadcastSession || typeof state.broadcastSession.muteAudio !== 'function') {
+            setBroadcastStatus('Live audio controls are unavailable for this broadcast session.', 'error');
+            return;
+        }
+        const nextMuted = !state.liveAudioMuted;
+        try {
+            const result = await state.broadcastSession.muteAudio(nextMuted);
+            if (result === false || result === null) {
+                throw new Error('Live microphone track is unavailable.');
+            }
+            state.liveAudioMuted = nextMuted;
+            renderProgramLiveControls();
+            setBroadcastStatus(nextMuted ? 'Live microphone muted.' : 'Live microphone unmuted.', 'success');
+        } catch (error) {
+            renderProgramLiveControls();
+            setBroadcastStatus((error && error.message) || 'Live microphone could not be updated. Check that the microphone track is available.', 'error');
+        }
+    }
+
+    async function toggleLiveVideo() {
+        if (!isBroadcastLiveReady()) {
+            setBroadcastStatus('Live video controls are available after the broadcast connects.', 'warning');
+            return;
+        }
+        if (!state.broadcastSession || typeof state.broadcastSession.muteVideo !== 'function') {
+            setBroadcastStatus('Live video controls are unavailable for this broadcast session.', 'error');
+            return;
+        }
+        const nextMuted = !state.liveVideoMuted;
+        try {
+            const result = await state.broadcastSession.muteVideo(nextMuted);
+            if (result === false || result === null) {
+                throw new Error('Program video track is unavailable.');
+            }
+            state.liveVideoMuted = nextMuted;
+            renderProgramLiveControls();
+            setBroadcastStatus(nextMuted ? 'Program video is off for live viewers and recordings.' : 'Program video is back on.', 'success');
+        } catch (error) {
+            renderProgramLiveControls();
+            setBroadcastStatus((error && error.message) || 'Program video could not be updated. Check that the Program video track is available.', 'error');
+        }
     }
 
     function renderProgramState() {
@@ -3356,6 +3463,7 @@
         state.broadcastStarting = true;
         state.broadcastReady = false;
         renderTransitionButtons();
+        renderProgramLiveControls();
         if (els.goLive) els.goLive.disabled = true;
         try {
             if (!state.programSource) {
@@ -3398,11 +3506,13 @@
             state.broadcastReady = true;
             state.broadcastStarting = false;
             renderTransitionButtons();
+            renderProgramLiveControls();
             await api('/broadcasts/' + state.broadcastVideoId + '/started', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ job_id: state.activeJobId || 0 }) });
             state.heartbeatTimer = window.setInterval(() => {
                 api('/broadcasts/' + state.broadcastVideoId + '/heartbeat', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } }).catch(() => {});
             }, 30000);
             if (els.endLive) els.endLive.disabled = false;
+            renderProgramLiveControls();
             setShellClass('is-live', true);
             setBroadcastStatus(strings.liveStarted, 'success');
         } catch (error) {
@@ -3424,6 +3534,7 @@
             state.broadcastStarting = false;
             state.broadcastReady = false;
             if (els.endLive) els.endLive.disabled = true;
+            resetProgramLiveControlState();
             if (els.goLive) els.goLive.disabled = false;
             setShellClass('is-live', false);
             renderTransitionButtons();
@@ -3438,6 +3549,7 @@
         state.broadcastEnding = true;
         state.broadcastReady = false;
         renderTransitionButtons();
+        renderProgramLiveControls();
         if (state.recorder || state.recordingStopPromise) {
             setBroadcastStatus('Stopping local recording before ending live…', 'info');
             const localStopError = await stopLocalRecording().then(() => null).catch((error) => {
@@ -3448,6 +3560,7 @@
                 state.broadcastEnding = false;
                 state.broadcastReady = Boolean(state.broadcastSession);
                 renderTransitionButtons();
+                renderProgramLiveControls();
                 setBroadcastStatus('Recording could not be stopped cleanly. Stop recording before ending live.', 'error');
                 return;
             }
@@ -3484,6 +3597,7 @@
         state.broadcastReady = false;
         if (els.goLive) els.goLive.disabled = false;
         if (els.endLive) els.endLive.disabled = true;
+        resetProgramLiveControlState();
         setShellClass('is-live', false);
         renderTransitionButtons();
         setBroadcastStatus((state.recordingStoppedAt && !state.serverStopConfirmed) ? 'Live ended. Recording upload is still finishing.' : strings.liveEnded, 'success');
@@ -3726,6 +3840,9 @@
         if (els.broadcastRequirePasscode) { els.broadcastRequirePasscode.addEventListener('change', updateBroadcastRules); }
         if (els.goLive) { els.goLive.addEventListener('click', goLive); }
         if (els.endLive) { els.endLive.addEventListener('click', endLive); }
+        if (els.programEndLive) { els.programEndLive.addEventListener('click', endLive); }
+        if (els.toggleMic) { els.toggleMic.addEventListener('click', toggleLiveAudio); }
+        if (els.toggleVideo) { els.toggleVideo.addEventListener('click', toggleLiveVideo); }
         if (els.studioFullscreen) { els.studioFullscreen.addEventListener('click', toggleStudioFullscreen); }
         if (els.openViewerLink) { els.openViewerLink.addEventListener('click', openViewerLink); }
         if (els.copyViewerLink) { els.copyViewerLink.addEventListener('click', copyViewerLink); }
@@ -3738,6 +3855,7 @@
                 state.lastAgoraConnectionState = detail.current;
                 state.broadcastReady = Boolean(state.broadcastSession) && detail.current === 'CONNECTED';
                 renderTransitionButtons();
+                renderProgramLiveControls();
                 setBroadcastStatus('Live connection: ' + detail.current + (detail.reason ? ' (' + detail.reason + ')' : ''), detail.current === 'CONNECTED' ? 'success' : 'info');
             }
         });
@@ -3773,6 +3891,7 @@
     renderPreviewState();
     renderSourceState();
     renderProgramState();
+    renderProgramLiveControls();
     renderTransitionButtons();
     renderSceneControls();
     updateViewerLinkControls();
