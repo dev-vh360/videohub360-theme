@@ -3848,6 +3848,22 @@
         if (els.copyViewerLink) { els.copyViewerLink.addEventListener('click', copyViewerLink); }
         document.addEventListener('fullscreenchange', updateFullscreenButton);
         updateFullscreenButton();
+        root.addEventListener('vh360:agora-broadcaster:track-ended', (event) => {
+            const detail = event.detail || {};
+            studioDebugLog('[VH360 Studio] Agora local track ended', detail);
+            if (state.broadcastEnding || !state.broadcastSession) {
+                return;
+            }
+            if (detail.kind === 'audio') {
+                state.liveAudioMuted = true;
+                renderProgramLiveControls();
+                setBroadcastStatus('Microphone input ended or was disconnected. Live audio may be unavailable.', 'warning');
+            } else if (detail.kind === 'video') {
+                state.liveVideoMuted = true;
+                renderProgramLiveControls();
+                setBroadcastStatus('Program video output ended. Restart the live broadcast if viewers cannot see video.', 'warning');
+            }
+        });
         root.addEventListener('vh360:agora-broadcaster:connection-state-change', (event) => {
             const detail = event.detail || {};
             studioDebugLog('[VH360 Studio] Agora connection state changed', detail);

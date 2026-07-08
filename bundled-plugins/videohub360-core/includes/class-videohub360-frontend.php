@@ -609,6 +609,9 @@ class VideoHub360_Frontend {
             'studioControlled' => get_post_meta($post_id, '_vh360_studio_controlled_live', true) === 'yes',
             'studioJobId' => get_post_meta($post_id, '_vh360_studio_job_id', true),
             'studioReplayReady' => get_post_meta($post_id, '_vh360_studio_replay_ready', true) === 'yes',
+            'studioReplayPending' => get_post_meta($post_id, '_vh360_studio_replay_pending', true) === 'yes',
+            'studioReplayFailed' => get_post_meta($post_id, '_vh360_studio_replay_failed', true) === 'yes',
+            'studioReplayStatus' => sanitize_key(get_post_meta($post_id, '_vh360_studio_replay_status', true)),
             'streamStopped' => get_post_meta($post_id, '_vh360_stream_stopped', true) === 'yes'
         );
     }

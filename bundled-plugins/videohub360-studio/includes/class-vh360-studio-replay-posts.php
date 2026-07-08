@@ -108,6 +108,9 @@ class VH360_Studio_Replay_Posts {
         update_post_meta( $post_id, '_vh360_studio_replay_source_live_video_id', ! empty( $job['live_video_id'] ) ? absint( $job['live_video_id'] ) : 0 );
         update_post_meta( $post_id, '_vh360_studio_replay_published_at', current_time( 'mysql' ) );
         update_post_meta( $post_id, '_vh360_studio_replay_ready', 'yes' );
+        update_post_meta( $post_id, '_vh360_studio_replay_pending', 'no' );
+        update_post_meta( $post_id, '_vh360_studio_replay_failed', 'no' );
+        update_post_meta( $post_id, '_vh360_studio_replay_status', 'ready' );
         update_post_meta( $post_id, '_vh360_studio_converted_live_to_replay', $is_live_conversion ? 'yes' : 'no' );
 
         if ( $poster_url ) {
