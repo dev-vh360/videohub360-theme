@@ -58,6 +58,10 @@
         programContext: null,
         programOutputStream: null,
         programAnimationFrame: null,
+        programHiddenTimer: null,
+        programHiddenFrameRate: 8,
+        programStatusMessage: 'Program active',
+        tabProtectionWarningPending: false,
         programFrameRate: 30,
         programWidth: 1920,
         programHeight: 1080,
@@ -187,6 +191,9 @@
         openViewerLink: root.querySelector('[data-open-viewer-link]'),
         copyViewerLink: root.querySelector('[data-copy-viewer-link]'),
         studioFullscreen: root.querySelector('[data-studio-fullscreen]'),
+        openStudioWindow: root.querySelector('[data-open-studio-window]'),
+        onAirNotice: root.querySelector('[data-on-air-notice]'),
+        programDiagnostics: root.querySelector('[data-program-diagnostics]'),
         copyViewerFeedback: root.querySelector('[data-copy-viewer-feedback]'),
         mediaSourceMenuToggle: root.querySelector('[data-toggle-media-source-menu]'),
         mediaSourceMenu: root.querySelector('[data-media-source-menu]'),
@@ -696,17 +703,13 @@
         if (!state.programOutputStream && typeof state.programCanvas.captureStream === 'function') {
             state.programOutputStream = state.programCanvas.captureStream(state.programFrameRate);
         }
-        if (!state.programAnimationFrame) {
-            drawProgramFrame();
-        }
+        updateProgramCompositorLoop();
         return state.programOutputStream;
     }
 
     function stopProgramCompositor(options = {}) {
-        if (state.programAnimationFrame) {
-            window.cancelAnimationFrame(state.programAnimationFrame);
-            state.programAnimationFrame = null;
-        }
+        stopVisibleProgramLoop();
+        stopHiddenProgramLoop();
         if (options.stopTracks && state.programOutputStream) {
             state.programOutputStream.getTracks().forEach((track) => track.stop());
         }
@@ -715,9 +718,79 @@
         }
     }
 
-    function drawProgramFrame() {
-        if (!state.programContext || !state.programCanvas) {
+    function isOnAirOrRecording() {
+        return Boolean(state.broadcastSession || isRecordingActive());
+    }
+
+    function getProgramVideoTrack() {
+        return state.programOutputStream && state.programOutputStream.getVideoTracks ? state.programOutputStream.getVideoTracks()[0] : null;
+    }
+
+    function requestProgramFrameIfSupported() {
+        const programTrack = getProgramVideoTrack();
+        if (programTrack && typeof programTrack.requestFrame === 'function') {
+            programTrack.requestFrame();
+        }
+    }
+
+    function stopVisibleProgramLoop() {
+        if (state.programAnimationFrame) {
+            window.cancelAnimationFrame(state.programAnimationFrame);
             state.programAnimationFrame = null;
+        }
+    }
+
+    function stopHiddenProgramLoop() {
+        if (state.programHiddenTimer) {
+            window.clearTimeout(state.programHiddenTimer);
+            state.programHiddenTimer = null;
+        }
+    }
+
+    function updateProgramCompositorLoop() {
+        if (!state.programContext || !state.programCanvas) {
+            stopVisibleProgramLoop();
+            stopHiddenProgramLoop();
+            return;
+        }
+        if (document.hidden && isOnAirOrRecording()) {
+            stopVisibleProgramLoop();
+            if (!state.programHiddenTimer) {
+                drawProgramFrame({ hiddenFallback: true });
+            }
+            setProgramDiagnostics('Tab hidden — browser may throttle video');
+            return;
+        }
+        stopHiddenProgramLoop();
+        if (!state.programAnimationFrame) {
+            drawProgramFrame();
+        }
+        setProgramDiagnostics(state.programStatusMessage || 'Program active');
+    }
+
+    function scheduleNextProgramFrame(hiddenFallback) {
+        if (hiddenFallback) {
+            if (document.hidden && isOnAirOrRecording()) {
+                state.programHiddenTimer = window.setTimeout(() => drawProgramFrame({ hiddenFallback: true }), Math.round(1000 / state.programHiddenFrameRate));
+            } else {
+                state.programHiddenTimer = null;
+                updateProgramCompositorLoop();
+            }
+            return;
+        }
+        if (!document.hidden || !isOnAirOrRecording()) {
+            state.programAnimationFrame = window.requestAnimationFrame(drawProgramFrame);
+        } else {
+            state.programAnimationFrame = null;
+            updateProgramCompositorLoop();
+        }
+    }
+
+    function drawProgramFrame(options = {}) {
+        const hiddenFallback = Boolean(options.hiddenFallback);
+        if (!state.programContext || !state.programCanvas) {
+            stopVisibleProgramLoop();
+            stopHiddenProgramLoop();
             return;
         }
         const context = state.programContext;
@@ -731,7 +804,8 @@
             context.textAlign = 'center';
             context.textBaseline = 'middle';
             context.fillText('Program video off', width / 2, height / 2);
-            state.programAnimationFrame = window.requestAnimationFrame(drawProgramFrame);
+            if (hiddenFallback) { requestProgramFrameIfSupported(); }
+            scheduleNextProgramFrame(hiddenFallback);
             return;
         }
         if (state.programSource === 'camera') {
@@ -753,7 +827,10 @@
                 drawMediaElement(context, mediaSource.element, width, height, mediaSource.transform || defaultMediaTransform(), 'video');
             }
         }
-        state.programAnimationFrame = window.requestAnimationFrame(drawProgramFrame);
+        if (hiddenFallback) {
+            requestProgramFrameIfSupported();
+        }
+        scheduleNextProgramFrame(hiddenFallback);
     }
 
     function getMediaNaturalSize(element, type, fallbackWidth, fallbackHeight) {
@@ -877,6 +954,7 @@
             }
         }
         root.classList.toggle('is-program-video-muted', state.liveVideoMuted);
+        renderOnAirTabProtection();
     }
 
     function resetProgramLiveControlState() {
@@ -1004,6 +1082,54 @@
             });
         }
         return tracks.length ? new MediaStream(tracks) : null;
+    }
+
+    function setProgramDiagnostics(message) {
+        state.programStatusMessage = message || 'Program active';
+        if (els.programDiagnostics) {
+            els.programDiagnostics.textContent = state.programStatusMessage;
+        }
+        updateOperatorStatus();
+    }
+
+    function renderOnAirTabProtection() {
+        const active = isOnAirOrRecording();
+        if (els.onAirNotice) {
+            els.onAirNotice.hidden = !active;
+        }
+        updateProgramCompositorLoop();
+    }
+
+    function openStudioWindow() {
+        const opened = window.open(window.location.href, 'vh360StudioWindow', 'popup=yes,width=1440,height=900');
+        if (opened) {
+            try { opened.opener = null; } catch (error) {}
+            return;
+        }
+        if (!opened) {
+            setStatus('Popup blocking prevented Studio Window from opening. Allow popups for this site and try again.', 'warning');
+        }
+    }
+
+    function handleStudioVisibilityChange() {
+        if (document.hidden) {
+            if (isOnAirOrRecording()) {
+                state.tabProtectionWarningPending = true;
+                setProgramDiagnostics('Tab hidden — browser may throttle video');
+                updateProgramCompositorLoop();
+                return;
+            }
+            cleanup({ releaseMediaSources: false });
+            return;
+        }
+        updateProgramCompositorLoop();
+        if (state.tabProtectionWarningPending) {
+            state.tabProtectionWarningPending = false;
+            setProgramDiagnostics('Program resumed');
+            setBroadcastStatus('Keep Studio visible while live. Your browser may pause Program video when this tab is hidden.', 'warning');
+        } else {
+            setProgramDiagnostics('Program active');
+        }
     }
 
     function setStatus(message, type) {
@@ -3102,6 +3228,7 @@
         setButtonVisibility(els.retryChunks, hasFailedUploads, hasFailedUploads);
         setButtonVisibility(els.finalizeRecording, canPrepareReplay, canPrepareReplay);
         updatePublishingButtons();
+        renderOnAirTabProtection();
     }
 
     function setRecorderButtons(recording, stopped) {
@@ -3844,6 +3971,7 @@
         if (els.toggleMic) { els.toggleMic.addEventListener('click', toggleLiveAudio); }
         if (els.toggleVideo) { els.toggleVideo.addEventListener('click', toggleLiveVideo); }
         if (els.studioFullscreen) { els.studioFullscreen.addEventListener('click', toggleStudioFullscreen); }
+        if (els.openStudioWindow) { els.openStudioWindow.addEventListener('click', openStudioWindow); }
         if (els.openViewerLink) { els.openViewerLink.addEventListener('click', openViewerLink); }
         if (els.copyViewerLink) { els.copyViewerLink.addEventListener('click', copyViewerLink); }
         document.addEventListener('fullscreenchange', updateFullscreenButton);
@@ -3889,11 +4017,7 @@
             }
             cleanup({ releaseMediaSources: true });
         });
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden && !isRecordingActive() && !state.broadcastSession) {
-                cleanup({ releaseMediaSources: false });
-            }
-        });
+        document.addEventListener('visibilitychange', handleStudioVisibilityChange);
     }
 
     detectSupport();
@@ -3908,6 +4032,7 @@
     renderSourceState();
     renderProgramState();
     renderProgramLiveControls();
+    setProgramDiagnostics('Program active');
     renderTransitionButtons();
     renderSceneControls();
     updateViewerLinkControls();

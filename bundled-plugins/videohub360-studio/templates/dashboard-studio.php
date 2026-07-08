@@ -84,9 +84,15 @@ $friendly_job_status = static function( $job ) {
         <div class="vh360-studio-screen-reader-status" aria-live="polite" data-studio-status>
             <?php esc_html_e( 'Checking browser support…', 'videohub360-studio' ); ?>
         </div>
+        <p class="vh360-studio-on-air-notice" data-on-air-notice hidden>
+            <?php esc_html_e( 'For best results, keep this Studio tab open and visible while broadcasting or recording.', 'videohub360-studio' ); ?>
+        </p>
         <div class="vh360-studio-topbar-links" aria-live="polite">
             <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-studio-fullscreen>
                 <?php esc_html_e( 'Fullscreen Studio', 'videohub360-studio' ); ?>
+            </button>
+            <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-open-studio-window>
+                <?php esc_html_e( 'Open Studio Window', 'videohub360-studio' ); ?>
             </button>
 
             <div class="vh360-studio-viewer-actions" data-viewer-link-wrap hidden>
@@ -207,6 +213,7 @@ $friendly_job_status = static function( $job ) {
                 </div>
                 <div class="vh360-studio-program-live-controls" aria-label="<?php esc_attr_e( 'Live Program controls', 'videohub360-studio' ); ?>">
                     <span class="vh360-studio-program-live-status" data-studio-program-live-status><?php esc_html_e( 'Not live', 'videohub360-studio' ); ?></span>
+                    <span class="vh360-studio-program-diagnostics" data-program-diagnostics><?php esc_html_e( 'Program active', 'videohub360-studio' ); ?></span>
                     <div class="vh360-studio-program-live-actions">
                         <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-studio-toggle-mic disabled><?php esc_html_e( 'Mute', 'videohub360-studio' ); ?></button>
                         <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-studio-toggle-video disabled><?php esc_html_e( 'Video Off', 'videohub360-studio' ); ?></button>
