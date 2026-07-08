@@ -545,6 +545,7 @@ class VideoHub360_Frontend {
             'endedDefaultHtml'     => vh360_get_default_stream_ended_html(),
             'endedByModeratorHtml' => vh360_get_stream_ended_by_moderator_html(),
             'endedNeedsRestartHtml' => vh360_get_stream_ended_needs_restart_html(),
+            'replayProcessingHtml' => vh360_get_stream_replay_processing_html(),
         );
         
         // Add livestream data if it's a live post
@@ -604,7 +605,11 @@ class VideoHub360_Frontend {
             'agoraMode' => get_post_meta($post_id, '_vh360_agora_mode', true) ?: 'interactive',
             'allowEveryoneIsHost' => get_post_meta($post_id, '_vh360_agora_everyone_is_host', true) === 'yes',
             'streamLive' => get_post_meta($post_id, '_vh360_agora_stream_live', true) === 'yes',
-            'liveStartTime' => get_post_meta($post_id, '_vh360_live_start_time', true)
+            'liveStartTime' => get_post_meta($post_id, '_vh360_live_start_time', true),
+            'studioControlled' => get_post_meta($post_id, '_vh360_studio_controlled_live', true) === 'yes',
+            'studioJobId' => get_post_meta($post_id, '_vh360_studio_job_id', true),
+            'studioReplayReady' => get_post_meta($post_id, '_vh360_studio_replay_ready', true) === 'yes',
+            'streamStopped' => get_post_meta($post_id, '_vh360_stream_stopped', true) === 'yes'
         );
     }
 

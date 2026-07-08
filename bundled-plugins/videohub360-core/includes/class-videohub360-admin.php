@@ -448,6 +448,7 @@ class VideoHub360_Admin {
             update_option('vh360_default_live_room_offline_html', wp_kses_post($_POST['vh360_default_live_room_offline_html'] ?? ''));
             update_option('vh360_stream_ended_by_moderator_html', wp_kses_post($_POST['vh360_stream_ended_by_moderator_html'] ?? ''));
             update_option('vh360_stream_ended_needs_restart_html', wp_kses_post($_POST['vh360_stream_ended_needs_restart_html'] ?? ''));
+            update_option('vh360_stream_replay_processing_html', wp_kses_post($_POST['vh360_stream_replay_processing_html'] ?? ''));
             update_option('vh360_default_stream_ended_icon', sanitize_text_field($_POST['vh360_default_stream_ended_icon'] ?? '📴'));
             update_option('vh360_default_live_room_offline_icon', sanitize_text_field($_POST['vh360_default_live_room_offline_icon'] ?? '🔴'));
             
@@ -544,6 +545,7 @@ class VideoHub360_Admin {
         $default_live_room_offline_html = get_option('vh360_default_live_room_offline_html', '');
         $stream_ended_by_moderator_html = get_option('vh360_stream_ended_by_moderator_html', '');
         $stream_ended_needs_restart_html = get_option('vh360_stream_ended_needs_restart_html', '');
+        $stream_replay_processing_html = get_option('vh360_stream_replay_processing_html', '');
         $default_stream_ended_icon = get_option('vh360_default_stream_ended_icon', '📴');
         $default_live_room_offline_icon = get_option('vh360_default_live_room_offline_icon', '🔴');
         
@@ -1182,6 +1184,13 @@ class VideoHub360_Admin {
                         <td>
                             <textarea name="vh360_stream_ended_needs_restart_html" rows="5" class="vh360-field-code"><?php echo esc_textarea($stream_ended_needs_restart_html); ?></textarea>
                             <p class="description">HTML allowed. Shown when the host needs to restart the stream.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Studio Replay Processing HTML</th>
+                        <td>
+                            <textarea name="vh360_stream_replay_processing_html" rows="5" class="vh360-field-code"><?php echo esc_textarea($stream_replay_processing_html); ?></textarea>
+                            <p class="description">Shown on ended Studio livestreams while the recorded replay is still being processed. Leave empty to use the default message.</p>
                         </td>
                     </tr>
                     
