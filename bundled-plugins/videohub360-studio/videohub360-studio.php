@@ -133,6 +133,7 @@ function vh360_studio_load_files() {
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-recording-cleanup.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-replay-posts.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-replay-publisher.php';
+    require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-replay-status-reconciler.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-publitio-client.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-bunny-stream-client.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-assets.php';
@@ -180,5 +181,8 @@ register_activation_hook( __FILE__, 'vh360_studio_activate' );
 function vh360_studio_deactivate() {
     vh360_studio_load_files();
     VH360_Studio_Recording_Cleanup::unschedule();
+    if ( class_exists( 'VH360_Studio_Replay_Status_Reconciler' ) ) {
+        VH360_Studio_Replay_Status_Reconciler::unschedule();
+    }
 }
 register_deactivation_hook( __FILE__, 'vh360_studio_deactivate' );

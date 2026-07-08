@@ -126,7 +126,7 @@ function vh360_get_stream_replay_processing_html() {
     return '<div class="vh360-stream-ended-content">
         <div class="vh360-stream-ended-icon">📴</div>
         <h3 class="vh360-stream-ended-title">Stream Ended</h3>
-        <p class="vh360-stream-ended-text">Thanks for watching. The replay is being prepared and will be available here soon.</p>
+        <p class="vh360-stream-ended-text">Thanks for watching. The replay is being prepared and will appear here when it is ready.</p>
     </div>';
 }
 
