@@ -66,7 +66,7 @@ class VideoHub360_Frontend {
                 $this->enqueue_video_player_assets($is_selfhosted_or_api_live);
             }
 
-            if ($state['is_active_livestream_runtime']) {
+            if ($state['allow_agora_runtime']) {
                 $this->enqueue_livestream_assets($state['allow_agora_sdk']);
             }
 
@@ -162,6 +162,18 @@ class VideoHub360_Frontend {
      * Enqueue Agora/interactive room layout, fullscreen, quality, and settings assets.
      */
     private function enqueue_interactive_layout_assets() {
+        if (!is_singular('videohub360')) {
+            return;
+        }
+
+        if (!wp_script_is('vh360-frontend', 'registered') && !wp_script_is('vh360-frontend', 'enqueued')) {
+            $this->enqueue_core_scripts(true);
+        }
+
+        if (!wp_script_is('vh360-frontend', 'registered') && !wp_script_is('vh360-frontend', 'enqueued')) {
+            return;
+        }
+
         $multiview_css_path = VIDEOHUB360_PLUGIN_DIR . 'assets/css/multi-view-layouts.css';
         $multiview_css_url = VIDEOHUB360_ASSETS_URL . 'css/multi-view-layouts.css';
         $multiview_css_version = file_exists($multiview_css_path) ? filemtime($multiview_css_path) : VIDEOHUB360_VERSION;
@@ -336,6 +348,14 @@ class VideoHub360_Frontend {
      * Enqueue livestream assets
      */
     private function enqueue_livestream_assets($load_agora_sdk = false) {
+        if (!is_singular('videohub360')) {
+            return;
+        }
+
+        if (!wp_script_is('vh360-frontend', 'registered') && !wp_script_is('vh360-frontend', 'enqueued')) {
+            $this->enqueue_core_scripts(true);
+        }
+
         if ($load_agora_sdk) {
             wp_enqueue_script('agora-rtc-sdk', 'https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js', array(), '4.20.0', true);
         }
@@ -345,10 +365,15 @@ class VideoHub360_Frontend {
         $js_url = VIDEOHUB360_ASSETS_URL . 'js/livestream.js';
         $js_version = file_exists($js_path) ? filemtime($js_path) : VIDEOHUB360_VERSION;
         
+        $frontend_dependency = (wp_script_is('vh360-frontend', 'registered') || wp_script_is('vh360-frontend', 'enqueued')) ? 'vh360-frontend' : 'vh360-frontend-core';
+        $livestream_dependencies = $load_agora_sdk
+            ? array('agora-rtc-sdk', 'vh360-frontend-agora')
+            : array($frontend_dependency);
+
         wp_enqueue_script(
             'vh360-livestream',
             $js_url,
-            $load_agora_sdk ? array('agora-rtc-sdk', 'vh360-frontend-agora') : array('vh360-frontend'),
+            $livestream_dependencies,
             $js_version,
             true
         );
@@ -591,6 +616,7 @@ class VideoHub360_Frontend {
             $post_id = $this->get_current_post_id();
         }
 
+        $is_single_video_context = $this->is_single_video_context($post_id);
         $is_live_identity = $post_id && get_post_meta($post_id, '_vh360_is_live', true) === 'yes';
         $stream_stopped = $post_id && get_post_meta($post_id, '_vh360_stream_stopped', true) === 'yes';
         $studio_replay_ready = $post_id && get_post_meta($post_id, '_vh360_studio_replay_ready', true) === 'yes';
@@ -603,7 +629,7 @@ class VideoHub360_Frontend {
         $is_ended_livestream_replay = $is_live_identity && $stream_stopped && $studio_replay_ready;
         $is_active_livestream_runtime = $has_livestream_identity && !$stream_stopped;
         $is_agora_identity = $post_id && get_post_meta($post_id, '_vh360_type', true) === 'agora';
-        $allow_agora_runtime = $is_active_livestream_runtime && $is_agora_identity;
+        $allow_agora_runtime = $is_single_video_context && $is_active_livestream_runtime && $is_agora_identity;
 
         $chat_enabled = false;
         if ($has_livestream_identity) {

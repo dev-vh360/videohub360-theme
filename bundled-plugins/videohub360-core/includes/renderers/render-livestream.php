@@ -117,6 +117,11 @@ if (!function_exists('videohub360_render_livestream')) {
             $can_moderate = $is_original_host || current_user_can('moderate_comments') || current_user_can('manage_options');
             $is_studio_controlled = 'yes' === get_post_meta(get_the_ID(), '_vh360_studio_controlled_live', true);
             $is_logged_in = is_user_logged_in();
+            $studio_host_user_id = $is_studio_controlled ? absint(get_post_meta(get_the_ID(), '_vh360_studio_host_user_id', true)) : 0;
+            $is_studio_host_viewer = $is_studio_controlled
+                && $studio_host_user_id
+                && $is_logged_in
+                && (int) get_current_user_id() === $studio_host_user_id;
 
             // Debug info — intentionally omits sensitive data (user roles, capabilities).
             $current_user = wp_get_current_user();
@@ -209,12 +214,24 @@ if ($is_appointment && function_exists('vh360_get_appointment_session_state')) {
     $player_html .= '<button id="vh360-join-livestream-btn" class="vh360-overlay-btn">Start Live Stream</button>';
     $player_html .= '<div class="vh360-overlay-hint">Click to start the live stream</div>';
 } else {
-    // Regular live room - check if everyone can join as host in interactive mode (Zoom-style)
-    if ($fields['agora_everyone_is_host'] === 'yes' && $fields['agora_mode'] === 'interactive') {
+    // Regular/Studio viewer flow. Studio controls Start/End ownership, but interactive
+    // presenter permissions still come from everyone-host/passcode settings.
+    $has_presenter_flow = $fields['agora_mode'] === 'interactive'
+        && (!empty($fields['host_passcode']) || $fields['agora_everyone_is_host'] === 'yes');
+
+    if ($is_studio_host_viewer) {
+        $player_html .= '<h3 class="vh360-overlay-title">Join Live Stream</h3>';
+        $player_html .= '<p class="vh360-overlay-description">Join as a viewer. Studio is already publishing your live feed.</p>';
+        $player_html .= '<button id="vh360-join-livestream-btn" class="vh360-overlay-btn">View Livestream</button>';
+    } elseif ($fields['agora_everyone_is_host'] === 'yes' && $fields['agora_mode'] === 'interactive') {
         $player_html .= '<h3 class="vh360-overlay-title">Join Live Stream</h3>';
         $player_html .= '<p class="vh360-overlay-description">Click to join as host</p>';
         $player_html .= '<button id="vh360-join-livestream-btn" class="vh360-overlay-btn">Join Livestream</button>';
         $player_html .= '<div class="vh360-overlay-hint">You can join immediately as a host</div>';
+    } elseif ($has_presenter_flow) {
+        $player_html .= '<h3 class="vh360-overlay-title">Join Live Stream</h3>';
+        $player_html .= '<p class="vh360-overlay-description">Join as a viewer, then use Go Live to request presenter access.</p>';
+        $player_html .= '<button id="vh360-join-livestream-btn" class="vh360-overlay-btn">Join Livestream</button>';
     } else {
         $player_html .= '<div class="vh360-overlay-waiting">Waiting for the host to start the live stream</div>';
     }

@@ -602,7 +602,6 @@ window.initializeAgoraPlayer = function(config) {
         currentRole = 'audience';
         config.isHost = false;
         config.role = 'audience';
-        config.allowEveryoneIsHost = false;
     }
 
     // Initialize stream started flag - controls should not show until stream begins
@@ -620,19 +619,32 @@ window.initializeAgoraPlayer = function(config) {
         studioControlled: !!config.studioControlled
     });
 
-    if (config.allowEveryoneIsHost && config.agoraMode === 'interactive') {
+    let isOriginalHost = config.studioControlled ? false : config.isOriginalHost;
+    let canModerate = config.canModerate;
+    let security = config.security || {};
+    const isStudioHostViewer = !!(
+        config.studioControlled &&
+        config.viewerUserId &&
+        config.studioHostUserId &&
+        String(config.viewerUserId) === String(config.studioHostUserId)
+    );
+    const allowEveryoneHostForThisViewer = !!(
+        config.allowEveryoneIsHost &&
+        config.agoraMode === 'interactive' &&
+        !isStudioHostViewer
+    );
+
+    if (allowEveryoneHostForThisViewer) {
         isHost = true;
         currentRole = 'host';
-        window.vh360Log("VideoHub360: Everyone-is-host mode enabled, setting role to host");
+        window.vh360Log("VideoHub360: Everyone-is-host mode enabled for this viewer, setting role to host");
+    } else if (isStudioHostViewer) {
+        window.vh360Log("VideoHub360: Studio host viewer detected, suppressing everyone-host auto-publish on public page");
     }
 
     window.vh360Log("VideoHub360: Final role setup:");
     window.vh360Log("- currentRole:", currentRole);
     window.vh360Log("- isHost:", isHost);
-
-    let isOriginalHost = config.studioControlled ? false : config.isOriginalHost;
-    let canModerate = config.canModerate;
-    let security = config.security || {};
 
     if (config.studioControlled) {
         config.displayName = config.viewerDisplayName || config.displayName || 'Guest';
@@ -3099,8 +3111,8 @@ window.initializeAgoraPlayer = function(config) {
 
     // -- Publishing (Host) --
     async function startPublishing() {
-        if (config.studioControlled) {
-            window.vh360Log('Studio-controlled broadcast: public page publishing disabled.');
+        if (config.studioControlled && config.agoraMode !== 'interactive') {
+            window.vh360Log('Studio-controlled broadcast stream: public page publishing disabled.');
             return;
         }
         try {
@@ -3298,12 +3310,16 @@ window.initializeAgoraPlayer = function(config) {
                 showAgoraError('Join as presenter is only available in Interactive mode.');
                 return;
             }
+            if (isStudioHostViewer) {
+                showAgoraError('Studio is already publishing your live feed. Use Studio to control this livestream.');
+                return;
+            }
             if (!security.is_logged_in) {
                 showAgoraError('Please log in to join as a presenter.');
                 return;
             }
-            if (config.studioControlled) {
-                window.vh360Log('Studio-controlled broadcast: public page publishing disabled.');
+            if (config.studioControlled && config.agoraMode !== 'interactive') {
+                window.vh360Log('Studio-controlled broadcast stream: public page publishing disabled.');
                 return;
             }
             if (isOriginalHost) {
@@ -4807,8 +4823,8 @@ window.initializeAgoraPlayer = function(config) {
     // Simple join livestream button functionality
     function handleJoinLivestream() {
         window.vh360Log('VideoHub360: handleJoinLivestream() called');
-        if (config.studioControlled) {
-            window.vh360Log('Studio-controlled broadcast: public page publishing disabled.');
+        if (config.studioControlled && config.agoraMode !== 'interactive') {
+            window.vh360Log('Studio-controlled broadcast stream: public page publishing disabled.');
         }
         window.vh360Log('VideoHub360: Current role at button click:', currentRole);
         window.vh360Log('VideoHub360: isOriginalHost:', isOriginalHost);
@@ -4818,7 +4834,7 @@ window.initializeAgoraPlayer = function(config) {
         var loginRequired = true;
 
         // If everyone-is-host mode is enabled and admin setting allows guest join, login is not required
-        if (config.allowEveryoneIsHost && config.agoraMode === 'interactive' && vh360Data.forceLoginEveryoneHost == 0) {
+        if (allowEveryoneHostForThisViewer && vh360Data.forceLoginEveryoneHost == 0) {
             loginRequired = false;
             window.vh360Log('VideoHub360: Guest join allowed - everyone-is-host mode enabled and login not required by admin setting');
         }
@@ -4828,7 +4844,7 @@ window.initializeAgoraPlayer = function(config) {
             window.location.href = vh360Data.userLoginUrl;
             return;
         }
-        if (config.studioControlled) {
+        if (config.studioControlled && config.agoraMode !== 'interactive') {
             if (joinOverlay) {
                 joinOverlay.style.display = 'none';
             }
@@ -4919,8 +4935,8 @@ window.initializeAgoraPlayer = function(config) {
             });
         } else {
             // Check if everyone should join as hosts in interactive mode (Zoom-style)
-            if (config.allowEveryoneIsHost && config.agoraMode === 'interactive') {
-                window.vh360Log('VideoHub360: Everyone-as-host mode enabled, joining immediately as host');
+            if (allowEveryoneHostForThisViewer) {
+                window.vh360Log('VideoHub360: Everyone-as-host mode enabled for this viewer, joining immediately as host');
                 if (joinOverlay) {
                     joinOverlay.style.display = 'none';
                 }
@@ -5078,9 +5094,9 @@ window.initializeAgoraPlayer = function(config) {
     } else if (isOriginalHost) {
         // Host sees the "Start Live Stream" button and waits for click
         window.vh360Log('VideoHub360: Host detected, waiting for Start Live Stream button click');
-    } else if (config.allowEveryoneIsHost && config.agoraMode === 'interactive') {
-        // In everyone-as-host mode with interactive streaming, users can join immediately
-        window.vh360Log('VideoHub360: Everyone-as-host mode enabled, showing join button for immediate host access');
+    } else if (allowEveryoneHostForThisViewer) {
+        // In everyone-as-host mode with interactive streaming, eligible users can join immediately.
+        window.vh360Log('VideoHub360: Everyone-as-host mode enabled for this viewer, showing join button for immediate host access');
         // Keep the join overlay visible so users can click to join as hosts
     } else {
         // Audience users start polling for stream status
