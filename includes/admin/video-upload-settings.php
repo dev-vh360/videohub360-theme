@@ -1,8 +1,8 @@
 <?php
 /**
- * Create Form Settings Page
+ * Add Video Form Settings Page
  *
- * Admin settings page for controlling frontend create form sections and video uploads.
+ * Admin settings page for controlling frontend Add Video form sections and video uploads.
  * Located at VH360 Theme → Add Video / Lesson.
  *
  * @package Videohub360_Theme
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Add Create Form Settings submenu under VH360 Theme
+ * Add Video Form Settings submenu under VH360 Theme
  */
 function vh360_video_upload_add_admin_menu() {
     add_submenu_page(
@@ -50,7 +50,7 @@ function vh360_video_upload_settings_init() {
 
     add_settings_section(
         'vh360_create_form_sections',
-        __('Create Form Sections', 'videohub360-theme'),
+        __('Add Video Form Sections', 'videohub360-theme'),
         'vh360_create_form_sections_callback',
         'vh360_video_upload'
     );
@@ -106,7 +106,7 @@ add_action('admin_init', 'vh360_video_upload_settings_init');
 
 
 /**
- * Sanitize create form section settings
+ * Sanitize Add Video form section settings
  */
 function vh360_create_form_sanitize_options($input) {
     return array(
@@ -116,7 +116,7 @@ function vh360_create_form_sanitize_options($input) {
 }
 
 /**
- * Create form sections callback
+ * Add Video form sections callback
  */
 function vh360_create_form_sections_callback() {
     ?>
@@ -129,7 +129,7 @@ function vh360_create_form_show_ads_render() {
     ?>
     <label>
         <input type="checkbox" name="vh360_create_form_options[show_ad_settings]" value="1" <?php checked($options['show_ad_settings'], 1); ?>>
-        <?php esc_html_e('Display the Ad Settings section in the frontend Create form.', 'videohub360-theme'); ?>
+        <?php esc_html_e('Display the Ad Settings section in the frontend Add Video / Lesson form.', 'videohub360-theme'); ?>
     </label>
     <?php
 }
@@ -139,7 +139,7 @@ function vh360_create_form_show_advanced_render() {
     ?>
     <label>
         <input type="checkbox" name="vh360_create_form_options[show_advanced_settings]" value="1" <?php checked($options['show_advanced_settings'], 1); ?>>
-        <?php esc_html_e('Display the Advanced Settings section in the frontend Create form.', 'videohub360-theme'); ?>
+        <?php esc_html_e('Display the Advanced Settings section in the frontend Add Video / Lesson form.', 'videohub360-theme'); ?>
     </label>
     <?php
 }
