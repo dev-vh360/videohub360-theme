@@ -3851,6 +3851,9 @@
         root.addEventListener('vh360:agora-broadcaster:track-ended', (event) => {
             const detail = event.detail || {};
             studioDebugLog('[VH360 Studio] Agora local track ended', detail);
+            if (state.broadcastEnding || !state.broadcastSession) {
+                return;
+            }
             if (detail.kind === 'audio') {
                 state.liveAudioMuted = true;
                 renderProgramLiveControls();

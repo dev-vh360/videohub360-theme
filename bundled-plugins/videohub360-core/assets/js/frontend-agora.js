@@ -3933,7 +3933,7 @@ window.initializeAgoraPlayer = function(config) {
     function handleStreamEndedFromServer(status) {
         stopStreamStatusPolling();
         if (localTracks.audioTrack || localTracks.videoTrack) {
-            stopBroadcasting().catch(function(error) {
+            stopPublishing().catch(function(error) {
                 window.vh360Warn('VideoHub360: Failed to stop local tracks after stream ended:', error);
             });
         }

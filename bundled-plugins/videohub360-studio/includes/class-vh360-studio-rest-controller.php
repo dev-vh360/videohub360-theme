@@ -970,6 +970,19 @@ class VH360_Studio_REST_Controller {
         return rest_ensure_response( $this->prepare_job_response( $this->jobs->update( absint( $request['id'] ), get_current_user_id(), $this->update_payload_from_request( $request ) ) ) );
     }
 
+    private function provider_status_is_failed( $status ) {
+        return in_array( sanitize_key( (string) $status ), array( 'bunny_stream_failed', 'publitio_failed', 'upload_failed', 'failed', 'error' ), true );
+    }
+
+    private function publish_response_is_failed( array $response ) {
+        foreach ( array( 'publish_provider_status', 'provider_status', 'publish_status', 'status' ) as $key ) {
+            if ( ! empty( $response[ $key ] ) && $this->provider_status_is_failed( $response[ $key ] ) ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private function update_live_replay_lifecycle( array $job, $status, $pending = 'yes', $ready = 'no', $failed = 'no' ) {
         $live_video_id = ! empty( $job['live_video_id'] ) ? absint( $job['live_video_id'] ) : 0;
         if ( ! $live_video_id || 'videohub360' !== get_post_type( $live_video_id ) ) {
@@ -1018,7 +1031,8 @@ class VH360_Studio_REST_Controller {
         $summary = $this->chunks->store_uploaded_chunk( $job, $session, intval( $chunk_index ), $files['chunk'], $request->get_param( 'mime_type' ), $request->get_param( 'chunk_checksum' ) );
         if ( is_wp_error( $summary ) ) {
             if ( ! $this->is_retryable_chunk_error( $summary ) ) {
-                $this->jobs->mark_failed( $job['id'], get_current_user_id(), $summary->get_error_message() );
+                $failed_job = $this->jobs->mark_failed( $job['id'], get_current_user_id(), $summary->get_error_message() );
+                $this->update_live_replay_lifecycle( is_wp_error( $failed_job ) ? $job : $failed_job, 'failed', 'no', 'no', 'yes' );
             }
             return $summary;
         }
@@ -1150,6 +1164,9 @@ class VH360_Studio_REST_Controller {
             $this->update_live_replay_lifecycle( $job, 'failed', 'no', 'no', 'yes' );
             return $published;
         }
+        if ( is_array( $published ) && $this->publish_response_is_failed( $published ) ) {
+            $this->update_live_replay_lifecycle( $job, 'failed', 'no', 'no', 'yes' );
+        }
         return rest_ensure_response( $this->prepare_publish_response( $published, $job ) );
     }
 
@@ -1161,6 +1178,13 @@ class VH360_Studio_REST_Controller {
         }
         $status = $this->publisher->status( $job );
         if ( is_wp_error( $status ) ) { return $status; }
+        if ( is_array( $status ) && $this->publish_response_is_failed( $status ) ) {
+            $this->update_live_replay_lifecycle( $job, 'failed', 'no', 'no', 'yes' );
+        } elseif ( VH360_Studio_Recording_Jobs::STATUS_READY === $job['status'] ) {
+            $this->update_live_replay_lifecycle( $job, 'ready', 'no', 'yes', 'no' );
+        } else {
+            $this->update_live_replay_lifecycle( $job, 'processing', 'yes', 'no', 'no' );
+        }
         return rest_ensure_response( $this->prepare_publish_response( $status, $job ) );
     }
 
@@ -1313,7 +1337,11 @@ class VH360_Studio_REST_Controller {
     }
 
     public function cancel_job( WP_REST_Request $request ) {
-        return rest_ensure_response( $this->prepare_job_response( $this->jobs->cancel( absint( $request['id'] ), get_current_user_id() ) ) );
+        $job = $this->jobs->cancel( absint( $request['id'] ), get_current_user_id() );
+        if ( ! is_wp_error( $job ) ) {
+            $this->update_live_replay_lifecycle( $job, 'cancelled', 'no', 'no', 'yes' );
+        }
+        return rest_ensure_response( $this->prepare_job_response( $job ) );
     }
 
     private function publitio_direct_upload_transient_key( $job_id, $token ) {
