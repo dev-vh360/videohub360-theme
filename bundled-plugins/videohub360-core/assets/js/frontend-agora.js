@@ -3310,6 +3310,10 @@ window.initializeAgoraPlayer = function(config) {
                 showAgoraError('Join as presenter is only available in Interactive mode.');
                 return;
             }
+            if (isStudioHostViewer) {
+                showAgoraError('Studio is already publishing your live feed. Use Studio to control this livestream.');
+                return;
+            }
             if (!security.is_logged_in) {
                 showAgoraError('Please log in to join as a presenter.');
                 return;

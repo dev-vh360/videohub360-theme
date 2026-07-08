@@ -219,16 +219,15 @@ if ($is_appointment && function_exists('vh360_get_appointment_session_state')) {
     $has_presenter_flow = $fields['agora_mode'] === 'interactive'
         && (!empty($fields['host_passcode']) || $fields['agora_everyone_is_host'] === 'yes');
 
-    if ($fields['agora_everyone_is_host'] === 'yes' && $fields['agora_mode'] === 'interactive') {
+    if ($is_studio_host_viewer) {
         $player_html .= '<h3 class="vh360-overlay-title">Join Live Stream</h3>';
-        if ($is_studio_host_viewer) {
-            $player_html .= '<p class="vh360-overlay-description">Join as a viewer. Studio is already publishing your live feed.</p>';
-            $player_html .= '<button id="vh360-join-livestream-btn" class="vh360-overlay-btn">View Livestream</button>';
-        } else {
-            $player_html .= '<p class="vh360-overlay-description">Click to join as host</p>';
-            $player_html .= '<button id="vh360-join-livestream-btn" class="vh360-overlay-btn">Join Livestream</button>';
-            $player_html .= '<div class="vh360-overlay-hint">You can join immediately as a host</div>';
-        }
+        $player_html .= '<p class="vh360-overlay-description">Join as a viewer. Studio is already publishing your live feed.</p>';
+        $player_html .= '<button id="vh360-join-livestream-btn" class="vh360-overlay-btn">View Livestream</button>';
+    } elseif ($fields['agora_everyone_is_host'] === 'yes' && $fields['agora_mode'] === 'interactive') {
+        $player_html .= '<h3 class="vh360-overlay-title">Join Live Stream</h3>';
+        $player_html .= '<p class="vh360-overlay-description">Click to join as host</p>';
+        $player_html .= '<button id="vh360-join-livestream-btn" class="vh360-overlay-btn">Join Livestream</button>';
+        $player_html .= '<div class="vh360-overlay-hint">You can join immediately as a host</div>';
     } elseif ($has_presenter_flow) {
         $player_html .= '<h3 class="vh360-overlay-title">Join Live Stream</h3>';
         $player_html .= '<p class="vh360-overlay-description">Join as a viewer, then use Go Live to request presenter access.</p>';
