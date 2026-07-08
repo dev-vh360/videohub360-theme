@@ -11,6 +11,25 @@
             const root = config.container || document;
             const localContainer = config.localContainer || root.querySelector('[data-agora-local-preview]') || root;
 
+            function bindTrackLifecycle(track, kind, source) {
+                if (!track) { return; }
+                const detail = { kind: kind, source: source, reason: 'ended' };
+                const notifyEnded = function (reason) {
+                    const eventDetail = Object.assign({}, detail, { reason: reason || 'ended' });
+                    emit(root, 'track-ended', eventDetail);
+                    emit(root, 'track-state-change', Object.assign({}, eventDetail, { state: 'ended' }));
+                };
+                if (typeof track.on === 'function') {
+                    track.on('track-ended', function () { notifyEnded('agora-track-ended'); });
+                }
+                if (typeof track.getMediaStreamTrack === 'function') {
+                    const mediaTrack = track.getMediaStreamTrack();
+                    if (mediaTrack && typeof mediaTrack.addEventListener === 'function') {
+                        mediaTrack.addEventListener('ended', function () { notifyEnded('media-track-ended'); }, { once: true });
+                    }
+                }
+            }
+
             async function start() {
                 if (!window.AgoraRTC) {
                     throw new Error('Agora RTC SDK is unavailable.');
@@ -39,6 +58,8 @@
                     state.videoTrack = await window.AgoraRTC.createCameraVideoTrack(config.videoConfig || {});
                     state.videoTrackOwnsSource = true;
                 }
+                bindTrackLifecycle(state.audioTrack, 'audio', 'microphone');
+                bindTrackLifecycle(state.videoTrack, 'video', config.initialVideoMediaStreamTrack ? 'program' : 'camera');
                 if (localContainer) {
                     state.videoTrack.play(localContainer, { mirror: config.initialVideoSource !== 'screen' });
                 }

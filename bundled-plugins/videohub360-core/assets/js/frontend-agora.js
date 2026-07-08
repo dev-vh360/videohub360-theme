@@ -2746,6 +2746,11 @@ window.initializeAgoraPlayer = function(config) {
             setActiveSpeaker(null);
         }
 
+        if (isStudioHostUid(user.uid)) {
+            setTimeout(() => handleAudienceNoRemoteUsers(), 100);
+            return;
+        }
+
         if (currentRole === 'audience' && Object.keys(remoteUsers).length === 0) {
             setTimeout(() => handleAudienceNoRemoteUsers(), 100);
         }
@@ -3874,10 +3879,15 @@ window.initializeAgoraPlayer = function(config) {
 
     function isStudioReplayProcessingStatus(status) {
         const data = status || {};
+        if (data.replay_processing === true) {
+            return true;
+        }
         const hasStudioJob = !!(data.studio_job_id || vh360Data?.studioJobId || config?.studioJobId);
         const isStudioControlled = data.studio_controlled === true || vh360Data?.studioControlled === true || config?.studioControlled === true;
         const replayReady = data.studio_replay_ready === true || vh360Data?.studioReplayReady === true || config?.studioReplayReady === true;
-        return isStudioControlled && hasStudioJob && !replayReady;
+        const replayPending = data.studio_replay_pending === true || vh360Data?.studioReplayPending === true || config?.studioReplayPending === true;
+        const replayFailed = data.studio_replay_failed === true || vh360Data?.studioReplayFailed === true || config?.studioReplayFailed === true;
+        return isStudioControlled && hasStudioJob && replayPending && !replayReady && !replayFailed;
     }
 
     function showStreamEndedMessage(status) {
@@ -3920,6 +3930,16 @@ window.initializeAgoraPlayer = function(config) {
         }).then(function(response) { return response.json(); });
     }
 
+    function handleStreamEndedFromServer(status) {
+        stopStreamStatusPolling();
+        if (localTracks.audioTrack || localTracks.videoTrack) {
+            stopBroadcasting().catch(function(error) {
+                window.vh360Warn('VideoHub360: Failed to stop local tracks after stream ended:', error);
+            });
+        }
+        showStreamEndedMessage(status);
+    }
+
     function handleAudienceNoRemoteUsers() {
         fetchStreamStatus()
             .then(function(data) {
@@ -3929,8 +3949,7 @@ window.initializeAgoraPlayer = function(config) {
                 }
 
                 if (data.data.stream_stopped === true) {
-                    stopStreamStatusPolling();
-                    showStreamEndedMessage(data.data);
+                    handleStreamEndedFromServer(data.data);
                 } else if (data.data.stream_live === false) {
                     showAudienceWaitingMessage();
                 }
@@ -4712,12 +4731,16 @@ window.initializeAgoraPlayer = function(config) {
     let streamStatusPollInterval = null;
     let isStreamStatusPollingActive = false;
 
+    function shouldPollStreamStatus() {
+        return config.studioControlled ? !isOriginalHost : (!isOriginalHost && currentRole === 'audience');
+    }
+
     function startStreamStatusPolling() {
-        if (!isOriginalHost && currentRole === 'audience' && !isStreamStatusPollingActive) {
+        if (shouldPollStreamStatus() && !isStreamStatusPollingActive) {
             isStreamStatusPollingActive = true;
             streamStatusPollInterval = setInterval(checkStreamStatus, 3000); // Poll every 3 seconds
             checkStreamStatus(); // Check immediately
-            window.vh360Log('VideoHub360: Started stream status polling for audience user');
+            window.vh360Log('VideoHub360: Started stream status polling');
         }
     }
 
@@ -4758,8 +4781,7 @@ window.initializeAgoraPlayer = function(config) {
             if (data.success) {
                 if (data.data.stream_stopped === true) {
                     window.vh360Log('VideoHub360: Stream detected as stopped');
-                    stopStreamStatusPolling();
-                    showStreamEndedMessage(data.data);
+                    handleStreamEndedFromServer(data.data);
                     return;
                 }
 

@@ -1057,6 +1057,9 @@ class VideoHub360_Ajax {
             $studio_controlled = get_post_meta($post_id, '_vh360_studio_controlled_live', true);
             $studio_job_id = get_post_meta($post_id, '_vh360_studio_job_id', true);
             $studio_replay_ready = get_post_meta($post_id, '_vh360_studio_replay_ready', true);
+            $studio_replay_pending = get_post_meta($post_id, '_vh360_studio_replay_pending', true);
+            $studio_replay_failed = get_post_meta($post_id, '_vh360_studio_replay_failed', true);
+            $studio_replay_status = get_post_meta($post_id, '_vh360_studio_replay_status', true);
             
             wp_send_json_success(array(
                 'post_id' => $post_id,
@@ -1069,7 +1072,10 @@ class VideoHub360_Ajax {
                 'studio_controlled' => $studio_controlled === 'yes',
                 'studio_job_id' => $studio_job_id,
                 'studio_replay_ready' => $studio_replay_ready === 'yes',
-                'replay_processing' => ($stream_stopped === 'yes' && $studio_controlled === 'yes' && !empty($studio_job_id) && $studio_replay_ready !== 'yes'),
+                'studio_replay_pending' => $studio_replay_pending === 'yes',
+                'studio_replay_failed' => $studio_replay_failed === 'yes',
+                'studio_replay_status' => sanitize_key($studio_replay_status),
+                'replay_processing' => ($stream_stopped === 'yes' && $studio_controlled === 'yes' && $studio_replay_ready !== 'yes' && $studio_replay_pending === 'yes' && $studio_replay_failed !== 'yes'),
                 'timestamp' => current_time('mysql')
             ));
             

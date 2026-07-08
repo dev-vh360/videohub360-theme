@@ -84,7 +84,15 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
         $livestream_fields['stream_stopped'] === 'yes'
         && get_post_meta(get_the_ID(), '_vh360_studio_controlled_live', true) === 'yes'
         && get_post_meta(get_the_ID(), '_vh360_studio_replay_ready', true) !== 'yes'
-        && get_post_meta(get_the_ID(), '_vh360_studio_job_id', true) !== ''
+        && get_post_meta(get_the_ID(), '_vh360_studio_replay_pending', true) === 'yes'
+        && get_post_meta(get_the_ID(), '_vh360_studio_replay_failed', true) !== 'yes'
+    );
+
+    $is_studio_replay_failed = (
+        $livestream_fields['stream_stopped'] === 'yes'
+        && get_post_meta(get_the_ID(), '_vh360_studio_controlled_live', true) === 'yes'
+        && get_post_meta(get_the_ID(), '_vh360_studio_replay_ready', true) !== 'yes'
+        && get_post_meta(get_the_ID(), '_vh360_studio_replay_failed', true) === 'yes'
     );
 
     $has_studio_replay_playback = (
@@ -251,13 +259,17 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
             <?php elseif ((($livestream_fields['is_live'] === 'yes' && $livestream_fields['stream_stopped'] === 'yes') || $is_legacy_studio_livestream_replay) && !$is_stopped_livestream_replay && !$is_youtube_auto_managed): ?>
                 <div class="videohub360-video-player">
                     <div class="vh360-offline-wrapper">
-                        <?php if (!empty($livestream_fields['offline_message'])) : ?>
-                            <div class="vh360-offline-message">
-                                <?php echo wp_kses_post($livestream_fields['offline_message']); ?>
-                            </div>
-                        <?php elseif ($is_studio_replay_processing) : ?>
+                        <?php if ($is_studio_replay_processing) : ?>
                             <div class="vh360-offline-message">
                                 <?php echo wp_kses_post(vh360_get_stream_replay_processing_html()); ?>
+                            </div>
+                        <?php elseif ($is_studio_replay_failed) : ?>
+                            <div class="vh360-offline-message">
+                                <div class="vh360-stream-ended-content"><div class="vh360-stream-ended-icon">📴</div><h3 class="vh360-stream-ended-title"><?php esc_html_e('Stream Ended', 'videohub360'); ?></h3><p class="vh360-stream-ended-text"><?php esc_html_e('The replay is not available yet. Please check back later.', 'videohub360'); ?></p></div>
+                            </div>
+                        <?php elseif (!empty($livestream_fields['offline_message'])) : ?>
+                            <div class="vh360-offline-message">
+                                <?php echo wp_kses_post($livestream_fields['offline_message']); ?>
                             </div>
                         <?php else : ?>
                             <div class="vh360-offline-message">
