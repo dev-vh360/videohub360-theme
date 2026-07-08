@@ -932,8 +932,8 @@ class VH360_Ajax_Handlers {
         // Tags
         $tags = isset($_POST['vh360_tags']) ? sanitize_text_field($_POST['vh360_tags']) : '';
         
-        // Livestream fields are intentionally not accepted from the legacy + Upload form.
-        // VH360 Studio and authorized core/admin workflows own livestream metadata updates.
+        // Livestream fields are intentionally not accepted from the legacy Add Video form.
+        // Studio and authorized core/admin workflows own livestream metadata updates.
         
         // Validate required fields
         if (empty($title)) {

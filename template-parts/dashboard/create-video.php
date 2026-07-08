@@ -90,7 +90,7 @@ $vh360_create_context_is_lesson = function_exists('vh360_is_create_form_lesson_c
 
 $vh360_create_labels = array(
     'item' => $vh360_create_context_is_lesson ? __('Lesson', 'videohub360-theme') : __('Video', 'videohub360-theme'),
-    'create_heading' => $vh360_create_context_is_lesson ? __('Create Lesson', 'videohub360-theme') : __('Create Video', 'videohub360-theme'),
+    'create_heading' => $vh360_create_context_is_lesson ? __('Add Lesson', 'videohub360-theme') : __('Add Video', 'videohub360-theme'),
     'edit_heading' => $vh360_create_context_is_lesson ? __('Edit Lesson', 'videohub360-theme') : __('Edit Video', 'videohub360-theme'),
     'title_label' => $vh360_create_context_is_lesson ? __('Lesson Title', 'videohub360-theme') : __('Video Title', 'videohub360-theme'),
     'title_placeholder' => $vh360_create_context_is_lesson ? __('Enter your lesson title', 'videohub360-theme') : __('Enter your video title', 'videohub360-theme'),
@@ -199,6 +199,9 @@ $locations = get_terms(array(
 
 $vh360_show_studio_notice = false;
 $vh360_studio_url = '';
+$vh360_studio_display_name = function_exists( 'vh360_studio_get_display_name' )
+    ? vh360_studio_get_display_name()
+    : __( 'Studio', 'videohub360-theme' );
 if ( class_exists( 'VH360_Studio_Permissions' ) && VH360_Studio_Permissions::user_can_access_studio( $current_user_id ) ) {
     $vh360_show_studio_notice = true;
 }
@@ -242,7 +245,7 @@ if ( $vh360_show_studio_notice ) {
     <?php else : ?>
 
     <div class="vh360-dashboard-notice vh360-dashboard-notice-info vh360-studio-redirect-notice">
-        <span><?php esc_html_e('Want to go live? Use VH360 Studio to start a livestream, record, and publish replays.', 'videohub360-theme'); ?></span>
+        <span><?php echo esc_html( sprintf( __( 'Want to go live? Use %s to start a livestream, record, and publish replays.', 'videohub360-theme' ), $vh360_studio_display_name ) ); ?></span>
         <?php if ($vh360_show_studio_notice && !empty($vh360_studio_url)) : ?>
             <a href="<?php echo esc_url($vh360_studio_url); ?>" class="vh360-dashboard-btn vh360-dashboard-btn-secondary vh360-dashboard-tab" data-tab="studio">
                 <?php esc_html_e('Open Studio', 'videohub360-theme'); ?>

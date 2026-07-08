@@ -45,7 +45,7 @@ function vh360_menu_icon_choices() {
         'courses'            => __( 'Courses', 'videohub360-theme' ),
         'create'             => __( 'Create', 'videohub360-theme' ),
         'create-post'        => __( 'Create Post', 'videohub360-theme' ),
-        'create-video'       => __( 'Create Video', 'videohub360-theme' ),
+        'create-video'       => __( 'Add Video', 'videohub360-theme' ),
         'dashboard'          => __( 'Dashboard', 'videohub360-theme' ),
         'directory'          => __( 'Directory', 'videohub360-theme' ),
         'donate'             => __( 'Donate', 'videohub360-theme' ),

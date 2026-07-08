@@ -3,7 +3,7 @@
  * Create Form Settings Page
  *
  * Admin settings page for controlling frontend create form sections and video uploads.
- * Located at VH360 Theme → Create Video / Lesson.
+ * Located at VH360 Theme → Add Video / Lesson.
  *
  * @package Videohub360_Theme
  * @since 1.0.0
@@ -19,8 +19,8 @@ if (!defined('ABSPATH')) {
 function vh360_video_upload_add_admin_menu() {
     add_submenu_page(
         'vh360-theme',
-        __('Create Video / Lesson Settings', 'videohub360-theme'),
-        __('Create Form', 'videohub360-theme'),
+        __('Add Video / Lesson Settings', 'videohub360-theme'),
+        __('Add Video Form', 'videohub360-theme'),
         'manage_options',
         'vh360-video-upload-settings',
         'vh360_video_upload_settings_page'
@@ -120,7 +120,7 @@ function vh360_create_form_sanitize_options($input) {
  */
 function vh360_create_form_sections_callback() {
     ?>
-    <p><?php esc_html_e('Control whether Ad Settings and Advanced Settings appear in the frontend Create Video / Lesson form.', 'videohub360-theme'); ?></p>
+    <p><?php esc_html_e('Control whether Ad Settings and Advanced Settings appear in the frontend Add Video / Lesson form.', 'videohub360-theme'); ?></p>
     <?php
 }
 
@@ -200,7 +200,7 @@ function vh360_video_upload_sanitize_options($input) {
  */
 function vh360_video_upload_section_callback() {
     ?>
-    <p><?php esc_html_e('Configure video file upload settings for the frontend "Create Video / Lesson" form. This controls MAIN video uploads (videohub360 post type), not Activity Feed videos.', 'videohub360-theme'); ?></p>
+    <p><?php esc_html_e('Configure video file upload settings for the frontend Add Video / Lesson form. This controls MAIN video uploads (videohub360 post type), not Activity Feed videos.', 'videohub360-theme'); ?></p>
     <div class="notice notice-info inline">
         <p>
             <strong><?php esc_html_e('Server Information:', 'videohub360-theme'); ?></strong><br>
@@ -232,7 +232,7 @@ function vh360_video_upload_enable_render() {
     ?>
     <label>
         <input type="checkbox" name="vh360_video_upload_options[enable_video_upload]" value="1" <?php checked($enabled, 1); ?>>
-        <?php esc_html_e('Allow users to upload video files directly from the Create Video / Lesson form', 'videohub360-theme'); ?>
+        <?php esc_html_e('Allow users to upload video files directly from the Add Video / Lesson form', 'videohub360-theme'); ?>
     </label>
     <p class="description">
         <?php esc_html_e('When enabled, users will see an upload option in the Video Source / Lesson Video section.', 'videohub360-theme'); ?>

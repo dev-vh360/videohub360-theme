@@ -41,7 +41,7 @@ function vh360_translate_dynamic_menu_placeholders($sorted_menu_items, $args) {
             continue;
         }
 
-        // Translate saved "My Videos" menu items to "My Lessons" when Course Mode is active.
+        // Translate saved "My Videos" menu items to current Videos/Lessons wording.
         if ( isset( $menu_item->title, $menu_item->url ) && 'My Videos' === $menu_item->title ) {
             $fragment = wp_parse_url( $menu_item->url, PHP_URL_FRAGMENT );
             $query    = wp_parse_url( $menu_item->url, PHP_URL_QUERY );
@@ -57,20 +57,10 @@ function vh360_translate_dynamic_menu_placeholders($sorted_menu_items, $args) {
                 $is_videos_dashboard_link = true;
             }
 
-            if (
-                $is_videos_dashboard_link
-                && function_exists( 'vh360_dashboard_uses_lesson_labels' )
-                && vh360_dashboard_uses_lesson_labels( $current_user_id )
-            ) {
-                $lesson_label_plural = function_exists( 'vh360_get_lesson_label' )
-                    ? vh360_get_lesson_label( true )
-                    : __( 'Lessons', 'videohub360-theme' );
-
-                $menu_item->title = sprintf(
-                    /* translators: %s = plural lesson label. */
-                    __( 'My %s', 'videohub360-theme' ),
-                    $lesson_label_plural
-                );
+            if ( $is_videos_dashboard_link ) {
+                $menu_item->title = ( function_exists( 'vh360_dashboard_uses_lesson_labels' ) && vh360_dashboard_uses_lesson_labels( $current_user_id ) )
+                    ? ( function_exists( 'vh360_get_lesson_label' ) ? vh360_get_lesson_label( true ) : __( 'Lessons', 'videohub360-theme' ) )
+                    : __( 'Videos', 'videohub360-theme' );
             }
         }
 
@@ -92,6 +82,38 @@ function vh360_translate_dynamic_menu_placeholders($sorted_menu_items, $args) {
     return $sorted_menu_items;
 }
 add_filter('wp_nav_menu_objects', 'vh360_translate_dynamic_menu_placeholders', 20, 2);
+
+/**
+ * Hide legacy create-video dashboard menu entries at render time without deleting saved menu items.
+ */
+function vh360_hide_create_video_dashboard_menu_items( $sorted_menu_items, $args ) {
+    if ( is_admin() || empty( $sorted_menu_items ) || empty( $args->theme_location ) || 'dashboard' !== $args->theme_location ) {
+        return $sorted_menu_items;
+    }
+
+    return array_values( array_filter( $sorted_menu_items, function( $menu_item ) {
+        if ( empty( $menu_item->url ) ) {
+            return true;
+        }
+
+        $fragment = (string) wp_parse_url( $menu_item->url, PHP_URL_FRAGMENT );
+        if ( 'create-video' === $fragment ) {
+            return false;
+        }
+
+        $query = wp_parse_url( $menu_item->url, PHP_URL_QUERY );
+        if ( ! empty( $query ) ) {
+            parse_str( $query, $query_args );
+            if ( isset( $query_args['tab'] ) && 'create-video' === $query_args['tab'] ) {
+                return false;
+            }
+        }
+
+        return false === strpos( $menu_item->url, 'create-video' );
+    } ) );
+}
+add_filter( 'wp_nav_menu_objects', 'vh360_hide_create_video_dashboard_menu_items', 25, 2 );
+
 
 /**
  * Available user menu icons
@@ -261,19 +283,12 @@ function vh360_get_custom_user_menu_items($current_user_id) {
         );
 
         // Runtime resolver: if a saved menu item points to the videos dashboard tab and
-        // still carries the default "My Videos" title, render the dynamic label instead.
+        // still carries the old default "My Videos" title, render the current label instead.
         $rendered_title = $menu_item->title;
         if ( 'videos' === $menu_item_fragment && 'My Videos' === $menu_item->title ) {
-            if ( function_exists( 'vh360_dashboard_uses_lesson_labels' ) && vh360_dashboard_uses_lesson_labels( $current_user_id ) ) {
-                $lesson_label_plural = function_exists( 'vh360_get_lesson_label' )
-                    ? vh360_get_lesson_label( true )
-                    : __( 'Lessons', 'videohub360-theme' );
-                $rendered_title = sprintf(
-                    /* translators: %s = plural lesson label */
-                    __( 'My %s', 'videohub360-theme' ),
-                    $lesson_label_plural
-                );
-            }
+            $rendered_title = ( function_exists( 'vh360_dashboard_uses_lesson_labels' ) && vh360_dashboard_uses_lesson_labels( $current_user_id ) )
+                ? ( function_exists( 'vh360_get_lesson_label' ) ? vh360_get_lesson_label( true ) : __( 'Lessons', 'videohub360-theme' ) )
+                : __( 'Videos', 'videohub360-theme' );
         }
 
         $output .= vh360_get_menu_item_html(
@@ -444,12 +459,8 @@ function vh360_render_user_menu_meta_box() {
         ),
         array(
             'title' => function_exists( 'vh360_dashboard_uses_lesson_labels' ) && vh360_dashboard_uses_lesson_labels( get_current_user_id() )
-                ? sprintf(
-                    /* translators: %s = plural lesson label */
-                    __( 'My %s', 'videohub360-theme' ),
-                    function_exists( 'vh360_get_lesson_label' ) ? vh360_get_lesson_label( true ) : __( 'Lessons', 'videohub360-theme' )
-                )
-                : __('My Videos', 'videohub360-theme'),
+                ? ( function_exists( 'vh360_get_lesson_label' ) ? vh360_get_lesson_label( true ) : __( 'Lessons', 'videohub360-theme' ) )
+                : __('Videos', 'videohub360-theme'),
             'url' => function_exists( 'vh360_get_dashboard_tab_url' ) ? vh360_get_dashboard_tab_url( 'videos' ) : home_url('/dashboard/?tab=videos'),
             'icon' => 'videos',
         ),
