@@ -62,6 +62,7 @@
         programHiddenFrameRate: 8,
         programStatusMessage: 'Program active',
         tabProtectionWarningPending: false,
+        isStudioWindow: false,
         programFrameRate: 30,
         programWidth: 1920,
         programHeight: 1080,
@@ -1100,15 +1101,36 @@
         updateProgramCompositorLoop();
     }
 
+    function studioWindowUrl() {
+        const url = new URL(window.location.href);
+        url.searchParams.set('vh360_studio_window', '1');
+        return url.toString();
+    }
+
+    function applyStudioWindowMode() {
+        const params = new URLSearchParams(window.location.search);
+        state.isStudioWindow = params.get('vh360_studio_window') === '1';
+        root.classList.toggle('is-studio-window', state.isStudioWindow);
+        root.dataset.studioWindowMode = state.isStudioWindow ? '1' : '0';
+        if (document.body) {
+            document.body.classList.toggle('vh360-studio-window-mode', state.isStudioWindow);
+        }
+    }
+
     function openStudioWindow() {
-        const opened = window.open(window.location.href, 'vh360StudioWindow', 'popup=yes,width=1440,height=900');
+        if (isOnAirOrRecording()) {
+            setBroadcastStatus('Open Studio Window before going live. Your current live session cannot be moved to a new browser window. Keep this Studio tab visible while broadcasting.', 'warning');
+            setStatus('Open Studio Window before going live. Keep this active Studio tab visible while broadcasting or recording.', 'warning');
+            return;
+        }
+
+        const features = 'popup=yes,width=1440,height=900,noopener';
+        const opened = window.open(studioWindowUrl(), 'vh360StudioWindow', features);
         if (opened) {
             try { opened.opener = null; } catch (error) {}
             return;
         }
-        if (!opened) {
-            setStatus('Popup blocking prevented Studio Window from opening. Allow popups for this site and try again.', 'warning');
-        }
+        setStatus('Popup blocking prevented Studio Window from opening. Allow popups for this site and try again.', 'warning');
     }
 
     function handleStudioVisibilityChange() {
@@ -4020,6 +4042,7 @@
         document.addEventListener('visibilitychange', handleStudioVisibilityChange);
     }
 
+    applyStudioWindowMode();
     detectSupport();
     renderSupportChecks();
     updateReadinessStatus();

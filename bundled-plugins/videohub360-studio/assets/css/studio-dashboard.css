@@ -30,11 +30,27 @@
     display: none !important;
 }
 
-.vh360-studio-dashboard:fullscreen {
+.vh360-studio-dashboard:fullscreen,
+.vh360-studio-dashboard.is-studio-window {
     border-radius: 0;
     min-height: 100vh;
     overflow: auto;
     padding: 1rem;
+}
+
+body.vh360-studio-window-mode {
+    background: var(--vh360-studio-app-bg, #090d16);
+}
+
+body.vh360-studio-window-mode .site-header,
+body.vh360-studio-window-mode .site-footer,
+body.vh360-studio-window-mode .vh360-dashboard-nav,
+body.vh360-studio-window-mode .dashboard-sidebar {
+    display: none;
+}
+
+body.vh360-studio-window-mode .vh360-studio-dashboard {
+    margin: 0;
 }
 
 .vh360-studio-dashboard *,
