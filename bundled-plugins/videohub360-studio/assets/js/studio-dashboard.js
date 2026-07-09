@@ -1257,6 +1257,17 @@
         return track ? new MediaStream([track]) : null;
     }
 
+    function syncMixerMuteButton(button, channel, mutedOverride) {
+        if (!button) { return; }
+        const muted = typeof mutedOverride === 'boolean' ? mutedOverride : !!(channel && channel.muted);
+        const label = channel && channel.label ? channel.label : button.dataset.mixerMute || 'audio';
+        const action = muted ? 'Unmute ' : 'Mute ';
+        button.setAttribute('aria-pressed', muted ? 'true' : 'false');
+        button.setAttribute('aria-label', action + label);
+        const srText = button.querySelector('.screen-reader-text');
+        if (srText) { srText.textContent = action + label; }
+    }
+
     function updateMixerUi() {
         const mixer = state.audioMixer;
         if (mixer) {
@@ -1264,6 +1275,7 @@
                 const channel = mixer.channels[id];
                 const label = id === 'mic' ? (channel.connected ? 'Global' : 'Off') : (channel.connected ? 'Active' : 'Off');
                 root.querySelectorAll('[data-mixer-status="' + id + '"]').forEach((el) => { el.textContent = channel.muted ? 'Muted' : label; });
+                root.querySelectorAll('[data-mixer-mute="' + id + '"]').forEach((button) => { syncMixerMuteButton(button, channel); });
             });
             root.querySelectorAll('[data-mixer-status="master"]').forEach((el) => { el.textContent = state.liveAudioMuted ? 'Muted' : 'Active'; });
         }
@@ -1355,6 +1367,7 @@
             el.style.height = '0%';
         });
         root.querySelectorAll('[data-mixer-status]').forEach((el) => { el.textContent = el.dataset.mixerStatus === 'master' ? 'Active' : 'Off'; });
+        root.querySelectorAll('[data-mixer-mute]').forEach((button) => { syncMixerMuteButton(button, null, false); });
     }
 
     async function ensureMicStream() {
@@ -4294,10 +4307,6 @@
                 const channel = mixer && mixer.channels[button.dataset.mixerMute];
                 if (!channel) { return; }
                 channel.muted = !channel.muted;
-                button.setAttribute('aria-pressed', channel.muted ? 'true' : 'false');
-                button.setAttribute('aria-label', (channel.muted ? 'Unmute ' : 'Mute ') + (channel.label || button.dataset.mixerMute));
-                const srText = button.querySelector('.screen-reader-text');
-                if (srText) { srText.textContent = (channel.muted ? 'Unmute ' : 'Mute ') + (channel.label || button.dataset.mixerMute); }
                 updateMixerUi();
                 applyMixerChannelGain(channel);
             });
