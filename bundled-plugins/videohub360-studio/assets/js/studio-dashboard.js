@@ -1136,16 +1136,73 @@
         updateMixerUi();
     }
 
+    function recreateMediaElementForMixer(sourceId, staleElement) {
+        const mediaSource = sourceId ? getMediaSource(sourceId) : null;
+        if (!mediaSource || mediaSource.type !== 'video' || !staleElement) { return staleElement; }
+
+        const wasPaused = staleElement.paused;
+        const currentTime = Number.isFinite(staleElement.currentTime) ? staleElement.currentTime : 0;
+        const parent = staleElement.parentNode;
+        const replacement = createMediaElement(mediaSource);
+        replacement.loop = staleElement.loop;
+        replacement.muted = true;
+        mediaSource.element = replacement;
+
+        if (parent) {
+            parent.replaceChild(replacement, staleElement);
+        }
+
+        staleElement.pause();
+        staleElement.removeAttribute('src');
+        if (typeof staleElement.load === 'function') {
+            staleElement.load();
+        }
+
+        replacement.addEventListener('loadedmetadata', () => {
+            if (currentTime > 0 && Number.isFinite(replacement.duration) && currentTime < replacement.duration) {
+                replacement.currentTime = currentTime;
+            }
+            if (!wasPaused) {
+                replacement.play().catch(() => {});
+            }
+        }, { once: true });
+
+        return replacement;
+    }
+
+    function mediaElementMixerSource(element, mixer, sourceId) {
+        if (!element) { return null; }
+        if (element._vh360MixerSource && element._vh360MixerContextId === mixer.id) {
+            return element._vh360MixerSource;
+        }
+
+        if (element._vh360MixerSource && element._vh360MixerContextId !== mixer.id) {
+            element = recreateMediaElementForMixer(sourceId, element);
+        }
+
+        if (element._vh360MixerSource && element._vh360MixerContextId === mixer.id) {
+            return element._vh360MixerSource;
+        }
+
+        element._vh360MixerSource = mixer.context.createMediaElementSource(element);
+        element._vh360MixerContextId = mixer.id;
+        return element._vh360MixerSource;
+    }
+
     function setMixerChannelElement(channelId, element, sourceId = '') {
         const mixer = ensureStudioAudioMixer();
         if (!mixer || !mixer.channels[channelId] || !element || element.tagName !== 'VIDEO') { return; }
         const channel = mixer.channels[channelId];
+        if (element._vh360MixerSource && element._vh360MixerContextId !== mixer.id) {
+            element = recreateMediaElementForMixer(sourceId, element);
+        }
+        if (!element || element.tagName !== 'VIDEO') { return; }
         if (channel.element === element && channel.sourceId === sourceId && channel.source) { return; }
         disconnectMixerChannel(channelId);
         channel.element = element;
         channel.sourceId = sourceId;
-        channel.source = element._vh360MixerSource || mixer.context.createMediaElementSource(element);
-        element._vh360MixerSource = channel.source;
+        channel.source = mediaElementMixerSource(element, mixer, sourceId);
+        if (!channel.source) { return; }
         channel.source.connect(channel.input);
         element.muted = false;
         channel.connected = true;
@@ -1259,6 +1316,17 @@
             channel.sourceId = '';
             channel.connected = false;
             channel.unavailable = true;
+        });
+
+        state.mediaSources.forEach((source) => {
+            if (source && source.element && source.element._vh360MixerContextId === mixer.id) {
+                const replacement = recreateMediaElementForMixer(source.sourceId, source.element);
+                if (replacement) {
+                    replacement.muted = true;
+                    delete replacement._vh360MixerSource;
+                    delete replacement._vh360MixerContextId;
+                }
+            }
         });
 
         ['masterGain', 'masterAnalyser'].forEach((nodeKey) => {
