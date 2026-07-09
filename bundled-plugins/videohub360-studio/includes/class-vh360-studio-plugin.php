@@ -32,6 +32,14 @@ class VH360_Studio_Plugin {
         add_filter( 'vh360_dashboard_tabs_registry', array( $this, 'register_dashboard_tab' ), 20, 2 );
         VH360_Studio_Recording_Cleanup::schedule();
         add_action( VH360_Studio_Recording_Cleanup::HOOK, array( new VH360_Studio_Recording_Cleanup( $this->jobs ), 'run' ) );
+
+        $replay_status_reconciler = new VH360_Studio_Replay_Status_Reconciler(
+            $this->jobs,
+            new VH360_Studio_Replay_Publisher( $this->registry, $this->jobs, new VH360_Studio_Recording_Validator( new VH360_Studio_Recording_Chunks( $this->jobs ) ), new VH360_Studio_Recording_Chunks( $this->jobs ) )
+        );
+        add_filter( 'cron_schedules', array( 'VH360_Studio_Replay_Status_Reconciler', 'add_interval' ) );
+        VH360_Studio_Replay_Status_Reconciler::schedule();
+        add_action( VH360_Studio_Replay_Status_Reconciler::HOOK, array( $replay_status_reconciler, 'run' ) );
         add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
     }
 

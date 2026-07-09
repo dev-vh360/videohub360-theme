@@ -30,11 +30,71 @@
     display: none !important;
 }
 
-.vh360-studio-dashboard:fullscreen {
+.vh360-studio-dashboard:fullscreen,
+.vh360-studio-dashboard.is-studio-window {
     border-radius: 0;
     min-height: 100vh;
     overflow: auto;
     padding: 1rem;
+}
+
+body.vh360-studio-window-mode {
+    background: var(--vh360-studio-app-bg, #090d16) !important;
+    margin: 0 !important;
+    min-height: 100vh;
+    padding: 0 !important;
+}
+
+body.vh360-studio-window-mode #wpadminbar,
+body.vh360-studio-window-mode .site-header,
+body.vh360-studio-window-mode .site-footer,
+body.vh360-studio-window-mode .vh360-dashboard-sidebar,
+body.vh360-studio-window-mode .vh360-dashboard-nav,
+body.vh360-studio-window-mode .dashboard-sidebar,
+body.vh360-studio-window-mode .vh360-community-menu,
+body.vh360-studio-window-mode .vh360-community-menu--compact,
+body.vh360-studio-window-mode .vh360-community-menu-backdrop,
+body.vh360-studio-window-mode .vh360-bulletin-banner {
+    display: none !important;
+}
+
+body.vh360-studio-window-mode.admin-bar,
+body.vh360-studio-window-mode.has-community-menu,
+body.vh360-studio-window-mode.community-menu-compact {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+body.vh360-studio-window-mode .site-layout-wrapper {
+    display: block !important;
+    margin: 0 !important;
+    max-width: none !important;
+    min-height: 100vh !important;
+    padding: 0 !important;
+    width: 100% !important;
+}
+
+body.vh360-studio-window-mode .site,
+body.vh360-studio-window-mode .site-content,
+body.vh360-studio-window-mode .content-area,
+body.vh360-studio-window-mode .entry-content,
+body.vh360-studio-window-mode .vh360-dashboard,
+body.vh360-studio-window-mode .vh360-dashboard-shell,
+body.vh360-studio-window-mode .vh360-dashboard-content,
+body.vh360-studio-window-mode .vh360-dashboard-main,
+body.vh360-studio-window-mode .vh360-dashboard-tab-content {
+    margin: 0 !important;
+    max-width: none !important;
+    padding: 0 !important;
+    width: 100% !important;
+}
+
+body.vh360-studio-window-mode .vh360-studio-dashboard {
+    border-radius: 0;
+    margin: 0 !important;
+    max-width: none;
+    min-height: 100vh;
+    width: 100%;
 }
 
 .vh360-studio-dashboard *,
@@ -65,6 +125,18 @@
     gap: 1rem;
     grid-template-columns: minmax(0, 1fr) auto;
     padding: 1rem;
+}
+
+.vh360-studio-on-air-notice {
+    background: color-mix(in srgb, var(--vh360-studio-warning) 16%, var(--vh360-studio-panel-bg-strong));
+    border: 1px solid color-mix(in srgb, var(--vh360-studio-warning) 55%, transparent);
+    border-radius: 12px;
+    color: var(--vh360-studio-text);
+    font-size: 0.9rem;
+    font-weight: 800;
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 0.75rem 0.85rem;
 }
 
 .vh360-studio-kicker { color: var(--vh360-studio-primary); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.1em; margin-bottom: 0.25rem; text-transform: uppercase; }
@@ -132,6 +204,7 @@
 .vh360-studio-monitor-header h3,
 .vh360-studio-dock-header h3 { color: var(--vh360-studio-text); font-size: 0.95rem; margin: 0; }
 .vh360-studio-pill { border: 1px solid var(--vh360-studio-panel-border); border-radius: 999px; color: var(--vh360-studio-text-muted); font-size: 0.75rem; font-weight: 800; padding: 0.2rem 0.55rem; text-transform: uppercase; }
+.vh360-studio-program-diagnostics { border: 1px solid var(--vh360-studio-panel-border); border-radius: 999px; color: var(--vh360-studio-text-muted); font-size: 0.75rem; font-weight: 800; padding: 0.2rem 0.55rem; }
 
 .vh360-studio-monitor-action {
     background: var(--vh360-studio-panel-bg-strong);

@@ -258,6 +258,39 @@ class VH360_Studio_Recording_Jobs {
         ) );
     }
 
+
+    public function list_pending_provider_replay_jobs( $limit = 10, $hours = 24 ) {
+        global $wpdb;
+
+        $limit = min( 25, max( 1, absint( $limit ) ) );
+        $hours = min( 72, max( 1, absint( $hours ) ) );
+        $since = gmdate( 'Y-m-d H:i:s', time() - ( $hours * HOUR_IN_SECONDS ) );
+        $table = VH360_Studio_Database::table_name();
+        $postmeta = $wpdb->postmeta;
+
+        return $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT j.* FROM {$table} j
+                INNER JOIN {$postmeta} pending ON pending.post_id = j.live_video_id AND pending.meta_key = '_vh360_studio_replay_pending' AND pending.meta_value = 'yes'
+                LEFT JOIN {$postmeta} ready ON ready.post_id = j.live_video_id AND ready.meta_key = '_vh360_studio_replay_ready'
+                LEFT JOIN {$postmeta} failed ON failed.post_id = j.live_video_id AND failed.meta_key = '_vh360_studio_replay_failed'
+                WHERE j.status IN (%s, %s)
+                    AND j.storage_provider IN ('bunny_stream', 'publitio', 'videopress')
+                    AND j.live_video_id > 0
+                    AND j.updated_at >= %s
+                    AND (ready.meta_value IS NULL OR ready.meta_value != 'yes')
+                    AND (failed.meta_value IS NULL OR failed.meta_value != 'yes')
+                ORDER BY j.updated_at ASC
+                LIMIT %d",
+                self::STATUS_PROCESSING,
+                self::STATUS_READY,
+                $since,
+                $limit
+            ),
+            ARRAY_A
+        );
+    }
+
     public function mark_stopping( $id, $user_id, $duration_seconds = null ) {
         $data = array( 'status' => self::STATUS_STOPPING, 'stopped_at' => current_time( 'mysql' ) );
         if ( null !== $duration_seconds ) { $data['duration_seconds'] = absint( $duration_seconds ); }

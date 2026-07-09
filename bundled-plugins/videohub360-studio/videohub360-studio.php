@@ -40,6 +40,51 @@ add_action( 'plugins_loaded', 'vh360_studio_load_textdomain' );
 
 
 /**
+ * Determine whether the current frontend request is for focused Studio Window mode.
+ *
+ * @return bool
+ */
+function vh360_studio_is_window_mode_request() {
+    if ( is_admin() || wp_doing_ajax() || wp_is_json_request() ) {
+        return false;
+    }
+
+    $window_mode = isset( $_GET['vh360_studio_window'] ) ? sanitize_text_field( wp_unslash( $_GET['vh360_studio_window'] ) ) : '';
+
+    return '1' === $window_mode;
+}
+
+/**
+ * Add the focused Studio Window body class before JavaScript runs.
+ *
+ * @param array $classes Existing body classes.
+ * @return array
+ */
+function vh360_studio_window_body_class( $classes ) {
+    if ( vh360_studio_is_window_mode_request() ) {
+        $classes[] = 'vh360-studio-window-mode';
+    }
+
+    return $classes;
+}
+add_filter( 'body_class', 'vh360_studio_window_body_class' );
+
+/**
+ * Hide the WordPress admin bar in focused Studio Window mode.
+ *
+ * @param bool $show Whether to show the admin bar.
+ * @return bool
+ */
+function vh360_studio_window_show_admin_bar( $show ) {
+    if ( vh360_studio_is_window_mode_request() ) {
+        return false;
+    }
+
+    return $show;
+}
+add_filter( 'show_admin_bar', 'vh360_studio_window_show_admin_bar', 20 );
+
+/**
  * Get the frontend Studio display name.
  *
  * @return string
@@ -88,6 +133,7 @@ function vh360_studio_load_files() {
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-recording-cleanup.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-replay-posts.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-replay-publisher.php';
+    require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-replay-status-reconciler.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-publitio-client.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-bunny-stream-client.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-assets.php';
@@ -135,5 +181,8 @@ register_activation_hook( __FILE__, 'vh360_studio_activate' );
 function vh360_studio_deactivate() {
     vh360_studio_load_files();
     VH360_Studio_Recording_Cleanup::unschedule();
+    if ( class_exists( 'VH360_Studio_Replay_Status_Reconciler' ) ) {
+        VH360_Studio_Replay_Status_Reconciler::unschedule();
+    }
 }
 register_deactivation_hook( __FILE__, 'vh360_studio_deactivate' );

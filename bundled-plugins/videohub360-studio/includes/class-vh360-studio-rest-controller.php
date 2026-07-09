@@ -974,6 +974,16 @@ class VH360_Studio_REST_Controller {
         return in_array( sanitize_key( (string) $status ), array( 'bunny_stream_failed', 'publitio_failed', 'upload_failed', 'failed', 'error' ), true );
     }
 
+    private function publish_response_is_ready( array $response ) {
+        foreach ( array( 'job_status', 'status', 'publish_provider_status', 'provider_status', 'publish_status' ) as $key ) {
+            if ( ! empty( $response[ $key ] ) && in_array( sanitize_key( (string) $response[ $key ] ), array( 'ready', 'bunny_stream_ready', 'publitio_ready', 'publitio_direct_ready', 'published' ), true ) ) {
+                return true;
+            }
+        }
+
+        return ! empty( $response['replay_video_id'] ) || ! empty( $response['replay_url'] );
+    }
+
     private function publish_response_is_failed( array $response ) {
         foreach ( array( 'publish_provider_status', 'provider_status', 'publish_status', 'status' ) as $key ) {
             if ( ! empty( $response[ $key ] ) && $this->provider_status_is_failed( $response[ $key ] ) ) {
@@ -981,6 +991,20 @@ class VH360_Studio_REST_Controller {
             }
         }
         return false;
+    }
+
+    private function reconcile_publish_response_lifecycle( array $job, array $response ) {
+        if ( $this->publish_response_is_ready( $response ) ) {
+            $this->update_live_replay_lifecycle( $job, 'ready', 'no', 'yes', 'no' );
+            return;
+        }
+
+        if ( $this->publish_response_is_failed( $response ) ) {
+            $this->update_live_replay_lifecycle( $job, 'failed', 'no', 'no', 'yes' );
+            return;
+        }
+
+        $this->update_live_replay_lifecycle( $job, 'processing', 'yes', 'no', 'no' );
     }
 
     private function update_live_replay_lifecycle( array $job, $status, $pending = 'yes', $ready = 'no', $failed = 'no' ) {
@@ -1141,12 +1165,24 @@ class VH360_Studio_REST_Controller {
     public function publish_recording( WP_REST_Request $request ) {
         $job = $this->chunks->validate_job_ownership( absint( $request['id'] ), get_current_user_id() );
         if ( is_wp_error( $job ) ) { return $job; }
+        if ( VH360_Studio_Recording_Jobs::STATUS_READY === $job['status'] ) {
+            $status = $this->publisher->status( $job );
+            if ( is_wp_error( $status ) ) { return $status; }
+            if ( is_array( $status ) ) {
+                $this->reconcile_publish_response_lifecycle( $job, $status );
+            }
+            return rest_ensure_response( $this->prepare_publish_response( $status, $job ) );
+        }
         $this->update_live_replay_lifecycle( $job, 'processing', 'yes', 'no', 'no' );
         $lock_key = 'vh360_studio_publish_lock_' . absint( $job['id'] );
         if ( get_transient( $lock_key ) ) {
             $status = $this->publisher->status( $job );
             if ( is_wp_error( $status ) ) {
                 $status = array();
+            }
+            if ( is_array( $status ) && $this->publish_response_is_ready( $status ) ) {
+                $this->reconcile_publish_response_lifecycle( $job, $status );
+                return rest_ensure_response( $this->prepare_publish_response( $status, $job ) );
             }
             $status['status']                  = $job['status'];
             $status['job_status']              = $job['status'];
@@ -1164,8 +1200,8 @@ class VH360_Studio_REST_Controller {
             $this->update_live_replay_lifecycle( $job, 'failed', 'no', 'no', 'yes' );
             return $published;
         }
-        if ( is_array( $published ) && $this->publish_response_is_failed( $published ) ) {
-            $this->update_live_replay_lifecycle( $job, 'failed', 'no', 'no', 'yes' );
+        if ( is_array( $published ) ) {
+            $this->reconcile_publish_response_lifecycle( $job, $published );
         }
         return rest_ensure_response( $this->prepare_publish_response( $published, $job ) );
     }
@@ -1178,12 +1214,8 @@ class VH360_Studio_REST_Controller {
         }
         $status = $this->publisher->status( $job );
         if ( is_wp_error( $status ) ) { return $status; }
-        if ( is_array( $status ) && $this->publish_response_is_failed( $status ) ) {
-            $this->update_live_replay_lifecycle( $job, 'failed', 'no', 'no', 'yes' );
-        } elseif ( VH360_Studio_Recording_Jobs::STATUS_READY === $job['status'] ) {
-            $this->update_live_replay_lifecycle( $job, 'ready', 'no', 'yes', 'no' );
-        } else {
-            $this->update_live_replay_lifecycle( $job, 'processing', 'yes', 'no', 'no' );
+        if ( is_array( $status ) ) {
+            $this->reconcile_publish_response_lifecycle( $job, $status );
         }
         return rest_ensure_response( $this->prepare_publish_response( $status, $job ) );
     }
