@@ -268,6 +268,10 @@ $friendly_job_status = static function( $job ) {
             <section class="vh360-studio-dock" aria-labelledby="vh360-studio-sources-title">
                 <div class="vh360-studio-dock-header"><h3 id="vh360-studio-sources-title"><?php esc_html_e( 'Sources', 'videohub360-studio' ); ?></h3></div>
                 <div class="vh360-studio-dock-body vh360-studio-control-stack">
+                    <div class="vh360-studio-source-device-header">
+                        <span><?php esc_html_e( 'Input devices', 'videohub360-studio' ); ?></span>
+                        <button type="button" class="vh360-studio-button vh360-studio-button--ghost vh360-studio-refresh-devices" data-refresh-devices><?php esc_html_e( 'Refresh Devices', 'videohub360-studio' ); ?></button>
+                    </div>
                     <label for="vh360-studio-camera-select"><?php esc_html_e( 'Camera', 'videohub360-studio' ); ?></label>
                     <select id="vh360-studio-camera-select" data-camera-select disabled>
                         <option value=""><?php esc_html_e( 'Grant camera access to list devices', 'videohub360-studio' ); ?></option>
@@ -276,6 +280,7 @@ $friendly_job_status = static function( $job ) {
                     <select id="vh360-studio-mic-select" data-mic-select disabled>
                         <option value=""><?php esc_html_e( 'Grant microphone access to list devices', 'videohub360-studio' ); ?></option>
                     </select>
+                    <p class="vh360-studio-help" data-device-status><?php esc_html_e( 'Refresh devices after plugging in a USB camera or granting browser permission.', 'videohub360-studio' ); ?></p>
                     <label for="vh360-studio-quality-select"><?php esc_html_e( 'Quality preset', 'videohub360-studio' ); ?></label>
                     <select id="vh360-studio-quality-select" data-quality-select>
                         <?php foreach ( $quality_presets as $preset_id => $preset ) : ?>

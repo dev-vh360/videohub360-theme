@@ -125,6 +125,8 @@
         cameraSelect: root.querySelector('[data-camera-select]'),
         micSelect: root.querySelector('[data-mic-select]'),
         micMeter: root.querySelector('[data-mic-meter]'),
+        refreshDevices: root.querySelector('[data-refresh-devices]'),
+        deviceStatus: root.querySelector('[data-device-status]'),
         mixerMeters: root.querySelectorAll('[data-mixer-meter]'),
         mixerStatuses: root.querySelectorAll('[data-mixer-status]'),
         mixerGains: root.querySelectorAll('[data-mixer-gain]'),
@@ -1655,6 +1657,7 @@
             getUserMedia: mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function',
             enumerateDevices: mediaDevices && typeof navigator.mediaDevices.enumerateDevices === 'function',
             getDisplayMedia: mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === 'function',
+            deviceChange: mediaDevices && 'ondevicechange' in navigator.mediaDevices,
             mediaRecorder,
             secureContext: window.isSecureContext || window.location.hostname === 'localhost',
             mimeTypes,
@@ -1769,8 +1772,24 @@
         return div.innerHTML;
     }
 
-    async function populateDevices() {
+    function setDeviceStatus(message, type) {
+        if (!els.deviceStatus) { return; }
+        els.deviceStatus.textContent = message || '';
+        els.deviceStatus.dataset.statusType = type || 'info';
+    }
+
+    async function refreshDevices(options = {}) {
+        if (els.refreshDevices) { els.refreshDevices.disabled = true; }
+        try {
+            await populateDevices(options);
+        } finally {
+            if (els.refreshDevices) { els.refreshDevices.disabled = false; }
+        }
+    }
+
+    async function populateDevices(options = {}) {
         if (!state.support.enumerateDevices) {
+            setDeviceStatus('Device refresh is unavailable in this browser.', 'warning');
             return;
         }
 
@@ -1778,20 +1797,33 @@
         const cameras = devices.filter((device) => device.kind === 'videoinput');
         const microphones = devices.filter((device) => device.kind === 'audioinput');
 
+        if (state.selectedCameraId && !cameras.some((device) => device.deviceId === state.selectedCameraId)) {
+            state.selectedCameraId = '';
+        }
+        if (state.selectedMicId && !microphones.some((device) => device.deviceId === state.selectedMicId)) {
+            state.selectedMicId = '';
+        }
+
         fillDeviceSelect(els.cameraSelect, cameras, 'Camera', state.selectedCameraId);
         fillDeviceSelect(els.micSelect, microphones, 'Microphone', state.selectedMicId);
 
-        if (!state.selectedCameraId && els.cameraSelect && els.cameraSelect.value) {
+        if (!options.keepDefaultCamera && !state.selectedCameraId && els.cameraSelect && els.cameraSelect.value) {
             state.selectedCameraId = els.cameraSelect.value;
         }
         if (!state.selectedMicId && els.micSelect && els.micSelect.value) {
             state.selectedMicId = els.micSelect.value;
         }
 
+        const cameraLabel = cameras.length === 1 ? '1 camera' : cameras.length + ' cameras';
+        const micLabel = microphones.length === 1 ? '1 microphone' : microphones.length + ' microphones';
         if (!cameras.length) {
             setStatus(strings.noCameraFound, 'warning');
+            setDeviceStatus('No cameras detected. Plug in a camera, grant browser permission, then refresh devices.', 'warning');
         } else if (!microphones.length) {
             setStatus(strings.noMicrophoneFound, 'warning');
+            setDeviceStatus(cameraLabel + ' detected. No microphones detected.', 'warning');
+        } else {
+            setDeviceStatus(cameraLabel + ' and ' + micLabel + ' detected' + (options.reason === 'devicechange' ? ' after a device change.' : '.'), 'success');
         }
     }
 
@@ -1822,7 +1854,7 @@
         select.disabled = false;
     }
 
-    async function startPreview(updateSelection = true) {
+    async function startPreview(updateSelection = true, options = {}) {
         if (!state.support.secureContext) {
             setStatus(strings.insecureContext, 'error');
             return;
@@ -1868,7 +1900,20 @@
             }
         } catch (error) {
             stopPreview();
-            setStatus(friendlyMediaError(error), 'error');
+            const canRetryDefaultCamera = !options.retriedDefaultCamera && state.selectedCameraId && ['NotReadableError', 'NotFoundError', 'DevicesNotFoundError', 'OverconstrainedError', 'ConstraintNotSatisfiedError'].includes(error && error.name);
+            if (canRetryDefaultCamera) {
+                const failedCameraId = state.selectedCameraId;
+                state.selectedCameraId = '';
+                if (els.cameraSelect) { els.cameraSelect.value = ''; }
+                setDeviceStatus('The selected camera could not be opened. Refreshing devices and retrying with the default camera…', 'warning');
+                await populateDevices({ reason: 'camera-retry', keepDefaultCamera: true }).catch(() => {});
+                studioDebugLog('[VH360 Studio] Retrying camera preview with default device after selected camera failed', { failedCameraId, errorName: error && error.name });
+                return startPreview(updateSelection, { retriedDefaultCamera: true });
+            }
+            const message = friendlyMediaError(error);
+            setStatus(message, 'error');
+            setDeviceStatus(message, 'error');
+            await populateDevices({ reason: 'preview-error' }).catch(() => {});
         }
     }
 
@@ -2564,13 +2609,16 @@
             return strings.browserUnsupported;
         }
         if (error.name === 'NotAllowedError' || error.name === 'SecurityError') {
-            return strings.permissionDenied;
+            return 'Camera or microphone permission was denied. Allow access in your browser, then refresh devices.';
         }
         if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
-            return strings.noCameraFound + ' ' + strings.noMicrophoneFound;
+            return 'No matching camera or microphone was found. Check that the device is plugged in, then refresh devices.';
         }
         if (error.name === 'NotReadableError') {
-            return strings.cameraBlocked;
+            return 'The selected camera or microphone is already in use or could not be opened. Close other apps that may be using it, then try again.';
+        }
+        if (error.name === 'OverconstrainedError' || error.name === 'ConstraintNotSatisfiedError') {
+            return 'The selected camera settings are unavailable. Studio will refresh devices so you can choose another camera.';
         }
         return error.message || strings.browserUnsupported;
     }
@@ -4276,6 +4324,22 @@
         }
         if (els.transitionCut) { els.transitionCut.addEventListener('click', () => commitPreviewToProgram('cut')); }
         if (els.transitionFade) { els.transitionFade.addEventListener('click', () => commitPreviewToProgram('fade')); }
+        if (els.refreshDevices) {
+            els.refreshDevices.addEventListener('click', () => {
+                setDeviceStatus('Refreshing cameras and microphones…', 'info');
+                refreshDevices({ reason: 'manual' }).catch((error) => {
+                    const message = (error && error.message) || 'Devices could not be refreshed.';
+                    setDeviceStatus(message, 'error');
+                    setStatus(message, 'error');
+                });
+            });
+        }
+        if (state.support.deviceChange && navigator.mediaDevices && typeof navigator.mediaDevices.addEventListener === 'function') {
+            navigator.mediaDevices.addEventListener('devicechange', () => {
+                setDeviceStatus('Device change detected. Refreshing cameras and microphones…', 'info');
+                refreshDevices({ reason: 'devicechange' }).catch(() => {});
+            });
+        }
         if (els.cameraSelect) {
             els.cameraSelect.addEventListener('change', () => {
                 state.selectedCameraId = els.cameraSelect.value;
