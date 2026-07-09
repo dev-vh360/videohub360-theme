@@ -1867,15 +1867,18 @@
 
         const hadSavedCamera = !!state.selectedCameraId;
         const hadSavedMic = !!state.selectedMicId;
+        let staleDeviceMessage = '';
         if (state.selectedCameraId && !cameras.some((device) => device.deviceId === state.selectedCameraId)) {
             state.selectedCameraId = '';
             storageSet(CAMERA_STORAGE_KEY, '');
-            setDeviceStatus('Your saved camera is no longer connected. Studio selected the default camera.', 'warning');
+            staleDeviceMessage = 'Your saved camera is no longer connected. Studio selected the default camera.';
         }
         if (state.selectedMicId && !microphones.some((device) => device.deviceId === state.selectedMicId)) {
             state.selectedMicId = '';
             storageSet(MIC_STORAGE_KEY, '');
-            setDeviceStatus('Your saved microphone is no longer connected. Studio selected the default microphone.', 'warning');
+            staleDeviceMessage = staleDeviceMessage
+                ? staleDeviceMessage + ' Your saved microphone is no longer connected. Studio selected the default microphone.'
+                : 'Your saved microphone is no longer connected. Studio selected the default microphone.';
         }
 
         fillDeviceSelect(els.cameraSelect, cameras, 'Camera', state.selectedCameraId);
@@ -1892,6 +1895,10 @@
         const micLabel = microphones.length === 1 ? '1 microphone' : microphones.length + ' microphones';
         updateActiveDeviceSummary();
         renderDeviceReadinessDetails().catch(() => {});
+        if (staleDeviceMessage) {
+            setDeviceStatus(staleDeviceMessage, 'warning');
+            return;
+        }
         if (options.reason === 'manual' && (state.broadcastSession || isRecordingActive())) {
             setDeviceStatus('Devices refreshed. Current live devices were not changed.', 'info');
             return;
@@ -4359,6 +4366,10 @@
 
     async function testCameraDevice() {
         if (!state.support.getUserMedia) { setDeviceStatus('Camera testing is unavailable in this browser.', 'error'); return; }
+        if (state.broadcastSession || isRecordingActive()) {
+            setDeviceStatus('Stop live/recording before testing a different camera.', 'warning');
+            return;
+        }
         setDeviceStatus('Testing selected camera…', 'info');
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: state.selectedCameraId ? { deviceId: { exact: state.selectedCameraId } } : true, audio: false });
