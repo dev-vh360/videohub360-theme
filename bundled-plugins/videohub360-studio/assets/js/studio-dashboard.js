@@ -1884,8 +1884,15 @@
         return true;
     }
 
+    function isMicMeterDrivenByMixer() {
+        return Boolean(els.micMeter && els.micMeter.matches('[data-mixer-meter="mic"]'));
+    }
+
     function setupAudioMeter(stream) {
         teardownAudioMeter();
+        if (isMicMeterDrivenByMixer()) {
+            return;
+        }
         const audioTracks = stream.getAudioTracks();
         if (!audioTracks.length || !window.AudioContext && !window.webkitAudioContext) {
             return;
@@ -1901,7 +1908,7 @@
     }
 
     function drawMeter() {
-        if (!state.analyser || !els.micMeter) {
+        if (!state.analyser || !els.micMeter || isMicMeterDrivenByMixer()) {
             return;
         }
 
@@ -1919,7 +1926,7 @@
             window.cancelAnimationFrame(state.meterFrame);
             state.meterFrame = null;
         }
-        if (els.micMeter) {
+        if (els.micMeter && !isMicMeterDrivenByMixer()) {
             els.micMeter.style.setProperty('--vh360-meter-level', '0%');
             els.micMeter.style.height = '0%';
         }
