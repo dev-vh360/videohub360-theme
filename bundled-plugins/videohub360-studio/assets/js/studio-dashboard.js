@@ -1098,6 +1098,9 @@
         const mixer = state.audioMixer;
         const channel = mixer && mixer.channels[channelId];
         if (!channel || expectedSourceId && channel.sourceId !== expectedSourceId) { return; }
+        if (channel.element && channelId === 'media') {
+            channel.element.muted = true;
+        }
         if (channel.source && typeof channel.source.disconnect === 'function') {
             try { channel.source.disconnect(); } catch (error) {}
         }
@@ -1144,6 +1147,7 @@
         channel.source = element._vh360MixerSource || mixer.context.createMediaElementSource(element);
         element._vh360MixerSource = channel.source;
         channel.source.connect(channel.input);
+        element.muted = false;
         channel.connected = true;
         channel.unavailable = false;
         applyMixerChannelGain(channel);
@@ -1225,6 +1229,52 @@
             mixer.meterFrame = window.requestAnimationFrame(draw);
         };
         draw();
+    }
+
+
+    function teardownStudioAudioMixer() {
+        const mixer = state.audioMixer;
+        if (!mixer) { return; }
+
+        if (mixer.meterFrame) {
+            window.cancelAnimationFrame(mixer.meterFrame);
+            mixer.meterFrame = null;
+        }
+
+        Object.keys(mixer.channels || {}).forEach((id) => {
+            const channel = mixer.channels[id];
+            if (!channel) { return; }
+            if (channel.element && id === 'media') {
+                channel.element.muted = true;
+            }
+            ['source', 'input', 'gain', 'analyser'].forEach((nodeKey) => {
+                const node = channel[nodeKey];
+                if (node && typeof node.disconnect === 'function') {
+                    try { node.disconnect(); } catch (error) {}
+                }
+            });
+            channel.source = null;
+            channel.stream = null;
+            channel.element = null;
+            channel.sourceId = '';
+            channel.connected = false;
+            channel.unavailable = true;
+        });
+
+        ['masterGain', 'masterAnalyser'].forEach((nodeKey) => {
+            const node = mixer[nodeKey];
+            if (node && typeof node.disconnect === 'function') {
+                try { node.disconnect(); } catch (error) {}
+            }
+        });
+
+        if (mixer.context && typeof mixer.context.close === 'function' && mixer.context.state !== 'closed') {
+            mixer.context.close().catch(() => {});
+        }
+
+        state.audioMixer = null;
+        root.querySelectorAll('[data-mixer-meter]').forEach((el) => { el.style.width = '0%'; });
+        root.querySelectorAll('[data-mixer-status]').forEach((el) => { el.textContent = 'Unavailable'; });
     }
 
     async function ensureMicStream() {
@@ -1917,7 +1967,7 @@
 
         const video = document.createElement('video');
         video.playsInline = true;
-        video.muted = false;
+        video.muted = true;
         video.volume = 1;
         video.loop = true;
         video.controls = false;
