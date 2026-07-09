@@ -294,7 +294,9 @@ body.vh360-studio-window-mode .vh360-studio-dashboard {
 .vh360-studio-scene-add-menu span { font-weight: 800; }
 .vh360-studio-scene-add-menu small { color: var(--vh360-studio-text-muted); font-size: 0.78rem; }
 
-.vh360-studio-audio-channel { background: var(--vh360-studio-panel-bg-strong); border: 1px solid var(--vh360-studio-panel-border); border-radius: 12px; padding: 0.75rem; }
+.vh360-studio-audio-channel { background: var(--vh360-studio-panel-bg-strong); border: 1px solid var(--vh360-studio-panel-border); border-radius: 12px; display: grid; gap: 0.55rem; padding: 0.75rem; }
+.vh360-studio-audio-status { color: var(--vh360-studio-text-muted); font-size: 0.78rem; }
+.vh360-studio-audio-gain { align-items: center; display: grid; gap: 0.35rem; }
 .vh360-studio-meter { background: var(--vh360-studio-black); border: 1px solid var(--vh360-studio-panel-border); border-radius: 999px; height: 18px; margin-top: 0.75rem; overflow: hidden; }
 .vh360-studio-meter span { background: linear-gradient(90deg, var(--vh360-studio-success), var(--vh360-studio-warning) 68%, var(--vh360-studio-danger)); display: block; height: 100%; transition: width 120ms linear; width: 0; }
 

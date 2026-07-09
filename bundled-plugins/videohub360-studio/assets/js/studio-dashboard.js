@@ -17,6 +17,7 @@
         audioContext: null,
         analyser: null,
         meterFrame: null,
+        audioMixer: null,
         selectedCameraId: '',
         selectedMicId: '',
         support: {},
@@ -124,6 +125,10 @@
         cameraSelect: root.querySelector('[data-camera-select]'),
         micSelect: root.querySelector('[data-mic-select]'),
         micMeter: root.querySelector('[data-mic-meter]'),
+        mixerMeters: root.querySelectorAll('[data-mixer-meter]'),
+        mixerStatuses: root.querySelectorAll('[data-mixer-status]'),
+        mixerGains: root.querySelectorAll('[data-mixer-gain]'),
+        mixerMutes: root.querySelectorAll('[data-mixer-mute]'),
         qualitySelect: root.querySelector('[data-quality-select]'),
         qualityDetails: root.querySelector('[data-quality-details]'),
         selectedMediaControls: root.querySelector('[data-selected-media-controls]'),
@@ -975,6 +980,7 @@
         }
         const nextMuted = !state.liveAudioMuted;
         try {
+            setMasterAudioMuted(nextMuted);
             const result = await state.broadcastSession.muteAudio(nextMuted);
             if (result === false || result === null) {
                 throw new Error('Live microphone track is unavailable.');
@@ -1039,13 +1045,161 @@
         }
     }
 
+
+    function createMixerChannel(context, destination, id, label) {
+        const input = context.createGain();
+        const gain = context.createGain();
+        const analyser = context.createAnalyser();
+        analyser.fftSize = 256;
+        input.connect(gain);
+        gain.connect(analyser);
+        analyser.connect(destination);
+        return { id, label, input, gain, analyser, source: null, stream: null, element: null, muted: false, volume: 1, connected: false, unavailable: true };
+    }
+
+    function ensureStudioAudioMixer() {
+        if (state.audioMixer && state.audioMixer.context && state.audioMixer.destination) {
+            return state.audioMixer;
+        }
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass || !window.MediaStream) {
+            return null;
+        }
+        const context = new AudioContextClass();
+        const destination = context.createMediaStreamDestination();
+        const masterGain = context.createGain();
+        const masterAnalyser = context.createAnalyser();
+        masterAnalyser.fftSize = 256;
+        masterGain.connect(masterAnalyser);
+        masterAnalyser.connect(destination);
+        const mixer = {
+            id: 'studio-mix-' + Date.now(),
+            context,
+            destination,
+            masterGain,
+            masterAnalyser,
+            meterFrame: null,
+            channels: {},
+        };
+        ['mic', 'screen', 'media'].forEach((id) => {
+            mixer.channels[id] = createMixerChannel(context, masterGain, id, id === 'mic' ? 'Microphone' : id === 'screen' ? 'Screen Share' : 'Media/Asset');
+        });
+        state.audioMixer = mixer;
+        startMixerMeters();
+        updateMixerUi();
+        return mixer;
+    }
+
+    function setMixerChannelStream(channelId, stream) {
+        const mixer = ensureStudioAudioMixer();
+        if (!mixer || !mixer.channels[channelId]) { return; }
+        const channel = mixer.channels[channelId];
+        if (channel.source && typeof channel.source.disconnect === 'function') {
+            try { channel.source.disconnect(); } catch (error) {}
+        }
+        channel.source = null;
+        channel.stream = stream || null;
+        const audioTracks = stream && stream.getAudioTracks ? stream.getAudioTracks().filter((track) => track.readyState !== 'ended') : [];
+        channel.connected = !!audioTracks.length;
+        channel.unavailable = !channel.connected;
+        if (audioTracks.length) {
+            channel.source = mixer.context.createMediaStreamSource(new MediaStream(audioTracks));
+            channel.source.connect(channel.input);
+            audioTracks.forEach((track) => track.addEventListener('ended', () => {
+                channel.connected = false;
+                channel.unavailable = true;
+                updateMixerUi();
+            }, { once: true }));
+        }
+        applyMixerChannelGain(channel);
+        updateMixerUi();
+    }
+
+    function setMixerChannelElement(channelId, element) {
+        const mixer = ensureStudioAudioMixer();
+        if (!mixer || !mixer.channels[channelId] || !element || element.tagName !== 'VIDEO') { return; }
+        const channel = mixer.channels[channelId];
+        if (channel.element === element && channel.source) { return; }
+        if (channel.source && typeof channel.source.disconnect === 'function') {
+            try { channel.source.disconnect(); } catch (error) {}
+        }
+        channel.element = element;
+        channel.source = element._vh360MixerSource || mixer.context.createMediaElementSource(element);
+        element._vh360MixerSource = channel.source;
+        channel.source.connect(channel.input);
+        channel.connected = true;
+        channel.unavailable = false;
+        applyMixerChannelGain(channel);
+        updateMixerUi();
+    }
+
+    function applyMixerChannelGain(channel) {
+        if (!channel || !channel.gain) { return; }
+        channel.gain.gain.value = channel.muted ? 0 : Number(channel.volume || 1);
+    }
+
+    function setMasterAudioMuted(muted) {
+        const mixer = ensureStudioAudioMixer();
+        if (!mixer) { return; }
+        state.liveAudioMuted = !!muted;
+        mixer.masterGain.gain.value = state.liveAudioMuted ? 0 : 1;
+        updateMixerUi();
+    }
+
+    function getStudioMixedAudioTrack() {
+        const mixer = ensureStudioAudioMixer();
+        if (!mixer) { return null; }
+        if (mixer.context && mixer.context.state === 'suspended' && typeof mixer.context.resume === 'function') {
+            mixer.context.resume().catch(() => {});
+        }
+        return mixer.destination.stream.getAudioTracks().find((track) => track.readyState !== 'ended') || null;
+    }
+
+    function getStudioMixedAudioStream() {
+        const track = getStudioMixedAudioTrack();
+        return track ? new MediaStream([track]) : null;
+    }
+
+    function updateMixerUi() {
+        const mixer = state.audioMixer;
+        if (mixer) {
+            Object.keys(mixer.channels).forEach((id) => {
+                const channel = mixer.channels[id];
+                root.querySelectorAll('[data-mixer-status="' + id + '"]').forEach((el) => { el.textContent = channel.connected ? 'Connected' : 'Unavailable'; });
+            });
+            root.querySelectorAll('[data-mixer-status="master"]').forEach((el) => { el.textContent = state.liveAudioMuted ? 'Muted' : 'Mixed output active'; });
+        }
+    }
+
+    function startMixerMeters() {
+        const mixer = state.audioMixer;
+        if (!mixer || mixer.meterFrame) { return; }
+        const draw = () => {
+            Object.keys(mixer.channels).forEach((id) => {
+                const channel = mixer.channels[id];
+                const data = new Uint8Array(channel.analyser.frequencyBinCount);
+                channel.analyser.getByteFrequencyData(data);
+                const average = data.reduce((sum, value) => sum + value, 0) / (data.length || 1);
+                root.querySelectorAll('[data-mixer-meter="' + id + '"]').forEach((el) => { el.style.width = Math.min(100, Math.round((average / 255) * 100)) + '%'; });
+            });
+            const masterData = new Uint8Array(mixer.masterAnalyser.frequencyBinCount);
+            mixer.masterAnalyser.getByteFrequencyData(masterData);
+            const masterAverage = masterData.reduce((sum, value) => sum + value, 0) / (masterData.length || 1);
+            root.querySelectorAll('[data-mixer-meter="master"]').forEach((el) => { el.style.width = Math.min(100, Math.round((masterAverage / 255) * 100)) + '%'; });
+            mixer.meterFrame = window.requestAnimationFrame(draw);
+        };
+        draw();
+    }
+
     async function ensureMicStream() {
         const existingAudio = state.cameraStream && state.cameraStream.getAudioTracks().find((track) => track.readyState !== 'ended');
         if (existingAudio) {
+            setMixerChannelStream('mic', state.cameraStream);
             return state.cameraStream;
         }
         const micAudio = state.micStream && state.micStream.getAudioTracks().find((track) => track.readyState !== 'ended');
         if (micAudio) {
+            setMixerChannelStream('mic', state.micStream);
             return state.micStream;
         }
         if (!state.support.getUserMedia) {
@@ -1055,6 +1209,7 @@
             audio: state.selectedMicId ? { deviceId: { exact: state.selectedMicId } } : true,
             video: false,
         });
+        setMixerChannelStream('mic', state.micStream);
         return state.micStream;
     }
 
@@ -1068,20 +1223,16 @@
                 }
             });
         }
-        let audioSource = state.broadcastSession && state.broadcastSession.getLocalMediaStream ? state.broadcastSession.getLocalMediaStream() : null;
-        if (!audioSource || !audioSource.getAudioTracks().some((track) => track.readyState !== 'ended')) {
-            audioSource = state.cameraStream;
+        await ensureMicStream().catch(() => null);
+        const mixedAudioTrack = getStudioMixedAudioTrack();
+        if (mixedAudioTrack) {
+            tracks.push(mixedAudioTrack);
         }
-        if (!audioSource || !audioSource.getAudioTracks().some((track) => track.readyState !== 'ended')) {
-            audioSource = await ensureMicStream();
-        }
-        if (audioSource) {
-            audioSource.getAudioTracks().forEach((track) => {
-                if (track.readyState !== 'ended') {
-                    tracks.push(track);
-                }
-            });
-        }
+        studioDebugLog('[VH360 Studio] MediaRecorder mixed audio diagnostics', {
+            mixerId: state.audioMixer ? state.audioMixer.id : '',
+            audioTrackId: mixedAudioTrack ? mixedAudioTrack.id : '',
+            matchesAgora: state.broadcastSession && typeof state.broadcastSession.getAudioTrackId === 'function' ? state.broadcastSession.getAudioTrackId() === (mixedAudioTrack && mixedAudioTrack.id) : null,
+        });
         return tracks.length ? new MediaStream(tracks) : null;
     }
 
@@ -1521,6 +1672,7 @@
                 await els.cameraPreview.play().catch(() => {});
             }
             setupAudioMeter(state.cameraStream);
+            setMixerChannelStream('mic', state.cameraStream);
             await populateDevices();
             setShellClass('is-preview-active', true);
             if (state.programSource === 'camera') {
@@ -1626,7 +1778,7 @@
             let captureController = null;
             const displayOptions = {
                 video: true,
-                audio: false,
+                audio: true,
                 surfaceSwitching: 'include',
                 selfBrowserSurface: 'exclude',
             };
@@ -1635,6 +1787,7 @@
                 displayOptions.controller = captureController;
             }
             state.screenStream = await navigator.mediaDevices.getDisplayMedia(displayOptions);
+            setMixerChannelStream('screen', state.screenStream);
             if (!state.screenStream) {
                 throw new Error('Screen Share could not be started.');
             }
@@ -1671,6 +1824,7 @@
             return false;
         }
         stopStream(state.screenStream);
+        setMixerChannelStream('screen', null);
         state.screenStream = null;
         if (els.screenPreview) {
             els.screenPreview.srcObject = null;
@@ -1726,11 +1880,14 @@
 
         const video = document.createElement('video');
         video.playsInline = true;
-        video.muted = true;
+        video.muted = false;
+        video.volume = 1;
         video.loop = true;
         video.controls = false;
         video.preload = 'metadata';
         video.src = source.url;
+        video.addEventListener('loadedmetadata', () => setMixerChannelElement('media', video), { once: true });
+        video.addEventListener('play', () => setMixerChannelElement('media', video));
         ['play', 'pause', 'timeupdate', 'loadedmetadata', 'durationchange', 'ended'].forEach((eventName) => {
             video.addEventListener(eventName, renderMediaPlaybackControls);
         });
@@ -3430,6 +3587,7 @@
         stopProgramCompositor({ stopTracks: canStopProgramOutput, clearStream: canStopProgramOutput });
         stopStream(state.micStream);
         state.micStream = null;
+        teardownStudioAudioMixer();
 
         if (canStopProgramOutput && releaseMediaSources) {
             clearLocalMediaSources();
@@ -3645,11 +3803,14 @@
                 container: root,
                 localContainer: els.agoraLocalPreview,
                 audioConfig: agoraAudioConfigFromSelection(),
+                initialAudioMediaStreamTrack: getStudioMixedAudioTrack(),
+                audioSource: 'studio-mix',
                 videoConfig: agoraVideoConfigFromPreset(),
                 initialVideoMediaStreamTrack: state.programOutputStream ? state.programOutputStream.getVideoTracks()[0] : null,
                 initialVideoSource: state.programSource || '',
             });
             await session.start();
+            studioDebugLog('[VH360 Studio] Agora mixed audio diagnostics', { mixerId: state.audioMixer ? state.audioMixer.id : '', audioTrackId: getStudioMixedAudioTrack() ? getStudioMixedAudioTrack().id : '', agoraAudioTrackId: typeof session.getAudioTrackId === 'function' ? session.getAudioTrackId() : '' });
             state.broadcastSession = session;
             updateViewerLinkControls();
             state.broadcastReady = true;
@@ -3937,6 +4098,26 @@
                 }
             });
         }
+        els.mixerGains.forEach((input) => {
+            input.addEventListener('input', () => {
+                const mixer = ensureStudioAudioMixer();
+                const channel = mixer && mixer.channels[input.dataset.mixerGain];
+                if (!channel) { return; }
+                channel.volume = (Number(input.value) || 0) / 100;
+                applyMixerChannelGain(channel);
+            });
+        });
+        els.mixerMutes.forEach((button) => {
+            button.addEventListener('click', () => {
+                const mixer = ensureStudioAudioMixer();
+                const channel = mixer && mixer.channels[button.dataset.mixerMute];
+                if (!channel) { return; }
+                channel.muted = !channel.muted;
+                button.textContent = channel.muted ? 'Unmute' : 'Mute';
+                button.setAttribute('aria-pressed', channel.muted ? 'true' : 'false');
+                applyMixerChannelGain(channel);
+            });
+        });
         if (els.qualitySelect) {
             els.qualitySelect.addEventListener('change', () => {
                 updateQualityDetails();
