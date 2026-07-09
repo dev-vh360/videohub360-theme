@@ -274,7 +274,7 @@ class VH360_Studio_Recording_Jobs {
                 INNER JOIN {$postmeta} pending ON pending.post_id = j.live_video_id AND pending.meta_key = '_vh360_studio_replay_pending' AND pending.meta_value = 'yes'
                 LEFT JOIN {$postmeta} ready ON ready.post_id = j.live_video_id AND ready.meta_key = '_vh360_studio_replay_ready'
                 LEFT JOIN {$postmeta} failed ON failed.post_id = j.live_video_id AND failed.meta_key = '_vh360_studio_replay_failed'
-                WHERE j.status = %s
+                WHERE j.status IN (%s, %s)
                     AND j.storage_provider IN ('bunny_stream', 'publitio', 'videopress')
                     AND j.live_video_id > 0
                     AND j.updated_at >= %s
@@ -283,6 +283,7 @@ class VH360_Studio_Recording_Jobs {
                 ORDER BY j.updated_at ASC
                 LIMIT %d",
                 self::STATUS_PROCESSING,
+                self::STATUS_READY,
                 $since,
                 $limit
             ),

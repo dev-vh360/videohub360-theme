@@ -56,6 +56,11 @@ class VH360_Studio_Replay_Status_Reconciler {
     }
 
     private function reconcile_job( array $job ) {
+        if ( VH360_Studio_Recording_Jobs::STATUS_READY === $job['status'] && $this->ready_job_has_replay_target( $job ) ) {
+            $this->update_live_replay_lifecycle( $job, 'ready', 'no', 'yes', 'no' );
+            return;
+        }
+
         $status = $this->publisher->status( $job );
         if ( is_wp_error( $status ) ) {
             return;
@@ -71,6 +76,14 @@ class VH360_Studio_Replay_Status_Reconciler {
             $failed = $this->jobs->mark_failed( $job['id'], 0, $message );
             $this->update_live_replay_lifecycle( is_wp_error( $failed ) ? $job : $failed, 'failed', 'no', 'no', 'yes' );
         }
+    }
+
+    private function ready_job_has_replay_target( array $job ) {
+        if ( ! empty( $job['replay_video_id'] ) || ! empty( $job['playback_url'] ) || ! empty( $job['provider_embed_url'] ) || ! empty( $job['provider_file_id'] ) || ! empty( $job['publitio_file_id'] ) || ! empty( $job['videopress_guid'] ) ) {
+            return true;
+        }
+
+        return ! empty( $job['publish_provider_status'] ) && in_array( sanitize_key( (string) $job['publish_provider_status'] ), array( 'ready', 'bunny_stream_ready', 'publitio_ready', 'publitio_direct_ready', 'published' ), true );
     }
 
     private function response_is_ready( array $response ) {

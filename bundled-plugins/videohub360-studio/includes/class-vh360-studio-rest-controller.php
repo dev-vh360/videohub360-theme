@@ -1165,6 +1165,14 @@ class VH360_Studio_REST_Controller {
     public function publish_recording( WP_REST_Request $request ) {
         $job = $this->chunks->validate_job_ownership( absint( $request['id'] ), get_current_user_id() );
         if ( is_wp_error( $job ) ) { return $job; }
+        if ( VH360_Studio_Recording_Jobs::STATUS_READY === $job['status'] ) {
+            $status = $this->publisher->status( $job );
+            if ( is_wp_error( $status ) ) { return $status; }
+            if ( is_array( $status ) ) {
+                $this->reconcile_publish_response_lifecycle( $job, $status );
+            }
+            return rest_ensure_response( $this->prepare_publish_response( $status, $job ) );
+        }
         $this->update_live_replay_lifecycle( $job, 'processing', 'yes', 'no', 'no' );
         $lock_key = 'vh360_studio_publish_lock_' . absint( $job['id'] );
         if ( get_transient( $lock_key ) ) {
