@@ -314,7 +314,7 @@ $friendly_job_status = static function( $job ) {
             <section class="vh360-studio-dock" aria-labelledby="vh360-studio-live-title">
                 <div class="vh360-studio-dock-header"><h3 id="vh360-studio-live-title"><?php esc_html_e( 'Stream Controls', 'videohub360-studio' ); ?></h3></div>
                 <div class="vh360-studio-dock-body">
-                    <p class="vh360-studio-help"><?php esc_html_e( 'Videohub360 handles the live connection automatically. Studio broadcasts your camera and microphone while viewers watch the public single video page.', 'videohub360-studio' ); ?></p>
+                    <p class="vh360-studio-help"><?php esc_html_e( 'Videohub360 handles the live connection automatically. Studio broadcasts the Program output and mixed Studio audio while viewers watch the public single video page.', 'videohub360-studio' ); ?></p>
                     <div class="vh360-studio-live-grid">
                         <p><label><?php esc_html_e( 'Title', 'videohub360-studio' ); ?><input type="text" data-broadcast-title placeholder="<?php esc_attr_e( 'My livestream', 'videohub360-studio' ); ?>"></label></p>
                         <p><label><?php esc_html_e( 'Description', 'videohub360-studio' ); ?><textarea data-broadcast-description rows="3"></textarea></label></p>

@@ -965,6 +965,9 @@
 
     function resetProgramLiveControlState() {
         state.liveAudioMuted = false;
+        if (state.audioMixer) {
+            setMasterAudioMuted(false);
+        }
         state.liveVideoMuted = false;
         renderProgramLiveControls();
     }
@@ -1031,6 +1034,7 @@
         if (els.programEmpty) {
             els.programEmpty.hidden = active;
         }
+        updateProgramAudioRouting();
         updateOperatorStatus();
     }
 
@@ -1054,7 +1058,7 @@
         input.connect(gain);
         gain.connect(analyser);
         analyser.connect(destination);
-        return { id, label, input, gain, analyser, source: null, stream: null, element: null, muted: false, volume: 1, connected: false, unavailable: true };
+        return { id, label, input, gain, analyser, source: null, stream: null, element: null, sourceId: '', muted: false, volume: 1, connected: false, unavailable: true };
     }
 
     function ensureStudioAudioMixer() {
@@ -1090,15 +1094,31 @@
         return mixer;
     }
 
-    function setMixerChannelStream(channelId, stream) {
-        const mixer = ensureStudioAudioMixer();
-        if (!mixer || !mixer.channels[channelId]) { return; }
-        const channel = mixer.channels[channelId];
+    function disconnectMixerChannel(channelId, expectedSourceId) {
+        const mixer = state.audioMixer;
+        const channel = mixer && mixer.channels[channelId];
+        if (!channel || expectedSourceId && channel.sourceId !== expectedSourceId) { return; }
         if (channel.source && typeof channel.source.disconnect === 'function') {
             try { channel.source.disconnect(); } catch (error) {}
         }
         channel.source = null;
+        channel.stream = null;
+        channel.element = null;
+        channel.sourceId = '';
+        channel.connected = false;
+        channel.unavailable = true;
+        updateMixerUi();
+    }
+
+    function setMixerChannelStream(channelId, stream, options = {}) {
+        const mixer = ensureStudioAudioMixer();
+        if (!mixer || !mixer.channels[channelId]) { return; }
+        const channel = mixer.channels[channelId];
+        const sourceId = options.sourceId || channelId;
+        if (channel.stream === stream && channel.sourceId === sourceId && channel.source) { return; }
+        disconnectMixerChannel(channelId);
         channel.stream = stream || null;
+        channel.sourceId = sourceId;
         const audioTracks = stream && stream.getAudioTracks ? stream.getAudioTracks().filter((track) => track.readyState !== 'ended') : [];
         channel.connected = !!audioTracks.length;
         channel.unavailable = !channel.connected;
@@ -1106,24 +1126,21 @@
             channel.source = mixer.context.createMediaStreamSource(new MediaStream(audioTracks));
             channel.source.connect(channel.input);
             audioTracks.forEach((track) => track.addEventListener('ended', () => {
-                channel.connected = false;
-                channel.unavailable = true;
-                updateMixerUi();
+                disconnectMixerChannel(channelId, sourceId);
             }, { once: true }));
         }
         applyMixerChannelGain(channel);
         updateMixerUi();
     }
 
-    function setMixerChannelElement(channelId, element) {
+    function setMixerChannelElement(channelId, element, sourceId = '') {
         const mixer = ensureStudioAudioMixer();
         if (!mixer || !mixer.channels[channelId] || !element || element.tagName !== 'VIDEO') { return; }
         const channel = mixer.channels[channelId];
-        if (channel.element === element && channel.source) { return; }
-        if (channel.source && typeof channel.source.disconnect === 'function') {
-            try { channel.source.disconnect(); } catch (error) {}
-        }
+        if (channel.element === element && channel.sourceId === sourceId && channel.source) { return; }
+        disconnectMixerChannel(channelId);
         channel.element = element;
+        channel.sourceId = sourceId;
         channel.source = element._vh360MixerSource || mixer.context.createMediaElementSource(element);
         element._vh360MixerSource = channel.source;
         channel.source.connect(channel.input);
@@ -1131,6 +1148,25 @@
         channel.unavailable = false;
         applyMixerChannelGain(channel);
         updateMixerUi();
+    }
+
+    function updateProgramAudioRouting() {
+        if (state.programSource === 'screen') {
+            setMixerChannelStream('screen', state.screenStream, { sourceId: 'screen' });
+        } else {
+            disconnectMixerChannel('screen');
+        }
+
+        if (isMediaSource(state.programSource)) {
+            const mediaSource = getMediaSource(state.programSource);
+            if (mediaSource && mediaSource.type === 'video' && mediaSource.element) {
+                setMixerChannelElement('media', mediaSource.element, mediaSource.sourceId);
+            } else {
+                disconnectMixerChannel('media');
+            }
+        } else {
+            disconnectMixerChannel('media');
+        }
     }
 
     function applyMixerChannelGain(channel) {
@@ -1787,7 +1823,7 @@
                 displayOptions.controller = captureController;
             }
             state.screenStream = await navigator.mediaDevices.getDisplayMedia(displayOptions);
-            setMixerChannelStream('screen', state.screenStream);
+            updateProgramAudioRouting();
             if (!state.screenStream) {
                 throw new Error('Screen Share could not be started.');
             }
@@ -1844,6 +1880,7 @@
     }
 
     async function handleScreenShareEnded() {
+        setMixerChannelStream('screen', null);
         state.screenStream = null;
         if (els.screenPreview) {
             els.screenPreview.srcObject = null;
@@ -1886,8 +1923,8 @@
         video.controls = false;
         video.preload = 'metadata';
         video.src = source.url;
-        video.addEventListener('loadedmetadata', () => setMixerChannelElement('media', video), { once: true });
-        video.addEventListener('play', () => setMixerChannelElement('media', video));
+        video.addEventListener('loadedmetadata', updateProgramAudioRouting, { once: true });
+        video.addEventListener('play', updateProgramAudioRouting);
         ['play', 'pause', 'timeupdate', 'loadedmetadata', 'durationchange', 'ended'].forEach((eventName) => {
             video.addEventListener(eventName, renderMediaPlaybackControls);
         });
@@ -2190,6 +2227,9 @@
     }
 
     function releaseMediaSource(source) {
+        if (source && source.sourceId) {
+            disconnectMixerChannel('media', source.sourceId);
+        }
         if (source.type === 'video' && source.element) {
             source.element.pause();
         }
@@ -3596,6 +3636,7 @@
             state.programStream = null;
             renderPreviewState();
             renderProgramState();
+            updateProgramAudioRouting();
             renderSourceState();
             renderSceneControls();
         }
