@@ -299,17 +299,28 @@ $friendly_job_status = static function( $job ) {
                     ?>
                     <div class="vh360-studio-audio-mixer" role="group" aria-label="<?php esc_attr_e( 'Studio audio mixer channels', 'videohub360-studio' ); ?>">
                         <?php foreach ( $audio_channels as $channel_id => $channel_label ) : ?>
+                            <?php
+                            $channel_display = 'mic' === $channel_id ? __( 'Mic/Aux', 'videohub360-studio' ) : $channel_label;
+                            $initial_status  = 'master' === $channel_id ? __( 'Active', 'videohub360-studio' ) : __( 'Off', 'videohub360-studio' );
+                            ?>
                             <div class="vh360-studio-audio-channel" data-mixer-channel="<?php echo esc_attr( $channel_id ); ?>">
-                                <div class="vh360-studio-audio-channel-header">
-                                    <strong><?php echo esc_html( $channel_label ); ?></strong>
-                                    <span class="vh360-studio-audio-status" data-mixer-status="<?php echo esc_attr( $channel_id ); ?>"><?php esc_html_e( 'Unavailable', 'videohub360-studio' ); ?></span>
+                                <span class="vh360-studio-audio-status" data-mixer-status="<?php echo esc_attr( $channel_id ); ?>"><?php echo esc_html( $initial_status ); ?></span>
+                                <strong class="vh360-studio-audio-name"><?php echo esc_html( $channel_display ); ?></strong>
+                                <div class="vh360-studio-audio-strip-body">
+                                    <?php if ( 'master' !== $channel_id ) : ?>
+                                        <label class="vh360-studio-audio-gain">
+                                            <span class="screen-reader-text"><?php echo esc_html( sprintf( __( '%s gain', 'videohub360-studio' ), $channel_label ) ); ?></span>
+                                            <input type="range" min="0" max="150" value="100" data-mixer-gain="<?php echo esc_attr( $channel_id ); ?>">
+                                        </label>
+                                    <?php else : ?>
+                                        <span class="vh360-studio-audio-master-note"><?php esc_html_e( 'Mix', 'videohub360-studio' ); ?></span>
+                                    <?php endif; ?>
+                                    <div class="vh360-studio-meter" aria-label="<?php echo esc_attr( $channel_label ); ?> <?php esc_attr_e( 'level', 'videohub360-studio' ); ?>"><span <?php echo 'mic' === $channel_id ? 'data-mic-meter ' : ''; ?>data-mixer-meter="<?php echo esc_attr( $channel_id ); ?>"></span></div>
                                 </div>
-                                <div class="vh360-studio-meter" aria-label="<?php echo esc_attr( $channel_label ); ?> <?php esc_attr_e( 'level', 'videohub360-studio' ); ?>"><span <?php echo 'mic' === $channel_id ? 'data-mic-meter ' : ''; ?>data-mixer-meter="<?php echo esc_attr( $channel_id ); ?>"></span></div>
                                 <?php if ( 'master' !== $channel_id ) : ?>
-                                    <label class="vh360-studio-audio-gain"><span><?php esc_html_e( 'Gain', 'videohub360-studio' ); ?></span><input type="range" min="0" max="150" value="100" data-mixer-gain="<?php echo esc_attr( $channel_id ); ?>"></label>
-                                    <button type="button" class="vh360-studio-button vh360-studio-button--ghost vh360-studio-audio-mute" data-mixer-mute="<?php echo esc_attr( $channel_id ); ?>" aria-pressed="false"><?php esc_html_e( 'Mute', 'videohub360-studio' ); ?></button>
+                                    <button type="button" class="vh360-studio-audio-mute" data-mixer-mute="<?php echo esc_attr( $channel_id ); ?>" aria-pressed="false" aria-label="<?php echo esc_attr( sprintf( __( 'Mute %s', 'videohub360-studio' ), $channel_label ) ); ?>"><span class="screen-reader-text"><?php echo esc_html( sprintf( __( 'Mute %s', 'videohub360-studio' ), $channel_label ) ); ?></span></button>
                                 <?php else : ?>
-                                    <span class="vh360-studio-audio-master-note"><?php esc_html_e( 'Final mixed output', 'videohub360-studio' ); ?></span>
+                                    <span class="vh360-studio-audio-master-note vh360-studio-audio-master-note--bottom"><?php esc_html_e( 'Output', 'videohub360-studio' ); ?></span>
                                 <?php endif; ?>
                             </div>
                         <?php endforeach; ?>

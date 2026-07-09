@@ -1262,9 +1262,10 @@
         if (mixer) {
             Object.keys(mixer.channels).forEach((id) => {
                 const channel = mixer.channels[id];
-                root.querySelectorAll('[data-mixer-status="' + id + '"]').forEach((el) => { el.textContent = channel.connected ? 'Connected' : 'Unavailable'; });
+                const label = id === 'mic' ? (channel.connected ? 'Global' : 'Off') : (channel.connected ? 'Active' : 'Off');
+                root.querySelectorAll('[data-mixer-status="' + id + '"]').forEach((el) => { el.textContent = channel.muted ? 'Muted' : label; });
             });
-            root.querySelectorAll('[data-mixer-status="master"]').forEach((el) => { el.textContent = state.liveAudioMuted ? 'Muted' : 'Mixed output active'; });
+            root.querySelectorAll('[data-mixer-status="master"]').forEach((el) => { el.textContent = state.liveAudioMuted ? 'Muted' : 'Active'; });
         }
     }
 
@@ -1277,12 +1278,20 @@
                 const data = new Uint8Array(channel.analyser.frequencyBinCount);
                 channel.analyser.getByteFrequencyData(data);
                 const average = data.reduce((sum, value) => sum + value, 0) / (data.length || 1);
-                root.querySelectorAll('[data-mixer-meter="' + id + '"]').forEach((el) => { el.style.width = Math.min(100, Math.round((average / 255) * 100)) + '%'; });
+                const level = Math.min(100, Math.round((average / 255) * 100)) + '%';
+                root.querySelectorAll('[data-mixer-meter="' + id + '"]').forEach((el) => {
+                    el.style.setProperty('--vh360-meter-level', level);
+                    el.style.height = level;
+                });
             });
             const masterData = new Uint8Array(mixer.masterAnalyser.frequencyBinCount);
             mixer.masterAnalyser.getByteFrequencyData(masterData);
             const masterAverage = masterData.reduce((sum, value) => sum + value, 0) / (masterData.length || 1);
-            root.querySelectorAll('[data-mixer-meter="master"]').forEach((el) => { el.style.width = Math.min(100, Math.round((masterAverage / 255) * 100)) + '%'; });
+            const masterLevel = Math.min(100, Math.round((masterAverage / 255) * 100)) + '%';
+            root.querySelectorAll('[data-mixer-meter="master"]').forEach((el) => {
+                el.style.setProperty('--vh360-meter-level', masterLevel);
+                el.style.height = masterLevel;
+            });
             mixer.meterFrame = window.requestAnimationFrame(draw);
         };
         draw();
@@ -1341,8 +1350,11 @@
         }
 
         state.audioMixer = null;
-        root.querySelectorAll('[data-mixer-meter]').forEach((el) => { el.style.width = '0%'; });
-        root.querySelectorAll('[data-mixer-status]').forEach((el) => { el.textContent = 'Unavailable'; });
+        root.querySelectorAll('[data-mixer-meter]').forEach((el) => {
+            el.style.setProperty('--vh360-meter-level', '0%');
+            el.style.height = '0%';
+        });
+        root.querySelectorAll('[data-mixer-status]').forEach((el) => { el.textContent = el.dataset.mixerStatus === 'master' ? 'Active' : 'Off'; });
     }
 
     async function ensureMicStream() {
@@ -1896,7 +1908,9 @@
         const data = new Uint8Array(state.analyser.frequencyBinCount);
         state.analyser.getByteFrequencyData(data);
         const average = data.reduce((sum, value) => sum + value, 0) / data.length;
-        els.micMeter.style.width = Math.min(100, Math.round((average / 255) * 100)) + '%';
+        const level = Math.min(100, Math.round((average / 255) * 100)) + '%';
+        els.micMeter.style.setProperty('--vh360-meter-level', level);
+        els.micMeter.style.height = level;
         state.meterFrame = window.requestAnimationFrame(drawMeter);
     }
 
@@ -1906,7 +1920,8 @@
             state.meterFrame = null;
         }
         if (els.micMeter) {
-            els.micMeter.style.width = '0%';
+            els.micMeter.style.setProperty('--vh360-meter-level', '0%');
+            els.micMeter.style.height = '0%';
         }
         if (state.audioContext) {
             state.audioContext.close().catch(() => {});
@@ -4272,8 +4287,11 @@
                 const channel = mixer && mixer.channels[button.dataset.mixerMute];
                 if (!channel) { return; }
                 channel.muted = !channel.muted;
-                button.textContent = channel.muted ? 'Unmute' : 'Mute';
                 button.setAttribute('aria-pressed', channel.muted ? 'true' : 'false');
+                button.setAttribute('aria-label', (channel.muted ? 'Unmute ' : 'Mute ') + (channel.label || button.dataset.mixerMute));
+                const srText = button.querySelector('.screen-reader-text');
+                if (srText) { srText.textContent = (channel.muted ? 'Unmute ' : 'Mute ') + (channel.label || button.dataset.mixerMute); }
+                updateMixerUi();
                 applyMixerChannelGain(channel);
             });
         });
