@@ -1377,26 +1377,51 @@
         root.querySelectorAll('[data-mixer-mute]').forEach((button) => { syncMixerMuteButton(button, null, false); });
     }
 
-    async function ensureMicStream() {
-        const existingAudio = state.cameraStream && state.cameraStream.getAudioTracks().find((track) => track.readyState !== 'ended');
-        if (existingAudio) {
-            setMixerChannelStream('mic', state.cameraStream);
-            return state.cameraStream;
+    async function startMicrophoneInput(options = {}) {
+        if (!state.support.getUserMedia) {
+            setMixerChannelStream('mic', null);
+            return null;
         }
+        if (state.micStream && !options.force) {
+            const micAudio = state.micStream.getAudioTracks().find((track) => track.readyState !== 'ended');
+            if (micAudio) {
+                setMixerChannelStream('mic', state.micStream);
+                return state.micStream;
+            }
+        }
+        stopStream(state.micStream);
+        state.micStream = null;
+        try {
+            state.micStream = await navigator.mediaDevices.getUserMedia({
+                audio: state.selectedMicId ? { deviceId: { exact: state.selectedMicId } } : true,
+                video: false,
+            });
+            setMixerChannelStream('mic', state.micStream);
+            await populateDevices({ reason: options.reason || 'microphone-start' }).catch(() => {});
+            return state.micStream;
+        } catch (error) {
+            setMixerChannelStream('mic', null);
+            if (!options.retriedDefaultMicrophone && state.selectedMicId && ['NotFoundError', 'DevicesNotFoundError', 'OverconstrainedError', 'ConstraintNotSatisfiedError'].includes(error && error.name)) {
+                const failedMicId = state.selectedMicId;
+                state.selectedMicId = '';
+                storageSet(MIC_STORAGE_KEY, '');
+                if (els.micSelect) { els.micSelect.value = ''; }
+                setDeviceStatus('The selected microphone is no longer available. Studio will retry with the default microphone…', 'warning');
+                await populateDevices({ reason: 'microphone-retry', keepDefaultMicrophone: true }).catch(() => {});
+                studioDebugLog('[VH360 Studio] Retrying microphone input with default device after selected microphone failed', { failedMicId, errorName: error && error.name });
+                return startMicrophoneInput(Object.assign({}, options, { retriedDefaultMicrophone: true }));
+            }
+            throw error;
+        }
+    }
+
+    async function ensureMicStream() {
         const micAudio = state.micStream && state.micStream.getAudioTracks().find((track) => track.readyState !== 'ended');
         if (micAudio) {
             setMixerChannelStream('mic', state.micStream);
             return state.micStream;
         }
-        if (!state.support.getUserMedia) {
-            return null;
-        }
-        state.micStream = await navigator.mediaDevices.getUserMedia({
-            audio: state.selectedMicId ? { deviceId: { exact: state.selectedMicId } } : true,
-            video: false,
-        });
-        setMixerChannelStream('mic', state.micStream);
-        return state.micStream;
+        return startMicrophoneInput();
     }
 
     async function buildRecordingStreamFromProgram() {
@@ -1965,15 +1990,17 @@
             const preset = getSelectedPreset();
             const constraints = {
                 video: buildVideoConstraints(preset),
-                audio: state.selectedMicId ? { deviceId: { exact: state.selectedMicId } } : true,
+                audio: false,
             };
             state.cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
             if (els.cameraPreview) {
                 els.cameraPreview.srcObject = state.cameraStream;
                 await els.cameraPreview.play().catch(() => {});
             }
-            setupAudioMeter(state.cameraStream);
-            setMixerChannelStream('mic', state.cameraStream);
+            startMicrophoneInput().catch((micError) => {
+                setMixerChannelStream('mic', null);
+                setDeviceStatus(friendlyMediaError(micError), 'warning');
+            });
             await populateDevices();
             setShellClass('is-preview-active', true);
             if (state.programSource === 'camera') {
@@ -2000,17 +2027,6 @@
                 await populateDevices({ reason: 'camera-retry', keepDefaultCamera: true }).catch(() => {});
                 studioDebugLog('[VH360 Studio] Retrying camera preview with default device after selected camera failed', { failedCameraId, errorName: error && error.name });
                 return startPreview(updateSelection, { retriedDefaultCamera: true });
-            }
-            const canRetryDefaultMic = !options.retriedDefaultMicrophone && state.selectedMicId && ['NotFoundError', 'DevicesNotFoundError', 'OverconstrainedError', 'ConstraintNotSatisfiedError'].includes(error && error.name);
-            if (canRetryDefaultMic) {
-                const failedMicId = state.selectedMicId;
-                state.selectedMicId = '';
-                storageSet(MIC_STORAGE_KEY, '');
-                if (els.micSelect) { els.micSelect.value = ''; }
-                setDeviceStatus('The selected microphone is no longer available. Studio will retry with the default microphone…', 'warning');
-                await populateDevices({ reason: 'microphone-retry', keepDefaultMicrophone: true }).catch(() => {});
-                studioDebugLog('[VH360 Studio] Retrying preview with default microphone after selected microphone failed', { failedMicId, errorName: error && error.name });
-                return startPreview(updateSelection, { retriedDefaultMicrophone: true });
             }
             const message = friendlyMediaError(error);
             setStatus(message, 'error');
@@ -2711,7 +2727,7 @@
             return strings.browserUnsupported;
         }
         if (error.name === 'NotAllowedError' || error.name === 'SecurityError') {
-            return 'Camera or microphone permission was blocked. Allow access in your browser site settings, then refresh devices.';
+            return 'Camera or microphone permission was blocked. Allow access in your browser site settings and macOS Privacy & Security, then refresh devices.';
         }
         if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
             return 'No matching camera or microphone was found. Check the USB connection and click Refresh Devices.';
@@ -4393,9 +4409,12 @@
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: state.selectedMicId ? { deviceId: { exact: state.selectedMicId } } : true, video: false });
             setMixerChannelStream('mic', stream);
-            window.setTimeout(() => { stopStream(stream); setMixerChannelStream('mic', state.cameraStream || state.micStream); }, 3000);
+            window.setTimeout(() => { stopStream(stream); setMixerChannelStream('mic', state.micStream); }, 3000);
             setDeviceStatus('Microphone test started: ' + selectedOptionLabel(els.micSelect, 'default microphone') + '.', 'success');
             await populateDevices({ reason: 'microphone-test' }).catch(() => {});
+            if (els.micSelect && els.micSelect.disabled) {
+                setDeviceStatus('Microphone permission was requested, but the browser still reports zero microphones. Check OS privacy settings, USB/audio hardware, and browser device permissions.', 'warning');
+            }
         } catch (error) {
             const message = friendlyMediaError(error);
             setDeviceStatus(message, 'error');
@@ -4499,9 +4518,11 @@
                 state.selectedMicId = els.micSelect.value;
                 storageSet(MIC_STORAGE_KEY, state.selectedMicId);
                 updateActiveDeviceSummary();
-                if (state.cameraStream) {
-                    startPreview();
-                }
+                startMicrophoneInput({ force: true, reason: 'microphone-change' }).catch((error) => {
+                    const message = friendlyMediaError(error);
+                    setDeviceStatus(message, 'error');
+                    setStatus(message, 'error');
+                });
             });
         }
         els.mixerGains.forEach((input) => {
