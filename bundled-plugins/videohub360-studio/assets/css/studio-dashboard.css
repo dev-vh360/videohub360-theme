@@ -300,6 +300,9 @@ body.vh360-studio-window-mode .vh360-studio-dashboard {
 [data-device-status][data-status-type="success"] { color: var(--vh360-studio-success); }
 [data-device-status][data-status-type="warning"] { color: var(--vh360-studio-warning); }
 [data-device-status][data-status-type="error"] { color: var(--vh360-studio-danger); }
+.vh360-studio-device-actions { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+.vh360-studio-device-actions .vh360-studio-button { min-height: 32px; padding: 0.35rem 0.7rem; }
+.vh360-studio-device-active { background: var(--vh360-studio-panel-bg-strong); border: 1px solid var(--vh360-studio-panel-border); border-radius: 10px; color: var(--vh360-studio-text-muted); font-size: 0.78rem; margin: 0; padding: 0.55rem; }
 
 .vh360-studio-audio-mixer { background: linear-gradient(180deg, var(--vh360-studio-panel-bg-strong), var(--vh360-studio-panel-bg)); border: 1px solid var(--vh360-studio-panel-border); border-radius: 14px; display: flex; gap: 0; overflow-x: auto; overflow-y: hidden; padding: 0.35rem; scrollbar-width: thin; }
 .vh360-studio-audio-mixer::-webkit-scrollbar { height: 8px; }

@@ -281,6 +281,11 @@ $friendly_job_status = static function( $job ) {
                         <option value=""><?php esc_html_e( 'Grant microphone access to list devices', 'videohub360-studio' ); ?></option>
                     </select>
                     <p class="vh360-studio-help" data-device-status><?php esc_html_e( 'Refresh devices after plugging in a USB camera or granting browser permission.', 'videohub360-studio' ); ?></p>
+                    <div class="vh360-studio-device-actions">
+                        <button type="button" class="vh360-studio-button vh360-studio-button--ghost" data-test-camera><?php esc_html_e( 'Test Camera', 'videohub360-studio' ); ?></button>
+                        <button type="button" class="vh360-studio-button vh360-studio-button--ghost" data-test-microphone><?php esc_html_e( 'Test Microphone', 'videohub360-studio' ); ?></button>
+                    </div>
+                    <p class="vh360-studio-device-active" data-active-devices><?php esc_html_e( 'Camera: Permission required · Microphone: Permission required', 'videohub360-studio' ); ?></p>
                     <label for="vh360-studio-quality-select"><?php esc_html_e( 'Quality preset', 'videohub360-studio' ); ?></label>
                     <select id="vh360-studio-quality-select" data-quality-select>
                         <?php foreach ( $quality_presets as $preset_id => $preset ) : ?>

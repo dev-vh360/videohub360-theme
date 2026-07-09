@@ -10,6 +10,8 @@
     const strings = config.strings || {};
     const supportLabels = config.supportLabels || {};
     const CHUNK_UPLOAD_CONCURRENCY = 2;
+    const CAMERA_STORAGE_KEY = 'vh360_studio_camera_device_id';
+    const MIC_STORAGE_KEY = 'vh360_studio_microphone_device_id';
     const state = {
         cameraStream: null,
         screenStream: null,
@@ -127,6 +129,9 @@
         micMeter: root.querySelector('[data-mic-meter]'),
         refreshDevices: root.querySelector('[data-refresh-devices]'),
         deviceStatus: root.querySelector('[data-device-status]'),
+        activeDevices: root.querySelector('[data-active-devices]'),
+        testCamera: root.querySelector('[data-test-camera]'),
+        testMicrophone: root.querySelector('[data-test-microphone]'),
         mixerMeters: root.querySelectorAll('[data-mixer-meter]'),
         mixerStatuses: root.querySelectorAll('[data-mixer-status]'),
         mixerGains: root.querySelectorAll('[data-mixer-gain]'),
@@ -1772,6 +1777,69 @@
         return div.innerHTML;
     }
 
+
+    function storageGet(key) {
+        try { return window.localStorage ? window.localStorage.getItem(key) || '' : ''; } catch (error) { return ''; }
+    }
+
+    function storageSet(key, value) {
+        try {
+            if (!window.localStorage) { return; }
+            if (value) { window.localStorage.setItem(key, value); } else { window.localStorage.removeItem(key); }
+        } catch (error) {}
+    }
+
+    function loadSavedDevicePreferences() {
+        state.selectedCameraId = storageGet(CAMERA_STORAGE_KEY);
+        state.selectedMicId = storageGet(MIC_STORAGE_KEY);
+    }
+
+    function selectedOptionLabel(select, fallback) {
+        if (!select || select.disabled || !select.options.length) { return fallback; }
+        const option = select.options[select.selectedIndex >= 0 ? select.selectedIndex : 0];
+        return option && option.value ? option.textContent || fallback : fallback;
+    }
+
+    function updateActiveDeviceSummary() {
+        if (!els.activeDevices) { return; }
+        const camera = selectedOptionLabel(els.cameraSelect, 'Permission required');
+        const mic = selectedOptionLabel(els.micSelect, 'Permission required');
+        els.activeDevices.textContent = 'Camera: ' + camera + ' · Microphone: ' + mic;
+    }
+
+
+    async function permissionStateLabel(name) {
+        if (!navigator.permissions || typeof navigator.permissions.query !== 'function') {
+            return 'Prompt';
+        }
+        try {
+            const status = await navigator.permissions.query({ name });
+            if (status.state === 'granted') { return 'Allowed'; }
+            if (status.state === 'denied') { return 'Blocked'; }
+            return 'Prompt';
+        } catch (error) {
+            return 'Prompt';
+        }
+    }
+
+    async function renderDeviceReadinessDetails() {
+        if (!els.supportChecks) { return; }
+        els.supportChecks.querySelectorAll('[data-device-readiness]').forEach((item) => item.remove());
+        const details = [
+            ['Camera permission', await permissionStateLabel('camera')],
+            ['Microphone permission', await permissionStateLabel('microphone')],
+            ['Camera selected', selectedOptionLabel(els.cameraSelect, 'Permission required')],
+            ['Microphone selected', selectedOptionLabel(els.micSelect, 'Permission required')],
+        ];
+        details.forEach(([label, value]) => {
+            const item = document.createElement('li');
+            item.dataset.deviceReadiness = 'true';
+            item.className = value === 'Blocked' || value === 'Permission required' ? 'is-unsupported' : 'is-supported';
+            item.innerHTML = '<span>' + escapeHtml(label) + '</span><strong>' + escapeHtml(value) + '</strong>';
+            els.supportChecks.appendChild(item);
+        });
+    }
+
     function setDeviceStatus(message, type) {
         if (!els.deviceStatus) { return; }
         els.deviceStatus.textContent = message || '';
@@ -1797,11 +1865,17 @@
         const cameras = devices.filter((device) => device.kind === 'videoinput');
         const microphones = devices.filter((device) => device.kind === 'audioinput');
 
+        const hadSavedCamera = !!state.selectedCameraId;
+        const hadSavedMic = !!state.selectedMicId;
         if (state.selectedCameraId && !cameras.some((device) => device.deviceId === state.selectedCameraId)) {
             state.selectedCameraId = '';
+            storageSet(CAMERA_STORAGE_KEY, '');
+            setDeviceStatus('Your saved camera is no longer connected. Studio selected the default camera.', 'warning');
         }
         if (state.selectedMicId && !microphones.some((device) => device.deviceId === state.selectedMicId)) {
             state.selectedMicId = '';
+            storageSet(MIC_STORAGE_KEY, '');
+            setDeviceStatus('Your saved microphone is no longer connected. Studio selected the default microphone.', 'warning');
         }
 
         fillDeviceSelect(els.cameraSelect, cameras, 'Camera', state.selectedCameraId);
@@ -1810,12 +1884,21 @@
         if (!options.keepDefaultCamera && !state.selectedCameraId && els.cameraSelect && els.cameraSelect.value) {
             state.selectedCameraId = els.cameraSelect.value;
         }
-        if (!state.selectedMicId && els.micSelect && els.micSelect.value) {
+        if (!options.keepDefaultMicrophone && !state.selectedMicId && els.micSelect && els.micSelect.value) {
             state.selectedMicId = els.micSelect.value;
         }
 
         const cameraLabel = cameras.length === 1 ? '1 camera' : cameras.length + ' cameras';
         const micLabel = microphones.length === 1 ? '1 microphone' : microphones.length + ' microphones';
+        updateActiveDeviceSummary();
+        renderDeviceReadinessDetails().catch(() => {});
+        if (options.reason === 'manual' && (state.broadcastSession || isRecordingActive())) {
+            setDeviceStatus('Devices refreshed. Current live devices were not changed.', 'info');
+            return;
+        }
+        if (options.reason === 'devicechange' && !hadSavedCamera && cameras.length) {
+            setDeviceStatus('Device change detected. Cameras and microphones refreshed. New camera detected. Choose it from Sources.', 'info');
+        }
         if (!cameras.length) {
             setStatus(strings.noCameraFound, 'warning');
             setDeviceStatus('No cameras detected. Plug in a camera, grant browser permission, then refresh devices.', 'warning');
@@ -1904,11 +1987,23 @@
             if (canRetryDefaultCamera) {
                 const failedCameraId = state.selectedCameraId;
                 state.selectedCameraId = '';
+                storageSet(CAMERA_STORAGE_KEY, '');
                 if (els.cameraSelect) { els.cameraSelect.value = ''; }
-                setDeviceStatus('The selected camera could not be opened. Refreshing devices and retrying with the default camera…', 'warning');
+                setDeviceStatus('The selected device is no longer available. Studio will retry with the default camera…', 'warning');
                 await populateDevices({ reason: 'camera-retry', keepDefaultCamera: true }).catch(() => {});
                 studioDebugLog('[VH360 Studio] Retrying camera preview with default device after selected camera failed', { failedCameraId, errorName: error && error.name });
                 return startPreview(updateSelection, { retriedDefaultCamera: true });
+            }
+            const canRetryDefaultMic = !options.retriedDefaultMicrophone && state.selectedMicId && ['NotFoundError', 'DevicesNotFoundError', 'OverconstrainedError', 'ConstraintNotSatisfiedError'].includes(error && error.name);
+            if (canRetryDefaultMic) {
+                const failedMicId = state.selectedMicId;
+                state.selectedMicId = '';
+                storageSet(MIC_STORAGE_KEY, '');
+                if (els.micSelect) { els.micSelect.value = ''; }
+                setDeviceStatus('The selected microphone is no longer available. Studio will retry with the default microphone…', 'warning');
+                await populateDevices({ reason: 'microphone-retry', keepDefaultMicrophone: true }).catch(() => {});
+                studioDebugLog('[VH360 Studio] Retrying preview with default microphone after selected microphone failed', { failedMicId, errorName: error && error.name });
+                return startPreview(updateSelection, { retriedDefaultMicrophone: true });
             }
             const message = friendlyMediaError(error);
             setStatus(message, 'error');
@@ -2609,16 +2704,16 @@
             return strings.browserUnsupported;
         }
         if (error.name === 'NotAllowedError' || error.name === 'SecurityError') {
-            return 'Camera or microphone permission was denied. Allow access in your browser, then refresh devices.';
+            return 'Camera or microphone permission was blocked. Allow access in your browser site settings, then refresh devices.';
         }
         if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
-            return 'No matching camera or microphone was found. Check that the device is plugged in, then refresh devices.';
+            return 'No matching camera or microphone was found. Check the USB connection and click Refresh Devices.';
         }
         if (error.name === 'NotReadableError') {
-            return 'The selected camera or microphone is already in use or could not be opened. Close other apps that may be using it, then try again.';
+            return 'The camera or microphone is already in use by another app. Close OBSBOT Center, Zoom, FaceTime, OBS, or other camera apps, then try again.';
         }
         if (error.name === 'OverconstrainedError' || error.name === 'ConstraintNotSatisfiedError') {
-            return 'The selected camera settings are unavailable. Studio will refresh devices so you can choose another camera.';
+            return 'The selected device is no longer available. Studio will retry with the default device.';
         }
         return error.message || strings.browserUnsupported;
     }
@@ -4261,6 +4356,42 @@
         renderPreviewMediaTransform();
     }
 
+
+    async function testCameraDevice() {
+        if (!state.support.getUserMedia) { setDeviceStatus('Camera testing is unavailable in this browser.', 'error'); return; }
+        setDeviceStatus('Testing selected camera…', 'info');
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: state.selectedCameraId ? { deviceId: { exact: state.selectedCameraId } } : true, audio: false });
+            stopStream(stream);
+            setDeviceStatus('Camera test passed: ' + selectedOptionLabel(els.cameraSelect, 'default camera') + '.', 'success');
+            await populateDevices({ reason: 'camera-test' }).catch(() => {});
+        } catch (error) {
+            const message = friendlyMediaError(error);
+            setDeviceStatus(message, 'error');
+            setStatus(message, 'error');
+        }
+    }
+
+    async function testMicrophoneDevice() {
+        if (!state.support.getUserMedia) { setDeviceStatus('Microphone testing is unavailable in this browser.', 'error'); return; }
+        if (state.broadcastSession || isRecordingActive()) {
+            setDeviceStatus('Stop live/recording before testing a different microphone.', 'warning');
+            return;
+        }
+        setDeviceStatus('Testing selected microphone. Watch the Mic/Aux meter…', 'info');
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: state.selectedMicId ? { deviceId: { exact: state.selectedMicId } } : true, video: false });
+            setMixerChannelStream('mic', stream);
+            window.setTimeout(() => { stopStream(stream); setMixerChannelStream('mic', state.cameraStream || state.micStream); }, 3000);
+            setDeviceStatus('Microphone test started: ' + selectedOptionLabel(els.micSelect, 'default microphone') + '.', 'success');
+            await populateDevices({ reason: 'microphone-test' }).catch(() => {});
+        } catch (error) {
+            const message = friendlyMediaError(error);
+            setDeviceStatus(message, 'error');
+            setStatus(message, 'error');
+        }
+    }
+
     function bindEvents() {
         if (els.sceneList) {
             els.sceneList.addEventListener('click', (event) => {
@@ -4340,9 +4471,13 @@
                 refreshDevices({ reason: 'devicechange' }).catch(() => {});
             });
         }
+        if (els.testCamera) { els.testCamera.addEventListener('click', testCameraDevice); }
+        if (els.testMicrophone) { els.testMicrophone.addEventListener('click', testMicrophoneDevice); }
         if (els.cameraSelect) {
             els.cameraSelect.addEventListener('change', () => {
                 state.selectedCameraId = els.cameraSelect.value;
+                storageSet(CAMERA_STORAGE_KEY, state.selectedCameraId);
+                updateActiveDeviceSummary();
                 if (state.cameraStream) {
                     startPreview();
                 }
@@ -4351,6 +4486,8 @@
         if (els.micSelect) {
             els.micSelect.addEventListener('change', () => {
                 state.selectedMicId = els.micSelect.value;
+                storageSet(MIC_STORAGE_KEY, state.selectedMicId);
+                updateActiveDeviceSummary();
                 if (state.cameraStream) {
                     startPreview();
                 }
@@ -4480,10 +4617,12 @@
         document.addEventListener('visibilitychange', handleStudioVisibilityChange);
     }
 
+    loadSavedDevicePreferences();
     applyStudioWindowMode();
     detectSupport();
     renderSupportChecks();
     updateReadinessStatus();
+    renderDeviceReadinessDetails().catch(() => {});
     updateQualityDetails();
     applyProgramCanvasResolution();
     updatePublishingButtons();
