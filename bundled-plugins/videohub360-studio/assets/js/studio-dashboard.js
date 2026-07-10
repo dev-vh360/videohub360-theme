@@ -103,6 +103,7 @@
         mediaControlsExpanded: false,
         lastRestError: '',
         mediaSourceUploadActive: false,
+        cameraSourceModalTrigger: null,
         mediaSourceModalTrigger: null,
         publishPollTimer: null,
         publishPollAttempts: 0,
@@ -316,8 +317,8 @@
     }
 
     function getActiveCameraSource() {
-        if (isCameraSource(state.previewSource)) { return getCameraSource(state.previewSource); }
         if (isCameraSource(state.selectedSceneSource)) { return getCameraSource(state.selectedSceneSource); }
+        if (isCameraSource(state.previewSource)) { return getCameraSource(state.previewSource); }
         return primaryCameraSource();
     }
 
@@ -477,7 +478,7 @@
 
     function fallbackPreviewSource(endedSource) {
         if (endedSource === 'screen') {
-            const camera = Array.from(state.cameraSources.values()).find((source) => hasLiveVideoTrack(source.stream)) || primaryCameraSource();
+            const camera = Array.from(state.cameraSources.values()).find((source) => hasLiveVideoTrack(source.stream));
             return camera ? camera.sourceId : null;
         }
         if (isCameraSource(endedSource) && state.screenStream) {
@@ -536,6 +537,7 @@
         renderSceneControls();
         renderMediaPlaybackControls();
         renderSelectedMediaControls();
+        renderSelectedCameraControls();
         updateOperatorStatus();
         renderProgramLiveControls();
     }
@@ -800,10 +802,24 @@
 
     function renderSelectedCameraControls() {
         const source = getActiveCameraSource();
-        const show = Boolean(source && (isCameraSource(state.selectedSceneSource) || isCameraSource(state.previewSource)));
+        const show = Boolean(source && isCameraSource(state.selectedSceneSource));
         if (els.selectedCameraControls) { els.selectedCameraControls.hidden = !show; }
-        if (els.selectedCameraName && source) { els.selectedCameraName.value = source.label || ''; }
-        if (els.selectedCameraStatus && source) {
+        if (els.cameraSelect) {
+            els.cameraSelect.disabled = !show || !(state.availableVideoInputDevices || []).length;
+        }
+        if (els.testCamera) {
+            els.testCamera.disabled = !show;
+        }
+        if (!show) {
+            if (els.selectedCameraName) { els.selectedCameraName.value = ''; }
+            if (els.selectedCameraStatus) {
+                els.selectedCameraStatus.textContent = '';
+                els.selectedCameraStatus.dataset.statusType = 'info';
+            }
+            return;
+        }
+        if (els.selectedCameraName) { els.selectedCameraName.value = source.label || ''; }
+        if (els.selectedCameraStatus) {
             els.selectedCameraStatus.textContent = cameraSourceStatusLabel(source.status) + (source.error ? ' · ' + source.error : '');
             els.selectedCameraStatus.dataset.statusType = source.status === 'active' ? 'success' : (source.status === 'error' || source.status === 'unavailable' || source.status === 'disconnected' ? 'warning' : 'info');
         }
@@ -2859,6 +2875,7 @@
             [getStudioString('microphonePermissionReadinessLabel', 'Microphone permission'), microphonePermission, microphonePermission === getStudioString('permissionStateBlocked', 'Blocked')],
             [getStudioString('cameraSelectedReadinessLabel', 'Camera selected'), selectedOptionLabel(els.cameraSelect, permissionRequired), selectedOptionLabel(els.cameraSelect, permissionRequired) === permissionRequired],
             [getStudioString('primaryMicrophoneSelectedReadinessLabel', 'Primary microphone selected'), selectedOptionLabel(els.micSelect, permissionRequired), selectedOptionLabel(els.micSelect, permissionRequired) === permissionRequired],
+            [getStudioString('configuredCameraSourcesReadinessLabel', 'Configured camera sources'), String(state.cameraSources.size || 1), false],
             [getStudioString('configuredAudioInputsReadinessLabel', 'Configured audio inputs'), String(state.audioInputs.size || 1), false],
         ];
         els.supportChecks.querySelectorAll('[data-device-readiness]').forEach((item) => item.remove());
@@ -2921,11 +2938,12 @@
             }
         });
         renderCameraScenes();
-        renderSelectedCameraControls();
         renderCameraSourceDialog();
         const selectedCamera = getActiveCameraSource();
         fillDeviceSelect(els.cameraSelect, cameras, getStudioString('cameraSummaryLabel', 'Camera'), selectedCamera ? selectedCamera.deviceId : '');
         preserveSelectedCameraDeviceOption(els.cameraSelect, selectedCamera);
+        renderSelectedCameraControls();
+        renderSourceState();
         const primary = primaryAudioInput();
         fillDeviceSelect(els.micSelect, microphones, getStudioString('microphoneFallbackLabel', 'Microphone'), primary ? primary.deviceId : '');
         preservePrimaryDefaultMicrophoneOption(els.micSelect, primary);
@@ -3081,6 +3099,15 @@
             warnProtectedSource(source.sourceId);
             throw new Error(getStudioString('protectedCameraSource', 'This camera is currently in Program. Send another source to Program before changing it.'));
         }
+        const previousState = {
+            deviceId: source.deviceId,
+            deviceLabel: source.deviceLabel,
+            connected: source.connected,
+            unavailable: source.unavailable,
+            status: source.status,
+            error: source.error,
+        };
+        const requestedDeviceId = Object.prototype.hasOwnProperty.call(options, 'deviceId') ? options.deviceId : source.deviceId;
         const requestId = ++source.startRequestId;
         source.connecting = true;
         source.status = 'connecting';
@@ -3088,7 +3115,7 @@
         renderSelectedCameraControls();
         try {
             const preset = getSelectedPreset();
-            const stream = await navigator.mediaDevices.getUserMedia({ video: buildVideoConstraints(preset, source.deviceId), audio: false });
+            const stream = await navigator.mediaDevices.getUserMedia({ video: buildVideoConstraints(preset, requestedDeviceId), audio: false });
             if (source.removed || requestId !== source.startRequestId) {
                 stopStream(stream);
                 return null;
@@ -3098,6 +3125,8 @@
             source.element.srcObject = stream;
             await source.element.play().catch(() => {});
             const track = stream.getVideoTracks()[0];
+            const settings = track && typeof track.getSettings === 'function' ? track.getSettings() : {};
+            source.deviceId = settings && settings.deviceId ? settings.deviceId : requestedDeviceId || source.deviceId;
             source.deviceLabel = (track && track.label) || source.deviceLabel || selectedDeviceLabel(els.cameraSelect, '');
             source.connected = true;
             source.connecting = false;
@@ -3114,11 +3143,21 @@
             return stream;
         } catch (error) {
             if (requestId === source.startRequestId) {
-                source.connecting = false;
-                source.connected = false;
-                source.status = 'error';
-                source.error = friendlyMediaError(error);
-                source.unavailable = true;
+                if (options.preserveOnFailure) {
+                    source.deviceId = previousState.deviceId;
+                    source.deviceLabel = previousState.deviceLabel;
+                    source.connected = previousState.connected;
+                    source.unavailable = previousState.unavailable;
+                    source.status = previousState.status;
+                    source.error = previousState.error;
+                    source.connecting = false;
+                } else {
+                    source.connecting = false;
+                    source.connected = false;
+                    source.status = 'error';
+                    source.error = friendlyMediaError(error);
+                    source.unavailable = true;
+                }
             }
             renderSelectedCameraControls();
             throw error;
@@ -3371,9 +3410,14 @@
             setStatus('Screen Share ended. Program source was cleared.', 'warning');
             const fallbackCamera = primaryCameraSource();
             if (state.broadcastSession && fallbackCamera) {
-                state.previewSource = fallbackCamera.sourceId;
-                await commitPreviewToProgram('cut');
-                setBroadcastStatus('Screen Share ended. Program fell back to Camera.', 'warning');
+                try {
+                    await setPreviewSource(fallbackCamera.sourceId);
+                    await commitPreviewToProgram('cut');
+                    setBroadcastStatus('Screen Share ended. Program fell back to Camera.', 'warning');
+                } catch (error) {
+                    setBroadcastStatus('Screen Share ended. Choose another source for Program.', 'warning');
+                    setDeviceStatus(friendlyMediaError(error), 'warning');
+                }
             } else if (state.broadcastSession) {
                 setBroadcastStatus('Screen Share ended. Choose another source for Program.', 'warning');
             }
@@ -3479,11 +3523,16 @@
         const available = firstUnassignedCameraDevice();
         if (available) { els.cameraSourceDevice.value = available.deviceId; }
         if (els.addCameraSource) { els.addCameraSource.disabled = !available; }
-        if (!available) { setCameraSourceModalStatus(getStudioString('noUnassignedCamerasAvailable', 'No unassigned cameras available.'), 'warning'); }
+        setCameraSourceModalStatus(
+            available ? '' : getStudioString('noUnassignedCamerasAvailable', 'No unassigned cameras available.'),
+            available ? 'info' : 'warning'
+        );
     }
 
     function openCameraSourceModal() {
         if (!els.cameraSourceModal) { return; }
+        state.cameraSourceModalTrigger = document.activeElement && document.activeElement.focus ? document.activeElement : null;
+        setCameraSourceModalStatus('', 'info');
         renderCameraSourceDialog();
         if (els.cameraSourceName) { els.cameraSourceName.value = nextCameraSourceName(); }
         els.cameraSourceModal.hidden = false;
@@ -3492,6 +3541,10 @@
 
     function closeCameraSourceModal() {
         if (els.cameraSourceModal) { els.cameraSourceModal.hidden = true; }
+        if (state.cameraSourceModalTrigger && typeof state.cameraSourceModalTrigger.focus === 'function') {
+            state.cameraSourceModalTrigger.focus();
+        }
+        state.cameraSourceModalTrigger = null;
     }
 
     function addCameraSourceFromDialog() {
@@ -5665,7 +5718,7 @@
             setDeviceStatus(getStudioString('stopLiveRecordingBeforeCameraTest', 'Stop live/recording before testing a different camera.'), 'warning');
             return;
         }
-        const source = getActiveCameraSource();
+        const source = getSelectedCameraSource();
         if (!source) {
             setDeviceStatus(getStudioString('selectedCameraUnavailable', 'Selected camera unavailable.'), 'error');
             return;
@@ -5776,15 +5829,34 @@
 
     function bindEvents() {
         if (els.sceneList) {
-            els.sceneList.addEventListener('click', (event) => {
+            els.sceneList.addEventListener('click', async (event) => {
                 const button = event.target.closest('[data-scene-source]');
                 if (!button || !els.sceneList.contains(button)) {
                     return;
                 }
 
                 const sourceId = button.dataset.sceneSource || '';
+                const previousPreviewSource = state.previewSource;
                 selectSceneSource(sourceId);
-                setPreviewSource(sourceId);
+                try {
+                    await setPreviewSource(sourceId);
+                } catch (error) {
+                    state.previewSource = previousPreviewSource;
+                    if (isCameraSource(sourceId)) {
+                        const source = getCameraSource(sourceId);
+                        if (source) {
+                            source.connecting = false;
+                            source.connected = hasLiveVideoTrack(source.stream);
+                            source.status = source.connected ? 'active' : 'error';
+                            source.unavailable = !source.connected;
+                            source.error = friendlyMediaError(error);
+                        }
+                    }
+                    setStatus(friendlyMediaError(error), 'error');
+                    setDeviceStatus(friendlyMediaError(error), 'error');
+                    renderPreviewState();
+                    renderSourceState();
+                }
             });
         }
         els.closeCameraSourceModal.forEach((button) => {
@@ -5873,8 +5945,8 @@
         if (els.testCamera) { els.testCamera.addEventListener('click', testCameraDevice); }
         if (els.testMicrophone) { els.testMicrophone.addEventListener('click', testMicrophoneDevice); }
         if (els.cameraSelect) {
-            els.cameraSelect.addEventListener('change', () => {
-                const source = getActiveCameraSource();
+            els.cameraSelect.addEventListener('change', async () => {
+                const source = getSelectedCameraSource();
                 if (!source) { return; }
                 const previous = source.deviceId;
                 const next = els.cameraSelect.value;
@@ -5888,20 +5960,47 @@
                     els.cameraSelect.value = previous;
                     return;
                 }
-                source.deviceId = next;
-                source.deviceLabel = selectedDeviceLabel(els.cameraSelect, '');
-                source.error = '';
-                scheduleCameraSourceConfigurationSave();
-                updateActiveDeviceSummary();
-                renderCameraScenes();
-                if (hasLiveVideoTrack(source.stream)) {
-                    startCameraSource(source.sourceId, { force: true }).catch((error) => setDeviceStatus(friendlyMediaError(error), 'error'));
+                const previousLabel = source.deviceLabel;
+                const previousStatus = source.status;
+                const previousUnavailable = source.unavailable;
+                const previousError = source.error;
+                if (!hasLiveVideoTrack(source.stream)) {
+                    source.deviceId = next;
+                    source.deviceLabel = selectedDeviceLabel(els.cameraSelect, '');
+                    source.error = '';
+                    source.unavailable = false;
+                    source.status = 'off';
+                    scheduleCameraSourceConfigurationSave();
+                    updateActiveDeviceSummary();
+                    renderCameraScenes();
+                    renderSourceState();
+                    return;
+                }
+                try {
+                    await startCameraSource(source.sourceId, { force: true, deviceId: next, preserveOnFailure: true });
+                    source.deviceLabel = selectedDeviceLabel(els.cameraSelect, source.deviceLabel);
+                    source.error = '';
+                    source.unavailable = false;
+                    source.status = hasLiveVideoTrack(source.stream) ? 'active' : 'off';
+                    scheduleCameraSourceConfigurationSave();
+                    updateActiveDeviceSummary();
+                    renderCameraScenes();
+                    renderSourceState();
+                } catch (error) {
+                    source.deviceId = previous;
+                    source.deviceLabel = previousLabel;
+                    source.status = previousStatus;
+                    source.unavailable = previousUnavailable;
+                    source.error = previousError;
+                    els.cameraSelect.value = previous;
+                    setDeviceStatus(friendlyMediaError(error), 'error');
+                    renderSelectedCameraControls();
                 }
             });
         }
         if (els.selectedCameraName) {
             els.selectedCameraName.addEventListener('change', () => {
-                const source = getActiveCameraSource();
+                const source = getSelectedCameraSource();
                 if (!source) { return; }
                 source.label = els.selectedCameraName.value.trim() || source.label;
                 if (source.element) { source.element.setAttribute('aria-label', source.label); }
