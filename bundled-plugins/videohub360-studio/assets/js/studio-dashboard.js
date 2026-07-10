@@ -3242,16 +3242,32 @@
             const preset = getSelectedPreset();
             source.detached = false;
             ensureCameraElementAttached(source);
+            const previousStream = source.stream;
+            const previousSrcObject = source.element ? source.element.srcObject : null;
             const stream = await navigator.mediaDevices.getUserMedia({ video: buildVideoConstraints(preset, requestedDeviceId), audio: false });
             if (source.removed || requestId !== source.startRequestId) {
                 stopStream(stream);
                 return null;
             }
-            stopStream(source.stream);
             source.stream = stream;
             source.element.srcObject = stream;
             const track = stream.getVideoTracks()[0];
             const settings = track && typeof track.getSettings === 'function' ? track.getSettings() : {};
+            const ready = await ensureCameraElementPlaying(source);
+            if (!ready) {
+                const playbackError = source.error || getStudioString('cameraPlaybackNotReady', 'Camera video is not ready yet.');
+                stopStream(stream);
+                source.stream = previousStream || null;
+                if (source.element) {
+                    source.element.srcObject = previousStream || previousSrcObject || null;
+                }
+                if (previousStream) {
+                    await ensureCameraElementPlaying(source, { timeoutMs: 1000 });
+                }
+                source.error = playbackError;
+                throw new Error(source.error || getStudioString('cameraPlaybackNotReady', 'Camera video is not ready yet.'));
+            }
+            stopStream(previousStream);
             source.deviceId = settings && settings.deviceId ? settings.deviceId : requestedDeviceId || source.deviceId;
             source.deviceLabel = (track && track.label) || options.deviceLabel || videoDeviceLabelById(requestedDeviceId, source.deviceLabel);
             source.connected = true;
@@ -3260,10 +3276,6 @@
             source.status = 'active';
             source.error = '';
             if (track) { track.addEventListener('ended', () => handleCameraSourceEnded(source.sourceId, stream), { once: true }); }
-            const ready = await ensureCameraElementPlaying(source);
-            if (!ready) {
-                throw new Error(source.error || getStudioString('cameraPlaybackNotReady', 'Camera video is not ready yet.'));
-            }
             ensureAudioInputStreams().catch((micError) => setDeviceStatus(friendlyMediaError(micError), 'warning'));
             await populateDevices({ reason: 'camera-start', keepDefaultCamera: true }).catch(() => {});
             if (state.programSource === source.sourceId) { state.programStream = stream; renderProgramState(); }
@@ -6414,7 +6426,6 @@
     renderRecordingState();
     updateBroadcastRules();
     renderCameraScenes();
-    renderPreviewState();
     renderSourceState();
     renderProgramState();
     renderProgramLiveControls();
