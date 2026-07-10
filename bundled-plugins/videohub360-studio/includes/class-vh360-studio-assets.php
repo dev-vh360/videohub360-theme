@@ -189,6 +189,17 @@ class VH360_Studio_Assets {
                 'multipleCamerasDetected' => __( '{count} cameras', 'videohub360-studio' ),
                 'oneMicrophoneDetected' => __( '1 microphone', 'videohub360-studio' ),
                 'multipleMicrophonesDetected' => __( '{count} microphones', 'videohub360-studio' ),
+                'screenShareLabel'     => __( 'Screen Share', 'videohub360-studio' ),
+                'mediaAssetLabel'      => __( 'Media/Asset', 'videohub360-studio' ),
+                'cameraTestingUnavailable' => __( 'Camera testing is unavailable in this browser.', 'videohub360-studio' ),
+                'stopLiveRecordingBeforeCameraTest' => __( 'Stop live/recording before testing a different camera.', 'videohub360-studio' ),
+                'testingSelectedCamera' => __( 'Testing selected camera…', 'videohub360-studio' ),
+                'cameraTestPassed'     => __( 'Camera test passed: {device}.', 'videohub360-studio' ),
+                'defaultCamera'        => __( 'default camera', 'videohub360-studio' ),
+                'selectedCameraUnavailableRetry' => __( 'The selected device is no longer available. Studio will retry with the default camera…', 'videohub360-studio' ),
+                'devicesCouldNotBeRefreshed' => __( 'Devices could not be refreshed.', 'videohub360-studio' ),
+                'deviceUnavailableOption' => __( '{device} unavailable', 'videohub360-studio' ),
+                'deviceFallbackOption' => __( '{device} {index}', 'videohub360-studio' ),
 
             ),
             'supportLabels'             => array(

@@ -297,11 +297,11 @@
 
     function sourceLabel(sourceId) {
         if (sourceId === 'screen') {
-            return 'Screen Share';
+            return getStudioString('screenShareLabel', 'Screen Share');
         }
 
         if (sourceId === 'camera') {
-            return 'Camera';
+            return getStudioString('cameraSummaryLabel', 'Camera');
         }
 
         const mediaSource = getMediaSource(sourceId);
@@ -1121,7 +1121,7 @@
     }
 
     function sanitizeAudioInputLabel(label, index) {
-        const cleaned = String(label || '').trim().slice(0, 60);
+        const cleaned = String(label || '').trim().slice(0, 48);
         if (cleaned) { return cleaned; }
         return index === 0 ? getStudioString('primaryAudioInputLabel', 'Mic/Aux') : getStudioString('audioInputFallbackLabel', 'Audio Input') + ' ' + (index + 1);
     }
@@ -1156,7 +1156,7 @@
                 id,
                 label: sanitizeAudioInputLabel(raw.label, index),
                 deviceId: sanitizeAudioDeviceId(raw.deviceId),
-                deviceLabel: sanitizeAudioInputLabel(raw.deviceLabel || '', index).slice(0, 60),
+                deviceLabel: String(raw.deviceLabel || '').trim().slice(0, 60),
                 isPrimary: false,
                 muted: raw.muted === true,
                 volume: normalizeMixerVolume(raw.volume, 1),
@@ -1241,6 +1241,7 @@
             id: input.id,
             label: input.label,
             deviceId: input.deviceId,
+            deviceLabel: String(input.deviceLabel || '').trim().slice(0, 60),
             isPrimary: !!input.isPrimary,
             volume: normalizeMixerVolume(input.volume, 1),
             muted: input.muted === true,
@@ -1336,7 +1337,7 @@
             channels: {},
         };
         ['screen', 'media'].forEach((id) => {
-            mixer.channels[id] = createMixerChannel(context, masterGain, id, id === 'screen' ? 'Screen Share' : 'Media/Asset');
+            mixer.channels[id] = createMixerChannel(context, masterGain, id, id === 'screen' ? getStudioString('screenShareLabel', 'Screen Share') : getStudioString('mediaAssetLabel', 'Media/Asset'));
         });
         state.audioMixer = mixer;
         state.audioInputs.forEach((input) => ensureAudioInputMixerChannel(input.id));
@@ -1380,6 +1381,8 @@
             channel.source = mixer.context.createMediaStreamSource(new MediaStream(audioTracks));
             channel.source.connect(channel.input);
             audioTracks.forEach((track) => track.addEventListener('ended', () => {
+                const currentChannel = state.audioMixer && state.audioMixer.channels[channelId];
+                if (!currentChannel || currentChannel.stream !== stream || currentChannel.sourceId !== sourceId) { return; }
                 disconnectMixerChannel(channelId, sourceId);
             }, { once: true }));
         }
@@ -1632,7 +1635,9 @@
         if (current && !state.availableAudioInputDevices.some((device) => device.deviceId === current)) {
             const missing = document.createElement('option');
             missing.value = current;
-            missing.textContent = (input.deviceLabel || getStudioString('savedMicrophoneLabel', 'Saved microphone')) + ' (' + getStudioString('audioStatusUnavailable', 'unavailable') + ')';
+            const live = hasLiveAudioTrack(input.stream);
+            const stateLabel = live ? audioInputStatusLabel('active') : audioInputStatusLabel('unavailable');
+            missing.textContent = (input.deviceLabel || getStudioString('savedMicrophoneLabel', 'Saved microphone')) + ' (' + stateLabel.toLowerCase() + ')';
             missing.selected = true;
             select.appendChild(missing);
         }
@@ -1657,7 +1662,7 @@
         name.value = input.label;
         name.maxLength = 48;
         name.dataset.audioInputName = input.id;
-        name.setAttribute('aria-label', 'Audio input name');
+        name.setAttribute('aria-label', input.label + ' ' + getStudioString('audioInputNameLabel', 'name'));
         strip.appendChild(name);
 
         if (input.isPrimary) {
@@ -1670,7 +1675,7 @@
         const select = document.createElement('select');
         select.className = 'vh360-studio-audio-device-select';
         select.dataset.audioInputDevice = input.id;
-        select.setAttribute('aria-label', input.label + ' device');
+        select.setAttribute('aria-label', input.label + ' ' + getStudioString('audioInputDeviceLabel', 'device'));
         populateAudioInputDeviceSelect(select, input);
         strip.appendChild(select);
         const warning = document.createElement('p');
@@ -1697,7 +1702,7 @@
         gainLabel.appendChild(gain);
         const meter = document.createElement('div');
         meter.className = 'vh360-studio-meter';
-        meter.setAttribute('aria-label', input.label + ' level');
+        meter.setAttribute('aria-label', input.label + ' ' + getStudioString('audioInputLevelLabel', 'level'));
         const meterFill = document.createElement('span');
         meterFill.dataset.mixerMeter = input.id;
         if (input.isPrimary) { meterFill.dataset.micMeter = ''; }
@@ -1743,6 +1748,11 @@
             strip.classList.toggle('is-unavailable', status === 'unavailable' || status === 'error' || status === 'permission-required');
             strip.classList.toggle('has-duplicate-device', !!duplicateWarning);
             strip.dataset.audioInputStatus = status;
+            const statusEl = strip.querySelector('[data-mixer-status]');
+            if (statusEl) {
+                statusEl.textContent = audioInputStatusLabel(status);
+                statusEl.dataset.statusState = status;
+            }
             const name = strip.querySelector('[data-audio-input-name]');
             if (name && document.activeElement !== name) { name.value = input.label; }
             populateAudioInputDeviceSelect(strip.querySelector('[data-audio-input-device]'), input);
@@ -1763,13 +1773,13 @@
             Object.keys(mixer.channels).forEach((id) => {
                 const channel = mixer.channels[id];
                 const input = state.audioInputs.get(id);
-                let label = channel.connected ? audioInputStatusLabel('active') : audioInputStatusLabel('off');
+                let statusKey = channel.muted ? 'muted' : channel.connected ? 'active' : 'off';
                 if (input) {
-                    label = audioInputStatusLabel(channel.muted && hasLiveAudioTrack(input.stream) ? 'muted' : audioInputStatus(input));
+                    statusKey = channel.muted && hasLiveAudioTrack(input.stream) ? 'muted' : audioInputStatus(input);
                 }
                 root.querySelectorAll('[data-mixer-status="' + id + '"]').forEach((el) => {
-                    el.textContent = channel.muted && !input ? audioInputStatusLabel('muted') : label;
-                    el.dataset.statusState = (channel.muted && !input ? 'muted' : (input ? audioInputStatus(input) : label.toLowerCase()));
+                    el.textContent = audioInputStatusLabel(statusKey);
+                    el.dataset.statusState = statusKey;
                 });
                 root.querySelectorAll('[data-mixer-mute="' + id + '"]').forEach((button) => { syncMixerMuteButton(button, channel); });
             });
@@ -1928,7 +1938,7 @@
                 latest.deviceLabel = track.label || latest.deviceLabel;
                 track.addEventListener('ended', () => {
                     const current = state.audioInputs.get(inputId);
-                    if (!current) { return; }
+                    if (!current || current.stream !== stream) { return; }
                     current.connected = false;
                     current.stream = null;
                     current.unavailable = true;
@@ -2524,7 +2534,7 @@
                 }
             } else if (!input.connected) {
                 input.unavailable = false;
-                if (input.status === 'unavailable') { input.status = 'off'; }
+                if (input.status === 'unavailable' || input.status === 'disconnected') { input.status = 'off'; }
                 if (input.error === getStudioString('selectedAudioDeviceUnavailable', 'Selected audio device is unavailable. Choose another device for this input.')) { input.error = ''; }
             } else if (live) {
                 input.status = input.muted ? 'muted' : 'active';
@@ -2581,7 +2591,7 @@
         if (!devices.length) {
             const option = document.createElement('option');
             option.value = '';
-            option.textContent = fallbackLabel + ' unavailable';
+            option.textContent = getStudioString('deviceUnavailableOption', '{device} unavailable').replace('{device}', fallbackLabel);
             select.appendChild(option);
             select.disabled = true;
             return;
@@ -2590,7 +2600,7 @@
         devices.forEach((device, index) => {
             const option = document.createElement('option');
             option.value = device.deviceId;
-            option.textContent = device.label || fallbackLabel + ' ' + (index + 1);
+            option.textContent = device.label || getStudioString('deviceFallbackOption', '{device} {index}').replace('{device}', fallbackLabel).replace('{index}', index + 1);
             if (selectedDeviceId && device.deviceId === selectedDeviceId) {
                 option.selected = true;
             }
@@ -2652,7 +2662,7 @@
                 state.selectedCameraId = '';
                 storageSet(CAMERA_STORAGE_KEY, '');
                 if (els.cameraSelect) { els.cameraSelect.value = ''; }
-                setDeviceStatus('The selected device is no longer available. Studio will retry with the default camera…', 'warning');
+                setDeviceStatus(getStudioString('selectedCameraUnavailableRetry', 'The selected device is no longer available. Studio will retry with the default camera…'), 'warning');
                 await populateDevices({ reason: 'camera-retry', keepDefaultCamera: true }).catch(() => {});
                 studioDebugLog('[VH360 Studio] Retrying camera preview with default device after selected camera failed', { failedCameraId, errorName: error && error.name });
                 return startPreview(updateSelection, { retriedDefaultCamera: true });
@@ -5026,16 +5036,16 @@
 
 
     async function testCameraDevice() {
-        if (!state.support.getUserMedia) { setDeviceStatus('Camera testing is unavailable in this browser.', 'error'); return; }
+        if (!state.support.getUserMedia) { setDeviceStatus(getStudioString('cameraTestingUnavailable', 'Camera testing is unavailable in this browser.'), 'error'); return; }
         if (state.broadcastSession || isRecordingActive()) {
-            setDeviceStatus('Stop live/recording before testing a different camera.', 'warning');
+            setDeviceStatus(getStudioString('stopLiveRecordingBeforeCameraTest', 'Stop live/recording before testing a different camera.'), 'warning');
             return;
         }
-        setDeviceStatus('Testing selected camera…', 'info');
+        setDeviceStatus(getStudioString('testingSelectedCamera', 'Testing selected camera…'), 'info');
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: state.selectedCameraId ? { deviceId: { exact: state.selectedCameraId } } : true, audio: false });
             stopStream(stream);
-            setDeviceStatus('Camera test passed: ' + selectedOptionLabel(els.cameraSelect, 'default camera') + '.', 'success');
+            setDeviceStatus(getStudioString('cameraTestPassed', 'Camera test passed: {device}.').replace('{device}', selectedOptionLabel(els.cameraSelect, getStudioString('defaultCamera', 'default camera'))), 'success');
             await populateDevices({ reason: 'camera-test' }).catch(() => {});
         } catch (error) {
             const message = friendlyMediaError(error);
@@ -5162,7 +5172,7 @@
             els.refreshDevices.addEventListener('click', () => {
                 setDeviceStatus(getStudioString('refreshingDevices', 'Refreshing cameras and microphones…'), 'info');
                 refreshDevices({ reason: 'manual' }).catch((error) => {
-                    const message = (error && error.message) || 'Devices could not be refreshed.';
+                    const message = (error && error.message) || getStudioString('devicesCouldNotBeRefreshed', 'Devices could not be refreshed.');
                     setDeviceStatus(message, 'error');
                     setStatus(message, 'error');
                 });
@@ -5255,7 +5265,8 @@
                 if (!name || !els.audioMixer.contains(name)) { return; }
                 const input = state.audioInputs.get(name.dataset.audioInputName);
                 if (!input) { return; }
-                input.label = sanitizeAudioInputLabel(name.value || input.label, input.isPrimary ? 0 : 1);
+                const inputIndex = Array.from(state.audioInputs.keys()).indexOf(input.id);
+                input.label = sanitizeAudioInputLabel(name.value, Math.max(0, inputIndex));
                 const channel = ensureAudioInputMixerChannel(input.id);
                 if (channel) { channel.label = input.label; }
                 saveAudioInputConfiguration();
