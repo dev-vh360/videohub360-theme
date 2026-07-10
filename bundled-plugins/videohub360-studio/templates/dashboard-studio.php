@@ -236,40 +236,68 @@ $friendly_job_status = static function( $job ) {
                 data-overlays-resizer
             ></div>
 
-            <aside class="vh360-studio-overlays-dock" aria-labelledby="vh360-studio-overlays-title" data-overlays-dock>
+            <aside
+                class="vh360-studio-overlays-dock"
+                aria-labelledby="vh360-studio-overlays-title"
+                data-overlays-dock
+                data-label-expand="<?php esc_attr_e( 'Expand', 'videohub360-studio' ); ?>"
+                data-label-collapse="<?php esc_attr_e( 'Collapse', 'videohub360-studio' ); ?>"
+                data-message-collapsed="<?php esc_attr_e( 'Overlays collapsed.', 'videohub360-studio' ); ?>"
+                data-message-expanded="<?php esc_attr_e( 'Overlays expanded.', 'videohub360-studio' ); ?>"
+                data-message-module-change="<?php esc_attr_e( 'Overlay module changed to %s.', 'videohub360-studio' ); ?>"
+                data-message-section-change="<?php esc_attr_e( 'Overlay section changed to %s.', 'videohub360-studio' ); ?>"
+            >
                 <header class="vh360-studio-overlays-header">
                     <div>
                         <p class="vh360-studio-overlays-kicker"><?php esc_html_e( 'Workspace', 'videohub360-studio' ); ?></p>
                         <h3 id="vh360-studio-overlays-title"><?php esc_html_e( 'Overlays', 'videohub360-studio' ); ?></h3>
                     </div>
-                    <button type="button" class="vh360-studio-overlays-collapse" aria-expanded="true" data-overlays-collapse>
+                    <button type="button" class="vh360-studio-overlays-collapse" aria-expanded="true" aria-controls="vh360-studio-overlays-body" data-overlays-collapse>
                         <span data-overlays-collapse-label><?php esc_html_e( 'Collapse', 'videohub360-studio' ); ?></span>
                     </button>
                 </header>
 
-                <div class="vh360-studio-overlays-body" data-overlays-body>
+                <div id="vh360-studio-overlays-body" class="vh360-studio-overlays-body" data-overlays-body>
                     <nav class="vh360-studio-overlays-section-tabs" role="tablist" aria-label="<?php esc_attr_e( 'Overlay section', 'videohub360-studio' ); ?>" data-overlays-section-tabs>
-                        <button type="button" role="tab" id="vh360-overlays-section-control" aria-selected="true" aria-controls="vh360-overlays-section-panel" data-overlays-section-tab data-section="control"><?php esc_html_e( 'Control', 'videohub360-studio' ); ?></button>
-                        <button type="button" role="tab" id="vh360-overlays-section-customize" aria-selected="false" aria-controls="vh360-overlays-section-panel" data-overlays-section-tab data-section="customize" tabindex="-1"><?php esc_html_e( 'Customize', 'videohub360-studio' ); ?></button>
-                        <button type="button" role="tab" id="vh360-overlays-section-settings" aria-selected="false" aria-controls="vh360-overlays-section-panel" data-overlays-section-tab data-section="settings" tabindex="-1"><?php esc_html_e( 'Settings', 'videohub360-studio' ); ?></button>
+                        <button type="button" role="tab" id="vh360-overlays-section-control" aria-selected="true" aria-controls="vh360-overlays-panel-lower-thirds-control" data-overlays-section-tab data-section="control"><?php esc_html_e( 'Control', 'videohub360-studio' ); ?></button>
+                        <button type="button" role="tab" id="vh360-overlays-section-customize" aria-selected="false" aria-controls="vh360-overlays-panel-lower-thirds-customize" data-overlays-section-tab data-section="customize" tabindex="-1"><?php esc_html_e( 'Customize', 'videohub360-studio' ); ?></button>
+                        <button type="button" role="tab" id="vh360-overlays-section-settings" aria-selected="false" aria-controls="vh360-overlays-panel-lower-thirds-settings" data-overlays-section-tab data-section="settings" tabindex="-1"><?php esc_html_e( 'Settings', 'videohub360-studio' ); ?></button>
                     </nav>
 
-                    <div id="vh360-overlays-section-panel" class="vh360-studio-overlays-content" role="tabpanel" aria-live="polite" data-overlays-content>
-                        <section id="vh360-overlays-module-lower-thirds" role="tabpanel" aria-labelledby="vh360-overlays-tab-lower-thirds" data-overlays-module-panel data-module="lower-thirds">
-                            <p class="vh360-studio-overlays-empty"><?php esc_html_e( 'Lower-third controls will appear here.', 'videohub360-studio' ); ?></p>
+                    <div class="vh360-studio-overlays-content" aria-live="polite" data-overlays-content>
+                        <section id="vh360-overlays-panel-lower-thirds-control" role="tabpanel" aria-labelledby="vh360-overlays-tab-lower-thirds vh360-overlays-section-control" data-overlays-panel data-module="lower-thirds" data-section="control">
+                            <p class="vh360-studio-overlays-empty"><?php esc_html_e( 'Lower-third control tools will appear here.', 'videohub360-studio' ); ?></p>
                         </section>
-                        <section id="vh360-overlays-module-bible" role="tabpanel" aria-labelledby="vh360-overlays-tab-bible" data-overlays-module-panel data-module="bible" hidden>
-                            <p class="vh360-studio-overlays-empty"><?php esc_html_e( 'Bible verse controls will appear here.', 'videohub360-studio' ); ?></p>
+                        <section id="vh360-overlays-panel-lower-thirds-customize" role="tabpanel" aria-labelledby="vh360-overlays-tab-lower-thirds vh360-overlays-section-customize" data-overlays-panel data-module="lower-thirds" data-section="customize" hidden>
+                            <p class="vh360-studio-overlays-empty"><?php esc_html_e( 'Lower-third customization tools will appear here.', 'videohub360-studio' ); ?></p>
                         </section>
-                        <section id="vh360-overlays-module-countdown" role="tabpanel" aria-labelledby="vh360-overlays-tab-countdown" data-overlays-module-panel data-module="countdown" hidden>
-                            <p class="vh360-studio-overlays-empty"><?php esc_html_e( 'Countdown controls will appear here.', 'videohub360-studio' ); ?></p>
+                        <section id="vh360-overlays-panel-lower-thirds-settings" role="tabpanel" aria-labelledby="vh360-overlays-tab-lower-thirds vh360-overlays-section-settings" data-overlays-panel data-module="lower-thirds" data-section="settings" hidden>
+                            <p class="vh360-studio-overlays-empty"><?php esc_html_e( 'Lower-third settings will appear here.', 'videohub360-studio' ); ?></p>
+                        </section>
+                        <section id="vh360-overlays-panel-bible-control" role="tabpanel" aria-labelledby="vh360-overlays-tab-bible vh360-overlays-section-control" data-overlays-panel data-module="bible" data-section="control" hidden>
+                            <p class="vh360-studio-overlays-empty"><?php esc_html_e( 'Bible verse control tools will appear here.', 'videohub360-studio' ); ?></p>
+                        </section>
+                        <section id="vh360-overlays-panel-bible-customize" role="tabpanel" aria-labelledby="vh360-overlays-tab-bible vh360-overlays-section-customize" data-overlays-panel data-module="bible" data-section="customize" hidden>
+                            <p class="vh360-studio-overlays-empty"><?php esc_html_e( 'Bible verse customization tools will appear here.', 'videohub360-studio' ); ?></p>
+                        </section>
+                        <section id="vh360-overlays-panel-bible-settings" role="tabpanel" aria-labelledby="vh360-overlays-tab-bible vh360-overlays-section-settings" data-overlays-panel data-module="bible" data-section="settings" hidden>
+                            <p class="vh360-studio-overlays-empty"><?php esc_html_e( 'Bible verse settings will appear here.', 'videohub360-studio' ); ?></p>
+                        </section>
+                        <section id="vh360-overlays-panel-countdown-control" role="tabpanel" aria-labelledby="vh360-overlays-tab-countdown vh360-overlays-section-control" data-overlays-panel data-module="countdown" data-section="control" hidden>
+                            <p class="vh360-studio-overlays-empty"><?php esc_html_e( 'Countdown control tools will appear here.', 'videohub360-studio' ); ?></p>
+                        </section>
+                        <section id="vh360-overlays-panel-countdown-customize" role="tabpanel" aria-labelledby="vh360-overlays-tab-countdown vh360-overlays-section-customize" data-overlays-panel data-module="countdown" data-section="customize" hidden>
+                            <p class="vh360-studio-overlays-empty"><?php esc_html_e( 'Countdown customization tools will appear here.', 'videohub360-studio' ); ?></p>
+                        </section>
+                        <section id="vh360-overlays-panel-countdown-settings" role="tabpanel" aria-labelledby="vh360-overlays-tab-countdown vh360-overlays-section-settings" data-overlays-panel data-module="countdown" data-section="settings" hidden>
+                            <p class="vh360-studio-overlays-empty"><?php esc_html_e( 'Countdown settings will appear here.', 'videohub360-studio' ); ?></p>
                         </section>
                     </div>
 
                     <nav class="vh360-studio-overlays-module-tabs" role="tablist" aria-label="<?php esc_attr_e( 'Overlay module', 'videohub360-studio' ); ?>" data-overlays-module-tabs>
-                        <button type="button" role="tab" id="vh360-overlays-tab-lower-thirds" aria-selected="true" aria-controls="vh360-overlays-module-lower-thirds" data-overlays-module-tab data-module="lower-thirds"><?php esc_html_e( 'Lower Thirds', 'videohub360-studio' ); ?></button>
-                        <button type="button" role="tab" id="vh360-overlays-tab-bible" aria-selected="false" aria-controls="vh360-overlays-module-bible" data-overlays-module-tab data-module="bible" tabindex="-1"><?php esc_html_e( 'Bible', 'videohub360-studio' ); ?></button>
-                        <button type="button" role="tab" id="vh360-overlays-tab-countdown" aria-selected="false" aria-controls="vh360-overlays-module-countdown" data-overlays-module-tab data-module="countdown" tabindex="-1"><?php esc_html_e( 'Countdown', 'videohub360-studio' ); ?></button>
+                        <button type="button" role="tab" id="vh360-overlays-tab-lower-thirds" aria-selected="true" aria-controls="vh360-overlays-panel-lower-thirds-control" data-overlays-module-tab data-module="lower-thirds"><?php esc_html_e( 'Lower Thirds', 'videohub360-studio' ); ?></button>
+                        <button type="button" role="tab" id="vh360-overlays-tab-bible" aria-selected="false" aria-controls="vh360-overlays-panel-bible-control" data-overlays-module-tab data-module="bible" tabindex="-1"><?php esc_html_e( 'Bible', 'videohub360-studio' ); ?></button>
+                        <button type="button" role="tab" id="vh360-overlays-tab-countdown" aria-selected="false" aria-controls="vh360-overlays-panel-countdown-control" data-overlays-module-tab data-module="countdown" tabindex="-1"><?php esc_html_e( 'Countdown', 'videohub360-studio' ); ?></button>
                     </nav>
                 </div>
                 <p class="screen-reader-text" aria-live="polite" data-overlays-status></p>

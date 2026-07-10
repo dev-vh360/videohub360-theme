@@ -85,3 +85,12 @@
     .vh360-studio-overlays-module-tabs button { flex: 1 1 auto; }
 }
 @media (prefers-reduced-motion: reduce) { .vh360-studio-overlays-resizer::before { transition: none; } }
+
+@media (max-width: 1279px) {
+    .vh360-studio-production-workspace {
+        gap: 1rem;
+        grid-template-columns: 1fr;
+    }
+    .vh360-studio-production-workspace .vh360-studio-overlays-resizer { display: none; }
+    .vh360-studio-production-workspace .vh360-studio-overlays-dock { height: auto !important; }
+}
