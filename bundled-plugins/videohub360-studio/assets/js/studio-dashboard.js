@@ -71,6 +71,7 @@
         viewerPermalink: '',
         heartbeatTimer: null,
         previewSource: null,
+        previewRequestId: 0,
         selectedSceneSource: '',
         programSource: null,
         programStream: null,
@@ -387,7 +388,9 @@
         throw new Error('Unknown source: ' + sourceId);
     }
 
-    async function setPreviewSource(sourceId) {
+    async function setPreviewSource(sourceId, options = {}) {
+        const requestId = options.requestId || ++state.previewRequestId;
+        const isCurrentPreviewRequest = () => requestId === state.previewRequestId;
         if (isMediaSource(sourceId)) {
             const mediaSource = getMediaSource(sourceId);
 
@@ -396,6 +399,7 @@
                 return;
             }
 
+            if (!isCurrentPreviewRequest()) { return false; }
             state.previewSource = sourceId;
 
             if (mediaSource.type === 'video') {
@@ -405,17 +409,21 @@
             renderPreviewState();
             renderSourceState();
             setStatus(sourceLabel(sourceId) + ' staged in Preview.', 'success');
-            return;
+            return true;
         }
 
         const stream = await getSourceStream(sourceId);
         if (!stream) {
-            return;
+            return false;
+        }
+        if (!isCurrentPreviewRequest()) {
+            return false;
         }
         state.previewSource = sourceId;
         renderPreviewState();
         renderSourceState();
         setStatus(sourceLabel(sourceId) + ' staged in Preview.', 'success');
+        return true;
     }
 
     async function commitPreviewToProgram(transitionType) {
@@ -805,7 +813,7 @@
         const show = Boolean(source && isCameraSource(state.selectedSceneSource));
         if (els.selectedCameraControls) { els.selectedCameraControls.hidden = !show; }
         if (els.cameraSelect) {
-            els.cameraSelect.disabled = !show || !(state.availableVideoInputDevices || []).length;
+            els.cameraSelect.disabled = !show || source.connecting || !(state.availableVideoInputDevices || []).length;
         }
         if (els.testCamera) {
             els.testCamera.disabled = !show;
@@ -2809,6 +2817,15 @@
         return option.dataset.deviceLabel || option.textContent || fallback;
     }
 
+    function cameraReadinessValue(fallback) {
+        const source = getSelectedCameraSource() || primaryCameraSource();
+        if (!source) { return fallback; }
+        if (source.deviceLabel) { return source.deviceLabel; }
+        if (source.deviceId) { return getStudioString('savedCameraLabel', 'Saved camera'); }
+        if (hasLiveVideoTrack(source.stream)) { return source.label || getStudioString('cameraSummaryLabel', 'Camera'); }
+        return fallback;
+    }
+
     function updateActiveDeviceSummary() {
         if (!els.activeDevices) { return; }
         const cameraSources = Array.from(state.cameraSources.values()).filter((source) => !source.removed);
@@ -2873,7 +2890,7 @@
         const details = [
             [getStudioString('cameraPermissionReadinessLabel', 'Camera permission'), cameraPermission, cameraPermission === getStudioString('permissionStateBlocked', 'Blocked')],
             [getStudioString('microphonePermissionReadinessLabel', 'Microphone permission'), microphonePermission, microphonePermission === getStudioString('permissionStateBlocked', 'Blocked')],
-            [getStudioString('cameraSelectedReadinessLabel', 'Camera selected'), selectedOptionLabel(els.cameraSelect, permissionRequired), selectedOptionLabel(els.cameraSelect, permissionRequired) === permissionRequired],
+            [getStudioString('cameraSelectedReadinessLabel', 'Camera selected'), cameraReadinessValue(permissionRequired), cameraReadinessValue(permissionRequired) === permissionRequired],
             [getStudioString('primaryMicrophoneSelectedReadinessLabel', 'Primary microphone selected'), selectedOptionLabel(els.micSelect, permissionRequired), selectedOptionLabel(els.micSelect, permissionRequired) === permissionRequired],
             [getStudioString('configuredCameraSourcesReadinessLabel', 'Configured camera sources'), String(state.cameraSources.size || 1), false],
             [getStudioString('configuredAudioInputsReadinessLabel', 'Configured audio inputs'), String(state.audioInputs.size || 1), false],
@@ -5724,8 +5741,9 @@
             return;
         }
         if (hasLiveVideoTrack(source.stream)) {
+            state.previewRequestId++;
             state.previewSource = source.sourceId;
-            renderPreviewState();
+            renderSourceState();
             setDeviceStatus(getStudioString('cameraSourceAlreadyActive', 'Camera source is already active.'), 'info');
             return;
         }
@@ -5837,10 +5855,14 @@
 
                 const sourceId = button.dataset.sceneSource || '';
                 const previousPreviewSource = state.previewSource;
+                const previewRequestId = ++state.previewRequestId;
                 selectSceneSource(sourceId);
                 try {
-                    await setPreviewSource(sourceId);
+                    await setPreviewSource(sourceId, { requestId: previewRequestId });
                 } catch (error) {
+                    if (previewRequestId !== state.previewRequestId) {
+                        return;
+                    }
                     state.previewSource = previousPreviewSource;
                     if (isCameraSource(sourceId)) {
                         const source = getCameraSource(sourceId);
@@ -5960,9 +5982,12 @@
                     els.cameraSelect.value = previous;
                     return;
                 }
+                const operationId = (source.reassignRequestId || 0) + 1;
+                source.reassignRequestId = operationId;
                 const previousLabel = source.deviceLabel;
-                const previousStatus = source.status;
-                const previousUnavailable = source.unavailable;
+                const previousHasLiveStream = hasLiveVideoTrack(source.stream);
+                const previousStatus = previousHasLiveStream ? 'active' : source.status;
+                const previousUnavailable = previousHasLiveStream ? false : source.unavailable;
                 const previousError = source.error;
                 if (!hasLiveVideoTrack(source.stream)) {
                     source.deviceId = next;
@@ -5977,7 +6002,10 @@
                     return;
                 }
                 try {
-                    await startCameraSource(source.sourceId, { force: true, deviceId: next, preserveOnFailure: true });
+                    const stream = await startCameraSource(source.sourceId, { force: true, deviceId: next, preserveOnFailure: true });
+                    if (operationId !== source.reassignRequestId || !stream || source.stream !== stream) {
+                        return;
+                    }
                     source.deviceLabel = selectedDeviceLabel(els.cameraSelect, source.deviceLabel);
                     source.error = '';
                     source.unavailable = false;
@@ -5987,6 +6015,9 @@
                     renderCameraScenes();
                     renderSourceState();
                 } catch (error) {
+                    if (operationId !== source.reassignRequestId) {
+                        return;
+                    }
                     source.deviceId = previous;
                     source.deviceLabel = previousLabel;
                     source.status = previousStatus;
