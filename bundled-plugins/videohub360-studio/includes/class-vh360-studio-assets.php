@@ -89,6 +89,7 @@ class VH360_Studio_Assets {
                 'studioVisibilityRestored' => __( 'Studio media and Program output restored.', 'videohub360-studio' ),
                 'audioContextResumeFailed' => __( 'Studio audio could not resume automatically. Interact with the Studio window and try again.', 'videohub360-studio' ),
                 'cameraVisibilityRestartFailed' => __( 'A previously active camera could not restart after Studio became visible.', 'videohub360-studio' ),
+                'audioVisibilityRestartFailed' => __( 'A previously active audio input could not restart after Studio became visible.', 'videohub360-studio' ),
                 'setupJobCreated'        => __( 'Setup job created. Recording has not started yet.', 'videohub360-studio' ),
                 'jobCreationFailed'      => __( 'Setup job could not be created. Please try again.', 'videohub360-studio' ),
                 'permissionDenied'       => __( 'Permission was denied. Please allow access in your browser.', 'videohub360-studio' ),

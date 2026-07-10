@@ -90,8 +90,6 @@
         hiddenActiveCameraSourceIds: new Set(),
         hiddenActiveAudioInputIds: new Set(),
         hiddenScreenWasActive: false,
-        hiddenPreviewSource: null,
-        hiddenProgramSource: null,
         pageStoredInBackForwardCache: false,
         visibilityRestorePromise: null,
         isStudioWindow: false,
@@ -2468,8 +2466,6 @@
         });
 
         state.hiddenScreenWasActive = hasLiveVideoTrack(state.screenStream);
-        state.hiddenPreviewSource = state.previewSource || null;
-        state.hiddenProgramSource = state.programSource || null;
     }
 
     async function restartCameraAfterVisibility(source) {
@@ -2492,6 +2488,37 @@
             source.error = (error && error.message) || getStudioString('cameraVisibilityRestartFailed', 'A previously active camera could not restart after Studio became visible.');
             setDeviceStatus((source.label || sourceLabel(source.sourceId)) + ': ' + source.error, 'warning');
             renderSourceState();
+            return null;
+        }
+    }
+
+    async function restartAudioInputAfterVisibility(input) {
+        if (!input || input.removed || !state.hiddenActiveAudioInputIds.has(input.id) || hasLiveAudioTrack(input.stream)) {
+            return null;
+        }
+
+        try {
+            const stream = await startAudioInput(input.id, {
+                force: true,
+                reason: 'visibility-restore',
+            });
+            const current = state.audioInputs.get(input.id);
+            if (hasLiveAudioTrack(stream) || hasLiveAudioTrack(current && current.stream)) {
+                return stream;
+            }
+            return null;
+        } catch (error) {
+            const current = state.audioInputs.get(input.id);
+
+            if (current) {
+                current.connected = false;
+                current.connecting = false;
+                current.unavailable = true;
+                current.status = 'disconnected';
+                current.error = (error && error.message) || getStudioString('audioVisibilityRestartFailed', 'A previously active audio input could not restart after Studio became visible.');
+                disconnectMixerChannel(current.mixerChannelId, current.id);
+            }
+
             return null;
         }
     }
@@ -2532,16 +2559,17 @@
 
     function requestFreshProgramFrame() {
         const track = state.programOutputStream && state.programOutputStream.getVideoTracks ? state.programOutputStream.getVideoTracks()[0] : null;
-        if (track && typeof track.requestFrame === 'function') {
-            track.requestFrame();
-        }
         if (state.programContext && state.programCanvas && !state.programAnimationFrame && !state.programHiddenTimer) {
             drawProgramFrame({ hiddenFallback: document.hidden && isOnAirOrRecording() });
+        }
+        if (track && typeof track.requestFrame === 'function') {
+            track.requestFrame();
         }
     }
 
     async function restoreStudioMediaAfterVisibility() {
         const cameraRecoveries = [];
+        const audioRecoveries = [];
 
         state.cameraSources.forEach((source) => {
             if (hasLiveVideoTrack(source.stream)) {
@@ -2554,7 +2582,14 @@
             }
         });
 
+        state.audioInputs.forEach((input) => {
+            if (state.hiddenActiveAudioInputIds.has(input.id) && !hasLiveAudioTrack(input.stream)) {
+                audioRecoveries.push(restartAudioInputAfterVisibility(input));
+            }
+        });
+
         await Promise.allSettled(cameraRecoveries);
+        await Promise.allSettled(audioRecoveries);
         await restoreScreenPlaybackAfterVisibility();
         await resumeStudioAudioContext();
 
@@ -6563,12 +6598,13 @@
             }
         });
         window.addEventListener('pagehide', (event) => {
-            endBroadcastKeepalive();
             flushCameraSourceConfigurationSave();
             flushAudioInputConfigurationSave();
             if (event.persisted) {
                 state.pageStoredInBackForwardCache = true;
+                return;
             }
+            endBroadcastKeepalive();
         });
         window.addEventListener('pageshow', (event) => {
             if (event.persisted) {
