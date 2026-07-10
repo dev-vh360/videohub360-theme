@@ -29,6 +29,7 @@
         audioInputTestStream: null,
         studioTearingDown: false,
         lastRecordingAudioSummary: null,
+        recordingPersistentWarnings: [],
         audioContext: null,
         analyser: null,
         meterFrame: null,
@@ -1620,7 +1621,7 @@
 
     function nextAudioInputDisplayName(input) {
         const base = getStudioString('audioInputFallbackLabel', 'Audio Input');
-        const used = new Set(Array.from(state.audioInputs.values()).map((item) => item.label));
+        const used = new Set(Array.from(state.audioInputs.values()).filter((item) => !input || item.id !== input.id).map((item) => item.label));
         const preferredNumber = Math.max(2, audioInputNumericSuffix(input && input.id));
         let number = preferredNumber;
         while (used.has(base + ' ' + number)) {
@@ -1907,10 +1908,13 @@
         if (!input) { return null; }
         if (input.removed || state.studioTearingDown) { return null; }
         if (!input.isPrimary && !input.deviceId) {
-            input.status = 'off';
-            input.connected = false;
-            input.connecting = false;
-            input.unavailable = false;
+            stopAudioInput(inputId);
+            const current = state.audioInputs.get(inputId);
+            if (current) {
+                current.error = '';
+                current.unavailable = false;
+                current.status = 'off';
+            }
             refreshAudioInputDiagnostics();
             return null;
         }
@@ -1945,6 +1949,11 @@
             const latest = state.audioInputs.get(inputId);
             if (!latest || latest.removed || state.studioTearingDown || latest.startRequestId !== requestId || latest.deviceId !== requestedDeviceId) {
                 stopStream(stream);
+                if (latest && latest.startRequestId === requestId && latest.connecting) {
+                    latest.connecting = false;
+                    latest.status = 'off';
+                    refreshAudioInputDiagnostics();
+                }
                 return null;
             }
             latest.stream = stream;
@@ -2009,7 +2018,10 @@
         const results = await Promise.all(Array.from(state.audioInputs.keys()).map(async (id) => {
             const input = state.audioInputs.get(id);
             if (!input || input.removed) { return { id, status: 'removed', error: null }; }
-            if (!input.isPrimary && !input.deviceId) { return { id, status: 'off', error: null }; }
+            if (!input.isPrimary && !input.deviceId) {
+                stopAudioInput(id);
+                return { id, status: 'off', error: null };
+            }
             if (hasLiveAudioTrack(input.stream)) { return { id, status: 'active', error: null }; }
             try {
                 const stream = await startAudioInput(id);
@@ -2314,22 +2326,22 @@
     function readinessIssues() {
         const issues = [];
         if (!state.support.secureContext) {
-            issues.push('Use HTTPS or localhost for Studio recording.');
+            issues.push(getStudioString('readinessHttpsRequired', 'Use HTTPS or localhost for Studio recording.'));
         }
         if (!state.support.mediaDevices || !state.support.getUserMedia) {
-            issues.push('Camera or microphone access is unavailable. Allow browser permissions, then refresh.');
+            issues.push(getStudioString('readinessCameraMicrophoneUnavailable', 'Camera or microphone access is unavailable. Allow browser permissions, then refresh.'));
         }
         if (!state.support.getDisplayMedia) {
-            issues.push('Screen sharing is unavailable in this browser.');
+            issues.push(getStudioString('readinessScreenShareUnavailable', 'Screen sharing is unavailable in this browser.'));
         }
         if (!state.support.mediaRecorder) {
-            issues.push('This browser does not support recording. Try Chrome, Edge, or Safari.');
+            issues.push(getStudioString('readinessRecordingUnsupported', 'This browser does not support recording. Try Chrome, Edge, or Safari.'));
         }
         if (!state.support.canvasContext || !state.support.canvasCapture) {
-            issues.push('Program canvas recording is unsupported in this browser.');
+            issues.push(getStudioString('readinessCanvasUnsupported', 'Program canvas recording is unsupported in this browser.'));
         }
         if (!state.support.mimeTypes || !state.support.mimeTypes.length) {
-            issues.push('No supported recording format was detected.');
+            issues.push(getStudioString('readinessNoRecordingFormat', 'No supported recording format was detected.'));
         }
         return issues;
     }
@@ -2340,10 +2352,10 @@
             els.readinessSummary.dataset.statusType = issues.length ? 'warning' : 'success';
         }
         if (els.readinessHeading) {
-            els.readinessHeading.textContent = issues.length ? 'Studio needs attention.' : 'Ready to go live.';
+            els.readinessHeading.textContent = issues.length ? getStudioString('readinessNeedsAttention', 'Studio needs attention.') : getStudioString('readinessReadyToGoLive', 'Ready to go live.');
         }
         if (els.readinessMessage) {
-            els.readinessMessage.textContent = issues.length ? 'Resolve the items below, then refresh Studio if needed.' : 'Camera, microphone, screen share, and recording are supported.';
+            els.readinessMessage.textContent = issues.length ? getStudioString('readinessResolveItems', 'Resolve the items below, then refresh Studio if needed.') : getStudioString('readinessAllSupported', 'Camera, microphone, screen share, and recording are supported.');
         }
         if (els.readinessIssues) {
             els.readinessIssues.innerHTML = '';
@@ -2385,14 +2397,14 @@
 
         const mimeItem = document.createElement('li');
         mimeItem.className = state.support.mimeTypes.length ? 'is-supported' : 'is-unsupported';
-        mimeItem.innerHTML = '<span>' + escapeHtml(supportLabels.mimeTypes || 'Formats') + '</span><strong>' + escapeHtml(state.support.mimeTypes.length ? state.support.mimeTypes.join(', ') : strings.notSupported) + '</strong>';
+        mimeItem.innerHTML = '<span>' + escapeHtml(supportLabels.mimeTypes || getStudioString('formatsFallbackLabel', 'Formats')) + '</span><strong>' + escapeHtml(state.support.mimeTypes.length ? state.support.mimeTypes.join(', ') : strings.notSupported) + '</strong>';
         els.supportChecks.appendChild(mimeItem);
 
         const preferred = preferredMimeType();
         if (isWebmMime(preferred)) {
             const warning = document.createElement('li');
             warning.className = 'is-unsupported';
-            warning.innerHTML = '<span>' + escapeHtml('Recording format') + '</span><strong>' + escapeHtml(webmFallbackWarning()) + '</strong>';
+            warning.innerHTML = '<span>' + escapeHtml(getStudioString('recordingFormatLabel', 'Recording format')) + '</span><strong>' + escapeHtml(webmFallbackWarning()) + '</strong>';
             els.supportChecks.appendChild(warning);
         }
     }
@@ -2483,32 +2495,35 @@
 
     async function permissionStateLabel(name) {
         if (!navigator.permissions || typeof navigator.permissions.query !== 'function') {
-            return 'Prompt';
+            return getStudioString('permissionStatePrompt', 'Prompt');
         }
         try {
             const status = await navigator.permissions.query({ name });
-            if (status.state === 'granted') { return 'Allowed'; }
-            if (status.state === 'denied') { return 'Blocked'; }
-            return 'Prompt';
+            if (status.state === 'granted') { return getStudioString('permissionStateAllowed', 'Allowed'); }
+            if (status.state === 'denied') { return getStudioString('permissionStateBlocked', 'Blocked'); }
+            return getStudioString('permissionStatePrompt', 'Prompt');
         } catch (error) {
-            return 'Prompt';
+            return getStudioString('permissionStatePrompt', 'Prompt');
         }
     }
 
     async function renderDeviceReadinessDetails() {
         if (!els.supportChecks) { return; }
         els.supportChecks.querySelectorAll('[data-device-readiness]').forEach((item) => item.remove());
+        const cameraPermission = await permissionStateLabel('camera');
+        const microphonePermission = await permissionStateLabel('microphone');
+        const permissionRequired = getStudioString('audioStatusPermissionRequired', 'Permission required');
         const details = [
-            ['Camera permission', await permissionStateLabel('camera')],
-            ['Microphone permission', await permissionStateLabel('microphone')],
-            [getStudioString('cameraSelectedReadinessLabel', 'Camera selected'), selectedOptionLabel(els.cameraSelect, getStudioString('audioStatusPermissionRequired', 'Permission required'))],
-            [getStudioString('primaryMicrophoneSelectedReadinessLabel', 'Primary microphone selected'), selectedOptionLabel(els.micSelect, getStudioString('audioStatusPermissionRequired', 'Permission required'))],
-            [getStudioString('configuredAudioInputsReadinessLabel', 'Configured audio inputs'), String(state.audioInputs.size || 1)],
+            [getStudioString('cameraPermissionReadinessLabel', 'Camera permission'), cameraPermission, cameraPermission === getStudioString('permissionStateBlocked', 'Blocked')],
+            [getStudioString('microphonePermissionReadinessLabel', 'Microphone permission'), microphonePermission, microphonePermission === getStudioString('permissionStateBlocked', 'Blocked')],
+            [getStudioString('cameraSelectedReadinessLabel', 'Camera selected'), selectedOptionLabel(els.cameraSelect, permissionRequired), selectedOptionLabel(els.cameraSelect, permissionRequired) === permissionRequired],
+            [getStudioString('primaryMicrophoneSelectedReadinessLabel', 'Primary microphone selected'), selectedOptionLabel(els.micSelect, permissionRequired), selectedOptionLabel(els.micSelect, permissionRequired) === permissionRequired],
+            [getStudioString('configuredAudioInputsReadinessLabel', 'Configured audio inputs'), String(state.audioInputs.size || 1), false],
         ];
-        details.forEach(([label, value]) => {
+        details.forEach(([label, value, unsupported]) => {
             const item = document.createElement('li');
             item.dataset.deviceReadiness = 'true';
-            item.className = value === 'Blocked' || value === 'Permission required' ? 'is-unsupported' : 'is-supported';
+            item.className = unsupported ? 'is-unsupported' : 'is-supported';
             item.innerHTML = '<span>' + escapeHtml(label) + '</span><strong>' + escapeHtml(value) + '</strong>';
             els.supportChecks.appendChild(item);
         });
@@ -2588,8 +2603,9 @@
         if (!options.keepDefaultCamera && !state.selectedCameraId && els.cameraSelect && els.cameraSelect.value) {
             state.selectedCameraId = els.cameraSelect.value;
         }
-        if (!options.keepDefaultMicrophone && primary && !primary.deviceId && els.micSelect && els.micSelect.value) {
+        if (!options.keepDefaultMicrophone && primary && !primary.deviceId && !primary.connecting && els.micSelect && els.micSelect.value) {
             primary.deviceId = els.micSelect.value;
+            primary.deviceLabel = selectedOptionLabel(els.micSelect, '');
             storageSet(MIC_STORAGE_KEY, primary.deviceId);
         }
 
@@ -2648,14 +2664,15 @@
     }
 
     function preserveSelectedDeviceOption(select, input) {
-        if (!select || !input || !input.deviceId || !hasLiveAudioTrack(input.stream)) { return; }
+        if (!select || !input || !input.deviceId) { return; }
         const hasOption = Array.from(select.options).some((option) => option.value === input.deviceId);
         if (hasOption) { return; }
         const option = document.createElement('option');
         option.value = input.deviceId;
+        const status = audioInputStatus(input);
         option.textContent = getStudioString('deviceStateOption', '{device} ({status})')
             .replace('{device}', input.deviceLabel || getStudioString('savedMicrophoneLabel', 'Saved microphone'))
-            .replace('{status}', audioInputStatusLabel('active'));
+            .replace('{status}', audioInputStatusLabel(status === 'active' || status === 'muted' ? 'active' : 'unavailable'));
         option.selected = true;
         select.appendChild(option);
         select.disabled = false;
@@ -3418,16 +3435,16 @@
             return strings.browserUnsupported;
         }
         if (error.name === 'NotAllowedError' || error.name === 'SecurityError') {
-            return 'Camera or microphone permission was blocked. Allow access in your browser site settings and macOS Privacy & Security, then refresh devices.';
+            return getStudioString('cameraMicrophonePermissionBlocked', 'Camera or microphone permission was blocked. Allow access in your browser site settings and macOS Privacy & Security, then refresh devices.');
         }
         if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
-            return 'No matching camera or microphone was found. Check the USB connection and click Refresh Devices.';
+            return getStudioString('noMatchingCameraMicrophone', 'No matching camera or microphone was found. Check the USB connection and click Refresh Devices.');
         }
         if (error.name === 'NotReadableError') {
-            return 'The camera or microphone is already in use by another app. Close OBSBOT Center, Zoom, FaceTime, OBS, or other camera apps, then try again.';
+            return getStudioString('cameraMicrophoneAlreadyInUse', 'The camera or microphone is already in use by another app. Close OBSBOT Center, Zoom, FaceTime, OBS, or other camera apps, then try again.');
         }
         if (error.name === 'OverconstrainedError' || error.name === 'ConstraintNotSatisfiedError') {
-            return 'The selected device is no longer available. Studio will retry with the default device.';
+            return getStudioString('selectedDeviceUnavailableRetryDefault', 'The selected device is no longer available. Studio will retry with the default device.');
         }
         return error.message || strings.browserUnsupported;
     }
@@ -3499,6 +3516,11 @@
             els.recordingStatus.textContent = message || '';
             els.recordingStatus.dataset.statusType = type || 'info';
         }
+    }
+
+    function updateRecordingOperationStatus(message, type = 'info') {
+        const warnings = Array.isArray(state.recordingPersistentWarnings) ? state.recordingPersistentWarnings.filter(Boolean) : [];
+        setRecordingStatus([warnings.join(' '), message].filter(Boolean).join(' '), warnings.length ? 'warning' : type);
     }
 
     function recordingMimeCandidates() {
@@ -3631,6 +3653,7 @@
         }
         let jobId = null;
         let serverRecordingStarted = false;
+        state.recordingPersistentWarnings = [];
         try {
             const preset = getSelectedPreset();
             lockRecordingCanvasSize();
@@ -3714,10 +3737,11 @@
                 ? formatAudioInputSummary(recordingAudioSummary, 'recording')
                 : '';
             const webmWarning = isWebmMime(state.selectedMimeType) ? webmFallbackWarning() : '';
+            state.recordingPersistentWarnings = [audioWarning, webmWarning].filter(Boolean);
             if (audioWarning || webmWarning) {
-                setRecordingStatus([audioWarning, webmWarning].filter(Boolean).join(' '), 'warning');
+                updateRecordingOperationStatus('', 'warning');
             } else {
-                setRecordingStatus(strings.recordingActive, 'success');
+                updateRecordingOperationStatus(strings.recordingActive, 'success');
             }
             renderRecordingState();
         } catch (error) {
@@ -3759,7 +3783,7 @@
             queueChunk(part, state.chunkIndex++);
             offset = end;
         }
-        setRecordingStatus('Large recording data was split into smaller upload chunks.', 'info');
+        updateRecordingOperationStatus(getStudioString('largeRecordingSplit', 'Large recording data was split into smaller upload chunks.'), 'info');
     }
 
     function scheduleChunkUploads() {
@@ -3826,7 +3850,7 @@
 
     async function uploadChunk(blob, index) {
         try {
-            setRecordingStatus(state.recordingStoppedAt ? strings.uploadingChunk : strings.recordingActive, 'info');
+            updateRecordingOperationStatus(state.recordingStoppedAt ? strings.uploadingChunk : strings.recordingActive, 'info');
             const form = new FormData();
             form.append('browser_session_id', state.browserSessionId);
             form.append('chunk_index', String(index));
@@ -3880,7 +3904,7 @@
             return;
         }
         try {
-            setRecordingStatus('Retrying server stop confirmation…', 'info');
+            updateRecordingOperationStatus(getStudioString('retryingServerStopConfirmation', 'Retrying server stop confirmation…'), 'info');
             await finishRecordingUploadsAndConfirmStop();
         } catch (error) {
             state.stopFailed = true;
@@ -3938,7 +3962,7 @@
             state.recorder = null;
             unlockRecordingCanvasSize();
             setShellClass('is-recording', false);
-            setRecordingStatus(isPublitioDirectMode() ? 'Recording stopped. Ready for fast cloud upload.' : strings.uploadingChunk, 'info');
+            updateRecordingOperationStatus(isPublitioDirectMode() ? getStudioString('recordingStoppedFastCloudReady', 'Recording stopped. Ready for fast cloud upload.') : strings.uploadingChunk, 'info');
             renderRecordingState();
             updateOperatorStatus();
             return true;
@@ -3965,7 +3989,8 @@
         if (isPublitioDirectMode()) {
             try {
                 const job = await confirmServerStop();
-                setRecordingStatus('Recording stopped. Ready for fast cloud upload.', 'success');
+                state.recordingPersistentWarnings = [];
+                setRecordingStatus(getStudioString('recordingStoppedFastCloudReady', 'Recording stopped. Ready for fast cloud upload.'), 'success');
                 return job;
             } catch (error) {
                 state.stopFailed = true;
@@ -3989,6 +4014,7 @@
         }
         try {
             const job = await confirmServerStop();
+            state.recordingPersistentWarnings = [];
             setRecordingStatus(strings.recordingSaved, 'success');
             return job;
         } catch (error) {
@@ -4026,7 +4052,7 @@
     }
 
     function retryFailedChunks() {
-        setRecordingStatus(strings.uploadRetry, 'info');
+        updateRecordingOperationStatus(strings.uploadRetry, 'info');
         Array.from(state.failedChunks.entries()).forEach(([index, blob]) => {
             if (state.pendingUploads.has(index)) {
                 return;
@@ -4043,15 +4069,15 @@
             return;
         }
         if (state.stopFailed || !state.serverStopConfirmed) {
-            setRecordingStatus('Confirm server stop before preparing the replay.', 'warning');
+            setRecordingStatus(getStudioString('confirmServerStopBeforeReplay', 'Confirm server stop before preparing the replay.'), 'warning');
             return;
         }
         if (state.failedChunks.size || state.pendingUploads.size) {
-            setRecordingStatus('Retry failed chunks during this session before preparing the replay.', 'warning');
+            setRecordingStatus(getStudioString('retryFailedChunksBeforeReplay', 'Retry failed chunks during this session before preparing the replay.'), 'warning');
             return;
         }
         if (!state.finalChunkCount) {
-            setRecordingStatus('No recording chunks were captured. Start a new recording and try again.', 'error');
+            setRecordingStatus(getStudioString('noRecordingChunksCaptured', 'No recording chunks were captured. Start a new recording and try again.'), 'error');
             return;
         }
         try {
@@ -4061,7 +4087,7 @@
             const job = await api('/jobs/' + state.activeJobId + '/recording/finalize', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ expected_chunks: state.finalChunkCount }) });
             state.currentJobStatus = job.status || 'processing';
             state.currentStorageProvider = job.storage_provider || state.currentStorageProvider;
-            setRecordingStatus('Replay prepared. You can publish it now.', 'success');
+            setRecordingStatus(getStudioString('replayPreparedReadyToPublish', 'Replay prepared. You can publish it now.'), 'success');
             appendRecentJob(job);
             updatePublishingButtons();
             if (els.recordingFinalizeStatus) { els.recordingFinalizeStatus.textContent = job.status || 'processing'; }
@@ -4947,11 +4973,11 @@
                 return;
             }
             if (state.recordingStoppedAt && !state.serverStopConfirmed) {
-                setRecordingStatus(isPublitioDirectMode() ? 'Recording stopped. Ready for fast cloud upload.' : strings.uploadingChunk, 'info');
+                updateRecordingOperationStatus(isPublitioDirectMode() ? getStudioString('recordingStoppedFastCloudReady', 'Recording stopped. Ready for fast cloud upload.') : strings.uploadingChunk, 'info');
                 finishRecordingUploadsAndConfirmStop().catch(() => {});
             }
         } else if (state.recordingStoppedAt && !state.serverStopConfirmed) {
-            setRecordingStatus(isPublitioDirectMode() ? 'Recording stopped. Ready for fast cloud upload.' : strings.uploadingChunk, 'info');
+            updateRecordingOperationStatus(isPublitioDirectMode() ? getStudioString('recordingStoppedFastCloudReady', 'Recording stopped. Ready for fast cloud upload.') : strings.uploadingChunk, 'info');
             finishRecordingUploadsAndConfirmStop().catch(() => {});
         }
         if (state.heartbeatTimer) {
@@ -5280,7 +5306,7 @@
                     return;
                 }
                 const assigned = new Set(Array.from(state.audioInputs.values()).map((input) => input.deviceId).filter(Boolean));
-                const device = state.availableAudioInputDevices.find((item) => !assigned.has(item.deviceId)) || state.availableAudioInputDevices[0] || null;
+                const device = state.availableAudioInputDevices.find((item) => !assigned.has(item.deviceId)) || null;
                 const input = createAudioInputSource({ deviceId: device ? device.deviceId : '', deviceLabel: device && device.label ? device.label : '' });
                 if (!input) { return; }
                 input.label = nextAudioInputDisplayName(input);
