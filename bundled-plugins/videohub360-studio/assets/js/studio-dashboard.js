@@ -3039,6 +3039,7 @@
         const microphones = devices.filter((device) => device.kind === 'audioinput');
 
         state.availableVideoInputDevices = cameras;
+        state.availableAudioInputDevices = microphones;
         let staleDeviceMessage = '';
         state.cameraSources.forEach((source) => {
             const live = hasLiveVideoTrack(source.stream);
@@ -3060,6 +3061,34 @@
                 source.unavailable = false;
                 if (source.status === 'unavailable' || source.status === 'disconnected') { source.status = 'off'; }
                 if (source.error === getStudioString('selectedCameraUnavailable', 'Selected camera is unavailable. Choose another device for this source.')) { source.error = ''; }
+            }
+        });
+        const unavailableAudioDeviceMessage = getStudioString('selectedAudioDeviceUnavailable', 'Selected audio device is unavailable. Choose another device for this input.');
+        state.audioInputs.forEach((input) => {
+            const live = hasLiveAudioTrack(input.stream);
+            const matchedDevice = input.deviceId ? microphones.find((device) => device.deviceId === input.deviceId) : null;
+            if (matchedDevice && matchedDevice.label) { input.deviceLabel = matchedDevice.label; }
+            if (input.deviceId && !matchedDevice) {
+                if (live) {
+                    input.connected = true;
+                    input.unavailable = false;
+                    input.status = input.muted ? 'muted' : 'active';
+                    input.error = '';
+                } else {
+                    input.connected = false;
+                    input.unavailable = true;
+                    input.status = 'unavailable';
+                    input.error = unavailableAudioDeviceMessage;
+                    staleDeviceMessage = staleDeviceMessage ? staleDeviceMessage + ' ' + getStudioString('oneAudioInputUnavailable', 'One saved audio input is unavailable.') : getStudioString('oneAudioInputUnavailable', 'One saved audio input is unavailable.');
+                }
+            } else if (live) {
+                input.connected = true;
+                input.unavailable = false;
+                input.status = input.muted ? 'muted' : 'active';
+            } else if (matchedDevice) {
+                input.unavailable = false;
+                if (!input.connected && (input.status === 'unavailable' || input.status === 'disconnected')) { input.status = 'off'; }
+                if (input.error === unavailableAudioDeviceMessage) { input.error = ''; }
             }
         });
         renderCameraScenes();
