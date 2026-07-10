@@ -189,8 +189,12 @@
     Controller.prototype.updatePanels = function () {
         const activePanelId = this.panelId(this.activeModule, this.activeSection);
         this.panels.forEach((panel) => { panel.hidden = panel.id !== activePanelId; });
-        this.moduleTabs.forEach((tab) => { if (tab.dataset.module === this.activeModule) tab.setAttribute('aria-controls', activePanelId); });
-        this.sectionTabs.forEach((tab) => { if (tab.dataset.section === this.activeSection) tab.setAttribute('aria-controls', activePanelId); });
+        this.moduleTabs.forEach((tab) => {
+            tab.setAttribute('aria-controls', this.panelId(tab.dataset.module, this.activeSection));
+        });
+        this.sectionTabs.forEach((tab) => {
+            tab.setAttribute('aria-controls', this.panelId(this.activeModule, tab.dataset.section));
+        });
     };
 
     Controller.prototype.panelId = function (module, section) { return `vh360-overlays-panel-${module}-${section}`; };
