@@ -31,6 +31,7 @@
         lastRecordingAudioSummary: null,
         recordingPersistentWarnings: [],
         liveAudioWarningActive: false,
+        lastAgoraConnectionState: '',
         deviceReadinessRequestId: 0,
         audioContext: null,
         analyser: null,
@@ -997,11 +998,11 @@
 
     async function toggleLiveAudio() {
         if (!isBroadcastLiveReady()) {
-            setBroadcastStatus('Live microphone controls are available after the broadcast connects.', 'warning');
+            setBroadcastStatus(getStudioString('liveMicControlsAfterConnect', 'Live microphone controls are available after the broadcast connects.'), 'warning');
             return;
         }
         if (!state.broadcastSession || typeof state.broadcastSession.muteAudio !== 'function') {
-            setBroadcastStatus('Live audio controls are unavailable for this broadcast session.', 'error');
+            setBroadcastStatus(getStudioString('liveAudioControlsUnavailable', 'Live audio controls are unavailable for this broadcast session.'), 'error');
             return;
         }
         const nextMuted = !state.liveAudioMuted;
@@ -1009,14 +1010,14 @@
             setMasterAudioMuted(nextMuted);
             const result = await state.broadcastSession.muteAudio(nextMuted);
             if (result === false || result === null) {
-                throw new Error('Live microphone track is unavailable.');
+                throw new Error(getStudioString('liveMicrophoneTrackUnavailable', 'Live microphone track is unavailable.'));
             }
             state.liveAudioMuted = nextMuted;
             renderProgramLiveControls();
-            setBroadcastStatus(nextMuted ? 'Live microphone muted.' : 'Live microphone unmuted.', 'success');
+            setBroadcastStatus(nextMuted ? getStudioString('liveMicrophoneMuted', 'Live microphone muted.') : getStudioString('liveMicrophoneUnmuted', 'Live microphone unmuted.'), 'success');
         } catch (error) {
             renderProgramLiveControls();
-            setBroadcastStatus((error && error.message) || 'Live microphone could not be updated. Check that the microphone track is available.', 'error');
+            setBroadcastStatus((error && error.message) || getStudioString('liveMicrophoneUpdateFailed', 'Live microphone could not be updated. Check that the microphone track is available.'), 'error');
         }
     }
 
@@ -1526,23 +1527,45 @@
         if (srText) { srText.textContent = action + label; }
     }
 
+    function audioInputDeviceInfo(input) {
+        if (!input || !input.deviceId) { return null; }
+        return (state.availableAudioInputDevices || []).find((device) => device.deviceId === input.deviceId) || null;
+    }
+
     function getDuplicateAudioDeviceAssignments() {
         const groups = new Map();
         state.audioInputs.forEach((input) => {
             if (!input.deviceId) { return; }
-            if (!groups.has(input.deviceId)) { groups.set(input.deviceId, []); }
-            groups.get(input.deviceId).push(input.id);
+            const device = audioInputDeviceInfo(input);
+            const keys = ['id:' + input.deviceId];
+            if (device && device.groupId) { keys.push('group:' + device.groupId); }
+            keys.forEach((key) => {
+                if (!groups.has(key)) { groups.set(key, []); }
+                groups.get(key).push(input.id);
+            });
         });
         const duplicates = new Map();
-        groups.forEach((ids, deviceId) => {
-            if (ids.length > 1) { duplicates.set(deviceId, ids); }
+        groups.forEach((ids, key) => {
+            const uniqueIds = Array.from(new Set(ids));
+            if (uniqueIds.length > 1) { duplicates.set(key, uniqueIds); }
         });
         return duplicates;
     }
 
+    function duplicateIdsForInput(input) {
+        if (!input || !input.deviceId) { return []; }
+        const device = audioInputDeviceInfo(input);
+        const duplicates = getDuplicateAudioDeviceAssignments();
+        const ids = new Set(duplicates.get('id:' + input.deviceId) || []);
+        if (device && device.groupId) {
+            (duplicates.get('group:' + device.groupId) || []).forEach((id) => ids.add(id));
+        }
+        return Array.from(ids);
+    }
+
     function duplicateWarningForInput(input) {
         if (!input || !input.deviceId) { return ''; }
-        const duplicateIds = getDuplicateAudioDeviceAssignments().get(input.deviceId) || [];
+        const duplicateIds = duplicateIdsForInput(input);
         const otherNames = duplicateIds.filter((id) => id !== input.id).map((id) => {
             const other = state.audioInputs.get(id);
             return other ? other.label : '';
@@ -1583,6 +1606,7 @@
         const audioWarning = microphoneWarningFromSummary(audioInputSummaryFromState(), 'recording');
         const webmWarning = state.selectedMimeType && isWebmMime(state.selectedMimeType) ? webmFallbackWarning() : '';
         state.recordingPersistentWarnings = [audioWarning, webmWarning].filter(Boolean);
+        if (els.recordingStatus && els.recordingStatus.dataset.statusType === 'error') { return; }
         if (isRecordingActive() || state.recordingStoppedAt && !state.serverStopConfirmed) {
             updateRecordingOperationStatus(state.recordingStoppedAt ? strings.uploadingChunk : strings.recordingActive, 'info');
         }
@@ -1590,6 +1614,7 @@
 
     function updateLiveAudioInputWarning() {
         if (!state.broadcastSession) { return; }
+        if (state.lastAgoraConnectionState && state.lastAgoraConnectionState !== 'CONNECTED') { return; }
         if (els.broadcastStatus && els.broadcastStatus.dataset.statusType === 'error') { return; }
         const warning = microphoneWarningFromSummary(audioInputSummaryFromState(), 'live');
         if (warning) {
@@ -2035,6 +2060,7 @@
                     current.stream = null;
                     current.unavailable = true;
                     current.status = 'disconnected';
+                    current.error = getStudioString('audioInputDisconnectedDetail', 'This audio device disconnected. Reconnect it or choose another device.');
                     disconnectMixerChannel(current.mixerChannelId, current.id);
                     refreshAudioInputDiagnostics();
                     setDeviceStatus(getStudioString('audioInputDisconnected', 'Audio input disconnected.') + ' ' + current.label, 'warning');
@@ -2674,6 +2700,7 @@
         fillDeviceSelect(els.cameraSelect, cameras, getStudioString('cameraSummaryLabel', 'Camera'), state.selectedCameraId);
         const primary = primaryAudioInput();
         fillDeviceSelect(els.micSelect, microphones, getStudioString('microphoneFallbackLabel', 'Microphone'), primary ? primary.deviceId : '');
+        preservePrimaryDefaultMicrophoneOption(els.micSelect, primary);
         preserveSelectedDeviceOption(els.micSelect, primary);
 
         if (!options.keepDefaultCamera && !state.selectedCameraId && els.cameraSelect && els.cameraSelect.value) {
@@ -2753,6 +2780,21 @@
             .replace('{status}', audioInputStatusLabel(status === 'active' || status === 'muted' ? 'active' : 'unavailable'));
         option.selected = true;
         select.appendChild(option);
+        select.disabled = false;
+    }
+
+    function preservePrimaryDefaultMicrophoneOption(select, input) {
+        if (!select || !input || !input.isPrimary || input.deviceId) { return; }
+        const option = document.createElement('option');
+        option.value = '';
+        option.dataset.deviceLabel = '';
+        const live = hasLiveAudioTrack(input.stream);
+        option.textContent = live
+            ? getStudioString('deviceStateOption', '{device} ({status})').replace('{device}', getStudioString('defaultMicrophone', 'Default microphone')).replace('{status}', audioInputStatusLabel('active'))
+            : getStudioString('defaultMicrophone', 'Default microphone');
+        option.selected = true;
+        select.insertBefore(option, select.firstChild || null);
+        select.value = '';
         select.disabled = false;
     }
 
@@ -4997,9 +5039,8 @@
             if (els.endLive) els.endLive.disabled = false;
             renderProgramLiveControls();
             setShellClass('is-live', true);
-            if (audioSummary.active === 0 || audioSummary.failed > 0) {
-                setBroadcastStatus(formatAudioInputSummary(audioSummary, 'live'), 'warning');
-            } else {
+            updateLiveAudioInputWarning();
+            if (!state.liveAudioWarningActive) {
                 setBroadcastStatus(strings.liveStarted, 'success');
             }
         } catch (error) {
@@ -5247,6 +5288,8 @@
                 return;
             }
             state.audioInputTestStream = stream;
+            const testTrack = stream.getAudioTracks()[0];
+            const testDeviceLabel = testTrack && testTrack.label ? testTrack.label : selectedOptionLabel(els.micSelect, getStudioString('defaultMicrophone', 'default microphone'));
             setMixerChannelStream(primary.mixerChannelId, stream, { sourceId: 'microphone-test' });
             focusOrHighlightMixerChannel(primary.id);
             window.setTimeout(() => {
@@ -5256,8 +5299,8 @@
                     disconnectMixerChannel(primary.mixerChannelId, 'microphone-test');
                 }
             }, 3000);
-            setDeviceStatus(getStudioString('microphoneTestStarted', 'Microphone test started: {device}.').replace('{device}', selectedOptionLabel(els.micSelect, getStudioString('defaultMicrophone', 'default microphone'))), 'success');
-            await populateDevices({ reason: 'microphone-test' }).catch(() => {});
+            setDeviceStatus(getStudioString('microphoneTestStarted', 'Microphone test started: {device}.').replace('{device}', testDeviceLabel), 'success');
+            await populateDevices({ reason: 'microphone-test', keepDefaultMicrophone: true }).catch(() => {});
             if (els.micSelect && els.micSelect.disabled) {
                 setDeviceStatus(getStudioString('microphonePermissionNoDevices', 'Microphone permission was requested, but the browser still reports zero microphones. Check OS privacy settings, USB/audio hardware, and browser device permissions.'), 'warning');
             }
@@ -5275,18 +5318,22 @@
         const deviceById = new Map(devices.map((device) => [device.deviceId, device]));
         const assignedIds = new Set();
         const assignedGroups = new Set();
-        let hasAmbiguousActiveInput = false;
+        let hasAmbiguousAssignedInput = false;
         state.audioInputs.forEach((input) => {
             if (!input || input.removed) { return; }
             if (!input.deviceId) {
-                if (hasLiveAudioTrack(input.stream)) { hasAmbiguousActiveInput = true; }
+                if (hasLiveAudioTrack(input.stream)) { hasAmbiguousAssignedInput = true; }
                 return;
             }
             assignedIds.add(input.deviceId);
             const assignedDevice = deviceById.get(input.deviceId);
-            if (assignedDevice && assignedDevice.groupId) { assignedGroups.add(assignedDevice.groupId); }
+            if (input.deviceId === 'default' || input.deviceId === 'communications' || !assignedDevice || !assignedDevice.groupId) {
+                hasAmbiguousAssignedInput = true;
+                return;
+            }
+            assignedGroups.add(assignedDevice.groupId);
         });
-        if (hasAmbiguousActiveInput) { return null; }
+        if (hasAmbiguousAssignedInput) { return null; }
         const hardwareDevices = devices.filter((device) => device.deviceId && device.deviceId !== 'default' && device.deviceId !== 'communications');
         return hardwareDevices.find((device) => {
             if (assignedIds.has(device.deviceId)) { return false; }
@@ -5579,7 +5626,7 @@
             if (detail.kind === 'audio') {
                 state.liveAudioMuted = true;
                 renderProgramLiveControls();
-                setBroadcastStatus('Microphone input ended or was disconnected. Live audio may be unavailable.', 'warning');
+                setBroadcastStatus(getStudioString('liveMicrophoneDisconnected', 'Microphone input ended or was disconnected. Live audio may be unavailable.'), 'warning');
             } else if (detail.kind === 'video') {
                 state.liveVideoMuted = true;
                 renderProgramLiveControls();
@@ -5594,7 +5641,14 @@
                 state.broadcastReady = Boolean(state.broadcastSession) && detail.current === 'CONNECTED';
                 renderTransitionButtons();
                 renderProgramLiveControls();
-                setBroadcastStatus('Live connection: ' + detail.current + (detail.reason ? ' (' + detail.reason + ')' : ''), detail.current === 'CONNECTED' ? 'success' : 'info');
+                if (detail.current === 'CONNECTED') {
+                    updateLiveAudioInputWarning();
+                    if (!state.liveAudioWarningActive) {
+                        setBroadcastStatus(getStudioString('liveConnectionState', 'Live connection: {state}{reason}').replace('{state}', detail.current).replace('{reason}', detail.reason ? ' (' + detail.reason + ')' : ''), 'success');
+                    }
+                } else {
+                    setBroadcastStatus(getStudioString('liveConnectionState', 'Live connection: {state}{reason}').replace('{state}', detail.current).replace('{reason}', detail.reason ? ' (' + detail.reason + ')' : ''), 'info');
+                }
             }
         });
         window.addEventListener('pagehide', () => {
