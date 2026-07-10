@@ -304,12 +304,22 @@ body.vh360-studio-window-mode .vh360-studio-dashboard {
 .vh360-studio-device-actions .vh360-studio-button { min-height: 32px; padding: 0.35rem 0.7rem; }
 .vh360-studio-device-active { background: var(--vh360-studio-panel-bg-strong); border: 1px solid var(--vh360-studio-panel-border); border-radius: 10px; color: var(--vh360-studio-text-muted); font-size: 0.78rem; margin: 0; padding: 0.55rem; }
 
-.vh360-studio-audio-mixer { background: linear-gradient(180deg, var(--vh360-studio-panel-bg-strong), var(--vh360-studio-panel-bg)); border: 1px solid var(--vh360-studio-panel-border); border-radius: 14px; display: flex; gap: 0; overflow-x: auto; overflow-y: hidden; padding: 0.35rem; scrollbar-width: thin; }
+.vh360-studio-audio-mixer-toolbar { align-items: center; display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: space-between; margin-bottom: 0.55rem; }
+.vh360-studio-audio-mixer-toolbar .vh360-studio-help { flex: 1 1 220px; margin: 0; }
+.vh360-studio-audio-mixer { background: linear-gradient(180deg, var(--vh360-studio-panel-bg-strong), var(--vh360-studio-panel-bg)); border: 1px solid var(--vh360-studio-panel-border); border-radius: 14px; display: flex; gap: 0.35rem; overflow-x: auto; overflow-y: hidden; padding: 0.35rem; scrollbar-width: thin; }
 .vh360-studio-audio-mixer::-webkit-scrollbar { height: 8px; }
 .vh360-studio-audio-mixer::-webkit-scrollbar-thumb { background: var(--vh360-studio-panel-border); border-radius: 999px; }
-.vh360-studio-audio-channel { align-items: center; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--vh360-studio-panel-border); border-radius: 10px; display: grid; flex: 0 0 82px; gap: 0.45rem; justify-items: center; min-width: 82px; padding: 0.55rem 0.45rem; }
+.vh360-studio-audio-input-channels { display: contents; }
+.vh360-studio-audio-channel { align-items: center; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--vh360-studio-panel-border); border-radius: 10px; display: grid; flex: 0 0 96px; gap: 0.45rem; justify-items: center; min-width: 96px; padding: 0.55rem 0.45rem; }
+.vh360-studio-audio-channel--input { flex-basis: 132px; min-width: 132px; }
+.vh360-studio-audio-channel.is-primary { border-color: color-mix(in srgb, var(--vh360-studio-primary) 60%, var(--vh360-studio-panel-border)); }
+.vh360-studio-audio-channel.is-unavailable { border-color: color-mix(in srgb, var(--vh360-studio-danger) 55%, var(--vh360-studio-panel-border)); }
 .vh360-studio-audio-status { background: var(--vh360-studio-black); border: 1px solid var(--vh360-studio-panel-border); border-radius: 999px; color: var(--vh360-studio-text-muted); font-size: 0.65rem; font-weight: 800; line-height: 1; max-width: 100%; overflow: hidden; padding: 0.24rem 0.38rem; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
 .vh360-studio-audio-name { font-size: 0.72rem; line-height: 1.1; min-height: 1.6em; text-align: center; }
+.vh360-studio-audio-name-field,
+.vh360-studio-audio-device-select { background: var(--vh360-studio-black); border: 1px solid var(--vh360-studio-panel-border); border-radius: 8px; color: var(--vh360-studio-text); font-size: 0.72rem; max-width: 112px; min-height: 28px; padding: 0.25rem 0.35rem; width: 100%; }
+.vh360-studio-audio-device-select { color: var(--vh360-studio-text-muted); }
+.vh360-studio-audio-primary { border: 1px solid var(--vh360-studio-primary); border-radius: 999px; color: var(--vh360-studio-primary); font-size: 0.6rem; font-weight: 800; padding: 0.1rem 0.35rem; text-transform: uppercase; }
 .vh360-studio-audio-strip-body { align-items: end; display: flex; gap: 0.42rem; justify-content: center; min-height: 126px; }
 .vh360-studio-audio-gain { align-items: center; display: flex; height: 120px; justify-content: center; width: 28px; }
 .vh360-studio-audio-gain input[type="range"] { accent-color: var(--vh360-studio-primary); direction: rtl; height: 120px; margin: 0; writing-mode: vertical-lr; }
@@ -320,6 +330,10 @@ body.vh360-studio-window-mode .vh360-studio-dashboard {
 .vh360-studio-audio-mute[aria-pressed="true"]::before { content: "🔇"; }
 .vh360-studio-audio-mute:hover,
 .vh360-studio-audio-mute:focus { border-color: var(--vh360-studio-primary); outline: none; }
+.vh360-studio-audio-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 0.25rem; justify-content: center; min-height: 32px; }
+.vh360-studio-audio-remove { background: transparent; border: 1px solid var(--vh360-studio-panel-border); border-radius: 999px; color: var(--vh360-studio-text-muted); cursor: pointer; font-size: 0.65rem; min-height: 28px; padding: 0.2rem 0.45rem; }
+.vh360-studio-audio-remove:hover,
+.vh360-studio-audio-remove:focus { border-color: var(--vh360-studio-danger); color: var(--vh360-studio-danger); outline: none; }
 .vh360-studio-meter { align-items: flex-end; background: var(--vh360-studio-black); border: 1px solid var(--vh360-studio-panel-border); border-radius: 999px; display: flex; height: 120px; overflow: hidden; width: 14px; }
 .vh360-studio-meter span { background: linear-gradient(0deg, var(--vh360-studio-success), var(--vh360-studio-warning) 68%, var(--vh360-studio-danger)); border-radius: inherit; display: block; height: var(--vh360-meter-level, 0%); transition: height 120ms linear; width: 100%; }
 
