@@ -124,7 +124,7 @@ $friendly_job_status = static function( $job ) {
                     </button>
                 </div>
                 <div class="vh360-studio-monitor-screen vh360-studio-preview-stage">
-                    <video class="vh360-studio-preview-video vh360-studio-preview-video--camera" data-camera-preview playsinline muted aria-label="<?php esc_attr_e( 'Local camera preview', 'videohub360-studio' ); ?>"></video>
+                    <div class="vh360-studio-preview-camera" data-camera-preview-container aria-label="<?php esc_attr_e( 'Local camera preview', 'videohub360-studio' ); ?>"></div>
                     <video class="vh360-studio-preview-video vh360-studio-preview-video--screen" data-screen-preview playsinline muted aria-label="<?php esc_attr_e( 'Screen-share preview', 'videohub360-studio' ); ?>"></video>
                     <div class="vh360-studio-preview-media" data-media-preview aria-label="<?php esc_attr_e( 'Media source preview', 'videohub360-studio' ); ?>"></div>
                     <span class="vh360-studio-monitor-empty" data-preview-empty><?php esc_html_e( 'Choose a Scene to stage it in Preview.', 'videohub360-studio' ); ?></span>
@@ -227,24 +227,26 @@ $friendly_job_status = static function( $job ) {
             <section class="vh360-studio-dock" aria-labelledby="vh360-studio-scenes-title">
                 <div class="vh360-studio-dock-header"><h3 id="vh360-studio-scenes-title"><?php esc_html_e( 'Scenes', 'videohub360-studio' ); ?></h3></div>
                 <div class="vh360-studio-dock-body">
-                    <ul class="vh360-studio-scene-list" data-scene-list>
-                        <li><button type="button" data-scene-source="camera"><?php esc_html_e( 'Camera Only', 'videohub360-studio' ); ?></button></li>
-                        <li><button type="button" data-scene-source="screen"><?php esc_html_e( 'Screen Share', 'videohub360-studio' ); ?></button></li>
-                    </ul>
+                    <ul class="vh360-studio-scene-list" data-scene-list></ul>
                     <div class="vh360-studio-scene-controls" aria-label="<?php esc_attr_e( 'Scene controls', 'videohub360-studio' ); ?>">
                         <div class="vh360-studio-scene-add-menu-wrap">
                             <button
                                 type="button"
                                 class="vh360-studio-scene-control-button"
-                                data-toggle-media-source-menu
-                                aria-label="<?php esc_attr_e( 'Add media source', 'videohub360-studio' ); ?>"
+                                data-toggle-source-menu
+                                aria-label="<?php esc_attr_e( 'Add source', 'videohub360-studio' ); ?>"
                                 aria-haspopup="true"
                                 aria-expanded="false"
                             >
                                 <span aria-hidden="true">+</span>
                             </button>
 
-                            <div class="vh360-studio-scene-add-menu" data-media-source-menu hidden>
+                            <div class="vh360-studio-scene-add-menu" data-source-menu hidden>
+                                <button type="button" data-open-camera-source>
+                                    <span><?php esc_html_e( 'Video Capture Device', 'videohub360-studio' ); ?></span>
+                                    <small><?php esc_html_e( 'Browser-local camera source', 'videohub360-studio' ); ?></small>
+                                </button>
+
                                 <button type="button" data-open-local-media-source>
                                     <span><?php esc_html_e( 'Local Media', 'videohub360-studio' ); ?></span>
                                     <small><?php esc_html_e( 'Current session only', 'videohub360-studio' ); ?></small>
@@ -257,7 +259,7 @@ $friendly_job_status = static function( $job ) {
                             </div>
                         </div>
 
-                        <button type="button" class="vh360-studio-scene-control-button" data-delete-selected-media-scene aria-label="<?php esc_attr_e( 'Delete selected media scene', 'videohub360-studio' ); ?>" disabled>
+                        <button type="button" class="vh360-studio-scene-control-button" data-delete-selected-source-scene aria-label="<?php esc_attr_e( 'Delete selected source scene', 'videohub360-studio' ); ?>" disabled>
                             <span aria-hidden="true">−</span>
                         </button>
                     </div>
@@ -273,6 +275,11 @@ $friendly_job_status = static function( $job ) {
                         <button type="button" class="vh360-studio-button vh360-studio-button--ghost vh360-studio-refresh-devices" data-refresh-devices><?php esc_html_e( 'Refresh Devices', 'videohub360-studio' ); ?></button>
                     </div>
                     <label for="vh360-studio-camera-select"><?php esc_html_e( 'Camera', 'videohub360-studio' ); ?></label>
+                    <div class="vh360-studio-selected-camera-controls" data-selected-camera-controls hidden>
+                        <label for="vh360-studio-camera-source-name"><?php esc_html_e( 'Camera source name', 'videohub360-studio' ); ?></label>
+                        <input id="vh360-studio-camera-source-name" type="text" data-selected-camera-name>
+                        <p class="vh360-studio-help" data-selected-camera-status></p>
+                    </div>
                     <select id="vh360-studio-camera-select" data-camera-select disabled>
                         <option value=""><?php esc_html_e( 'Grant camera access to list devices', 'videohub360-studio' ); ?></option>
                     </select>
@@ -477,6 +484,32 @@ $friendly_job_status = static function( $job ) {
                 </details>
             <?php endif; ?>
         </section>
+    </div>
+
+    <div class="vh360-studio-modal" data-camera-source-modal hidden role="dialog" aria-modal="true" aria-labelledby="vh360-studio-camera-source-title">
+        <div class="vh360-studio-modal__backdrop" data-close-camera-source-modal></div>
+
+        <div class="vh360-studio-modal__panel">
+            <div class="vh360-studio-modal__header">
+                <h3 id="vh360-studio-camera-source-title"><?php esc_html_e( 'Add Video Capture Device', 'videohub360-studio' ); ?></h3>
+                <button type="button" class="vh360-studio-modal__close" data-close-camera-source-modal aria-label="<?php esc_attr_e( 'Close', 'videohub360-studio' ); ?>">×</button>
+            </div>
+
+            <div class="vh360-studio-modal__body">
+                <label for="vh360-studio-new-camera-device"><?php esc_html_e( 'Choose video device', 'videohub360-studio' ); ?></label>
+                <select id="vh360-studio-new-camera-device" data-camera-source-device></select>
+
+                <label for="vh360-studio-new-camera-name"><?php esc_html_e( 'Camera source name', 'videohub360-studio' ); ?></label>
+                <input id="vh360-studio-new-camera-name" type="text" data-camera-source-name>
+
+                <div class="vh360-studio-modal__status" data-camera-source-status hidden></div>
+            </div>
+
+            <div class="vh360-studio-modal__footer">
+                <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-close-camera-source-modal><?php esc_html_e( 'Cancel', 'videohub360-studio' ); ?></button>
+                <button type="button" class="vh360-studio-button" data-add-camera-source><?php esc_html_e( 'Add Source', 'videohub360-studio' ); ?></button>
+            </div>
+        </div>
     </div>
 
     <div class="vh360-studio-modal" data-media-source-modal hidden role="dialog" aria-modal="true" aria-labelledby="vh360-studio-media-source-title">
