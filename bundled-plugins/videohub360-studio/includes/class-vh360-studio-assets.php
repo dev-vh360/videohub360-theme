@@ -200,6 +200,8 @@ class VH360_Studio_Assets {
                 'devicesCouldNotBeRefreshed' => __( 'Devices could not be refreshed.', 'videohub360-studio' ),
                 'deviceUnavailableOption' => __( '{device} unavailable', 'videohub360-studio' ),
                 'deviceFallbackOption' => __( '{device} {index}', 'videohub360-studio' ),
+                'deviceStateOption'    => __( '{device} ({status})', 'videohub360-studio' ),
+                'chooseAudioDevice'    => __( 'Choose audio device', 'videohub360-studio' ),
 
             ),
             'supportLabels'             => array(
