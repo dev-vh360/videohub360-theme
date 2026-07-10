@@ -2817,6 +2817,12 @@
         return option.dataset.deviceLabel || option.textContent || fallback;
     }
 
+    function videoDeviceLabelById(deviceId, fallback) {
+        if (!deviceId) { return fallback || ''; }
+        const device = (state.availableVideoInputDevices || []).find((item) => item.deviceId === deviceId);
+        return device && device.label ? device.label : (fallback || '');
+    }
+
     function cameraReadinessValue(fallback) {
         const source = getSelectedCameraSource() || primaryCameraSource();
         if (!source) { return fallback; }
@@ -3144,7 +3150,7 @@
             const track = stream.getVideoTracks()[0];
             const settings = track && typeof track.getSettings === 'function' ? track.getSettings() : {};
             source.deviceId = settings && settings.deviceId ? settings.deviceId : requestedDeviceId || source.deviceId;
-            source.deviceLabel = (track && track.label) || source.deviceLabel || selectedDeviceLabel(els.cameraSelect, '');
+            source.deviceLabel = (track && track.label) || options.deviceLabel || videoDeviceLabelById(requestedDeviceId, source.deviceLabel);
             source.connected = true;
             source.connecting = false;
             source.unavailable = false;
@@ -3225,7 +3231,9 @@
             state.programStream = null;
             const fallback = fallbackPreviewSource(sourceId);
             if (state.broadcastSession && fallback) {
-                setPreviewSource(fallback).then(() => commitPreviewToProgram('cut')).catch(() => {});
+                setPreviewSource(fallback)
+                    .then((staged) => staged ? commitPreviewToProgram('cut') : null)
+                    .catch(() => {});
             }
             renderProgramState();
         }
@@ -3428,9 +3436,13 @@
             const fallbackCamera = primaryCameraSource();
             if (state.broadcastSession && fallbackCamera) {
                 try {
-                    await setPreviewSource(fallbackCamera.sourceId);
-                    await commitPreviewToProgram('cut');
-                    setBroadcastStatus('Screen Share ended. Program fell back to Camera.', 'warning');
+                    const staged = await setPreviewSource(fallbackCamera.sourceId);
+                    if (staged) {
+                        await commitPreviewToProgram('cut');
+                        setBroadcastStatus('Screen Share ended. Program fell back to Camera.', 'warning');
+                    } else {
+                        setBroadcastStatus('Screen Share ended. Waiting for the selected Preview source before changing Program.', 'warning');
+                    }
                 } catch (error) {
                     setBroadcastStatus('Screen Share ended. Choose another source for Program.', 'warning');
                     setDeviceStatus(friendlyMediaError(error), 'warning');
@@ -4268,8 +4280,10 @@
                 if (state.previewSource) {
                     state.programSource = state.previewSource;
                 } else {
-                    await setPreviewSource(primaryCameraSourceId());
-                    state.programSource = state.previewSource || primaryCameraSourceId();
+                    const staged = await setPreviewSource(primaryCameraSourceId());
+                    if (staged) {
+                        state.programSource = state.previewSource;
+                    }
                 }
             }
             if (isCameraSource(state.programSource)) {
@@ -4288,12 +4302,14 @@
             ensureProgramCompositor();
             state.recordingStream = await buildRecordingStreamFromProgram();
             if (!state.recordingStream) {
-                await setPreviewSource(primaryCameraSourceId());
-                state.programSource = state.previewSource || primaryCameraSourceId();
-                state.programStream = await getSourceStream(state.programSource);
-                renderProgramState();
-                ensureProgramCompositor();
-                state.recordingStream = await buildRecordingStreamFromProgram();
+                const staged = await setPreviewSource(primaryCameraSourceId());
+                if (staged) {
+                    state.programSource = state.previewSource;
+                    state.programStream = await getSourceStream(state.programSource);
+                    renderProgramState();
+                    ensureProgramCompositor();
+                    state.recordingStream = await buildRecordingStreamFromProgram();
+                }
             }
             if (!state.recordingStream) {
                 throw new Error('Choose a Program source before recording.');
@@ -5471,8 +5487,13 @@
         if (els.goLive) els.goLive.disabled = true;
         try {
             if (!state.programSource) {
-                await setPreviewSource(primaryCameraSourceId());
-                await commitPreviewToProgram('cut');
+                const staged = await setPreviewSource(primaryCameraSourceId());
+                if (staged) {
+                    await commitPreviewToProgram('cut');
+                }
+            }
+            if (!hasProgramOutput()) {
+                throw new Error(getStudioString('chooseProgramSourceBeforeLive', 'Choose a Program source before going live.'));
             }
             setBroadcastStatus('Go Live will use the current Program source.', 'info');
             const audioSummary = await ensureAudioInputStreams().catch((error) => ({ active: 0, failed: state.audioInputs.size || 1, skipped: 0, total: state.audioInputs.size || 1, results: [], error }));
@@ -5985,6 +6006,7 @@
                 const operationId = (source.reassignRequestId || 0) + 1;
                 source.reassignRequestId = operationId;
                 const previousLabel = source.deviceLabel;
+                const requestedDeviceLabel = selectedDeviceLabel(els.cameraSelect, '');
                 const previousHasLiveStream = hasLiveVideoTrack(source.stream);
                 const previousStatus = previousHasLiveStream ? 'active' : source.status;
                 const previousUnavailable = previousHasLiveStream ? false : source.unavailable;
@@ -6002,11 +6024,10 @@
                     return;
                 }
                 try {
-                    const stream = await startCameraSource(source.sourceId, { force: true, deviceId: next, preserveOnFailure: true });
+                    const stream = await startCameraSource(source.sourceId, { force: true, deviceId: next, deviceLabel: requestedDeviceLabel, preserveOnFailure: true });
                     if (operationId !== source.reassignRequestId || !stream || source.stream !== stream) {
                         return;
                     }
-                    source.deviceLabel = selectedDeviceLabel(els.cameraSelect, source.deviceLabel);
                     source.error = '';
                     source.unavailable = false;
                     source.status = hasLiveVideoTrack(source.stream) ? 'active' : 'off';
