@@ -73,7 +73,7 @@ class VH360_Studio_Assets {
             'restRoot'                  => esc_url_raw( rest_url( 'vh360-studio/v1' ) ),
             'nonce'                     => wp_create_nonce( 'wp_rest' ),
             'qualityPresets'            => VH360_Studio_Quality_Presets::get_presets(),
-            'defaultQualityPreset'      => VH360_Studio_Quality_Presets::DEFAULT_PRESET,
+            'defaultQualityPreset'      => VH360_Studio_Quality_Presets::get_default_preset(),
             'uploadSettings'             => class_exists( 'VH360_Studio_Recording_Chunks' ) ? ( new VH360_Studio_Recording_Chunks( VH360_Studio_Plugin::instance()->jobs() ) )->upload_settings() : array(),
             'publitioDirectUpload'      => $this->publitio_direct_upload_config(),
             'currentUserId'             => get_current_user_id(),

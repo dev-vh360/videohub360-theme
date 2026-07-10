@@ -77,7 +77,7 @@ class VH360_Studio_Plugin {
 
         $jobs            = $this->jobs->list( $user_id, 10 );
         $registry        = $this->registry;
-        $default_preset  = VH360_Studio_Quality_Presets::DEFAULT_PRESET;
+        $default_preset  = VH360_Studio_Quality_Presets::get_default_preset();
         $quality_presets = VH360_Studio_Quality_Presets::get_presets();
 
         include VH360_STUDIO_TEMPLATES_DIR . 'dashboard-studio.php';

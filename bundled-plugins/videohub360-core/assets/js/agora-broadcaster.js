@@ -62,6 +62,14 @@
                         mediaStreamTrack: config.initialVideoMediaStreamTrack
                     });
                     state.videoTrackOwnsSource = false;
+                    if (
+                        config.videoConfig &&
+                        config.videoConfig.encoderConfig &&
+                        state.videoTrack &&
+                        typeof state.videoTrack.setEncoderConfiguration === 'function'
+                    ) {
+                        await state.videoTrack.setEncoderConfiguration(config.videoConfig.encoderConfig);
+                    }
                 } else {
                     state.videoTrack = await window.AgoraRTC.createCameraVideoTrack(config.videoConfig || {});
                     state.videoTrackOwnsSource = true;

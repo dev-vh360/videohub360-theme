@@ -913,7 +913,7 @@ class VH360_Studio_REST_Controller {
             'live_video_id'    => absint( $broadcast['videoId'] ),
             'room_id'          => sanitize_text_field( $broadcast['channelName'] ),
             'recording_mode'   => 'browser',
-            'quality_preset'   => VH360_Studio_Quality_Presets::normalize( $request->get_param( 'quality_preset' ) ?: VH360_Studio_Quality_Presets::DEFAULT_PRESET ),
+            'quality_preset'   => VH360_Studio_Quality_Presets::normalize( $request->get_param( 'quality_preset' ) ?: VH360_Studio_Quality_Presets::get_default_preset() ),
             'storage_provider' => $this->default_replay_storage_provider(),
         ) );
         if ( ! is_wp_error( $job ) ) {

@@ -834,3 +834,8 @@ body.vh360-studio-window-mode .vh360-studio-dashboard {
 .vh360-studio-selected-camera-controls[hidden] { display: none !important; }
 .vh360-studio-selected-camera-controls input { width: 100%; }
 .vh360-studio-modal__status[data-status-type="warning"] { border-color: color-mix(in srgb, var(--vh360-studio-warning) 55%, transparent); color: var(--vh360-studio-warning); }
+
+.vh360-studio-dashboard [data-quality-select]:disabled {
+    cursor: not-allowed;
+    opacity: 0.75;
+}

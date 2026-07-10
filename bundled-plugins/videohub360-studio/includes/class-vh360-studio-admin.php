@@ -36,6 +36,7 @@ class VH360_Studio_Admin {
     public function register_settings() {
         $settings = array(
             'vh360_studio_display_name'                    => 'sanitize_text_field',
+            'vh360_studio_default_quality_preset'           => array( $this, 'sanitize_quality_preset' ),
             'vh360_studio_default_replay_storage_provider' => array( $this, 'sanitize_provider' ),
             'vh360_studio_publitio_api_key'               => array( $this, 'sanitize_api_key' ),
             'vh360_studio_publitio_api_secret'            => array( $this, 'sanitize_secret' ),
@@ -62,6 +63,10 @@ class VH360_Studio_Admin {
         foreach ( $settings as $name => $sanitize ) {
             register_setting( 'vh360_studio_settings', $name, array( 'sanitize_callback' => $sanitize ) );
         }
+    }
+
+    public function sanitize_quality_preset( $value ) {
+        return VH360_Studio_Quality_Presets::normalize( $value );
     }
 
     public function sanitize_provider( $value ) {
@@ -221,6 +226,11 @@ class VH360_Studio_Admin {
                 <h2><?php esc_html_e( 'Studio Display', 'videohub360-studio' ); ?></h2>
                 <table class="form-table" role="presentation"><tbody>
                     <tr><th><label for="vh360_studio_display_name"><?php esc_html_e( 'Studio Display Name', 'videohub360-studio' ); ?></label></th><td><input type="text" class="regular-text" id="vh360_studio_display_name" name="vh360_studio_display_name" value="<?php echo esc_attr( get_option( 'vh360_studio_display_name', '' ) ); ?>"><p class="description"><?php esc_html_e( 'Controls the Studio name shown on the frontend dashboard. Leave blank to use {Site Title} Studio.', 'videohub360-studio' ); ?></p></td></tr>
+                </tbody></table>
+                <h2><?php esc_html_e( 'Production Quality', 'videohub360-studio' ); ?></h2>
+                <table class="form-table" role="presentation"><tbody>
+                    <?php $quality_presets = VH360_Studio_Quality_Presets::get_presets(); $default_quality_preset = VH360_Studio_Quality_Presets::get_default_preset(); ?>
+                    <tr><th><label for="vh360_studio_default_quality_preset"><?php esc_html_e( 'Default Studio Quality Preset', 'videohub360-studio' ); ?></label></th><td><select id="vh360_studio_default_quality_preset" name="vh360_studio_default_quality_preset"><?php foreach ( $quality_presets as $preset_id => $preset ) : ?><option value="<?php echo esc_attr( $preset_id ); ?>" <?php selected( $default_quality_preset, $preset_id ); ?>><?php echo esc_html( $preset['label'] ); ?><?php if ( ! empty( $preset['recommended'] ) ) : ?> <?php esc_html_e( '(recommended)', 'videohub360-studio' ); ?><?php elseif ( ! empty( $preset['advanced'] ) ) : ?> <?php esc_html_e( '(advanced)', 'videohub360-studio' ); ?><?php endif; ?></option><?php endforeach; ?></select><p class="description"><?php esc_html_e( 'Controls the default camera capture, Program canvas, live encoder, and browser recording preset in VH360 Studio. It does not control viewer playback quality.', 'videohub360-studio' ); ?></p></td></tr>
                 </tbody></table>
                 <h2><?php esc_html_e( 'Replay Provider Settings', 'videohub360-studio' ); ?></h2>
                 <table class="form-table" role="presentation"><tbody>

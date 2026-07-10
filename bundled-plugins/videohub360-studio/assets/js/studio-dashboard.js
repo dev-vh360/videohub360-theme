@@ -120,6 +120,7 @@
         featuredImageId: 0,
         featuredImageUrl: '',
         clearFeaturedImage: false,
+        activeQualityPresetKey: '',
     };
 
     const els = {
@@ -799,7 +800,7 @@
             };
         }
 
-        const preset = getSelectedPreset();
+        const preset = getOutputPreset();
         const resolution = preset && preset.resolution ? preset.resolution : {};
 
         return {
@@ -3253,6 +3254,9 @@
             source.element.srcObject = stream;
             const track = stream.getVideoTracks()[0];
             const settings = track && typeof track.getSettings === 'function' ? track.getSettings() : {};
+            source.actualWidth = Number(settings.width) || 0;
+            source.actualHeight = Number(settings.height) || 0;
+            source.actualFrameRate = Number(settings.frameRate) || 0;
             const ready = await ensureCameraElementPlaying(source);
             if (!ready) {
                 const playbackError = source.error || getStudioString('cameraPlaybackNotReady', 'Camera video is not ready yet.');
@@ -3270,6 +3274,9 @@
             stopStream(previousStream);
             source.deviceId = settings && settings.deviceId ? settings.deviceId : requestedDeviceId || source.deviceId;
             source.deviceLabel = (track && track.label) || options.deviceLabel || videoDeviceLabelById(requestedDeviceId, source.deviceLabel);
+            source.actualWidth = Number(settings.width) || source.actualWidth || 0;
+            source.actualHeight = Number(settings.height) || source.actualHeight || 0;
+            source.actualFrameRate = Number(settings.frameRate) || source.actualFrameRate || 0;
             source.connected = true;
             source.connecting = false;
             source.unavailable = false;
@@ -3281,6 +3288,7 @@
             if (state.programSource === source.sourceId) { state.programStream = stream; renderProgramState(); }
             scheduleCameraSourceConfigurationSave();
             renderSourceState();
+            updateCameraResolutionDiagnostics();
             return stream;
         } catch (error) {
             if (requestId === source.startRequestId) {
@@ -4188,8 +4196,19 @@
         }
         const preset = getSelectedPreset();
         const resolution = preset.resolution ? preset.resolution.width + '×' + preset.resolution.height : '';
-        const bitrate = preset.video_bitrate ? ' · ~' + Math.round(Number(preset.video_bitrate) / 1000000 * 10) / 10 + ' Mbps video' : '';
-        els.qualityDetails.textContent = preset.label + ' · ' + resolution + ' · ' + preset.fps + 'fps' + bitrate + '. Higher quality creates larger files and longer uploads.';
+        const fps = preset.fps ? Number(preset.fps) : 0;
+        const recordingMbps = preset.recording_video_bitrate ? Math.round(Number(preset.recording_video_bitrate) / 100000) / 10 : 0;
+        const live = preset.live_resolution && preset.live_bitrate_max
+            ? ((preset.live_resolution.width !== preset.resolution.width || preset.live_resolution.height !== preset.resolution.height)
+                ? preset.live_resolution.width + '×' + preset.live_resolution.height + ' up to ' + Math.round(Number(preset.live_bitrate_max) / 100) / 10 + ' Mbps'
+                : 'up to ' + Math.round(Number(preset.live_bitrate_max) / 100) / 10 + ' Mbps')
+            : 'adaptive';
+        const totalBits = Number(preset.recording_video_bitrate || 0) + Number(preset.recording_audio_bitrate || 0);
+        const gbPerHour = totalBits ? Math.round((totalBits * 3600 / 8 / 1000000000) * 10) / 10 : 0;
+        const suffix = preset.recommended ? ' (recommended)' : (preset.advanced ? ' (advanced)' : '');
+        const warnings = getSelectedPresetKey() === 'professional_4k' ? ' Program and recording output are 4K; current browser live output is 1080p. Larger recordings increase browser processing load, temporary upload size, chunk count, upload duration, and replay-provider processing time.' : '';
+        els.qualityDetails.textContent = preset.label + suffix + ' · ' + resolution + ' · ' + fps + ' fps. Recording: ' + recordingMbps + ' Mbps · Live: ' + live + '. Estimated recording size: about ' + gbPerHour + ' GB per hour. Estimates use target MediaRecorder bitrates and final files may vary.' + warnings;
+        updateQualitySelectorLock();
     }
 
 
@@ -4230,6 +4249,41 @@
     function getSelectedPreset() {
         const presets = config.qualityPresets || {};
         return presets[getSelectedPresetKey()] || {};
+    }
+
+    function getOutputPresetKey() {
+        const presets = config.qualityPresets || {};
+        return state.activeQualityPresetKey && presets[state.activeQualityPresetKey] ? state.activeQualityPresetKey : getSelectedPresetKey();
+    }
+
+    function getOutputPreset() {
+        const presets = config.qualityPresets || {};
+        return presets[getOutputPresetKey()] || getSelectedPreset();
+    }
+
+    function lockOutputQualityPreset() {
+        if (!state.activeQualityPresetKey) {
+            state.activeQualityPresetKey = getSelectedPresetKey();
+        }
+        updateQualitySelectorLock();
+        return state.activeQualityPresetKey;
+    }
+
+    function releaseOutputQualityPresetIfIdle() {
+        if (!state.broadcastSession && !state.broadcastStarting && !isRecordingActive() && !state.recorder && !state.recordingStopPromise) {
+            state.activeQualityPresetKey = '';
+        }
+        updateQualitySelectorLock();
+    }
+
+    function updateQualitySelectorLock() {
+        if (!els.qualitySelect) { return; }
+        if (state.activeQualityPresetKey) {
+            els.qualitySelect.value = state.activeQualityPresetKey;
+            els.qualitySelect.disabled = true;
+        } else {
+            els.qualitySelect.disabled = false;
+        }
     }
 
     function buildVideoConstraints(preset, deviceId) {
@@ -4333,7 +4387,7 @@
         if (state.activeJobId) {
             return state.activeJobId;
         }
-        const job = await api('/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ recording_mode: 'browser', source_type: 'studio_setup', source_id: 'studio-recording-' + Date.now(), quality_preset: getSelectedPresetKey() }) });
+        const job = await api('/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ recording_mode: 'browser', source_type: 'studio_setup', source_id: 'studio-recording-' + Date.now(), quality_preset: getOutputPresetKey() }) });
         state.activeJobId = job.id;
         state.currentStorageProvider = job.storage_provider || '';
         appendRecentJob(job);
@@ -4388,7 +4442,8 @@
         let serverRecordingStarted = false;
         state.recordingPersistentWarnings = [];
         try {
-            const preset = getSelectedPreset();
+            lockOutputQualityPreset();
+            const preset = getOutputPreset();
             lockRecordingCanvasSize();
             if (!state.programSource) {
                 if (state.previewSource) {
@@ -4456,8 +4511,8 @@
             state.recordingStopRequested = false;
             state.finalChunkCount = 0;
             const options = { mimeType: mimeType };
-            if (preset.video_bitrate) { options.videoBitsPerSecond = Number(preset.video_bitrate); }
-            if (preset.audio_bitrate) { options.audioBitsPerSecond = Number(preset.audio_bitrate); }
+            if (preset.recording_video_bitrate) { options.videoBitsPerSecond = Number(preset.recording_video_bitrate); }
+            if (preset.recording_audio_bitrate) { options.audioBitsPerSecond = Number(preset.recording_audio_bitrate); }
             state.recorder = new window.MediaRecorder(state.recordingStream, options);
             state.selectedMimeType = state.recorder.mimeType || mimeType;
             const start = await api('/jobs/' + jobId + '/recording/start', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ mime_type: state.selectedMimeType }) });
@@ -4495,6 +4550,7 @@
             }
             state.recorder = null;
             unlockRecordingCanvasSize();
+            releaseOutputQualityPresetIfIdle();
             setRecorderButtons(false, false);
             setRecordingStatus(error.message || strings.recorderUnavailable, 'error');
         }
@@ -4704,6 +4760,7 @@
             state.finalChunkCount = state.chunkIndex;
             state.recorder = null;
             unlockRecordingCanvasSize();
+            releaseOutputQualityPresetIfIdle();
             setShellClass('is-recording', false);
             updateRecordingOperationStatus(isPublitioDirectMode() ? getStudioString('recordingStoppedFastCloudReady', 'Recording stopped. Ready for fast cloud upload.') : strings.uploadingChunk, 'info');
             renderRecordingState();
@@ -5516,7 +5573,7 @@
             agora_everyone_is_host: mode === 'interactive' && !!(els.broadcastEveryoneHost && els.broadcastEveryoneHost.checked),
             require_passcode: mode === 'interactive' && !!(els.broadcastRequirePasscode && els.broadcastRequirePasscode.checked),
             host_passcode: els.broadcastPasscode ? els.broadcastPasscode.value : '',
-            quality_preset: getSelectedPresetKey(),
+            quality_preset: getOutputPresetKey(),
             clear_featured_image: !featuredImageId && state.clearFeaturedImage,
         };
         if (state.broadcastVideoId && Number(state.broadcastVideoId) > 0) {
@@ -5554,14 +5611,17 @@
 
 
     function agoraVideoConfigFromPreset() {
-        const preset = getSelectedPreset();
+        const preset = getOutputPreset();
         const encoderConfig = {};
-        if (preset.resolution) {
-            encoderConfig.width = Number(preset.resolution.width);
-            encoderConfig.height = Number(preset.resolution.height);
+        if (preset.live_resolution) {
+            encoderConfig.width = Number(preset.live_resolution.width);
+            encoderConfig.height = Number(preset.live_resolution.height);
         }
-        if (preset.fps) {
-            encoderConfig.frameRate = Number(preset.fps);
+        if (preset.live_fps) {
+            encoderConfig.frameRate = Number(preset.live_fps);
+        }
+        if (preset.live_bitrate_max) {
+            encoderConfig.bitrateMax = Number(preset.live_bitrate_max);
         }
         const videoConfig = {};
         const activeProgramCamera = isCameraSource(state.programSource) ? getCameraSource(state.programSource) : primaryCameraSource();
@@ -5590,14 +5650,11 @@
             setBroadcastStatus(strings.broadcastFailed, 'error');
             return;
         }
-        if (isRecordingActive()) {
-            setBroadcastStatus('Stop browser recording before going live, then start recording again after the live connection is active so Studio can record the active broadcast tracks.', 'error');
-            return;
-        }
         if (!state.broadcastVideoId && els.broadcastMode && els.broadcastMode.value === 'interactive' && els.broadcastRequirePasscode && els.broadcastRequirePasscode.checked && (!els.broadcastPasscode || !els.broadcastPasscode.value.trim())) {
             setBroadcastStatus('Enter a passcode before enabling passcode access.', 'error');
             return;
         }
+        lockOutputQualityPreset();
         setBroadcastStatus(strings.goingLive, 'info');
         state.broadcastStarting = true;
         state.broadcastReady = false;
@@ -5697,6 +5754,7 @@
             setShellClass('is-live', false);
             renderTransitionButtons();
             setBroadcastStatus((error && error.message) || strings.broadcastFailed, 'error');
+            releaseOutputQualityPresetIfIdle();
         }
     }
 
@@ -5760,6 +5818,7 @@
         setShellClass('is-live', false);
         renderTransitionButtons();
         setBroadcastStatus((state.recordingStoppedAt && !state.serverStopConfirmed) ? 'Live ended. Recording upload is still finishing.' : strings.liveEnded, 'success');
+        releaseOutputQualityPresetIfIdle();
     }
 
 
@@ -5868,6 +5927,44 @@
         renderPreviewMediaTransform();
     }
 
+
+    async function refreshActiveCameraConstraintsForQuality() {
+        const activeSources = Array.from(state.cameraSources.values()).filter((source) => source && !source.removed && hasLiveVideoTrack(source.stream));
+        if (!activeSources.length) { return; }
+        const results = await Promise.all(activeSources.map(async (source) => {
+            try {
+                await startCameraSource(source.sourceId, { force: true, preserveOnFailure: true, deviceId: source.deviceId });
+                return null;
+            } catch (error) {
+                return source.label + ': ' + friendlyMediaError(error);
+            }
+        }));
+        const failures = results.filter(Boolean);
+        if (failures.length) {
+            setDeviceStatus('Some cameras kept their previous working stream: ' + failures.join(' '), 'warning');
+        } else {
+            setDeviceStatus('Active camera constraints refreshed for the selected quality preset.', 'success');
+        }
+        updateCameraResolutionDiagnostics();
+    }
+
+    function updateCameraResolutionDiagnostics() {
+        const presetKey = getOutputPresetKey();
+        const messages = [];
+        state.cameraSources.forEach((source) => {
+            if (!source || !hasLiveVideoTrack(source.stream) || !source.actualWidth || !source.actualHeight) { return; }
+            if (presetKey === 'professional_4k') {
+                if (source.actualWidth >= 3840 && source.actualHeight >= 2160) {
+                    messages.push(source.label + ': Native 4K camera input detected.');
+                } else {
+                    messages.push(source.label + ': This camera is providing ' + source.actualWidth + '×' + source.actualHeight + '. The 4K Program output will upscale this source.');
+                }
+            } else {
+                messages.push(source.label + ': camera input ' + source.actualWidth + '×' + source.actualHeight + (source.actualFrameRate ? ' @ ' + Math.round(source.actualFrameRate) + ' fps' : '') + '.');
+            }
+        });
+        if (messages.length) { setDeviceStatus(messages.join(' '), presetKey === 'professional_4k' ? 'warning' : 'info'); }
+    }
 
     async function testCameraDevice() {
         if (!state.support.getUserMedia) { setDeviceStatus(getStudioString('cameraTestingUnavailable', 'Camera testing is unavailable in this browser.'), 'error'); return; }
@@ -6304,14 +6401,15 @@
         }
         if (els.qualitySelect) {
             els.qualitySelect.addEventListener('change', () => {
-                updateQualityDetails();
-
-                if (state.broadcastSession || isRecordingActive()) {
+                if (state.broadcastSession || isRecordingActive() || state.activeQualityPresetKey) {
+                    updateQualitySelectorLock();
                     setStatus('Quality changes apply before going live or recording starts.', 'warning');
                     return;
                 }
 
+                updateQualityDetails();
                 applyProgramCanvasResolution();
+                refreshActiveCameraConstraintsForQuality();
             });
         }
         if (els.toggleMediaControls) { els.toggleMediaControls.addEventListener('click', toggleSelectedMediaControls); }

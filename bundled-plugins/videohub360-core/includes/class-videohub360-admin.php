@@ -1084,8 +1084,8 @@ class VideoHub360_Admin {
                 </div>
                 <div class="vh360-settings-card">
                     <div class="vh360-settings-card__header">
-                        <h2>Video Quality & Streaming Settings</h2>
-                            <p>Set global playback quality, mirror controls, badges, and 4K streaming options.</p>
+                        <h2>Playback Quality & Player Settings</h2>
+                            <p>Controls viewer playback preferences, quality controls, mirror controls, badges, and player-facing 4K options. VH360 Studio production quality is configured under Studio settings.</p>
                     </div>
                     <table class="form-table vh360-settings-card__table">
                         <tbody>
@@ -1411,7 +1411,7 @@ class VideoHub360_Admin {
 
         <!-- Video Quality Settings Section -->
         <div class="vh360-meta-section">
-            <h3>🎬 Video Quality & Mirror Settings</h3>
+            <h3>🎬 Playback Quality & Mirror Settings</h3>
             <div class="vh360-field">
                 <label>
                     <input type="checkbox" id="vh360_override_quality_settings" name="vh360_override_quality_settings" value="yes" <?php checked($post_quality_override, 'yes'); ?> />

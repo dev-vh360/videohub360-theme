@@ -165,7 +165,7 @@ class VH360_Studio_Recording_Jobs {
                     'source_id'       => '',
                     'room_id'         => '',
                     'recording_mode'  => 'browser',
-                    'quality_preset'  => VH360_Studio_Quality_Presets::DEFAULT_PRESET,
+                    'quality_preset'  => VH360_Studio_Quality_Presets::get_default_preset(),
                     'storage_provider' => 'videopress',
                     'status'          => self::STATUS_CREATED,
                 )

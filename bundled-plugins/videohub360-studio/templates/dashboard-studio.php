@@ -296,7 +296,7 @@ $friendly_job_status = static function( $job ) {
                     <label for="vh360-studio-quality-select"><?php esc_html_e( 'Quality preset', 'videohub360-studio' ); ?></label>
                     <select id="vh360-studio-quality-select" data-quality-select>
                         <?php foreach ( $quality_presets as $preset_id => $preset ) : ?>
-                            <option value="<?php echo esc_attr( $preset_id ); ?>" <?php selected( $preset_id, $default_preset ); ?>><?php echo esc_html( $preset['label'] ); ?><?php if ( ! empty( $preset['recommended'] ) ) : ?> <?php esc_html_e( '(recommended)', 'videohub360-studio' ); ?><?php endif; ?></option>
+                            <option value="<?php echo esc_attr( $preset_id ); ?>" <?php selected( $preset_id, $default_preset ); ?>><?php echo esc_html( $preset['label'] ); ?><?php if ( ! empty( $preset['recommended'] ) ) : ?> <?php esc_html_e( '(recommended)', 'videohub360-studio' ); ?><?php elseif ( ! empty( $preset['advanced'] ) ) : ?> <?php esc_html_e( '(advanced)', 'videohub360-studio' ); ?><?php endif; ?></option>
                         <?php endforeach; ?>
                     </select>
                     <p class="vh360-studio-help" data-quality-details><?php echo esc_html( $default_label ); ?> · <?php esc_html_e( 'Higher quality creates larger files and longer uploads; lower presets remain available for smaller recordings.', 'videohub360-studio' ); ?></p>
