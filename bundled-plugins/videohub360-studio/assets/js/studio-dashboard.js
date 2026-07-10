@@ -406,7 +406,6 @@
                 mediaSource.element.play().catch(() => {});
             }
 
-            renderPreviewState();
             renderSourceState();
             setStatus(sourceLabel(sourceId) + ' staged in Preview.', 'success');
             return true;
@@ -419,8 +418,19 @@
         if (!isCurrentPreviewRequest()) {
             return false;
         }
+        if (isCameraSource(sourceId)) {
+            const cameraSource = getCameraSource(sourceId);
+            const ready = await ensureCameraElementPlaying(cameraSource);
+            if (!ready) {
+                setStatus((cameraSource && cameraSource.error) || getStudioString('cameraPlaybackNotReady', 'Camera video is not ready yet.'), 'warning');
+                renderSourceState();
+                return false;
+            }
+            if (!isCurrentPreviewRequest()) {
+                return false;
+            }
+        }
         state.previewSource = sourceId;
-        renderPreviewState();
         renderSourceState();
         setStatus(sourceLabel(sourceId) + ' staged in Preview.', 'success');
         return true;
@@ -463,6 +473,13 @@
                 }
             } else {
                 stream = await getSourceStream(nextSource);
+                if (isCameraSource(nextSource)) {
+                    const cameraSource = getCameraSource(nextSource);
+                    const ready = await ensureCameraElementPlaying(cameraSource);
+                    if (!ready) {
+                        throw new Error((cameraSource && cameraSource.error) || getStudioString('cameraPlaybackNotReady', 'Camera video is not ready yet.'));
+                    }
+                }
             }
 
             state.programSource = nextSource;
@@ -506,13 +523,13 @@
         root.classList.toggle('is-preview-source-media', isMediaSource(state.previewSource));
 
         if (els.cameraPreviewContainer) {
-            els.cameraPreviewContainer.innerHTML = '';
-            if (isCameraSource(state.previewSource)) {
-                const cameraSource = getCameraSource(state.previewSource);
-                if (cameraSource && cameraSource.element) {
-                    els.cameraPreviewContainer.appendChild(cameraSource.element);
-                }
-            }
+            state.cameraSources.forEach((source) => {
+                ensureCameraElementAttached(source);
+                if (!source.element) { return; }
+                const active = source.sourceId === state.previewSource;
+                source.element.classList.toggle('is-preview-active', active);
+                source.element.setAttribute('aria-hidden', active ? 'false' : 'true');
+            });
         }
 
         if (els.mediaPreview) {
@@ -548,6 +565,75 @@
         renderSelectedCameraControls();
         updateOperatorStatus();
         renderProgramLiveControls();
+    }
+
+    function ensureCameraElementAttached(source) {
+        if (!source || source.removed || source.detached || !source.element || !els.cameraPreviewContainer) { return; }
+        if (source.element.parentNode !== els.cameraPreviewContainer) {
+            els.cameraPreviewContainer.appendChild(source.element);
+        }
+    }
+
+    function isCameraElementDrawable(source) {
+        const element = source && source.element;
+        return Boolean(
+            element &&
+            !element.paused &&
+            !element.ended &&
+            element.readyState >= 2 &&
+            element.videoWidth > 0 &&
+            element.videoHeight > 0
+        );
+    }
+
+    function waitForCameraElementData(element, timeoutMs = 2500) {
+        if (!element) { return Promise.resolve(false); }
+        if (element.readyState >= 2 && element.videoWidth > 0 && element.videoHeight > 0) {
+            return Promise.resolve(true);
+        }
+        return new Promise((resolve) => {
+            let settled = false;
+            const done = () => {
+                if (settled) { return; }
+                settled = true;
+                cleanupListeners();
+                resolve(element.readyState >= 2 && element.videoWidth > 0 && element.videoHeight > 0);
+            };
+            const cleanupListeners = () => {
+                window.clearTimeout(timer);
+                ['loadedmetadata', 'loadeddata', 'canplay', 'playing'].forEach((eventName) => {
+                    element.removeEventListener(eventName, done);
+                });
+            };
+            const timer = window.setTimeout(done, timeoutMs);
+            ['loadedmetadata', 'loadeddata', 'canplay', 'playing'].forEach((eventName) => {
+                element.addEventListener(eventName, done, { once: true });
+            });
+        });
+    }
+
+    async function ensureCameraElementPlaying(source, options = {}) {
+        if (!source || !source.element || !hasLiveVideoTrack(source.stream)) { return false; }
+        ensureCameraElementAttached(source);
+        if (source.element.srcObject !== source.stream) {
+            source.element.srcObject = source.stream;
+        }
+        try {
+            if (source.element.paused || source.element.ended || source.element.readyState < 2 || !source.element.videoWidth || !source.element.videoHeight) {
+                await source.element.play();
+            }
+            const ready = await waitForCameraElementData(source.element, options.timeoutMs || 2500);
+            if (ready && isCameraElementDrawable(source)) {
+                source.error = source.error === getStudioString('cameraPlaybackNotReady', 'Camera video is not ready yet.') ? '' : source.error;
+                return true;
+            }
+            source.error = getStudioString('cameraPlaybackNotReady', 'Camera video is not ready yet.');
+            return false;
+        } catch (error) {
+            source.error = (error && error.message) || getStudioString('cameraPlaybackFailed', 'Camera playback could not resume.');
+            setDeviceStatus(source.label + ': ' + source.error, 'warning');
+            return false;
+        }
     }
 
     function selectSceneSource(sourceId) {
@@ -977,8 +1063,17 @@
         }
         if (isCameraSource(state.programSource)) {
             const cameraSource = getCameraSource(state.programSource);
-            if (cameraSource && cameraSource.element && cameraSource.element.readyState >= 2) {
+            if (isCameraElementDrawable(cameraSource)) {
                 drawVideoContain(context, cameraSource.element, width, height, true);
+            } else if (cameraSource && !cameraSource.playbackRecoveryPending) {
+                cameraSource.playbackRecoveryPending = true;
+                ensureCameraElementPlaying(cameraSource)
+                    .then((ready) => {
+                        if (!ready) {
+                            setProgramDiagnostics((cameraSource.label || sourceLabel(cameraSource.sourceId)) + ': ' + (cameraSource.error || getStudioString('cameraPlaybackNotReady', 'Camera video is not ready yet.')));
+                        }
+                    })
+                    .finally(() => { cameraSource.playbackRecoveryPending = false; });
             }
         } else if (state.programSource === 'screen') {
             if (els.screenPreview && els.screenPreview.readyState >= 2) {
@@ -2360,6 +2455,11 @@
             return;
         }
         updateProgramCompositorLoop();
+        state.cameraSources.forEach((source) => {
+            if (hasLiveVideoTrack(source.stream)) {
+                ensureCameraElementPlaying(source).catch(() => {});
+            }
+        });
         if (state.tabProtectionWarningPending) {
             state.tabProtectionWarningPending = false;
             setProgramDiagnostics('Program resumed');
@@ -2697,9 +2797,11 @@
             status: 'off',
             error: '',
             removed: false,
+            detached: false,
             startRequestId: 0,
         };
         source.element = createCameraElement(source);
+        ensureCameraElementAttached(source);
         state.cameraSources.set(id, source);
         if (source.isPrimary || !state.primaryCameraSourceId) {
             state.primaryCameraSourceId = id;
@@ -3138,6 +3240,8 @@
         renderSelectedCameraControls();
         try {
             const preset = getSelectedPreset();
+            source.detached = false;
+            ensureCameraElementAttached(source);
             const stream = await navigator.mediaDevices.getUserMedia({ video: buildVideoConstraints(preset, requestedDeviceId), audio: false });
             if (source.removed || requestId !== source.startRequestId) {
                 stopStream(stream);
@@ -3146,7 +3250,6 @@
             stopStream(source.stream);
             source.stream = stream;
             source.element.srcObject = stream;
-            await source.element.play().catch(() => {});
             const track = stream.getVideoTracks()[0];
             const settings = track && typeof track.getSettings === 'function' ? track.getSettings() : {};
             source.deviceId = settings && settings.deviceId ? settings.deviceId : requestedDeviceId || source.deviceId;
@@ -3157,11 +3260,14 @@
             source.status = 'active';
             source.error = '';
             if (track) { track.addEventListener('ended', () => handleCameraSourceEnded(source.sourceId, stream), { once: true }); }
+            const ready = await ensureCameraElementPlaying(source);
+            if (!ready) {
+                throw new Error(source.error || getStudioString('cameraPlaybackNotReady', 'Camera video is not ready yet.'));
+            }
             ensureAudioInputStreams().catch((micError) => setDeviceStatus(friendlyMediaError(micError), 'warning'));
             await populateDevices({ reason: 'camera-start', keepDefaultCamera: true }).catch(() => {});
             if (state.programSource === source.sourceId) { state.programStream = stream; renderProgramState(); }
             scheduleCameraSourceConfigurationSave();
-            renderPreviewState();
             renderSourceState();
             return stream;
         } catch (error) {
@@ -3198,12 +3304,15 @@
         stopStream(source.stream);
         source.stream = null;
         if (source.element) { source.element.srcObject = null; }
+        if (options.detach && source.element && source.element.parentNode) {
+            source.element.parentNode.removeChild(source.element);
+        }
+        source.detached = Boolean(options.detach);
         source.connected = false;
         source.connecting = false;
         source.status = source.unavailable ? 'unavailable' : 'off';
         if (state.previewSource === source.sourceId) { state.previewSource = fallbackPreviewSource(source.sourceId); }
         if (state.programSource === source.sourceId) { state.programSource = null; state.programStream = null; renderProgramState(); }
-        renderPreviewState();
         renderSourceState();
         return true;
     }
@@ -3238,12 +3347,11 @@
             renderProgramState();
         }
         setDeviceStatus(source.label + ': ' + source.error, 'warning');
-        renderPreviewState();
         renderSourceState();
     }
 
     function stopAllCameraSources(options = {}) {
-        state.cameraSources.forEach((source) => stopCameraSource(source.sourceId, Object.assign({}, options, { force: true })));
+        state.cameraSources.forEach((source) => stopCameraSource(source.sourceId, Object.assign({}, options, { force: true, detach: Boolean(options.detach) })));
     }
 
     async function startPreview(updateSelection = true, options = {}) {
@@ -3253,7 +3361,6 @@
             setShellClass('is-preview-active', true);
             if (updateSelection) {
                 state.previewSource = sourceId;
-                renderPreviewState();
                 renderSourceState();
                 setStatus(sourceLabel(sourceId) + ' staged in Preview.', 'success');
             } else {
@@ -3379,7 +3486,6 @@
             setShellClass('is-screen-active', true);
             if (updateSelection) {
                 state.previewSource = 'screen';
-                renderPreviewState();
                 renderSourceState();
                 setStatus('Screen Share staged in Preview.', 'success');
             } else {
@@ -3405,7 +3511,6 @@
         setShellClass('is-screen-active', false);
         if (state.previewSource === 'screen') {
             state.previewSource = fallbackPreviewSource('screen');
-            renderPreviewState();
             renderSourceState();
         }
         if (state.programSource === 'screen') {
@@ -3425,7 +3530,6 @@
         setShellClass('is-screen-active', false);
         if (state.previewSource === 'screen') {
             state.previewSource = fallbackPreviewSource('screen');
-            renderPreviewState();
             renderSourceState();
         }
         if (state.programSource === 'screen') {
@@ -3925,7 +4029,6 @@
         if (els.mediaPreview) {
             els.mediaPreview.innerHTML = '';
         }
-        renderPreviewState();
         renderProgramState();
         renderSourceState();
         renderSceneControls();
@@ -3974,7 +4077,6 @@
             els.mediaPreview.innerHTML = '';
         }
 
-        renderPreviewState();
         renderProgramState();
         renderSourceState();
         renderSceneControls();
@@ -3995,8 +4097,8 @@
             if (!window.confirm(getStudioString('removeCameraSourceConfirm', 'Remove this video capture device source?'))) {
                 return;
             }
-            stopCameraSource(cameraSource.sourceId, { force: true });
             cameraSource.removed = true;
+            stopCameraSource(cameraSource.sourceId, { force: true, detach: true });
             state.cameraSources.delete(cameraSource.id);
             if (state.selectedSceneSource === cameraSource.sourceId) { state.selectedSceneSource = ''; }
             if (state.previewSource === cameraSource.sourceId) { state.previewSource = null; }
@@ -5298,7 +5400,7 @@
         const canStopProgramOutput = !state.broadcastSession && !isRecordingActive();
         const releaseMediaSources = options.releaseMediaSources === true;
 
-        stopAllCameraSources({ force: true });
+        stopAllCameraSources({ force: true, detach: releaseMediaSources });
         stopScreenPreview({ force: true });
         stopProgramCompositor({ stopTracks: canStopProgramOutput, clearStream: canStopProgramOutput });
         state.audioInputs.forEach((input) => stopAudioInput(input.id));
@@ -5309,7 +5411,6 @@
             state.previewSource = null;
             state.programSource = null;
             state.programStream = null;
-            renderPreviewState();
             renderProgramState();
             updateProgramAudioRouting();
             renderSourceState();
@@ -5903,7 +6004,6 @@
                     }
                     setStatus(friendlyMediaError(error), 'error');
                     setDeviceStatus(friendlyMediaError(error), 'error');
-                    renderPreviewState();
                     renderSourceState();
                 }
             });

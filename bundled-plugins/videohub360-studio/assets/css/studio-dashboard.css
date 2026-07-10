@@ -801,9 +801,21 @@ body.vh360-studio-window-mode .vh360-studio-dashboard {
 }
 
 .vh360-studio-camera-source-video {
+    inset: 0;
     height: 100%;
+    opacity: 0;
     object-fit: cover;
+    pointer-events: none;
+    position: absolute;
+    visibility: hidden;
     width: 100%;
+    z-index: 1;
+}
+
+.vh360-studio-camera-source-video.is-preview-active {
+    opacity: 1;
+    visibility: visible;
+    z-index: 2;
 }
 
 .vh360-studio-scene-list button.is-unavailable {
