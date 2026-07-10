@@ -4297,6 +4297,9 @@
                 }
                 state.programStream = null;
             }
+            if (!hasProgramOutput()) {
+                throw new Error(getStudioString('chooseProgramSourceBeforeRecording', 'Choose a Program source before recording.'));
+            }
             renderProgramState();
             applyProgramCanvasResolution({ force: true });
             ensureProgramCompositor();
@@ -4306,13 +4309,16 @@
                 if (staged) {
                     state.programSource = state.previewSource;
                     state.programStream = await getSourceStream(state.programSource);
+                    if (!hasProgramOutput()) {
+                        throw new Error(getStudioString('chooseProgramSourceBeforeRecording', 'Choose a Program source before recording.'));
+                    }
                     renderProgramState();
                     ensureProgramCompositor();
                     state.recordingStream = await buildRecordingStreamFromProgram();
                 }
             }
             if (!state.recordingStream) {
-                throw new Error('Choose a Program source before recording.');
+                throw new Error(getStudioString('chooseProgramSourceBeforeRecording', 'Choose a Program source before recording.'));
             }
             jobId = await ensureSetupJob();
             const mimeType = preferredMimeType();

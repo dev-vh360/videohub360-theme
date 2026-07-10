@@ -199,6 +199,7 @@ class VH360_Studio_Assets {
                 'removeCameraSourceConfirm' => __( 'Remove this video capture device source?', 'videohub360-studio' ),
                 'configuredCameraSourcesReadinessLabel' => __( 'Configured camera sources', 'videohub360-studio' ),
                 'chooseProgramSourceBeforeLive' => __( 'Choose a Program source before going live.', 'videohub360-studio' ),
+                'chooseProgramSourceBeforeRecording' => __( 'Choose a Program source before recording.', 'videohub360-studio' ),
                 'primaryMicrophoneSummaryLabel' => __( 'Primary microphone', 'videohub360-studio' ),
                 'cameraSelectedReadinessLabel' => __( 'Camera selected', 'videohub360-studio' ),
                 'primaryMicrophoneSelectedReadinessLabel' => __( 'Primary microphone selected', 'videohub360-studio' ),
