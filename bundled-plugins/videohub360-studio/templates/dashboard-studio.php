@@ -280,7 +280,7 @@ $friendly_job_status = static function( $job ) {
                     <select id="vh360-studio-mic-select" data-mic-select disabled>
                         <option value=""><?php esc_html_e( 'Grant microphone access to list devices', 'videohub360-studio' ); ?></option>
                     </select>
-                    <p class="vh360-studio-help" data-device-status><?php esc_html_e( 'Refresh devices after plugging in a USB camera or granting browser permission.', 'videohub360-studio' ); ?></p>
+                    <p class="vh360-studio-help" data-device-status role="status" aria-live="polite" aria-atomic="true"><?php esc_html_e( 'Refresh devices after plugging in a USB camera or granting browser permission.', 'videohub360-studio' ); ?></p>
                     <div class="vh360-studio-device-actions">
                         <button type="button" class="vh360-studio-button vh360-studio-button--ghost" data-test-camera><?php esc_html_e( 'Test Camera', 'videohub360-studio' ); ?></button>
                         <button type="button" class="vh360-studio-button vh360-studio-button--ghost" data-test-microphone><?php esc_html_e( 'Test Microphone', 'videohub360-studio' ); ?></button>
@@ -301,16 +301,22 @@ $friendly_job_status = static function( $job ) {
                 <div class="vh360-studio-dock-body">
                     <?php
                     $audio_channels = array(
-                        'mic'    => __( 'Microphone', 'videohub360-studio' ),
                         'screen' => __( 'Screen Share', 'videohub360-studio' ),
                         'media'  => __( 'Media/Asset', 'videohub360-studio' ),
                         'master' => __( 'Master Output', 'videohub360-studio' ),
                     );
                     ?>
-                    <div class="vh360-studio-audio-mixer" role="group" aria-label="<?php esc_attr_e( 'Studio audio mixer channels', 'videohub360-studio' ); ?>">
+                    <div class="vh360-studio-audio-mixer-toolbar">
+                        <button type="button" class="vh360-studio-button vh360-studio-button--ghost" data-add-audio-input>
+                            <?php esc_html_e( 'Add Audio Input', 'videohub360-studio' ); ?>
+                        </button>
+                        <p class="vh360-studio-help"><?php esc_html_e( 'Each input represents one browser-visible microphone or USB audio device. Hardware mixer sub-channels are not separated by Studio.', 'videohub360-studio' ); ?></p>
+                    </div>
+                    <div class="vh360-studio-audio-mixer" data-audio-mixer role="group" aria-label="<?php esc_attr_e( 'Studio audio mixer channels', 'videohub360-studio' ); ?>">
+                        <div class="vh360-studio-audio-input-channels" data-audio-input-channels></div>
                         <?php foreach ( $audio_channels as $channel_id => $channel_label ) : ?>
                             <?php
-                            $channel_display = 'mic' === $channel_id ? __( 'Mic/Aux', 'videohub360-studio' ) : $channel_label;
+                            $channel_display = $channel_label;
                             $initial_status  = 'master' === $channel_id ? __( 'Active', 'videohub360-studio' ) : __( 'Off', 'videohub360-studio' );
                             ?>
                             <div class="vh360-studio-audio-channel" data-mixer-channel="<?php echo esc_attr( $channel_id ); ?>">
@@ -325,7 +331,7 @@ $friendly_job_status = static function( $job ) {
                                     <?php else : ?>
                                         <span class="vh360-studio-audio-master-note"><?php esc_html_e( 'Mix', 'videohub360-studio' ); ?></span>
                                     <?php endif; ?>
-                                    <div class="vh360-studio-meter" aria-label="<?php echo esc_attr( $channel_label ); ?> <?php esc_attr_e( 'level', 'videohub360-studio' ); ?>"><span <?php echo 'mic' === $channel_id ? 'data-mic-meter ' : ''; ?>data-mixer-meter="<?php echo esc_attr( $channel_id ); ?>"></span></div>
+                                    <div class="vh360-studio-meter" aria-label="<?php echo esc_attr( $channel_label ); ?> <?php esc_attr_e( 'level', 'videohub360-studio' ); ?>"><span data-mixer-meter="<?php echo esc_attr( $channel_id ); ?>"></span></div>
                                 </div>
                                 <?php if ( 'master' !== $channel_id ) : ?>
                                     <button type="button" class="vh360-studio-audio-mute" data-mixer-mute="<?php echo esc_attr( $channel_id ); ?>" aria-pressed="false" aria-label="<?php echo esc_attr( sprintf( __( 'Mute %s', 'videohub360-studio' ), $channel_label ) ); ?>"><span class="screen-reader-text"><?php echo esc_html( sprintf( __( 'Mute %s', 'videohub360-studio' ), $channel_label ) ); ?></span></button>
