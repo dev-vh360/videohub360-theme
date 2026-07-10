@@ -7,7 +7,7 @@
 
     window.VH360AgoraBroadcaster = {
         create: function (config) {
-            const state = { client: null, audioTrack: null, videoTrack: null, videoTrackOwnsSource: true, joined: false, published: false };
+            const state = { client: null, audioTrack: null, audioTrackOwnsSource: true, videoTrack: null, videoTrackOwnsSource: true, joined: false, published: false };
             const root = config.container || document;
             const localContainer = config.localContainer || root.querySelector('[data-agora-local-preview]') || root;
 
@@ -48,7 +48,15 @@
                 if (clientMode === 'live' && typeof state.client.setClientRole === 'function') {
                     await state.client.setClientRole('host');
                 }
-                state.audioTrack = await window.AgoraRTC.createMicrophoneAudioTrack(config.audioConfig || {});
+                if (config.initialAudioMediaStreamTrack && typeof window.AgoraRTC.createCustomAudioTrack === 'function') {
+                    state.audioTrack = window.AgoraRTC.createCustomAudioTrack({
+                        mediaStreamTrack: config.initialAudioMediaStreamTrack
+                    });
+                    state.audioTrackOwnsSource = false;
+                } else {
+                    state.audioTrack = await window.AgoraRTC.createMicrophoneAudioTrack(config.audioConfig || {});
+                    state.audioTrackOwnsSource = true;
+                }
                 if (config.initialVideoMediaStreamTrack && typeof window.AgoraRTC.createCustomVideoTrack === 'function') {
                     state.videoTrack = window.AgoraRTC.createCustomVideoTrack({
                         mediaStreamTrack: config.initialVideoMediaStreamTrack
@@ -58,7 +66,7 @@
                     state.videoTrack = await window.AgoraRTC.createCameraVideoTrack(config.videoConfig || {});
                     state.videoTrackOwnsSource = true;
                 }
-                bindTrackLifecycle(state.audioTrack, 'audio', 'microphone');
+                bindTrackLifecycle(state.audioTrack, 'audio', config.initialAudioMediaStreamTrack ? 'studio-mix' : 'microphone');
                 bindTrackLifecycle(state.videoTrack, 'video', config.initialVideoMediaStreamTrack ? 'program' : 'camera');
                 if (localContainer) {
                     state.videoTrack.play(localContainer, { mirror: config.initialVideoSource !== 'screen' });
@@ -77,8 +85,9 @@
                 }
                 if (state.audioTrack) {
                     state.audioTrack.stop();
-                    state.audioTrack.close();
+                    if (state.audioTrackOwnsSource && typeof state.audioTrack.close === 'function') { state.audioTrack.close(); }
                     state.audioTrack = null;
+                    state.audioTrackOwnsSource = true;
                 }
                 if (state.videoTrack) {
                     stopAndMaybeCloseVideoTrack(state.videoTrack, state.videoTrackOwnsSource);
@@ -120,6 +129,13 @@
                 isReadyToPublish: isReadyToPublish,
                 muteAudio: function (muted) { return state.audioTrack && state.audioTrack.setEnabled(!muted); },
                 muteVideo: function (muted) { return state.videoTrack && state.videoTrack.setEnabled(!muted); },
+                getAudioTrackId: function () {
+                    if (state.audioTrack && typeof state.audioTrack.getMediaStreamTrack === 'function') {
+                        const track = state.audioTrack.getMediaStreamTrack();
+                        return track ? track.id : '';
+                    }
+                    return '';
+                },
                 getLocalMediaStream: function () {
                     const tracks = [];
                     if (state.audioTrack && typeof state.audioTrack.getMediaStreamTrack === 'function') {
