@@ -86,6 +86,12 @@
         programHiddenFrameRate: 8,
         programStatusMessage: 'Program active',
         tabProtectionWarningPending: false,
+        studioDocumentHidden: false,
+        hiddenActiveCameraSourceIds: new Set(),
+        hiddenActiveAudioInputIds: new Set(),
+        hiddenScreenWasActive: false,
+        pageStoredInBackForwardCache: false,
+        visibilityRestorePromise: null,
         isStudioWindow: false,
         programFrameRate: 30,
         programWidth: 1920,
@@ -1011,7 +1017,7 @@
             if (!state.programHiddenTimer) {
                 drawProgramFrame({ hiddenFallback: true });
             }
-            setProgramDiagnostics('Tab hidden — browser may throttle video');
+            setProgramDiagnostics(getStudioString('studioHiddenBackgroundWarning', 'Studio is hidden. Browser background limits may reduce the Program frame rate.'));
             return;
         }
         stopHiddenProgramLoop();
@@ -2443,30 +2449,191 @@
         setStatus('Popup blocking prevented Studio Window from opening. Allow popups for this site and try again.', 'warning');
     }
 
-    function handleStudioVisibilityChange() {
-        if (document.hidden) {
-            if (isOnAirOrRecording()) {
-                state.tabProtectionWarningPending = true;
-                setProgramDiagnostics('Tab hidden — browser may throttle video');
-                updateProgramCompositorLoop();
-                return;
-            }
-            cleanup({ releaseMediaSources: false });
-            return;
-        }
-        updateProgramCompositorLoop();
+    function captureHiddenStudioState() {
+        state.hiddenActiveCameraSourceIds = new Set();
+        state.hiddenActiveAudioInputIds = new Set();
+
         state.cameraSources.forEach((source) => {
             if (hasLiveVideoTrack(source.stream)) {
-                ensureCameraElementPlaying(source).catch(() => {});
+                state.hiddenActiveCameraSourceIds.add(source.sourceId);
             }
         });
-        if (state.tabProtectionWarningPending) {
-            state.tabProtectionWarningPending = false;
-            setProgramDiagnostics('Program resumed');
-            setBroadcastStatus('Keep Studio visible while live. Your browser may pause Program video when this tab is hidden.', 'warning');
-        } else {
-            setProgramDiagnostics('Program active');
+
+        state.audioInputs.forEach((input) => {
+            if (hasLiveAudioTrack(input.stream)) {
+                state.hiddenActiveAudioInputIds.add(input.id);
+            }
+        });
+
+        state.hiddenScreenWasActive = hasLiveVideoTrack(state.screenStream);
+    }
+
+    async function restartCameraAfterVisibility(source) {
+        if (!source || !state.hiddenActiveCameraSourceIds.has(source.sourceId) || hasLiveVideoTrack(source.stream) || !source.deviceId || source.removed) {
+            return null;
         }
+
+        try {
+            return await startCameraSource(source.sourceId, {
+                force: true,
+                deviceId: source.deviceId,
+                deviceLabel: source.deviceLabel,
+                preserveOnFailure: true,
+            });
+        } catch (error) {
+            source.connected = false;
+            source.connecting = false;
+            source.unavailable = true;
+            source.status = 'disconnected';
+            source.error = (error && error.message) || getStudioString('cameraVisibilityRestartFailed', 'A previously active camera could not restart after Studio became visible.');
+            setDeviceStatus((source.label || sourceLabel(source.sourceId)) + ': ' + source.error, 'warning');
+            renderSourceState();
+            return null;
+        }
+    }
+
+    async function restartAudioInputAfterVisibility(input) {
+        if (!input || input.removed || !state.hiddenActiveAudioInputIds.has(input.id) || hasLiveAudioTrack(input.stream)) {
+            return null;
+        }
+
+        try {
+            const stream = await startAudioInput(input.id, {
+                force: true,
+                reason: 'visibility-restore',
+            });
+            const current = state.audioInputs.get(input.id);
+            if (hasLiveAudioTrack(stream) || hasLiveAudioTrack(current && current.stream)) {
+                return stream;
+            }
+            return null;
+        } catch (error) {
+            const current = state.audioInputs.get(input.id);
+
+            if (current) {
+                current.connected = false;
+                current.connecting = false;
+                current.unavailable = true;
+                current.status = 'disconnected';
+                current.error = (error && error.message) || getStudioString('audioVisibilityRestartFailed', 'A previously active audio input could not restart after Studio became visible.');
+                disconnectMixerChannel(current.mixerChannelId, current.id);
+            }
+
+            return null;
+        }
+    }
+
+    async function restoreScreenPlaybackAfterVisibility() {
+        if (!state.hiddenScreenWasActive && !state.screenStream) {
+            return;
+        }
+
+        if (hasLiveVideoTrack(state.screenStream)) {
+            if (els.screenPreview) {
+                if (els.screenPreview.srcObject !== state.screenStream) {
+                    els.screenPreview.srcObject = state.screenStream;
+                }
+                await els.screenPreview.play().catch(() => {});
+            }
+            setShellClass('is-screen-active', true);
+            updateProgramAudioRouting();
+            return;
+        }
+
+        if (state.screenStream) {
+            await handleScreenShareEnded();
+        }
+    }
+
+    async function resumeStudioAudioContext() {
+        const context = state.audioMixer && state.audioMixer.context ? state.audioMixer.context : null;
+
+        if (context && context.state === 'suspended' && typeof context.resume === 'function') {
+            try {
+                await context.resume();
+            } catch (error) {
+                setStatus(getStudioString('audioContextResumeFailed', 'Studio audio could not resume automatically. Interact with the Studio window and try again.'), 'warning');
+            }
+        }
+    }
+
+    function requestFreshProgramFrame() {
+        const track = state.programOutputStream && state.programOutputStream.getVideoTracks ? state.programOutputStream.getVideoTracks()[0] : null;
+        if (state.programContext && state.programCanvas && !state.programAnimationFrame && !state.programHiddenTimer) {
+            drawProgramFrame({ hiddenFallback: document.hidden && isOnAirOrRecording() });
+        }
+        if (track && typeof track.requestFrame === 'function') {
+            track.requestFrame();
+        }
+    }
+
+    async function restoreStudioMediaAfterVisibility() {
+        const cameraRecoveries = [];
+        const audioRecoveries = [];
+
+        state.cameraSources.forEach((source) => {
+            if (hasLiveVideoTrack(source.stream)) {
+                cameraRecoveries.push(ensureCameraElementPlaying(source));
+                return;
+            }
+
+            if (state.hiddenActiveCameraSourceIds.has(source.sourceId)) {
+                cameraRecoveries.push(restartCameraAfterVisibility(source));
+            }
+        });
+
+        state.audioInputs.forEach((input) => {
+            if (state.hiddenActiveAudioInputIds.has(input.id) && !hasLiveAudioTrack(input.stream)) {
+                audioRecoveries.push(restartAudioInputAfterVisibility(input));
+            }
+        });
+
+        await Promise.allSettled(cameraRecoveries);
+        await Promise.allSettled(audioRecoveries);
+        await restoreScreenPlaybackAfterVisibility();
+        await resumeStudioAudioContext();
+
+        ensureProgramCompositor();
+        updateProgramCompositorLoop();
+        requestFreshProgramFrame();
+
+        renderSourceState();
+        renderProgramState();
+        refreshAudioInputDiagnostics();
+
+        state.tabProtectionWarningPending = false;
+        setProgramDiagnostics(getStudioString('studioVisibilityRestored', 'Studio media and Program output restored.'));
+    }
+
+    function queueStudioVisibilityRestore() {
+        if (state.visibilityRestorePromise) {
+            return state.visibilityRestorePromise;
+        }
+
+        state.visibilityRestorePromise = restoreStudioMediaAfterVisibility()
+            .finally(() => {
+                state.visibilityRestorePromise = null;
+            });
+
+        return state.visibilityRestorePromise;
+    }
+
+    function handleStudioVisibilityChange() {
+        if (document.hidden) {
+            captureHiddenStudioState();
+            state.studioDocumentHidden = true;
+            state.tabProtectionWarningPending = isOnAirOrRecording();
+            updateProgramCompositorLoop();
+
+            if (isOnAirOrRecording()) {
+                setProgramDiagnostics(getStudioString('studioHiddenBackgroundWarning', 'Studio is hidden. Browser background limits may reduce the Program frame rate.'));
+            }
+
+            return;
+        }
+
+        state.studioDocumentHidden = false;
+        queueStudioVisibilityRestore().catch(() => {});
     }
 
     function setStatus(message, type) {
@@ -6430,10 +6597,22 @@
                 }
             }
         });
-        window.addEventListener('pagehide', () => {
+        window.addEventListener('pagehide', (event) => {
+            flushCameraSourceConfigurationSave();
+            flushAudioInputConfigurationSave();
+            if (event.persisted) {
+                state.pageStoredInBackForwardCache = true;
+                return;
+            }
             endBroadcastKeepalive();
-            if (!isRecordingActive() && !state.broadcastSession) {
-                cleanup({ releaseMediaSources: true });
+        });
+        window.addEventListener('pageshow', (event) => {
+            if (event.persisted) {
+                state.pageStoredInBackForwardCache = false;
+                state.studioDocumentHidden = document.hidden;
+                if (!document.hidden) {
+                    queueStudioVisibilityRestore().catch(() => {});
+                }
             }
         });
         window.addEventListener('beforeunload', (event) => {
