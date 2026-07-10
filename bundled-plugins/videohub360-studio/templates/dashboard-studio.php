@@ -280,7 +280,7 @@ $friendly_job_status = static function( $job ) {
                     <select id="vh360-studio-mic-select" data-mic-select disabled>
                         <option value=""><?php esc_html_e( 'Grant microphone access to list devices', 'videohub360-studio' ); ?></option>
                     </select>
-                    <p class="vh360-studio-help" data-device-status><?php esc_html_e( 'Refresh devices after plugging in a USB camera or granting browser permission.', 'videohub360-studio' ); ?></p>
+                    <p class="vh360-studio-help" data-device-status role="status" aria-live="polite" aria-atomic="true"><?php esc_html_e( 'Refresh devices after plugging in a USB camera or granting browser permission.', 'videohub360-studio' ); ?></p>
                     <div class="vh360-studio-device-actions">
                         <button type="button" class="vh360-studio-button vh360-studio-button--ghost" data-test-camera><?php esc_html_e( 'Test Camera', 'videohub360-studio' ); ?></button>
                         <button type="button" class="vh360-studio-button vh360-studio-button--ghost" data-test-microphone><?php esc_html_e( 'Test Microphone', 'videohub360-studio' ); ?></button>

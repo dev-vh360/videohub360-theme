@@ -1555,10 +1555,9 @@
     function audioInputStatus(input) {
         if (!input) { return 'off'; }
         if (input.removed) { return 'removed'; }
-        if (input.muted && hasLiveAudioTrack(input.stream)) { return 'muted'; }
-        if (input.status) { return input.status; }
-        if (input.connecting) { return 'connecting'; }
-        if (hasLiveAudioTrack(input.stream)) { return 'active'; }
+        if (input.connecting || input.status === 'connecting') { return 'connecting'; }
+        if (hasLiveAudioTrack(input.stream)) { return input.muted ? 'muted' : 'active'; }
+        if (['permission-required', 'unavailable', 'disconnected', 'error', 'off'].includes(input.status)) { return input.status; }
         if (input.unavailable) { return 'unavailable'; }
         return 'off';
     }
@@ -1764,17 +1763,17 @@
             Object.keys(mixer.channels).forEach((id) => {
                 const channel = mixer.channels[id];
                 const input = state.audioInputs.get(id);
-                let label = channel.connected ? 'Active' : 'Off';
+                let label = channel.connected ? audioInputStatusLabel('active') : audioInputStatusLabel('off');
                 if (input) {
                     label = audioInputStatusLabel(channel.muted && hasLiveAudioTrack(input.stream) ? 'muted' : audioInputStatus(input));
                 }
                 root.querySelectorAll('[data-mixer-status="' + id + '"]').forEach((el) => {
-                    el.textContent = channel.muted && !input ? 'Muted' : label;
+                    el.textContent = channel.muted && !input ? audioInputStatusLabel('muted') : label;
                     el.dataset.statusState = (channel.muted && !input ? 'muted' : (input ? audioInputStatus(input) : label.toLowerCase()));
                 });
                 root.querySelectorAll('[data-mixer-mute="' + id + '"]').forEach((button) => { syncMixerMuteButton(button, channel); });
             });
-            root.querySelectorAll('[data-mixer-status="master"]').forEach((el) => { el.textContent = state.liveAudioMuted ? 'Muted' : 'Active'; });
+            root.querySelectorAll('[data-mixer-status="master"]').forEach((el) => { el.textContent = state.liveAudioMuted ? audioInputStatusLabel('muted') : audioInputStatusLabel('active'); });
         }
         renderAudioInputChannels();
     }
@@ -1864,7 +1863,7 @@
             el.style.setProperty('--vh360-meter-level', '0%');
             el.style.height = '0%';
         });
-        root.querySelectorAll('[data-mixer-status]').forEach((el) => { el.textContent = el.dataset.mixerStatus === 'master' ? 'Active' : 'Off'; });
+        root.querySelectorAll('[data-mixer-status]').forEach((el) => { el.textContent = el.dataset.mixerStatus === 'master' ? audioInputStatusLabel('active') : audioInputStatusLabel('off'); });
         root.querySelectorAll('[data-mixer-mute]').forEach((button) => { syncMixerMuteButton(button, null, false); });
     }
 
@@ -1974,7 +1973,7 @@
     }
 
     async function ensureAudioInputStreams() {
-        if (!state.audioInputs.size) { createAudioInputSource({ id: 'audio-input-1', label: 'Mic/Aux', isPrimary: true }); }
+        if (!state.audioInputs.size) { createAudioInputSource({ id: 'audio-input-1', label: getStudioString('primaryAudioInputLabel', 'Mic/Aux'), isPrimary: true }); }
         const results = await Promise.all(Array.from(state.audioInputs.keys()).map(async (id) => {
             const input = state.audioInputs.get(id);
             if (!input || input.removed) { return { id, status: 'removed', error: null }; }
@@ -2492,7 +2491,7 @@
 
     async function populateDevices(options = {}) {
         if (!state.support.enumerateDevices) {
-            setDeviceStatus('Device refresh is unavailable in this browser.', 'warning');
+            setDeviceStatus(getStudioString('deviceRefreshUnavailable', 'Device refresh is unavailable in this browser.'), 'warning');
             return;
         }
 
@@ -2505,16 +2504,24 @@
         if (state.selectedCameraId && !cameras.some((device) => device.deviceId === state.selectedCameraId)) {
             state.selectedCameraId = '';
             storageSet(CAMERA_STORAGE_KEY, '');
-            staleDeviceMessage = 'Your saved camera is no longer connected. Studio selected the default camera.';
+            staleDeviceMessage = getStudioString('savedCameraUnavailable', 'Your saved camera is no longer connected. Studio selected the default camera.');
         }
         state.availableAudioInputDevices = microphones;
         state.audioInputs.forEach((input) => {
             const live = hasLiveAudioTrack(input.stream);
             if (input.deviceId && !microphones.some((device) => device.deviceId === input.deviceId)) {
-                input.unavailable = true;
-                input.status = live ? 'disconnected' : 'unavailable';
-                input.error = getStudioString('selectedAudioDeviceUnavailable', 'Selected audio device is unavailable. Choose another device for this input.');
-                staleDeviceMessage = staleDeviceMessage ? staleDeviceMessage + ' ' + getStudioString('oneAudioInputUnavailable', 'One saved audio input is unavailable.') : getStudioString('oneAudioInputUnavailable', 'One saved audio input is unavailable.');
+                if (live) {
+                    input.connected = true;
+                    input.unavailable = false;
+                    input.status = input.muted ? 'muted' : 'active';
+                    input.error = '';
+                } else {
+                    input.connected = false;
+                    input.unavailable = true;
+                    input.status = 'unavailable';
+                    input.error = getStudioString('selectedAudioDeviceUnavailable', 'Selected audio device is unavailable. Choose another device for this input.');
+                    staleDeviceMessage = staleDeviceMessage ? staleDeviceMessage + ' ' + getStudioString('oneAudioInputUnavailable', 'One saved audio input is unavailable.') : getStudioString('oneAudioInputUnavailable', 'One saved audio input is unavailable.');
+                }
             } else if (!input.connected) {
                 input.unavailable = false;
                 if (input.status === 'unavailable') { input.status = 'off'; }
@@ -2536,8 +2543,8 @@
             storageSet(MIC_STORAGE_KEY, primary.deviceId);
         }
 
-        const cameraLabel = cameras.length === 1 ? '1 camera' : cameras.length + ' cameras';
-        const micLabel = microphones.length === 1 ? '1 microphone' : microphones.length + ' microphones';
+        const cameraLabel = (cameras.length === 1 ? getStudioString('oneCameraDetected', '1 camera') : getStudioString('multipleCamerasDetected', '{count} cameras').replace('{count}', cameras.length));
+        const micLabel = (microphones.length === 1 ? getStudioString('oneMicrophoneDetected', '1 microphone') : getStudioString('multipleMicrophonesDetected', '{count} microphones').replace('{count}', microphones.length));
         updateActiveDeviceSummary();
         renderAudioInputChannels();
         scheduleAudioInputConfigurationSave();
@@ -2547,20 +2554,21 @@
             return;
         }
         if (options.reason === 'manual' && (state.broadcastSession || isRecordingActive())) {
-            setDeviceStatus('Devices refreshed. Current live devices were not changed.', 'info');
+            setDeviceStatus(getStudioString('devicesRefreshedLiveUnchanged', 'Devices refreshed. Current live devices were not changed.'), 'info');
             return;
         }
         if (options.reason === 'devicechange' && !hadSavedCamera && cameras.length) {
-            setDeviceStatus('Device change detected. Cameras and microphones refreshed. New camera detected. Choose it from Sources.', 'info');
+            setDeviceStatus(getStudioString('deviceChangeNewCamera', 'Device change detected. Cameras and microphones refreshed. New camera detected. Choose it from Sources.'), 'info');
         }
         if (!cameras.length) {
             setStatus(strings.noCameraFound, 'warning');
-            setDeviceStatus('No cameras detected. Plug in a camera, grant browser permission, then refresh devices.', 'warning');
+            setDeviceStatus(getStudioString('noCamerasDetectedDetail', 'No cameras detected. Plug in a camera, grant browser permission, then refresh devices.'), 'warning');
         } else if (!microphones.length) {
             setStatus(strings.noMicrophoneFound, 'warning');
-            setDeviceStatus(cameraLabel + ' detected. No microphones detected.', 'warning');
+            setDeviceStatus(getStudioString('camerasDetectedNoMicrophones', '{cameraLabel} detected. No microphones detected.').replace('{cameraLabel}', cameraLabel), 'warning');
         } else {
-            setDeviceStatus(cameraLabel + ' and ' + micLabel + ' detected' + (options.reason === 'devicechange' ? ' after a device change.' : '.'), 'success');
+            const statusTemplate = options.reason === 'devicechange' ? getStudioString('devicesDetectedAfterChange', '{cameraLabel} and {micLabel} detected after a device change.') : getStudioString('devicesDetected', '{cameraLabel} and {micLabel} detected.');
+            setDeviceStatus(statusTemplate.replace('{cameraLabel}', cameraLabel).replace('{micLabel}', micLabel), 'success');
         }
     }
 
@@ -5152,7 +5160,7 @@
         if (els.transitionFade) { els.transitionFade.addEventListener('click', () => commitPreviewToProgram('fade')); }
         if (els.refreshDevices) {
             els.refreshDevices.addEventListener('click', () => {
-                setDeviceStatus('Refreshing cameras and microphones…', 'info');
+                setDeviceStatus(getStudioString('refreshingDevices', 'Refreshing cameras and microphones…'), 'info');
                 refreshDevices({ reason: 'manual' }).catch((error) => {
                     const message = (error && error.message) || 'Devices could not be refreshed.';
                     setDeviceStatus(message, 'error');
@@ -5162,7 +5170,7 @@
         }
         if (state.support.deviceChange && navigator.mediaDevices && typeof navigator.mediaDevices.addEventListener === 'function') {
             navigator.mediaDevices.addEventListener('devicechange', () => {
-                setDeviceStatus('Device change detected. Refreshing cameras and microphones…', 'info');
+                setDeviceStatus(getStudioString('deviceChangeRefreshing', 'Device change detected. Refreshing cameras and microphones…'), 'info');
                 refreshDevices({ reason: 'devicechange' }).catch(() => {});
             });
         }
