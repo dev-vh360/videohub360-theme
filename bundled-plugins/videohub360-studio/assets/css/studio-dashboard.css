@@ -196,7 +196,7 @@ body.vh360-studio-window-mode .vh360-studio-dashboard {
 .vh360-studio-job-result[data-status-type="error"],
 .vh360-studio-publish-status[data-status-type="error"] { border-color: color-mix(in srgb, var(--vh360-studio-danger) 55%, transparent); color: var(--vh360-studio-danger); }
 
-.vh360-studio-workbench { display: grid; gap: 1rem; padding: 1rem; }
+.vh360-studio-workbench { display: grid; gap: 1rem; min-width: 0; padding: 1rem; }
 .vh360-studio-monitors { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr) 150px minmax(0, 1fr); }
 .vh360-studio-monitor { min-width: 0; }
 .vh360-studio-monitor-header,

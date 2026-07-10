@@ -22,14 +22,23 @@ class VH360_Studio_Assets {
             return;
         }
 
-        $css_path = 'assets/css/studio-dashboard.css';
-        $js_path  = 'assets/js/studio-dashboard.js';
+        $css_path                = 'assets/css/studio-dashboard.css';
+        $overlays_css_path       = 'assets/css/studio-overlays-workspace.css';
+        $js_path                 = 'assets/js/studio-dashboard.js';
+        $overlays_workspace_path = 'assets/js/studio-overlays-workspace.js';
 
         wp_enqueue_style(
             'vh360-studio-dashboard',
             VH360_STUDIO_PLUGIN_URL . $css_path,
             array(),
             $this->asset_version( $css_path )
+        );
+
+        wp_enqueue_style(
+            'vh360-studio-overlays-workspace',
+            VH360_STUDIO_PLUGIN_URL . $overlays_css_path,
+            array( 'vh360-studio-dashboard' ),
+            $this->asset_version( $overlays_css_path )
         );
 
         wp_enqueue_script( 'agora-rtc-sdk', 'https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js', array(), '4.20.0', true );
@@ -51,6 +60,14 @@ class VH360_Studio_Assets {
         );
 
         wp_localize_script( 'vh360-studio-dashboard', 'vh360StudioDashboard', $this->localized_data() );
+
+        wp_enqueue_script(
+            'vh360-studio-overlays-workspace',
+            VH360_STUDIO_PLUGIN_URL . $overlays_workspace_path,
+            array( 'vh360-studio-dashboard' ),
+            $this->asset_version( $overlays_workspace_path ),
+            true
+        );
     }
 
     private function is_studio_dashboard_tab() {
