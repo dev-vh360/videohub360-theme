@@ -129,7 +129,6 @@
         previewContext.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
         const item = state.preview.lowerThird;
         if (item) { renderLowerThird(previewContext, item.config, { width: previewCanvas.width, height: previewCanvas.height, now: now(), preview: true }, 1); }
-        if (item) { schedulePreviewFrame(); }
     }
 
     function rgba(hex, opacity) {
@@ -159,6 +158,26 @@
         return weight + ' ' + size + 'px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
     }
 
+    function ellipsizeText(context, text, maxWidth) {
+        if (context.measureText(text).width <= maxWidth) { return text; }
+        const ellipsis = '…';
+        const chars = Array.from(text);
+        let low = 0;
+        let high = chars.length;
+        let best = ellipsis;
+        while (low <= high) {
+            const mid = Math.floor((low + high) / 2);
+            const candidate = chars.slice(0, mid).join('') + ellipsis;
+            if (context.measureText(candidate).width <= maxWidth) {
+                best = candidate;
+                low = mid + 1;
+            } else {
+                high = mid - 1;
+            }
+        }
+        return best;
+    }
+
     function fitText(context, text, maxWidth, startSize, minSize, weight) {
         let size = startSize;
         let font = fontFor(size, weight);
@@ -167,12 +186,14 @@
             font = fontFor(size, weight);
             context.font = font;
             width = context.measureText(text).width;
-            if (width <= maxWidth || size <= minSize) { return { size, width, font }; }
+            if (width <= maxWidth || size <= minSize) { break; }
             size -= 2;
         } while (size > minSize);
-        font = fontFor(minSize, weight);
+        size = Math.max(size, minSize);
+        font = fontFor(size, weight);
         context.font = font;
-        return { size: minSize, width: context.measureText(text).width, font };
+        const displayText = ellipsizeText(context, text, maxWidth);
+        return { size, width: context.measureText(displayText).width, font, text: displayText };
     }
 
     function geometry(context, config, frame) {
@@ -182,10 +203,12 @@
         const safeX = frame.width * 0.05;
         const safeBottom = frame.height * 0.07;
         const maxWidth = frame.width * 0.65;
-        const primary = String(content.primary || '');
-        const secondary = String(content.secondary || '');
-        const primaryText = fitText(context, primary, maxWidth * 0.82, frame.height * 0.042 * scale, frame.height * 0.026, '800');
-        const secondaryText = secondary ? fitText(context, secondary, maxWidth * 0.82, frame.height * 0.026 * scale, frame.height * 0.018, '600') : { size: 0, width: 0, font: '' };
+        const rawPrimary = String(content.primary || '');
+        const rawSecondary = String(content.secondary || '');
+        const primaryText = fitText(context, rawPrimary, maxWidth * 0.82, frame.height * 0.042 * scale, frame.height * 0.026, '800');
+        const secondaryText = rawSecondary ? fitText(context, rawSecondary, maxWidth * 0.82, frame.height * 0.026 * scale, frame.height * 0.018, '600') : { size: 0, width: 0, font: '', text: '' };
+        const primary = primaryText.text;
+        const secondary = secondaryText.text;
         const primarySize = primaryText.size;
         const secondarySize = secondaryText.size;
         const paddingX = frame.width * 0.018 * scale;

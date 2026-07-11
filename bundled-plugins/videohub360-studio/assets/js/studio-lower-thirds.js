@@ -96,8 +96,15 @@
 
     async function loadPresets() {
         setStatus(text('loading'), 'info');
-        try { state.presets = await api('/overlays?type=lower_third'); renderPresetOptions(); setStatus(text('loaded'), 'success'); }
-        catch (error) { setStatus(text('loadFailed'), 'warning'); }
+        try {
+            const presets = await api('/overlays?type=lower_third');
+            if (state.destroyed) { return; }
+            state.presets = presets;
+            renderPresetOptions();
+            setStatus(text('loaded'), 'success');
+        } catch (error) {
+            if (!state.destroyed) { setStatus(text('loadFailed'), 'warning'); }
+        }
     }
 
     function updateStagedPreview() { if (state.staged) { engine.stage('lowerThird', currentConfig()); } }
@@ -137,10 +144,11 @@
         if (!cfg.content.primary) { setStatus(text('enterPrimary'), 'warning'); return; }
         try {
             const item = await api(asNew || !state.selectedId ? '/overlays' : '/overlays/' + state.selectedId, { method: asNew || !state.selectedId ? 'POST' : 'PUT', body: JSON.stringify({ name: cfg.name, type: 'lower_third', config: cfg }) });
+            if (state.destroyed) { return; }
             const index = state.presets.findIndex((preset) => Number(preset.id) === Number(item.id));
             if (index >= 0) { state.presets[index] = item; } else { state.presets.unshift(item); }
             state.selectedId = item.id; renderPresetOptions(); if (els.preset) { els.preset.value = String(item.id); } setStatus(text('saved'), 'success');
-        } catch (error) { setStatus(text('saveFailed'), 'warning'); }
+        } catch (error) { if (!state.destroyed) { setStatus(text('saveFailed'), 'warning'); } }
         renderButtons();
     }
 
@@ -149,9 +157,10 @@
         const nextFocus = els.preset;
         try {
             await api('/overlays/' + state.selectedId, { method: 'DELETE' });
+            if (state.destroyed) { return; }
             state.presets = state.presets.filter((preset) => Number(preset.id) !== Number(state.selectedId));
             state.selectedId = 0; renderPresetOptions(); setStatus(text('deleted'), 'success'); if (nextFocus) { nextFocus.focus(); }
-        } catch (error) { setStatus(text('deleteFailed'), 'warning'); }
+        } catch (error) { if (!state.destroyed) { setStatus(text('deleteFailed'), 'warning'); } }
         renderButtons();
     }
 
