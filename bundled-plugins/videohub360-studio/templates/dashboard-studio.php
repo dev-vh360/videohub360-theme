@@ -108,7 +108,8 @@ $friendly_job_status = static function( $job ) {
     </header>
 
     <div class="vh360-studio-workbench">
-        <div class="vh360-studio-monitors">
+        <div class="vh360-studio-production-workspace" data-overlays-workspace>
+            <div class="vh360-studio-monitors" data-overlays-monitors>
             <section class="vh360-studio-monitor vh360-studio-monitor--preview" aria-labelledby="vh360-studio-preview-title">
                 <div class="vh360-studio-monitor-header">
                     <h3 id="vh360-studio-preview-title"><?php esc_html_e( 'Preview', 'videohub360-studio' ); ?></h3>
@@ -127,6 +128,8 @@ $friendly_job_status = static function( $job ) {
                     <div class="vh360-studio-preview-camera" data-camera-preview-container aria-label="<?php esc_attr_e( 'Local camera preview', 'videohub360-studio' ); ?>"></div>
                     <video class="vh360-studio-preview-video vh360-studio-preview-video--screen" data-screen-preview playsinline muted aria-label="<?php esc_attr_e( 'Screen-share preview', 'videohub360-studio' ); ?>"></video>
                     <div class="vh360-studio-preview-media" data-media-preview aria-label="<?php esc_attr_e( 'Media source preview', 'videohub360-studio' ); ?>"></div>
+                    <canvas class="vh360-studio-preview-overlay-canvas" data-preview-overlay-canvas aria-hidden="true"></canvas>
+                    <span class="vh360-studio-overlay-status" data-preview-overlay-status hidden><?php esc_html_e( 'Lower third staged', 'videohub360-studio' ); ?></span>
                     <span class="vh360-studio-monitor-empty" data-preview-empty><?php esc_html_e( 'Choose a Scene to stage it in Preview.', 'videohub360-studio' ); ?></span>
                 </div>
                 <div class="vh360-studio-media-playback" data-media-playback-controls hidden>
@@ -205,6 +208,8 @@ $friendly_job_status = static function( $job ) {
                 <div class="vh360-studio-monitor-header">
                     <h3 id="vh360-studio-program-title"><?php esc_html_e( 'Program', 'videohub360-studio' ); ?></h3>
                     <span class="vh360-studio-pill"><?php esc_html_e( 'Program output', 'videohub360-studio' ); ?></span>
+                        <span class="vh360-studio-overlay-status" data-program-overlay-status hidden><?php esc_html_e( 'Lower third live', 'videohub360-studio' ); ?></span>
+                        <button type="button" class="vh360-studio-monitor-action" data-clear-program-overlays hidden><?php esc_html_e( 'Clear Overlays', 'videohub360-studio' ); ?></button>
                 </div>
                 <div class="vh360-studio-monitor-screen">
                     <canvas class="vh360-studio-program-canvas" data-program-canvas aria-label="<?php esc_attr_e( 'Program output preview', 'videohub360-studio' ); ?>"></canvas>
@@ -221,6 +226,190 @@ $friendly_job_status = static function( $job ) {
                     </div>
                 </div>
             </section>
+            </div>
+
+            <div
+                class="vh360-studio-overlays-resizer"
+                role="separator"
+                tabindex="0"
+                aria-orientation="vertical"
+                aria-label="<?php esc_attr_e( 'Resize Overlays workspace', 'videohub360-studio' ); ?>"
+                aria-valuemin="320"
+                aria-valuemax="520"
+                aria-valuenow="400"
+                data-overlays-resizer
+            ></div>
+
+            <aside
+                class="vh360-studio-overlays-dock"
+                aria-labelledby="vh360-studio-overlays-title"
+                data-overlays-dock
+                data-label-expand="<?php esc_attr_e( 'Expand', 'videohub360-studio' ); ?>"
+                data-label-collapse="<?php esc_attr_e( 'Collapse', 'videohub360-studio' ); ?>"
+                data-message-collapsed="<?php esc_attr_e( 'Overlays collapsed.', 'videohub360-studio' ); ?>"
+                data-message-expanded="<?php esc_attr_e( 'Overlays expanded.', 'videohub360-studio' ); ?>"
+                data-message-module-change="<?php esc_attr_e( 'Overlay module changed to %s.', 'videohub360-studio' ); ?>"
+                data-message-section-change="<?php esc_attr_e( 'Overlay section changed to %s.', 'videohub360-studio' ); ?>"
+            >
+                <header class="vh360-studio-overlays-header">
+                    <div>
+                        <p class="vh360-studio-overlays-kicker"><?php esc_html_e( 'Workspace', 'videohub360-studio' ); ?></p>
+                        <h3 id="vh360-studio-overlays-title"><?php esc_html_e( 'Overlays', 'videohub360-studio' ); ?></h3>
+                    </div>
+                    <button type="button" class="vh360-studio-overlays-collapse" aria-expanded="true" aria-controls="vh360-studio-overlays-body" data-overlays-collapse>
+                        <span data-overlays-collapse-label><?php esc_html_e( 'Collapse', 'videohub360-studio' ); ?></span>
+                    </button>
+                </header>
+
+                <div id="vh360-studio-overlays-body" class="vh360-studio-overlays-body" data-overlays-body>
+                    <nav class="vh360-studio-overlays-section-tabs" role="tablist" aria-label="<?php esc_attr_e( 'Overlay section', 'videohub360-studio' ); ?>" data-overlays-section-tabs>
+                        <button type="button" role="tab" id="vh360-overlays-section-control" aria-selected="true" aria-controls="vh360-overlays-panel-lower-thirds-control" data-overlays-section-tab data-section="control"><?php esc_html_e( 'Control', 'videohub360-studio' ); ?></button>
+                        <button type="button" role="tab" id="vh360-overlays-section-customize" aria-selected="false" aria-controls="vh360-overlays-panel-lower-thirds-customize" data-overlays-section-tab data-section="customize" tabindex="-1"><?php esc_html_e( 'Customize', 'videohub360-studio' ); ?></button>
+                        <button type="button" role="tab" id="vh360-overlays-section-settings" aria-selected="false" aria-controls="vh360-overlays-panel-lower-thirds-settings" data-overlays-section-tab data-section="settings" tabindex="-1"><?php esc_html_e( 'Settings', 'videohub360-studio' ); ?></button>
+                    </nav>
+
+                    <div class="vh360-studio-overlays-content" data-overlays-content>
+                        <section id="vh360-overlays-panel-lower-thirds-control" class="vh360-studio-lower-thirds-panel" role="tabpanel" aria-labelledby="vh360-overlays-tab-lower-thirds vh360-overlays-section-control" data-overlays-panel data-module="lower-thirds" data-section="control">
+                            <div class="vh360-studio-lower-thirds-stack">
+                                <label for="vh360-lower-third-preset"><?php esc_html_e( 'Saved preset', 'videohub360-studio' ); ?></label>
+                                <select id="vh360-lower-third-preset" data-lt-preset-select>
+                                    <option value=""><?php esc_html_e( 'Unsaved lower third', 'videohub360-studio' ); ?></option>
+                                </select>
+                                <label for="vh360-lower-third-primary"><?php esc_html_e( 'Primary text', 'videohub360-studio' ); ?></label>
+                                <input id="vh360-lower-third-primary" type="text" maxlength="120" data-lt-primary>
+                                <label for="vh360-lower-third-secondary"><?php esc_html_e( 'Secondary text', 'videohub360-studio' ); ?></label>
+                                <input id="vh360-lower-third-secondary" type="text" maxlength="160" data-lt-secondary>
+                                <div class="vh360-studio-lower-thirds-status-grid">
+                                    <p><strong><?php esc_html_e( 'Preview', 'videohub360-studio' ); ?></strong><span data-lt-preview-status><?php esc_html_e( 'Not staged', 'videohub360-studio' ); ?></span></p>
+                                    <p><strong><?php esc_html_e( 'Program', 'videohub360-studio' ); ?></strong><span data-lt-program-status><?php esc_html_e( 'Not live', 'videohub360-studio' ); ?></span></p>
+                                </div>
+                                <div class="vh360-studio-lower-thirds-actions">
+                                    <button type="button" class="vh360-studio-button" data-lt-stage><?php esc_html_e( 'Stage in Preview', 'videohub360-studio' ); ?></button>
+                                    <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-lt-clear-preview><?php esc_html_e( 'Clear Preview', 'videohub360-studio' ); ?></button>
+                                    <button type="button" class="vh360-studio-button" data-lt-take><?php esc_html_e( 'Take to Program', 'videohub360-studio' ); ?></button>
+                                    <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-lt-update-program><?php esc_html_e( 'Update Program', 'videohub360-studio' ); ?></button>
+                                    <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-lt-hide><?php esc_html_e( 'Hide from Program', 'videohub360-studio' ); ?></button>
+                                </div>
+                                <p class="vh360-studio-lower-thirds-message" role="status" aria-live="polite" data-lt-status></p>
+                            </div>
+                        </section>
+                        <section id="vh360-overlays-panel-lower-thirds-customize" class="vh360-studio-lower-thirds-panel" role="tabpanel" aria-labelledby="vh360-overlays-tab-lower-thirds vh360-overlays-section-customize" data-overlays-panel data-module="lower-thirds" data-section="customize" hidden>
+                            <div class="vh360-studio-lower-thirds-stack">
+                                <label for="vh360-lower-third-template"><?php esc_html_e( 'Template', 'videohub360-studio' ); ?></label>
+                                <select id="vh360-lower-third-template" data-lt-template>
+                                    <option value="accent_bar"><?php esc_html_e( 'Accent Bar', 'videohub360-studio' ); ?></option>
+                                    <option value="solid_band"><?php esc_html_e( 'Solid Band', 'videohub360-studio' ); ?></option>
+                                    <option value="minimal"><?php esc_html_e( 'Minimal', 'videohub360-studio' ); ?></option>
+                                </select>
+                                <label for="vh360-lower-third-position"><?php esc_html_e( 'Position', 'videohub360-studio' ); ?></label>
+                                <select id="vh360-lower-third-position" data-lt-position>
+                                    <option value="bottom_left"><?php esc_html_e( 'Bottom left', 'videohub360-studio' ); ?></option>
+                                    <option value="bottom_center"><?php esc_html_e( 'Bottom center', 'videohub360-studio' ); ?></option>
+                                    <option value="bottom_right"><?php esc_html_e( 'Bottom right', 'videohub360-studio' ); ?></option>
+                                </select>
+                                <label for="vh360-lower-third-scale"><?php esc_html_e( 'Scale', 'videohub360-studio' ); ?></label>
+                                <input id="vh360-lower-third-scale" type="range" min="75" max="140" value="100" data-lt-scale>
+                                <label for="vh360-lower-third-accent"><?php esc_html_e( 'Accent color', 'videohub360-studio' ); ?></label>
+                                <input id="vh360-lower-third-accent" type="color" value="#4f46e5" data-lt-accent-color>
+                                <label for="vh360-lower-third-bg"><?php esc_html_e( 'Background color', 'videohub360-studio' ); ?></label>
+                                <input id="vh360-lower-third-bg" type="color" value="#0f172a" data-lt-background-color>
+                                <label for="vh360-lower-third-bg-opacity"><?php esc_html_e( 'Background opacity', 'videohub360-studio' ); ?></label>
+                                <input id="vh360-lower-third-bg-opacity" type="range" min="0" max="100" value="90" data-lt-background-opacity>
+                                <label for="vh360-lower-third-primary-color"><?php esc_html_e( 'Primary text color', 'videohub360-studio' ); ?></label>
+                                <input id="vh360-lower-third-primary-color" type="color" value="#ffffff" data-lt-primary-color>
+                                <label for="vh360-lower-third-secondary-color"><?php esc_html_e( 'Secondary text color', 'videohub360-studio' ); ?></label>
+                                <input id="vh360-lower-third-secondary-color" type="color" value="#dbeafe" data-lt-secondary-color>
+                            </div>
+                        </section>
+                        <section id="vh360-overlays-panel-lower-thirds-settings" class="vh360-studio-lower-thirds-panel" role="tabpanel" aria-labelledby="vh360-overlays-tab-lower-thirds vh360-overlays-section-settings" data-overlays-panel data-module="lower-thirds" data-section="settings" hidden>
+                            <div class="vh360-studio-lower-thirds-stack">
+                                <label for="vh360-lower-third-name"><?php esc_html_e( 'Preset name', 'videohub360-studio' ); ?></label>
+                                <input id="vh360-lower-third-name" type="text" maxlength="120" data-lt-name>
+                                <label for="vh360-lower-third-entrance"><?php esc_html_e( 'Entrance animation', 'videohub360-studio' ); ?></label>
+                                <select id="vh360-lower-third-entrance" data-lt-entrance>
+                                    <option value="slide_left"><?php esc_html_e( 'Slide from left', 'videohub360-studio' ); ?></option>
+                                    <option value="fade"><?php esc_html_e( 'Fade', 'videohub360-studio' ); ?></option>
+                                    <option value="none"><?php esc_html_e( 'None', 'videohub360-studio' ); ?></option>
+                                </select>
+                                <label for="vh360-lower-third-exit"><?php esc_html_e( 'Exit animation', 'videohub360-studio' ); ?></label>
+                                <select id="vh360-lower-third-exit" data-lt-exit>
+                                    <option value="slide_left"><?php esc_html_e( 'Slide to left', 'videohub360-studio' ); ?></option>
+                                    <option value="fade"><?php esc_html_e( 'Fade', 'videohub360-studio' ); ?></option>
+                                    <option value="none"><?php esc_html_e( 'None', 'videohub360-studio' ); ?></option>
+                                </select>
+                                <label for="vh360-lower-third-duration"><?php esc_html_e( 'Animation duration', 'videohub360-studio' ); ?></label>
+                                <input id="vh360-lower-third-duration" type="number" min="0" max="2000" step="50" value="300" data-lt-duration>
+                                <label for="vh360-lower-third-auto-hide"><?php esc_html_e( 'Auto-hide duration', 'videohub360-studio' ); ?></label>
+                                <input id="vh360-lower-third-auto-hide" type="number" min="0" max="300" step="1" value="0" data-lt-auto-hide>
+                                <div class="vh360-studio-lower-thirds-actions">
+                                    <button type="button" class="vh360-studio-button" data-lt-save><?php esc_html_e( 'Save preset', 'videohub360-studio' ); ?></button>
+                                    <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-lt-save-new><?php esc_html_e( 'Save as new', 'videohub360-studio' ); ?></button>
+                                    <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-lt-duplicate><?php esc_html_e( 'Duplicate', 'videohub360-studio' ); ?></button>
+                                    <button type="button" class="vh360-studio-button vh360-studio-button--danger" data-lt-delete><?php esc_html_e( 'Delete', 'videohub360-studio' ); ?></button>
+                                </div>
+                            </div>
+                        </section>
+                        <section id="vh360-overlays-panel-bible-control" role="tabpanel" aria-labelledby="vh360-overlays-tab-bible vh360-overlays-section-control" data-overlays-panel data-module="bible" data-section="control" hidden>
+                            <p class="vh360-studio-overlays-empty"><?php esc_html_e( 'Bible verse control tools will appear here.', 'videohub360-studio' ); ?></p>
+                        </section>
+                        <section id="vh360-overlays-panel-bible-customize" role="tabpanel" aria-labelledby="vh360-overlays-tab-bible vh360-overlays-section-customize" data-overlays-panel data-module="bible" data-section="customize" hidden>
+                            <p class="vh360-studio-overlays-empty"><?php esc_html_e( 'Bible verse customization tools will appear here.', 'videohub360-studio' ); ?></p>
+                        </section>
+                        <section id="vh360-overlays-panel-bible-settings" role="tabpanel" aria-labelledby="vh360-overlays-tab-bible vh360-overlays-section-settings" data-overlays-panel data-module="bible" data-section="settings" hidden>
+                            <p class="vh360-studio-overlays-empty"><?php esc_html_e( 'Bible verse settings will appear here.', 'videohub360-studio' ); ?></p>
+                        </section>
+                        <section id="vh360-overlays-panel-countdown-control" class="vh360-studio-countdown-panel" role="tabpanel" aria-labelledby="vh360-overlays-tab-countdown vh360-overlays-section-control" data-overlays-panel data-module="countdown" data-section="control" hidden>
+                            <div class="vh360-studio-countdown-stack">
+                                <label for="vh360-countdown-preset"><?php esc_html_e( 'Saved preset', 'videohub360-studio' ); ?></label>
+                                <select id="vh360-countdown-preset" data-countdown-preset><option value=""><?php esc_html_e( 'Unsaved countdown', 'videohub360-studio' ); ?></option></select>
+                                <label for="vh360-countdown-mode"><?php esc_html_e( 'Mode', 'videohub360-studio' ); ?></label>
+                                <select id="vh360-countdown-mode" data-countdown-mode><option value="duration"><?php esc_html_e( 'Duration', 'videohub360-studio' ); ?></option><option value="target_time"><?php esc_html_e( 'Target Time', 'videohub360-studio' ); ?></option></select>
+                                <div class="vh360-studio-countdown-duration" data-countdown-duration-fields>
+                                    <label for="vh360-countdown-hours"><?php esc_html_e( 'Hours', 'videohub360-studio' ); ?></label><input id="vh360-countdown-hours" type="number" min="0" max="23" value="0" data-countdown-hours>
+                                    <label for="vh360-countdown-minutes"><?php esc_html_e( 'Minutes', 'videohub360-studio' ); ?></label><input id="vh360-countdown-minutes" type="number" min="0" max="59" value="10" data-countdown-minutes>
+                                    <label for="vh360-countdown-seconds"><?php esc_html_e( 'Seconds', 'videohub360-studio' ); ?></label><input id="vh360-countdown-seconds" type="number" min="0" max="59" value="0" data-countdown-seconds>
+                                </div>
+                                <div data-countdown-target-fields hidden><label for="vh360-countdown-target"><?php esc_html_e( 'Target date and time', 'videohub360-studio' ); ?></label><input id="vh360-countdown-target" type="datetime-local" data-countdown-target></div>
+                                <label for="vh360-countdown-label"><?php esc_html_e( 'Label', 'videohub360-studio' ); ?></label><input id="vh360-countdown-label" type="text" maxlength="120" data-countdown-label>
+                                <label for="vh360-countdown-message"><?php esc_html_e( 'End message', 'videohub360-studio' ); ?></label><input id="vh360-countdown-message" type="text" maxlength="160" data-countdown-message>
+                                <div class="vh360-studio-countdown-status"><p><strong><?php esc_html_e( 'Preview', 'videohub360-studio' ); ?></strong><span data-countdown-preview-status></span></p><p><strong><?php esc_html_e( 'Program', 'videohub360-studio' ); ?></strong><span data-countdown-program-status></span></p><p><strong><?php esc_html_e( 'Remaining', 'videohub360-studio' ); ?></strong><span data-countdown-remaining></span></p></div>
+                                <div class="vh360-studio-countdown-actions"><button type="button" class="vh360-studio-button" data-countdown-stage><?php esc_html_e( 'Stage in Preview', 'videohub360-studio' ); ?></button><button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-countdown-clear-preview><?php esc_html_e( 'Clear Preview', 'videohub360-studio' ); ?></button><button type="button" class="vh360-studio-button" data-countdown-take><?php esc_html_e( 'Take to Program', 'videohub360-studio' ); ?></button><button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-countdown-update><?php esc_html_e( 'Update Program', 'videohub360-studio' ); ?></button><button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-countdown-hide><?php esc_html_e( 'Hide from Program', 'videohub360-studio' ); ?></button><button type="button" class="vh360-studio-button" data-countdown-start><?php esc_html_e( 'Start', 'videohub360-studio' ); ?></button><button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-countdown-pause><?php esc_html_e( 'Pause', 'videohub360-studio' ); ?></button><button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-countdown-resume><?php esc_html_e( 'Resume', 'videohub360-studio' ); ?></button><button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-countdown-reset><?php esc_html_e( 'Reset', 'videohub360-studio' ); ?></button></div>
+                                <p class="vh360-studio-countdown-message" role="status" aria-live="polite" data-countdown-status></p>
+                            </div>
+                        </section>
+                        <section id="vh360-overlays-panel-countdown-customize" class="vh360-studio-countdown-panel" role="tabpanel" aria-labelledby="vh360-overlays-tab-countdown vh360-overlays-section-customize" data-overlays-panel data-module="countdown" data-section="customize" hidden>
+                            <div class="vh360-studio-countdown-stack">
+                                <label for="vh360-countdown-template"><?php esc_html_e( 'Template', 'videohub360-studio' ); ?></label><select id="vh360-countdown-template" data-countdown-template><option value="full_screen"><?php esc_html_e( 'Full Screen', 'videohub360-studio' ); ?></option><option value="center_card"><?php esc_html_e( 'Center Card', 'videohub360-studio' ); ?></option><option value="lower_center"><?php esc_html_e( 'Lower Center', 'videohub360-studio' ); ?></option><option value="corner"><?php esc_html_e( 'Corner', 'videohub360-studio' ); ?></option></select>
+                                <label for="vh360-countdown-position"><?php esc_html_e( 'Corner position', 'videohub360-studio' ); ?></label><select id="vh360-countdown-position" data-countdown-position><option value="top_left"><?php esc_html_e( 'Top left', 'videohub360-studio' ); ?></option><option value="top_right"><?php esc_html_e( 'Top right', 'videohub360-studio' ); ?></option><option value="bottom_left"><?php esc_html_e( 'Bottom left', 'videohub360-studio' ); ?></option><option value="bottom_right"><?php esc_html_e( 'Bottom right', 'videohub360-studio' ); ?></option></select>
+                                <label for="vh360-countdown-scale"><?php esc_html_e( 'Scale', 'videohub360-studio' ); ?></label><input id="vh360-countdown-scale" type="range" min="75" max="140" value="100" data-countdown-scale>
+                                <label for="vh360-countdown-accent"><?php esc_html_e( 'Accent color', 'videohub360-studio' ); ?></label><input id="vh360-countdown-accent" type="color" value="#4f46e5" data-countdown-accent>
+                                <label for="vh360-countdown-bg"><?php esc_html_e( 'Background color', 'videohub360-studio' ); ?></label><input id="vh360-countdown-bg" type="color" value="#0f172a" data-countdown-bg>
+                                <label for="vh360-countdown-bg-opacity"><?php esc_html_e( 'Background opacity', 'videohub360-studio' ); ?></label><input id="vh360-countdown-bg-opacity" type="range" min="0" max="100" value="88" data-countdown-bg-opacity>
+                                <label for="vh360-countdown-timer-color"><?php esc_html_e( 'Timer text color', 'videohub360-studio' ); ?></label><input id="vh360-countdown-timer-color" type="color" value="#ffffff" data-countdown-timer-color>
+                                <label for="vh360-countdown-label-color"><?php esc_html_e( 'Label text color', 'videohub360-studio' ); ?></label><input id="vh360-countdown-label-color" type="color" value="#dbeafe" data-countdown-label-color>
+                            </div>
+                        </section>
+                        <section id="vh360-overlays-panel-countdown-settings" class="vh360-studio-countdown-panel" role="tabpanel" aria-labelledby="vh360-overlays-tab-countdown vh360-overlays-section-settings" data-overlays-panel data-module="countdown" data-section="settings" hidden>
+                            <div class="vh360-studio-countdown-stack">
+                                <label for="vh360-countdown-name"><?php esc_html_e( 'Preset name', 'videohub360-studio' ); ?></label><input id="vh360-countdown-name" type="text" maxlength="120" data-countdown-name>
+                                <label for="vh360-countdown-end-behavior"><?php esc_html_e( 'End behavior', 'videohub360-studio' ); ?></label><select id="vh360-countdown-end-behavior" data-countdown-end-behavior><option value="hold_zero"><?php esc_html_e( 'Hold at zero', 'videohub360-studio' ); ?></option><option value="show_message"><?php esc_html_e( 'Show end message', 'videohub360-studio' ); ?></option><option value="hide"><?php esc_html_e( 'Hide', 'videohub360-studio' ); ?></option></select>
+                                <label for="vh360-countdown-message-duration"><?php esc_html_e( 'End-message duration', 'videohub360-studio' ); ?></label><input id="vh360-countdown-message-duration" type="number" min="0" max="300" value="5" data-countdown-message-duration>
+                                <label for="vh360-countdown-entrance"><?php esc_html_e( 'Entrance animation', 'videohub360-studio' ); ?></label><select id="vh360-countdown-entrance" data-countdown-entrance><option value="fade"><?php esc_html_e( 'Fade', 'videohub360-studio' ); ?></option><option value="none"><?php esc_html_e( 'None', 'videohub360-studio' ); ?></option></select>
+                                <label for="vh360-countdown-exit"><?php esc_html_e( 'Exit animation', 'videohub360-studio' ); ?></label><select id="vh360-countdown-exit" data-countdown-exit><option value="fade"><?php esc_html_e( 'Fade', 'videohub360-studio' ); ?></option><option value="none"><?php esc_html_e( 'None', 'videohub360-studio' ); ?></option></select>
+                                <label for="vh360-countdown-duration-ms"><?php esc_html_e( 'Animation duration', 'videohub360-studio' ); ?></label><input id="vh360-countdown-duration-ms" type="number" min="0" max="2000" step="50" value="300" data-countdown-duration-ms>
+                                <div class="vh360-studio-countdown-actions"><button type="button" class="vh360-studio-button" data-countdown-save><?php esc_html_e( 'Save preset', 'videohub360-studio' ); ?></button><button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-countdown-save-new><?php esc_html_e( 'Save as new', 'videohub360-studio' ); ?></button><button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-countdown-duplicate><?php esc_html_e( 'Duplicate', 'videohub360-studio' ); ?></button><button type="button" class="vh360-studio-button vh360-studio-button--danger" data-countdown-delete><?php esc_html_e( 'Delete', 'videohub360-studio' ); ?></button></div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <nav class="vh360-studio-overlays-module-tabs" role="tablist" aria-label="<?php esc_attr_e( 'Overlay module', 'videohub360-studio' ); ?>" data-overlays-module-tabs>
+                        <button type="button" role="tab" id="vh360-overlays-tab-lower-thirds" aria-selected="true" aria-controls="vh360-overlays-panel-lower-thirds-control" data-overlays-module-tab data-module="lower-thirds"><?php esc_html_e( 'Lower Thirds', 'videohub360-studio' ); ?></button>
+                        <button type="button" role="tab" id="vh360-overlays-tab-bible" aria-selected="false" aria-controls="vh360-overlays-panel-bible-control" data-overlays-module-tab data-module="bible" tabindex="-1"><?php esc_html_e( 'Bible', 'videohub360-studio' ); ?></button>
+                        <button type="button" role="tab" id="vh360-overlays-tab-countdown" aria-selected="false" aria-controls="vh360-overlays-panel-countdown-control" data-overlays-module-tab data-module="countdown" tabindex="-1"><?php esc_html_e( 'Countdown', 'videohub360-studio' ); ?></button>
+                    </nav>
+                </div>
+                <p class="screen-reader-text" aria-live="polite" data-overlays-status></p>
+            </aside>
         </div>
 
         <div class="vh360-studio-dock-grid">

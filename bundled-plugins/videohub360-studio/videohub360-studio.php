@@ -148,6 +148,8 @@ function vh360_studio_load_files() {
     require_once VH360_STUDIO_INCLUDES_DIR . 'providers/class-vh360-studio-local-media-provider.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-provider-registry.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-rest-controller.php';
+    require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-overlay-repository.php';
+    require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-overlays-rest-controller.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-admin.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-plugin.php';
 }
