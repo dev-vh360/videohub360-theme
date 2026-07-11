@@ -411,8 +411,14 @@
         const scale = clamp(Number(style.scale) || 100, 75, 140) / 100;
         const safeX = frame.width * 0.05;
         const safeY = frame.height * 0.07;
+        const scripture = config.scripture || {};
         let w = frame.width * (style.template === 'scripture_card' ? 0.72 : 0.9);
         let h = frame.height * (style.template === 'lower_band' ? 0.26 : (style.template === 'full_width_panel' ? 0.58 : 0.44));
+        if (scripture.attributionRequired && scripture.attribution) {
+            const extra = Math.min(0.24, String(scripture.attribution).length / 2200);
+            const minHeight = frame.height * (style.template === 'lower_band' ? 0.38 + extra : (style.template === 'scripture_card' ? 0.52 + extra : 0.66 + extra));
+            h = Math.min(frame.height * 0.86, Math.max(h, minHeight));
+        }
         let x = (frame.width - w) / 2;
         let y = style.position === 'top_center' ? safeY : (style.position === 'center' ? (frame.height - h) / 2 : frame.height - h - safeY);
         return { x, y, w, h, pad: frame.width * 0.025 * scale, scale };
@@ -446,7 +452,7 @@
         const box = bibleBox(config, frame);
         const maxLines = clamp(Number(config.pagination && config.pagination.maximumLines) || 6, 1, 12);
         const bodySize = Math.max(18, frame.height * 0.035 * box.scale);
-        const labelSize = Math.max(14, frame.height * 0.022 * box.scale);
+        const labelSize = Math.max(12, Math.min(frame.height * 0.022 * box.scale, frame.height * 0.032));
         const lineHeight = bodySize * 1.32;
         const innerWidth = box.w - box.pad * 2;
         context.font = fontFor(bodySize, '700');
@@ -459,7 +465,8 @@
         context.font = fontFor(labelSize * 0.86, '600');
         const attributionLines = scripture.attributionRequired && scripture.attribution ? bibleWrap(context, scripture.attribution, innerWidth) : [];
         const reserveAttribution = attributionLines.length ? attributionLines.length * labelSize * 1.08 + labelSize * 0.35 : 0;
-        const pageLines = Math.max(1, Math.min(maxLines, Math.floor((box.h - box.pad * 2 - reserveLabels - reserveAttribution) / lineHeight)));
+        const availableForScripture = box.h - box.pad * 2 - reserveLabels - reserveAttribution;
+        const pageLines = Math.max(1, Math.min(maxLines, Math.floor(availableForScripture / lineHeight)));
         const pages = [];
         for (let i = 0; i < allLines.length; i += pageLines) { pages.push({ lines: allLines.slice(i, i + pageLines), bodySize, labelSize, lineHeight, attributionLines }); }
         const result = pages.length ? pages : [{ lines: [], bodySize, labelSize, lineHeight, attributionLines }];

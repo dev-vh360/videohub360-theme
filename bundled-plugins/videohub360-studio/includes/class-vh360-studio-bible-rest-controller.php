@@ -26,9 +26,9 @@ class VH360_Studio_Bible_REST_Controller {
     public function passage($r){$result=$this->repo->resolve_reference($r['translation'],$r['reference']); return is_wp_error($result)?$result:rest_ensure_response($result);}
     public function create_import($r){$meta=$r->get_params();$files=$r->get_file_params();$file=isset($files['file'])?$files['file']:array();$job=$this->importer->create_job(get_current_user_id(),$file,$meta);return is_wp_error($job)?$job:rest_ensure_response($job);}
     public function get_import($r){$job=$this->importer->get_job(absint($r['id']));return $job?rest_ensure_response($job):new WP_Error('vh360_bible_import_missing',__('Import job not found.','videohub360-studio'),array('status'=>404));}
-    public function delete_import($r){return rest_ensure_response(array('deleted'=>$this->importer->cancel_job(absint($r['id']))));}
+    public function delete_import($r){$result=$this->importer->cancel_job(absint($r['id']));return is_wp_error($result)?$result:rest_ensure_response(array('deleted'=>true));}
     public function batch($r){$job=$this->importer->process_batch(absint($r['id']));return is_wp_error($job)?$job:rest_ensure_response($job);}
-    public function clean_import($r){return rest_ensure_response(array('cleaned'=>$this->importer->clean_failed_job(absint($r['id']))));}
+    public function clean_import($r){$result=$this->importer->clean_failed_job(absint($r['id']));return is_wp_error($result)?$result:rest_ensure_response(array('cleaned'=>true));}
     public function enable_translation($r){$result=$this->repo->set_translation_status($r['key'],'installed');return is_wp_error($result)?$result:rest_ensure_response(array('enabled'=>true));}
     public function disable_translation($r){$result=$this->repo->set_translation_status($r['key'],'disabled');return is_wp_error($result)?$result:rest_ensure_response(array('disabled'=>true));}
     public function delete_translation($r){$result=$this->repo->delete_translation($r['key']);return is_wp_error($result)?$result:rest_ensure_response(array('deleted'=>true));}

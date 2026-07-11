@@ -39,9 +39,9 @@ class VH360_Studio_Bible_Importer {
 
     public function get_job( $id ) { global $wpdb; $j = VH360_Studio_Database::bible_import_jobs_table_name(); return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$j} WHERE id=%d", absint( $id ) ), ARRAY_A ); }
 
-    public function cancel_job( $id ) { $job = $this->get_job( $id ); if ( ! $job ) { return false; } $this->cleanup_staging( $job, true ); global $wpdb; return (bool) $wpdb->update( VH360_Studio_Database::bible_import_jobs_table_name(), array( 'status' => 'cancelled', 'updated_at' => current_time( 'mysql' ) ), array( 'id' => absint( $id ) ) ); }
+    public function cancel_job( $id ) { $job = $this->get_job( $id ); if ( ! $job ) { return new WP_Error( 'vh360_bible_import_missing', __( 'Import job not found.', 'videohub360-studio' ), array( 'status' => 404 ) ); } if ( ! in_array( $job['status'], array( 'created', 'validating', 'importing', 'promoting' ), true ) ) { return new WP_Error( 'vh360_bible_import_state', __( 'Import job cannot be cancelled in its current state.', 'videohub360-studio' ), array( 'status' => 400 ) ); } $this->cleanup_staging( $job, true ); global $wpdb; return false === $wpdb->update( VH360_Studio_Database::bible_import_jobs_table_name(), array( 'status' => 'cancelled', 'updated_at' => current_time( 'mysql' ) ), array( 'id' => absint( $id ) ) ) ? new WP_Error( 'vh360_bible_import_cancel_failed', __( 'Import job could not be cancelled.', 'videohub360-studio' ), array( 'status' => 500 ) ) : true; }
 
-    public function clean_failed_job( $id ) { $job = $this->get_job( $id ); if ( ! $job || ! in_array( $job['status'], array( 'failed', 'cancelled' ), true ) ) { return false; } $this->cleanup_staging( $job, true ); global $wpdb; return (bool) $wpdb->delete( VH360_Studio_Database::bible_import_jobs_table_name(), array( 'id' => absint( $id ) ) ); }
+    public function clean_failed_job( $id ) { $job = $this->get_job( $id ); if ( ! $job ) { return new WP_Error( 'vh360_bible_import_missing', __( 'Import job not found.', 'videohub360-studio' ), array( 'status' => 404 ) ); } if ( ! in_array( $job['status'], array( 'failed', 'cancelled' ), true ) ) { return new WP_Error( 'vh360_bible_import_state', __( 'Import job cannot be cleaned in its current state.', 'videohub360-studio' ), array( 'status' => 400 ) ); } $this->cleanup_staging( $job, true ); global $wpdb; return false === $wpdb->delete( VH360_Studio_Database::bible_import_jobs_table_name(), array( 'id' => absint( $id ) ) ) ? new WP_Error( 'vh360_bible_import_clean_failed', __( 'Import job could not be cleaned.', 'videohub360-studio' ), array( 'status' => 500 ) ) : true; }
 
     public function process_batch( $id, $limit = null ) {
         global $wpdb; $job = $this->get_job( $id ); if ( ! $job ) { return new WP_Error( 'vh360_bible_import_missing', __( 'Import job not found.', 'videohub360-studio' ), array( 'status' => 404 ) ); }
@@ -62,7 +62,7 @@ class VH360_Studio_Bible_Importer {
         }
         $eof = feof( $fh ); $byte = ftell( $fh ); fclose( $fh );
         $this->append_errors( $job, $errors );
-        $wpdb->update( VH360_Studio_Database::bible_import_jobs_table_name(), array( 'status' => $eof ? ( $failed ? 'failed' : 'validating' ) : 'importing', 'byte_offset' => $byte, 'rows_processed' => (int) $job['rows_processed'] + $processed, 'rows_imported' => (int) $job['rows_imported'] + $imported, 'rows_omitted' => (int) $job['rows_omitted'] + $omitted, 'rows_failed' => (int) $job['rows_failed'] + $failed, 'updated_at' => $now ), array( 'id' => $id ) );
+        $wpdb->update( VH360_Studio_Database::bible_import_jobs_table_name(), array( 'status' => $eof ? ( ( (int) $job['rows_failed'] + $failed ) > 0 ? 'failed' : 'validating' ) : 'importing', 'byte_offset' => $byte, 'rows_processed' => (int) $job['rows_processed'] + $processed, 'rows_imported' => (int) $job['rows_imported'] + $imported, 'rows_omitted' => (int) $job['rows_omitted'] + $omitted, 'rows_failed' => (int) $job['rows_failed'] + $failed, 'updated_at' => $now ), array( 'id' => $id ) );
         $job = $this->get_job( $id );
         if ( $eof && ( $failed || (int) $job['rows_failed'] > 0 ) ) { $this->cleanup_staging( $job, false ); if ( file_exists( $job['source_file'] ) ) { wp_delete_file( $job['source_file'] ); } return $job; }
         if ( $eof ) { return $this->promote( $id ); }
@@ -70,7 +70,7 @@ class VH360_Studio_Bible_Importer {
     }
 
     private function validate_row( $row, $row_num ) {
-        if ( count( $row ) < 4 ) { return new WP_Error( 'vh360_bible_row_invalid', sprintf( __( 'Row %d has too few columns.', 'videohub360-studio' ), $row_num ) ); }
+        if ( count( $row ) !== 4 ) { return new WP_Error( 'vh360_bible_row_invalid', sprintf( __( 'Row %d must contain exactly four CSV columns.', 'videohub360-studio' ), $row_num ) ); }
         $book = VH360_Studio_Bible_Books::normalize_name( $row[0] ); $chap = absint( $row[1] ); preg_match( '/^(\d+)([a-z]?)$/i', trim( $row[2] ), $vm ); $verse = $vm ? absint( $vm[1] ) : 0; $suffix = $vm ? strtolower( $vm[2] ) : '';
         $raw_text = (string) $row[3]; $text = wp_check_invalid_utf8( $raw_text );
         if ( '' !== $raw_text && '' === $text ) { return new WP_Error( 'vh360_bible_row_invalid_utf8', sprintf( __( 'Invalid UTF-8 text at row %d.', 'videohub360-studio' ), $row_num ) ); }
