@@ -24,8 +24,12 @@ class VH360_Studio_Assets {
 
         $css_path                = 'assets/css/studio-dashboard.css';
         $overlays_css_path       = 'assets/css/studio-overlays-workspace.css';
+        $overlay_engine_css_path = 'assets/css/studio-overlay-engine.css';
+        $lower_thirds_css_path   = 'assets/css/studio-lower-thirds.css';
         $js_path                 = 'assets/js/studio-dashboard.js';
         $overlays_workspace_path = 'assets/js/studio-overlays-workspace.js';
+        $overlay_engine_path     = 'assets/js/studio-overlay-engine.js';
+        $lower_thirds_path       = 'assets/js/studio-lower-thirds.js';
 
         wp_enqueue_style(
             'vh360-studio-dashboard',
@@ -39,6 +43,20 @@ class VH360_Studio_Assets {
             VH360_STUDIO_PLUGIN_URL . $overlays_css_path,
             array( 'vh360-studio-dashboard' ),
             $this->asset_version( $overlays_css_path )
+        );
+
+        wp_enqueue_style(
+            'vh360-studio-overlay-engine',
+            VH360_STUDIO_PLUGIN_URL . $overlay_engine_css_path,
+            array( 'vh360-studio-overlays-workspace' ),
+            $this->asset_version( $overlay_engine_css_path )
+        );
+
+        wp_enqueue_style(
+            'vh360-studio-lower-thirds',
+            VH360_STUDIO_PLUGIN_URL . $lower_thirds_css_path,
+            array( 'vh360-studio-overlay-engine' ),
+            $this->asset_version( $lower_thirds_css_path )
         );
 
         wp_enqueue_script( 'agora-rtc-sdk', 'https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js', array(), '4.20.0', true );
@@ -66,6 +84,22 @@ class VH360_Studio_Assets {
             VH360_STUDIO_PLUGIN_URL . $overlays_workspace_path,
             array( 'vh360-studio-dashboard' ),
             $this->asset_version( $overlays_workspace_path ),
+            true
+        );
+
+        wp_enqueue_script(
+            'vh360-studio-overlay-engine',
+            VH360_STUDIO_PLUGIN_URL . $overlay_engine_path,
+            array( 'vh360-studio-overlays-workspace' ),
+            $this->asset_version( $overlay_engine_path ),
+            true
+        );
+
+        wp_enqueue_script(
+            'vh360-studio-lower-thirds',
+            VH360_STUDIO_PLUGIN_URL . $lower_thirds_path,
+            array( 'vh360-studio-overlay-engine' ),
+            $this->asset_version( $lower_thirds_path ),
             true
         );
     }
@@ -291,6 +325,31 @@ class VH360_Studio_Assets {
                 'retryFailedChunksBeforeReplay' => __( 'Retry failed chunks during this session before preparing the replay.', 'videohub360-studio' ),
                 'noRecordingChunksCaptured' => __( 'No recording chunks were captured. Start a new recording and try again.', 'videohub360-studio' ),
                 'replayPreparedReadyToPublish' => __( 'Replay prepared. You can publish it now.', 'videohub360-studio' ),
+
+                'lowerThirds' => array(
+                    'loading'          => __( 'Loading lower thirds…', 'videohub360-studio' ),
+                    'loaded'           => __( 'Lower thirds loaded.', 'videohub360-studio' ),
+                    'loadFailed'       => __( 'Lower thirds could not be loaded.', 'videohub360-studio' ),
+                    'saved'            => __( 'Preset saved.', 'videohub360-studio' ),
+                    'deleted'          => __( 'Preset deleted.', 'videohub360-studio' ),
+                    'choosePreview'    => __( 'Choose a Preview source first.', 'videohub360-studio' ),
+                    'chooseProgram'    => __( 'Send a source to Program first.', 'videohub360-studio' ),
+                    'enterPrimary'     => __( 'Enter primary text.', 'videohub360-studio' ),
+                    'staged'           => __( 'Lower third staged in Preview.', 'videohub360-studio' ),
+                    'taken'            => __( 'Lower third taken to Program.', 'videohub360-studio' ),
+                    'updated'          => __( 'Program lower third updated.', 'videohub360-studio' ),
+                    'hidden'           => __( 'Lower third hidden.', 'videohub360-studio' ),
+                    'cleared'          => __( 'All Program overlays cleared.', 'videohub360-studio' ),
+                    'saveFailed'       => __( 'Preset could not be saved.', 'videohub360-studio' ),
+                    'deleteFailed'     => __( 'Preset could not be deleted.', 'videohub360-studio' ),
+                    'previewStaged'    => __( 'Lower third staged in Preview.', 'videohub360-studio' ),
+                    'previewNotStaged' => __( 'Not staged', 'videohub360-studio' ),
+                    'programLive'      => __( 'Lower third live.', 'videohub360-studio' ),
+                    'programNotLive'   => __( 'Not live', 'videohub360-studio' ),
+                    'unsaved'          => __( 'Unsaved lower third', 'videohub360-studio' ),
+                    'untitled'         => __( 'Untitled Lower Third', 'videohub360-studio' ),
+                    'confirmDelete'    => __( 'Delete this preset?', 'videohub360-studio' ),
+                ),
 
             ),
             'supportLabels'             => array(

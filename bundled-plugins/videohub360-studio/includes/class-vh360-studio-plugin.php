@@ -28,6 +28,7 @@ class VH360_Studio_Plugin {
         new VH360_Studio_Assets( $this->registry );
         new VH360_Studio_Media_Admin();
         new VH360_Studio_Admin( $this->registry, $this->jobs );
+        VH360_Studio_Overlay_Repository::register_post_type();
 
         add_filter( 'vh360_dashboard_tabs_registry', array( $this, 'register_dashboard_tab' ), 20, 2 );
         VH360_Studio_Recording_Cleanup::schedule();
@@ -53,6 +54,7 @@ class VH360_Studio_Plugin {
 
     public function register_rest_routes() {
         ( new VH360_Studio_REST_Controller( $this->jobs ) )->register_routes();
+        ( new VH360_Studio_Overlays_REST_Controller( new VH360_Studio_Overlay_Repository() ) )->register_routes();
     }
 
     public function register_dashboard_tab( $tabs, $user_id ) {

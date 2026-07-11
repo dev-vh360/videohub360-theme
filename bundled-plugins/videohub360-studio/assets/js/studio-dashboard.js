@@ -18,6 +18,7 @@
     const MIC_STORAGE_KEY = 'vh360_studio_microphone_device_id';
     const AUDIO_INPUTS_STORAGE_KEY = 'vh360_studio_audio_inputs';
     const MAX_AUDIO_INPUTS = 8;
+    const programRenderLayers = new Map();
     const state = {
         cameraSources: new Map(),
         primaryCameraSourceId: '',
@@ -137,6 +138,7 @@
         readinessIssues: root.querySelector('[data-readiness-issues]'),
         cameraPreviewContainer: root.querySelector('[data-camera-preview-container]'),
         screenPreview: root.querySelector('[data-screen-preview]'),
+        previewOverlayCanvas: root.querySelector('[data-preview-overlay-canvas]'),
         programCanvas: root.querySelector('[data-program-canvas]'),
         programEmpty: root.querySelector('[data-program-empty]'),
         sceneList: root.querySelector('[data-scene-list]'),
@@ -507,6 +509,45 @@
         }
     }
 
+    function sourceType(sourceId) {
+        if (isCameraSource(sourceId)) { return 'camera'; }
+        if (sourceId === 'screen') { return 'screen'; }
+        if (isMediaSource(sourceId)) { return 'media'; }
+        return '';
+    }
+
+    function sourceSummary(sourceId) {
+        return {
+            sourceId: sourceId || '',
+            sourceType: sourceType(sourceId),
+            hasOutput: sourceId === state.previewSource ? Boolean(sourceId) : hasProgramOutput(),
+        };
+    }
+
+    function dispatchStudioEvent(name, detail) {
+        root.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
+    }
+
+    function dispatchPreviewSourceChange() {
+        const detail = sourceSummary(state.previewSource);
+        detail.hasOutput = Boolean(state.previewSource);
+        dispatchStudioEvent('vh360:studio:preview-source-change', detail);
+    }
+
+    function dispatchProgramSourceChange() {
+        const detail = sourceSummary(state.programSource);
+        detail.hasOutput = hasProgramOutput();
+        dispatchStudioEvent('vh360:studio:program-source-change', detail);
+    }
+
+    function dispatchProgramResolutionChange() {
+        dispatchStudioEvent('vh360:studio:program-resolution-change', {
+            width: state.programWidth || 1920,
+            height: state.programHeight || 1080,
+            fps: state.programFrameRate || 30,
+        });
+    }
+
     function fallbackPreviewSource(endedSource) {
         if (endedSource === 'screen') {
             const camera = Array.from(state.cameraSources.values()).find((source) => hasLiveVideoTrack(source.stream));
@@ -552,6 +593,7 @@
 
         renderMediaPlaybackControls();
         renderSelectedMediaControls();
+        dispatchPreviewSourceChange();
     }
 
     function renderSourceState() {
@@ -836,6 +878,7 @@
 
         renderPreviewMediaTransform();
         renderSelectedMediaControls();
+        dispatchProgramResolutionChange();
     }
 
     function unlockRecordingCanvasSize() {
@@ -1045,6 +1088,21 @@
         }
     }
 
+    function drawProgramRenderLayers(context, frame) {
+        Array.from(programRenderLayers.values())
+            .sort((a, b) => a.order - b.order)
+            .forEach((layer) => {
+                context.save();
+                try {
+                    layer.draw(context, frame);
+                } catch (error) {
+                    console.error('Studio overlay layer failed:', layer.id, error);
+                } finally {
+                    context.restore();
+                }
+            });
+    }
+
     function drawProgramFrame(options = {}) {
         const hiddenFallback = Boolean(options.hiddenFallback);
         if (!state.programContext || !state.programCanvas) {
@@ -1096,6 +1154,13 @@
                 drawMediaElement(context, mediaSource.element, width, height, mediaSource.transform || defaultMediaTransform(), 'video');
             }
         }
+        drawProgramRenderLayers(context, {
+            width,
+            height,
+            now: performance.now(),
+            hiddenFallback,
+            programSourceActive: hasProgramOutput(),
+        });
         if (hiddenFallback) {
             requestProgramFrameIfSupported();
         }
@@ -1299,6 +1364,7 @@
         }
         updateProgramAudioRouting();
         updateOperatorStatus();
+        dispatchProgramSourceChange();
     }
 
     function isSourceProtected(sourceId) {
@@ -4418,6 +4484,7 @@
             ensureProgramCompositor();
         }
 
+        dispatchProgramResolutionChange();
         renderSelectedMediaControls();
     }
 
@@ -5835,7 +5902,6 @@
             updateViewerLinkControls();
             const prepared = await api('/broadcasts/' + state.broadcastVideoId + '/prepare', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
             studioDebugLog('[VH360 Studio] Studio broadcaster UID', prepared.uid);
-            applyProgramCanvasResolution();
             ensureProgramCompositor();
             const session = window.VH360AgoraBroadcaster.create({
                 appId: prepared.appId,
@@ -6625,6 +6691,31 @@
         });
         document.addEventListener('visibilitychange', handleStudioVisibilityChange);
     }
+
+    window.VH360StudioCompositor = {
+        registerLayer(id, order, drawCallback) {
+            if (!id || typeof drawCallback !== 'function') { return false; }
+            programRenderLayers.set(id, { id, order: Number(order) || 50, draw: drawCallback });
+            requestFreshProgramFrame();
+            return true;
+        },
+        unregisterLayer(id) {
+            programRenderLayers.delete(id);
+            requestFreshProgramFrame();
+        },
+        requestFrame() { requestFreshProgramFrame(); },
+        getOutputSize() {
+            return { width: state.programWidth || 1920, height: state.programHeight || 1080, fps: state.programFrameRate || 30 };
+        },
+        hasPreviewSource() { return Boolean(state.previewSource); },
+        hasProgramOutput() { return hasProgramOutput(); },
+        getSourceSummary() {
+            return {
+                preview: sourceSummary(state.previewSource),
+                program: Object.assign(sourceSummary(state.programSource), { hasOutput: hasProgramOutput() }),
+            };
+        },
+    };
 
     loadSavedDevicePreferences();
     applyStudioWindowMode();
