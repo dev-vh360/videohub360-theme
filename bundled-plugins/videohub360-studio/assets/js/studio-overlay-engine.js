@@ -404,6 +404,100 @@
         needsProgramFrame(item) { return item.phase === 'entering' || item.phase === 'updating' || item.phase === 'exiting' || Number(item.config && item.config.behavior && item.config.behavior.autoHideSeconds) > 0; },
     });
 
+
+    function bibleBox(config, frame) {
+        const style = config.style || {};
+        const scale = clamp(Number(style.scale) || 100, 75, 140) / 100;
+        const safeX = frame.width * 0.05;
+        const safeY = frame.height * 0.07;
+        let w = frame.width * (style.template === 'scripture_card' ? 0.72 : 0.9);
+        let h = frame.height * (style.template === 'lower_band' ? 0.26 : (style.template === 'full_width_panel' ? 0.58 : 0.44));
+        let x = (frame.width - w) / 2;
+        let y = style.position === 'top_center' ? safeY : (style.position === 'center' ? (frame.height - h) / 2 : frame.height - h - safeY);
+        return { x, y, w, h, pad: frame.width * 0.025 * scale, scale };
+    }
+
+    function bibleWrap(context, text, maxWidth) {
+        const words = String(text || '').split(/\s+/).filter(Boolean);
+        const lines = [];
+        let line = '';
+        words.forEach((word) => {
+            const test = line ? line + ' ' + word : word;
+            if (context.measureText(test).width <= maxWidth || !line) { line = test; }
+            else { lines.push(line); line = word; }
+        });
+        if (line) { lines.push(line); }
+        return lines;
+    }
+
+    function biblePages(context, config, frame) {
+        const scripture = config.scripture || {};
+        const style = config.style || {};
+        const verses = Array.isArray(scripture.verses) ? scripture.verses : [];
+        const box = bibleBox(config, frame);
+        const maxLines = clamp(Number(config.pagination && config.pagination.maximumLines) || 6, 1, 12);
+        const bodySize = Math.max(18, frame.height * 0.035 * box.scale);
+        const labelSize = Math.max(14, frame.height * 0.022 * box.scale);
+        const lineHeight = bodySize * 1.32;
+        const innerWidth = box.w - box.pad * 2;
+        context.font = fontFor(bodySize, '700');
+        const allLines = [];
+        verses.forEach((verse) => {
+            const prefix = style.showVerseNumbers !== false ? String(verse.verse || '') + ' ' : '';
+            bibleWrap(context, prefix + String(verse.text || ''), innerWidth).forEach((line, index) => allLines.push({ verse: index === 0 ? verse.verse : null, text: line }));
+        });
+        const pageLines = Math.max(1, Math.min(maxLines, Math.floor((box.h - box.pad * 2 - labelSize * 1.8) / lineHeight)));
+        const pages = [];
+        for (let i = 0; i < allLines.length; i += pageLines) { pages.push({ lines: allLines.slice(i, i + pageLines), bodySize, labelSize, lineHeight }); }
+        return pages.length ? pages : [{ lines: [], bodySize, labelSize, lineHeight }];
+    }
+
+    function drawBible(context, item, frame, alpha) {
+        const config = item.config || {};
+        const scripture = config.scripture || {};
+        const style = config.style || {};
+        const runtime = item.runtime || {};
+        const box = bibleBox(config, frame);
+        const pages = biblePages(context, config, frame);
+        const pageIndex = clamp(Number(runtime.pageIndex) || 0, 0, pages.length - 1);
+        item.runtime = Object.assign({}, runtime, { pageIndex, pageCount: pages.length });
+        const page = pages[pageIndex];
+        context.save();
+        try {
+            context.globalAlpha *= alpha;
+            roundRect(context, box.x, box.y, box.w, box.h, Math.round(frame.height * 0.02));
+            context.fillStyle = rgba(style.backgroundColor || '#0f172a', Number(style.backgroundOpacity));
+            context.fill();
+            context.textAlign = style.textAlign || 'center';
+            context.textBaseline = 'top';
+            const tx = context.textAlign === 'left' ? box.x + box.pad : (context.textAlign === 'right' ? box.x + box.w - box.pad : box.x + box.w / 2);
+            let y = box.y + box.pad;
+            context.font = fontFor(page.bodySize, '700');
+            context.fillStyle = style.scriptureColor || '#ffffff';
+            page.lines.forEach((line) => { context.fillText(line.text, tx, y); y += page.lineHeight; });
+            const parts = [];
+            if (style.showReference !== false && scripture.reference) { parts.push(scripture.reference); }
+            if (style.showTranslation !== false && scripture.translationLabel) { parts.push(scripture.translationLabel); }
+            const label = parts.join(' · ');
+            if (label) { context.font = fontFor(page.labelSize, '700'); context.fillStyle = style.referenceColor || '#dbeafe'; context.fillText(ellipsizeText(context, label, box.w - box.pad * 2), tx, box.y + box.h - box.pad - page.labelSize); }
+        } finally { context.restore(); }
+    }
+
+    registerOverlayRenderer({
+        slot: 'bible', layerId: 'bible', order: 40,
+        drawPreview(context, item, frame) { drawBible(context, item, frame, 1); },
+        drawProgram(context, item, frame) {
+            const previousConfig = item.previousConfig ? clone(item.previousConfig) : null;
+            const previousRuntime = item.previousRuntime ? clone(item.previousRuntime) : null;
+            const wasUpdating = item.phase === 'updating';
+            const motion = phaseAlphaAndOffset(context, item, frame, 'bible');
+            if (!motion) { return; }
+            if (wasUpdating && previousConfig) { drawBible(context, { config: previousConfig, runtime: previousRuntime || item.runtime }, frame, 1 - motion.progress); }
+            drawBible(context, item, frame, motion.alpha);
+        },
+        needsProgramFrame(item) { return item.phase === 'entering' || item.phase === 'updating' || item.phase === 'exiting'; },
+    });
+
     function countdownDurationMs(config) {
         const timer = (config && config.timer) || {};
         return Math.max(1000, Math.min(86400000, Number(timer.durationSeconds || 600) * 1000));

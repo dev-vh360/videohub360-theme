@@ -27,12 +27,14 @@ class VH360_Studio_Assets {
         $overlay_engine_css_path = 'assets/css/studio-overlay-engine.css';
         $lower_thirds_css_path   = 'assets/css/studio-lower-thirds.css';
         $countdown_css_path      = 'assets/css/studio-countdown.css';
+        $bible_css_path          = 'assets/css/studio-bible.css';
         $js_path                 = 'assets/js/studio-dashboard.js';
         $overlays_workspace_path = 'assets/js/studio-overlays-workspace.js';
         $overlay_engine_path     = 'assets/js/studio-overlay-engine.js';
         $overlay_status_path     = 'assets/js/studio-overlay-status.js';
         $lower_thirds_path       = 'assets/js/studio-lower-thirds.js';
         $countdown_path          = 'assets/js/studio-countdown.js';
+        $bible_path              = 'assets/js/studio-bible.js';
 
         wp_enqueue_style(
             'vh360-studio-dashboard',
@@ -67,6 +69,13 @@ class VH360_Studio_Assets {
             VH360_STUDIO_PLUGIN_URL . $countdown_css_path,
             array( 'vh360-studio-lower-thirds' ),
             $this->asset_version( $countdown_css_path )
+        );
+
+        wp_enqueue_style(
+            'vh360-studio-bible',
+            VH360_STUDIO_PLUGIN_URL . $bible_css_path,
+            array( 'vh360-studio-countdown' ),
+            $this->asset_version( $bible_css_path )
         );
 
         wp_enqueue_script( 'agora-rtc-sdk', 'https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js', array(), '4.20.0', true );
@@ -126,6 +135,14 @@ class VH360_Studio_Assets {
             VH360_STUDIO_PLUGIN_URL . $countdown_path,
             array( 'vh360-studio-lower-thirds' ),
             $this->asset_version( $countdown_path ),
+            true
+        );
+
+        wp_enqueue_script(
+            'vh360-studio-bible',
+            VH360_STUDIO_PLUGIN_URL . $bible_path,
+            array( 'vh360-studio-countdown' ),
+            $this->asset_version( $bible_path ),
             true
         );
     }
@@ -351,6 +368,36 @@ class VH360_Studio_Assets {
                 'retryFailedChunksBeforeReplay' => __( 'Retry failed chunks during this session before preparing the replay.', 'videohub360-studio' ),
                 'noRecordingChunksCaptured' => __( 'No recording chunks were captured. Start a new recording and try again.', 'videohub360-studio' ),
                 'replayPreparedReadyToPublish' => __( 'Replay prepared. You can publish it now.', 'videohub360-studio' ),
+
+                'bible' => array(
+                    'loadingTranslations' => __( 'Loading translations…', 'videohub360-studio' ),
+                    'noneInstalled' => __( 'No Bible translations are installed.', 'videohub360-studio' ),
+                    'loadingBooks' => __( 'Loading books…', 'videohub360-studio' ),
+                    'loadingChapter' => __( 'Loading chapter…', 'videohub360-studio' ),
+                    'resolving' => __( 'Resolving reference…', 'videohub360-studio' ),
+                    'loaded' => __( 'Reference loaded.', 'videohub360-studio' ),
+                    'resolveFailed' => __( 'Reference could not be resolved.', 'videohub360-studio' ),
+                    'chooseTranslation' => __( 'Choose a translation.', 'videohub360-studio' ),
+                    'choosePreview' => __( 'Choose a Preview source first.', 'videohub360-studio' ),
+                    'chooseProgram' => __( 'Send a source to Program first.', 'videohub360-studio' ),
+                    'chooseVerse' => __( 'Choose at least one verse.', 'videohub360-studio' ),
+                    'staged' => __( 'Bible passage staged in Preview.', 'videohub360-studio' ),
+                    'taken' => __( 'Bible passage taken to Program.', 'videohub360-studio' ),
+                    'updated' => __( 'Program Bible passage updated.', 'videohub360-studio' ),
+                    'hidden' => __( 'Bible passage hidden.', 'videohub360-studio' ),
+                    'previewPage' => __( 'Preview page %1$s of %2$s.', 'videohub360-studio' ),
+                    'programPage' => __( 'Program page %1$s of %2$s.', 'videohub360-studio' ),
+                    'firstPage' => __( 'First page.', 'videohub360-studio' ),
+                    'lastPage' => __( 'Last page.', 'videohub360-studio' ),
+                    'saved' => __( 'Cue saved.', 'videohub360-studio' ),
+                    'deleted' => __( 'Cue deleted.', 'videohub360-studio' ),
+                    'saveFailed' => __( 'Cue could not be saved.', 'videohub360-studio' ),
+                    'deleteFailed' => __( 'Cue could not be deleted.', 'videohub360-studio' ),
+                    'datasetChanged' => __( 'Translation data has changed since this cue was saved.', 'videohub360-studio' ),
+                    'translationMissing' => __( 'This translation is no longer installed.', 'videohub360-studio' ),
+                    'lowerBandWarning' => __( 'The Bible lower band may overlap the active lower third.', 'videohub360-studio' ),
+                    'fullPanelWarning' => __( 'The full-width Scripture panel may cover other overlays.', 'videohub360-studio' ),
+                ),
 
                 'countdown' => array(
                     'loading'       => __( 'Loading countdown presets…', 'videohub360-studio' ),

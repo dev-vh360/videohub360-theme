@@ -16,6 +16,7 @@ class VH360_Studio_Overlay_Repository {
 
     const TYPE_LOWER_THIRD = 'lower_third';
     const TYPE_COUNTDOWN    = 'countdown';
+    const TYPE_BIBLE        = 'bible';
 
     public static function register_post_type() {
         register_post_type(
@@ -214,6 +215,9 @@ class VH360_Studio_Overlay_Repository {
         if ( self::TYPE_COUNTDOWN === $type ) {
             return $this->sanitize_countdown_config( $config );
         }
+        if ( self::TYPE_BIBLE === $type ) {
+            return $this->sanitize_bible_config( $config );
+        }
         return $this->sanitize_lower_third_config( $config );
     }
 
@@ -305,6 +309,62 @@ class VH360_Studio_Overlay_Repository {
         );
     }
 
+
+
+    public function sanitize_bible_config( $config ) {
+        if ( ! is_array( $config ) ) {
+            return new WP_Error( 'vh360_overlay_invalid_config', __( 'Invalid overlay configuration.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        }
+        $default    = $this->default_config( self::TYPE_BIBLE );
+        $scripture  = isset( $config['scripture'] ) && is_array( $config['scripture'] ) ? $config['scripture'] : array();
+        $style      = isset( $config['style'] ) && is_array( $config['style'] ) ? $config['style'] : array();
+        $pagination = isset( $config['pagination'] ) && is_array( $config['pagination'] ) ? $config['pagination'] : array();
+        $behavior   = isset( $config['behavior'] ) && is_array( $config['behavior'] ) ? $config['behavior'] : array();
+        $name       = isset( $config['name'] ) ? $this->sanitize_name( $config['name'] ) : $default['name'];
+        if ( is_wp_error( $name ) ) { return $name; }
+        $ranges = array();
+        if ( isset( $scripture['ranges'] ) && is_array( $scripture['ranges'] ) ) {
+            foreach ( $scripture['ranges'] as $range ) {
+                if ( ! is_array( $range ) ) { continue; }
+                $ranges[] = array(
+                    'bookKey'      => sanitize_key( isset( $range['bookKey'] ) ? $range['bookKey'] : '' ),
+                    'startChapter' => max( 1, absint( isset( $range['startChapter'] ) ? $range['startChapter'] : 1 ) ),
+                    'startVerse'   => max( 1, absint( isset( $range['startVerse'] ) ? $range['startVerse'] : 1 ) ),
+                    'endChapter'   => max( 1, absint( isset( $range['endChapter'] ) ? $range['endChapter'] : 1 ) ),
+                    'endVerse'     => max( 1, absint( isset( $range['endVerse'] ) ? $range['endVerse'] : 1 ) ),
+                );
+            }
+        }
+        return array(
+            'id'         => isset( $config['id'] ) ? max( 0, absint( $config['id'] ) ) : 0,
+            'type'       => self::TYPE_BIBLE,
+            'name'       => $name,
+            'scripture'  => array(
+                'translationKey'   => sanitize_key( isset( $scripture['translationKey'] ) ? $scripture['translationKey'] : '' ),
+                'translationLabel' => $this->limit_text( sanitize_text_field( isset( $scripture['translationLabel'] ) ? $scripture['translationLabel'] : '' ), 40 ),
+                'reference'        => $this->limit_text( sanitize_text_field( isset( $scripture['reference'] ) ? $scripture['reference'] : '' ), 120 ),
+                'ranges'           => $ranges,
+                'datasetVersion'   => $this->limit_text( sanitize_text_field( isset( $scripture['datasetVersion'] ) ? $scripture['datasetVersion'] : '' ), 100 ),
+                'sourceHash'       => preg_match( '/^[a-f0-9]{64}$/', isset( $scripture['sourceHash'] ) ? $scripture['sourceHash'] : '' ) ? $scripture['sourceHash'] : '',
+            ),
+            'style'      => array(
+                'template'          => $this->allowlisted( isset( $style['template'] ) ? $style['template'] : '', array( 'lower_band', 'scripture_card', 'full_width_panel' ), $default['style']['template'] ),
+                'position'          => $this->allowlisted( isset( $style['position'] ) ? $style['position'] : '', array( 'bottom_center', 'center', 'top_center' ), $default['style']['position'] ),
+                'scale'             => min( 140, max( 75, absint( isset( $style['scale'] ) ? $style['scale'] : $default['style']['scale'] ) ) ),
+                'backgroundColor'   => $this->sanitize_hex( isset( $style['backgroundColor'] ) ? $style['backgroundColor'] : $default['style']['backgroundColor'], $default['style']['backgroundColor'] ),
+                'backgroundOpacity' => min( 100, max( 0, absint( isset( $style['backgroundOpacity'] ) ? $style['backgroundOpacity'] : $default['style']['backgroundOpacity'] ) ) ),
+                'scriptureColor'    => $this->sanitize_hex( isset( $style['scriptureColor'] ) ? $style['scriptureColor'] : $default['style']['scriptureColor'], $default['style']['scriptureColor'] ),
+                'referenceColor'    => $this->sanitize_hex( isset( $style['referenceColor'] ) ? $style['referenceColor'] : $default['style']['referenceColor'], $default['style']['referenceColor'] ),
+                'textAlign'         => $this->allowlisted( isset( $style['textAlign'] ) ? $style['textAlign'] : '', array( 'left', 'center', 'right' ), $default['style']['textAlign'] ),
+                'showVerseNumbers'  => ! empty( $style['showVerseNumbers'] ),
+                'showReference'     => ! array_key_exists( 'showReference', $style ) || ! empty( $style['showReference'] ),
+                'showTranslation'   => ! array_key_exists( 'showTranslation', $style ) || ! empty( $style['showTranslation'] ),
+            ),
+            'pagination' => array( 'maximumLines' => min( 12, max( 1, absint( isset( $pagination['maximumLines'] ) ? $pagination['maximumLines'] : $default['pagination']['maximumLines'] ) ) ) ),
+            'behavior'   => array( 'entrance' => $this->allowlisted( isset( $behavior['entrance'] ) ? $behavior['entrance'] : '', array( 'fade', 'none' ), $default['behavior']['entrance'] ), 'exit' => $this->allowlisted( isset( $behavior['exit'] ) ? $behavior['exit'] : '', array( 'fade', 'none' ), $default['behavior']['exit'] ), 'durationMs' => min( 2000, max( 0, absint( isset( $behavior['durationMs'] ) ? $behavior['durationMs'] : $default['behavior']['durationMs'] ) ) ) ),
+        );
+    }
+
     private function sanitize_name( $name ) {
         $name = $this->limit_text( sanitize_text_field( $name ), 120 );
         if ( '' === $name ) {
@@ -318,7 +378,7 @@ class VH360_Studio_Overlay_Repository {
     }
 
     private function sanitize_type( $type ) {
-        return in_array( $type, array( self::TYPE_LOWER_THIRD, self::TYPE_COUNTDOWN ), true ) ? $type : new WP_Error( 'vh360_overlay_invalid_type', __( 'Invalid overlay type.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        return in_array( $type, array( self::TYPE_LOWER_THIRD, self::TYPE_COUNTDOWN, self::TYPE_BIBLE ), true ) ? $type : new WP_Error( 'vh360_overlay_invalid_type', __( 'Invalid overlay type.', 'videohub360-studio' ), array( 'status' => 400 ) );
     }
 
     private function sanitize_hex( $value, $fallback ) {
@@ -331,6 +391,15 @@ class VH360_Studio_Overlay_Repository {
     }
 
     public function default_config( $type = self::TYPE_LOWER_THIRD ) {
+        if ( self::TYPE_BIBLE === $type ) {
+            return array(
+                'id' => 0, 'type' => self::TYPE_BIBLE, 'name' => __( 'Untitled Scripture Cue', 'videohub360-studio' ),
+                'scripture' => array( 'translationKey' => '', 'translationLabel' => '', 'reference' => '', 'ranges' => array(), 'datasetVersion' => '', 'sourceHash' => '' ),
+                'style' => array( 'template' => 'lower_band', 'position' => 'bottom_center', 'scale' => 100, 'backgroundColor' => '#0f172a', 'backgroundOpacity' => 88, 'scriptureColor' => '#ffffff', 'referenceColor' => '#dbeafe', 'textAlign' => 'center', 'showVerseNumbers' => true, 'showReference' => true, 'showTranslation' => true ),
+                'pagination' => array( 'maximumLines' => 6 ),
+                'behavior' => array( 'entrance' => 'fade', 'exit' => 'fade', 'durationMs' => 300 ),
+            );
+        }
         if ( self::TYPE_COUNTDOWN === $type ) {
             return array(
                 'id' => 0, 'type' => self::TYPE_COUNTDOWN, 'name' => __( 'Untitled Countdown', 'videohub360-studio' ),
