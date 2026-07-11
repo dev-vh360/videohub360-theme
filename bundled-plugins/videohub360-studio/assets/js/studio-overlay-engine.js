@@ -41,10 +41,17 @@
         requestFrames();
     }
     function transition(name, slot, item) { dispatch(name, eventDetail(slot, item)); }
+    function requestProgramFrame() {
+        if (!destroyed && compositor.requestFrame) { compositor.requestFrame(); }
+    }
+
+    function requestPreviewFrame() {
+        if (!destroyed) { schedulePreviewFrame(); }
+    }
+
     function requestFrames() {
-        if (destroyed) { return; }
-        if (compositor.requestFrame) { compositor.requestFrame(); }
-        schedulePreviewFrame();
+        requestProgramFrame();
+        requestPreviewFrame();
     }
 
     function stage(slot, config) {
@@ -304,7 +311,15 @@
         const item = state.program.lowerThird;
         if (!item) { return; }
         drawAnimatedLowerThird(context, item, frame);
-        if (state.program.lowerThird) { requestFrames(); }
+        const current = state.program.lowerThird;
+        if (current && (
+            current.phase === 'entering' ||
+            current.phase === 'updating' ||
+            current.phase === 'exiting' ||
+            Number(current.config && current.config.behavior && current.config.behavior.autoHideSeconds) > 0
+        )) {
+            requestProgramFrame();
+        }
     });
 
     function handleProgramResolutionChange(event) {
