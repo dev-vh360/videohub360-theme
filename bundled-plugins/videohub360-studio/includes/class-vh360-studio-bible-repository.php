@@ -45,7 +45,7 @@ class VH360_Studio_Bible_Repository {
         $key = 'vh360_bible_' . sanitize_key( $translation_key ) . '_' . $book_key . '_' . $chapter . '_' . $tr['source_hash'];
         $cached = wp_cache_get( $key, 'vh360_studio_bible' ); if ( false !== $cached ) { return $cached; }
         global $wpdb; $v = VH360_Studio_Database::bible_verses_table_name();
-        $rows = $wpdb->get_results( $wpdb->prepare( "SELECT book_key AS bookKey,book_name AS bookName,chapter_number AS chapter,verse_number AS verse,verse_suffix AS suffix,verse_text AS text,verse_status AS status FROM {$v} WHERE translation_key=%s AND book_key=%s AND chapter_number=%d ORDER BY verse_number,verse_suffix", sanitize_key( $translation_key ), $book_key, $chapter ), ARRAY_A );
+        $rows = $wpdb->get_results( $wpdb->prepare( "SELECT book_key AS bookKey,book_name AS bookName,chapter_number AS chapter,verse_number AS verse,verse_suffix AS suffix,verse_suffix AS verseSuffix,verse_text AS text,verse_status AS status FROM {$v} WHERE translation_key=%s AND book_key=%s AND chapter_number=%d ORDER BY verse_number,verse_suffix", sanitize_key( $translation_key ), $book_key, $chapter ), ARRAY_A );
         $rows = array_values( array_filter( $rows, function( $r ) { return 'present' === $r['status'] && '' !== trim( $r['text'] ); } ) );
         wp_cache_set( $key, $rows, 'vh360_studio_bible', HOUR_IN_SECONDS );
         return $rows;
@@ -61,7 +61,8 @@ class VH360_Studio_Bible_Repository {
                 $chapter = $this->get_chapter( $translation_key, $range['bookKey'], $c ); if ( is_wp_error( $chapter ) ) { return $chapter; }
                 foreach ( $chapter as $row ) {
                     $v = absint( $row['verse'] );
-                    if ( ( $c === $range['startChapter'] && $v < $range['startVerse'] ) || ( $c === $range['endChapter'] && $v > $range['endVerse'] ) ) { continue; }
+                    $suffix = isset( $row['suffix'] ) ? (string) $row['suffix'] : '';
+                    if ( ( $c === $range['startChapter'] && ( $v < $range['startVerse'] || ( $v === $range['startVerse'] && strcmp( $suffix, $range['startVerseSuffix'] ) < 0 ) ) ) || ( $c === $range['endChapter'] && ( $v > $range['endVerse'] || ( $v === $range['endVerse'] && strcmp( $suffix, $range['endVerseSuffix'] ) > 0 ) ) ) ) { continue; }
                     $out[] = $row;
                     if ( count( $out ) > self::LIMIT ) { return new WP_Error( 'vh360_bible_passage_too_large', __( 'Bible passages are limited to 50 verses.', 'videohub360-studio' ), array( 'status' => 400 ) ); }
                 }
@@ -89,8 +90,10 @@ class VH360_Studio_Bible_Repository {
             'bookKey' => strtoupper( sanitize_text_field( isset( $r['bookKey'] ) ? $r['bookKey'] : ( isset( $r['book_key'] ) ? $r['book_key'] : '' ) ) ),
             'startChapter' => absint( isset( $r['startChapter'] ) ? $r['startChapter'] : ( isset( $r['start_chapter'] ) ? $r['start_chapter'] : 0 ) ),
             'startVerse' => absint( isset( $r['startVerse'] ) ? $r['startVerse'] : ( isset( $r['start_verse'] ) ? $r['start_verse'] : 0 ) ),
+            'startVerseSuffix' => strtolower( sanitize_text_field( isset( $r['startVerseSuffix'] ) ? $r['startVerseSuffix'] : ( isset( $r['start_verse_suffix'] ) ? $r['start_verse_suffix'] : '' ) ) ),
             'endChapter' => absint( isset( $r['endChapter'] ) ? $r['endChapter'] : ( isset( $r['end_chapter'] ) ? $r['end_chapter'] : 0 ) ),
             'endVerse' => isset( $r['endVerse'] ) ? ( null === $r['endVerse'] ? null : absint( $r['endVerse'] ) ) : ( isset( $r['end_verse'] ) ? absint( $r['end_verse'] ) : 0 ),
+            'endVerseSuffix' => strtolower( sanitize_text_field( isset( $r['endVerseSuffix'] ) ? $r['endVerseSuffix'] : ( isset( $r['end_verse_suffix'] ) ? $r['end_verse_suffix'] : '' ) ) ),
         );
     }
 
@@ -99,23 +102,24 @@ class VH360_Studio_Bible_Repository {
         global $wpdb; $v = VH360_Studio_Database::bible_verses_table_name();
         $end = (int) $wpdb->get_var( $wpdb->prepare( "SELECT MAX(verse_number) FROM {$v} WHERE translation_key=%s AND book_key=%s AND chapter_number=%d AND verse_status='present'", sanitize_key( $translation_key ), $range['bookKey'], $range['endChapter'] ) );
         if ( $end < 1 ) { return new WP_Error( 'vh360_bible_reference_out_of_range', __( 'Reference could not be resolved.', 'videohub360-studio' ), array( 'status' => 400 ) ); }
-        $range['endVerse'] = $end; return $range;
+        $range['endVerse'] = $end; $range['endVerseSuffix'] = (string) $wpdb->get_var( $wpdb->prepare( "SELECT MAX(verse_suffix) FROM {$v} WHERE translation_key=%s AND book_key=%s AND chapter_number=%d AND verse_number=%d AND verse_status='present'", sanitize_key( $translation_key ), $range['bookKey'], $range['endChapter'], $end ) ); return $range;
     }
 
     private function validate_range_bounds( $translation_key, $range ) {
         if ( ! VH360_Studio_Bible_Books::get( strtoupper( $range['bookKey'] ) ) && ! VH360_Studio_Bible_Books::get( $range['bookKey'] ) ) { return new WP_Error( 'vh360_bible_book_unknown', __( 'Unknown Bible book.', 'videohub360-studio' ), array( 'status' => 400 ) ); }
         if ( $range['endChapter'] < $range['startChapter'] || $range['endChapter'] - $range['startChapter'] > self::MAX_CHAPTER_SPAN ) { return new WP_Error( 'vh360_bible_reference_too_large', __( 'Bible reference spans too many chapters.', 'videohub360-studio' ), array( 'status' => 400 ) ); }
         global $wpdb; $v = VH360_Studio_Database::bible_verses_table_name();
-        $start = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$v} WHERE translation_key=%s AND book_key=%s AND chapter_number=%d AND verse_number=%d AND verse_status='present'", sanitize_key( $translation_key ), $range['bookKey'], $range['startChapter'], $range['startVerse'] ) );
-        $end = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$v} WHERE translation_key=%s AND book_key=%s AND chapter_number=%d AND verse_number=%d AND verse_status='present'", sanitize_key( $translation_key ), $range['bookKey'], $range['endChapter'], $range['endVerse'] ) );
+        $start = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$v} WHERE translation_key=%s AND book_key=%s AND chapter_number=%d AND verse_number=%d AND verse_suffix=%s AND verse_status='present'", sanitize_key( $translation_key ), $range['bookKey'], $range['startChapter'], $range['startVerse'], $range['startVerseSuffix'] ) );
+        $end = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$v} WHERE translation_key=%s AND book_key=%s AND chapter_number=%d AND verse_number=%d AND verse_suffix=%s AND verse_status='present'", sanitize_key( $translation_key ), $range['bookKey'], $range['endChapter'], $range['endVerse'], $range['endVerseSuffix'] ) );
         if ( ! $start || ! $end ) { return new WP_Error( 'vh360_bible_reference_out_of_range', __( 'Reference could not be resolved.', 'videohub360-studio' ), array( 'status' => 400 ) ); }
         return true;
     }
 
     private function display_reference( $book, $r ) {
         $same = $r['startChapter'] === $r['endChapter'];
-        if ( $same && $r['startVerse'] === $r['endVerse'] ) { return $book . ' ' . $r['startChapter'] . ':' . $r['startVerse']; }
-        return $book . ' ' . $r['startChapter'] . ':' . $r['startVerse'] . '–' . ( $same ? '' : $r['endChapter'] . ':' ) . $r['endVerse'];
+        $start = $r['startVerse'] . $r['startVerseSuffix']; $end = $r['endVerse'] . $r['endVerseSuffix'];
+        if ( $same && $start === $end ) { return $book . ' ' . $r['startChapter'] . ':' . $start; }
+        return $book . ' ' . $r['startChapter'] . ':' . $start . '–' . ( $same ? '' : $r['endChapter'] . ':' ) . $end;
     }
 
 

@@ -330,8 +330,10 @@ class VH360_Studio_Overlay_Repository {
                     'bookKey'      => strtoupper( sanitize_text_field( isset( $range['bookKey'] ) ? $range['bookKey'] : ( isset( $range['book_key'] ) ? $range['book_key'] : '' ) ) ),
                     'startChapter' => max( 1, absint( isset( $range['startChapter'] ) ? $range['startChapter'] : ( isset( $range['start_chapter'] ) ? $range['start_chapter'] : 1 ) ) ),
                     'startVerse'   => max( 1, absint( isset( $range['startVerse'] ) ? $range['startVerse'] : ( isset( $range['start_verse'] ) ? $range['start_verse'] : 1 ) ) ),
+                    'startVerseSuffix' => preg_match( '/^[a-z]?$/', isset( $range['startVerseSuffix'] ) ? $range['startVerseSuffix'] : ( isset( $range['start_verse_suffix'] ) ? $range['start_verse_suffix'] : '' ) ) ? strtolower( sanitize_text_field( isset( $range['startVerseSuffix'] ) ? $range['startVerseSuffix'] : ( isset( $range['start_verse_suffix'] ) ? $range['start_verse_suffix'] : '' ) ) ) : '',
                     'endChapter'   => max( 1, absint( isset( $range['endChapter'] ) ? $range['endChapter'] : ( isset( $range['end_chapter'] ) ? $range['end_chapter'] : 1 ) ) ),
                     'endVerse'     => max( 1, absint( isset( $range['endVerse'] ) ? $range['endVerse'] : ( isset( $range['end_verse'] ) ? $range['end_verse'] : 1 ) ) ),
+                    'endVerseSuffix' => preg_match( '/^[a-z]?$/', isset( $range['endVerseSuffix'] ) ? $range['endVerseSuffix'] : ( isset( $range['end_verse_suffix'] ) ? $range['end_verse_suffix'] : '' ) ) ? strtolower( sanitize_text_field( isset( $range['endVerseSuffix'] ) ? $range['endVerseSuffix'] : ( isset( $range['end_verse_suffix'] ) ? $range['end_verse_suffix'] : '' ) ) ) : '',
                 );
             }
         }

@@ -474,8 +474,9 @@
         context.font = fontFor(bodySize, '700');
         const allLines = [];
         verses.forEach((verse) => {
-            const prefix = style.showVerseNumbers !== false ? String(verse.verse || '') + ' ' : '';
-            bibleWrap(context, prefix + String(verse.text || ''), innerWidth).forEach((line, index) => allLines.push({ verse: index === 0 ? verse.verse : null, text: line }));
+            const marker = String(verse.verse || '') + String(verse.suffix || verse.verseSuffix || '');
+            const prefix = style.showVerseNumbers !== false ? marker + ' ' : '';
+            bibleWrap(context, prefix + String(verse.text || ''), innerWidth).forEach((line, index) => allLines.push({ verse: index === 0 ? marker : null, text: line }));
         });
         const reserveLabels = (style.showReference !== false && scripture.reference) || (style.showTranslation !== false && scripture.translationLabel) ? labelSize * 1.8 : 0;
         context.font = fontFor(labelSize * 0.86, '600');
