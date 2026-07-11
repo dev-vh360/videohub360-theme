@@ -5,9 +5,11 @@ class VH360_Studio_Bible_Importer {
 
     public function create_job( $user_id, $file, $meta ) {
         if ( empty( $meta['permissionConfirmed'] ) ) { return new WP_Error( 'vh360_bible_permission_required', __( 'Confirm that you have permission to use this file.', 'videohub360-studio' ), array( 'status' => 400 ) ); }
-        $required = array( 'translationKey', 'name', 'abbreviation', 'language', 'sourceName', 'licenseName', 'datasetVersion' );
-        foreach ( $required as $k ) { if ( empty( $meta[ $k ] ) ) { return new WP_Error( 'vh360_bible_import_metadata_required', __( 'Bible translation metadata is required.', 'videohub360-studio' ), array( 'status' => 400 ) ); } }
-        if ( ! empty( $meta['attributionRequired'] ) && '' === trim( isset( $meta['attribution'] ) ? (string) $meta['attribution'] : '' ) ) { return new WP_Error( 'vh360_bible_attribution_required', __( 'Attribution text is required when attribution is required by the license.', 'videohub360-studio' ), array( 'status' => 400 ) ); }
+        $clean_meta = $this->sanitize_meta( $meta );
+        $required_clean = array( 'translation_key', 'name', 'abbreviation', 'language', 'source_name', 'license_name', 'dataset_version' );
+        foreach ( $required_clean as $k ) { if ( '' === trim( (string) $clean_meta[ $k ] ) ) { return new WP_Error( 'vh360_bible_import_metadata_required', __( 'Bible translation metadata is required.', 'videohub360-studio' ), array( 'status' => 400 ) ); } }
+        if ( ! empty( $clean_meta['attribution_required'] ) && '' === trim( (string) $clean_meta['attribution'] ) ) { return new WP_Error( 'vh360_bible_attribution_required', __( 'Attribution text is required when attribution is required by the license.', 'videohub360-studio' ), array( 'status' => 400 ) ); }
+        if ( strlen( $clean_meta['attribution'] ) > 500 ) { return new WP_Error( 'vh360_bible_attribution_too_long', __( 'Attribution text must be 500 characters or fewer.', 'videohub360-studio' ), array( 'status' => 400 ) ); }
         if ( empty( $file['tmp_name'] ) || ! is_uploaded_file( $file['tmp_name'] ) ) { return new WP_Error( 'vh360_bible_upload_required', __( 'CSV file is required.', 'videohub360-studio' ), array( 'status' => 400 ) ); }
         $ext = strtolower( pathinfo( isset( $file['name'] ) ? $file['name'] : '', PATHINFO_EXTENSION ) );
         if ( 'csv' !== $ext ) { return new WP_Error( 'vh360_bible_upload_type', __( 'Upload a CSV file.', 'videohub360-studio' ), array( 'status' => 400 ) ); }
@@ -16,7 +18,7 @@ class VH360_Studio_Bible_Importer {
         if ( ! move_uploaded_file( $file['tmp_name'], $dest ) ) { return new WP_Error( 'vh360_bible_upload_failed', __( 'CSV upload failed.', 'videohub360-studio' ), array( 'status' => 500 ) ); }
         $header_error = $this->validate_header( $dest ); if ( is_wp_error( $header_error ) ) { wp_delete_file( $dest ); return $header_error; }
         global $wpdb; $jobs = VH360_Studio_Database::bible_import_jobs_table_name(); $now = current_time( 'mysql' ); $key = sanitize_key( $meta['translationKey'] ); if ( '' === $key || strlen( $key ) > 64 || 0 === strpos( $key, '__vh360_' ) ) { wp_delete_file( $dest ); return new WP_Error( 'vh360_bible_translation_key_invalid', __( 'Translation key is invalid or reserved.', 'videohub360-studio' ), array( 'status' => 400 ) ); } $hash = hash_file( 'sha256', $dest );
-        $payload = array( 'meta' => $this->sanitize_meta( $meta ), 'errors' => array() );
+        $payload = array( 'meta' => $clean_meta, 'errors' => array() );
         $ok = $wpdb->insert( $jobs, array( 'user_id' => absint( $user_id ), 'translation_key' => $key, 'source_file' => $dest, 'source_hash' => $hash, 'status' => 'created', 'created_at' => $now, 'updated_at' => $now, 'error_message' => wp_json_encode( $payload ) ) );
         if ( false === $ok ) { wp_delete_file( $dest ); return new WP_Error( 'vh360_bible_import_create_failed', __( 'Import job could not be created.', 'videohub360-studio' ), array( 'status' => 500 ) ); }
         $id = (int) $wpdb->insert_id; if ( false === $wpdb->update( $jobs, array( 'temporary_translation_key' => '__vh360_import_' . $id ), array( 'id' => $id ) ) ) { wp_delete_file( $dest ); $wpdb->delete( $jobs, array( 'id' => $id ) ); return new WP_Error( 'vh360_bible_import_create_failed', __( 'Import job could not be created.', 'videohub360-studio' ), array( 'status' => 500 ) ); }
@@ -24,14 +26,14 @@ class VH360_Studio_Bible_Importer {
     }
 
     private function sanitize_meta( $m ) {
-        return array( 'translation_key' => sanitize_key( $m['translationKey'] ), 'name' => sanitize_text_field( $m['name'] ), 'abbreviation' => sanitize_text_field( $m['abbreviation'] ), 'language' => sanitize_text_field( $m['language'] ), 'source_name' => sanitize_text_field( $m['sourceName'] ), 'source_url' => esc_url_raw( isset( $m['sourceUrl'] ) ? $m['sourceUrl'] : '' ), 'license_name' => sanitize_text_field( $m['licenseName'] ), 'license_url' => esc_url_raw( isset( $m['licenseUrl'] ) ? $m['licenseUrl'] : '' ), 'attribution' => $this->limit_text( sanitize_textarea_field( isset( $m['attribution'] ) ? $m['attribution'] : '' ), 500 ), 'attribution_required' => ! empty( $m['attributionRequired'] ) ? 1 : 0, 'dataset_version' => sanitize_text_field( $m['datasetVersion'] ) );
+        return array( 'translation_key' => sanitize_key( isset( $m['translationKey'] ) ? $m['translationKey'] : '' ), 'name' => sanitize_text_field( isset( $m['name'] ) ? $m['name'] : '' ), 'abbreviation' => sanitize_text_field( isset( $m['abbreviation'] ) ? $m['abbreviation'] : '' ), 'language' => sanitize_text_field( isset( $m['language'] ) ? $m['language'] : '' ), 'source_name' => sanitize_text_field( isset( $m['sourceName'] ) ? $m['sourceName'] : '' ), 'source_url' => esc_url_raw( isset( $m['sourceUrl'] ) ? $m['sourceUrl'] : '' ), 'license_name' => sanitize_text_field( isset( $m['licenseName'] ) ? $m['licenseName'] : '' ), 'license_url' => esc_url_raw( isset( $m['licenseUrl'] ) ? $m['licenseUrl'] : '' ), 'attribution' => sanitize_textarea_field( isset( $m['attribution'] ) ? $m['attribution'] : '' ), 'attribution_required' => ! empty( $m['attributionRequired'] ) ? 1 : 0, 'dataset_version' => sanitize_text_field( isset( $m['datasetVersion'] ) ? $m['datasetVersion'] : '' ) );
     }
 
     private function limit_text( $value, $length ) { return function_exists( 'mb_substr' ) ? mb_substr( $value, 0, $length ) : substr( $value, 0, $length ); }
 
     private function validate_header( $file ) {
         $fh = fopen( $file, 'r' ); if ( ! $fh ) { return new WP_Error( 'vh360_bible_import_file_missing', __( 'Import file missing.', 'videohub360-studio' ), array( 'status' => 500 ) ); }
-        $header = fgetcsv( $fh ); fclose( $fh ); if ( ! $header || count( $header ) < 4 ) { return new WP_Error( 'vh360_bible_import_header_invalid', __( 'CSV header must be Book,Chapter,Verse,Text.', 'videohub360-studio' ), array( 'status' => 400 ) ); }
+        $header = fgetcsv( $fh ); fclose( $fh ); if ( ! $header || count( $header ) !== 4 ) { return new WP_Error( 'vh360_bible_import_header_invalid', __( 'CSV header must be Book,Chapter,Verse,Text.', 'videohub360-studio' ), array( 'status' => 400 ) ); }
         $header[0] = preg_replace( '/^\xEF\xBB\xBF/', '', $header[0] );
         $expected = array( 'book', 'chapter', 'verse', 'text' );
         foreach ( $expected as $i => $name ) { if ( strtolower( trim( $header[ $i ] ) ) !== $name ) { return new WP_Error( 'vh360_bible_import_header_invalid', __( 'CSV header must be Book,Chapter,Verse,Text.', 'videohub360-studio' ), array( 'status' => 400 ) ); } }
