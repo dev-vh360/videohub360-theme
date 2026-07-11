@@ -213,6 +213,25 @@
         return '';
     }
 
+    function timerDefinitionChanged(staged, live) {
+        const stagedTimer = (staged && staged.timer) || {};
+        const liveTimer = (live && live.timer) || {};
+        return stagedTimer.mode !== liveTimer.mode ||
+            Number(stagedTimer.durationSeconds) !== Number(liveTimer.durationSeconds) ||
+            String(stagedTimer.targetLocalDateTime || '') !== String(liveTimer.targetLocalDateTime || '');
+    }
+
+    function configForProgramUpdate(staged, live) {
+        const merged = clone(staged);
+        const liveTimer = (live && live.timer) || {};
+        merged.timer = Object.assign({}, merged.timer || {}, {
+            mode: liveTimer.mode || merged.timer.mode,
+            durationSeconds: liveTimer.durationSeconds || merged.timer.durationSeconds,
+            targetLocalDateTime: liveTimer.targetLocalDateTime || '',
+        });
+        return merged;
+    }
+
     function announceAction(message) {
         const warning = conflictWarning();
         setStatus(warning || message, warning ? 'warning' : 'success');
@@ -305,8 +324,14 @@
 
     function update() {
         if (!requireValid()) { return; }
-        engine.updateProgram('countdown', { preserveRuntime: true });
-        announceAction(text('updated'));
+        const program = snapshot().program.countdown;
+        const staged = currentConfig();
+        const changedTimer = timerDefinitionChanged(staged, program && program.config);
+        engine.updateProgram('countdown', { preserveRuntime: true, config: program ? configForProgramUpdate(staged, program.config) : staged });
+        setStatus(changedTimer ? text('timerResetNote') : text('updated'), changedTimer ? 'warning' : 'success');
+        if (!changedTimer) {
+            announceAction(text('updated'));
+        }
         render();
     }
 
@@ -356,7 +381,7 @@
         if (!engine.resetProgram('countdown', countdown, { runtime })) {
             engine.setRuntime('program', 'countdown', runtime);
         }
-        setStatus(text('reset') + ' ' + text('timerResetNote'), 'success');
+        setStatus(text('reset'), 'success');
         render();
     }
 

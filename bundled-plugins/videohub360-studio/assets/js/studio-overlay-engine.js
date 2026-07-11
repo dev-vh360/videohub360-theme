@@ -86,7 +86,7 @@
         if (!isSlot(slot) || !state.preview[slot] || !state.program[slot]) { return false; }
         const current = state.program[slot];
         const runtime = options.preserveRuntime === false ? (options.runtime || state.preview[slot].runtime) : current.runtime;
-        const next = makeItem(state.preview[slot].config, 'updating', runtime);
+        const next = makeItem(options.config || state.preview[slot].config, 'updating', runtime);
         next.previousConfig = clone(current.config);
         next.previousRuntime = clone(current.runtime);
         state.program[slot] = next;
@@ -487,7 +487,8 @@
             context.textAlign = 'center';
             context.textBaseline = 'top';
             const centerX = x + w / 2;
-            let textY = y + h * 0.18;
+            const textGroupHeight = (labelText.text ? labelText.size * 1.45 : 0) + timerText.size;
+            let textY = template === 'full_screen' ? (frame.height - textGroupHeight) / 2 : y + h * 0.18;
             if (labelText.text) { context.font = labelText.font; context.fillStyle = style.labelColor || '#dbeafe'; context.fillText(labelText.text, centerX, textY); textY += labelText.size * 1.45; }
             context.font = timerText.font; context.fillStyle = style.timerColor || '#ffffff'; context.fillText(timerText.text, centerX, textY);
         } finally { context.restore(); }
@@ -496,13 +497,16 @@
     function updateCountdownRuntime(item) {
         const runtime = item.runtime || {};
         const timer = (item.config && item.config.timer) || {};
+        if (item.phase === 'exiting') {
+            return;
+        }
         if (runtime.status === 'running' && countdownRemaining(item) <= 0) {
-            if (timer.endBehavior === 'hide') { hideProgram('countdown'); }
+            if (timer.endBehavior === 'hide') { runtime.status = 'complete'; runtime.remainingMs = 0; item.runtime = runtime; hideProgram('countdown'); }
             else if (timer.endBehavior === 'show_message') {
                 runtime.status = 'message'; runtime.completedAtEpochMs = Date.now(); runtime.messageUntilEpochMs = Number(timer.messageDurationSeconds) > 0 ? Date.now() + Number(timer.messageDurationSeconds) * 1000 : 0; item.runtime = runtime; changed('program', 'countdown');
             } else { runtime.status = 'complete'; runtime.completedAtEpochMs = Date.now(); item.runtime = runtime; changed('program', 'countdown'); }
         }
-        if (runtime.status === 'message' && runtime.messageUntilEpochMs && Date.now() >= runtime.messageUntilEpochMs) { hideProgram('countdown'); }
+        if (runtime.status === 'message' && runtime.messageUntilEpochMs && Date.now() >= runtime.messageUntilEpochMs) { runtime.messageUntilEpochMs = 0; runtime.status = 'complete'; item.runtime = runtime; hideProgram('countdown'); }
     }
 
     registerOverlayRenderer({
