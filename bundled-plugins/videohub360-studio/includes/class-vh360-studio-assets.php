@@ -400,6 +400,7 @@ class VH360_Studio_Assets {
                     'countdownCardWarning' => __( 'The Countdown may cover Scripture.', 'videohub360-studio' ),
                     'countdownLowerWarning' => __( 'The lower Bible band may overlap the active countdown.', 'videohub360-studio' ),
                     'unsaved' => __( 'Unsaved Scripture cue', 'videohub360-studio' ),
+                    'crossChapterDirect' => __( 'Cross-chapter ranges must be edited in the Reference field.', 'videohub360-studio' ),
                 ),
 
                 'countdown' => array(

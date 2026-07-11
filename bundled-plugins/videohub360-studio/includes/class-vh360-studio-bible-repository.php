@@ -123,12 +123,17 @@ class VH360_Studio_Bible_Repository {
     public function set_translation_status( $translation_key, $status ) {
         if ( ! in_array( $status, array( 'installed', 'disabled' ), true ) ) { return new WP_Error( 'vh360_bible_status_invalid', __( 'Invalid translation status.', 'videohub360-studio' ), array( 'status' => 400 ) ); }
         global $wpdb; $t = VH360_Studio_Database::bible_translations_table_name();
-        $updated = $wpdb->update( $t, array( 'status' => $status, 'updated_at' => current_time( 'mysql' ) ), array( 'translation_key' => sanitize_key( $translation_key ) ) );
+        $key = sanitize_key( $translation_key );
+        $exists = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$t} WHERE translation_key=%s", $key ) );
+        if ( ! $exists ) { return new WP_Error( 'vh360_bible_translation_missing', __( 'This translation is no longer installed.', 'videohub360-studio' ), array( 'status' => 404 ) ); }
+        $updated = $wpdb->update( $t, array( 'status' => $status, 'updated_at' => current_time( 'mysql' ) ), array( 'translation_key' => $key ) );
         return false === $updated ? new WP_Error( 'vh360_bible_status_failed', __( 'Translation status could not be updated.', 'videohub360-studio' ), array( 'status' => 500 ) ) : true;
     }
 
     public function delete_translation( $translation_key ) {
         global $wpdb; $t = VH360_Studio_Database::bible_translations_table_name(); $v = VH360_Studio_Database::bible_verses_table_name(); $key = sanitize_key( $translation_key );
+        $exists = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$t} WHERE translation_key=%s", $key ) );
+        if ( ! $exists ) { return new WP_Error( 'vh360_bible_translation_missing', __( 'This translation is no longer installed.', 'videohub360-studio' ), array( 'status' => 404 ) ); }
         if ( false === $wpdb->query( 'START TRANSACTION' ) ) { return new WP_Error( 'vh360_bible_delete_failed', __( 'Translation could not be deleted.', 'videohub360-studio' ), array( 'status' => 500 ) ); }
         if ( false === $wpdb->delete( $v, array( 'translation_key' => $key ) ) || false === $wpdb->delete( $t, array( 'translation_key' => $key ) ) ) { $wpdb->query( 'ROLLBACK' ); return new WP_Error( 'vh360_bible_delete_failed', __( 'Translation could not be deleted.', 'videohub360-studio' ), array( 'status' => 500 ) ); }
         if ( false === $wpdb->query( 'COMMIT' ) ) { return new WP_Error( 'vh360_bible_delete_failed', __( 'Translation could not be deleted.', 'videohub360-studio' ), array( 'status' => 500 ) ); }

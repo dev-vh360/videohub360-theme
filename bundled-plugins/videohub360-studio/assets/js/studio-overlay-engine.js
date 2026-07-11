@@ -424,14 +424,30 @@
         return { x, y, w, h, pad: frame.width * 0.025 * scale, scale };
     }
 
+    function splitLongToken(context, token, maxWidth) {
+        const chars = Array.from(String(token || ''));
+        const parts = [];
+        let part = '';
+        chars.forEach((char) => {
+            const test = part + char;
+            if (!part || context.measureText(test).width <= maxWidth) { part = test; }
+            else { parts.push(part); part = char; }
+        });
+        if (part) { parts.push(part); }
+        return parts;
+    }
+
     function bibleWrap(context, text, maxWidth) {
         const words = String(text || '').split(/\s+/).filter(Boolean);
         const lines = [];
         let line = '';
         words.forEach((word) => {
-            const test = line ? line + ' ' + word : word;
-            if (context.measureText(test).width <= maxWidth || !line) { line = test; }
-            else { lines.push(line); line = word; }
+            const segments = context.measureText(word).width > maxWidth ? splitLongToken(context, word, maxWidth) : [word];
+            segments.forEach((segment) => {
+                const test = line ? line + ' ' + segment : segment;
+                if (context.measureText(test).width <= maxWidth || !line) { line = test; }
+                else { lines.push(line); line = segment; }
+            });
         });
         if (line) { lines.push(line); }
         return lines;
@@ -660,10 +676,22 @@
         return { pageIndex, pageCount: pages.length };
     }
 
+    function refreshBibleRuntimeForScope(scope) {
+        const item = state[scope] && state[scope].bible;
+        if (!item) { return false; }
+        const runtime = paginateBible(item.config, item.runtime);
+        item.runtime = runtime;
+        return true;
+    }
+
     function handleProgramResolutionChange(event) {
         outputSize = event.detail || outputSize;
         bibleLayoutCache.clear();
         syncPreviewCanvasSize();
+        const previewChanged = refreshBibleRuntimeForScope('preview');
+        const programChanged = refreshBibleRuntimeForScope('program');
+        if (previewChanged) { changed('preview', 'bible'); }
+        if (programChanged) { changed('program', 'bible'); }
         requestFrames();
     }
 
