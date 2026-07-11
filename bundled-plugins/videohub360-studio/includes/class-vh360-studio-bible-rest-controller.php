@@ -12,6 +12,10 @@ class VH360_Studio_Bible_REST_Controller {
         register_rest_route($this->namespace,'/bible/imports',array('methods'=>'POST','callback'=>array($this,'create_import'),'permission_callback'=>array($this,'can_import')));
         register_rest_route($this->namespace,'/bible/imports/(?P<id>\d+)',array(array('methods'=>'GET','callback'=>array($this,'get_import'),'permission_callback'=>array($this,'can_import')),array('methods'=>'DELETE','callback'=>array($this,'delete_import'),'permission_callback'=>array($this,'can_import'))));
         register_rest_route($this->namespace,'/bible/imports/(?P<id>\d+)/batch',array('methods'=>'POST','callback'=>array($this,'batch'),'permission_callback'=>array($this,'can_import')));
+        register_rest_route($this->namespace,'/bible/imports/(?P<id>\d+)/clean',array('methods'=>'POST','callback'=>array($this,'clean_import'),'permission_callback'=>array($this,'can_import')));
+        register_rest_route($this->namespace,'/bible/translations/(?P<key>[a-z0-9_-]+)',array(array('methods'=>'DELETE','callback'=>array($this,'delete_translation'),'permission_callback'=>array($this,'can_import'))));
+        register_rest_route($this->namespace,'/bible/translations/(?P<key>[a-z0-9_-]+)/enable',array('methods'=>'POST','callback'=>array($this,'enable_translation'),'permission_callback'=>array($this,'can_import')));
+        register_rest_route($this->namespace,'/bible/translations/(?P<key>[a-z0-9_-]+)/disable',array('methods'=>'POST','callback'=>array($this,'disable_translation'),'permission_callback'=>array($this,'can_import')));
     }
     public function can_query(){return is_user_logged_in() && VH360_Studio_Permissions::user_can_access_studio() && wp_verify_nonce(isset($_SERVER['HTTP_X_WP_NONCE'])?sanitize_text_field(wp_unslash($_SERVER['HTTP_X_WP_NONCE'])):'','wp_rest');}
     public function can_import(){return current_user_can('manage_options') && wp_verify_nonce(isset($_SERVER['HTTP_X_WP_NONCE'])?sanitize_text_field(wp_unslash($_SERVER['HTTP_X_WP_NONCE'])):'','wp_rest');}
@@ -24,4 +28,8 @@ class VH360_Studio_Bible_REST_Controller {
     public function get_import($r){$job=$this->importer->get_job(absint($r['id']));return $job?rest_ensure_response($job):new WP_Error('vh360_bible_import_missing',__('Import job not found.','videohub360-studio'),array('status'=>404));}
     public function delete_import($r){return rest_ensure_response(array('deleted'=>$this->importer->cancel_job(absint($r['id']))));}
     public function batch($r){$job=$this->importer->process_batch(absint($r['id']));return is_wp_error($job)?$job:rest_ensure_response($job);}
+    public function clean_import($r){return rest_ensure_response(array('cleaned'=>$this->importer->clean_failed_job(absint($r['id']))));}
+    public function enable_translation($r){$result=$this->repo->set_translation_status($r['key'],'installed');return is_wp_error($result)?$result:rest_ensure_response(array('enabled'=>true));}
+    public function disable_translation($r){$result=$this->repo->set_translation_status($r['key'],'disabled');return is_wp_error($result)?$result:rest_ensure_response(array('disabled'=>true));}
+    public function delete_translation($r){$result=$this->repo->delete_translation($r['key']);return is_wp_error($result)?$result:rest_ensure_response(array('deleted'=>true));}
 }

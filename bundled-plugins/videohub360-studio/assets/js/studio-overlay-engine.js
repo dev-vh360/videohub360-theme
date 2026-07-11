@@ -456,11 +456,13 @@
             bibleWrap(context, prefix + String(verse.text || ''), innerWidth).forEach((line, index) => allLines.push({ verse: index === 0 ? verse.verse : null, text: line }));
         });
         const reserveLabels = (style.showReference !== false && scripture.reference) || (style.showTranslation !== false && scripture.translationLabel) ? labelSize * 1.8 : 0;
-        const reserveAttribution = scripture.attributionRequired && scripture.attribution ? labelSize * 1.4 : 0;
+        context.font = fontFor(labelSize * 0.86, '600');
+        const attributionLines = scripture.attributionRequired && scripture.attribution ? bibleWrap(context, scripture.attribution, innerWidth) : [];
+        const reserveAttribution = attributionLines.length ? attributionLines.length * labelSize * 1.08 + labelSize * 0.35 : 0;
         const pageLines = Math.max(1, Math.min(maxLines, Math.floor((box.h - box.pad * 2 - reserveLabels - reserveAttribution) / lineHeight)));
         const pages = [];
-        for (let i = 0; i < allLines.length; i += pageLines) { pages.push({ lines: allLines.slice(i, i + pageLines), bodySize, labelSize, lineHeight }); }
-        const result = pages.length ? pages : [{ lines: [], bodySize, labelSize, lineHeight }];
+        for (let i = 0; i < allLines.length; i += pageLines) { pages.push({ lines: allLines.slice(i, i + pageLines), bodySize, labelSize, lineHeight, attributionLines }); }
+        const result = pages.length ? pages : [{ lines: [], bodySize, labelSize, lineHeight, attributionLines }];
         bibleLayoutCache.set(cacheKey, clone(result));
         if (bibleLayoutCache.size > 80) { bibleLayoutCache.delete(bibleLayoutCache.keys().next().value); }
         return result;
@@ -494,7 +496,13 @@
             if (style.showTranslation !== false && scripture.translationLabel) { parts.push(scripture.translationLabel); }
             const label = parts.join(' · ');
             let labelY = box.y + box.h - box.pad - page.labelSize;
-            if (scripture.attributionRequired && scripture.attribution) { context.font = fontFor(page.labelSize * 0.86, '600'); context.fillStyle = style.referenceColor || '#dbeafe'; context.fillText(ellipsizeText(context, scripture.attribution, box.w - box.pad * 2), tx, labelY); labelY -= page.labelSize * 1.2; }
+            if (page.attributionLines && page.attributionLines.length) {
+                context.font = fontFor(page.labelSize * 0.86, '600');
+                context.fillStyle = style.referenceColor || '#dbeafe';
+                labelY -= (page.attributionLines.length - 1) * page.labelSize * 1.08;
+                page.attributionLines.forEach((line, index) => { context.fillText(line, tx, labelY + index * page.labelSize * 1.08); });
+                labelY -= page.labelSize * 1.35;
+            }
             if (label) { context.font = fontFor(page.labelSize, '700'); context.fillStyle = style.referenceColor || '#dbeafe'; context.fillText(ellipsizeText(context, label, box.w - box.pad * 2), tx, labelY); }
         } finally { context.restore(); }
     }

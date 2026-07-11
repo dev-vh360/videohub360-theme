@@ -118,5 +118,22 @@ class VH360_Studio_Bible_Repository {
         return $book . ' ' . $r['startChapter'] . ':' . $r['startVerse'] . '–' . ( $same ? '' : $r['endChapter'] . ':' ) . $r['endVerse'];
     }
 
+
+
+    public function set_translation_status( $translation_key, $status ) {
+        if ( ! in_array( $status, array( 'installed', 'disabled' ), true ) ) { return new WP_Error( 'vh360_bible_status_invalid', __( 'Invalid translation status.', 'videohub360-studio' ), array( 'status' => 400 ) ); }
+        global $wpdb; $t = VH360_Studio_Database::bible_translations_table_name();
+        $updated = $wpdb->update( $t, array( 'status' => $status, 'updated_at' => current_time( 'mysql' ) ), array( 'translation_key' => sanitize_key( $translation_key ) ) );
+        return false === $updated ? new WP_Error( 'vh360_bible_status_failed', __( 'Translation status could not be updated.', 'videohub360-studio' ), array( 'status' => 500 ) ) : true;
+    }
+
+    public function delete_translation( $translation_key ) {
+        global $wpdb; $t = VH360_Studio_Database::bible_translations_table_name(); $v = VH360_Studio_Database::bible_verses_table_name(); $key = sanitize_key( $translation_key );
+        if ( false === $wpdb->query( 'START TRANSACTION' ) ) { return new WP_Error( 'vh360_bible_delete_failed', __( 'Translation could not be deleted.', 'videohub360-studio' ), array( 'status' => 500 ) ); }
+        if ( false === $wpdb->delete( $v, array( 'translation_key' => $key ) ) || false === $wpdb->delete( $t, array( 'translation_key' => $key ) ) ) { $wpdb->query( 'ROLLBACK' ); return new WP_Error( 'vh360_bible_delete_failed', __( 'Translation could not be deleted.', 'videohub360-studio' ), array( 'status' => 500 ) ); }
+        if ( false === $wpdb->query( 'COMMIT' ) ) { return new WP_Error( 'vh360_bible_delete_failed', __( 'Translation could not be deleted.', 'videohub360-studio' ), array( 'status' => 500 ) ); }
+        self::clear_translation_cache( $key ); return true;
+    }
+
     public static function clear_translation_cache( $translation_key ) { wp_cache_set( 'vh360_bible_cache_bust_' . sanitize_key( $translation_key ), time(), 'vh360_studio_bible' ); }
 }
