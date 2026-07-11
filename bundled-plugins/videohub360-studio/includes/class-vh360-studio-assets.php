@@ -26,10 +26,13 @@ class VH360_Studio_Assets {
         $overlays_css_path       = 'assets/css/studio-overlays-workspace.css';
         $overlay_engine_css_path = 'assets/css/studio-overlay-engine.css';
         $lower_thirds_css_path   = 'assets/css/studio-lower-thirds.css';
+        $countdown_css_path      = 'assets/css/studio-countdown.css';
         $js_path                 = 'assets/js/studio-dashboard.js';
         $overlays_workspace_path = 'assets/js/studio-overlays-workspace.js';
         $overlay_engine_path     = 'assets/js/studio-overlay-engine.js';
+        $overlay_status_path     = 'assets/js/studio-overlay-status.js';
         $lower_thirds_path       = 'assets/js/studio-lower-thirds.js';
+        $countdown_path          = 'assets/js/studio-countdown.js';
 
         wp_enqueue_style(
             'vh360-studio-dashboard',
@@ -57,6 +60,13 @@ class VH360_Studio_Assets {
             VH360_STUDIO_PLUGIN_URL . $lower_thirds_css_path,
             array( 'vh360-studio-overlay-engine' ),
             $this->asset_version( $lower_thirds_css_path )
+        );
+
+        wp_enqueue_style(
+            'vh360-studio-countdown',
+            VH360_STUDIO_PLUGIN_URL . $countdown_css_path,
+            array( 'vh360-studio-lower-thirds' ),
+            $this->asset_version( $countdown_css_path )
         );
 
         wp_enqueue_script( 'agora-rtc-sdk', 'https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js', array(), '4.20.0', true );
@@ -96,10 +106,26 @@ class VH360_Studio_Assets {
         );
 
         wp_enqueue_script(
+            'vh360-studio-overlay-status',
+            VH360_STUDIO_PLUGIN_URL . $overlay_status_path,
+            array( 'vh360-studio-overlay-engine' ),
+            $this->asset_version( $overlay_status_path ),
+            true
+        );
+
+        wp_enqueue_script(
             'vh360-studio-lower-thirds',
             VH360_STUDIO_PLUGIN_URL . $lower_thirds_path,
-            array( 'vh360-studio-overlay-engine' ),
+            array( 'vh360-studio-overlay-status' ),
             $this->asset_version( $lower_thirds_path ),
+            true
+        );
+
+        wp_enqueue_script(
+            'vh360-studio-countdown',
+            VH360_STUDIO_PLUGIN_URL . $countdown_path,
+            array( 'vh360-studio-lower-thirds' ),
+            $this->asset_version( $countdown_path ),
             true
         );
     }
@@ -325,6 +351,40 @@ class VH360_Studio_Assets {
                 'retryFailedChunksBeforeReplay' => __( 'Retry failed chunks during this session before preparing the replay.', 'videohub360-studio' ),
                 'noRecordingChunksCaptured' => __( 'No recording chunks were captured. Start a new recording and try again.', 'videohub360-studio' ),
                 'replayPreparedReadyToPublish' => __( 'Replay prepared. You can publish it now.', 'videohub360-studio' ),
+
+                'countdown' => array(
+                    'loading'       => __( 'Loading countdown presets…', 'videohub360-studio' ),
+                    'loaded'        => __( 'Countdown presets loaded.', 'videohub360-studio' ),
+                    'loadFailed'    => __( 'Countdown presets could not be loaded.', 'videohub360-studio' ),
+                    'choosePreview' => __( 'Choose a Preview source first.', 'videohub360-studio' ),
+                    'chooseProgram' => __( 'Send a source to Program first.', 'videohub360-studio' ),
+                    'invalidDuration' => __( 'Enter a valid duration.', 'videohub360-studio' ),
+                    'futureTarget'  => __( 'Choose a future target date and time.', 'videohub360-studio' ),
+                    'staged'        => __( 'Countdown staged in Preview.', 'videohub360-studio' ),
+                    'taken'         => __( 'Countdown taken to Program.', 'videohub360-studio' ),
+                    'started'       => __( 'Countdown started.', 'videohub360-studio' ),
+                    'paused'        => __( 'Countdown paused.', 'videohub360-studio' ),
+                    'resumed'       => __( 'Countdown resumed.', 'videohub360-studio' ),
+                    'reset'         => __( 'Countdown reset.', 'videohub360-studio' ),
+                    'updated'       => __( 'Program countdown updated.', 'videohub360-studio' ),
+                    'hidden'        => __( 'Countdown hidden.', 'videohub360-studio' ),
+                    'complete'      => __( 'Countdown complete.', 'videohub360-studio' ),
+                    'message'       => __( 'End message displayed.', 'videohub360-studio' ),
+                    'saved'         => __( 'Preset saved.', 'videohub360-studio' ),
+                    'deleted'       => __( 'Preset deleted.', 'videohub360-studio' ),
+                    'saveFailed'    => __( 'Preset could not be saved.', 'videohub360-studio' ),
+                    'deleteFailed'  => __( 'Preset could not be deleted.', 'videohub360-studio' ),
+                    'fullWarning'   => __( 'Full-screen countdown will cover other overlays.', 'videohub360-studio' ),
+                    'lowerWarning'  => __( 'Lower-center countdown may overlap the active lower third.', 'videohub360-studio' ),
+                    'timerResetNote'=> __( 'Timer changes take effect when Program is reset.', 'videohub360-studio' ),
+                    'unsaved'       => __( 'Unsaved countdown', 'videohub360-studio' ),
+                    'untitled'      => __( 'Untitled Countdown', 'videohub360-studio' ),
+                    'confirmDelete' => __( 'Delete this preset?', 'videohub360-studio' ),
+                    'stagedShort'   => __( 'Staged', 'videohub360-studio' ),
+                    'notStaged'     => __( 'Not staged', 'videohub360-studio' ),
+                    'ready'         => __( 'Ready', 'videohub360-studio' ),
+                    'notLive'       => __( 'Not live', 'videohub360-studio' ),
+                ),
 
                 'lowerThirds' => array(
                     'loading'          => __( 'Loading lower thirds…', 'videohub360-studio' ),

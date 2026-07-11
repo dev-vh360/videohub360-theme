@@ -22,7 +22,6 @@
         stage: $('[data-lt-stage]'), clearPreview: $('[data-lt-clear-preview]'), take: $('[data-lt-take]'), updateProgram: $('[data-lt-update-program]'), hide: $('[data-lt-hide]'),
         save: $('[data-lt-save]'), saveNew: $('[data-lt-save-new]'), duplicate: $('[data-lt-duplicate]'), delete: $('[data-lt-delete]'),
         status: $('[data-lt-status]'), previewStatus: $('[data-lt-preview-status]'), programStatus: $('[data-lt-program-status]'),
-        previewBadge: $('[data-preview-overlay-status]'), programBadge: $('[data-program-overlay-status]'), clearAll: $('[data-clear-program-overlays]'),
     };
 
     const state = { presets: [], selectedId: 0, staged: false, previewSource: compositor.hasPreviewSource(), programOutput: compositor.hasProgramOutput(), destroyed: false };
@@ -123,9 +122,6 @@
         if (els.delete) { els.delete.disabled = !state.selectedId; }
         if (els.previewStatus) { els.previewStatus.textContent = previewLt ? text('previewStaged') : text('previewNotStaged'); }
         if (els.programStatus) { els.programStatus.textContent = programLt ? text('programLive') : text('programNotLive'); }
-        if (els.previewBadge) { els.previewBadge.hidden = !previewLt; }
-        if (els.programBadge) { els.programBadge.hidden = !programLt; }
-        if (els.clearAll) { els.clearAll.hidden = !programLt; els.clearAll.disabled = !programLt; }
     }
 
     function stage() {
@@ -137,7 +133,6 @@
     function take() { if (!state.programOutput) { setStatus(text('chooseProgram'), 'warning'); return; } if (engine.takeToProgram('lowerThird')) { setStatus(text('taken'), 'success'); } renderButtons(); }
     function updateProgram() { if (engine.updateProgram('lowerThird')) { setStatus(text('updated'), 'success'); } renderButtons(); }
     function hide() { if (engine.hideProgram('lowerThird')) { setStatus(text('hidden'), 'success'); } renderButtons(); }
-    function clearAll() { engine.clearAllProgram(); setStatus(text('cleared'), 'success'); renderButtons(); }
 
     async function save(asNew) {
         const cfg = currentConfig();
@@ -190,14 +185,13 @@
     on(els.take, 'click', take);
     on(els.updateProgram, 'click', updateProgram);
     on(els.hide, 'click', hide);
-    on(els.clearAll, 'click', clearAll);
     on(els.save, 'click', () => save(false));
     on(els.saveNew, 'click', () => save(true));
     on(els.duplicate, 'click', () => { state.selectedId = 0; if (els.name && !els.name.value) { els.name.value = text('untitled'); } save(true); });
     on(els.delete, 'click', deletePreset);
 
     on(root, 'vh360:studio:preview-source-change', (event) => { state.previewSource = Boolean(event.detail && event.detail.sourceId); renderButtons(); });
-    on(root, 'vh360:studio:program-source-change', (event) => { state.programOutput = Boolean(event.detail && event.detail.hasOutput); if (!state.programOutput) { engine.clearAllProgram({ silentTransition: true }); } renderButtons(); });
+    on(root, 'vh360:studio:program-source-change', (event) => { state.programOutput = Boolean(event.detail && event.detail.hasOutput); renderButtons(); });
     on(root, 'vh360:studio-overlay:preview-change', renderButtons);
     on(root, 'vh360:studio-overlay:program-change', renderButtons);
 

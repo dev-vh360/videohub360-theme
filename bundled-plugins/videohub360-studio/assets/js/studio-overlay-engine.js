@@ -12,6 +12,7 @@
         program: { lowerThird: null, bible: null, countdown: null },
     };
     const subscribers = new Set();
+    const renderers = new Map();
     let previewContext = previewCanvas ? previewCanvas.getContext('2d') : null;
     let previewFrame = null;
     let outputSize = compositor.getOutputSize ? compositor.getOutputSize() : { width: 1920, height: 1080, fps: 30 };
@@ -24,13 +25,13 @@
     function isSlot(slot) { return slots.indexOf(slot) !== -1; }
     function normalizeSlot(slot) { return slot === 'lower_third' ? 'lowerThird' : slot; }
 
-    function makeItem(config, phase) {
+    function makeItem(config, phase, runtime) {
         const timestamp = now();
-        return { config: clone(config), phase, startedAt: timestamp, visibleAt: 0, previousConfig: null };
+        return { config: clone(config), runtime: clone(runtime) || null, phase, startedAt: timestamp, visibleAt: 0, previousConfig: null, previousRuntime: null };
     }
 
     function eventDetail(slot, item) {
-        return { slot, active: Boolean(item), phase: item ? item.phase : 'hidden', config: item ? clone(item.config) : null };
+        return { slot, active: Boolean(item), phase: item ? item.phase : 'hidden', config: item ? clone(item.config) : null, runtime: item ? clone(item.runtime) : null };
     }
 
     function dispatch(name, detail) { root.dispatchEvent(new CustomEvent(name, { bubbles: true, detail })); }
@@ -54,10 +55,10 @@
         requestPreviewFrame();
     }
 
-    function stage(slot, config) {
+    function stage(slot, config, options = {}) {
         slot = normalizeSlot(slot);
         if (!isSlot(slot)) { return false; }
-        state.preview[slot] = makeItem(config, 'visible');
+        state.preview[slot] = makeItem(config, 'visible', options.runtime);
         state.preview[slot].visibleAt = now();
         changed('preview', slot);
         return true;
@@ -71,21 +72,23 @@
         return true;
     }
 
-    function takeToProgram(slot) {
+    function takeToProgram(slot, options = {}) {
         slot = normalizeSlot(slot);
         if (!isSlot(slot) || !state.preview[slot]) { return false; }
-        state.program[slot] = makeItem(state.preview[slot].config, 'entering');
+        state.program[slot] = makeItem(state.preview[slot].config, 'entering', options.runtime || state.preview[slot].runtime);
         transition('vh360:studio-overlay:transition-start', slot, state.program[slot]);
         changed('program', slot);
         return true;
     }
 
-    function updateProgram(slot) {
+    function updateProgram(slot, options = {}) {
         slot = normalizeSlot(slot);
         if (!isSlot(slot) || !state.preview[slot] || !state.program[slot]) { return false; }
         const current = state.program[slot];
-        const next = makeItem(state.preview[slot].config, 'updating');
+        const runtime = options.preserveRuntime === false ? (options.runtime || state.preview[slot].runtime) : current.runtime;
+        const next = makeItem(state.preview[slot].config, 'updating', runtime);
         next.previousConfig = clone(current.config);
+        next.previousRuntime = clone(current.runtime);
         state.program[slot] = next;
         transition('vh360:studio-overlay:transition-start', slot, next);
         changed('program', slot);
@@ -114,6 +117,17 @@
     function clearAllProgram(options) { slots.forEach((slot) => clearProgram(slot, options)); }
     function getState() { return clone(state); }
     function subscribe(callback) { subscribers.add(callback); return () => subscribers.delete(callback); }
+    function setRuntime(scope, slot, runtime) {
+        slot = normalizeSlot(slot);
+        if (!state[scope] || !isSlot(slot) || !state[scope][slot]) { return false; }
+        state[scope][slot].runtime = clone(runtime);
+        changed(scope, slot);
+        return true;
+    }
+    function getRuntime(scope, slot) {
+        slot = normalizeSlot(slot);
+        return state[scope] && isSlot(slot) && state[scope][slot] ? clone(state[scope][slot].runtime) : null;
+    }
 
     function syncPreviewCanvasSize() {
         if (!previewCanvas) { return; }
@@ -134,8 +148,11 @@
         if (!previewContext || !previewCanvas) { return; }
         syncPreviewCanvasSize();
         previewContext.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
-        const item = state.preview.lowerThird;
-        if (item) { renderLowerThird(previewContext, item.config, { width: previewCanvas.width, height: previewCanvas.height, now: now(), preview: true }, 1); }
+        const frame = { width: previewCanvas.width, height: previewCanvas.height, now: now(), preview: true };
+        Array.from(renderers.values()).sort((a, b) => a.order - b.order).forEach((renderer) => {
+            const item = state.preview[renderer.slot];
+            if (item && typeof renderer.drawPreview === 'function') { renderer.drawPreview(previewContext, item, frame); }
+        });
     }
 
     function rgba(hex, opacity) {
@@ -307,19 +324,152 @@
         drawConfig(context, item.config, frame, alpha, offsetX);
     }
 
-    compositor.registerLayer('lower-third', 50, (context, frame) => {
-        const item = state.program.lowerThird;
-        if (!item) { return; }
-        drawAnimatedLowerThird(context, item, frame);
-        const current = state.program.lowerThird;
-        if (current && (
-            current.phase === 'entering' ||
-            current.phase === 'updating' ||
-            current.phase === 'exiting' ||
-            Number(current.config && current.config.behavior && current.config.behavior.autoHideSeconds) > 0
-        )) {
-            requestProgramFrame();
+    function phaseAlphaAndOffset(context, item, frame, slot) {
+        const duration = durationOf(item);
+        const elapsed = frame.now - item.startedAt;
+        const progress = duration <= 0 ? 1 : clamp(elapsed / duration, 0, 1);
+        let alpha = 1;
+        let offsetX = 0;
+        const behavior = (item.config && item.config.behavior) || {};
+        if (item.phase === 'entering') {
+            if (behavior.entrance === 'none') { item.phase = 'visible'; item.visibleAt = frame.now; transition('vh360:studio-overlay:transition-end', slot, item); changed('program', slot); }
+            if (behavior.entrance === 'fade') { alpha = progress; }
+            if (behavior.entrance === 'slide_left') { offsetX = -slideTravel(context, item.config, frame) * (1 - progress); }
+            if (behavior.entrance !== 'none' && progress >= 1) { item.phase = 'visible'; item.visibleAt = frame.now; transition('vh360:studio-overlay:transition-end', slot, item); changed('program', slot); }
+        } else if (item.phase === 'updating') {
+            alpha = progress;
+            if (progress >= 1) { item.phase = 'visible'; item.visibleAt = frame.now; item.previousConfig = null; item.previousRuntime = null; transition('vh360:studio-overlay:transition-end', slot, item); changed('program', slot); }
+        } else if (item.phase === 'exiting') {
+            if (behavior.exit === 'none') { clearProgram(slot, { silentTransition: true }); transition('vh360:studio-overlay:transition-end', slot, null); return null; }
+            if (behavior.exit === 'fade') { alpha = 1 - progress; }
+            if (behavior.exit === 'slide_left') { offsetX = -slideTravel(context, item.config, frame) * progress; }
+            if (progress >= 1) { clearProgram(slot, { silentTransition: true }); transition('vh360:studio-overlay:transition-end', slot, null); return null; }
         }
+        return { alpha, offsetX, progress };
+    }
+
+    function registerOverlayRenderer(renderer) {
+        if (!renderer || !renderer.slot || !renderer.layerId || typeof renderer.drawProgram !== 'function') { return false; }
+        renderer.slot = normalizeSlot(renderer.slot);
+        renderer.order = Number(renderer.order) || 50;
+        renderers.set(renderer.slot, renderer);
+        compositor.registerLayer(renderer.layerId, renderer.order, (context, frame) => {
+            const item = state.program[renderer.slot];
+            if (!item) { return; }
+            renderer.drawProgram(context, item, frame);
+            const current = state.program[renderer.slot];
+            if (current && renderer.needsProgramFrame && renderer.needsProgramFrame(current)) { requestProgramFrame(); }
+        });
+        requestFrames();
+        return true;
+    }
+
+    function unregisterOverlayRenderer(slot) {
+        slot = normalizeSlot(slot);
+        const renderer = renderers.get(slot);
+        if (renderer) { compositor.unregisterLayer(renderer.layerId); }
+        renderers.delete(slot);
+    }
+
+    registerOverlayRenderer({
+        slot: 'lowerThird',
+        layerId: 'lower-third',
+        order: 50,
+        drawPreview(context, item, frame) { renderLowerThird(context, item.config, frame, 1); },
+        drawProgram(context, item, frame) {
+            const motion = phaseAlphaAndOffset(context, item, frame, 'lowerThird');
+            if (!motion) { return; }
+            if (item.phase === 'updating' && item.previousConfig) { drawConfig(context, item.previousConfig, frame, 1 - motion.progress, 0); }
+            if (item.phase === 'visible' && Number(item.config && item.config.behavior && item.config.behavior.autoHideSeconds) > 0 && item.visibleAt && frame.now - item.visibleAt >= Number(item.config.behavior.autoHideSeconds) * 1000) { hideProgram('lowerThird'); }
+            drawConfig(context, item.config, frame, motion.alpha, motion.offsetX);
+        },
+        needsProgramFrame(item) { return item.phase === 'entering' || item.phase === 'updating' || item.phase === 'exiting' || Number(item.config && item.config.behavior && item.config.behavior.autoHideSeconds) > 0; },
+    });
+
+    function countdownDurationMs(config) {
+        const timer = (config && config.timer) || {};
+        return Math.max(1000, Math.min(86400000, Number(timer.durationSeconds || 600) * 1000));
+    }
+
+    function formatCountdown(ms) {
+        const total = Math.max(0, Math.ceil(ms / 1000));
+        const hours = Math.floor(total / 3600);
+        const minutes = Math.floor((total % 3600) / 60);
+        const seconds = total % 60;
+        const pad = (value) => String(value).padStart(2, '0');
+        return hours > 0 ? pad(hours) + ':' + pad(minutes) + ':' + pad(seconds) : pad(minutes) + ':' + pad(seconds);
+    }
+
+    function countdownRemaining(item) {
+        const runtime = item.runtime || {};
+        if (runtime.status === 'running' && runtime.endAtEpochMs) { return Math.max(0, runtime.endAtEpochMs - Date.now()); }
+        if (runtime.status === 'paused') { return Math.max(0, Number(runtime.pausedRemainingMs) || 0); }
+        if (runtime.status === 'complete' || runtime.status === 'message') { return 0; }
+        return Math.max(0, Number(runtime.remainingMs) || countdownDurationMs(item.config));
+    }
+
+    function countdownDisplay(item) {
+        const runtime = item.runtime || {};
+        const timer = (item.config && item.config.timer) || {};
+        if (runtime.status === 'message') { return String((item.config.content && item.config.content.endMessage) || ''); }
+        return formatCountdown(countdownRemaining(item));
+    }
+
+    function drawCountdown(context, item, frame, alpha) {
+        const config = item.config || {};
+        const style = config.style || {};
+        const content = config.content || {};
+        const template = style.template || 'center_card';
+        const scale = clamp(Number(style.scale) || 100, 75, 140) / 100;
+        const safeX = frame.width * 0.05;
+        const safeY = frame.height * 0.06;
+        const labelText = fitText(context, String(content.label || ''), frame.width * 0.75, frame.height * 0.038 * scale, frame.height * 0.022, '700');
+        const timerText = fitText(context, countdownDisplay(item), frame.width * 0.8, frame.height * (template === 'corner' ? 0.072 : 0.12) * scale, frame.height * 0.04, '900');
+        let x = safeX;
+        let y = safeY;
+        let w = Math.max(timerText.width, labelText.width) + frame.width * 0.06 * scale;
+        let h = timerText.size + (labelText.text ? labelText.size * 1.5 : 0) + frame.height * 0.05 * scale;
+        if (template === 'full_screen') { x = 0; y = 0; w = frame.width; h = frame.height; }
+        else if (template === 'lower_center') { w = Math.min(frame.width * 0.78, Math.max(w, frame.width * 0.44)); x = (frame.width - w) / 2; y = frame.height - safeY - h; }
+        else if (template === 'corner') {
+            w = Math.min(frame.width * 0.34, Math.max(w, frame.width * 0.18));
+            const pos = style.position || 'top_right';
+            if (pos.indexOf('right') !== -1) { x = frame.width - safeX - w; }
+            if (pos.indexOf('bottom') !== -1) { y = frame.height - safeY - h; }
+        } else { w = Math.min(frame.width * 0.64, Math.max(w, frame.width * 0.34)); x = (frame.width - w) / 2; y = (frame.height - h) / 2; }
+        context.save();
+        try {
+            context.globalAlpha *= alpha;
+            if (template === 'full_screen') { context.fillStyle = rgba(style.backgroundColor, Number(style.backgroundOpacity)); context.fillRect(0, 0, frame.width, frame.height); }
+            else { roundRect(context, x, y, w, h, Math.round(frame.height * 0.018)); context.fillStyle = rgba(style.backgroundColor, Number(style.backgroundOpacity)); context.fill(); }
+            context.fillStyle = style.accentColor || '#4f46e5';
+            context.fillRect(x, y, w, Math.max(4, frame.height * 0.006));
+            context.textAlign = 'center';
+            context.textBaseline = 'top';
+            const centerX = x + w / 2;
+            let textY = y + h * 0.18;
+            if (labelText.text) { context.font = labelText.font; context.fillStyle = style.labelColor || '#dbeafe'; context.fillText(labelText.text, centerX, textY); textY += labelText.size * 1.45; }
+            context.font = timerText.font; context.fillStyle = style.timerColor || '#ffffff'; context.fillText(timerText.text, centerX, textY);
+        } finally { context.restore(); }
+    }
+
+    function updateCountdownRuntime(item) {
+        const runtime = item.runtime || {};
+        const timer = (item.config && item.config.timer) || {};
+        if (runtime.status === 'running' && countdownRemaining(item) <= 0) {
+            if (timer.endBehavior === 'hide') { hideProgram('countdown'); }
+            else if (timer.endBehavior === 'show_message') {
+                runtime.status = 'message'; runtime.completedAtEpochMs = Date.now(); runtime.messageUntilEpochMs = Number(timer.messageDurationSeconds) > 0 ? Date.now() + Number(timer.messageDurationSeconds) * 1000 : 0; item.runtime = runtime; changed('program', 'countdown');
+            } else { runtime.status = 'complete'; runtime.completedAtEpochMs = Date.now(); item.runtime = runtime; changed('program', 'countdown'); }
+        }
+        if (runtime.status === 'message' && runtime.messageUntilEpochMs && Date.now() >= runtime.messageUntilEpochMs) { hideProgram('countdown'); }
+    }
+
+    registerOverlayRenderer({
+        slot: 'countdown', layerId: 'countdown', order: 60,
+        drawPreview(context, item, frame) { drawCountdown(context, item, frame, 1); },
+        drawProgram(context, item, frame) { const motion = phaseAlphaAndOffset(context, item, frame, 'countdown'); if (!motion) { return; } updateCountdownRuntime(item); drawCountdown(context, item, frame, motion.alpha); },
+        needsProgramFrame(item) { const status = item.runtime && item.runtime.status; return item.phase === 'entering' || item.phase === 'updating' || item.phase === 'exiting' || status === 'running' || (status === 'message' && Number(item.runtime.messageUntilEpochMs) > 0); },
     });
 
     function handleProgramResolutionChange(event) {
@@ -329,15 +479,18 @@
     }
 
     root.addEventListener('vh360:studio:program-resolution-change', handleProgramResolutionChange);
+    function handleProgramSourceChange(event) { if (event.detail && event.detail.hasOutput === false) { clearAllProgram({ silentTransition: true }); } }
+    root.addEventListener('vh360:studio:program-source-change', handleProgramSourceChange);
 
     function destroy() {
         destroyed = true;
         if (previewFrame) { window.cancelAnimationFrame(previewFrame); previewFrame = null; }
         root.removeEventListener('vh360:studio:program-resolution-change', handleProgramResolutionChange);
-        compositor.unregisterLayer('lower-third');
+        root.removeEventListener('vh360:studio:program-source-change', handleProgramSourceChange);
+        Array.from(renderers.keys()).forEach((slot) => unregisterOverlayRenderer(slot));
         subscribers.clear();
     }
 
     syncPreviewCanvasSize();
-    window.VH360StudioOverlayEngine = { stage, clearPreview, takeToProgram, updateProgram, hideProgram, clearProgram, clearAllProgram, getState, subscribe, destroy, renderLowerThird };
+    window.VH360StudioOverlayEngine = { stage, clearPreview, takeToProgram, updateProgram, hideProgram, clearProgram, clearAllProgram, setRuntime, getRuntime, getState, subscribe, destroy, renderLowerThird, formatCountdown };
 }());

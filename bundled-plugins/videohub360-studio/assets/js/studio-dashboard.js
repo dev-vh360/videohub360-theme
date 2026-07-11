@@ -5677,6 +5677,12 @@
         stopStream(state.audioInputTestStream);
         state.audioInputTestStream = null;
         if (options.releaseMediaSources === true) {
+            if (window.VH360StudioCountdown && typeof window.VH360StudioCountdown.destroy === 'function') {
+                window.VH360StudioCountdown.destroy();
+            }
+            if (window.VH360StudioOverlayStatus && typeof window.VH360StudioOverlayStatus.destroy === 'function') {
+                window.VH360StudioOverlayStatus.destroy();
+            }
             if (window.VH360StudioLowerThirds && typeof window.VH360StudioLowerThirds.destroy === 'function') {
                 window.VH360StudioLowerThirds.destroy();
             }

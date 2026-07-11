@@ -15,6 +15,7 @@ class VH360_Studio_Overlay_Repository {
     const META_CONFIG = '_vh360_studio_overlay_config';
 
     const TYPE_LOWER_THIRD = 'lower_third';
+    const TYPE_COUNTDOWN    = 'countdown';
 
     public static function register_post_type() {
         register_post_type(
@@ -64,7 +65,7 @@ class VH360_Studio_Overlay_Repository {
             return $type;
         }
 
-        $config = $this->sanitize_config( isset( $payload['config'] ) ? $payload['config'] : $payload );
+        $config = $this->sanitize_config( isset( $payload['config'] ) ? $payload['config'] : $payload, $type );
         if ( is_wp_error( $config ) ) {
             return $config;
         }
@@ -90,24 +91,34 @@ class VH360_Studio_Overlay_Repository {
         }
 
         $config['id'] = (int) $post_id;
-        update_post_meta( $post_id, self::META_TYPE, self::TYPE_LOWER_THIRD );
+        update_post_meta( $post_id, self::META_TYPE, $type );
         update_post_meta( $post_id, self::META_CONFIG, $config );
 
-        return $this->get( $post_id, $user_id, self::TYPE_LOWER_THIRD );
+        return $this->get( $post_id, $user_id, $type );
     }
 
     public function update( $post_id, $user_id, $payload ) {
-        $type = $this->sanitize_type( isset( $payload['type'] ) ? sanitize_key( $payload['type'] ) : self::TYPE_LOWER_THIRD );
+        $submitted_type = $this->sanitize_type( isset( $payload['type'] ) ? sanitize_key( $payload['type'] ) : self::TYPE_LOWER_THIRD );
+        if ( is_wp_error( $submitted_type ) ) {
+            return $submitted_type;
+        }
+
+        $existing_post = get_post( (int) $post_id );
+        $stored_type   = $existing_post ? get_post_meta( $existing_post->ID, self::META_TYPE, true ) : '';
+        $type          = $this->sanitize_type( $stored_type );
         if ( is_wp_error( $type ) ) {
             return $type;
         }
+        if ( $submitted_type !== $type ) {
+            return new WP_Error( 'vh360_overlay_type_change_forbidden', __( 'Overlay preset type cannot be changed.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        }
 
-        $post = $this->get_owned_post( $post_id, $user_id, self::TYPE_LOWER_THIRD );
+        $post = $this->get_owned_post( $post_id, $user_id, $type );
         if ( is_wp_error( $post ) ) {
             return $post;
         }
 
-        $config = $this->sanitize_config( isset( $payload['config'] ) ? $payload['config'] : $payload );
+        $config = $this->sanitize_config( isset( $payload['config'] ) ? $payload['config'] : $payload, $type );
         if ( is_wp_error( $config ) ) {
             return $config;
         }
@@ -133,11 +144,16 @@ class VH360_Studio_Overlay_Repository {
         $config['id'] = (int) $post->ID;
         update_post_meta( $post->ID, self::META_CONFIG, $config );
 
-        return $this->get( $post->ID, $user_id, self::TYPE_LOWER_THIRD );
+        return $this->get( $post->ID, $user_id, $type );
     }
 
     public function delete( $post_id, $user_id ) {
-        $post = $this->get_owned_post( $post_id, $user_id, self::TYPE_LOWER_THIRD );
+        $post_obj = get_post( (int) $post_id );
+        $type     = $post_obj ? $this->sanitize_type( get_post_meta( $post_obj->ID, self::META_TYPE, true ) ) : self::TYPE_LOWER_THIRD;
+        if ( is_wp_error( $type ) ) {
+            return $type;
+        }
+        $post = $this->get_owned_post( $post_id, $user_id, $type );
         if ( is_wp_error( $post ) ) {
             return $post;
         }
@@ -177,14 +193,16 @@ class VH360_Studio_Overlay_Repository {
     }
 
     private function format_post( $post ) {
+        $type = get_post_meta( $post->ID, self::META_TYPE, true );
+        $type = is_wp_error( $this->sanitize_type( $type ) ) ? self::TYPE_LOWER_THIRD : $type;
         $config = get_post_meta( $post->ID, self::META_CONFIG, true );
         if ( ! is_array( $config ) ) {
-            $config = $this->default_config();
+            $config = $this->default_config( $type );
         }
 
         return array(
             'id'        => (int) $post->ID,
-            'type'      => self::TYPE_LOWER_THIRD,
+            'type'      => $type,
             'name'      => get_the_title( $post ),
             'config'    => $config,
             'createdAt' => mysql_to_rfc3339( $post->post_date_gmt ?: $post->post_date ),
@@ -192,7 +210,14 @@ class VH360_Studio_Overlay_Repository {
         );
     }
 
-    public function sanitize_config( $config ) {
+    public function sanitize_config( $config, $type = self::TYPE_LOWER_THIRD ) {
+        if ( self::TYPE_COUNTDOWN === $type ) {
+            return $this->sanitize_countdown_config( $config );
+        }
+        return $this->sanitize_lower_third_config( $config );
+    }
+
+    public function sanitize_lower_third_config( $config ) {
         if ( ! is_array( $config ) ) {
             return new WP_Error( 'vh360_overlay_invalid_config', __( 'Invalid overlay configuration.', 'videohub360-studio' ), array( 'status' => 400 ) );
         }
@@ -239,6 +264,30 @@ class VH360_Studio_Overlay_Repository {
         );
     }
 
+    public function sanitize_countdown_config( $config ) {
+        if ( ! is_array( $config ) ) {
+            return new WP_Error( 'vh360_overlay_invalid_config', __( 'Invalid overlay configuration.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        }
+        $default  = $this->default_config( self::TYPE_COUNTDOWN );
+        $content  = isset( $config['content'] ) && is_array( $config['content'] ) ? $config['content'] : array();
+        $timer    = isset( $config['timer'] ) && is_array( $config['timer'] ) ? $config['timer'] : array();
+        $style    = isset( $config['style'] ) && is_array( $config['style'] ) ? $config['style'] : array();
+        $behavior = isset( $config['behavior'] ) && is_array( $config['behavior'] ) ? $config['behavior'] : array();
+        $name     = isset( $config['name'] ) ? $this->sanitize_name( $config['name'] ) : $default['name'];
+        if ( is_wp_error( $name ) ) { return $name; }
+        $target = isset( $timer['targetLocalDateTime'] ) ? sanitize_text_field( $timer['targetLocalDateTime'] ) : '';
+        if ( '' !== $target && ! preg_match( '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/', $target ) ) { $target = ''; }
+        return array(
+            'id' => isset( $config['id'] ) ? max( 0, absint( $config['id'] ) ) : 0,
+            'type' => self::TYPE_COUNTDOWN,
+            'name' => $name,
+            'content' => array( 'label' => isset( $content['label'] ) ? $this->limit_text( sanitize_text_field( $content['label'] ), 120 ) : '', 'endMessage' => isset( $content['endMessage'] ) ? $this->limit_text( sanitize_text_field( $content['endMessage'] ), 160 ) : '' ),
+            'timer' => array( 'mode' => $this->allowlisted( isset( $timer['mode'] ) ? $timer['mode'] : '', array( 'duration', 'target_time' ), $default['timer']['mode'] ), 'durationSeconds' => min( 86400, max( 1, absint( isset( $timer['durationSeconds'] ) ? $timer['durationSeconds'] : $default['timer']['durationSeconds'] ) ) ), 'targetLocalDateTime' => $target, 'endBehavior' => $this->allowlisted( isset( $timer['endBehavior'] ) ? $timer['endBehavior'] : '', array( 'hold_zero', 'show_message', 'hide' ), $default['timer']['endBehavior'] ), 'messageDurationSeconds' => min( 300, max( 0, absint( isset( $timer['messageDurationSeconds'] ) ? $timer['messageDurationSeconds'] : $default['timer']['messageDurationSeconds'] ) ) ) ),
+            'style' => array( 'template' => $this->allowlisted( isset( $style['template'] ) ? $style['template'] : '', array( 'full_screen', 'center_card', 'lower_center', 'corner' ), $default['style']['template'] ), 'position' => $this->allowlisted( isset( $style['position'] ) ? $style['position'] : '', array( 'top_left', 'top_right', 'bottom_left', 'bottom_right' ), $default['style']['position'] ), 'scale' => min( 140, max( 75, absint( isset( $style['scale'] ) ? $style['scale'] : $default['style']['scale'] ) ) ), 'accentColor' => $this->sanitize_hex( isset( $style['accentColor'] ) ? $style['accentColor'] : $default['style']['accentColor'], $default['style']['accentColor'] ), 'backgroundColor' => $this->sanitize_hex( isset( $style['backgroundColor'] ) ? $style['backgroundColor'] : $default['style']['backgroundColor'], $default['style']['backgroundColor'] ), 'backgroundOpacity' => min( 100, max( 0, absint( isset( $style['backgroundOpacity'] ) ? $style['backgroundOpacity'] : $default['style']['backgroundOpacity'] ) ) ), 'timerColor' => $this->sanitize_hex( isset( $style['timerColor'] ) ? $style['timerColor'] : $default['style']['timerColor'], $default['style']['timerColor'] ), 'labelColor' => $this->sanitize_hex( isset( $style['labelColor'] ) ? $style['labelColor'] : $default['style']['labelColor'], $default['style']['labelColor'] ) ),
+            'behavior' => array( 'entrance' => $this->allowlisted( isset( $behavior['entrance'] ) ? $behavior['entrance'] : '', array( 'fade', 'none' ), $default['behavior']['entrance'] ), 'exit' => $this->allowlisted( isset( $behavior['exit'] ) ? $behavior['exit'] : '', array( 'fade', 'none' ), $default['behavior']['exit'] ), 'durationMs' => min( 2000, max( 0, absint( isset( $behavior['durationMs'] ) ? $behavior['durationMs'] : $default['behavior']['durationMs'] ) ) ) ),
+        );
+    }
+
     private function sanitize_name( $name ) {
         $name = $this->limit_text( sanitize_text_field( $name ), 120 );
         if ( '' === $name ) {
@@ -252,7 +301,7 @@ class VH360_Studio_Overlay_Repository {
     }
 
     private function sanitize_type( $type ) {
-        return self::TYPE_LOWER_THIRD === $type ? $type : new WP_Error( 'vh360_overlay_invalid_type', __( 'Invalid overlay type.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        return in_array( $type, array( self::TYPE_LOWER_THIRD, self::TYPE_COUNTDOWN ), true ) ? $type : new WP_Error( 'vh360_overlay_invalid_type', __( 'Invalid overlay type.', 'videohub360-studio' ), array( 'status' => 400 ) );
     }
 
     private function sanitize_hex( $value, $fallback ) {
@@ -264,7 +313,16 @@ class VH360_Studio_Overlay_Repository {
         return in_array( $value, $allowed, true ) ? $value : $fallback;
     }
 
-    public function default_config() {
+    public function default_config( $type = self::TYPE_LOWER_THIRD ) {
+        if ( self::TYPE_COUNTDOWN === $type ) {
+            return array(
+                'id' => 0, 'type' => self::TYPE_COUNTDOWN, 'name' => __( 'Untitled Countdown', 'videohub360-studio' ),
+                'content' => array( 'label' => 'Service Begins In', 'endMessage' => 'Service Is Beginning' ),
+                'timer' => array( 'mode' => 'duration', 'durationSeconds' => 600, 'targetLocalDateTime' => '', 'endBehavior' => 'show_message', 'messageDurationSeconds' => 5 ),
+                'style' => array( 'template' => 'center_card', 'position' => 'top_right', 'scale' => 100, 'accentColor' => '#4f46e5', 'backgroundColor' => '#0f172a', 'backgroundOpacity' => 88, 'timerColor' => '#ffffff', 'labelColor' => '#dbeafe' ),
+                'behavior' => array( 'entrance' => 'fade', 'exit' => 'fade', 'durationMs' => 300 ),
+            );
+        }
         return array(
             'id'       => 0,
             'type'     => self::TYPE_LOWER_THIRD,
