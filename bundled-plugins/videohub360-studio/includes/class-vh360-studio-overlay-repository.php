@@ -378,7 +378,12 @@ class VH360_Studio_Overlay_Repository {
     }
 
     private function limit_text( $value, $length ) {
-        return function_exists( 'mb_substr' ) ? mb_substr( $value, 0, $length ) : substr( $value, 0, $length );
+        $value = (string) $value;
+        if ( function_exists( 'mb_substr' ) ) {
+            return mb_substr( $value, 0, $length, 'UTF-8' );
+        }
+        $limited = preg_replace( '/^(.{0,' . absint( $length ) . '}).*$/us', '$1', $value );
+        return is_string( $limited ) ? $limited : '';
     }
 
     private function sanitize_type( $type ) {
