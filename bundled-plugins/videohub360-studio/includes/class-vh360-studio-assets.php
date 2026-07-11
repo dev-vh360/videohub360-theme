@@ -397,6 +397,9 @@ class VH360_Studio_Assets {
                     'translationMissing' => __( 'This translation is no longer installed.', 'videohub360-studio' ),
                     'lowerBandWarning' => __( 'The Bible lower band may overlap the active lower third.', 'videohub360-studio' ),
                     'fullPanelWarning' => __( 'The full-width Scripture panel may cover other overlays.', 'videohub360-studio' ),
+                    'countdownCardWarning' => __( 'The Countdown may cover Scripture.', 'videohub360-studio' ),
+                    'countdownLowerWarning' => __( 'The lower Bible band may overlap the active countdown.', 'videohub360-studio' ),
+                    'unsaved' => __( 'Unsaved Scripture cue', 'videohub360-studio' ),
                 ),
 
                 'countdown' => array(

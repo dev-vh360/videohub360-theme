@@ -16,9 +16,9 @@ class VH360_Studio_Bible_REST_Controller {
     public function can_query(){return is_user_logged_in() && VH360_Studio_Permissions::user_can_access_studio() && wp_verify_nonce(isset($_SERVER['HTTP_X_WP_NONCE'])?sanitize_text_field(wp_unslash($_SERVER['HTTP_X_WP_NONCE'])):'','wp_rest');}
     public function can_import(){return current_user_can('manage_options') && wp_verify_nonce(isset($_SERVER['HTTP_X_WP_NONCE'])?sanitize_text_field(wp_unslash($_SERVER['HTTP_X_WP_NONCE'])):'','wp_rest');}
     public function translations(){return rest_ensure_response($this->repo->list_translations());}
-    public function books($r){return rest_ensure_response($this->repo->list_books($r['translation']));}
-    public function chapters($r){return rest_ensure_response($this->repo->list_chapters($r['translation'],$r['book']));}
-    public function verses($r){return rest_ensure_response($this->repo->get_chapter($r['translation'],$r['book'],absint($r['chapter'])));}
+    public function books($r){$result=$this->repo->list_books($r['translation']); return is_wp_error($result)?$result:rest_ensure_response($result);}
+    public function chapters($r){$result=$this->repo->list_chapters($r['translation'],$r['book']); return is_wp_error($result)?$result:rest_ensure_response($result);}
+    public function verses($r){$result=$this->repo->get_chapter($r['translation'],$r['book'],absint($r['chapter'])); return is_wp_error($result)?$result:rest_ensure_response($result);}
     public function passage($r){$result=$this->repo->resolve_reference($r['translation'],$r['reference']); return is_wp_error($result)?$result:rest_ensure_response($result);}
     public function create_import($r){$meta=$r->get_params();$files=$r->get_file_params();$file=isset($files['file'])?$files['file']:array();$job=$this->importer->create_job(get_current_user_id(),$file,$meta);return is_wp_error($job)?$job:rest_ensure_response($job);}
     public function get_import($r){$job=$this->importer->get_job(absint($r['id']));return $job?rest_ensure_response($job):new WP_Error('vh360_bible_import_missing',__('Import job not found.','videohub360-studio'),array('status'=>404));}

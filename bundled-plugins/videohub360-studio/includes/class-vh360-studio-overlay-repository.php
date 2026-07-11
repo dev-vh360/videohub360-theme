@@ -327,11 +327,11 @@ class VH360_Studio_Overlay_Repository {
             foreach ( $scripture['ranges'] as $range ) {
                 if ( ! is_array( $range ) ) { continue; }
                 $ranges[] = array(
-                    'bookKey'      => sanitize_key( isset( $range['bookKey'] ) ? $range['bookKey'] : '' ),
-                    'startChapter' => max( 1, absint( isset( $range['startChapter'] ) ? $range['startChapter'] : 1 ) ),
-                    'startVerse'   => max( 1, absint( isset( $range['startVerse'] ) ? $range['startVerse'] : 1 ) ),
-                    'endChapter'   => max( 1, absint( isset( $range['endChapter'] ) ? $range['endChapter'] : 1 ) ),
-                    'endVerse'     => max( 1, absint( isset( $range['endVerse'] ) ? $range['endVerse'] : 1 ) ),
+                    'bookKey'      => strtoupper( sanitize_text_field( isset( $range['bookKey'] ) ? $range['bookKey'] : ( isset( $range['book_key'] ) ? $range['book_key'] : '' ) ) ),
+                    'startChapter' => max( 1, absint( isset( $range['startChapter'] ) ? $range['startChapter'] : ( isset( $range['start_chapter'] ) ? $range['start_chapter'] : 1 ) ) ),
+                    'startVerse'   => max( 1, absint( isset( $range['startVerse'] ) ? $range['startVerse'] : ( isset( $range['start_verse'] ) ? $range['start_verse'] : 1 ) ) ),
+                    'endChapter'   => max( 1, absint( isset( $range['endChapter'] ) ? $range['endChapter'] : ( isset( $range['end_chapter'] ) ? $range['end_chapter'] : 1 ) ) ),
+                    'endVerse'     => max( 1, absint( isset( $range['endVerse'] ) ? $range['endVerse'] : ( isset( $range['end_verse'] ) ? $range['end_verse'] : 1 ) ) ),
                 );
             }
         }
@@ -346,6 +346,8 @@ class VH360_Studio_Overlay_Repository {
                 'ranges'           => $ranges,
                 'datasetVersion'   => $this->limit_text( sanitize_text_field( isset( $scripture['datasetVersion'] ) ? $scripture['datasetVersion'] : '' ), 100 ),
                 'sourceHash'       => preg_match( '/^[a-f0-9]{64}$/', isset( $scripture['sourceHash'] ) ? $scripture['sourceHash'] : '' ) ? $scripture['sourceHash'] : '',
+                'attribution'      => $this->limit_text( sanitize_textarea_field( isset( $scripture['attribution'] ) ? $scripture['attribution'] : '' ), 500 ),
+                'attributionRequired' => ! empty( $scripture['attributionRequired'] ),
             ),
             'style'      => array(
                 'template'          => $this->allowlisted( isset( $style['template'] ) ? $style['template'] : '', array( 'lower_band', 'scripture_card', 'full_width_panel' ), $default['style']['template'] ),
@@ -394,7 +396,7 @@ class VH360_Studio_Overlay_Repository {
         if ( self::TYPE_BIBLE === $type ) {
             return array(
                 'id' => 0, 'type' => self::TYPE_BIBLE, 'name' => __( 'Untitled Scripture Cue', 'videohub360-studio' ),
-                'scripture' => array( 'translationKey' => '', 'translationLabel' => '', 'reference' => '', 'ranges' => array(), 'datasetVersion' => '', 'sourceHash' => '' ),
+                'scripture' => array( 'translationKey' => '', 'translationLabel' => '', 'reference' => '', 'ranges' => array(), 'datasetVersion' => '', 'sourceHash' => '', 'attribution' => '', 'attributionRequired' => false ),
                 'style' => array( 'template' => 'lower_band', 'position' => 'bottom_center', 'scale' => 100, 'backgroundColor' => '#0f172a', 'backgroundOpacity' => 88, 'scriptureColor' => '#ffffff', 'referenceColor' => '#dbeafe', 'textAlign' => 'center', 'showVerseNumbers' => true, 'showReference' => true, 'showTranslation' => true ),
                 'pagination' => array( 'maximumLines' => 6 ),
                 'behavior' => array( 'entrance' => 'fade', 'exit' => 'fade', 'durationMs' => 300 ),
