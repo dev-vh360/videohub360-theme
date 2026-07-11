@@ -95,6 +95,24 @@
         return true;
     }
 
+    function resetProgram(slot, config, options = {}) {
+        slot = normalizeSlot(slot);
+        if (!isSlot(slot) || !state.program[slot]) { return false; }
+        const current = state.program[slot];
+        const next = makeItem(config, options.phase || 'updating', options.runtime);
+        if (options.crossfade !== false) {
+            next.previousConfig = clone(current.config);
+            next.previousRuntime = clone(current.runtime);
+            transition('vh360:studio-overlay:transition-start', slot, next);
+        } else {
+            next.phase = 'visible';
+            next.visibleAt = now();
+        }
+        state.program[slot] = next;
+        changed('program', slot);
+        return true;
+    }
+
     function hideProgram(slot) {
         slot = normalizeSlot(slot);
         if (!isSlot(slot) || !state.program[slot]) { return false; }
@@ -415,6 +433,31 @@
         return formatCountdown(countdownRemaining(item));
     }
 
+    function countdownBox(template, style, frame, scale, safeX, safeY, estimatedHeight) {
+        let x = safeX;
+        let y = safeY;
+        let w = frame.width * 0.64;
+        let h = estimatedHeight;
+        if (template === 'full_screen') {
+            return { x: 0, y: 0, w: frame.width, h: frame.height, innerWidth: frame.width * 0.86 };
+        }
+        if (template === 'lower_center') {
+            w = frame.width * 0.78;
+            x = (frame.width - w) / 2;
+            y = frame.height - safeY - h;
+        } else if (template === 'corner') {
+            w = frame.width * 0.34;
+            const pos = style.position || 'top_right';
+            if (pos.indexOf('right') !== -1) { x = frame.width - safeX - w; }
+            if (pos.indexOf('bottom') !== -1) { y = frame.height - safeY - h; }
+        } else {
+            w = frame.width * 0.64;
+            x = (frame.width - w) / 2;
+            y = (frame.height - h) / 2;
+        }
+        return { x, y, w, h, innerWidth: Math.max(20, w - frame.width * 0.06 * scale) };
+    }
+
     function drawCountdown(context, item, frame, alpha) {
         const config = item.config || {};
         const style = config.style || {};
@@ -423,20 +466,17 @@
         const scale = clamp(Number(style.scale) || 100, 75, 140) / 100;
         const safeX = frame.width * 0.05;
         const safeY = frame.height * 0.06;
-        const labelText = fitText(context, String(content.label || ''), frame.width * 0.75, frame.height * 0.038 * scale, frame.height * 0.022, '700');
-        const timerText = fitText(context, countdownDisplay(item), frame.width * 0.8, frame.height * (template === 'corner' ? 0.072 : 0.12) * scale, frame.height * 0.04, '900');
-        let x = safeX;
-        let y = safeY;
-        let w = Math.max(timerText.width, labelText.width) + frame.width * 0.06 * scale;
-        let h = timerText.size + (labelText.text ? labelText.size * 1.5 : 0) + frame.height * 0.05 * scale;
-        if (template === 'full_screen') { x = 0; y = 0; w = frame.width; h = frame.height; }
-        else if (template === 'lower_center') { w = Math.min(frame.width * 0.78, Math.max(w, frame.width * 0.44)); x = (frame.width - w) / 2; y = frame.height - safeY - h; }
-        else if (template === 'corner') {
-            w = Math.min(frame.width * 0.34, Math.max(w, frame.width * 0.18));
-            const pos = style.position || 'top_right';
-            if (pos.indexOf('right') !== -1) { x = frame.width - safeX - w; }
-            if (pos.indexOf('bottom') !== -1) { y = frame.height - safeY - h; }
-        } else { w = Math.min(frame.width * 0.64, Math.max(w, frame.width * 0.34)); x = (frame.width - w) / 2; y = (frame.height - h) / 2; }
+        const estimatedLabelSize = frame.height * 0.038 * scale;
+        const estimatedTimerSize = frame.height * (template === 'corner' ? 0.072 : 0.12) * scale;
+        const estimatedHeight = estimatedTimerSize + (String(content.label || '') ? estimatedLabelSize * 1.5 : 0) + frame.height * 0.05 * scale;
+        let box = countdownBox(template, style, frame, scale, safeX, safeY, estimatedHeight);
+        const labelText = fitText(context, String(content.label || ''), box.innerWidth, estimatedLabelSize, frame.height * 0.022, '700');
+        const timerText = fitText(context, countdownDisplay(item), box.innerWidth, estimatedTimerSize, frame.height * 0.04, '900');
+        const h = timerText.size + (labelText.text ? labelText.size * 1.5 : 0) + frame.height * 0.05 * scale;
+        box = countdownBox(template, style, frame, scale, safeX, safeY, h);
+        const x = box.x;
+        const y = box.y;
+        const w = box.w;
         context.save();
         try {
             context.globalAlpha *= alpha;
@@ -468,7 +508,18 @@
     registerOverlayRenderer({
         slot: 'countdown', layerId: 'countdown', order: 60,
         drawPreview(context, item, frame) { drawCountdown(context, item, frame, 1); },
-        drawProgram(context, item, frame) { const motion = phaseAlphaAndOffset(context, item, frame, 'countdown'); if (!motion) { return; } updateCountdownRuntime(item); drawCountdown(context, item, frame, motion.alpha); },
+        drawProgram(context, item, frame) {
+            const wasUpdating = item.phase === 'updating';
+            const previousConfig = item.previousConfig ? clone(item.previousConfig) : null;
+            const previousRuntime = item.previousRuntime ? clone(item.previousRuntime) : null;
+            const motion = phaseAlphaAndOffset(context, item, frame, 'countdown');
+            if (!motion) { return; }
+            updateCountdownRuntime(item);
+            if (wasUpdating && previousConfig) {
+                drawCountdown(context, { config: previousConfig, runtime: previousRuntime || item.runtime }, frame, 1 - motion.progress);
+            }
+            drawCountdown(context, item, frame, motion.alpha);
+        },
         needsProgramFrame(item) { const status = item.runtime && item.runtime.status; return item.phase === 'entering' || item.phase === 'updating' || item.phase === 'exiting' || status === 'running' || (status === 'message' && Number(item.runtime.messageUntilEpochMs) > 0); },
     });
 
@@ -492,5 +543,5 @@
     }
 
     syncPreviewCanvasSize();
-    window.VH360StudioOverlayEngine = { stage, clearPreview, takeToProgram, updateProgram, hideProgram, clearProgram, clearAllProgram, setRuntime, getRuntime, getState, subscribe, destroy, renderLowerThird, formatCountdown };
+    window.VH360StudioOverlayEngine = { stage, clearPreview, takeToProgram, updateProgram, resetProgram, hideProgram, clearProgram, clearAllProgram, setRuntime, getRuntime, getState, subscribe, destroy, renderLowerThird, formatCountdown };
 }());

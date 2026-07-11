@@ -264,10 +264,10 @@ class VH360_Studio_Overlay_Repository {
         );
     }
 
-    public function sanitize_countdown_config( $config ) {
-        if ( ! is_array( $config ) ) {
-            return new WP_Error( 'vh360_overlay_invalid_config', __( 'Invalid overlay configuration.', 'videohub360-studio' ), array( 'status' => 400 ) );
-        }
+	    public function sanitize_countdown_config( $config ) {
+	        if ( ! is_array( $config ) ) {
+	            return new WP_Error( 'vh360_overlay_invalid_config', __( 'Invalid overlay configuration.', 'videohub360-studio' ), array( 'status' => 400 ) );
+	        }
         $default  = $this->default_config( self::TYPE_COUNTDOWN );
         $content  = isset( $config['content'] ) && is_array( $config['content'] ) ? $config['content'] : array();
         $timer    = isset( $config['timer'] ) && is_array( $config['timer'] ) ? $config['timer'] : array();
@@ -275,14 +275,31 @@ class VH360_Studio_Overlay_Repository {
         $behavior = isset( $config['behavior'] ) && is_array( $config['behavior'] ) ? $config['behavior'] : array();
         $name     = isset( $config['name'] ) ? $this->sanitize_name( $config['name'] ) : $default['name'];
         if ( is_wp_error( $name ) ) { return $name; }
-        $target = isset( $timer['targetLocalDateTime'] ) ? sanitize_text_field( $timer['targetLocalDateTime'] ) : '';
-        if ( '' !== $target && ! preg_match( '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/', $target ) ) { $target = ''; }
-        return array(
-            'id' => isset( $config['id'] ) ? max( 0, absint( $config['id'] ) ) : 0,
-            'type' => self::TYPE_COUNTDOWN,
-            'name' => $name,
-            'content' => array( 'label' => isset( $content['label'] ) ? $this->limit_text( sanitize_text_field( $content['label'] ), 120 ) : '', 'endMessage' => isset( $content['endMessage'] ) ? $this->limit_text( sanitize_text_field( $content['endMessage'] ), 160 ) : '' ),
-            'timer' => array( 'mode' => $this->allowlisted( isset( $timer['mode'] ) ? $timer['mode'] : '', array( 'duration', 'target_time' ), $default['timer']['mode'] ), 'durationSeconds' => min( 86400, max( 1, absint( isset( $timer['durationSeconds'] ) ? $timer['durationSeconds'] : $default['timer']['durationSeconds'] ) ) ), 'targetLocalDateTime' => $target, 'endBehavior' => $this->allowlisted( isset( $timer['endBehavior'] ) ? $timer['endBehavior'] : '', array( 'hold_zero', 'show_message', 'hide' ), $default['timer']['endBehavior'] ), 'messageDurationSeconds' => min( 300, max( 0, absint( isset( $timer['messageDurationSeconds'] ) ? $timer['messageDurationSeconds'] : $default['timer']['messageDurationSeconds'] ) ) ) ),
+	        $mode = $this->allowlisted( isset( $timer['mode'] ) ? $timer['mode'] : '', array( 'duration', 'target_time' ), $default['timer']['mode'] );
+	        $duration_seconds = isset( $timer['durationSeconds'] ) ? absint( $timer['durationSeconds'] ) : absint( $default['timer']['durationSeconds'] );
+	        if ( $duration_seconds < 1 || $duration_seconds > 86400 ) {
+	            return new WP_Error( 'vh360_overlay_countdown_duration_invalid', __( 'Countdown duration must be between 1 and 86400 seconds.', 'videohub360-studio' ), array( 'status' => 400 ) );
+	        }
+	        $target = isset( $timer['targetLocalDateTime'] ) ? sanitize_text_field( $timer['targetLocalDateTime'] ) : '';
+	        if ( 'target_time' === $mode ) {
+	            $date = DateTime::createFromFormat( 'Y-m-d\TH:i', $target );
+	            $errors = DateTime::getLastErrors();
+	            if ( '' === $target || false === $date || ( is_array( $errors ) && ( $errors['warning_count'] > 0 || $errors['error_count'] > 0 ) ) || $date->format( 'Y-m-d\TH:i' ) !== $target ) {
+	                return new WP_Error( 'vh360_overlay_countdown_target_invalid', __( 'Countdown target date and time is invalid.', 'videohub360-studio' ), array( 'status' => 400 ) );
+	            }
+	        } elseif ( '' !== $target ) {
+	            $date = DateTime::createFromFormat( 'Y-m-d\TH:i', $target );
+	            $errors = DateTime::getLastErrors();
+	            if ( false === $date || ( is_array( $errors ) && ( $errors['warning_count'] > 0 || $errors['error_count'] > 0 ) ) || $date->format( 'Y-m-d\TH:i' ) !== $target ) {
+	                $target = '';
+	            }
+	        }
+	        return array(
+	            'id' => isset( $config['id'] ) ? max( 0, absint( $config['id'] ) ) : 0,
+	            'type' => self::TYPE_COUNTDOWN,
+	            'name' => $name,
+	            'content' => array( 'label' => isset( $content['label'] ) ? $this->limit_text( sanitize_text_field( $content['label'] ), 120 ) : '', 'endMessage' => isset( $content['endMessage'] ) ? $this->limit_text( sanitize_text_field( $content['endMessage'] ), 160 ) : '' ),
+	            'timer' => array( 'mode' => $mode, 'durationSeconds' => $duration_seconds, 'targetLocalDateTime' => $target, 'endBehavior' => $this->allowlisted( isset( $timer['endBehavior'] ) ? $timer['endBehavior'] : '', array( 'hold_zero', 'show_message', 'hide' ), $default['timer']['endBehavior'] ), 'messageDurationSeconds' => min( 300, max( 0, absint( isset( $timer['messageDurationSeconds'] ) ? $timer['messageDurationSeconds'] : $default['timer']['messageDurationSeconds'] ) ) ) ),
             'style' => array( 'template' => $this->allowlisted( isset( $style['template'] ) ? $style['template'] : '', array( 'full_screen', 'center_card', 'lower_center', 'corner' ), $default['style']['template'] ), 'position' => $this->allowlisted( isset( $style['position'] ) ? $style['position'] : '', array( 'top_left', 'top_right', 'bottom_left', 'bottom_right' ), $default['style']['position'] ), 'scale' => min( 140, max( 75, absint( isset( $style['scale'] ) ? $style['scale'] : $default['style']['scale'] ) ) ), 'accentColor' => $this->sanitize_hex( isset( $style['accentColor'] ) ? $style['accentColor'] : $default['style']['accentColor'], $default['style']['accentColor'] ), 'backgroundColor' => $this->sanitize_hex( isset( $style['backgroundColor'] ) ? $style['backgroundColor'] : $default['style']['backgroundColor'], $default['style']['backgroundColor'] ), 'backgroundOpacity' => min( 100, max( 0, absint( isset( $style['backgroundOpacity'] ) ? $style['backgroundOpacity'] : $default['style']['backgroundOpacity'] ) ) ), 'timerColor' => $this->sanitize_hex( isset( $style['timerColor'] ) ? $style['timerColor'] : $default['style']['timerColor'], $default['style']['timerColor'] ), 'labelColor' => $this->sanitize_hex( isset( $style['labelColor'] ) ? $style['labelColor'] : $default['style']['labelColor'], $default['style']['labelColor'] ) ),
             'behavior' => array( 'entrance' => $this->allowlisted( isset( $behavior['entrance'] ) ? $behavior['entrance'] : '', array( 'fade', 'none' ), $default['behavior']['entrance'] ), 'exit' => $this->allowlisted( isset( $behavior['exit'] ) ? $behavior['exit'] : '', array( 'fade', 'none' ), $default['behavior']['exit'] ), 'durationMs' => min( 2000, max( 0, absint( isset( $behavior['durationMs'] ) ? $behavior['durationMs'] : $default['behavior']['durationMs'] ) ) ) ),
         );
@@ -317,7 +334,7 @@ class VH360_Studio_Overlay_Repository {
         if ( self::TYPE_COUNTDOWN === $type ) {
             return array(
                 'id' => 0, 'type' => self::TYPE_COUNTDOWN, 'name' => __( 'Untitled Countdown', 'videohub360-studio' ),
-                'content' => array( 'label' => 'Service Begins In', 'endMessage' => 'Service Is Beginning' ),
+	                'content' => array( 'label' => __( 'Service Begins In', 'videohub360-studio' ), 'endMessage' => __( 'Service Is Beginning', 'videohub360-studio' ) ),
                 'timer' => array( 'mode' => 'duration', 'durationSeconds' => 600, 'targetLocalDateTime' => '', 'endBehavior' => 'show_message', 'messageDurationSeconds' => 5 ),
                 'style' => array( 'template' => 'center_card', 'position' => 'top_right', 'scale' => 100, 'accentColor' => '#4f46e5', 'backgroundColor' => '#0f172a', 'backgroundOpacity' => 88, 'timerColor' => '#ffffff', 'labelColor' => '#dbeafe' ),
                 'behavior' => array( 'entrance' => 'fade', 'exit' => 'fade', 'durationMs' => 300 ),

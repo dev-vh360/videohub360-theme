@@ -384,6 +384,22 @@ class VH360_Studio_Assets {
                     'notStaged'     => __( 'Not staged', 'videohub360-studio' ),
                     'ready'         => __( 'Ready', 'videohub360-studio' ),
                     'notLive'       => __( 'Not live', 'videohub360-studio' ),
+                    'runtimeReady'  => __( 'Ready', 'videohub360-studio' ),
+                    'runtimeRunning'=> __( 'Running', 'videohub360-studio' ),
+                    'runtimePaused' => __( 'Paused', 'videohub360-studio' ),
+                    'runtimeComplete'=> __( 'Complete', 'videohub360-studio' ),
+                    'runtimeMessage'=> __( 'Message', 'videohub360-studio' ),
+                    'defaultLabel'  => __( 'Service Begins In', 'videohub360-studio' ),
+                    'defaultEndMessage' => __( 'Service Is Beginning', 'videohub360-studio' ),
+                ),
+
+                'overlayStatus' => array(
+                    'previewSingular' => __( '1 overlay staged', 'videohub360-studio' ),
+                    'previewPlural'   => __( '%s overlays staged', 'videohub360-studio' ),
+                    'programSingular' => __( '1 overlay live', 'videohub360-studio' ),
+                    'programPlural'   => __( '%s overlays live', 'videohub360-studio' ),
+                    'tabPreview'      => __( 'overlay staged', 'videohub360-studio' ),
+                    'tabProgram'      => __( 'live overlay active', 'videohub360-studio' ),
                 ),
 
                 'lowerThirds' => array(
