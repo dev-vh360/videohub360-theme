@@ -25,7 +25,8 @@
         previewBadge: $('[data-preview-overlay-status]'), programBadge: $('[data-program-overlay-status]'), clearAll: $('[data-clear-program-overlays]'),
     };
 
-    const state = { presets: [], selectedId: 0, staged: false, previewSource: compositor.hasPreviewSource(), programOutput: compositor.hasProgramOutput() };
+    const state = { presets: [], selectedId: 0, staged: false, previewSource: compositor.hasPreviewSource(), programOutput: compositor.hasProgramOutput(), destroyed: false };
+    const listeners = [];
 
     function defaultConfig() {
         return { id: 0, type: 'lower_third', name: '', content: { primary: '', secondary: '' }, style: { template: 'accent_bar', position: 'bottom_left', scale: 100, accentColor: '#4f46e5', backgroundColor: '#0f172a', backgroundOpacity: 90, primaryColor: '#ffffff', secondaryColor: '#dbeafe' }, behavior: { entrance: 'slide_left', exit: 'fade', durationMs: 300, autoHideSeconds: 0 } };
@@ -154,27 +155,49 @@
         renderButtons();
     }
 
+    function on(target, eventName, handler) {
+        if (!target) { return; }
+        target.addEventListener(eventName, handler);
+        listeners.push({ target, eventName, handler });
+    }
+
+    const formChangeHandler = () => { updateStagedPreview(); renderButtons(); };
     ['input', 'change'].forEach((eventName) => {
         [els.name, els.primary, els.secondary, els.template, els.position, els.scale, els.accentColor, els.backgroundColor, els.backgroundOpacity, els.primaryColor, els.secondaryColor, els.entrance, els.exit, els.duration, els.autoHide].forEach((el) => {
-            if (el) { el.addEventListener(eventName, () => { updateStagedPreview(); renderButtons(); }); }
+            on(el, eventName, formChangeHandler);
         });
     });
-    if (els.preset) { els.preset.addEventListener('change', () => { const preset = state.presets.find((item) => String(item.id) === els.preset.value); if (preset) { applyConfig(Object.assign(clone(preset.config), { id: preset.id, name: preset.name })); } }); }
-    if (els.stage) { els.stage.addEventListener('click', stage); }
-    if (els.clearPreview) { els.clearPreview.addEventListener('click', clearPreview); }
-    if (els.take) { els.take.addEventListener('click', take); }
-    if (els.updateProgram) { els.updateProgram.addEventListener('click', updateProgram); }
-    if (els.hide) { els.hide.addEventListener('click', hide); }
-    if (els.clearAll) { els.clearAll.addEventListener('click', clearAll); }
-    if (els.save) { els.save.addEventListener('click', () => save(false)); }
-    if (els.saveNew) { els.saveNew.addEventListener('click', () => save(true)); }
-    if (els.duplicate) { els.duplicate.addEventListener('click', () => { state.selectedId = 0; if (els.name && !els.name.value) { els.name.value = text('untitled'); } save(true); }); }
-    if (els.delete) { els.delete.addEventListener('click', deletePreset); }
+    on(els.preset, 'change', () => {
+        if (!els.preset.value) {
+            state.selectedId = 0;
+            renderButtons();
+            return;
+        }
+        const preset = state.presets.find((item) => String(item.id) === els.preset.value);
+        if (preset) { applyConfig(Object.assign(clone(preset.config), { id: preset.id, name: preset.name })); }
+    });
+    on(els.stage, 'click', stage);
+    on(els.clearPreview, 'click', clearPreview);
+    on(els.take, 'click', take);
+    on(els.updateProgram, 'click', updateProgram);
+    on(els.hide, 'click', hide);
+    on(els.clearAll, 'click', clearAll);
+    on(els.save, 'click', () => save(false));
+    on(els.saveNew, 'click', () => save(true));
+    on(els.duplicate, 'click', () => { state.selectedId = 0; if (els.name && !els.name.value) { els.name.value = text('untitled'); } save(true); });
+    on(els.delete, 'click', deletePreset);
 
-    root.addEventListener('vh360:studio:preview-source-change', (event) => { state.previewSource = Boolean(event.detail && event.detail.sourceId); renderButtons(); });
-    root.addEventListener('vh360:studio:program-source-change', (event) => { state.programOutput = Boolean(event.detail && event.detail.hasOutput); if (!state.programOutput) { engine.clearAllProgram({ silentTransition: true }); } renderButtons(); });
-    root.addEventListener('vh360:studio-overlay:preview-change', renderButtons);
-    root.addEventListener('vh360:studio-overlay:program-change', renderButtons);
+    on(root, 'vh360:studio:preview-source-change', (event) => { state.previewSource = Boolean(event.detail && event.detail.sourceId); renderButtons(); });
+    on(root, 'vh360:studio:program-source-change', (event) => { state.programOutput = Boolean(event.detail && event.detail.hasOutput); if (!state.programOutput) { engine.clearAllProgram({ silentTransition: true }); } renderButtons(); });
+    on(root, 'vh360:studio-overlay:preview-change', renderButtons);
+    on(root, 'vh360:studio-overlay:program-change', renderButtons);
+
+    function destroy() {
+        state.destroyed = true;
+        listeners.splice(0).forEach(({ target, eventName, handler }) => target.removeEventListener(eventName, handler));
+    }
+
+    window.VH360StudioLowerThirds = { destroy };
 
     applyConfig(defaultConfig());
     loadPresets();

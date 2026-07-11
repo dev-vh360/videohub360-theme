@@ -5676,6 +5676,14 @@
         state.audioInputTestRequestId++;
         stopStream(state.audioInputTestStream);
         state.audioInputTestStream = null;
+        if (options.releaseMediaSources === true) {
+            if (window.VH360StudioLowerThirds && typeof window.VH360StudioLowerThirds.destroy === 'function') {
+                window.VH360StudioLowerThirds.destroy();
+            }
+            if (window.VH360StudioOverlayEngine && typeof window.VH360StudioOverlayEngine.destroy === 'function') {
+                window.VH360StudioOverlayEngine.destroy();
+            }
+        }
         const canStopProgramOutput = !state.broadcastSession && !isRecordingActive();
         const releaseMediaSources = options.releaseMediaSources === true;
 
@@ -5902,6 +5910,7 @@
             updateViewerLinkControls();
             const prepared = await api('/broadcasts/' + state.broadcastVideoId + '/prepare', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
             studioDebugLog('[VH360 Studio] Studio broadcaster UID', prepared.uid);
+            applyProgramCanvasResolution();
             ensureProgramCompositor();
             const session = window.VH360AgoraBroadcaster.create({
                 appId: prepared.appId,

@@ -59,6 +59,11 @@ class VH360_Studio_Overlay_Repository {
     }
 
     public function create( $user_id, $payload ) {
+        $type = $this->sanitize_type( isset( $payload['type'] ) ? sanitize_key( $payload['type'] ) : self::TYPE_LOWER_THIRD );
+        if ( is_wp_error( $type ) ) {
+            return $type;
+        }
+
         $config = $this->sanitize_config( isset( $payload['config'] ) ? $payload['config'] : $payload );
         if ( is_wp_error( $config ) ) {
             return $config;
@@ -84,6 +89,7 @@ class VH360_Studio_Overlay_Repository {
             return $post_id;
         }
 
+        $config['id'] = (int) $post_id;
         update_post_meta( $post_id, self::META_TYPE, self::TYPE_LOWER_THIRD );
         update_post_meta( $post_id, self::META_CONFIG, $config );
 
@@ -91,6 +97,11 @@ class VH360_Studio_Overlay_Repository {
     }
 
     public function update( $post_id, $user_id, $payload ) {
+        $type = $this->sanitize_type( isset( $payload['type'] ) ? sanitize_key( $payload['type'] ) : self::TYPE_LOWER_THIRD );
+        if ( is_wp_error( $type ) ) {
+            return $type;
+        }
+
         $post = $this->get_owned_post( $post_id, $user_id, self::TYPE_LOWER_THIRD );
         if ( is_wp_error( $post ) ) {
             return $post;
@@ -119,6 +130,7 @@ class VH360_Studio_Overlay_Repository {
             return $updated;
         }
 
+        $config['id'] = (int) $post->ID;
         update_post_meta( $post->ID, self::META_CONFIG, $config );
 
         return $this->get( $post->ID, $user_id, self::TYPE_LOWER_THIRD );

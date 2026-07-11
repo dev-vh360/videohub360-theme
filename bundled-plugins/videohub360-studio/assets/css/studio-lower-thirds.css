@@ -19,3 +19,7 @@
 @media (min-width: 420px) {
     .vh360-studio-lower-thirds-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+.vh360-studio-lower-thirds-message[data-status-type="success"] { border-color: color-mix(in srgb, var(--vh360-studio-success) 55%, transparent); color: var(--vh360-studio-success); }
+.vh360-studio-lower-thirds-message[data-status-type="warning"] { border-color: color-mix(in srgb, var(--vh360-studio-warning) 55%, transparent); color: var(--vh360-studio-warning); }
+.vh360-studio-lower-thirds-message[data-status-type="error"] { border-color: color-mix(in srgb, var(--vh360-studio-danger) 55%, transparent); color: var(--vh360-studio-danger); }
+.vh360-studio-lower-thirds-message[data-status-type="info"] { color: var(--vh360-studio-text-muted); }
