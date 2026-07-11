@@ -216,9 +216,13 @@
     function timerDefinitionChanged(staged, live) {
         const stagedTimer = (staged && staged.timer) || {};
         const liveTimer = (live && live.timer) || {};
-        return stagedTimer.mode !== liveTimer.mode ||
-            Number(stagedTimer.durationSeconds) !== Number(liveTimer.durationSeconds) ||
-            String(stagedTimer.targetLocalDateTime || '') !== String(liveTimer.targetLocalDateTime || '');
+        if (stagedTimer.mode !== liveTimer.mode) {
+            return true;
+        }
+        if (stagedTimer.mode === 'target_time') {
+            return String(stagedTimer.targetLocalDateTime || '') !== String(liveTimer.targetLocalDateTime || '');
+        }
+        return Number(stagedTimer.durationSeconds) !== Number(liveTimer.durationSeconds);
     }
 
     function configForProgramUpdate(staged, live) {
@@ -235,6 +239,22 @@
     function announceAction(message) {
         const warning = conflictWarning();
         setStatus(warning || message, warning ? 'warning' : 'success');
+    }
+
+    function programUpdateStatus(changedTimer) {
+        const messages = [];
+        const conflict = conflictWarning();
+        if (conflict) {
+            messages.push(conflict);
+        }
+        if (changedTimer) {
+            messages.push(text('timerResetNote'));
+        }
+        if (messages.length) {
+            setStatus(messages.join(' '), 'warning');
+            return;
+        }
+        setStatus(text('updated'), 'success');
     }
 
     function render() {
@@ -328,10 +348,7 @@
         const staged = currentConfig();
         const changedTimer = timerDefinitionChanged(staged, program && program.config);
         engine.updateProgram('countdown', { preserveRuntime: true, config: program ? configForProgramUpdate(staged, program.config) : staged });
-        setStatus(changedTimer ? text('timerResetNote') : text('updated'), changedTimer ? 'warning' : 'success');
-        if (!changedTimer) {
-            announceAction(text('updated'));
-        }
+        programUpdateStatus(changedTimer);
         render();
     }
 
