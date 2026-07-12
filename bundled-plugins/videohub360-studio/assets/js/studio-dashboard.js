@@ -5498,6 +5498,15 @@
         return 'Ready to record';
     }
 
+    function setButtonVisibility(button, visible, enabled) {
+        if (!button) {
+            return;
+        }
+
+        button.hidden = !visible;
+        button.disabled = !visible || !enabled;
+    }
+
     function renderRecordingState() {
         if (els.recordingJobId) { els.recordingJobId.textContent = state.activeJobId || '—'; }
         if (els.recordingMime) { els.recordingMime.textContent = state.selectedMimeType || preferredMimeType() || '—'; }
