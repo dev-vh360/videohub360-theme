@@ -1,0 +1,40 @@
+<?php
+/** Canonical Bible book registry. */
+if ( ! defined( 'ABSPATH' ) ) { exit; }
+class VH360_Studio_Bible_Books {
+    public static function all() {
+        $names = array(
+            'GEN'=>'Genesis','EXO'=>'Exodus','LEV'=>'Leviticus','NUM'=>'Numbers','DEU'=>'Deuteronomy','JOS'=>'Joshua','JDG'=>'Judges','RUT'=>'Ruth','1SA'=>'1 Samuel','2SA'=>'2 Samuel','1KI'=>'1 Kings','2KI'=>'2 Kings','1CH'=>'1 Chronicles','2CH'=>'2 Chronicles','EZR'=>'Ezra','NEH'=>'Nehemiah','EST'=>'Esther','JOB'=>'Job','PSA'=>'Psalm','PRO'=>'Proverbs','ECC'=>'Ecclesiastes','SNG'=>'Song of Solomon','ISA'=>'Isaiah','JER'=>'Jeremiah','LAM'=>'Lamentations','EZK'=>'Ezekiel','DAN'=>'Daniel','HOS'=>'Hosea','JOL'=>'Joel','AMO'=>'Amos','OBA'=>'Obadiah','JON'=>'Jonah','MIC'=>'Micah','NAM'=>'Nahum','HAB'=>'Habakkuk','ZEP'=>'Zephaniah','HAG'=>'Haggai','ZEC'=>'Zechariah','MAL'=>'Malachi','MAT'=>'Matthew','MRK'=>'Mark','LUK'=>'Luke','JHN'=>'John','ACT'=>'Acts','ROM'=>'Romans','1CO'=>'1 Corinthians','2CO'=>'2 Corinthians','GAL'=>'Galatians','EPH'=>'Ephesians','PHP'=>'Philippians','COL'=>'Colossians','1TH'=>'1 Thessalonians','2TH'=>'2 Thessalonians','1TI'=>'1 Timothy','2TI'=>'2 Timothy','TIT'=>'Titus','PHM'=>'Philemon','HEB'=>'Hebrews','JAS'=>'James','1PE'=>'1 Peter','2PE'=>'2 Peter','1JN'=>'1 John','2JN'=>'2 John','3JN'=>'3 John','JUD'=>'Jude','REV'=>'Revelation'
+        );
+        $extra = array(
+            '1SA'=>array('I Samuel','First Samuel'),'2SA'=>array('II Samuel','Second Samuel'),'1KI'=>array('I Kings','First Kings'),'2KI'=>array('II Kings','Second Kings'),'1CH'=>array('I Chronicles','First Chronicles'),'2CH'=>array('II Chronicles','Second Chronicles'),'SNG'=>array('Song of Songs','Canticles'),'JHN'=>array('The Gospel According to John'),'1CO'=>array('I Corinthians','First Corinthians'),'2CO'=>array('II Corinthians','Second Corinthians'),'1TH'=>array('I Thessalonians','First Thessalonians'),'2TH'=>array('II Thessalonians','Second Thessalonians'),'1TI'=>array('I Timothy','First Timothy'),'2TI'=>array('II Timothy','Second Timothy'),'1PE'=>array('I Peter','First Peter'),'2PE'=>array('II Peter','Second Peter'),'1JN'=>array('I John','First John'),'2JN'=>array('II John','Second John'),'3JN'=>array('III John','Third John'),'REV'=>array('Revelation of John','The Revelation'),'PSA'=>array('Psalms')
+        );
+        $books = array(); $i = 1;
+        foreach ( $names as $key => $name ) {
+            $aliases = array_merge( array( $name ), isset( $extra[ $key ] ) ? $extra[ $key ] : array() );
+            $books[ $key ] = array( 'key' => $key, 'order' => $i++, 'default_name' => $name, 'aliases' => $aliases );
+        }
+        return $books;
+    }
+    public static function get( $key ) { $books = self::all(); return isset( $books[ $key ] ) ? $books[ $key ] : null; }
+    public static function normalize_name( $name ) {
+        $needle = self::normalize_alias( $name );
+        foreach ( self::all() as $book ) {
+            foreach ( $book['aliases'] as $alias ) {
+                if ( self::normalize_alias( $alias ) === $needle ) { return $book; }
+            }
+        }
+        return null;
+    }
+    public static function normalize_alias( $value ) {
+        $value = strtolower( trim( (string) $value ) );
+        $value = preg_replace( '/\b(the|book of|gospel according to)\b/', '', $value );
+        $value = preg_replace( '/\bfirst\b/', '1', $value );
+        $value = preg_replace( '/\bsecond\b/', '2', $value );
+        $value = preg_replace( '/\bthird\b/', '3', $value );
+        $value = preg_replace( '/\biii\b/', '3', $value );
+        $value = preg_replace( '/\bii\b/', '2', $value );
+        $value = preg_replace( '/\bi\b/', '1', $value );
+        return preg_replace( '/[^a-z0-9]+/', '', $value );
+    }
+}

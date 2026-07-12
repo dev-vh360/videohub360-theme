@@ -5677,6 +5677,9 @@
         stopStream(state.audioInputTestStream);
         state.audioInputTestStream = null;
         if (options.releaseMediaSources === true) {
+            if (window.VH360StudioBible && typeof window.VH360StudioBible.destroy === 'function') {
+                window.VH360StudioBible.destroy();
+            }
             if (window.VH360StudioCountdown && typeof window.VH360StudioCountdown.destroy === 'function') {
                 window.VH360StudioCountdown.destroy();
             }

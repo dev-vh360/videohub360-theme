@@ -20,6 +20,21 @@ class VH360_Studio_Database {
         return $wpdb->prefix . 'vh360_studio_recording_chunks';
     }
 
+    public static function bible_translations_table_name() {
+        global $wpdb;
+        return $wpdb->prefix . 'vh360_studio_bible_translations';
+    }
+
+    public static function bible_verses_table_name() {
+        global $wpdb;
+        return $wpdb->prefix . 'vh360_studio_bible_verses';
+    }
+
+    public static function bible_import_jobs_table_name() {
+        global $wpdb;
+        return $wpdb->prefix . 'vh360_studio_bible_import_jobs';
+    }
+
     public static function maybe_install() {
         if ( get_option( 'vh360_studio_db_version' ) !== VH360_STUDIO_DB_VERSION ) {
             self::install();
@@ -32,6 +47,9 @@ class VH360_Studio_Database {
 
         $table_name       = self::table_name();
         $chunks_table_name = self::chunks_table_name();
+        $bible_translations_table = self::bible_translations_table_name();
+        $bible_verses_table       = self::bible_verses_table_name();
+        $bible_jobs_table         = self::bible_import_jobs_table_name();
         $charset_collate  = $wpdb->get_charset_collate();
 
         // Phase 1A has not shipped with production data. Replace the initial
@@ -118,6 +136,79 @@ class VH360_Studio_Database {
         ) {$charset_collate};";
 
         dbDelta( $chunks_sql );
+
+        $bible_translations_sql = "CREATE TABLE {$bible_translations_table} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            translation_key varchar(64) NOT NULL,
+            name varchar(191) NOT NULL,
+            abbreviation varchar(40) NOT NULL,
+            language varchar(80) NOT NULL DEFAULT 'en',
+            source_name varchar(191) NOT NULL DEFAULT '',
+            source_url text DEFAULT NULL,
+            license_name varchar(191) NOT NULL DEFAULT '',
+            license_url text DEFAULT NULL,
+            attribution text DEFAULT NULL,
+            attribution_required tinyint(1) NOT NULL DEFAULT 0,
+            dataset_version varchar(100) NOT NULL DEFAULT '',
+            source_hash varchar(64) NOT NULL DEFAULT '',
+            status varchar(40) NOT NULL DEFAULT 'importing',
+            verse_count int(10) unsigned NOT NULL DEFAULT 0,
+            book_count int(10) unsigned NOT NULL DEFAULT 0,
+            imported_at datetime DEFAULT NULL,
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+            PRIMARY KEY  (id),
+            UNIQUE KEY translation_key (translation_key),
+            KEY status (status),
+            KEY language (language)
+        ) {$charset_collate};";
+        dbDelta( $bible_translations_sql );
+
+        $bible_verses_sql = "CREATE TABLE {$bible_verses_table} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            translation_key varchar(64) NOT NULL,
+            book_key varchar(8) NOT NULL,
+            book_name varchar(100) NOT NULL,
+            book_order int(10) unsigned NOT NULL,
+            chapter_number int(10) unsigned NOT NULL,
+            verse_number int(10) unsigned NOT NULL,
+            verse_suffix varchar(8) NOT NULL DEFAULT '',
+            verse_text longtext NOT NULL,
+            verse_status varchar(20) NOT NULL DEFAULT 'present',
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+            PRIMARY KEY  (id),
+            UNIQUE KEY translation_reference (translation_key,book_key,chapter_number,verse_number,verse_suffix),
+            KEY translation_book_chapter (translation_key,book_order,chapter_number),
+            KEY translation_book (translation_key,book_key)
+        ) {$charset_collate};";
+        dbDelta( $bible_verses_sql );
+
+        $bible_jobs_sql = "CREATE TABLE {$bible_jobs_table} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) unsigned NOT NULL,
+            translation_key varchar(64) NOT NULL,
+            temporary_translation_key varchar(80) NOT NULL DEFAULT '',
+            source_file text NOT NULL,
+            source_hash varchar(64) NOT NULL DEFAULT '',
+            status varchar(40) NOT NULL DEFAULT 'created',
+            byte_offset bigint(20) unsigned NOT NULL DEFAULT 0,
+            rows_processed int(10) unsigned NOT NULL DEFAULT 0,
+            rows_imported int(10) unsigned NOT NULL DEFAULT 0,
+            rows_omitted int(10) unsigned NOT NULL DEFAULT 0,
+            rows_failed int(10) unsigned NOT NULL DEFAULT 0,
+            book_count int(10) unsigned NOT NULL DEFAULT 0,
+            error_message longtext DEFAULT NULL,
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+            completed_at datetime DEFAULT NULL,
+            PRIMARY KEY  (id),
+            KEY user_id (user_id),
+            KEY translation_key (translation_key),
+            KEY status (status)
+        ) {$charset_collate};";
+        dbDelta( $bible_jobs_sql );
+
         update_option( 'vh360_studio_db_version', VH360_STUDIO_DB_VERSION );
     }
 }

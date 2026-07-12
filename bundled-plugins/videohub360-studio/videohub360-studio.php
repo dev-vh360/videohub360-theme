@@ -28,7 +28,7 @@ define( 'VH360_STUDIO_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'VH360_STUDIO_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'VH360_STUDIO_INCLUDES_DIR', VH360_STUDIO_PLUGIN_DIR . 'includes/' );
 define( 'VH360_STUDIO_TEMPLATES_DIR', VH360_STUDIO_PLUGIN_DIR . 'templates/' );
-define( 'VH360_STUDIO_DB_VERSION', '1.5.0' );
+define( 'VH360_STUDIO_DB_VERSION', '1.6.0' );
 
 /**
  * Load translations.
@@ -148,6 +148,12 @@ function vh360_studio_load_files() {
     require_once VH360_STUDIO_INCLUDES_DIR . 'providers/class-vh360-studio-local-media-provider.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-provider-registry.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-rest-controller.php';
+    require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-bible-books.php';
+    require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-bible-reference-parser.php';
+    require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-bible-repository.php';
+    require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-bible-importer.php';
+    require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-bible-rest-controller.php';
+    require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-bible-admin.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-overlay-repository.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-overlays-rest-controller.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-admin.php';
