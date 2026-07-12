@@ -99,17 +99,9 @@ class VH360_Studio_Assets {
         wp_localize_script( 'vh360-studio-dashboard', 'vh360StudioDashboard', $this->localized_data() );
 
         wp_enqueue_script(
-            'vh360-studio-overlays-workspace',
-            VH360_STUDIO_PLUGIN_URL . $overlays_workspace_path,
-            array( 'vh360-studio-dashboard' ),
-            $this->asset_version( $overlays_workspace_path ),
-            true
-        );
-
-        wp_enqueue_script(
             'vh360-studio-overlay-engine',
             VH360_STUDIO_PLUGIN_URL . $overlay_engine_path,
-            array( 'vh360-studio-overlays-workspace' ),
+            array( 'vh360-studio-dashboard' ),
             $this->asset_version( $overlay_engine_path ),
             true
         );
@@ -143,6 +135,14 @@ class VH360_Studio_Assets {
             VH360_STUDIO_PLUGIN_URL . $bible_path,
             array( 'vh360-studio-countdown' ),
             $this->asset_version( $bible_path ),
+            true
+        );
+
+        wp_enqueue_script(
+            'vh360-studio-overlays-workspace',
+            VH360_STUDIO_PLUGIN_URL . $overlays_workspace_path,
+            array( 'vh360-studio-bible' ),
+            $this->asset_version( $overlays_workspace_path ),
             true
         );
     }
