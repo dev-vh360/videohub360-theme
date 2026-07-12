@@ -1,57 +1,707 @@
 (function () {
     'use strict';
-    const CONFIG = { defaultWidth: 400, minWidth: 320, maxWidth: 520, stackedBreakpoint: 1280, widthKey: 'vh360_studio_overlays_width', collapsedKey: 'vh360_studio_overlays_collapsed', moduleKey: 'vh360_studio_overlays_active_module', sectionKey: 'vh360_studio_overlays_active_section', modules: ['lower-thirds', 'bible', 'countdown'], sections: ['control', 'customize', 'settings'] };
-    const slotMap = { 'lower-thirds': 'lowerThird', bible: 'bible', countdown: 'countdown' };
-    const apiMap = { 'lower-thirds': 'VH360StudioLowerThirds', bible: 'VH360StudioBible', countdown: 'VH360StudioCountdown' };
-    const storage = { get(k){try{return localStorage.getItem(k);}catch(e){return null;}}, set(k,v){try{localStorage.setItem(k,v);}catch(e){}}, remove(k){try{localStorage.removeItem(k);}catch(e){}} };
-    const clamp = (v,min,max)=>Math.min(Math.max(v,min),max);
-    function uniqueAllowed(values, allowed) { const seen = {}; return allowed.filter((m)=>Array.isArray(values) && values.indexOf(m) !== -1 && !seen[m] && (seen[m]=true)); }
-    function Controller(workspace) {
-        this.workspace=workspace; this.root=workspace.closest('[data-vh360-studio-dashboard]')||document; this.cfg=window.vh360StudioDashboard||{}; this.strings=this.cfg.strings||{};
-        this.allowedModules=uniqueAllowed((this.cfg.overlayTools&&this.cfg.overlayTools.allowedModules)||CONFIG.modules, CONFIG.modules); this.enabledModules=uniqueAllowed((this.cfg.overlayTools&&this.cfg.overlayTools.enabledModules)||[], this.allowedModules);
-        this.monitors=workspace.querySelector('[data-overlays-monitors]'); this.resizer=workspace.querySelector('[data-overlays-resizer]'); this.dock=workspace.querySelector('[data-overlays-dock]'); this.body=workspace.querySelector('[data-overlays-body]'); this.collapseButton=workspace.querySelector('[data-overlays-collapse]'); this.collapseLabel=workspace.querySelector('[data-overlays-collapse-label]'); this.status=workspace.querySelector('[data-overlays-status]'); this.empty=workspace.querySelector('[data-overlays-empty]'); this.moduleTabs=Array.from(workspace.querySelectorAll('[data-overlays-module-tab]')); this.sectionTabs=Array.from(workspace.querySelectorAll('[data-overlays-section-tab]')); this.sectionTabsWrap=workspace.querySelector('[data-overlays-section-tabs]'); this.moduleTabsWrap=workspace.querySelector('[data-overlays-module-tabs]'); this.panels=Array.from(workspace.querySelectorAll('[data-overlays-panel]'));
-        this.modal=this.root.querySelector('[data-overlay-tools-modal]'); this.checkboxes=this.modal?Array.from(this.modal.querySelectorAll('[data-overlay-tool-checkbox]')):[]; this.saveButton=this.modal&&this.modal.querySelector('[data-save-overlay-tools]'); this.modalStatus=this.modal&&this.modal.querySelector('[data-overlay-tools-status]'); this.lastTrigger=null; this.saving=false;
-        this.width=this.savedWidth(); this.collapsed=storage.get(CONFIG.collapsedKey)==='true'; this.activeSection=CONFIG.sections.indexOf(storage.get(CONFIG.sectionKey))!==-1?storage.get(CONFIG.sectionKey):CONFIG.sections[0]; const saved=storage.get(CONFIG.moduleKey); this.activeModule=this.enabledModules.indexOf(saved)!==-1?saved:(this.enabledModules[0]||null); this.isStacked=false; this.drag=null;
+
+    const CONFIG = {
+        defaultWidth: 400,
+        minWidth: 320,
+        maxWidth: 520,
+        stackedBreakpoint: 1280,
+        widthKey: 'vh360_studio_overlays_width',
+        collapsedKey: 'vh360_studio_overlays_collapsed',
+        moduleKey: 'vh360_studio_overlays_active_module',
+        sectionKey: 'vh360_studio_overlays_active_section',
+        modules: ['lower-thirds', 'bible', 'countdown'],
+        sections: ['control', 'customize', 'settings'],
+    };
+
+    const SLOT_BY_MODULE = {
+        'lower-thirds': 'lowerThird',
+        bible: 'bible',
+        countdown: 'countdown',
+    };
+
+    const API_BY_MODULE = {
+        'lower-thirds': 'VH360StudioLowerThirds',
+        bible: 'VH360StudioBible',
+        countdown: 'VH360StudioCountdown',
+    };
+
+    const storage = {
+        get(key) {
+            try {
+                return window.localStorage.getItem(key);
+            } catch (error) {
+                return null;
+            }
+        },
+        set(key, value) {
+            try {
+                window.localStorage.setItem(key, value);
+            } catch (error) {}
+        },
+        remove(key) {
+            try {
+                window.localStorage.removeItem(key);
+            } catch (error) {}
+        },
+    };
+
+    function clamp(value, min, max) {
+        return Math.min(Math.max(value, min), max);
     }
-    Controller.prototype.text=function(k){ return this.dock && this.dock.dataset[k] || this.strings[k] || k; };
-    Controller.prototype.announce=function(m){ if(this.status) this.status.textContent=m||''; };
-    Controller.prototype.savedWidth=function(){ const p=parseInt(storage.get(CONFIG.widthKey),10); return Number.isFinite(p)?clamp(p,CONFIG.minWidth,CONFIG.maxWidth):CONFIG.defaultWidth; };
-    Controller.prototype.init=function(){ this.bindEvents(); this.applyWidth(this.width,false); this.applyCollapsed(this.collapsed,false); this.applyEnabledModules(this.enabledModules,false); this.enabledModules.forEach((m)=>this.moduleApi(m,'init')); this.observe(); this.refreshLayout(); };
-    Controller.prototype.bindEvents=function(){ const self=this; if(this.resizer){ this.resizer.addEventListener('pointerdown', e=>self.onPointerDown(e)); this.resizer.addEventListener('keydown', e=>self.onResizerKeydown(e)); this.resizer.addEventListener('dblclick', ()=>self.applyWidth(CONFIG.defaultWidth,true)); }
-        if(this.collapseButton) this.collapseButton.addEventListener('click',()=>this.applyCollapsed(!this.collapsed,true));
-        this.moduleTabs.forEach(t=>{t.addEventListener('click',()=>this.selectModule(t.dataset.module,true)); t.addEventListener('keydown',e=>this.onModuleKey(e,t));});
-        this.sectionTabs.forEach(t=>{t.addEventListener('click',()=>this.selectSection(t.dataset.section,true)); t.addEventListener('keydown',e=>this.onSectionKey(e,t));});
-        this.root.querySelectorAll('[data-open-overlay-tools]').forEach(b=>b.addEventListener('click',e=>this.openModal(e.currentTarget)));
-        if(this.modal){ this.modal.querySelectorAll('[data-close-overlay-tools]').forEach(b=>b.addEventListener('click',()=>this.closeModal())); this.modal.addEventListener('keydown',e=>{if(e.key==='Escape')this.closeModal();}); }
-        if(this.saveButton) this.saveButton.addEventListener('click',()=>this.saveTools());
-        window.addEventListener('resize',()=>this.refreshLayout()); window.addEventListener('orientationchange',()=>this.refreshLayout());
+
+    function allowedOrdered(values, allowed) {
+        if (!Array.isArray(values)) {
+            return [];
+        }
+        const selected = values.reduce((accumulator, value) => {
+            accumulator[value] = true;
+            return accumulator;
+        }, {});
+        return allowed.filter((value) => selected[value]);
+    }
+
+    function Controller(workspace) {
+        this.workspace = workspace;
+        this.root = workspace.closest('[data-vh360-studio-dashboard]') || document;
+        this.config = window.vh360StudioDashboard || {};
+        this.strings = this.config.strings || {};
+        this.allowedModules = allowedOrdered(
+            (this.config.overlayTools && this.config.overlayTools.allowedModules) || CONFIG.modules,
+            CONFIG.modules
+        );
+        this.enabledModules = allowedOrdered(
+            (this.config.overlayTools && this.config.overlayTools.enabledModules) || [],
+            this.allowedModules
+        );
+        this.previousEnabledModules = this.enabledModules.slice();
+
+        this.monitors = workspace.querySelector('[data-overlays-monitors]');
+        this.resizer = workspace.querySelector('[data-overlays-resizer]');
+        this.dock = workspace.querySelector('[data-overlays-dock]');
+        this.body = workspace.querySelector('[data-overlays-body]');
+        this.collapseButton = workspace.querySelector('[data-overlays-collapse]');
+        this.collapseLabel = workspace.querySelector('[data-overlays-collapse-label]');
+        this.status = workspace.querySelector('[data-overlays-status]');
+        this.empty = workspace.querySelector('[data-overlays-empty]');
+        this.moduleTabsWrap = workspace.querySelector('[data-overlays-module-tabs]');
+        this.sectionTabsWrap = workspace.querySelector('[data-overlays-section-tabs]');
+        this.moduleTabs = Array.from(workspace.querySelectorAll('[data-overlays-module-tab]'));
+        this.sectionTabs = Array.from(workspace.querySelectorAll('[data-overlays-section-tab]'));
+        this.panels = Array.from(workspace.querySelectorAll('[data-overlays-panel]'));
+
+        this.modal = this.root.querySelector('[data-overlay-tools-modal]');
+        this.checkboxes = this.modal ? Array.from(this.modal.querySelectorAll('[data-overlay-tool-checkbox]')) : [];
+        this.saveButton = this.modal ? this.modal.querySelector('[data-save-overlay-tools]') : null;
+        this.modalStatus = this.modal ? this.modal.querySelector('[data-overlay-tools-status]') : null;
+        this.lastModalTrigger = null;
+        this.saving = false;
+
+        this.width = this.savedWidth();
+        this.collapsed = storage.get(CONFIG.collapsedKey) === 'true';
+        this.activeSection = this.savedSection();
+        this.activeModule = this.resolveInitialModule();
+        this.isStacked = false;
+        this.drag = null;
+        this.dragPointerId = null;
+
+        this.boundPointerDown = this.onPointerDown.bind(this);
+        this.boundPointerMove = this.onPointerMove.bind(this);
+        this.boundPointerEnd = this.endDrag.bind(this);
+        this.boundResizerKeydown = this.onResizerKeydown.bind(this);
+        this.boundResizerDblclick = this.onResizerDblclick.bind(this);
+        this.boundCollapseClick = this.onCollapseClick.bind(this);
+        this.boundWindowResize = this.refreshLayout.bind(this);
+        this.boundWindowBlur = this.endDrag.bind(this);
+    }
+
+    Controller.prototype.savedWidth = function () {
+        const parsed = parseInt(storage.get(CONFIG.widthKey), 10);
+        return Number.isFinite(parsed) ? clamp(parsed, CONFIG.minWidth, CONFIG.maxWidth) : CONFIG.defaultWidth;
     };
-    Controller.prototype.visibleModuleTabs=function(){ return this.moduleTabs.filter(t=>!t.hidden && this.enabledModules.indexOf(t.dataset.module)!==-1); };
-    Controller.prototype.onModuleKey=function(e,tab){ if(['ArrowLeft','ArrowRight','Home','End'].indexOf(e.key)===-1)return; e.preventDefault(); const tabs=this.visibleModuleTabs(); if(!tabs.length)return; let i=tabs.indexOf(tab); if(e.key==='Home')i=0; else if(e.key==='End')i=tabs.length-1; else i=(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length; tabs[i].focus(); this.selectModule(tabs[i].dataset.module,true); };
-    Controller.prototype.onSectionKey=function(e,tab){ if(['ArrowLeft','ArrowRight','Home','End'].indexOf(e.key)===-1||!this.activeModule)return; e.preventDefault(); let i=this.sectionTabs.indexOf(tab); if(e.key==='Home')i=0; else if(e.key==='End')i=this.sectionTabs.length-1; else i=(i+(e.key==='ArrowRight'?1:-1)+this.sectionTabs.length)%this.sectionTabs.length; this.sectionTabs[i].focus(); this.selectSection(this.sectionTabs[i].dataset.section,true); };
-    Controller.prototype.applyEnabledModules=function(modules,persist){ const previous=this.enabledModules.slice(); this.enabledModules=uniqueAllowed(modules,this.allowedModules); if(this.activeModule && this.enabledModules.indexOf(this.activeModule)===-1) this.activeModule=this.enabledModules[0]||null; if(!this.activeModule) { this.activeModule=this.enabledModules[0]||null; }
-        const empty=!this.enabledModules.length; if(this.empty)this.empty.hidden=!empty; if(this.sectionTabsWrap)this.sectionTabsWrap.hidden=empty; if(this.moduleTabsWrap)this.moduleTabsWrap.hidden=empty;
-        this.moduleTabs.forEach(t=>{ const enabled=this.enabledModules.indexOf(t.dataset.module)!==-1; t.hidden=!enabled; t.tabIndex=-1; t.setAttribute('aria-selected','false'); });
-        if(empty){ storage.remove(CONFIG.moduleKey); this.panels.forEach(p=>p.hidden=true); this.sectionTabs.forEach(t=>{t.hidden=true;t.tabIndex=-1;t.setAttribute('aria-selected','false');t.removeAttribute('aria-controls');}); this.announce(this.strings.overlayToolsNoneEnabled||'No overlay tools enabled.'); }
-        else { this.sectionTabs.forEach(t=>{t.hidden=false;}); this.selectSection(this.activeSection,false); this.selectModule(this.activeModule,false); }
-        this.workspace.dispatchEvent(new CustomEvent('vh360:studio-overlays:preference-change',{bubbles:true,detail:{enabledModules:this.enabledModules,previousModules:previous}})); if(persist!==false)this.announce(this.strings.overlayToolsSaved||'Overlay tools saved.'); };
-    Controller.prototype.panelId=function(m,s){ return m ? `vh360-overlays-panel-${m}-${s}` : ''; };
-    Controller.prototype.selectModule=function(m,persist){ if(this.enabledModules.indexOf(m)===-1)m=this.enabledModules[0]||null; this.activeModule=m; this.moduleTabs.forEach(t=>{const sel=m&&t.dataset.module===m; t.setAttribute('aria-selected',String(!!sel)); t.tabIndex=sel?0:-1; if(m)t.setAttribute('aria-controls',this.panelId(t.dataset.module,this.activeSection));}); this.updatePanels(); if(persist&&m)storage.set(CONFIG.moduleKey,m); };
-    Controller.prototype.selectSection=function(s,persist){ if(CONFIG.sections.indexOf(s)===-1)s=CONFIG.sections[0]; this.activeSection=s; this.sectionTabs.forEach(t=>{const sel=t.dataset.section===s; t.setAttribute('aria-selected',String(sel)); t.tabIndex=sel?0:-1; if(this.activeModule)t.setAttribute('aria-controls',this.panelId(this.activeModule,t.dataset.section));}); this.updatePanels(); if(persist)storage.set(CONFIG.sectionKey,s); };
-    Controller.prototype.updatePanels=function(){ const id=this.panelId(this.activeModule,this.activeSection); this.panels.forEach(p=>{ p.hidden=!id || p.id!==id || this.enabledModules.indexOf(p.dataset.module)===-1; }); };
-    Controller.prototype.openModal=function(trigger){ this.lastTrigger=trigger; this.checkboxes.forEach(c=>{c.checked=this.enabledModules.indexOf(c.value)!==-1;}); if(this.modalStatus){this.modalStatus.hidden=true;this.modalStatus.textContent='';} if(this.modal){this.modal.hidden=false; (this.checkboxes[0]||this.saveButton||this.modal).focus();} };
-    Controller.prototype.closeModal=function(){ if(this.saving)return; if(this.modal)this.modal.hidden=true; if(this.lastTrigger&&this.lastTrigger.focus)this.lastTrigger.focus(); };
-    Controller.prototype.removedActiveSlots=function(next){ const state=window.VH360StudioOverlayEngine&&window.VH360StudioOverlayEngine.getState&&window.VH360StudioOverlayEngine.getState(); if(!state)return[]; return this.enabledModules.filter(m=>next.indexOf(m)===-1).filter(m=>{const slot=slotMap[m]; return (state.preview&&state.preview[slot])||(state.program&&state.program[slot]);}); };
-    Controller.prototype.saveTools=function(){ if(this.saving)return; const next=uniqueAllowed(this.checkboxes.filter(c=>c.checked).map(c=>c.value),this.allowedModules); const active=this.removedActiveSlots(next); if(active.length && !window.confirm(this.strings.overlayToolsConfirmDisable||'Active overlays will be removed. Continue?'))return; this.saving=true; if(this.saveButton)this.saveButton.disabled=true; if(this.modalStatus){this.modalStatus.hidden=false;this.modalStatus.textContent='';}
-        active.forEach(m=>{const slot=slotMap[m], e=window.VH360StudioOverlayEngine; if(e){ if(e.clearPreview)e.clearPreview(slot); if(e.clearProgram)e.clearProgram(slot); }});
-        fetch((this.cfg.restRoot||'').replace(/\/$/,'')+'/overlay-tools',{method:'PUT',headers:{'Content-Type':'application/json','X-WP-Nonce':this.cfg.nonce},body:JSON.stringify({enabled_modules:next})}).then(r=>r.json().then(j=>{if(!r.ok)throw new Error(j.message||''); return j;})).then(j=>{ const saved=uniqueAllowed(j.enabled_modules||[],this.allowedModules); this.enabledModules.filter(m=>saved.indexOf(m)===-1).forEach(m=>this.moduleApi(m,'destroy')); saved.filter(m=>this.enabledModules.indexOf(m)===-1).forEach(m=>this.moduleApi(m,'init')); this.applyEnabledModules(saved,true); this.saving=false; if(this.saveButton)this.saveButton.disabled=false; this.closeModal(); }).catch(()=>{this.saving=false; if(this.saveButton)this.saveButton.disabled=false; if(this.modalStatus){this.modalStatus.hidden=false;this.modalStatus.textContent=this.strings.overlayToolsSaveFailed||'Overlay tools could not be saved. Please try again.';}});
+
+    Controller.prototype.savedSection = function () {
+        const section = storage.get(CONFIG.sectionKey);
+        return CONFIG.sections.indexOf(section) !== -1 ? section : CONFIG.sections[0];
     };
-    Controller.prototype.moduleApi=function(m,method){ const api=window[apiMap[m]]; if(api&&typeof api[method]==='function')api[method](); };
-    Controller.prototype.applyWidth=function(w,persist){ this.width=clamp(parseInt(w,10)||CONFIG.defaultWidth,CONFIG.minWidth,CONFIG.maxWidth); this.workspace.style.setProperty('--vh360-studio-overlays-width',`${this.width}px`); if(this.resizer)this.resizer.setAttribute('aria-valuenow',String(this.width)); if(persist)storage.set(CONFIG.widthKey,String(this.width)); };
-    Controller.prototype.applyCollapsed=function(c,persist){ this.collapsed=!!c; this.workspace.classList.toggle('is-overlays-collapsed',this.collapsed); if(this.collapseButton)this.collapseButton.setAttribute('aria-expanded',String(!this.collapsed)); if(this.collapseLabel)this.collapseLabel.textContent=this.collapsed?(this.dock.dataset.labelExpand||'Expand'):(this.dock.dataset.labelCollapse||'Collapse'); if(persist)storage.set(CONFIG.collapsedKey,String(this.collapsed)); this.refreshLayout(); };
-    Controller.prototype.onPointerDown=function(e){ if(this.collapsed||this.isStacked)return; e.preventDefault(); const startX=e.clientX,startW=this.width, move=(ev)=>this.applyWidth(startW+(ev.clientX-startX),false), up=()=>{storage.set(CONFIG.widthKey,String(this.width));document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',up);}; document.addEventListener('pointermove',move); document.addEventListener('pointerup',up); };
-    Controller.prototype.onResizerKeydown=function(e){ if(['ArrowLeft','ArrowRight','Home','End'].indexOf(e.key)===-1)return; e.preventDefault(); let w=this.width; if(e.key==='ArrowLeft')w-=20; if(e.key==='ArrowRight')w+=20; if(e.key==='Home')w=CONFIG.minWidth; if(e.key==='End')w=CONFIG.maxWidth; this.applyWidth(w,true); };
-    Controller.prototype.observe=function(){ if(!('ResizeObserver'in window))return; new ResizeObserver(()=>this.refreshLayout()).observe(this.workspace); };
-    Controller.prototype.refreshLayout=function(){ const stacked=this.workspace.getBoundingClientRect().width<CONFIG.stackedBreakpoint; this.isStacked=stacked; this.workspace.classList.toggle('is-overlays-stacked',stacked); if(this.dock&&this.monitors)this.dock.style.height=stacked?'':`${Math.round(this.monitors.getBoundingClientRect().height)}px`; };
-    document.addEventListener('DOMContentLoaded',()=>{ const ws=document.querySelector('[data-overlays-workspace]'); if(ws)new Controller(ws).init(); });
+
+    Controller.prototype.resolveInitialModule = function () {
+        const savedModule = storage.get(CONFIG.moduleKey);
+        if (this.enabledModules.indexOf(savedModule) !== -1) {
+            return savedModule;
+        }
+        return this.enabledModules[0] || null;
+    };
+
+    Controller.prototype.init = function () {
+        this.bindEvents();
+        this.applyWidth(this.width, false, false);
+        this.applyCollapsed(this.collapsed, false, false);
+        this.applyEnabledModules(this.enabledModules, { announce: false, dispatch: false });
+        this.enabledModules.forEach((module) => this.callModuleApi(module, 'init'));
+        this.observe();
+        this.refreshLayout();
+    };
+
+    Controller.prototype.bindEvents = function () {
+        if (this.resizer) {
+            this.resizer.addEventListener('pointerdown', this.boundPointerDown);
+            this.resizer.addEventListener('keydown', this.boundResizerKeydown);
+            this.resizer.addEventListener('dblclick', this.boundResizerDblclick);
+            this.resizer.addEventListener('lostpointercapture', this.boundPointerEnd);
+        }
+
+        if (this.collapseButton) {
+            this.collapseButton.addEventListener('click', this.boundCollapseClick);
+        }
+
+        this.moduleTabs.forEach((tab) => {
+            tab.addEventListener('click', () => this.selectModule(tab.dataset.module, true));
+            tab.addEventListener('keydown', (event) => this.onModuleTabKeydown(event, tab));
+        });
+
+        this.sectionTabs.forEach((tab) => {
+            tab.addEventListener('click', () => this.selectSection(tab.dataset.section, true));
+            tab.addEventListener('keydown', (event) => this.onSectionTabKeydown(event, tab));
+        });
+
+        this.root.querySelectorAll('[data-open-overlay-tools]').forEach((button) => {
+            button.addEventListener('click', (event) => this.openToolsModal(event.currentTarget));
+        });
+
+        if (this.modal) {
+            this.modal.querySelectorAll('[data-close-overlay-tools]').forEach((button) => {
+                button.addEventListener('click', () => this.closeToolsModal());
+            });
+            this.modal.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
+                    this.closeToolsModal();
+                }
+            });
+        }
+
+        if (this.saveButton) {
+            this.saveButton.addEventListener('click', () => this.saveTools());
+        }
+
+        window.addEventListener('resize', this.boundWindowResize);
+        window.addEventListener('orientationchange', this.boundWindowResize);
+        window.addEventListener('blur', this.boundWindowBlur);
+    };
+
+    Controller.prototype.observe = function () {
+        if (!('ResizeObserver' in window)) {
+            return;
+        }
+
+        this.workspaceObserver = new ResizeObserver(() => this.refreshLayout());
+        this.workspaceObserver.observe(this.workspace);
+
+        if (this.monitors) {
+            this.monitorObserver = new ResizeObserver(() => this.matchDockHeight());
+            this.monitorObserver.observe(this.monitors);
+        }
+    };
+
+    Controller.prototype.refreshLayout = function () {
+        const width = this.workspace.getBoundingClientRect().width;
+        const stacked = width < CONFIG.stackedBreakpoint;
+        if (stacked !== this.isStacked) {
+            this.isStacked = stacked;
+            this.workspace.classList.toggle('is-overlays-stacked', stacked);
+            this.dispatchLayoutChange();
+        }
+        this.matchDockHeight();
+    };
+
+    Controller.prototype.matchDockHeight = function () {
+        if (!this.dock || !this.monitors) {
+            return;
+        }
+        if (this.isStacked) {
+            this.dock.style.height = '';
+            return;
+        }
+        this.dock.style.height = `${Math.round(this.monitors.getBoundingClientRect().height)}px`;
+    };
+
+    Controller.prototype.applyWidth = function (width, persist, notify) {
+        this.width = clamp(parseInt(width, 10) || CONFIG.defaultWidth, CONFIG.minWidth, CONFIG.maxWidth);
+        this.workspace.style.setProperty('--vh360-studio-overlays-width', `${this.width}px`);
+        if (this.resizer) {
+            this.resizer.setAttribute('aria-valuenow', String(this.width));
+        }
+        if (persist) {
+            storage.set(CONFIG.widthKey, String(this.width));
+        }
+        if (notify !== false) {
+            this.dispatchLayoutChange();
+        }
+    };
+
+    Controller.prototype.applyCollapsed = function (collapsed, persist, notify) {
+        this.collapsed = Boolean(collapsed);
+        this.workspace.classList.toggle('is-overlays-collapsed', this.collapsed);
+        if (this.collapseButton) {
+            this.collapseButton.setAttribute('aria-expanded', String(!this.collapsed));
+        }
+        if (this.collapseLabel) {
+            this.collapseLabel.textContent = this.collapsed ? this.text('labelExpand') : this.text('labelCollapse');
+        }
+        if (persist) {
+            storage.set(CONFIG.collapsedKey, String(this.collapsed));
+        }
+        if (notify !== false) {
+            this.announce(this.collapsed ? this.text('messageCollapsed') : this.text('messageExpanded'));
+            this.dispatchLayoutChange();
+        }
+        this.refreshLayout();
+    };
+
+    Controller.prototype.onCollapseClick = function () {
+        this.applyCollapsed(!this.collapsed, true);
+    };
+
+    Controller.prototype.onPointerDown = function (event) {
+        if (this.collapsed || this.isStacked) {
+            return;
+        }
+        event.preventDefault();
+        this.drag = { startX: event.clientX, startWidth: this.width };
+        this.dragPointerId = event.pointerId;
+        this.workspace.classList.add('is-resizing-overlays');
+        if (this.resizer && this.resizer.setPointerCapture) {
+            this.resizer.setPointerCapture(event.pointerId);
+        }
+        document.addEventListener('pointermove', this.boundPointerMove);
+        document.addEventListener('pointerup', this.boundPointerEnd);
+        document.addEventListener('pointercancel', this.boundPointerEnd);
+    };
+
+    Controller.prototype.onPointerMove = function (event) {
+        if (!this.drag) {
+            return;
+        }
+        const delta = event.clientX - this.drag.startX;
+        this.applyWidth(this.drag.startWidth - delta, false);
+    };
+
+    Controller.prototype.endDrag = function () {
+        if (!this.drag) {
+            return;
+        }
+        this.drag = null;
+        this.workspace.classList.remove('is-resizing-overlays');
+        if (this.resizer && this.dragPointerId !== null && this.resizer.releasePointerCapture) {
+            try {
+                this.resizer.releasePointerCapture(this.dragPointerId);
+            } catch (error) {}
+        }
+        this.dragPointerId = null;
+        storage.set(CONFIG.widthKey, String(this.width));
+        document.removeEventListener('pointermove', this.boundPointerMove);
+        document.removeEventListener('pointerup', this.boundPointerEnd);
+        document.removeEventListener('pointercancel', this.boundPointerEnd);
+    };
+
+    Controller.prototype.onResizerKeydown = function (event) {
+        if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].indexOf(event.key) === -1) {
+            return;
+        }
+        event.preventDefault();
+        const increment = event.shiftKey ? 50 : 20;
+        let width = this.width;
+        if (event.key === 'ArrowLeft') {
+            width += increment;
+        }
+        if (event.key === 'ArrowRight') {
+            width -= increment;
+        }
+        if (event.key === 'Home') {
+            width = CONFIG.minWidth;
+        }
+        if (event.key === 'End') {
+            width = CONFIG.maxWidth;
+        }
+        this.applyWidth(width, true);
+    };
+
+    Controller.prototype.onResizerDblclick = function () {
+        this.applyWidth(CONFIG.defaultWidth, true);
+    };
+
+    Controller.prototype.visibleModuleTabs = function () {
+        return this.moduleTabs.filter((tab) => !tab.hidden && this.enabledModules.indexOf(tab.dataset.module) !== -1);
+    };
+
+    Controller.prototype.onModuleTabKeydown = function (event, tab) {
+        if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].indexOf(event.key) === -1) {
+            return;
+        }
+        event.preventDefault();
+        const tabs = this.visibleModuleTabs();
+        if (!tabs.length) {
+            return;
+        }
+        const current = Math.max(0, tabs.indexOf(tab));
+        let next = current;
+        if (event.key === 'ArrowLeft') {
+            next = (current - 1 + tabs.length) % tabs.length;
+        }
+        if (event.key === 'ArrowRight') {
+            next = (current + 1) % tabs.length;
+        }
+        if (event.key === 'Home') {
+            next = 0;
+        }
+        if (event.key === 'End') {
+            next = tabs.length - 1;
+        }
+        tabs[next].focus();
+        this.selectModule(tabs[next].dataset.module, true);
+    };
+
+    Controller.prototype.onSectionTabKeydown = function (event, tab) {
+        if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].indexOf(event.key) === -1 || !this.activeModule) {
+            return;
+        }
+        event.preventDefault();
+        const current = Math.max(0, this.sectionTabs.indexOf(tab));
+        let next = current;
+        if (event.key === 'ArrowLeft') {
+            next = (current - 1 + this.sectionTabs.length) % this.sectionTabs.length;
+        }
+        if (event.key === 'ArrowRight') {
+            next = (current + 1) % this.sectionTabs.length;
+        }
+        if (event.key === 'Home') {
+            next = 0;
+        }
+        if (event.key === 'End') {
+            next = this.sectionTabs.length - 1;
+        }
+        this.sectionTabs[next].focus();
+        this.selectSection(this.sectionTabs[next].dataset.section, true);
+    };
+
+    Controller.prototype.resolveModuleAfterDisable = function (previousModules, nextModules) {
+        if (this.activeModule && nextModules.indexOf(this.activeModule) !== -1) {
+            return this.activeModule;
+        }
+        if (!nextModules.length) {
+            return null;
+        }
+        const previousIndex = previousModules.indexOf(this.activeModule);
+        if (previousIndex === -1) {
+            return nextModules[0];
+        }
+        for (let index = previousIndex + 1; index < previousModules.length; index++) {
+            if (nextModules.indexOf(previousModules[index]) !== -1) {
+                return previousModules[index];
+            }
+        }
+        for (let index = previousIndex - 1; index >= 0; index--) {
+            if (nextModules.indexOf(previousModules[index]) !== -1) {
+                return previousModules[index];
+            }
+        }
+        return nextModules[0];
+    };
+
+    Controller.prototype.applyEnabledModules = function (modules, options) {
+        const settings = Object.assign({ announce: true, dispatch: true }, options || {});
+        const previousModules = this.enabledModules.slice();
+        const nextModules = allowedOrdered(modules, this.allowedModules);
+        this.enabledModules = nextModules;
+        this.activeModule = this.resolveModuleAfterDisable(previousModules, nextModules);
+
+        const empty = nextModules.length === 0;
+        if (this.empty) {
+            this.empty.hidden = !empty;
+        }
+        if (this.sectionTabsWrap) {
+            this.sectionTabsWrap.hidden = empty;
+        }
+        if (this.moduleTabsWrap) {
+            this.moduleTabsWrap.hidden = empty;
+        }
+
+        this.moduleTabs.forEach((tab) => {
+            const enabled = nextModules.indexOf(tab.dataset.module) !== -1;
+            tab.hidden = !enabled;
+            this.setTabState(tab, false);
+        });
+
+        if (empty) {
+            storage.remove(CONFIG.moduleKey);
+            this.sectionTabs.forEach((tab) => {
+                tab.hidden = true;
+                tab.removeAttribute('aria-controls');
+                this.setTabState(tab, false);
+            });
+            this.panels.forEach((panel) => {
+                panel.hidden = true;
+            });
+            if (settings.announce) {
+                this.announce(this.strings.overlayToolsNoneEnabled || 'No overlay tools enabled.');
+            }
+        } else {
+            this.sectionTabs.forEach((tab) => {
+                tab.hidden = false;
+            });
+            this.selectSection(this.activeSection, false, false);
+            this.selectModule(this.activeModule, false, false);
+            if (settings.announce) {
+                this.announce(this.strings.overlayToolsSaved || 'Overlay tools saved.');
+            }
+        }
+
+        if (settings.dispatch) {
+            this.dispatch('vh360:studio-overlays:preference-change', {
+                enabledModules: nextModules.slice(),
+                previousModules,
+            });
+        }
+    };
+
+    Controller.prototype.selectModule = function (module, persist, notify) {
+        const nextModule = this.enabledModules.indexOf(module) !== -1 ? module : (this.enabledModules[0] || null);
+        this.activeModule = nextModule;
+        this.moduleTabs.forEach((tab) => {
+            const selected = Boolean(nextModule && tab.dataset.module === nextModule);
+            this.setTabState(tab, selected);
+            if (nextModule) {
+                tab.setAttribute('aria-controls', this.panelId(tab.dataset.module, this.activeSection));
+            }
+        });
+        this.updatePanels();
+        if (persist && nextModule) {
+            storage.set(CONFIG.moduleKey, nextModule);
+        }
+        if (notify !== false && nextModule) {
+            this.dispatch('vh360:studio-overlays:module-change', { module: nextModule, section: this.activeSection });
+            this.announce(this.format(this.text('messageModuleChange'), this.moduleLabel(nextModule)));
+        }
+    };
+
+    Controller.prototype.selectSection = function (section, persist, notify) {
+        const nextSection = CONFIG.sections.indexOf(section) !== -1 ? section : CONFIG.sections[0];
+        this.activeSection = nextSection;
+        this.sectionTabs.forEach((tab) => {
+            const selected = tab.dataset.section === nextSection;
+            this.setTabState(tab, selected);
+            if (this.activeModule) {
+                tab.setAttribute('aria-controls', this.panelId(this.activeModule, tab.dataset.section));
+            }
+        });
+        this.updatePanels();
+        if (persist) {
+            storage.set(CONFIG.sectionKey, nextSection);
+        }
+        if (notify !== false && this.activeModule) {
+            this.dispatch('vh360:studio-overlays:section-change', { module: this.activeModule, section: nextSection });
+            this.announce(this.format(this.text('messageSectionChange'), this.sectionLabel(nextSection)));
+        }
+    };
+
+    Controller.prototype.updatePanels = function () {
+        const activePanelId = this.activeModule ? this.panelId(this.activeModule, this.activeSection) : '';
+        this.panels.forEach((panel) => {
+            panel.hidden = !activePanelId || panel.id !== activePanelId || this.enabledModules.indexOf(panel.dataset.module) === -1;
+        });
+    };
+
+    Controller.prototype.panelId = function (module, section) {
+        return module ? `vh360-overlays-panel-${module}-${section}` : '';
+    };
+
+    Controller.prototype.setTabState = function (tab, selected) {
+        tab.setAttribute('aria-selected', String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+    };
+
+    Controller.prototype.openToolsModal = function (trigger) {
+        this.lastModalTrigger = trigger;
+        this.checkboxes.forEach((checkbox) => {
+            checkbox.checked = this.enabledModules.indexOf(checkbox.value) !== -1;
+        });
+        if (this.modalStatus) {
+            this.modalStatus.hidden = true;
+            this.modalStatus.textContent = '';
+        }
+        if (this.modal) {
+            this.modal.hidden = false;
+            (this.checkboxes[0] || this.saveButton || this.modal).focus();
+        }
+    };
+
+    Controller.prototype.closeToolsModal = function () {
+        if (this.saving) {
+            return;
+        }
+        if (this.modal) {
+            this.modal.hidden = true;
+        }
+        if (this.lastModalTrigger && this.lastModalTrigger.focus) {
+            this.lastModalTrigger.focus();
+        }
+    };
+
+    Controller.prototype.checkedModules = function () {
+        return allowedOrdered(
+            this.checkboxes.filter((checkbox) => checkbox.checked).map((checkbox) => checkbox.value),
+            this.allowedModules
+        );
+    };
+
+    Controller.prototype.removedModulesWithActiveOverlays = function (nextModules) {
+        const engine = window.VH360StudioOverlayEngine;
+        if (!engine || typeof engine.getState !== 'function') {
+            return [];
+        }
+        const state = engine.getState();
+        return this.enabledModules
+            .filter((module) => nextModules.indexOf(module) === -1)
+            .filter((module) => {
+                const slot = SLOT_BY_MODULE[module];
+                return Boolean((state.preview && state.preview[slot]) || (state.program && state.program[slot]));
+            });
+    };
+
+    Controller.prototype.saveTools = function () {
+        if (this.saving) {
+            return;
+        }
+
+        const nextModules = this.checkedModules();
+        const activeRemovedModules = this.removedModulesWithActiveOverlays(nextModules);
+        if (activeRemovedModules.length && !window.confirm(this.strings.overlayToolsConfirmDisable || 'Active overlays will be removed. Continue?')) {
+            return;
+        }
+
+        this.setSaving(true);
+        this.saveEnabledModules(nextModules)
+            .then((savedModules) => {
+                this.clearActiveRemovedModules(activeRemovedModules);
+                this.enabledModules
+                    .filter((module) => savedModules.indexOf(module) === -1)
+                    .forEach((module) => this.callModuleApi(module, 'destroy'));
+                savedModules
+                    .filter((module) => this.enabledModules.indexOf(module) === -1)
+                    .forEach((module) => this.callModuleApi(module, 'init'));
+                this.applyEnabledModules(savedModules, { announce: true, dispatch: true });
+                this.setSaving(false);
+                this.closeToolsModal();
+            })
+            .catch(() => {
+                this.setSaving(false);
+                if (this.modalStatus) {
+                    this.modalStatus.hidden = false;
+                    this.modalStatus.textContent = this.strings.overlayToolsSaveFailed || 'Overlay tools could not be saved. Please try again.';
+                }
+            });
+    };
+
+    Controller.prototype.saveEnabledModules = function (modules) {
+        const restRoot = (this.config.restRoot || '').replace(/\/$/, '');
+        return window.fetch(`${restRoot}/overlay-tools`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-WP-Nonce': this.config.nonce || '',
+            },
+            body: JSON.stringify({ enabled_modules: modules }),
+        })
+            .then((response) => response.json().then((json) => {
+                if (!response.ok) {
+                    throw new Error(json.message || 'REST request failed.');
+                }
+                return json;
+            }))
+            .then((json) => allowedOrdered(json.enabled_modules || [], this.allowedModules));
+    };
+
+    Controller.prototype.setSaving = function (saving) {
+        this.saving = Boolean(saving);
+        if (this.saveButton) {
+            this.saveButton.disabled = this.saving;
+        }
+    };
+
+    Controller.prototype.clearActiveRemovedModules = function (modules) {
+        const engine = window.VH360StudioOverlayEngine;
+        if (!engine) {
+            return;
+        }
+        modules.forEach((module) => {
+            const slot = SLOT_BY_MODULE[module];
+            if (slot && typeof engine.clearPreview === 'function') {
+                engine.clearPreview(slot);
+            }
+            if (slot && typeof engine.clearProgram === 'function') {
+                engine.clearProgram(slot);
+            }
+        });
+    };
+
+    Controller.prototype.callModuleApi = function (module, method) {
+        const api = window[API_BY_MODULE[module]];
+        if (api && typeof api[method] === 'function') {
+            api[method]();
+        }
+    };
+
+    Controller.prototype.dispatchLayoutChange = function () {
+        this.dispatch('vh360:studio-overlays:layout-change', {
+            width: this.width,
+            collapsed: this.collapsed,
+            stacked: this.isStacked,
+        });
+    };
+
+    Controller.prototype.dispatch = function (name, detail) {
+        this.workspace.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
+    };
+
+    Controller.prototype.text = function (key) {
+        if (!this.dock) {
+            return key;
+        }
+        return this.dock.dataset[key] || key;
+    };
+
+    Controller.prototype.format = function (template, value) {
+        return String(template || '').replace('%s', value);
+    };
+
+    Controller.prototype.moduleLabel = function (module) {
+        const tab = this.moduleTabs.find((item) => item.dataset.module === module);
+        return tab ? tab.textContent.trim() : module;
+    };
+
+    Controller.prototype.sectionLabel = function (section) {
+        const tab = this.sectionTabs.find((item) => item.dataset.section === section);
+        return tab ? tab.textContent.trim() : section;
+    };
+
+    Controller.prototype.announce = function (message) {
+        if (this.status) {
+            this.status.textContent = message || '';
+        }
+    };
+
+    function initAll() {
+        document.querySelectorAll('[data-overlays-workspace]').forEach((workspace) => {
+            if (!workspace.vh360OverlaysController) {
+                workspace.vh360OverlaysController = new Controller(workspace);
+                workspace.vh360OverlaysController.init();
+            }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAll);
+    } else {
+        initAll();
+    }
 }());

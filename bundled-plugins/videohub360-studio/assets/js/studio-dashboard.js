@@ -138,6 +138,7 @@
         readinessIssues: root.querySelector('[data-readiness-issues]'),
         diagnosticsButton: root.querySelector('[data-open-studio-diagnostics]'),
         diagnosticsModal: root.querySelector('[data-studio-diagnostics-modal]'),
+        lastDiagnosticsTrigger: null,
         cameraPreviewContainer: root.querySelector('[data-camera-preview-container]'),
         screenPreview: root.querySelector('[data-screen-preview]'),
         previewOverlayCanvas: root.querySelector('[data-preview-overlay-canvas]'),
@@ -2701,23 +2702,39 @@
     }
 
 
+    function openDiagnosticsModal(trigger) {
+        els.lastDiagnosticsTrigger = trigger || null;
+        if (!els.diagnosticsModal) {
+            return;
+        }
+        els.diagnosticsModal.hidden = false;
+        const close = els.diagnosticsModal.querySelector('[data-close-studio-diagnostics]');
+        if (close) {
+            close.focus();
+        }
+    }
+
+    function closeDiagnosticsModal() {
+        if (!els.diagnosticsModal) {
+            return;
+        }
+        els.diagnosticsModal.hidden = true;
+        if (els.lastDiagnosticsTrigger && els.lastDiagnosticsTrigger.focus) {
+            els.lastDiagnosticsTrigger.focus();
+        }
+    }
+
     root.querySelectorAll('[data-open-studio-diagnostics]').forEach((button) => {
-        button.addEventListener('click', () => {
-            if (els.diagnosticsModal) {
-                els.diagnosticsModal.hidden = false;
-                const close = els.diagnosticsModal.querySelector('[data-close-studio-diagnostics]');
-                if (close) { close.focus(); }
-            }
-        });
+        button.addEventListener('click', (event) => openDiagnosticsModal(event.currentTarget));
     });
     root.querySelectorAll('[data-close-studio-diagnostics]').forEach((button) => {
-        button.addEventListener('click', () => {
-            if (els.diagnosticsModal) { els.diagnosticsModal.hidden = true; }
-        });
+        button.addEventListener('click', closeDiagnosticsModal);
     });
     if (els.diagnosticsModal) {
         els.diagnosticsModal.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') { els.diagnosticsModal.hidden = true; }
+            if (event.key === 'Escape') {
+                closeDiagnosticsModal();
+            }
         });
     }
     function setStatus(message, type) {

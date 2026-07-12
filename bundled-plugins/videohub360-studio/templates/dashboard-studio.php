@@ -220,9 +220,10 @@ $overlay_tool_descriptions = array(
 
                 <div id="vh360-studio-overlays-body" class="vh360-studio-overlays-body" data-overlays-body>
                     <nav class="vh360-studio-overlays-section-tabs" <?php echo empty( $enabled_overlay_modules ) ? 'hidden' : ''; ?> role="tablist" aria-label="<?php esc_attr_e( 'Overlay section', 'videohub360-studio' ); ?>" data-overlays-section-tabs>
-                        <button type="button" role="tab" id="vh360-overlays-section-control" aria-selected="true" aria-controls="vh360-overlays-panel-lower-thirds-control" data-overlays-section-tab data-section="control"><?php esc_html_e( 'Control', 'videohub360-studio' ); ?></button>
-                        <button type="button" role="tab" id="vh360-overlays-section-customize" aria-selected="false" aria-controls="vh360-overlays-panel-lower-thirds-customize" data-overlays-section-tab data-section="customize" tabindex="-1"><?php esc_html_e( 'Customize', 'videohub360-studio' ); ?></button>
-                        <button type="button" role="tab" id="vh360-overlays-section-settings" aria-selected="false" aria-controls="vh360-overlays-panel-lower-thirds-settings" data-overlays-section-tab data-section="settings" tabindex="-1"><?php esc_html_e( 'Settings', 'videohub360-studio' ); ?></button>
+                        <?php foreach ( array( 'control' => __( 'Control', 'videohub360-studio' ), 'customize' => __( 'Customize', 'videohub360-studio' ), 'settings' => __( 'Settings', 'videohub360-studio' ) ) as $section => $section_label ) : ?>
+                            <?php $section_selected = 'control' === $section; ?>
+                            <button type="button" role="tab" id="vh360-overlays-section-<?php echo esc_attr( $section ); ?>" aria-selected="<?php echo $section_selected ? 'true' : 'false'; ?>" <?php echo $active_overlay_module ? 'aria-controls="' . esc_attr( 'vh360-overlays-panel-' . $active_overlay_module . '-' . $section ) . '"' : ''; ?> data-overlays-section-tab data-section="<?php echo esc_attr( $section ); ?>" tabindex="<?php echo $section_selected ? '0' : '-1'; ?>"><?php echo esc_html( $section_label ); ?></button>
+                        <?php endforeach; ?>
                     </nav>
 
                     <div class="vh360-studio-overlays-content" data-overlays-content>
