@@ -1,5 +1,9 @@
 (function () {
     'use strict';
+    let initialized = false;
+    function init() {
+        if (initialized) { return; }
+        initialized = true;
 
     const root = document.querySelector('[data-vh360-studio-dashboard]');
     const engine = window.VH360StudioOverlayEngine;
@@ -196,13 +200,15 @@
     on(root, 'vh360:studio-overlay:program-change', renderButtons);
 
     function destroy() {
-        state.destroyed = true;
+        state.destroyed = true; initialized = false;
         listeners.splice(0).forEach(({ target, eventName, handler }) => target.removeEventListener(eventName, handler));
     }
 
-    window.VH360StudioLowerThirds = { destroy };
+    window.VH360StudioLowerThirds = { init, destroy, isInitialized: () => initialized };
 
     applyConfig(defaultConfig());
     loadPresets();
     renderButtons();
+    }
+    window.VH360StudioLowerThirds = { init, destroy: function () {}, isInitialized: () => initialized };
 }());

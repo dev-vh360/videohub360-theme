@@ -171,8 +171,16 @@ class VH360_Studio_Assets {
             'uploadSettings'             => class_exists( 'VH360_Studio_Recording_Chunks' ) ? ( new VH360_Studio_Recording_Chunks( VH360_Studio_Plugin::instance()->jobs() ) )->upload_settings() : array(),
             'publitioDirectUpload'      => $this->publitio_direct_upload_config(),
             'currentUserId'             => get_current_user_id(),
+            'overlayTools'              => array(
+                'allowedModules' => VH360_Studio_User_Preferences::allowed_overlay_modules(),
+                'enabledModules' => VH360_Studio_User_Preferences::get_enabled_overlay_modules( get_current_user_id() ),
+            ),
             'strings'                   => array(
                 'ready'                  => __( 'Ready', 'videohub360-studio' ),
+                'overlayToolsSaved'      => __( 'Overlay tools saved.', 'videohub360-studio' ),
+                'overlayToolsSaveFailed' => __( 'Overlay tools could not be saved. Please try again.', 'videohub360-studio' ),
+                'overlayToolsConfirmDisable' => __( 'One or more disabled overlay tools are active in Preview or Program. Their active overlays will be removed from Preview and Program. Continue?', 'videohub360-studio' ),
+                'overlayToolsNoneEnabled' => __( 'No overlay tools enabled.', 'videohub360-studio' ),
                 'browserUnsupported'     => __( 'This browser is missing required Studio features.', 'videohub360-studio' ),
                 'cameraBlocked'          => __( 'Camera access was blocked. Check browser permissions and try again.', 'videohub360-studio' ),
                 'microphoneBlocked'      => __( 'Microphone access was blocked. Check browser permissions and try again.', 'videohub360-studio' ),

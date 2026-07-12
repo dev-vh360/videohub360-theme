@@ -1,5 +1,9 @@
 (function () {
     'use strict';
+    let initialized = false;
+    function init() {
+        if (initialized) { return; }
+        initialized = true;
 
     const root = document.querySelector('[data-vh360-studio-dashboard]');
     const engine = window.VH360StudioOverlayEngine;
@@ -485,13 +489,15 @@
     on(root, 'vh360:studio-overlay:preview-change', render);
 
     function destroy() {
-        state.destroyed = true;
+        state.destroyed = true; initialized = false;
         if (refreshTimer) { window.clearTimeout(refreshTimer); }
         listeners.splice(0).forEach(({ target, event, handler }) => target.removeEventListener(event, handler));
     }
 
-    window.VH360StudioCountdown = { destroy };
+    window.VH360StudioCountdown = { init, destroy, isInitialized: () => initialized };
     applyConfig(defaultConfig());
     load();
     render();
+    }
+    window.VH360StudioCountdown = { init, destroy: function () {}, isInitialized: () => initialized };
 }());

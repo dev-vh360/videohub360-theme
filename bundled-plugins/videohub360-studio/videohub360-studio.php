@@ -154,6 +154,7 @@ function vh360_studio_load_files() {
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-bible-importer.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-bible-rest-controller.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-bible-admin.php';
+    require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-user-preferences.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-overlay-repository.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-overlays-rest-controller.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-admin.php';

@@ -19,6 +19,30 @@ class VH360_Studio_Overlays_REST_Controller {
     public function register_routes() {
         register_rest_route(
             'vh360-studio/v1',
+            '/overlay-tools',
+            array(
+                array(
+                    'methods'             => WP_REST_Server::READABLE,
+                    'callback'            => array( $this, 'get_overlay_tools' ),
+                    'permission_callback' => array( $this, 'permissions_check' ),
+                ),
+                array(
+                    'methods'             => WP_REST_Server::EDITABLE,
+                    'callback'            => array( $this, 'update_overlay_tools' ),
+                    'permission_callback' => array( $this, 'permissions_check' ),
+                    'args'                => array(
+                        'enabled_modules' => array(
+                            'type'    => 'array',
+                            'items'   => array( 'type' => 'string' ),
+                            'default' => array(),
+                        ),
+                    ),
+                ),
+            )
+        );
+
+        register_rest_route(
+            'vh360-studio/v1',
             '/overlays',
             array(
                 array(
@@ -60,6 +84,16 @@ class VH360_Studio_Overlays_REST_Controller {
 
     public function permissions_check() {
         return is_user_logged_in() && VH360_Studio_Permissions::user_can_access_studio();
+    }
+
+    public function get_overlay_tools() {
+        return rest_ensure_response( array( 'enabled_modules' => VH360_Studio_User_Preferences::get_enabled_overlay_modules( get_current_user_id() ) ) );
+    }
+
+    public function update_overlay_tools( WP_REST_Request $request ) {
+        $params  = $request->get_json_params() ?: array();
+        $modules = isset( $params['enabled_modules'] ) ? $params['enabled_modules'] : array();
+        return rest_ensure_response( array( 'enabled_modules' => VH360_Studio_User_Preferences::save_enabled_overlay_modules( get_current_user_id(), $modules ) ) );
     }
 
     public function list_items( WP_REST_Request $request ) {

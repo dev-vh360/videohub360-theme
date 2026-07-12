@@ -79,7 +79,8 @@ class VH360_Studio_Plugin {
             return;
         }
 
-        $jobs            = $this->jobs->list( $user_id, 10 );
+        $enabled_overlay_modules = VH360_Studio_User_Preferences::get_enabled_overlay_modules( $user_id );
+        $allowed_overlay_modules  = VH360_Studio_User_Preferences::allowed_overlay_modules();
         $registry        = $this->registry;
         $default_preset  = VH360_Studio_Quality_Presets::DEFAULT_PRESET;
         $quality_presets = VH360_Studio_Quality_Presets::get_presets();

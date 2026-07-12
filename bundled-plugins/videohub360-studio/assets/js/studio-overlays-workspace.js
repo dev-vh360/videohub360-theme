@@ -1,323 +1,57 @@
 (function () {
     'use strict';
-
-    const CONFIG = {
-        defaultWidth: 400,
-        minWidth: 320,
-        maxWidth: 520,
-        stackedBreakpoint: 1280,
-        widthKey: 'vh360_studio_overlays_width',
-        collapsedKey: 'vh360_studio_overlays_collapsed',
-        moduleKey: 'vh360_studio_overlays_active_module',
-        sectionKey: 'vh360_studio_overlays_active_section',
-        modules: ['lower-thirds', 'bible', 'countdown'],
-        sections: ['control', 'customize', 'settings'],
-    };
-
-    const storage = {
-        get(key) { try { return window.localStorage.getItem(key); } catch (error) { return null; } },
-        set(key, value) { try { window.localStorage.setItem(key, value); } catch (error) {} },
-    };
-
-    function clamp(value, min, max) { return Math.min(Math.max(value, min), max); }
-    function isAllowed(value, allowed) { return allowed.indexOf(value) !== -1; }
-
+    const CONFIG = { defaultWidth: 400, minWidth: 320, maxWidth: 520, stackedBreakpoint: 1280, widthKey: 'vh360_studio_overlays_width', collapsedKey: 'vh360_studio_overlays_collapsed', moduleKey: 'vh360_studio_overlays_active_module', sectionKey: 'vh360_studio_overlays_active_section', modules: ['lower-thirds', 'bible', 'countdown'], sections: ['control', 'customize', 'settings'] };
+    const slotMap = { 'lower-thirds': 'lowerThird', bible: 'bible', countdown: 'countdown' };
+    const apiMap = { 'lower-thirds': 'VH360StudioLowerThirds', bible: 'VH360StudioBible', countdown: 'VH360StudioCountdown' };
+    const storage = { get(k){try{return localStorage.getItem(k);}catch(e){return null;}}, set(k,v){try{localStorage.setItem(k,v);}catch(e){}}, remove(k){try{localStorage.removeItem(k);}catch(e){}} };
+    const clamp = (v,min,max)=>Math.min(Math.max(v,min),max);
+    function uniqueAllowed(values, allowed) { const seen = {}; return allowed.filter((m)=>Array.isArray(values) && values.indexOf(m) !== -1 && !seen[m] && (seen[m]=true)); }
     function Controller(workspace) {
-        this.workspace = workspace;
-        this.root = workspace.closest('[data-vh360-studio-dashboard]') || document;
-        this.monitors = workspace.querySelector('[data-overlays-monitors]');
-        this.resizer = workspace.querySelector('[data-overlays-resizer]');
-        this.dock = workspace.querySelector('[data-overlays-dock]');
-        this.body = workspace.querySelector('[data-overlays-body]');
-        this.collapseButton = workspace.querySelector('[data-overlays-collapse]');
-        this.collapseLabel = workspace.querySelector('[data-overlays-collapse-label]');
-        this.status = workspace.querySelector('[data-overlays-status]');
-        this.moduleTabs = Array.from(workspace.querySelectorAll('[data-overlays-module-tab]'));
-        this.panels = Array.from(workspace.querySelectorAll('[data-overlays-panel]'));
-        this.sectionTabs = Array.from(workspace.querySelectorAll('[data-overlays-section-tab]'));
-        this.width = this.savedWidth();
-        this.collapsed = storage.get(CONFIG.collapsedKey) === 'true';
-        this.activeModule = this.savedChoice(CONFIG.moduleKey, CONFIG.modules, CONFIG.modules[0]);
-        this.activeSection = this.savedChoice(CONFIG.sectionKey, CONFIG.sections, CONFIG.sections[0]);
-        this.isStacked = false;
-        this.drag = null;
-        this.boundPointerDown = this.onPointerDown.bind(this);
-        this.boundPointerMove = this.onPointerMove.bind(this);
-        this.boundPointerEnd = this.endDrag.bind(this);
-        this.boundResizerKeydown = this.onResizerKeydown.bind(this);
-        this.boundResizerDblclick = this.onResizerDblclick.bind(this);
-        this.boundCollapseClick = this.onCollapseClick.bind(this);
-        this.boundWindowResize = this.refreshLayout.bind(this);
-        this.boundWindowBlur = this.endDrag.bind(this);
-        this.tabHandlers = [];
-        this.dragPointerId = null;
+        this.workspace=workspace; this.root=workspace.closest('[data-vh360-studio-dashboard]')||document; this.cfg=window.vh360StudioDashboard||{}; this.strings=this.cfg.strings||{};
+        this.allowedModules=uniqueAllowed((this.cfg.overlayTools&&this.cfg.overlayTools.allowedModules)||CONFIG.modules, CONFIG.modules); this.enabledModules=uniqueAllowed((this.cfg.overlayTools&&this.cfg.overlayTools.enabledModules)||[], this.allowedModules);
+        this.monitors=workspace.querySelector('[data-overlays-monitors]'); this.resizer=workspace.querySelector('[data-overlays-resizer]'); this.dock=workspace.querySelector('[data-overlays-dock]'); this.body=workspace.querySelector('[data-overlays-body]'); this.collapseButton=workspace.querySelector('[data-overlays-collapse]'); this.collapseLabel=workspace.querySelector('[data-overlays-collapse-label]'); this.status=workspace.querySelector('[data-overlays-status]'); this.empty=workspace.querySelector('[data-overlays-empty]'); this.moduleTabs=Array.from(workspace.querySelectorAll('[data-overlays-module-tab]')); this.sectionTabs=Array.from(workspace.querySelectorAll('[data-overlays-section-tab]')); this.sectionTabsWrap=workspace.querySelector('[data-overlays-section-tabs]'); this.moduleTabsWrap=workspace.querySelector('[data-overlays-module-tabs]'); this.panels=Array.from(workspace.querySelectorAll('[data-overlays-panel]'));
+        this.modal=this.root.querySelector('[data-overlay-tools-modal]'); this.checkboxes=this.modal?Array.from(this.modal.querySelectorAll('[data-overlay-tool-checkbox]')):[]; this.saveButton=this.modal&&this.modal.querySelector('[data-save-overlay-tools]'); this.modalStatus=this.modal&&this.modal.querySelector('[data-overlay-tools-status]'); this.lastTrigger=null; this.saving=false;
+        this.width=this.savedWidth(); this.collapsed=storage.get(CONFIG.collapsedKey)==='true'; this.activeSection=CONFIG.sections.indexOf(storage.get(CONFIG.sectionKey))!==-1?storage.get(CONFIG.sectionKey):CONFIG.sections[0]; const saved=storage.get(CONFIG.moduleKey); this.activeModule=this.enabledModules.indexOf(saved)!==-1?saved:(this.enabledModules[0]||null); this.isStacked=false; this.drag=null;
     }
-
-    Controller.prototype.savedWidth = function () {
-        const parsed = parseInt(storage.get(CONFIG.widthKey), 10);
-        return Number.isFinite(parsed) ? clamp(parsed, CONFIG.minWidth, CONFIG.maxWidth) : CONFIG.defaultWidth;
+    Controller.prototype.text=function(k){ return this.dock && this.dock.dataset[k] || this.strings[k] || k; };
+    Controller.prototype.announce=function(m){ if(this.status) this.status.textContent=m||''; };
+    Controller.prototype.savedWidth=function(){ const p=parseInt(storage.get(CONFIG.widthKey),10); return Number.isFinite(p)?clamp(p,CONFIG.minWidth,CONFIG.maxWidth):CONFIG.defaultWidth; };
+    Controller.prototype.init=function(){ this.bindEvents(); this.applyWidth(this.width,false); this.applyCollapsed(this.collapsed,false); this.applyEnabledModules(this.enabledModules,false); this.enabledModules.forEach((m)=>this.moduleApi(m,'init')); this.observe(); this.refreshLayout(); };
+    Controller.prototype.bindEvents=function(){ const self=this; if(this.resizer){ this.resizer.addEventListener('pointerdown', e=>self.onPointerDown(e)); this.resizer.addEventListener('keydown', e=>self.onResizerKeydown(e)); this.resizer.addEventListener('dblclick', ()=>self.applyWidth(CONFIG.defaultWidth,true)); }
+        if(this.collapseButton) this.collapseButton.addEventListener('click',()=>this.applyCollapsed(!this.collapsed,true));
+        this.moduleTabs.forEach(t=>{t.addEventListener('click',()=>this.selectModule(t.dataset.module,true)); t.addEventListener('keydown',e=>this.onModuleKey(e,t));});
+        this.sectionTabs.forEach(t=>{t.addEventListener('click',()=>this.selectSection(t.dataset.section,true)); t.addEventListener('keydown',e=>this.onSectionKey(e,t));});
+        this.root.querySelectorAll('[data-open-overlay-tools]').forEach(b=>b.addEventListener('click',e=>this.openModal(e.currentTarget)));
+        if(this.modal){ this.modal.querySelectorAll('[data-close-overlay-tools]').forEach(b=>b.addEventListener('click',()=>this.closeModal())); this.modal.addEventListener('keydown',e=>{if(e.key==='Escape')this.closeModal();}); }
+        if(this.saveButton) this.saveButton.addEventListener('click',()=>this.saveTools());
+        window.addEventListener('resize',()=>this.refreshLayout()); window.addEventListener('orientationchange',()=>this.refreshLayout());
     };
-
-    Controller.prototype.savedChoice = function (key, allowed, fallback) {
-        const value = storage.get(key);
-        return isAllowed(value, allowed) ? value : fallback;
+    Controller.prototype.visibleModuleTabs=function(){ return this.moduleTabs.filter(t=>!t.hidden && this.enabledModules.indexOf(t.dataset.module)!==-1); };
+    Controller.prototype.onModuleKey=function(e,tab){ if(['ArrowLeft','ArrowRight','Home','End'].indexOf(e.key)===-1)return; e.preventDefault(); const tabs=this.visibleModuleTabs(); if(!tabs.length)return; let i=tabs.indexOf(tab); if(e.key==='Home')i=0; else if(e.key==='End')i=tabs.length-1; else i=(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length; tabs[i].focus(); this.selectModule(tabs[i].dataset.module,true); };
+    Controller.prototype.onSectionKey=function(e,tab){ if(['ArrowLeft','ArrowRight','Home','End'].indexOf(e.key)===-1||!this.activeModule)return; e.preventDefault(); let i=this.sectionTabs.indexOf(tab); if(e.key==='Home')i=0; else if(e.key==='End')i=this.sectionTabs.length-1; else i=(i+(e.key==='ArrowRight'?1:-1)+this.sectionTabs.length)%this.sectionTabs.length; this.sectionTabs[i].focus(); this.selectSection(this.sectionTabs[i].dataset.section,true); };
+    Controller.prototype.applyEnabledModules=function(modules,persist){ const previous=this.enabledModules.slice(); this.enabledModules=uniqueAllowed(modules,this.allowedModules); if(this.activeModule && this.enabledModules.indexOf(this.activeModule)===-1) this.activeModule=this.enabledModules[0]||null; if(!this.activeModule) { this.activeModule=this.enabledModules[0]||null; }
+        const empty=!this.enabledModules.length; if(this.empty)this.empty.hidden=!empty; if(this.sectionTabsWrap)this.sectionTabsWrap.hidden=empty; if(this.moduleTabsWrap)this.moduleTabsWrap.hidden=empty;
+        this.moduleTabs.forEach(t=>{ const enabled=this.enabledModules.indexOf(t.dataset.module)!==-1; t.hidden=!enabled; t.tabIndex=-1; t.setAttribute('aria-selected','false'); });
+        if(empty){ storage.remove(CONFIG.moduleKey); this.panels.forEach(p=>p.hidden=true); this.sectionTabs.forEach(t=>{t.hidden=true;t.tabIndex=-1;t.setAttribute('aria-selected','false');t.removeAttribute('aria-controls');}); this.announce(this.strings.overlayToolsNoneEnabled||'No overlay tools enabled.'); }
+        else { this.sectionTabs.forEach(t=>{t.hidden=false;}); this.selectSection(this.activeSection,false); this.selectModule(this.activeModule,false); }
+        this.workspace.dispatchEvent(new CustomEvent('vh360:studio-overlays:preference-change',{bubbles:true,detail:{enabledModules:this.enabledModules,previousModules:previous}})); if(persist!==false)this.announce(this.strings.overlayToolsSaved||'Overlay tools saved.'); };
+    Controller.prototype.panelId=function(m,s){ return m ? `vh360-overlays-panel-${m}-${s}` : ''; };
+    Controller.prototype.selectModule=function(m,persist){ if(this.enabledModules.indexOf(m)===-1)m=this.enabledModules[0]||null; this.activeModule=m; this.moduleTabs.forEach(t=>{const sel=m&&t.dataset.module===m; t.setAttribute('aria-selected',String(!!sel)); t.tabIndex=sel?0:-1; if(m)t.setAttribute('aria-controls',this.panelId(t.dataset.module,this.activeSection));}); this.updatePanels(); if(persist&&m)storage.set(CONFIG.moduleKey,m); };
+    Controller.prototype.selectSection=function(s,persist){ if(CONFIG.sections.indexOf(s)===-1)s=CONFIG.sections[0]; this.activeSection=s; this.sectionTabs.forEach(t=>{const sel=t.dataset.section===s; t.setAttribute('aria-selected',String(sel)); t.tabIndex=sel?0:-1; if(this.activeModule)t.setAttribute('aria-controls',this.panelId(this.activeModule,t.dataset.section));}); this.updatePanels(); if(persist)storage.set(CONFIG.sectionKey,s); };
+    Controller.prototype.updatePanels=function(){ const id=this.panelId(this.activeModule,this.activeSection); this.panels.forEach(p=>{ p.hidden=!id || p.id!==id || this.enabledModules.indexOf(p.dataset.module)===-1; }); };
+    Controller.prototype.openModal=function(trigger){ this.lastTrigger=trigger; this.checkboxes.forEach(c=>{c.checked=this.enabledModules.indexOf(c.value)!==-1;}); if(this.modalStatus){this.modalStatus.hidden=true;this.modalStatus.textContent='';} if(this.modal){this.modal.hidden=false; (this.checkboxes[0]||this.saveButton||this.modal).focus();} };
+    Controller.prototype.closeModal=function(){ if(this.saving)return; if(this.modal)this.modal.hidden=true; if(this.lastTrigger&&this.lastTrigger.focus)this.lastTrigger.focus(); };
+    Controller.prototype.removedActiveSlots=function(next){ const state=window.VH360StudioOverlayEngine&&window.VH360StudioOverlayEngine.getState&&window.VH360StudioOverlayEngine.getState(); if(!state)return[]; return this.enabledModules.filter(m=>next.indexOf(m)===-1).filter(m=>{const slot=slotMap[m]; return (state.preview&&state.preview[slot])||(state.program&&state.program[slot]);}); };
+    Controller.prototype.saveTools=function(){ if(this.saving)return; const next=uniqueAllowed(this.checkboxes.filter(c=>c.checked).map(c=>c.value),this.allowedModules); const active=this.removedActiveSlots(next); if(active.length && !window.confirm(this.strings.overlayToolsConfirmDisable||'Active overlays will be removed. Continue?'))return; this.saving=true; if(this.saveButton)this.saveButton.disabled=true; if(this.modalStatus){this.modalStatus.hidden=false;this.modalStatus.textContent='';}
+        active.forEach(m=>{const slot=slotMap[m], e=window.VH360StudioOverlayEngine; if(e){ if(e.clearPreview)e.clearPreview(slot); if(e.clearProgram)e.clearProgram(slot); }});
+        fetch((this.cfg.restRoot||'').replace(/\/$/,'')+'/overlay-tools',{method:'PUT',headers:{'Content-Type':'application/json','X-WP-Nonce':this.cfg.nonce},body:JSON.stringify({enabled_modules:next})}).then(r=>r.json().then(j=>{if(!r.ok)throw new Error(j.message||''); return j;})).then(j=>{ const saved=uniqueAllowed(j.enabled_modules||[],this.allowedModules); this.enabledModules.filter(m=>saved.indexOf(m)===-1).forEach(m=>this.moduleApi(m,'destroy')); saved.filter(m=>this.enabledModules.indexOf(m)===-1).forEach(m=>this.moduleApi(m,'init')); this.applyEnabledModules(saved,true); this.saving=false; if(this.saveButton)this.saveButton.disabled=false; this.closeModal(); }).catch(()=>{this.saving=false; if(this.saveButton)this.saveButton.disabled=false; if(this.modalStatus){this.modalStatus.hidden=false;this.modalStatus.textContent=this.strings.overlayToolsSaveFailed||'Overlay tools could not be saved. Please try again.';}});
     };
-
-    Controller.prototype.init = function () {
-        this.applyWidth(this.width, false);
-        this.applyCollapsed(this.collapsed, false);
-        this.selectModule(this.activeModule, false);
-        this.selectSection(this.activeSection, false);
-        this.bindEvents();
-        this.observe();
-        this.refreshLayout();
-    };
-
-    Controller.prototype.bindEvents = function () {
-        if (this.resizer) {
-            this.resizer.addEventListener('pointerdown', this.boundPointerDown);
-            this.resizer.addEventListener('keydown', this.boundResizerKeydown);
-            this.resizer.addEventListener('dblclick', this.boundResizerDblclick);
-            this.resizer.addEventListener('lostpointercapture', this.boundPointerEnd);
-        }
-        if (this.collapseButton) this.collapseButton.addEventListener('click', this.boundCollapseClick);
-        this.moduleTabs.forEach((tab) => this.bindTab(tab, this.moduleTabs, (value) => this.selectModule(value, true)));
-        this.sectionTabs.forEach((tab) => this.bindTab(tab, this.sectionTabs, (value) => this.selectSection(value, true)));
-        window.addEventListener('resize', this.boundWindowResize);
-        window.addEventListener('orientationchange', this.boundWindowResize);
-        window.addEventListener('blur', this.boundWindowBlur);
-    };
-
-    Controller.prototype.bindTab = function (tab, tabs, callback) {
-        const clickHandler = () => callback(tab.dataset.module || tab.dataset.section);
-        const keyHandler = (event) => {
-            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-            event.preventDefault();
-            const current = tabs.indexOf(tab);
-            let next = current;
-            if (event.key === 'ArrowLeft') next = (current - 1 + tabs.length) % tabs.length;
-            if (event.key === 'ArrowRight') next = (current + 1) % tabs.length;
-            if (event.key === 'Home') next = 0;
-            if (event.key === 'End') next = tabs.length - 1;
-            tabs[next].focus();
-            callback(tabs[next].dataset.module || tabs[next].dataset.section);
-        };
-        tab.addEventListener('click', clickHandler);
-        tab.addEventListener('keydown', keyHandler);
-        this.tabHandlers.push({ tab, clickHandler, keyHandler });
-    };
-
-    Controller.prototype.observe = function () {
-        if (!('ResizeObserver' in window)) return;
-        this.workspaceObserver = new ResizeObserver(() => this.refreshLayout());
-        this.workspaceObserver.observe(this.workspace);
-        if (this.monitors) {
-            this.monitorObserver = new ResizeObserver(() => this.matchDockHeight());
-            this.monitorObserver.observe(this.monitors);
-        }
-    };
-
-    Controller.prototype.refreshLayout = function () {
-        const width = this.workspace.getBoundingClientRect().width;
-        const stacked = width < CONFIG.stackedBreakpoint;
-        if (stacked !== this.isStacked) {
-            this.isStacked = stacked;
-            this.workspace.classList.toggle('is-overlays-stacked', stacked);
-            this.dispatchLayoutChange();
-        }
-        this.matchDockHeight();
-    };
-
-    Controller.prototype.matchDockHeight = function () {
-        if (!this.dock || !this.monitors) return;
-        if (this.isStacked) {
-            this.dock.style.height = '';
-            return;
-        }
-        this.dock.style.height = `${Math.round(this.monitors.getBoundingClientRect().height)}px`;
-    };
-
-    Controller.prototype.applyWidth = function (width, persist, notify) {
-        this.width = clamp(parseInt(width, 10) || CONFIG.defaultWidth, CONFIG.minWidth, CONFIG.maxWidth);
-        this.workspace.style.setProperty('--vh360-studio-overlays-width', `${this.width}px`);
-        if (this.resizer) this.resizer.setAttribute('aria-valuenow', String(this.width));
-        if (persist) storage.set(CONFIG.widthKey, String(this.width));
-        if (notify !== false) this.dispatchLayoutChange();
-    };
-
-    Controller.prototype.applyCollapsed = function (collapsed, persist) {
-        this.collapsed = Boolean(collapsed);
-        this.workspace.classList.toggle('is-overlays-collapsed', this.collapsed);
-        if (this.collapseButton) this.collapseButton.setAttribute('aria-expanded', String(!this.collapsed));
-        if (this.collapseLabel) this.collapseLabel.textContent = this.collapsed ? this.text('labelExpand') : this.text('labelCollapse');
-        if (persist) storage.set(CONFIG.collapsedKey, String(this.collapsed));
-        this.announce(this.collapsed ? this.text('messageCollapsed') : this.text('messageExpanded'));
-        this.refreshLayout();
-        this.dispatchLayoutChange();
-    };
-
-    Controller.prototype.onCollapseClick = function () { this.applyCollapsed(!this.collapsed, true); };
-
-    Controller.prototype.selectModule = function (module, persist) {
-        if (!isAllowed(module, CONFIG.modules)) module = CONFIG.modules[0];
-        this.activeModule = module;
-        this.moduleTabs.forEach((tab) => {
-            const selected = tab.dataset.module === module;
-            this.setTabState(tab, selected);
-            if (selected) tab.setAttribute('aria-controls', this.panelId(module, this.activeSection));
-        });
-        this.updatePanels();
-        if (persist) storage.set(CONFIG.moduleKey, module);
-        this.dispatch('vh360:studio-overlays:module-change', { module, section: this.activeSection });
-        this.announce(this.format(this.text('messageModuleChange'), this.moduleLabel(module)));
-    };
-
-    Controller.prototype.selectSection = function (section, persist) {
-        if (!isAllowed(section, CONFIG.sections)) section = CONFIG.sections[0];
-        this.activeSection = section;
-        this.sectionTabs.forEach((tab) => {
-            const selected = tab.dataset.section === section;
-            this.setTabState(tab, selected);
-            if (selected) tab.setAttribute('aria-controls', this.panelId(this.activeModule, section));
-        });
-        this.updatePanels();
-        if (persist) storage.set(CONFIG.sectionKey, section);
-        this.dispatch('vh360:studio-overlays:section-change', { module: this.activeModule, section });
-        this.announce(this.format(this.text('messageSectionChange'), this.sectionLabel(section)));
-    };
-
-    Controller.prototype.updatePanels = function () {
-        const activePanelId = this.panelId(this.activeModule, this.activeSection);
-        this.panels.forEach((panel) => { panel.hidden = panel.id !== activePanelId; });
-        this.moduleTabs.forEach((tab) => {
-            tab.setAttribute('aria-controls', this.panelId(tab.dataset.module, this.activeSection));
-        });
-        this.sectionTabs.forEach((tab) => {
-            tab.setAttribute('aria-controls', this.panelId(this.activeModule, tab.dataset.section));
-        });
-    };
-
-    Controller.prototype.panelId = function (module, section) { return `vh360-overlays-panel-${module}-${section}`; };
-
-    Controller.prototype.setTabState = function (tab, selected) {
-        tab.setAttribute('aria-selected', String(selected));
-        tab.tabIndex = selected ? 0 : -1;
-    };
-
-    Controller.prototype.onPointerDown = function (event) {
-        if (this.collapsed || this.isStacked) return;
-        event.preventDefault();
-        this.drag = { startX: event.clientX, startWidth: this.width };
-        this.workspace.classList.add('is-resizing-overlays');
-        this.resizer.setPointerCapture(event.pointerId);
-        this.dragPointerId = event.pointerId;
-        document.addEventListener('pointermove', this.boundPointerMove);
-        document.addEventListener('pointerup', this.boundPointerEnd);
-        document.addEventListener('pointercancel', this.boundPointerEnd);
-    };
-
-    Controller.prototype.onPointerMove = function (event) {
-        if (!this.drag) return;
-        this.applyWidth(this.drag.startWidth - (event.clientX - this.drag.startX), false, false);
-    };
-
-    Controller.prototype.endDrag = function () {
-        if (!this.drag) return;
-        this.drag = null;
-        this.workspace.classList.remove('is-resizing-overlays');
-        if (this.resizer && this.dragPointerId !== null && this.resizer.hasPointerCapture && this.resizer.hasPointerCapture(this.dragPointerId)) {
-            this.resizer.releasePointerCapture(this.dragPointerId);
-        }
-        this.dragPointerId = null;
-        storage.set(CONFIG.widthKey, String(this.width));
-        document.removeEventListener('pointermove', this.boundPointerMove);
-        document.removeEventListener('pointerup', this.boundPointerEnd);
-        document.removeEventListener('pointercancel', this.boundPointerEnd);
-        this.dispatchLayoutChange();
-    };
-
-    Controller.prototype.onResizerDblclick = function () { this.applyWidth(CONFIG.defaultWidth, true); };
-
-    Controller.prototype.onResizerKeydown = function (event) {
-        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-        event.preventDefault();
-        const step = event.shiftKey ? 40 : 10;
-        if (event.key === 'ArrowLeft') this.applyWidth(this.width + step, true);
-        if (event.key === 'ArrowRight') this.applyWidth(this.width - step, true);
-        if (event.key === 'Home') this.applyWidth(CONFIG.minWidth, true);
-        if (event.key === 'End') this.applyWidth(CONFIG.maxWidth, true);
-    };
-
-    Controller.prototype.destroy = function () {
-        this.endDrag();
-        if (this.workspaceObserver) this.workspaceObserver.disconnect();
-        if (this.monitorObserver) this.monitorObserver.disconnect();
-        if (this.resizer) {
-            this.resizer.removeEventListener('pointerdown', this.boundPointerDown);
-            this.resizer.removeEventListener('keydown', this.boundResizerKeydown);
-            this.resizer.removeEventListener('dblclick', this.boundResizerDblclick);
-            this.resizer.removeEventListener('lostpointercapture', this.boundPointerEnd);
-        }
-        if (this.collapseButton) this.collapseButton.removeEventListener('click', this.boundCollapseClick);
-        this.tabHandlers.forEach(({ tab, clickHandler, keyHandler }) => {
-            tab.removeEventListener('click', clickHandler);
-            tab.removeEventListener('keydown', keyHandler);
-        });
-        window.removeEventListener('resize', this.boundWindowResize);
-        window.removeEventListener('orientationchange', this.boundWindowResize);
-        window.removeEventListener('blur', this.boundWindowBlur);
-        document.removeEventListener('pointermove', this.boundPointerMove);
-        document.removeEventListener('pointerup', this.boundPointerEnd);
-        document.removeEventListener('pointercancel', this.boundPointerEnd);
-    };
-
-    Controller.prototype.dispatchLayoutChange = function () {
-        this.dispatch('vh360:studio-overlays:layout-change', {
-            stacked: this.isStacked,
-            collapsed: this.collapsed,
-            dockWidth: this.width,
-            workspaceWidth: Math.round(this.workspace.getBoundingClientRect().width),
-        });
-    };
-
-    Controller.prototype.text = function (name) {
-        const fallback = {
-            labelExpand: 'Expand',
-            labelCollapse: 'Collapse',
-            messageCollapsed: 'Overlays collapsed.',
-            messageExpanded: 'Overlays expanded.',
-            messageModuleChange: 'Overlay module changed to %s.',
-            messageSectionChange: 'Overlay section changed to %s.',
-        };
-        return this.dock && this.dock.dataset[name] ? this.dock.dataset[name] : fallback[name];
-    };
-
-    Controller.prototype.format = function (template, value) { return template.replace('%s', value); };
-    Controller.prototype.moduleLabel = function (module) {
-        const tab = this.moduleTabs.find((item) => item.dataset.module === module);
-        return tab ? tab.textContent.trim() : module;
-    };
-    Controller.prototype.sectionLabel = function (section) {
-        const tab = this.sectionTabs.find((item) => item.dataset.section === section);
-        return tab ? tab.textContent.trim() : section;
-    };
-
-    Controller.prototype.dispatch = function (name, detail) { this.workspace.dispatchEvent(new CustomEvent(name, { bubbles: true, detail })); };
-    Controller.prototype.announce = function (message) { if (this.status) this.status.textContent = message; };
-
-    function initAll() {
-        const controllers = Array.from(document.querySelectorAll('[data-overlays-workspace]')).map((workspace) => {
-            const controller = new Controller(workspace);
-            controller.init();
-            return controller;
-        });
-        window.VH360StudioOverlaysWorkspace = {
-            controllers,
-            config: CONFIG,
-            destroy() { controllers.forEach((controller) => controller.destroy()); },
-        };
-    }
-
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initAll);
-    else initAll();
+    Controller.prototype.moduleApi=function(m,method){ const api=window[apiMap[m]]; if(api&&typeof api[method]==='function')api[method](); };
+    Controller.prototype.applyWidth=function(w,persist){ this.width=clamp(parseInt(w,10)||CONFIG.defaultWidth,CONFIG.minWidth,CONFIG.maxWidth); this.workspace.style.setProperty('--vh360-studio-overlays-width',`${this.width}px`); if(this.resizer)this.resizer.setAttribute('aria-valuenow',String(this.width)); if(persist)storage.set(CONFIG.widthKey,String(this.width)); };
+    Controller.prototype.applyCollapsed=function(c,persist){ this.collapsed=!!c; this.workspace.classList.toggle('is-overlays-collapsed',this.collapsed); if(this.collapseButton)this.collapseButton.setAttribute('aria-expanded',String(!this.collapsed)); if(this.collapseLabel)this.collapseLabel.textContent=this.collapsed?(this.dock.dataset.labelExpand||'Expand'):(this.dock.dataset.labelCollapse||'Collapse'); if(persist)storage.set(CONFIG.collapsedKey,String(this.collapsed)); this.refreshLayout(); };
+    Controller.prototype.onPointerDown=function(e){ if(this.collapsed||this.isStacked)return; e.preventDefault(); const startX=e.clientX,startW=this.width, move=(ev)=>this.applyWidth(startW+(ev.clientX-startX),false), up=()=>{storage.set(CONFIG.widthKey,String(this.width));document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',up);}; document.addEventListener('pointermove',move); document.addEventListener('pointerup',up); };
+    Controller.prototype.onResizerKeydown=function(e){ if(['ArrowLeft','ArrowRight','Home','End'].indexOf(e.key)===-1)return; e.preventDefault(); let w=this.width; if(e.key==='ArrowLeft')w-=20; if(e.key==='ArrowRight')w+=20; if(e.key==='Home')w=CONFIG.minWidth; if(e.key==='End')w=CONFIG.maxWidth; this.applyWidth(w,true); };
+    Controller.prototype.observe=function(){ if(!('ResizeObserver'in window))return; new ResizeObserver(()=>this.refreshLayout()).observe(this.workspace); };
+    Controller.prototype.refreshLayout=function(){ const stacked=this.workspace.getBoundingClientRect().width<CONFIG.stackedBreakpoint; this.isStacked=stacked; this.workspace.classList.toggle('is-overlays-stacked',stacked); if(this.dock&&this.monitors)this.dock.style.height=stacked?'':`${Math.round(this.monitors.getBoundingClientRect().height)}px`; };
+    document.addEventListener('DOMContentLoaded',()=>{ const ws=document.querySelector('[data-overlays-workspace]'); if(ws)new Controller(ws).init(); });
 }());
