@@ -2081,12 +2081,14 @@
         if (statusEl) { statusEl.setAttribute('aria-label', label + ' ' + getStudioString('audioInputStatusLabel', 'status') + ': ' + status); }
     }
 
-    function focusOrHighlightMixerChannel(inputId) {
+    function focusOrHighlightMixerChannel(inputId, options = {}) {
         const strip = els.audioInputChannels && els.audioInputChannels.querySelector('[data-audio-input-id="' + inputId + '"]');
         if (!strip) { return; }
         strip.classList.add('is-test-highlighted');
-        const target = strip.querySelector('[data-mixer-gain], [data-open-audio-input-settings], [data-mixer-mute]');
-        if (target && typeof target.focus === 'function') { target.focus({ preventScroll: false }); }
+        if (options.focus !== false) {
+            const target = strip.querySelector('[data-mixer-gain], [data-open-audio-input-settings], [data-mixer-mute]');
+            if (target && typeof target.focus === 'function') { target.focus({ preventScroll: false }); }
+        }
         window.setTimeout(() => { strip.classList.remove('is-test-highlighted'); }, 2500);
     }
 
@@ -6402,7 +6404,7 @@
         }
         if (hasLiveAudioTrack(primary.stream)) {
             setDeviceStatus(getStudioString('primaryMicAlreadyActive', 'Primary microphone is already active. Watch the Mic/Aux meter for live levels.'), 'info');
-            focusOrHighlightMixerChannel(primary.id);
+            focusOrHighlightMixerChannel(primary.id, { focus: !(els.deviceToolsModal && !els.deviceToolsModal.hidden) });
             return;
         }
         if (state.audioInputTestStream) {
@@ -6421,7 +6423,7 @@
             const testTrack = stream.getAudioTracks()[0];
             const testDeviceLabel = testTrack && testTrack.label ? testTrack.label : selectedOptionLabel(els.micSelect, getStudioString('defaultMicrophone', 'default microphone'));
             setMixerChannelStream(primary.mixerChannelId, stream, { sourceId: 'microphone-test' });
-            focusOrHighlightMixerChannel(primary.id);
+            focusOrHighlightMixerChannel(primary.id, { focus: !(els.deviceToolsModal && !els.deviceToolsModal.hidden) });
             window.setTimeout(() => {
                 if (state.audioInputTestRequestId === requestId) {
                     stopStream(stream);

@@ -668,6 +668,35 @@ body.vh360-studio-window-mode .vh360-studio-dashboard {
     }
 }
 
+
+.vh360-studio-readiness-summary {
+    background: var(--vh360-studio-panel-bg-strong);
+    border: 1px solid var(--vh360-studio-panel-border);
+    border-radius: 12px;
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+}
+
+.vh360-studio-readiness-summary[data-status-type="warning"] {
+    border-color: color-mix(in srgb, var(--vh360-studio-warning) 45%, transparent);
+}
+
+.vh360-studio-readiness-summary strong {
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.vh360-studio-readiness-summary p,
+.vh360-studio-readiness-summary ul {
+    color: var(--vh360-studio-text-muted);
+    margin-bottom: 0;
+}
+
+.vh360-studio-readiness-summary ul {
+    margin-top: 0.5rem;
+    padding-left: 1.1rem;
+}
+
 .vh360-studio-technical-details {
     border: 1px solid var(--vh360-studio-panel-border);
     border-radius: 12px;

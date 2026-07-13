@@ -21,7 +21,6 @@
 
     function render() {
         const state = engine.getState();
-        const previewCount = count(state.preview);
         const programCount = count(state.program);
 
         if (clearButton) {
