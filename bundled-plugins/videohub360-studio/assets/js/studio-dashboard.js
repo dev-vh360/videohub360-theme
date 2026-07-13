@@ -2050,10 +2050,6 @@
         if (!input || !strip) { return; }
         const label = input.label || getStudioString('audioInputFallbackLabel', 'Audio Input');
         const status = audioInputStatusLabel(audioInputStatus(input));
-        const name = strip.querySelector('[data-audio-input-name]');
-        if (name) { name.setAttribute('aria-label', label + ' ' + getStudioString('audioInputNameLabel', 'name')); }
-        const select = strip.querySelector('[data-audio-input-device]');
-        if (select) { select.setAttribute('aria-label', label + ' ' + getStudioString('audioInputDeviceLabel', 'device')); }
         const gain = strip.querySelector('[data-mixer-gain]');
         if (gain) { gain.setAttribute('aria-label', label + ' ' + getStudioString('audioInputGainLabel', 'gain')); }
         const meter = strip.querySelector('.vh360-studio-meter');
@@ -2162,6 +2158,7 @@
         strip.appendChild(markers);
         const readout = document.createElement('output');
         readout.className = 'vh360-studio-audio-gain-readout';
+        readout.setAttribute('for', input.id + '-gain');
         readout.dataset.mixerGainReadout = input.id;
         readout.textContent = mixerGainToDb(input.volume);
         strip.appendChild(readout);
@@ -2173,7 +2170,7 @@
         gainSr.className = 'screen-reader-text';
         gainSr.textContent = input.label + ' ' + getStudioString('gainLabel', 'Gain');
         const gain = document.createElement('input');
-        gain.type = 'range'; gain.min = '0'; gain.max = '150'; gain.value = String(Math.round(input.volume * 100)); gain.dataset.mixerGain = input.id;
+        gain.id = input.id + '-gain'; gain.type = 'range'; gain.min = '0'; gain.max = '150'; gain.value = String(Math.round(input.volume * 100)); gain.dataset.mixerGain = input.id;
         gainLabel.appendChild(gainSr); gainLabel.appendChild(gain);
         body.appendChild(gainLabel); body.appendChild(createMeterElement(input.id, input.label)); strip.appendChild(body);
         const actions = document.createElement('div'); actions.className = 'vh360-studio-audio-actions';
@@ -2182,6 +2179,22 @@
         strip.appendChild(actions);
         updateAudioInputAccessibility(input.id);
         return strip;
+    }
+
+    function commitAudioInputSettingsName() {
+        const input = state.audioInputs.get(state.audioInputSettingsId);
+        if (!input || !els.audioInputSettingsName) { return false; }
+        const inputIndex = Array.from(state.audioInputs.keys()).indexOf(input.id);
+        const nextLabel = sanitizeAudioInputLabel(els.audioInputSettingsName.value, Math.max(0, inputIndex));
+        if (els.audioInputSettingsName.value !== nextLabel) { els.audioInputSettingsName.value = nextLabel; }
+        if (input.label === nextLabel) { return false; }
+        input.label = nextLabel;
+        const channel = ensureAudioInputMixerChannel(input.id);
+        if (channel) { channel.label = input.label; }
+        saveAudioInputConfiguration();
+        updateMixerUi();
+        renderAudioInputSettings();
+        return true;
     }
 
     function renderAudioInputSettings() {
@@ -2213,6 +2226,7 @@
 
     function closeAudioInputSettings() {
         if (!els.audioInputSettingsModal || els.audioInputSettingsModal.hidden) { return; }
+        commitAudioInputSettingsName();
         const closingId = state.audioInputSettingsId;
         els.audioInputSettingsModal.hidden = true;
         state.audioInputSettingsId = '';
@@ -2356,7 +2370,7 @@
         const peakPercent = Math.max(0, Math.min(100, meterDbToPercent(stateObj.peakDb)));
         targets.forEach((target) => {
             if (target.fill) { target.fill.style.height = rmsPercent.toFixed(2) + '%'; target.fill.style.setProperty('--vh360-meter-level', rmsPercent.toFixed(2) + '%'); }
-            if (target.peak) { target.peak.style.bottom = peakPercent.toFixed(2) + '%'; }
+            if (target.peak) { target.peak.style.bottom = 'calc(' + peakPercent.toFixed(2) + '% - ' + (peakPercent / 100 * 2).toFixed(2) + 'px)'; }
             if (target.clip) { const clipping = now < stateObj.clipUntil; target.clip.classList.toggle('is-clipping', clipping); target.clip.setAttribute('aria-hidden', clipping ? 'false' : 'true'); }
             if (target.meter && (!stateObj.lastAriaUpdateTime || now - stateObj.lastAriaUpdateTime >= METER_ARIA_UPDATE_MS)) {
                 const ariaDb = Math.max(METER_FLOOR_DB, Math.min(0, stateObj.displayDb));
@@ -2378,15 +2392,16 @@
                 mixer.lastMeterRenderTime = now;
                 Object.keys(mixer.channels || {}).forEach((id) => {
                     const channel = mixer.channels[id];
-                    const active = !!(channel && channel.connected && !channel.unavailable);
+                    const active = !!(channel && channel.connected && !channel.unavailable && !channel.muted);
                     const measurement = active ? readAnalyserDb(channel.analyser, channel) : { rmsDb: METER_FLOOR_DB, peakDb: METER_FLOOR_DB };
                     channel.meterState = channel.meterState || { displayDb: METER_FLOOR_DB, peakDb: METER_FLOOR_DB, peakHoldUntil: 0, clipUntil: 0, lastUpdateTime: now, lastAriaUpdateTime: 0 };
                     updateMeterState(channel.meterState, measurement, now, active);
                     renderMeterTargets(channel.meterTargets || [], channel.meterState, now);
                 });
-                const masterMeasurement = readAnalyserDb(mixer.masterAnalyser, mixer);
+                const masterActive = !state.liveAudioMuted;
+                const masterMeasurement = masterActive ? readAnalyserDb(mixer.masterAnalyser, mixer) : { rmsDb: METER_FLOOR_DB, peakDb: METER_FLOOR_DB };
                 mixer.masterMeterState = mixer.masterMeterState || { displayDb: METER_FLOOR_DB, peakDb: METER_FLOOR_DB, peakHoldUntil: 0, clipUntil: 0, lastUpdateTime: now, lastAriaUpdateTime: 0 };
-                updateMeterState(mixer.masterMeterState, masterMeasurement, now, true);
+                updateMeterState(mixer.masterMeterState, masterMeasurement, now, masterActive);
                 renderMeterTargets(mixer.masterMeterTargets || [], mixer.masterMeterState, now);
             }
             mixer.meterFrame = window.requestAnimationFrame(draw);
@@ -6683,17 +6698,7 @@
             els.closeAudioInputSettings.forEach((button) => button.addEventListener('click', closeAudioInputSettings));
         }
         if (els.audioInputSettingsName) {
-            els.audioInputSettingsName.addEventListener('change', () => {
-                const input = state.audioInputs.get(state.audioInputSettingsId);
-                if (!input) { return; }
-                const inputIndex = Array.from(state.audioInputs.keys()).indexOf(input.id);
-                input.label = sanitizeAudioInputLabel(els.audioInputSettingsName.value, Math.max(0, inputIndex));
-                const channel = ensureAudioInputMixerChannel(input.id);
-                if (channel) { channel.label = input.label; }
-                saveAudioInputConfiguration();
-                updateMixerUi();
-                renderAudioInputSettings();
-            });
+            els.audioInputSettingsName.addEventListener('change', commitAudioInputSettingsName);
         }
         if (els.audioInputSettingsDevice) {
             els.audioInputSettingsDevice.addEventListener('change', () => {

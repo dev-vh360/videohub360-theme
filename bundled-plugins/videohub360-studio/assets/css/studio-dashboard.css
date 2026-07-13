@@ -342,9 +342,15 @@ body.vh360-studio-window-mode .vh360-studio-dashboard {
 .vh360-studio-audio-mixer::-webkit-scrollbar { height: 8px; }
 .vh360-studio-audio-mixer::-webkit-scrollbar-thumb { background: var(--vh360-studio-panel-border); border-radius: 999px; }
 .vh360-studio-audio-input-channels { display: contents; }
-.vh360-studio-meter-scale { align-self: end; color: var(--vh360-studio-text-muted); display: grid; flex: 0 0 24px; font-size: 0.58rem; height: 112px; line-height: 1; padding: 0 0.15rem 34px 0; pointer-events: none; position: sticky; left: 0; z-index: 2; }
-.vh360-studio-meter-scale span { transform: translateY(-50%); }
-.vh360-studio-meter-scale span:nth-child(1) { align-self: start; } .vh360-studio-meter-scale span:nth-child(2) { align-self: start; margin-top: 11.2px; } .vh360-studio-meter-scale span:nth-child(3) { align-self: start; margin-top: 11.2px; } .vh360-studio-meter-scale span:nth-child(4) { align-self: start; margin-top: 11.2px; } .vh360-studio-meter-scale span:nth-child(5) { align-self: start; margin-top: 22.4px; } .vh360-studio-meter-scale span:nth-child(6) { align-self: start; margin-top: 28px; } .vh360-studio-meter-scale span:nth-child(7) { align-self: end; }
+.vh360-studio-meter-scale { align-self: end; color: var(--vh360-studio-text-muted); display: block; flex: 0 0 24px; font-size: 0.58rem; height: 112px; line-height: 1; margin-bottom: 34px; padding: 0; pointer-events: none; position: sticky; left: 0; z-index: 2; }
+.vh360-studio-meter-scale span { position: absolute; right: 0.15rem; transform: translateY(-50%); }
+.vh360-studio-meter-scale span:nth-child(1) { top: 0%; transform: translateY(0); }
+.vh360-studio-meter-scale span:nth-child(2) { top: 10%; }
+.vh360-studio-meter-scale span:nth-child(3) { top: 20%; }
+.vh360-studio-meter-scale span:nth-child(4) { top: 30%; }
+.vh360-studio-meter-scale span:nth-child(5) { top: 50%; }
+.vh360-studio-meter-scale span:nth-child(6) { top: 75%; }
+.vh360-studio-meter-scale span:nth-child(7) { top: 100%; transform: translateY(-100%); }
 .vh360-studio-audio-channel { align-items: center; background: color-mix(in srgb, var(--vh360-studio-panel-bg-strong) 70%, transparent); border: 1px solid var(--vh360-studio-panel-border); border-radius: 8px; display: grid; flex: 0 0 78px; gap: 0.25rem; justify-items: center; min-width: 78px; padding: 0.35rem 0.25rem; }
 .vh360-studio-audio-channel--input { flex-basis: 84px; min-width: 84px; }
 .vh360-studio-audio-channel.is-primary { border-color: color-mix(in srgb, var(--vh360-studio-primary) 60%, var(--vh360-studio-panel-border)); }

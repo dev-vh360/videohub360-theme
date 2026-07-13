@@ -493,13 +493,13 @@ $overlay_tool_descriptions = array(
                                 <span class="vh360-studio-audio-status" data-mixer-status="<?php echo esc_attr( $channel_id ); ?>"><span class="vh360-studio-audio-status__dot" aria-hidden="true"></span><span data-mixer-status-text><?php echo esc_html( $initial_status ); ?></span></span>
                                 <strong class="vh360-studio-audio-name" title="<?php echo esc_attr( $channel_display ); ?>"><?php echo esc_html( $channel_display ); ?></strong>
                                 <?php if ( 'master' !== $channel_id ) : ?>
-                                    <output class="vh360-studio-audio-gain-readout" data-mixer-gain-readout="<?php echo esc_attr( $channel_id ); ?>">0.0 dB</output>
+                                    <output class="vh360-studio-audio-gain-readout" for="vh360-studio-<?php echo esc_attr( $channel_id ); ?>-gain" data-mixer-gain-readout="<?php echo esc_attr( $channel_id ); ?>">0.0 dB</output>
                                 <?php endif; ?>
                                 <div class="vh360-studio-audio-strip-body">
                                     <?php if ( 'master' !== $channel_id ) : ?>
                                         <label class="vh360-studio-audio-gain">
                                             <span class="screen-reader-text"><?php echo esc_html( sprintf( __( '%s gain', 'videohub360-studio' ), $channel_label ) ); ?></span>
-                                            <input type="range" min="0" max="150" value="100" data-mixer-gain="<?php echo esc_attr( $channel_id ); ?>">
+                                            <input id="vh360-studio-<?php echo esc_attr( $channel_id ); ?>-gain" type="range" min="0" max="150" value="100" data-mixer-gain="<?php echo esc_attr( $channel_id ); ?>">
                                         </label>
                                     <?php else : ?>
                                         <span class="vh360-studio-audio-master-note"><?php esc_html_e( 'Mix', 'videohub360-studio' ); ?></span>
@@ -570,7 +570,7 @@ $overlay_tool_descriptions = array(
                 <label class="vh360-studio-field"><?php esc_html_e( 'Device', 'videohub360-studio' ); ?><select data-audio-input-settings-device></select></label>
                 <p class="vh360-studio-audio-settings-primary" data-audio-input-settings-primary></p>
                 <p class="vh360-studio-audio-settings-status"><strong><?php esc_html_e( 'Current status', 'videohub360-studio' ); ?>:</strong> <span data-audio-input-settings-status></span></p>
-                <div class="vh360-studio-modal__status" data-audio-input-settings-warning hidden></div>
+                <div class="vh360-studio-modal__status" data-audio-input-settings-warning role="status" aria-live="polite" hidden></div>
                 <p class="vh360-studio-help"><?php esc_html_e( 'Each input represents one browser-visible microphone or USB audio device. Hardware mixer sub-channels are not separated by Studio.', 'videohub360-studio' ); ?></p>
                 <button type="button" class="vh360-studio-button vh360-studio-button--danger" data-audio-input-settings-remove><?php esc_html_e( 'Remove Audio Input', 'videohub360-studio' ); ?></button>
             </div>
