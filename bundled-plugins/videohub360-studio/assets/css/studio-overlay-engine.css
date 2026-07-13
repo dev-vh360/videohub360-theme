@@ -6,20 +6,3 @@
     width: 100%;
     z-index: 4;
 }
-.vh360-studio-overlay-status {
-    background: color-mix(in srgb, var(--vh360-studio-success) 22%, var(--vh360-studio-panel-bg-strong));
-    border: 1px solid color-mix(in srgb, var(--vh360-studio-success) 55%, transparent);
-    border-radius: 999px;
-    color: var(--vh360-studio-text);
-    font-size: 0.72rem;
-    font-weight: 800;
-    padding: 0.2rem 0.55rem;
-    position: relative;
-    z-index: 5;
-}
-.vh360-studio-monitor-header .vh360-studio-overlay-status { position: static; }
-.vh360-studio-preview-stage > .vh360-studio-overlay-status {
-    bottom: 0.6rem;
-    left: 0.6rem;
-    position: absolute;
-}

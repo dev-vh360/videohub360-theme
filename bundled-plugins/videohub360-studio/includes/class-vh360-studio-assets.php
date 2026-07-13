@@ -464,10 +464,6 @@ class VH360_Studio_Assets {
                 ),
 
                 'overlayStatus' => array(
-                    'previewSingular' => __( '1 overlay staged', 'videohub360-studio' ),
-                    'previewPlural'   => __( '%s overlays staged', 'videohub360-studio' ),
-                    'programSingular' => __( '1 overlay live', 'videohub360-studio' ),
-                    'programPlural'   => __( '%s overlays live', 'videohub360-studio' ),
                     'tabPreview'      => __( 'overlay staged', 'videohub360-studio' ),
                     'tabProgram'      => __( 'live overlay active', 'videohub360-studio' ),
                 ),
