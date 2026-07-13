@@ -17,7 +17,11 @@ class VH360_Studio_Bible_REST_Controller {
         register_rest_route($this->namespace,'/bible/translations/(?P<key>[a-z0-9_-]+)/enable',array('methods'=>'POST','callback'=>array($this,'enable_translation'),'permission_callback'=>array($this,'can_import')));
         register_rest_route($this->namespace,'/bible/translations/(?P<key>[a-z0-9_-]+)/disable',array('methods'=>'POST','callback'=>array($this,'disable_translation'),'permission_callback'=>array($this,'can_import')));
     }
-    public function can_query(){return is_user_logged_in() && VH360_Studio_Permissions::user_can_access_studio() && wp_verify_nonce(isset($_SERVER['HTTP_X_WP_NONCE'])?sanitize_text_field(wp_unslash($_SERVER['HTTP_X_WP_NONCE'])):'','wp_rest');}
+    public function can_query(){
+        if(!is_user_logged_in() || !VH360_Studio_Permissions::user_can_access_studio()){return false;}
+        if(!wp_verify_nonce(isset($_SERVER['HTTP_X_WP_NONCE'])?sanitize_text_field(wp_unslash($_SERVER['HTTP_X_WP_NONCE'])):'','wp_rest')){return false;}
+        return VH360_Studio_Permissions::license_permission_result();
+    }
     public function can_import(){return current_user_can('manage_options') && wp_verify_nonce(isset($_SERVER['HTTP_X_WP_NONCE'])?sanitize_text_field(wp_unslash($_SERVER['HTTP_X_WP_NONCE'])):'','wp_rest');}
     public function translations(){return rest_ensure_response($this->repo->list_translations());}
     public function books($r){$result=$this->repo->list_books($r['translation']); return is_wp_error($result)?$result:rest_ensure_response($result);}

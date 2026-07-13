@@ -29,7 +29,7 @@ class VH360_Studio_Overlays_REST_Controller {
                 array(
                     'methods'             => WP_REST_Server::EDITABLE,
                     'callback'            => array( $this, 'update_overlay_tools' ),
-                    'permission_callback' => array( $this, 'permissions_check' ),
+                    'permission_callback' => array( $this, 'licensed_permissions_check' ),
                     'args'                => array(
                         'enabled_modules' => array(
                             'type'    => 'array',
@@ -59,7 +59,7 @@ class VH360_Studio_Overlays_REST_Controller {
                 array(
                     'methods'             => WP_REST_Server::CREATABLE,
                     'callback'            => array( $this, 'create_item' ),
-                    'permission_callback' => array( $this, 'permissions_check' ),
+                    'permission_callback' => array( $this, 'licensed_permissions_check' ),
                 ),
             )
         );
@@ -71,12 +71,12 @@ class VH360_Studio_Overlays_REST_Controller {
                 array(
                     'methods'             => WP_REST_Server::EDITABLE,
                     'callback'            => array( $this, 'update_item' ),
-                    'permission_callback' => array( $this, 'permissions_check' ),
+                    'permission_callback' => array( $this, 'licensed_permissions_check' ),
                 ),
                 array(
                     'methods'             => WP_REST_Server::DELETABLE,
                     'callback'            => array( $this, 'delete_item' ),
-                    'permission_callback' => array( $this, 'permissions_check' ),
+                    'permission_callback' => array( $this, 'licensed_permissions_check' ),
                 ),
             )
         );
@@ -84,6 +84,16 @@ class VH360_Studio_Overlays_REST_Controller {
 
     public function permissions_check() {
         return is_user_logged_in() && VH360_Studio_Permissions::user_can_access_studio();
+    }
+
+    public function licensed_permissions_check() {
+        $access = $this->permissions_check();
+
+        if ( is_wp_error( $access ) || true !== $access ) {
+            return $access;
+        }
+
+        return VH360_Studio_Permissions::license_permission_result();
     }
 
     public function get_overlay_tools() {

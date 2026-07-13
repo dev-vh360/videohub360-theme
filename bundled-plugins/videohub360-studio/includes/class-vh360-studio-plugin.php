@@ -79,6 +79,11 @@ class VH360_Studio_Plugin {
             return;
         }
 
+        if ( ! VH360_Studio_Permissions::license_is_valid() ) {
+            include VH360_STUDIO_TEMPLATES_DIR . 'dashboard-studio-locked.php';
+            return;
+        }
+
         $enabled_overlay_modules = VH360_Studio_User_Preferences::get_enabled_overlay_modules( $user_id );
         $allowed_overlay_modules  = VH360_Studio_User_Preferences::allowed_overlay_modules();
         $registry        = $this->registry;
