@@ -2,9 +2,9 @@
 .vh360-studio-lower-thirds-stack { display: grid; gap: 0.65rem; }
 .vh360-studio-lower-thirds-stack label { font-size: 0.82rem; margin: 0; }
 .vh360-studio-lower-thirds-stack input[type="color"] { min-height: 40px; padding: 0.2rem; }
-.vh360-studio-lower-thirds-actions { display: grid; gap: 0.5rem; grid-template-columns: 1fr; }
-.vh360-studio-lower-thirds-actions .vh360-studio-button { justify-content: center; width: 100%; }
-.vh360-studio-lower-thirds-status-grid { display: grid; gap: 0.5rem; grid-template-columns: 1fr; }
+.vh360-studio-lower-thirds-actions { display: grid; gap: 0.4rem; grid-template-columns: 1fr; }
+.vh360-studio-lower-thirds-actions .vh360-studio-button { border-radius: 9px; font-size: 0.76rem; font-weight: 700; justify-content: center; line-height: 1.15; min-height: 34px; padding: 0.4rem 0.6rem; width: 100%; }
+.vh360-studio-lower-thirds-status-grid { display: grid; gap: 0.4rem; grid-template-columns: 1fr; }
 .vh360-studio-lower-thirds-status-grid p,
 .vh360-studio-lower-thirds-message {
     background: var(--vh360-studio-panel-bg-strong);

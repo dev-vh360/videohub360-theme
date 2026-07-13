@@ -87,6 +87,7 @@
         programHiddenFrameRate: 8,
         programStatusMessage: 'Program active',
         tabProtectionWarningPending: false,
+        onAirNoticeDismissed: false,
         studioDocumentHidden: false,
         hiddenActiveCameraSourceIds: new Set(),
         hiddenActiveAudioInputIds: new Set(),
@@ -236,6 +237,7 @@
         studioFullscreen: root.querySelector('[data-studio-fullscreen]'),
         openStudioWindow: root.querySelector('[data-open-studio-window]'),
         onAirNotice: root.querySelector('[data-on-air-notice]'),
+        onAirNoticeDismiss: root.querySelector('[data-dismiss-on-air-notice]'),
         programDiagnostics: root.querySelector('[data-program-diagnostics]'),
         copyViewerFeedback: root.querySelector('[data-copy-viewer-feedback]'),
         sourceMenuToggle: root.querySelector('[data-toggle-source-menu]'),
@@ -2476,9 +2478,15 @@
 
     function renderOnAirTabProtection() {
         const active = isOnAirOrRecording();
-        if (els.onAirNotice) {
-            els.onAirNotice.hidden = !active;
+
+        if (!active) {
+            state.onAirNoticeDismissed = false;
         }
+
+        if (els.onAirNotice) {
+            els.onAirNotice.hidden = !active || state.onAirNoticeDismissed;
+        }
+
         updateProgramCompositorLoop();
     }
 
@@ -6157,6 +6165,13 @@
     }
 
     function bindEvents() {
+        if (els.onAirNoticeDismiss) {
+            els.onAirNoticeDismiss.addEventListener('click', () => {
+                state.onAirNoticeDismissed = true;
+                renderOnAirTabProtection();
+            });
+        }
+
         if (els.sceneList) {
             els.sceneList.addEventListener('click', async (event) => {
                 const button = event.target.closest('[data-scene-source]');
