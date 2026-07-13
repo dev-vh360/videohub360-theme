@@ -1,11 +1,11 @@
 .vh360-studio-countdown-panel { min-width: 0; }
 .vh360-studio-countdown-stack { display: grid; gap: 0.65rem; }
 .vh360-studio-countdown-stack label { font-size: 0.82rem; margin: 0; }
-.vh360-studio-countdown-duration { display: grid; gap: 0.5rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.vh360-studio-countdown-duration { display: grid; gap: 0.4rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .vh360-studio-countdown-duration label { grid-row: 1; }
-.vh360-studio-countdown-actions { display: grid; gap: 0.5rem; grid-template-columns: 1fr; }
-.vh360-studio-countdown-actions .vh360-studio-button { justify-content: center; width: 100%; }
-.vh360-studio-countdown-status { display: grid; gap: 0.5rem; }
+.vh360-studio-countdown-actions { display: grid; gap: 0.4rem; grid-template-columns: 1fr; }
+.vh360-studio-countdown-actions .vh360-studio-button { border-radius: 9px; font-size: 0.76rem; font-weight: 700; justify-content: center; line-height: 1.15; min-height: 34px; padding: 0.4rem 0.6rem; width: 100%; }
+.vh360-studio-countdown-status { display: grid; gap: 0.4rem; }
 .vh360-studio-countdown-status p,
 .vh360-studio-countdown-message { background: var(--vh360-studio-panel-bg-strong); border: 1px solid var(--vh360-studio-panel-border); border-radius: 10px; color: var(--vh360-studio-text-muted); margin: 0; padding: 0.55rem 0.65rem; }
 .vh360-studio-countdown-status strong { color: var(--vh360-studio-text); display: block; font-size: 0.76rem; text-transform: uppercase; }

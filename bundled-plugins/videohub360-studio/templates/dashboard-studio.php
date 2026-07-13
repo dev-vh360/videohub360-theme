@@ -35,25 +35,41 @@ $overlay_tool_descriptions = array(
         <div class="vh360-studio-screen-reader-status" aria-live="polite" data-studio-status>
             <?php esc_html_e( 'Checking browser support…', 'videohub360-studio' ); ?>
         </div>
-        <p class="vh360-studio-on-air-notice" data-on-air-notice hidden>
-            <?php esc_html_e( 'For best results, keep this Studio tab open and visible while broadcasting or recording.', 'videohub360-studio' ); ?>
-        </p>
+        <div
+            class="vh360-studio-on-air-notice"
+            data-on-air-notice
+            role="status"
+            aria-live="polite"
+            hidden
+        >
+            <span class="vh360-studio-on-air-notice__message">
+                <?php esc_html_e( 'For best results, keep this Studio tab open and visible while broadcasting or recording.', 'videohub360-studio' ); ?>
+            </span>
+            <button
+                type="button"
+                class="vh360-studio-on-air-notice__dismiss"
+                data-dismiss-on-air-notice
+                aria-label="<?php esc_attr_e( 'Dismiss Studio visibility reminder', 'videohub360-studio' ); ?>"
+            >
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
         <div class="vh360-studio-topbar-links" aria-live="polite">
-            <button type="button" class="vh360-studio-button vh360-studio-button--secondary vh360-studio-attention-button" data-open-studio-diagnostics hidden>
+            <button type="button" class="vh360-studio-button vh360-studio-button--secondary vh360-studio-button--compact vh360-studio-attention-button" data-open-studio-diagnostics hidden>
                 <?php esc_html_e( 'Studio needs attention', 'videohub360-studio' ); ?>
             </button>
-            <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-studio-fullscreen>
+            <button type="button" class="vh360-studio-button vh360-studio-button--secondary vh360-studio-button--compact" data-studio-fullscreen>
                 <?php esc_html_e( 'Fullscreen Studio', 'videohub360-studio' ); ?>
             </button>
-            <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-open-studio-window>
+            <button type="button" class="vh360-studio-button vh360-studio-button--secondary vh360-studio-button--compact" data-open-studio-window>
                 <?php esc_html_e( 'Open Studio Window', 'videohub360-studio' ); ?>
             </button>
 
             <div class="vh360-studio-viewer-actions" data-viewer-link-wrap hidden>
-                <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-open-viewer-link disabled>
+                <button type="button" class="vh360-studio-button vh360-studio-button--secondary vh360-studio-button--compact" data-open-viewer-link disabled>
                     <?php esc_html_e( 'Open Viewer', 'videohub360-studio' ); ?>
                 </button>
-                <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-copy-viewer-link>
+                <button type="button" class="vh360-studio-button vh360-studio-button--secondary vh360-studio-button--compact" data-copy-viewer-link>
                     <?php esc_html_e( 'Copy Link', 'videohub360-studio' ); ?>
                 </button>
                 <span class="vh360-studio-copy-feedback" data-copy-viewer-feedback hidden></span>
@@ -152,8 +168,8 @@ $overlay_tool_descriptions = array(
 
             <section class="vh360-studio-transition-panel" aria-labelledby="vh360-studio-transition-title">
                 <h3 id="vh360-studio-transition-title"><?php esc_html_e( 'Transition', 'videohub360-studio' ); ?></h3>
-                <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-transition-cut><?php esc_html_e( 'Cut', 'videohub360-studio' ); ?></button>
-                <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-transition-fade><?php esc_html_e( 'Fade', 'videohub360-studio' ); ?></button>
+                <button type="button" class="vh360-studio-button vh360-studio-button--secondary vh360-studio-button--compact" data-transition-cut><?php esc_html_e( 'Cut', 'videohub360-studio' ); ?></button>
+                <button type="button" class="vh360-studio-button vh360-studio-button--secondary vh360-studio-button--compact" data-transition-fade><?php esc_html_e( 'Fade', 'videohub360-studio' ); ?></button>
                 <label class="vh360-studio-transition-duration"><?php esc_html_e( 'Duration', 'videohub360-studio' ); ?><input type="number" min="0" max="2000" step="50" value="300" data-transition-duration></label>
                 <p><?php esc_html_e( 'Stage a source in Preview, then send it to Program.', 'videohub360-studio' ); ?></p>
             </section>
