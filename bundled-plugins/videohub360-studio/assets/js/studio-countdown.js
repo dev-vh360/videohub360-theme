@@ -1,5 +1,8 @@
 (function () {
     'use strict';
+    let initialized = false;
+    function init() {
+        if (initialized) { return; }
 
     const root = document.querySelector('[data-vh360-studio-dashboard]');
     const engine = window.VH360StudioOverlayEngine;
@@ -10,6 +13,7 @@
     if (!root || !engine || !compositor) {
         return;
     }
+    initialized = true;
 
     const $ = (selector) => root.querySelector(selector);
     const text = (key) => strings[key] || key;
@@ -25,6 +29,8 @@
         programOutput: compositor.hasProgramOutput(),
         destroyed: false,
     };
+
+    const controllers = [];
 
     const els = {
         preset: $('[data-countdown-preset]'), mode: $('[data-countdown-mode]'), hours: $('[data-countdown-hours]'), minutes: $('[data-countdown-minutes]'), seconds: $('[data-countdown-seconds]'), target: $('[data-countdown-target]'), durationFields: $('[data-countdown-duration-fields]'), targetFields: $('[data-countdown-target-fields]'), label: $('[data-countdown-label]'), message: $('[data-countdown-message]'), previewStatus: $('[data-countdown-preview-status]'), programStatus: $('[data-countdown-program-status]'), remaining: $('[data-countdown-remaining]'), status: $('[data-countdown-status]'), stage: $('[data-countdown-stage]'), clearPreview: $('[data-countdown-clear-preview]'), take: $('[data-countdown-take]'), update: $('[data-countdown-update]'), hide: $('[data-countdown-hide]'), start: $('[data-countdown-start]'), pause: $('[data-countdown-pause]'), resume: $('[data-countdown-resume]'), reset: $('[data-countdown-reset]'), template: $('[data-countdown-template]'), position: $('[data-countdown-position]'), scale: $('[data-countdown-scale]'), accent: $('[data-countdown-accent]'), bg: $('[data-countdown-bg]'), bgOpacity: $('[data-countdown-bg-opacity]'), timerColor: $('[data-countdown-timer-color]'), labelColor: $('[data-countdown-label-color]'), name: $('[data-countdown-name]'), endBehavior: $('[data-countdown-end-behavior]'), messageDuration: $('[data-countdown-message-duration]'), entrance: $('[data-countdown-entrance]'), exit: $('[data-countdown-exit]'), durationMs: $('[data-countdown-duration-ms]'), save: $('[data-countdown-save]'), saveNew: $('[data-countdown-save-new]'), duplicate: $('[data-countdown-duplicate]'), delete: $('[data-countdown-delete]')
@@ -293,9 +299,18 @@
     }
 
     async function api(path, options) {
-        const response = await fetch((config.restRoot || '') + path, Object.assign({ headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce || '' } }, options || {}));
-        if (!response.ok) { throw new Error('rest'); }
-        return response.json();
+        const controller = new AbortController();
+        controllers.push(controller);
+        const requestOptions = Object.assign({ headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce || '' } }, options || {});
+        requestOptions.signal = controller.signal;
+        try {
+            const response = await fetch((config.restRoot || '') + path, requestOptions);
+            if (!response.ok) { throw new Error('rest'); }
+            return response.json();
+        } finally {
+            const index = controllers.indexOf(controller);
+            if (index !== -1) { controllers.splice(index, 1); }
+        }
     }
 
     function renderPresets() {
@@ -485,13 +500,16 @@
     on(root, 'vh360:studio-overlay:preview-change', render);
 
     function destroy() {
-        state.destroyed = true;
+        state.destroyed = true; initialized = false;
+        controllers.splice(0).forEach((controller) => controller.abort());
         if (refreshTimer) { window.clearTimeout(refreshTimer); }
         listeners.splice(0).forEach(({ target, event, handler }) => target.removeEventListener(event, handler));
     }
 
-    window.VH360StudioCountdown = { destroy };
+    window.VH360StudioCountdown = { init, destroy, isInitialized: () => initialized };
     applyConfig(defaultConfig());
     load();
     render();
+    }
+    window.VH360StudioCountdown = { init, destroy: function () {}, isInitialized: () => initialized };
 }());

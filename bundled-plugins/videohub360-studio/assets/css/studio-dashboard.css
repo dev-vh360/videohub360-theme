@@ -111,7 +111,6 @@ body.vh360-studio-window-mode .vh360-studio-dashboard {
 .vh360-studio-topbar,
 .vh360-studio-workbench,
 .vh360-studio-dock,
-.vh360-studio-lower-panel,
 .vh360-studio-card {
     background: color-mix(in srgb, var(--vh360-studio-panel-bg) 94%, transparent);
     border: 1px solid var(--vh360-studio-panel-border);
@@ -394,21 +393,15 @@ body.vh360-studio-window-mode .vh360-studio-dashboard {
 .vh360-studio-publish-status,
 .vh360-studio-replay-link { margin: 0; }
 
-.vh360-studio-lower-panels { display: grid; gap: 1rem; grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.2fr); }
-.vh360-studio-lower-panel { min-width: 0; padding: 1rem; }
-.vh360-studio-lower-panel h3 { color: var(--vh360-studio-text); margin-bottom: 0.35rem; }
 .vh360-studio-checks { display: grid; gap: 0.6rem; grid-template-columns: repeat(2, minmax(0, 1fr)); list-style: none; margin: 1rem 0 0; padding: 0; }
 .vh360-studio-checks li { align-items: center; background: var(--vh360-studio-panel-bg-strong); border: 1px solid var(--vh360-studio-panel-border); border-radius: 10px; color: var(--vh360-studio-text-muted); display: flex; gap: 0.75rem; justify-content: space-between; padding: 0.65rem; }
 .vh360-studio-checks .is-supported strong { color: var(--vh360-studio-success); }
 .vh360-studio-checks .is-unsupported strong { color: var(--vh360-studio-danger); }
-.vh360-studio-recent-jobs { overflow-x: auto; }
-.vh360-studio-recent-jobs table { min-width: 980px; }
 
 @media (max-width: 1024px) {
     .vh360-studio-topbar,
     .vh360-studio-monitors,
-    .vh360-studio-dock-grid,
-    .vh360-studio-lower-panels { grid-template-columns: 1fr; }
+    .vh360-studio-dock-grid { grid-template-columns: 1fr; }
     .vh360-studio-transition-panel { order: 3; }
     .vh360-studio-live-grid,
     .vh360-studio-recorder-stats,
@@ -597,7 +590,6 @@ body.vh360-studio-window-mode .vh360-studio-dashboard {
 }
 
 .vh360-studio-workflow-summary,
-.vh360-recent-replays-table {
     width: 100%;
 }
 
@@ -670,33 +662,26 @@ body.vh360-studio-window-mode .vh360-studio-dashboard {
     margin-bottom: 0.75rem;
 }
 
-.vh360-studio-technical-table-wrap {
     overflow-x: auto;
 }
 
-.vh360-studio-technical-table-wrap table {
     min-width: 980px;
 }
 
-.vh360-recent-replays-table {
     border-collapse: collapse;
     margin-top: 0.75rem;
 }
 
-.vh360-recent-replays-table th,
-.vh360-recent-replays-table td {
     border-bottom: 1px solid var(--vh360-studio-panel-border);
     padding: 0.65rem;
     text-align: left;
 }
 
-.vh360-recent-replays-table th {
     color: var(--vh360-studio-text-muted);
     font-size: 0.78rem;
     text-transform: uppercase;
 }
 
-.vh360-studio-recent-jobs {
     overflow-x: visible;
 }
 
@@ -706,7 +691,6 @@ body.vh360-studio-window-mode .vh360-studio-dashboard {
     }
 }
 
-.vh360-studio-recent-jobs .vh360-recent-replays-table {
     min-width: 0;
 }
 
@@ -834,3 +818,5 @@ body.vh360-studio-window-mode .vh360-studio-dashboard {
 .vh360-studio-selected-camera-controls[hidden] { display: none !important; }
 .vh360-studio-selected-camera-controls input { width: 100%; }
 .vh360-studio-modal__status[data-status-type="warning"] { border-color: color-mix(in srgb, var(--vh360-studio-warning) 55%, transparent); color: var(--vh360-studio-warning); }
+
+.vh360-studio-attention-button:not([hidden]) { display: inline-flex; }

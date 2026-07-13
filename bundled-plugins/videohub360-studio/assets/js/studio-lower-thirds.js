@@ -1,5 +1,8 @@
 (function () {
     'use strict';
+    let initialized = false;
+    function init() {
+        if (initialized) { return; }
 
     const root = document.querySelector('[data-vh360-studio-dashboard]');
     const engine = window.VH360StudioOverlayEngine;
@@ -7,6 +10,7 @@
     const config = window.vh360StudioDashboard || {};
     const strings = (config.strings && config.strings.lowerThirds) || {};
     if (!root || !engine || !compositor) { return; }
+    initialized = true;
 
     function text(key) { return strings[key] || key; }
     function $(selector) { return root.querySelector(selector); }
@@ -26,6 +30,7 @@
 
     const state = { presets: [], selectedId: 0, staged: false, previewSource: compositor.hasPreviewSource(), programOutput: compositor.hasProgramOutput(), destroyed: false };
     const listeners = [];
+    const controllers = [];
 
     function defaultConfig() {
         return { id: 0, type: 'lower_third', name: '', content: { primary: '', secondary: '' }, style: { template: 'accent_bar', position: 'bottom_left', scale: 100, accentColor: '#4f46e5', backgroundColor: '#0f172a', backgroundOpacity: 90, primaryColor: '#ffffff', secondaryColor: '#dbeafe' }, behavior: { entrance: 'slide_left', exit: 'fade', durationMs: 300, autoHideSeconds: 0 } };
@@ -88,9 +93,18 @@
     }
 
     async function api(path, options) {
-        const response = await window.fetch((config.restRoot || '') + path, Object.assign({ headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce || '' } }, options || {}));
-        if (!response.ok) { throw new Error('REST request failed.'); }
-        return response.json();
+        const controller = new AbortController();
+        controllers.push(controller);
+        const requestOptions = Object.assign({ headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce || '' } }, options || {});
+        requestOptions.signal = controller.signal;
+        try {
+            const response = await window.fetch((config.restRoot || '') + path, requestOptions);
+            if (!response.ok) { throw new Error('REST request failed.'); }
+            return response.json();
+        } finally {
+            const index = controllers.indexOf(controller);
+            if (index !== -1) { controllers.splice(index, 1); }
+        }
     }
 
     async function loadPresets() {
@@ -196,13 +210,16 @@
     on(root, 'vh360:studio-overlay:program-change', renderButtons);
 
     function destroy() {
-        state.destroyed = true;
+        state.destroyed = true; initialized = false;
+        controllers.splice(0).forEach((controller) => controller.abort());
         listeners.splice(0).forEach(({ target, eventName, handler }) => target.removeEventListener(eventName, handler));
     }
 
-    window.VH360StudioLowerThirds = { destroy };
+    window.VH360StudioLowerThirds = { init, destroy, isInitialized: () => initialized };
 
     applyConfig(defaultConfig());
     loadPresets();
     renderButtons();
+    }
+    window.VH360StudioLowerThirds = { init, destroy: function () {}, isInitialized: () => initialized };
 }());
