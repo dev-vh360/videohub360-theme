@@ -10,8 +10,6 @@
         return;
     }
 
-    const previewBadge = root.querySelector('[data-preview-overlay-status]');
-    const programBadge = root.querySelector('[data-program-overlay-status]');
     const clearButton = root.querySelector('[data-clear-program-overlays]');
     const tabs = Array.from(root.querySelectorAll('[data-overlays-module-tab]'));
     const listeners = [];
@@ -21,27 +19,10 @@
         return Object.values(scope || {}).filter(Boolean).length;
     }
 
-    function sprintf(template, value) {
-        return String(template || '').replace('%s', String(value));
-    }
-
-    function label(num, singularKey, pluralKey) {
-        return num === 1 ? strings[singularKey] : sprintf(strings[pluralKey], num);
-    }
-
     function render() {
         const state = engine.getState();
-        const previewCount = count(state.preview);
         const programCount = count(state.program);
 
-        if (previewBadge) {
-            previewBadge.hidden = previewCount === 0;
-            previewBadge.textContent = label(previewCount, 'previewSingular', 'previewPlural');
-        }
-        if (programBadge) {
-            programBadge.hidden = programCount === 0;
-            programBadge.textContent = label(programCount, 'programSingular', 'programPlural');
-        }
         if (clearButton) {
             clearButton.hidden = programCount === 0;
             clearButton.disabled = programCount === 0;

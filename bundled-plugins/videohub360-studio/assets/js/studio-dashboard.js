@@ -140,6 +140,10 @@
         streamSettingsModalTrigger: null,
         streamSettingsActiveTab: 'live',
         coverImageUploadActive: false,
+        deviceToolsTrigger: null,
+        deviceStatusMessage: '',
+        deviceStatusType: 'info',
+        deviceStatusHideTimer: null,
     };
 
     const els = {
@@ -185,6 +189,10 @@
         audioInputSettingsRemove: root.querySelector('[data-audio-input-settings-remove]'),
         closeAudioInputSettings: root.querySelectorAll('[data-close-audio-input-settings]'),
         refreshDevices: root.querySelector('[data-refresh-devices]'),
+        deviceToolsModal: root.querySelector('[data-device-tools-modal]'),
+        openDeviceTools: root.querySelector('[data-open-device-tools]'),
+        closeDeviceTools: root.querySelectorAll('[data-close-device-tools]'),
+        deviceToolsStatus: root.querySelector('[data-device-tools-status]'),
         deviceStatus: root.querySelector('[data-device-status]'),
         activeDevices: root.querySelector('[data-active-devices]'),
         testCamera: root.querySelector('[data-test-camera]'),
@@ -210,6 +218,7 @@
         recordingStatus: root.querySelector('[data-recording-status]'),
         recordingTimer: root.querySelector('[data-recording-timer]'),
         recordingProgress: root.querySelector('[data-recording-progress]'),
+        recordingProgressMeta: root.querySelector('[data-recording-progress-meta]'),
         recordingProgressLabel: root.querySelector('[data-recording-progress-label]'),
         recordingSummaryStatus: root.querySelector('[data-recording-summary-status]'),
         publishReplay: root.querySelector('[data-publish-replay]'),
@@ -235,7 +244,6 @@
         interactiveOnly: root.querySelectorAll('[data-interactive-only]'),
         goLive: root.querySelector('[data-go-live]'),
         endLive: root.querySelector('[data-end-live]'),
-        programEndLive: root.querySelector('[data-program-end-live]'),
         toggleMic: root.querySelector('[data-studio-toggle-mic]'),
         toggleVideo: root.querySelector('[data-studio-toggle-video]'),
         programLiveStatus: root.querySelector('[data-studio-program-live-status]'),
@@ -284,6 +292,7 @@
         operatorActiveJob: root.querySelector('[data-operator-active-job]'),
         operatorLastRestError: root.querySelector('[data-operator-last-rest-error]'),
         operatorRecordingFormat: root.querySelector('[data-operator-recording-format]'),
+        operatorProgramStatus: root.querySelector('[data-operator-program-status]'),
     };
 
     function defaultMediaTransform() {
@@ -373,6 +382,9 @@
             const recordingMimeType = state.selectedMimeType || preferredMimeType();
             els.operatorRecordingFormat.textContent = recordingFormatLabel(recordingMimeType);
             els.operatorRecordingFormat.dataset.statusType = isWebmMime(recordingMimeType) ? 'warning' : 'success';
+        }
+        if (els.operatorProgramStatus) {
+            els.operatorProgramStatus.textContent = state.programStatusMessage || 'Program active';
         }
     }
 
@@ -975,13 +987,17 @@
             if (els.selectedCameraStatus) {
                 els.selectedCameraStatus.textContent = '';
                 els.selectedCameraStatus.dataset.statusType = 'info';
+                els.selectedCameraStatus.hidden = true;
             }
             return;
         }
         if (els.selectedCameraName) { els.selectedCameraName.value = source.label || ''; }
         if (els.selectedCameraStatus) {
-            els.selectedCameraStatus.textContent = cameraSourceStatusLabel(source.status) + (source.error ? ' · ' + source.error : '');
-            els.selectedCameraStatus.dataset.statusType = source.status === 'active' ? 'success' : (source.status === 'error' || source.status === 'unavailable' || source.status === 'disconnected' ? 'warning' : 'info');
+            const statusType = source.status === 'active' ? 'success' : (source.status === 'error' || source.status === 'unavailable' || source.status === 'disconnected' ? 'warning' : 'info');
+            const message = cameraSourceStatusLabel(source.status) + (source.error ? ' · ' + source.error : '');
+            els.selectedCameraStatus.textContent = message;
+            els.selectedCameraStatus.dataset.statusType = statusType;
+            els.selectedCameraStatus.hidden = source.status === 'active' && !source.error;
         }
         if (els.cameraSelect && source) {
             fillDeviceSelect(els.cameraSelect, state.availableVideoInputDevices || [], getStudioString('cameraSummaryLabel', 'Camera'), source.deviceId);
@@ -1288,9 +1304,6 @@
             els.toggleVideo.disabled = disabled;
             els.toggleVideo.textContent = state.liveVideoMuted ? 'Video On' : 'Video Off';
             els.toggleVideo.setAttribute('aria-pressed', state.liveVideoMuted ? 'true' : 'false');
-        }
-        if (els.programEndLive) {
-            els.programEndLive.disabled = !state.broadcastSession || state.broadcastEnding;
         }
         if (els.programLiveStatus) {
             if (!state.broadcastSession) {
@@ -2068,12 +2081,14 @@
         if (statusEl) { statusEl.setAttribute('aria-label', label + ' ' + getStudioString('audioInputStatusLabel', 'status') + ': ' + status); }
     }
 
-    function focusOrHighlightMixerChannel(inputId) {
+    function focusOrHighlightMixerChannel(inputId, options = {}) {
         const strip = els.audioInputChannels && els.audioInputChannels.querySelector('[data-audio-input-id="' + inputId + '"]');
         if (!strip) { return; }
         strip.classList.add('is-test-highlighted');
-        const target = strip.querySelector('[data-mixer-gain], [data-open-audio-input-settings], [data-mixer-mute]');
-        if (target && typeof target.focus === 'function') { target.focus({ preventScroll: false }); }
+        if (options.focus !== false) {
+            const target = strip.querySelector('[data-mixer-gain], [data-open-audio-input-settings], [data-mixer-mute]');
+            if (target && typeof target.focus === 'function') { target.focus({ preventScroll: false }); }
+        }
         window.setTimeout(() => { strip.classList.remove('is-test-highlighted'); }, 2500);
     }
 
@@ -3604,10 +3619,56 @@
         });
     }
 
+    function renderDeviceStatus() {
+        const message = state.deviceStatusMessage || '';
+        const type = state.deviceStatusType || 'info';
+        const persistent = type === 'warning' || type === 'error';
+        if (els.deviceStatus) {
+            els.deviceStatus.textContent = message;
+            els.deviceStatus.dataset.statusType = type;
+            els.deviceStatus.hidden = !message;
+        }
+        if (els.deviceToolsStatus) {
+            els.deviceToolsStatus.textContent = message;
+            els.deviceToolsStatus.dataset.statusType = type;
+            els.deviceToolsStatus.hidden = !message;
+        }
+        if (state.deviceStatusHideTimer) {
+            window.clearTimeout(state.deviceStatusHideTimer);
+            state.deviceStatusHideTimer = null;
+        }
+        if (message && !persistent) {
+            state.deviceStatusHideTimer = window.setTimeout(() => {
+                if (els.deviceStatus) {
+                    els.deviceStatus.hidden = true;
+                }
+                state.deviceStatusHideTimer = null;
+            }, 5000);
+        }
+    }
+
     function setDeviceStatus(message, type) {
-        if (!els.deviceStatus) { return; }
-        els.deviceStatus.textContent = message || '';
-        els.deviceStatus.dataset.statusType = type || 'info';
+        state.deviceStatusMessage = message || '';
+        state.deviceStatusType = type || 'info';
+        renderDeviceStatus();
+    }
+
+    function openDeviceToolsModal(event) {
+        if (!els.deviceToolsModal) { return; }
+        state.deviceToolsTrigger = event && event.currentTarget ? event.currentTarget : els.openDeviceTools;
+        updateActiveDeviceSummary();
+        renderDeviceStatus();
+        els.deviceToolsModal.hidden = false;
+        const target = (els.testCamera && !els.testCamera.disabled) ? els.testCamera : ((els.testMicrophone && !els.testMicrophone.disabled) ? els.testMicrophone : els.deviceToolsModal.querySelector('[data-close-device-tools]'));
+        if (target && typeof target.focus === 'function') { target.focus(); }
+    }
+
+    function closeDeviceToolsModal() {
+        if (!els.deviceToolsModal) { return; }
+        els.deviceToolsModal.hidden = true;
+        const trigger = state.deviceToolsTrigger || els.openDeviceTools;
+        state.deviceToolsTrigger = null;
+        if (trigger && typeof trigger.focus === 'function') { trigger.focus(); }
     }
 
     async function refreshDevices(options = {}) {
@@ -4817,10 +4878,7 @@
     }
 
     function setRecordingStatus(message, type) {
-        if (els.recordingStatus) {
-            els.recordingStatus.textContent = message || '';
-            els.recordingStatus.dataset.statusType = type || 'info';
-        }
+        setInlineStatus(els.recordingStatus, message, type);
     }
 
     function updateRecordingOperationStatus(message, type = 'info') {
@@ -5411,11 +5469,7 @@
 
 
     function setPublishingStatus(message, type) {
-        if (!els.publishingStatus) {
-            return;
-        }
-        els.publishingStatus.textContent = message || '';
-        els.publishingStatus.dataset.statusType = type || 'info';
+        setInlineStatus(els.publishingStatus, message, type);
     }
 
     function renderReplayLink(url) {
@@ -5779,6 +5833,13 @@
         if (els.recordingProgressLabel) {
             els.recordingProgressLabel.textContent = progress + '%';
         }
+        const showProgress = Boolean(state.activeJobId || isRecordingActive() || state.pendingUploads.size || state.failedChunks.size || state.finalChunkCount || state.finalizeInProgress);
+        if (els.recordingProgress) {
+            els.recordingProgress.hidden = !showProgress;
+        }
+        if (els.recordingProgressMeta) {
+            els.recordingProgressMeta.hidden = !showProgress;
+        }
         const recording = isRecordingActive();
         const stopping = Boolean(state.recordingStopRequested && !state.recordingStoppedAt);
         const hasFailedUploads = Boolean(state.failedChunks.size);
@@ -5810,6 +5871,10 @@
         state.audioInputTestRequestId++;
         stopStream(state.audioInputTestStream);
         state.audioInputTestStream = null;
+        if (state.deviceStatusHideTimer) {
+            window.clearTimeout(state.deviceStatusHideTimer);
+            state.deviceStatusHideTimer = null;
+        }
         if (options.releaseMediaSources === true) {
             if (window.VH360StudioBible && typeof window.VH360StudioBible.destroy === 'function') {
                 window.VH360StudioBible.destroy();
@@ -5917,11 +5982,15 @@
     }
 
 
+    function setInlineStatus(element, message, type) {
+        if (!element) { return; }
+        element.textContent = message || '';
+        element.dataset.statusType = type || 'info';
+        element.hidden = !message;
+    }
+
     function setBroadcastStatus(message, type) {
-        if (els.broadcastStatus) {
-            els.broadcastStatus.textContent = message;
-            els.broadcastStatus.dataset.statusType = type || 'info';
-        }
+        setInlineStatus(els.broadcastStatus, message, type);
     }
 
     function broadcastPayload() {
@@ -6335,7 +6404,7 @@
         }
         if (hasLiveAudioTrack(primary.stream)) {
             setDeviceStatus(getStudioString('primaryMicAlreadyActive', 'Primary microphone is already active. Watch the Mic/Aux meter for live levels.'), 'info');
-            focusOrHighlightMixerChannel(primary.id);
+            focusOrHighlightMixerChannel(primary.id, { focus: !(els.deviceToolsModal && !els.deviceToolsModal.hidden) });
             return;
         }
         if (state.audioInputTestStream) {
@@ -6354,7 +6423,7 @@
             const testTrack = stream.getAudioTracks()[0];
             const testDeviceLabel = testTrack && testTrack.label ? testTrack.label : selectedOptionLabel(els.micSelect, getStudioString('defaultMicrophone', 'default microphone'));
             setMixerChannelStream(primary.mixerChannelId, stream, { sourceId: 'microphone-test' });
-            focusOrHighlightMixerChannel(primary.id);
+            focusOrHighlightMixerChannel(primary.id, { focus: !(els.deviceToolsModal && !els.deviceToolsModal.hidden) });
             window.setTimeout(() => {
                 if (state.audioInputTestRequestId === requestId) {
                     stopStream(stream);
@@ -6511,6 +6580,11 @@
             if (event.key === 'Escape' && els.streamSettingsModal && !els.streamSettingsModal.hidden) {
                 event.preventDefault();
                 closeStreamSettingsModal();
+                return;
+            }
+            if (event.key === 'Escape' && els.deviceToolsModal && !els.deviceToolsModal.hidden) {
+                event.preventDefault();
+                closeDeviceToolsModal();
             }
         });
         if (els.addCameraSource) {
@@ -6772,9 +6846,10 @@
         if (els.removeCoverImage) { els.removeCoverImage.addEventListener('click', () => setCoverImage(0, '', { clear: true })); }
         if (els.broadcastEveryoneHost) { els.broadcastEveryoneHost.addEventListener('change', updateBroadcastRules); }
         if (els.broadcastRequirePasscode) { els.broadcastRequirePasscode.addEventListener('change', updateBroadcastRules); }
+        if (els.openDeviceTools) { els.openDeviceTools.addEventListener('click', openDeviceToolsModal); }
+        if (els.closeDeviceTools) { els.closeDeviceTools.forEach((button) => button.addEventListener('click', closeDeviceToolsModal)); }
         if (els.goLive) { els.goLive.addEventListener('click', goLive); }
         if (els.endLive) { els.endLive.addEventListener('click', endLive); }
-        if (els.programEndLive) { els.programEndLive.addEventListener('click', endLive); }
         if (els.toggleMic) { els.toggleMic.addEventListener('click', toggleLiveAudio); }
         if (els.toggleVideo) { els.toggleVideo.addEventListener('click', toggleLiveVideo); }
         if (els.studioFullscreen) { els.studioFullscreen.addEventListener('click', toggleStudioFullscreen); }
