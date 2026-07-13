@@ -404,7 +404,7 @@ body.vh360-studio-window-mode .vh360-studio-dashboard {
 .vh360-studio-stream-control-section { border: 1px solid var(--vh360-studio-panel-border); border-radius: 12px; display: grid; gap: 0.7rem; padding: 0.75rem; }
 .vh360-studio-stream-control-section__header { align-items: center; display: flex; justify-content: space-between; }
 .vh360-studio-stream-control-section__header h4 { color: var(--vh360-studio-text); font-size: 0.9rem; margin: 0; }
-.vh360-studio-modal__panel--stream-settings { display: flex; flex-direction: column; max-height: calc(100vh - 2rem); max-width: 760px; width: min(100%, 760px); }
+.vh360-studio-modal__panel.vh360-studio-modal__panel--stream-settings { display: flex; flex-direction: column; max-height: calc(100vh - 2rem); max-width: 760px; width: min(100%, 760px); }
 .vh360-studio-modal__panel--stream-settings .vh360-studio-modal__body { overflow-y: auto; }
 .vh360-studio-stream-settings-tabs { align-items: center; border-bottom: 1px solid var(--vh360-studio-panel-border); display: flex; gap: 0.4rem; padding-bottom: 0.5rem; }
 .vh360-studio-stream-settings-tab { background: transparent; border: 1px solid var(--vh360-studio-panel-border); border-radius: 999px; color: var(--vh360-studio-text-muted); cursor: pointer; font-weight: 800; padding: 0.45rem 0.75rem; }
