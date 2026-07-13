@@ -3391,7 +3391,7 @@
         const source = {
             id,
             sourceId: 'camera:' + id,
-            label: config.label || (config.isPrimary ? getStudioString('cameraOnlyLabel', 'Camera Only') : getStudioString('cameraSourceDefaultName', 'Camera {number}').replace('{number}', state.cameraSources.size + 1)),
+            label: config.label || (config.isPrimary ? getStudioString('cameraOne', 'Camera 1') : getStudioString('cameraSourceDefaultName', 'Camera {number}').replace('{number}', state.cameraSources.size + 1)),
             deviceId: config.deviceId || '',
             deviceLabel: config.deviceLabel || '',
             stream: null,
@@ -3442,7 +3442,7 @@
 
     function enforcePrimaryCameraSourceInvariant() {
         if (!state.cameraSources.size) {
-            createCameraSource({ id: 'camera-input-1', label: getStudioString('cameraOnlyLabel', 'Camera Only'), deviceId: storageGet(CAMERA_STORAGE_KEY), isPrimary: true }, { skipPersist: true });
+            createCameraSource({ id: 'camera-input-1', label: getStudioString('cameraOne', 'Camera 1'), deviceId: storageGet(CAMERA_STORAGE_KEY), isPrimary: true }, { skipPersist: true });
         }
         let primary = Array.from(state.cameraSources.values()).find((source) => source.isPrimary && !source.removed) || Array.from(state.cameraSources.values())[0];
         state.cameraSources.forEach((source) => { source.isPrimary = source === primary; });
@@ -3492,7 +3492,7 @@
         if (normalizedCameras.length) {
             normalizedCameras.forEach((source) => createCameraSource(source, { skipPersist: true }));
         } else {
-            createCameraSource({ id: 'camera-input-1', label: getStudioString('cameraOnlyLabel', 'Camera Only'), deviceId: storageGet(CAMERA_STORAGE_KEY), isPrimary: true }, { skipPersist: true });
+            createCameraSource({ id: 'camera-input-1', label: getStudioString('cameraOne', 'Camera 1'), deviceId: storageGet(CAMERA_STORAGE_KEY), isPrimary: true }, { skipPersist: true });
         }
         enforcePrimaryCameraSourceInvariant();
         saveCameraSourceConfiguration();

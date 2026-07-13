@@ -302,7 +302,7 @@ class VH360_Studio_Assets {
                 'livePartialAudioInputs' => __( 'Live will start with {active} audio input(s). {failed} configured input(s) are unavailable.', 'videohub360-studio' ),
                 'recordingPartialAudioInputs' => __( 'Recording will start with {active} audio input(s). {failed} configured input(s) are unavailable.', 'videohub360-studio' ),
                 'cameraSummaryLabel'    => __( 'Camera', 'videohub360-studio' ),
-                'cameraOnlyLabel'       => __( 'Camera Only', 'videohub360-studio' ),
+                'cameraOne'             => __( 'Camera 1', 'videohub360-studio' ),
                 'addVideoCaptureDevice' => __( 'Add Video Capture Device', 'videohub360-studio' ),
                 'cameraSourceDefaultName' => __( 'Camera {number}', 'videohub360-studio' ),
                 'chooseVideoDevice'     => __( 'Choose video device', 'videohub360-studio' ),
