@@ -2,13 +2,27 @@
     --vh360-studio-overlays-width: 400px;
     --vh360-studio-overlays-rail-width: 48px;
     --vh360-studio-overlays-resizer-width: 8px;
+    --vh360-studio-production-height: clamp(520px, 58vh, 760px);
     display: grid;
     gap: 0;
     grid-template-columns: minmax(0, 1fr) var(--vh360-studio-overlays-resizer-width) var(--vh360-studio-overlays-width);
     min-width: 0;
 }
 
-.vh360-studio-production-workspace > .vh360-studio-monitors { align-self: start; }
+.vh360-studio-production-workspace:not(.is-overlays-stacked) {
+    align-items: stretch;
+    min-height: var(--vh360-studio-production-height);
+}
+
+
+.vh360-studio-production-workspace > .vh360-studio-monitors { align-self: center; min-width: 0; width: 100%; }
+
+.vh360-studio-production-workspace:not(.is-overlays-stacked) > .vh360-studio-overlays-dock { align-self: stretch; height: 100%; }
+
+.vh360-studio-dashboard:fullscreen .vh360-studio-production-workspace,
+.vh360-studio-dashboard.is-studio-window .vh360-studio-production-workspace {
+    --vh360-studio-production-height: clamp(600px, 68vh, 900px);
+}
 
 .vh360-studio-overlays-resizer {
     align-self: stretch;
@@ -73,9 +87,10 @@
 .vh360-studio-production-workspace.is-overlays-collapsed:not(.is-overlays-stacked) .vh360-studio-overlays-kicker { display: none; }
 .vh360-studio-production-workspace.is-overlays-collapsed:not(.is-overlays-stacked) .vh360-studio-overlays-collapse { padding: 0.35rem; writing-mode: vertical-rl; }
 
-.vh360-studio-production-workspace.is-overlays-stacked { gap: 1rem; grid-template-columns: 1fr; }
+.vh360-studio-production-workspace.is-overlays-stacked { gap: 1rem; grid-template-columns: 1fr; min-height: 0; }
+.vh360-studio-production-workspace.is-overlays-stacked > .vh360-studio-monitors { align-self: stretch; }
 .vh360-studio-production-workspace.is-overlays-stacked .vh360-studio-overlays-resizer { display: none; }
-.vh360-studio-production-workspace.is-overlays-stacked .vh360-studio-overlays-dock { height: auto !important; }
+.vh360-studio-production-workspace.is-overlays-stacked .vh360-studio-overlays-dock { height: auto; }
 .vh360-studio-production-workspace.is-overlays-stacked.is-overlays-collapsed .vh360-studio-overlays-body { display: none; }
 
 @media (max-width: 640px) {
@@ -92,7 +107,7 @@
         grid-template-columns: 1fr;
     }
     .vh360-studio-production-workspace .vh360-studio-overlays-resizer { display: none; }
-    .vh360-studio-production-workspace .vh360-studio-overlays-dock { height: auto !important; }
+    .vh360-studio-production-workspace .vh360-studio-overlays-dock { height: auto; }
 }
 .vh360-studio-overlays-header-actions { align-items: center; display: flex; gap: 0.4rem; }
 .vh360-studio-overlays-tools { background: var(--vh360-studio-panel-bg); border: 1px solid var(--vh360-studio-panel-border); border-radius: 999px; color: var(--vh360-studio-text); cursor: pointer; font-size: 0.76rem; font-weight: 700; padding: 0.35rem 0.55rem; }

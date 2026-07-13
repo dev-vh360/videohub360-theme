@@ -79,7 +79,7 @@ $overlay_tool_descriptions = array(
 
     <div class="vh360-studio-workbench">
         <div class="vh360-studio-production-workspace" data-overlays-workspace>
-            <div class="vh360-studio-monitors" data-overlays-monitors>
+            <div class="vh360-studio-monitors">
             <section class="vh360-studio-monitor vh360-studio-monitor--preview" aria-labelledby="vh360-studio-preview-title">
                 <div class="vh360-studio-monitor-header">
                     <h3 id="vh360-studio-preview-title"><?php esc_html_e( 'Preview', 'videohub360-studio' ); ?></h3>
@@ -387,8 +387,8 @@ $overlay_tool_descriptions = array(
             </aside>
         </div>
 
-        <div class="vh360-studio-dock-grid">
-            <section class="vh360-studio-dock vh360-studio-dock--scenes" aria-labelledby="vh360-studio-scenes-title">
+        <div class="vh360-studio-dock-grid" data-studio-dock-layout>
+            <section id="vh360-studio-dock-scenes" class="vh360-studio-dock vh360-studio-dock--scenes" aria-labelledby="vh360-studio-scenes-title" data-studio-dock-panel="scenes">
                 <div class="vh360-studio-dock-header"><h3 id="vh360-studio-scenes-title"><?php esc_html_e( 'Scenes', 'videohub360-studio' ); ?></h3></div>
                 <div class="vh360-studio-dock-body">
                     <ul class="vh360-studio-scene-list" data-scene-list></ul>
@@ -431,7 +431,9 @@ $overlay_tool_descriptions = array(
                 </div>
             </section>
 
-            <section class="vh360-studio-dock vh360-studio-dock--sources" aria-labelledby="vh360-studio-sources-title">
+            <div class="vh360-studio-dock-resizer" role="separator" tabindex="0" aria-orientation="vertical" aria-controls="vh360-studio-dock-scenes vh360-studio-dock-sources" aria-label="<?php esc_attr_e( 'Resize Scenes and Sources panels', 'videohub360-studio' ); ?>" data-studio-dock-resizer data-left-dock="scenes" data-right-dock="sources"></div>
+
+            <section id="vh360-studio-dock-sources" class="vh360-studio-dock vh360-studio-dock--sources" aria-labelledby="vh360-studio-sources-title" data-studio-dock-panel="sources">
                 <div class="vh360-studio-dock-header">
                     <h3 id="vh360-studio-sources-title"><?php esc_html_e( 'Sources', 'videohub360-studio' ); ?></h3>
                     <div class="vh360-studio-dock-header-actions">
@@ -457,7 +459,9 @@ $overlay_tool_descriptions = array(
                 </div>
             </section>
 
-            <section class="vh360-studio-dock vh360-studio-dock--audio" aria-labelledby="vh360-studio-audio-title">
+            <div class="vh360-studio-dock-resizer" role="separator" tabindex="0" aria-orientation="vertical" aria-controls="vh360-studio-dock-sources vh360-studio-dock-audio" aria-label="<?php esc_attr_e( 'Resize Sources and Audio Mixer panels', 'videohub360-studio' ); ?>" data-studio-dock-resizer data-left-dock="sources" data-right-dock="audio"></div>
+
+            <section id="vh360-studio-dock-audio" class="vh360-studio-dock vh360-studio-dock--audio" aria-labelledby="vh360-studio-audio-title" data-studio-dock-panel="audio">
                 <div class="vh360-studio-dock-header"><h3 id="vh360-studio-audio-title"><?php esc_html_e( 'Audio Mixer', 'videohub360-studio' ); ?></h3><button type="button" class="vh360-studio-button vh360-studio-button--ghost vh360-studio-button--compact" data-add-audio-input><?php esc_html_e( 'Add Audio Input', 'videohub360-studio' ); ?></button></div>
                 <div class="vh360-studio-dock-body">
                     <?php
@@ -503,7 +507,9 @@ $overlay_tool_descriptions = array(
                 </div>
             </section>
 
-            <section class="vh360-studio-dock vh360-studio-dock--stream" aria-labelledby="vh360-studio-live-title">
+            <div class="vh360-studio-dock-resizer" role="separator" tabindex="0" aria-orientation="vertical" aria-controls="vh360-studio-dock-audio vh360-studio-dock-stream" aria-label="<?php esc_attr_e( 'Resize Audio Mixer and Stream Controls panels', 'videohub360-studio' ); ?>" data-studio-dock-resizer data-left-dock="audio" data-right-dock="stream"></div>
+
+            <section id="vh360-studio-dock-stream" class="vh360-studio-dock vh360-studio-dock--stream" aria-labelledby="vh360-studio-live-title" data-studio-dock-panel="stream">
                 <div class="vh360-studio-dock-header">
                     <h3 id="vh360-studio-live-title"><?php esc_html_e( 'Stream Controls', 'videohub360-studio' ); ?></h3>
                     <button type="button" class="vh360-studio-button vh360-studio-button--ghost vh360-studio-button--compact" data-open-stream-settings><?php esc_html_e( 'Settings', 'videohub360-studio' ); ?></button>

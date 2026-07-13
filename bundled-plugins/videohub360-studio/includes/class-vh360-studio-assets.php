@@ -30,6 +30,7 @@ class VH360_Studio_Assets {
         $bible_css_path          = 'assets/css/studio-bible.css';
         $js_path                 = 'assets/js/studio-dashboard.js';
         $overlays_workspace_path = 'assets/js/studio-overlays-workspace.js';
+        $dock_layout_path         = 'assets/js/studio-dock-layout.js';
         $overlay_engine_path     = 'assets/js/studio-overlay-engine.js';
         $overlay_status_path     = 'assets/js/studio-overlay-status.js';
         $lower_thirds_path       = 'assets/js/studio-lower-thirds.js';
@@ -145,6 +146,14 @@ class VH360_Studio_Assets {
             $this->asset_version( $overlays_workspace_path ),
             true
         );
+
+        wp_enqueue_script(
+            'vh360-studio-dock-layout',
+            VH360_STUDIO_PLUGIN_URL . $dock_layout_path,
+            array( 'vh360-studio-overlays-workspace' ),
+            $this->asset_version( $dock_layout_path ),
+            true
+        );
     }
 
     private function is_studio_dashboard_tab() {
@@ -181,6 +190,9 @@ class VH360_Studio_Assets {
                 'overlayToolsSaveFailed' => __( 'Overlay tools could not be saved. Please try again.', 'videohub360-studio' ),
                 'overlayToolsConfirmDisable' => __( 'One or more disabled overlay tools are active in Preview or Program. Their active overlays will be removed from Preview and Program. Continue?', 'videohub360-studio' ),
                 'overlayToolsNoneEnabled' => __( 'No overlay tools enabled.', 'videohub360-studio' ),
+                'lowerDockLayout'       => array(
+                    'valueText' => __( '%s %d pixels, %s %d pixels', 'videohub360-studio' ),
+                ),
                 'browserUnsupported'     => __( 'This browser is missing required Studio features.', 'videohub360-studio' ),
                 'cameraBlocked'          => __( 'Camera access was blocked. Check browser permissions and try again.', 'videohub360-studio' ),
                 'microphoneBlocked'      => __( 'Microphone access was blocked. Check browser permissions and try again.', 'videohub360-studio' ),
@@ -290,7 +302,7 @@ class VH360_Studio_Assets {
                 'livePartialAudioInputs' => __( 'Live will start with {active} audio input(s). {failed} configured input(s) are unavailable.', 'videohub360-studio' ),
                 'recordingPartialAudioInputs' => __( 'Recording will start with {active} audio input(s). {failed} configured input(s) are unavailable.', 'videohub360-studio' ),
                 'cameraSummaryLabel'    => __( 'Camera', 'videohub360-studio' ),
-                'cameraOnlyLabel'       => __( 'Camera Only', 'videohub360-studio' ),
+                'cameraOne'             => __( 'Camera 1', 'videohub360-studio' ),
                 'addVideoCaptureDevice' => __( 'Add Video Capture Device', 'videohub360-studio' ),
                 'cameraSourceDefaultName' => __( 'Camera {number}', 'videohub360-studio' ),
                 'chooseVideoDevice'     => __( 'Choose video device', 'videohub360-studio' ),

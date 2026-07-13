@@ -76,7 +76,6 @@
         );
         this.previousEnabledModules = this.enabledModules.slice();
 
-        this.monitors = workspace.querySelector('[data-overlays-monitors]');
         this.resizer = workspace.querySelector('[data-overlays-resizer]');
         this.dock = workspace.querySelector('[data-overlays-dock]');
         this.body = workspace.querySelector('[data-overlays-body]');
@@ -196,11 +195,6 @@
 
         this.workspaceObserver = new ResizeObserver(() => this.refreshLayout());
         this.workspaceObserver.observe(this.workspace);
-
-        if (this.monitors) {
-            this.monitorObserver = new ResizeObserver(() => this.matchDockHeight());
-            this.monitorObserver.observe(this.monitors);
-        }
     };
 
     Controller.prototype.refreshLayout = function () {
@@ -211,19 +205,8 @@
             this.workspace.classList.toggle('is-overlays-stacked', stacked);
             this.dispatchLayoutChange();
         }
-        this.matchDockHeight();
     };
 
-    Controller.prototype.matchDockHeight = function () {
-        if (!this.dock || !this.monitors) {
-            return;
-        }
-        if (this.isStacked) {
-            this.dock.style.height = '';
-            return;
-        }
-        this.dock.style.height = `${Math.round(this.monitors.getBoundingClientRect().height)}px`;
-    };
 
     Controller.prototype.applyWidth = function (width, persist, notify) {
         this.width = clamp(parseInt(width, 10) || CONFIG.defaultWidth, CONFIG.minWidth, CONFIG.maxWidth);
