@@ -192,7 +192,6 @@ class VH360_Studio_Assets {
                 'overlayToolsNoneEnabled' => __( 'No overlay tools enabled.', 'videohub360-studio' ),
                 'lowerDockLayout'       => array(
                     'valueText' => __( '%s %d pixels, %s %d pixels', 'videohub360-studio' ),
-                    'reset'     => __( 'Lower Studio panel layout reset.', 'videohub360-studio' ),
                 ),
                 'browserUnsupported'     => __( 'This browser is missing required Studio features.', 'videohub360-studio' ),
                 'cameraBlocked'          => __( 'Camera access was blocked. Check browser permissions and try again.', 'videohub360-studio' ),

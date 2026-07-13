@@ -79,7 +79,7 @@ $overlay_tool_descriptions = array(
 
     <div class="vh360-studio-workbench">
         <div class="vh360-studio-production-workspace" data-overlays-workspace>
-            <div class="vh360-studio-monitors" data-overlays-monitors>
+            <div class="vh360-studio-monitors">
             <section class="vh360-studio-monitor vh360-studio-monitor--preview" aria-labelledby="vh360-studio-preview-title">
                 <div class="vh360-studio-monitor-header">
                     <h3 id="vh360-studio-preview-title"><?php esc_html_e( 'Preview', 'videohub360-studio' ); ?></h3>

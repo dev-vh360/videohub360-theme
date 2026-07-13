@@ -52,11 +52,31 @@
         }
         const rounded = {};
         let used = 0;
+        const targetTotal = Math.round(availableWidth);
         CONFIG.order.forEach((key, index) => {
-            if (index === CONFIG.order.length - 1) { rounded[key] = Math.max(CONFIG.minimumWidths[key], Math.round(availableWidth - used)); }
+            if (index === CONFIG.order.length - 1) { rounded[key] = Math.max(CONFIG.minimumWidths[key], targetTotal - used); }
             else { rounded[key] = Math.max(CONFIG.minimumWidths[key], Math.round(widths[key])); used += rounded[key]; }
         });
-        return rounded;
+
+        let difference = sumWidths(rounded) - targetTotal;
+        if (difference > 0) {
+            for (let index = CONFIG.order.length - 1; index >= 0 && difference > 0; index -= 1) {
+                const key = CONFIG.order[index];
+                const reducible = Math.max(0, rounded[key] - CONFIG.minimumWidths[key]);
+                const reduction = Math.min(reducible, difference);
+                rounded[key] -= reduction;
+                difference -= reduction;
+            }
+        }
+
+        difference = targetTotal - sumWidths(rounded);
+        if (difference > 0) {
+            const preferred = ['audio', 'stream', 'sources', 'scenes'];
+            const key = preferred.find((panel) => CONFIG.order.indexOf(panel) !== -1) || CONFIG.order[CONFIG.order.length - 1];
+            rounded[key] += difference;
+        }
+
+        return sumWidths(rounded) === targetTotal ? rounded : null;
     }
 
     function Controller(grid) {
@@ -89,7 +109,7 @@
         this.scheduleLayout();
     };
 
-    Controller.prototype.availableWidth = function () { return Math.floor(this.grid.getBoundingClientRect().width) - (this.resizers.length * CONFIG.resizerWidth); };
+    Controller.prototype.availableWidth = function () { return Math.max(0, Math.floor(this.grid.getBoundingClientRect().width) - (this.resizers.length * CONFIG.resizerWidth)); };
     Controller.prototype.isDesktop = function () { return window.matchMedia(`(min-width: ${CONFIG.desktopBreakpoint}px)`).matches; };
 
     Controller.prototype.readSavedRatios = function () {
@@ -204,6 +224,12 @@
     Controller.prototype.onKeydown = function (event, resizer) {
         if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].indexOf(event.key) === -1) { return; }
         event.preventDefault();
+        if (!this.widths) {
+            this.applyLayout();
+        }
+        if (!this.widths) {
+            return;
+        }
         const left = resizer.dataset.leftDock;
         const right = resizer.dataset.rightDock;
         const total = this.widths[left] + this.widths[right];

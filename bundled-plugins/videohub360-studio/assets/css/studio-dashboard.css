@@ -288,6 +288,9 @@ body.vh360-studio-window-mode .vh360-studio-dashboard {
     --vh360-studio-dock-resizer-width: 16px;
     column-gap: 0;
     display: grid;
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
     grid-template-columns: var(--vh360-studio-dock-scenes-width, 220px) var(--vh360-studio-dock-resizer-width) var(--vh360-studio-dock-sources-width, 260px) var(--vh360-studio-dock-resizer-width) var(--vh360-studio-dock-audio-width, minmax(260px, 1fr)) var(--vh360-studio-dock-resizer-width) var(--vh360-studio-dock-stream-width, minmax(280px, 1fr));
     row-gap: 1rem;
 }
