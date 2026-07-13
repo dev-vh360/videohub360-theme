@@ -377,7 +377,9 @@ class VH360_Demo_Importer {
     private function ensure_required_plugins() {
         $this->logger->info('Checking required plugins');
         
-        if (empty($this->current_demo['required_plugins'])) {
+        $required_plugins = vh360_ss_get_effective_required_plugins($this->current_demo['required_plugins'] ?? array());
+
+        if (empty($required_plugins)) {
             $this->logger->info('No required plugins specified');
             return true;
         }
@@ -387,7 +389,7 @@ class VH360_Demo_Importer {
         // Track plugins that were newly installed during this import and successfully activated
         $installed_plugins = array();
         
-        foreach ($this->current_demo['required_plugins'] as $plugin_slug) {
+        foreach ($required_plugins as $plugin_slug) {
             // Check if already active
             if (vh360_ss_is_plugin_active($plugin_slug)) {
                 $this->logger->info(sprintf('Plugin already active: %s', $plugin_slug));

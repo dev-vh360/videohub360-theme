@@ -190,7 +190,7 @@ class VH360_Demo_Registry {
             'thumbnail' => isset($demo['thumbnail']) ? esc_url_raw($demo['thumbnail']) : '',
             'preview_url' => isset($demo['preview_url']) ? esc_url_raw($demo['preview_url']) : '',
             'package_manifest_url' => esc_url_raw($demo['package_manifest_url']),
-            'required_plugins' => isset($demo['required_plugins']) && is_array($demo['required_plugins']) ? array_map('sanitize_text_field', $demo['required_plugins']) : array(),
+            'required_plugins' => vh360_ss_get_effective_required_plugins( isset($demo['required_plugins']) && is_array($demo['required_plugins']) ? $demo['required_plugins'] : array() ),
             'recommended_plugins' => isset($demo['recommended_plugins']) && is_array($demo['recommended_plugins']) ? array_map('sanitize_text_field', $demo['recommended_plugins']) : array(),
             'min_theme_version' => isset($demo['min_theme_version']) ? sanitize_text_field($demo['min_theme_version']) : '1.0.0',
             'category' => isset($demo['category']) ? sanitize_text_field($demo['category']) : 'general',
@@ -251,7 +251,7 @@ class VH360_Demo_Registry {
         }
         
         // Check required plugins
-        foreach ($demo['required_plugins'] as $plugin_slug) {
+        foreach (vh360_ss_get_effective_required_plugins($demo['required_plugins'] ?? array()) as $plugin_slug) {
             if (!vh360_ss_is_plugin_active($plugin_slug)) {
                 $issues[] = sprintf(
                     __('Required plugin not active: %s', 'videohub360-starter-sites'),

@@ -281,11 +281,9 @@ class VH360_Demo_Post_Import {
         }
         
         // Check if required plugins are active
-        if (isset($manifest['required_plugins'])) {
-            foreach ($manifest['required_plugins'] as $plugin_slug) {
-                if (!vh360_ss_is_plugin_active($plugin_slug)) {
-                    $issues[] = sprintf(__('Required plugin not active: %s', 'videohub360-starter-sites'), $plugin_slug);
-                }
+        foreach (vh360_ss_get_effective_required_plugins($manifest['required_plugins'] ?? array()) as $plugin_slug) {
+            if (!vh360_ss_is_plugin_active($plugin_slug)) {
+                $issues[] = sprintf(__('Required plugin not active: %s', 'videohub360-starter-sites'), $plugin_slug);
             }
         }
         
