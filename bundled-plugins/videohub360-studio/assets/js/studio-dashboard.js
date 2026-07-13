@@ -128,6 +128,9 @@
         featuredImageId: 0,
         featuredImageUrl: '',
         clearFeaturedImage: false,
+        streamSettingsModalTrigger: null,
+        streamSettingsActiveTab: 'live',
+        coverImageUploadActive: false,
     };
 
     const els = {
@@ -190,18 +193,10 @@
         retryChunks: root.querySelector('[data-retry-chunks]'),
         finalizeRecording: root.querySelector('[data-finalize-recording]'),
         recordingStatus: root.querySelector('[data-recording-status]'),
-        recordingJobId: root.querySelector('[data-recording-job-id]'),
-        recordingMime: root.querySelector('[data-recording-mime]'),
         recordingTimer: root.querySelector('[data-recording-timer]'),
-        recordingUploaded: root.querySelector('[data-recording-uploaded]'),
-        recordingPending: root.querySelector('[data-recording-pending]'),
-        recordingFailed: root.querySelector('[data-recording-failed]'),
-        recordingBytes: root.querySelector('[data-recording-bytes]'),
-        recordingFinalizeStatus: root.querySelector('[data-recording-finalize-status]'),
         recordingProgress: root.querySelector('[data-recording-progress]'),
         recordingProgressLabel: root.querySelector('[data-recording-progress-label]'),
         recordingSummaryStatus: root.querySelector('[data-recording-summary-status]'),
-        replayRawUrl: root.querySelector('[data-replay-raw-url]'),
         publishReplay: root.querySelector('[data-publish-replay]'),
         checkReplayStatus: root.querySelector('[data-check-replay-status]'),
         publishingStatus: root.querySelector('[data-publishing-status]'),
@@ -230,6 +225,12 @@
         toggleVideo: root.querySelector('[data-studio-toggle-video]'),
         programLiveStatus: root.querySelector('[data-studio-program-live-status]'),
         broadcastStatus: root.querySelector('[data-broadcast-status]'),
+        streamSettingsModal: root.querySelector('[data-stream-settings-modal]'),
+        openStreamSettings: root.querySelector('[data-open-stream-settings]'),
+        closeStreamSettings: root.querySelectorAll('[data-close-stream-settings]'),
+        streamSettingsTabs: root.querySelectorAll('[data-stream-settings-tab]'),
+        streamSettingsPanels: root.querySelectorAll('[data-stream-settings-panel]'),
+        streamSettingsStatus: root.querySelector('[data-stream-settings-status]'),
         agoraLocalPreview: root.querySelector('[data-agora-local-preview]'),
         viewerLinkWrap: root.querySelector('[data-viewer-link-wrap]'),
         openViewerLink: root.querySelector('[data-open-viewer-link]'),
@@ -2710,6 +2711,106 @@
     }
 
 
+    function setStreamSettingsStatus(message, type) {
+        if (!els.streamSettingsStatus) {
+            return;
+        }
+        els.streamSettingsStatus.textContent = message || '';
+        els.streamSettingsStatus.dataset.statusType = type || 'info';
+        els.streamSettingsStatus.hidden = !message;
+    }
+
+    function setCoverImageStatus(message, type) {
+        setBroadcastStatus(message, type);
+        setStreamSettingsStatus(message, type);
+    }
+
+    function setActiveStreamSettingsTab(tab, options = {}) {
+        const requested = tab || 'live';
+        const tabs = Array.from(els.streamSettingsTabs || []);
+        const panels = Array.from(els.streamSettingsPanels || []);
+        const activeTab = tabs.some((button) => button.dataset.streamSettingsTab === requested) ? requested : 'live';
+        state.streamSettingsActiveTab = activeTab;
+
+        tabs.forEach((button) => {
+            const active = button.dataset.streamSettingsTab === activeTab;
+            button.setAttribute('aria-selected', active ? 'true' : 'false');
+            button.tabIndex = active ? 0 : -1;
+        });
+
+        panels.forEach((panel) => {
+            panel.hidden = panel.dataset.streamSettingsPanel !== activeTab;
+        });
+
+        if (options.focus === true) {
+            const activeButton = tabs.find((button) => button.dataset.streamSettingsTab === activeTab);
+            if (activeButton && typeof activeButton.focus === 'function') {
+                activeButton.focus();
+            }
+        }
+    }
+
+    function focusStreamSettingsContent() {
+        const activePanel = Array.from(els.streamSettingsPanels || []).find((panel) => panel.dataset.streamSettingsPanel === state.streamSettingsActiveTab);
+        const focusTarget = activePanel && activePanel.querySelector('input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])');
+        if (focusTarget && typeof focusTarget.focus === 'function') {
+            focusTarget.focus();
+            return;
+        }
+        const activeTab = Array.from(els.streamSettingsTabs || []).find((button) => button.dataset.streamSettingsTab === state.streamSettingsActiveTab);
+        if (activeTab && typeof activeTab.focus === 'function') {
+            activeTab.focus();
+        }
+    }
+
+    function openStreamSettingsModal(trigger) {
+        if (!els.streamSettingsModal) {
+            return;
+        }
+        state.streamSettingsModalTrigger = trigger || els.openStreamSettings || null;
+        if (!state.coverImageUploadActive) {
+            setStreamSettingsStatus('', 'info');
+        }
+        els.streamSettingsModal.hidden = false;
+        setActiveStreamSettingsTab(state.streamSettingsActiveTab || 'live');
+        window.setTimeout(focusStreamSettingsContent, 0);
+    }
+
+    function closeStreamSettingsModal() {
+        if (!els.streamSettingsModal) {
+            return;
+        }
+        els.streamSettingsModal.hidden = true;
+        const trigger = state.streamSettingsModalTrigger || els.openStreamSettings;
+        state.streamSettingsModalTrigger = null;
+        if (trigger && typeof trigger.focus === 'function') {
+            trigger.focus();
+        }
+    }
+
+    function handleStreamSettingsTabKeydown(event) {
+        const tabs = Array.from(els.streamSettingsTabs || []);
+        const currentIndex = tabs.indexOf(event.currentTarget);
+        if (currentIndex === -1) {
+            return;
+        }
+        let nextIndex = currentIndex;
+        if (event.key === 'ArrowRight') {
+            nextIndex = (currentIndex + 1) % tabs.length;
+        } else if (event.key === 'ArrowLeft') {
+            nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+        } else if (event.key === 'Home') {
+            nextIndex = 0;
+        } else if (event.key === 'End') {
+            nextIndex = tabs.length - 1;
+        } else {
+            return;
+        }
+        event.preventDefault();
+        setActiveStreamSettingsTab(tabs[nextIndex].dataset.streamSettingsTab, { focus: true });
+    }
+
+
     function openDiagnosticsModal(trigger) {
         els.lastDiagnosticsTrigger = trigger || null;
         if (!els.diagnosticsModal) {
@@ -2742,6 +2843,24 @@
         els.diagnosticsModal.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') {
                 closeDiagnosticsModal();
+            }
+        });
+    }
+    if (els.openStreamSettings) {
+        els.openStreamSettings.addEventListener('click', (event) => openStreamSettingsModal(event.currentTarget));
+    }
+    els.closeStreamSettings.forEach((button) => {
+        button.addEventListener('click', closeStreamSettingsModal);
+    });
+    els.streamSettingsTabs.forEach((button) => {
+        button.addEventListener('click', () => setActiveStreamSettingsTab(button.dataset.streamSettingsTab, { focus: true }));
+        button.addEventListener('keydown', handleStreamSettingsTabKeydown);
+    });
+    if (els.streamSettingsModal) {
+        els.streamSettingsModal.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                closeStreamSettingsModal();
             }
         });
     }
@@ -4919,7 +5038,6 @@
             state.pendingUploads.delete(index);
             state.failedChunks.delete(index);
             (summary.received_chunk_indexes || []).forEach((item) => state.uploadedChunks.add(Number(item)));
-            if (els.recordingBytes) { els.recordingBytes.textContent = String(summary.received_bytes || 0); }
         } catch (error) {
             state.pendingUploads.delete(index);
             state.failedChunks.set(index, blob);
@@ -5138,17 +5256,14 @@
         }
         try {
             state.finalizeInProgress = true;
-            if (els.recordingFinalizeStatus) { els.recordingFinalizeStatus.textContent = strings.finalizing; }
             if (els.finalizeRecording) { els.finalizeRecording.disabled = true; }
             const job = await api('/jobs/' + state.activeJobId + '/recording/finalize', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ expected_chunks: state.finalChunkCount }) });
             state.currentJobStatus = job.status || 'processing';
             state.currentStorageProvider = job.storage_provider || state.currentStorageProvider;
             setRecordingStatus(getStudioString('replayPreparedReadyToPublish', 'Replay prepared. You can publish it now.'), 'success');
                 updatePublishingButtons();
-            if (els.recordingFinalizeStatus) { els.recordingFinalizeStatus.textContent = job.status || 'processing'; }
         } catch (error) {
             setRecordingStatus(error.message || strings.chunkUploadFailed, 'error');
-            if (els.recordingFinalizeStatus) { els.recordingFinalizeStatus.textContent = error.message || strings.chunkUploadFailed; }
         } finally {
             state.finalizeInProgress = false;
             renderRecordingState();
@@ -5176,12 +5291,6 @@
         els.replayLink.href = url;
         els.replayLink.textContent = 'Open replay';
         els.replayLinkWrap.hidden = false;
-    }
-
-    function renderReplayRawUrl(url) {
-        if (els.replayRawUrl) {
-            els.replayRawUrl.textContent = url || '—';
-        }
     }
 
     function normalizePublishStatus(result) {
@@ -5392,12 +5501,10 @@
                 result = await publishReplayViaServerRelay();
             }
             state.currentPublishResult = result;
-            const rawPlaybackUrl = result.playback_url || '';
             const publicReplayUrl = resolvePublicReplayUrl(result);
             const published = hasPublicReplay(result);
             const failed = isPublishFailure(result);
             state.currentJobStatus = published ? 'ready' : (failed ? 'failed' : (result.job_status || result.status || result.publish_provider_status || state.currentJobStatus));
-            renderReplayRawUrl(rawPlaybackUrl);
             renderReplayLink(publicReplayUrl);
             if (published) {
                 setPublishingStatus(strings.publishComplete, 'success');
@@ -5434,11 +5541,9 @@
         try {
             const result = await api('/jobs/' + state.activeJobId + '/publishing/status', { method: 'GET' });
             state.currentPublishResult = result;
-            const rawPlaybackUrl = result.playback_url || '';
             const publicReplayUrl = resolvePublicReplayUrl(result);
             const published = hasPublicReplay(result);
             state.currentJobStatus = published ? 'ready' : (isPublishFailure(result) ? 'failed' : (result.job_status || result.status || result.publish_provider_status || state.currentJobStatus));
-            renderReplayRawUrl(rawPlaybackUrl);
             renderReplayLink(publicReplayUrl);
             if (published) {
                 setPublishingStatus(strings.publishComplete, 'success');
@@ -5516,12 +5621,7 @@
     }
 
     function renderRecordingState() {
-        if (els.recordingJobId) { els.recordingJobId.textContent = state.activeJobId || '—'; }
-        if (els.recordingMime) { els.recordingMime.textContent = state.selectedMimeType || preferredMimeType() || '—'; }
         updateOperatorStatus();
-        if (els.recordingUploaded) { els.recordingUploaded.textContent = String(state.uploadedChunks.size); }
-        if (els.recordingPending) { els.recordingPending.textContent = String(state.pendingUploads.size); }
-        if (els.recordingFailed) { els.recordingFailed.textContent = String(state.failedChunks.size); }
         if (els.recordingSummaryStatus) { els.recordingSummaryStatus.textContent = recordingSummaryStatus(); }
         if (els.recordingTimer) {
             let seconds = 0;
@@ -5633,7 +5733,7 @@
 
     function selectCoverImage() {
         if (!els.coverImageFile) {
-            setBroadcastStatus('Cover image upload is unavailable.', 'error');
+            setCoverImageStatus('Cover image upload is unavailable.', 'error');
             return;
         }
         els.coverImageFile.click();
@@ -5646,7 +5746,7 @@
         }
 
         if (!file.type || file.type.indexOf('image/') !== 0) {
-            setBroadcastStatus('Choose a valid image file.', 'error');
+            setCoverImageStatus('Choose a valid image file.', 'error');
             els.coverImageFile.value = '';
             return;
         }
@@ -5657,18 +5757,20 @@
         if (els.selectCoverImage) {
             els.selectCoverImage.disabled = true;
         }
-        setBroadcastStatus('Uploading cover image…', 'info');
+        state.coverImageUploadActive = true;
+        setCoverImageStatus('Uploading cover image…', 'info');
 
         try {
             const response = await api('/cover-image', { method: 'POST', body: formData });
             setCoverImage(response.attachment_id || 0, response.url || response.thumbnail_url || '', { clear: false });
-            setBroadcastStatus('Cover image uploaded.', 'success');
+            setCoverImageStatus('Cover image uploaded.', 'success');
         } catch (error) {
-            setBroadcastStatus((error && error.message) || 'Cover image upload failed.', 'error');
+            setCoverImageStatus((error && error.message) || 'Cover image upload failed.', 'error');
         } finally {
             if (els.selectCoverImage) {
                 els.selectCoverImage.disabled = false;
             }
+            state.coverImageUploadActive = false;
             if (els.coverImageFile) {
                 els.coverImageFile.value = '';
             }
@@ -6260,6 +6362,11 @@
             if (event.key === 'Escape' && els.mediaSourceModal && !els.mediaSourceModal.hidden) {
                 event.preventDefault();
                 closeMediaSourceModal();
+                return;
+            }
+            if (event.key === 'Escape' && els.streamSettingsModal && !els.streamSettingsModal.hidden) {
+                event.preventDefault();
+                closeStreamSettingsModal();
             }
         });
         if (els.addCameraSource) {

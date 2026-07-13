@@ -468,13 +468,6 @@ $overlay_tool_descriptions = array(
                         <button type="button" class="vh360-studio-button vh360-studio-button--ghost" data-test-microphone><?php esc_html_e( 'Test Microphone', 'videohub360-studio' ); ?></button>
                     </div>
                     <p class="vh360-studio-device-active" data-active-devices><?php esc_html_e( 'Camera: Permission required · Microphone: Permission required', 'videohub360-studio' ); ?></p>
-                    <label for="vh360-studio-quality-select"><?php esc_html_e( 'Quality preset', 'videohub360-studio' ); ?></label>
-                    <select id="vh360-studio-quality-select" data-quality-select>
-                        <?php foreach ( $quality_presets as $preset_id => $preset ) : ?>
-                            <option value="<?php echo esc_attr( $preset_id ); ?>" <?php selected( $preset_id, $default_preset ); ?>><?php echo esc_html( $preset['label'] ); ?><?php if ( ! empty( $preset['recommended'] ) ) : ?> <?php esc_html_e( '(recommended)', 'videohub360-studio' ); ?><?php endif; ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <p class="vh360-studio-help" data-quality-details><?php echo esc_html( $default_label ); ?> · <?php esc_html_e( 'Higher quality creates larger files and longer uploads; lower presets remain available for smaller recordings.', 'videohub360-studio' ); ?></p>
                 </div>
             </section>
 
@@ -527,12 +520,62 @@ $overlay_tool_descriptions = array(
             </section>
 
             <section class="vh360-studio-dock" aria-labelledby="vh360-studio-live-title">
-                <div class="vh360-studio-dock-header"><h3 id="vh360-studio-live-title"><?php esc_html_e( 'Stream Controls', 'videohub360-studio' ); ?></h3></div>
-                <div class="vh360-studio-dock-body">
-                    <p class="vh360-studio-help"><?php esc_html_e( 'Videohub360 handles the live connection automatically. Studio broadcasts the Program output and mixed Studio audio while viewers watch the public single video page.', 'videohub360-studio' ); ?></p>
+                <div class="vh360-studio-dock-header">
+                    <h3 id="vh360-studio-live-title"><?php esc_html_e( 'Stream Controls', 'videohub360-studio' ); ?></h3>
+                    <button type="button" class="vh360-studio-button vh360-studio-button--ghost vh360-studio-button--compact" data-open-stream-settings><?php esc_html_e( 'Settings', 'videohub360-studio' ); ?></button>
+                </div>
+                <div class="vh360-studio-dock-body vh360-studio-stream-controls">
+                    <div class="vh360-studio-stream-control-section">
+                        <div class="vh360-studio-stream-control-section__header"><h4><?php esc_html_e( 'Live', 'videohub360-studio' ); ?></h4></div>
+                        <p class="vh360-studio-help"><?php esc_html_e( 'Videohub360 handles the live connection automatically. Studio broadcasts the Program output and mixed Studio audio while viewers watch the public single video page.', 'videohub360-studio' ); ?></p>
+                        <div class="vh360-studio-actions">
+                            <button type="button" class="vh360-studio-button vh360-studio-button--primary" data-go-live><?php esc_html_e( 'Go Live', 'videohub360-studio' ); ?></button>
+                            <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-end-live disabled><?php esc_html_e( 'End Live', 'videohub360-studio' ); ?></button>
+                        </div>
+                        <div class="vh360-studio-job-result" aria-live="polite" data-broadcast-status></div>
+                    </div>
+                    <div class="vh360-studio-stream-control-section">
+                        <div class="vh360-studio-stream-control-section__header"><h4><?php esc_html_e( 'Recording & Replay', 'videohub360-studio' ); ?></h4></div>
+                    <div class="vh360-studio-workflow-summary">
+                        <div class="vh360-studio-workflow-summary__status"><strong><?php esc_html_e( 'Status', 'videohub360-studio' ); ?></strong><span data-recording-summary-status><?php esc_html_e( 'Ready to record', 'videohub360-studio' ); ?></span></div>
+                        <div><strong><?php esc_html_e( 'Duration', 'videohub360-studio' ); ?></strong><span data-recording-timer>00:00</span></div>
+                        <div><strong><?php esc_html_e( 'Progress', 'videohub360-studio' ); ?></strong><span data-recording-progress-label>0%</span></div>
+                    </div>
+                    <progress class="vh360-studio-progress" max="100" value="0" data-recording-progress></progress>
+                    <div class="vh360-studio-actions">
+                        <button type="button" class="vh360-studio-button vh360-studio-button--primary" data-start-recording><?php esc_html_e( 'Start recording', 'videohub360-studio' ); ?></button>
+                        <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-stop-recording hidden disabled><?php esc_html_e( 'Stop recording', 'videohub360-studio' ); ?></button>
+                        <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-retry-chunks hidden disabled><?php esc_html_e( 'Retry failed chunks', 'videohub360-studio' ); ?></button>
+                        <button type="button" class="vh360-studio-button" data-finalize-recording hidden disabled><?php esc_html_e( 'Prepare replay', 'videohub360-studio' ); ?></button>
+                    </div>
+                    <p class="vh360-studio-help"><?php esc_html_e( 'Studio uploads recordings in chunks and can retry failed chunks during this browser session.', 'videohub360-studio' ); ?></p>
+                    <div class="vh360-studio-job-result" aria-live="polite" data-recording-status></div>
+                    <div class="vh360-studio-actions">
+                        <button type="button" class="vh360-studio-button vh360-studio-button--primary" data-publish-replay hidden disabled><?php esc_html_e( 'Publish replay', 'videohub360-studio' ); ?></button>
+                        <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-check-replay-status hidden disabled><?php esc_html_e( 'Check replay status', 'videohub360-studio' ); ?></button>
+                    </div>
+                    <div class="vh360-studio-publish-status" aria-live="polite" data-publishing-status></div>
+                    <p class="vh360-studio-replay-link" data-replay-link-wrap hidden><strong><?php esc_html_e( 'Replay published.', 'videohub360-studio' ); ?></strong> <a href="#" class="vh360-studio-button vh360-studio-button--secondary" data-replay-link target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Open replay', 'videohub360-studio' ); ?></a></p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="vh360-studio-modal" data-stream-settings-modal hidden role="dialog" aria-modal="true" aria-labelledby="vh360-studio-stream-settings-title">
+        <div class="vh360-studio-modal__backdrop" data-close-stream-settings></div>
+        <div class="vh360-studio-modal__panel vh360-studio-modal__panel--stream-settings">
+            <div class="vh360-studio-modal__header"><h3 id="vh360-studio-stream-settings-title"><?php esc_html_e( 'Stream Settings', 'videohub360-studio' ); ?></h3><button type="button" class="vh360-studio-modal__close" data-close-stream-settings aria-label="<?php esc_attr_e( 'Close', 'videohub360-studio' ); ?>">×</button></div>
+            <div class="vh360-studio-modal__body vh360-studio-modal__body--stream-settings">
+                <div class="vh360-studio-stream-settings-tabs" role="tablist" aria-label="<?php esc_attr_e( 'Stream settings sections', 'videohub360-studio' ); ?>">
+                    <button type="button" class="vh360-studio-stream-settings-tab" id="vh360-studio-stream-settings-tab-live" data-stream-settings-tab="live" role="tab" aria-selected="true" aria-controls="vh360-studio-stream-settings-panel-live" tabindex="0"><?php esc_html_e( 'Live Setup', 'videohub360-studio' ); ?></button>
+                    <button type="button" class="vh360-studio-stream-settings-tab" id="vh360-studio-stream-settings-tab-quality" data-stream-settings-tab="quality" role="tab" aria-selected="false" aria-controls="vh360-studio-stream-settings-panel-quality" tabindex="-1"><?php esc_html_e( 'Quality', 'videohub360-studio' ); ?></button>
+                </div>
+                <div class="vh360-studio-stream-settings-panel" id="vh360-studio-stream-settings-panel-live" data-stream-settings-panel="live" role="tabpanel" aria-labelledby="vh360-studio-stream-settings-tab-live">
+                    <div class="vh360-studio-stream-settings-section">
                     <div class="vh360-studio-live-grid">
-                        <p><label><?php esc_html_e( 'Title', 'videohub360-studio' ); ?><input type="text" data-broadcast-title placeholder="<?php esc_attr_e( 'My livestream', 'videohub360-studio' ); ?>"></label></p>
-                        <p><label><?php esc_html_e( 'Description', 'videohub360-studio' ); ?><textarea data-broadcast-description rows="3"></textarea></label></p>
+                        <p class="vh360-studio-live-grid__full"><label><?php esc_html_e( 'Title', 'videohub360-studio' ); ?><input type="text" data-broadcast-title placeholder="<?php esc_attr_e( 'My livestream', 'videohub360-studio' ); ?>"></label></p>
+                        <p class="vh360-studio-live-grid__full"><label><?php esc_html_e( 'Description', 'videohub360-studio' ); ?><textarea data-broadcast-description rows="3"></textarea></label></p>
                         <div class="vh360-studio-cover-control" data-cover-control>
                             <label><?php esc_html_e( 'Cover Image / Featured Image', 'videohub360-studio' ); ?></label>
                             <input type="hidden" data-cover-image-id value="">
@@ -553,54 +596,24 @@ $overlay_tool_descriptions = array(
                         <p data-interactive-only><label><input type="checkbox" data-broadcast-require-passcode> <?php esc_html_e( 'Require passcode to join/present', 'videohub360-studio' ); ?></label></p>
                         <p data-passcode-wrap hidden><label><?php esc_html_e( 'Passcode', 'videohub360-studio' ); ?><input type="password" data-broadcast-passcode autocomplete="new-password"></label></p>
                     </div>
-                    <div class="vh360-studio-actions">
-                        <button type="button" class="vh360-studio-button vh360-studio-button--primary" data-go-live><?php esc_html_e( 'Go Live', 'videohub360-studio' ); ?></button>
-                        <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-end-live disabled><?php esc_html_e( 'End Live', 'videohub360-studio' ); ?></button>
                     </div>
-                    <div class="vh360-studio-job-result" aria-live="polite" data-broadcast-status></div>
                 </div>
-            </section>
-
-            <section class="vh360-studio-dock vh360-studio-dock--recording" aria-labelledby="vh360-studio-recorder-title">
-                <div class="vh360-studio-dock-header"><h3 id="vh360-studio-recorder-title"><?php esc_html_e( 'Recording / Replay', 'videohub360-studio' ); ?></h3></div>
-                <div class="vh360-studio-dock-body">
-                    <div class="vh360-studio-workflow-summary">
-                        <div><strong><?php esc_html_e( 'Status', 'videohub360-studio' ); ?></strong><span data-recording-summary-status><?php esc_html_e( 'Ready to record', 'videohub360-studio' ); ?></span></div>
-                        <div><strong><?php esc_html_e( 'Duration', 'videohub360-studio' ); ?></strong><span data-recording-timer>00:00</span></div>
-                        <div><strong><?php esc_html_e( 'Progress', 'videohub360-studio' ); ?></strong><span data-recording-progress-label>0%</span></div>
+                <div class="vh360-studio-stream-settings-panel" id="vh360-studio-stream-settings-panel-quality" data-stream-settings-panel="quality" role="tabpanel" aria-labelledby="vh360-studio-stream-settings-tab-quality" hidden>
+                    <div class="vh360-studio-stream-settings-section">
+                    <label for="vh360-studio-quality-select"><?php esc_html_e( 'Quality preset', 'videohub360-studio' ); ?></label>
+                    <select id="vh360-studio-quality-select" data-quality-select>
+                        <?php foreach ( $quality_presets as $preset_id => $preset ) : ?>
+                            <option value="<?php echo esc_attr( $preset_id ); ?>" <?php selected( $preset_id, $default_preset ); ?>><?php echo esc_html( $preset['label'] ); ?><?php if ( ! empty( $preset['recommended'] ) ) : ?> <?php esc_html_e( '(recommended)', 'videohub360-studio' ); ?><?php endif; ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <p class="vh360-studio-help" data-quality-details><?php echo esc_html( $default_label ); ?> · <?php esc_html_e( 'Higher quality creates larger files and longer uploads; lower presets remain available for smaller recordings.', 'videohub360-studio' ); ?></p>
                     </div>
-                    <progress class="vh360-studio-progress" max="100" value="0" data-recording-progress></progress>
-                    <div class="vh360-studio-actions">
-                        <button type="button" class="vh360-studio-button vh360-studio-button--primary" data-start-recording><?php esc_html_e( 'Start recording', 'videohub360-studio' ); ?></button>
-                        <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-stop-recording hidden disabled><?php esc_html_e( 'Stop recording', 'videohub360-studio' ); ?></button>
-                        <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-retry-chunks hidden disabled><?php esc_html_e( 'Retry failed chunks', 'videohub360-studio' ); ?></button>
-                        <button type="button" class="vh360-studio-button" data-finalize-recording hidden disabled><?php esc_html_e( 'Prepare replay', 'videohub360-studio' ); ?></button>
-                    </div>
-                    <p class="vh360-studio-help"><?php esc_html_e( 'Studio uploads recordings in chunks and can retry failed chunks during this browser session.', 'videohub360-studio' ); ?></p>
-                    <div class="vh360-studio-job-result" aria-live="polite" data-recording-status></div>
-                    <div class="vh360-studio-actions">
-                        <button type="button" class="vh360-studio-button vh360-studio-button--primary" data-publish-replay hidden disabled><?php esc_html_e( 'Publish replay', 'videohub360-studio' ); ?></button>
-                        <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-check-replay-status hidden disabled><?php esc_html_e( 'Check replay status', 'videohub360-studio' ); ?></button>
-                    </div>
-                    <div class="vh360-studio-publish-status" aria-live="polite" data-publishing-status></div>
-                    <p class="vh360-studio-replay-link" data-replay-link-wrap hidden><strong><?php esc_html_e( 'Replay published.', 'videohub360-studio' ); ?></strong> <a href="#" class="vh360-studio-button vh360-studio-button--secondary" data-replay-link target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Open replay', 'videohub360-studio' ); ?></a></p>
-                    <?php if ( $is_admin ) : ?>
-                        <details class="vh360-studio-technical-details">
-                            <summary><?php esc_html_e( 'Technical Recording Details', 'videohub360-studio' ); ?></summary>
-                            <div class="vh360-studio-recorder-stats">
-                                <div><strong><?php esc_html_e( 'Current job ID', 'videohub360-studio' ); ?></strong><span data-recording-job-id>—</span></div>
-                                <div><strong><?php esc_html_e( 'Selected MIME type', 'videohub360-studio' ); ?></strong><span data-recording-mime>—</span></div>
-                                <div><strong><?php esc_html_e( 'Chunks uploaded', 'videohub360-studio' ); ?></strong><span data-recording-uploaded>0</span></div>
-                                <div><strong><?php esc_html_e( 'Chunks pending', 'videohub360-studio' ); ?></strong><span data-recording-pending>0</span></div>
-                                <div><strong><?php esc_html_e( 'Chunks failed', 'videohub360-studio' ); ?></strong><span data-recording-failed>0</span></div>
-                                <div><strong><?php esc_html_e( 'Total bytes uploaded', 'videohub360-studio' ); ?></strong><span data-recording-bytes>0</span></div>
-                                <div><strong><?php esc_html_e( 'Finalize status', 'videohub360-studio' ); ?></strong><span data-recording-finalize-status>—</span></div>
-                                <div><strong><?php esc_html_e( 'Raw replay URL', 'videohub360-studio' ); ?></strong><span data-replay-raw-url>—</span></div>
-                            </div>
-                        </details>
-                    <?php endif; ?>
                 </div>
-            </section>
+                <div class="vh360-studio-modal__status" data-stream-settings-status role="status" aria-live="polite" hidden></div>
+            </div>
+            <div class="vh360-studio-modal__footer">
+                <button type="button" class="vh360-studio-button" data-close-stream-settings><?php esc_html_e( 'Done', 'videohub360-studio' ); ?></button>
+            </div>
         </div>
     </div>
 
