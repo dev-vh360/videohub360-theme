@@ -19,6 +19,16 @@
     const AUDIO_INPUTS_STORAGE_KEY = 'vh360_studio_audio_inputs';
     const MAX_AUDIO_INPUTS = 8;
     const programRenderLayers = new Map();
+
+    const METER_FLOOR_DB = -60;
+    const METER_CLIP_DB = -0.1;
+    const METER_ATTACK_MS = 35;
+    const METER_RELEASE_MS = 300;
+    const METER_PEAK_HOLD_MS = 1000;
+    const METER_PEAK_DECAY_DB_PER_SECOND = 20;
+    const METER_UPDATE_INTERVAL_MS = 1000 / 30;
+    const METER_CLIP_HOLD_MS = 900;
+    const METER_ARIA_UPDATE_MS = 250;
     const state = {
         cameraSources: new Map(),
         primaryCameraSourceId: '',
@@ -33,15 +43,14 @@
         audioInputSaveTimer: null,
         audioInputTestRequestId: 0,
         audioInputTestStream: null,
+        audioInputSettingsId: '',
+        audioInputSettingsTrigger: null,
         studioTearingDown: false,
         lastRecordingAudioSummary: null,
         recordingPersistentWarnings: [],
         liveAudioWarningActive: false,
         lastAgoraConnectionState: '',
         deviceReadinessRequestId: 0,
-        audioContext: null,
-        analyser: null,
-        meterFrame: null,
         audioMixer: null,
         support: {},
         activeJobId: null,
@@ -163,17 +172,23 @@
         transitionDuration: root.querySelector('[data-transition-duration]'),
         cameraSelect: root.querySelector('[data-camera-select]'),
         micSelect: root.querySelector('[data-mic-select]'),
-        micMeter: root.querySelector('[data-mic-meter]'),
         audioMixer: root.querySelector('[data-audio-mixer]'),
         audioInputChannels: root.querySelector('[data-audio-input-channels]'),
         addAudioInput: root.querySelector('[data-add-audio-input]'),
+        audioInputSettingsModal: root.querySelector('[data-audio-input-settings-modal]'),
+        audioInputSettingsTitle: root.querySelector('[data-audio-input-settings-title]'),
+        audioInputSettingsStatus: root.querySelector('[data-audio-input-settings-status]'),
+        audioInputSettingsPrimary: root.querySelector('[data-audio-input-settings-primary]'),
+        audioInputSettingsName: root.querySelector('[data-audio-input-settings-name]'),
+        audioInputSettingsDevice: root.querySelector('[data-audio-input-settings-device]'),
+        audioInputSettingsWarning: root.querySelector('[data-audio-input-settings-warning]'),
+        audioInputSettingsRemove: root.querySelector('[data-audio-input-settings-remove]'),
+        closeAudioInputSettings: root.querySelectorAll('[data-close-audio-input-settings]'),
         refreshDevices: root.querySelector('[data-refresh-devices]'),
         deviceStatus: root.querySelector('[data-device-status]'),
         activeDevices: root.querySelector('[data-active-devices]'),
         testCamera: root.querySelector('[data-test-camera]'),
         testMicrophone: root.querySelector('[data-test-microphone]'),
-        mixerMeters: root.querySelectorAll('[data-mixer-meter]'),
-        mixerStatuses: root.querySelectorAll('[data-mixer-status]'),
         qualitySelect: root.querySelector('[data-quality-select]'),
         qualityDetails: root.querySelector('[data-quality-details]'),
         selectedMediaControls: root.querySelector('[data-selected-media-controls]'),
@@ -1381,11 +1396,77 @@
     }
 
 
+
+    function mixerGainToDb(volume) {
+        if (volume <= 0) { return '−∞ dB'; }
+        const db = 20 * Math.log10(volume);
+        const prefix = db > 0 ? '+' : '';
+        return prefix + db.toFixed(1) + ' dB';
+    }
+
+    function meterDbToPercent(db) {
+        const clamped = Math.max(METER_FLOOR_DB, Math.min(0, Number.isFinite(db) ? db : METER_FLOOR_DB));
+        return ((clamped - METER_FLOOR_DB) / Math.abs(METER_FLOOR_DB)) * 100;
+    }
+
+    function createMeterElement(id, label) {
+        const meter = document.createElement('div');
+        meter.className = 'vh360-studio-meter';
+        meter.dataset.meterChannel = id;
+        meter.setAttribute('role', 'meter');
+        meter.setAttribute('aria-valuemin', String(METER_FLOOR_DB));
+        meter.setAttribute('aria-valuemax', '0');
+        meter.setAttribute('aria-valuenow', String(METER_FLOOR_DB));
+        meter.setAttribute('aria-valuetext', label + ' ' + getStudioString('audioLevelLabel', 'Audio level') + ' ' + METER_FLOOR_DB + ' dBFS');
+        meter.setAttribute('aria-label', label + ' ' + getStudioString('audioLevelLabel', 'Audio level'));
+        const track = document.createElement('span');
+        track.className = 'vh360-studio-meter__track';
+        track.setAttribute('aria-hidden', 'true');
+        const fill = document.createElement('span');
+        fill.className = 'vh360-studio-meter__fill';
+        fill.dataset.mixerMeter = id;
+        const peak = document.createElement('span');
+        peak.className = 'vh360-studio-meter__peak';
+        peak.dataset.mixerPeak = id;
+        const clip = document.createElement('span');
+        clip.className = 'vh360-studio-meter__clip';
+        clip.dataset.mixerClip = id;
+        clip.setAttribute('aria-hidden', 'true');
+        clip.textContent = getStudioString('clippingLabel', 'Clipping');
+        track.appendChild(fill); track.appendChild(peak); meter.appendChild(track); meter.appendChild(clip);
+        return meter;
+    }
+
+    function updateMixerGainReadout(channelId, volume) {
+        root.querySelectorAll('[data-mixer-gain-readout="' + channelId + '"]').forEach((el) => { el.textContent = mixerGainToDb(normalizeMixerVolume(volume, 1)); });
+    }
+
+    function resetMeterTarget(target) {
+        if (!target) { return; }
+        if (target.fill) { target.fill.style.height = '0%'; target.fill.style.setProperty('--vh360-meter-level', '0%'); }
+        if (target.peak) { target.peak.style.bottom = '0%'; }
+        if (target.clip) { target.clip.classList.remove('is-clipping'); target.clip.setAttribute('aria-hidden', 'true'); }
+        if (target.meter) { target.meter.setAttribute('aria-valuenow', String(METER_FLOOR_DB)); target.meter.setAttribute('aria-valuetext', (target.label || target.id) + ' ' + getStudioString('audioLevelLabel', 'Audio level') + ' ' + METER_FLOOR_DB + ' dBFS'); }
+    }
+
+    function syncMixerMeterTargets() {
+        const mixer = state.audioMixer;
+        if (!mixer) { return; }
+        const makeState = () => ({ displayDb: METER_FLOOR_DB, peakDb: METER_FLOOR_DB, peakHoldUntil: 0, clipUntil: 0, lastUpdateTime: 0, lastAriaUpdateTime: 0 });
+        Object.keys(mixer.channels || {}).forEach((id) => {
+            const channel = mixer.channels[id];
+            channel.meterState = channel.meterState || makeState();
+            channel.meterTargets = Array.from(root.querySelectorAll('[data-meter-channel="' + id + '"]')).map((meter) => ({ id, label: channel.label || id, meter, fill: meter.querySelector('[data-mixer-meter]'), peak: meter.querySelector('[data-mixer-peak]'), clip: meter.querySelector('[data-mixer-clip]') }));
+        });
+        mixer.masterMeterState = mixer.masterMeterState || makeState();
+        mixer.masterMeterTargets = Array.from(root.querySelectorAll('[data-meter-channel="master"]')).map((meter) => ({ id: 'master', label: getStudioString('masterOutputLabel', 'Master Output'), meter, fill: meter.querySelector('[data-mixer-meter]'), peak: meter.querySelector('[data-mixer-peak]'), clip: meter.querySelector('[data-mixer-clip]') }));
+    }
+
     function createMixerChannel(context, destination, id, label) {
         const input = context.createGain();
         const gain = context.createGain();
         const analyser = context.createAnalyser();
-        analyser.fftSize = 256;
+        analyser.fftSize = 1024;
         input.connect(gain);
         gain.connect(analyser);
         analyser.connect(destination);
@@ -1636,7 +1717,7 @@
         const destination = context.createMediaStreamDestination();
         const masterGain = context.createGain();
         const masterAnalyser = context.createAnalyser();
-        masterAnalyser.fftSize = 256;
+        masterAnalyser.fftSize = 1024;
         masterGain.connect(masterAnalyser);
         masterAnalyser.connect(destination);
         const mixer = {
@@ -1969,18 +2050,20 @@
         if (!input || !strip) { return; }
         const label = input.label || getStudioString('audioInputFallbackLabel', 'Audio Input');
         const status = audioInputStatusLabel(audioInputStatus(input));
-        const name = strip.querySelector('[data-audio-input-name]');
-        if (name) { name.setAttribute('aria-label', label + ' ' + getStudioString('audioInputNameLabel', 'name')); }
-        const select = strip.querySelector('[data-audio-input-device]');
-        if (select) { select.setAttribute('aria-label', label + ' ' + getStudioString('audioInputDeviceLabel', 'device')); }
         const gain = strip.querySelector('[data-mixer-gain]');
         if (gain) { gain.setAttribute('aria-label', label + ' ' + getStudioString('audioInputGainLabel', 'gain')); }
         const meter = strip.querySelector('.vh360-studio-meter');
-        if (meter) { meter.setAttribute('aria-label', label + ' ' + getStudioString('audioInputLevelLabel', 'level')); }
+        if (meter) { meter.setAttribute('aria-label', label + ' ' + getStudioString('audioLevelLabel', 'Audio level')); meter.setAttribute('aria-valuetext', label + ' ' + getStudioString('audioLevelLabel', 'Audio level') + ' -60 dBFS'); }
+        const settings = strip.querySelector('[data-open-audio-input-settings]');
+        if (settings) { settings.setAttribute('aria-label', getStudioString('configureAudioInput', 'Configure audio input') + ': ' + label); const sr = settings.querySelector('.screen-reader-text'); if (sr) { sr.textContent = getStudioString('configureAudioInput', 'Configure audio input') + ': ' + label; } }
+        const displayName = strip.querySelector('[data-audio-input-display-name]');
+        if (displayName) { displayName.textContent = label; displayName.title = label; }
+        const primary = strip.querySelector('[data-audio-input-primary]');
+        if (primary) { primary.hidden = !input.isPrimary; primary.title = getStudioString('primaryAudioInputDescription', 'Primary audio input'); }
+        const warningIndicator = strip.querySelector('[data-audio-input-warning-indicator]');
+        if (warningIndicator) { const warning = [input.error, duplicateWarningForInput(input)].filter(Boolean).join(' '); warningIndicator.hidden = !warning; warningIndicator.title = warning; }
         const mute = strip.querySelector('[data-mixer-mute]');
         if (mute) { syncMixerMuteButton(mute, { label, muted: !!input.muted }); }
-        const remove = strip.querySelector('[data-remove-audio-input]');
-        if (remove) { remove.setAttribute('aria-label', getStudioString('removeAudioInputLabel', 'Remove') + ' ' + label); }
         const statusEl = strip.querySelector('[data-mixer-status]');
         if (statusEl) { statusEl.setAttribute('aria-label', label + ' ' + getStudioString('audioInputStatusLabel', 'status') + ': ' + status); }
     }
@@ -1989,7 +2072,7 @@
         const strip = els.audioInputChannels && els.audioInputChannels.querySelector('[data-audio-input-id="' + inputId + '"]');
         if (!strip) { return; }
         strip.classList.add('is-test-highlighted');
-        const target = strip.querySelector('[data-audio-input-device], [data-audio-input-name], [data-mixer-gain]');
+        const target = strip.querySelector('[data-mixer-gain], [data-open-audio-input-settings], [data-mixer-mute]');
         if (target && typeof target.focus === 'function') { target.focus({ preventScroll: false }); }
         window.setTimeout(() => { strip.classList.remove('is-test-highlighted'); }, 2500);
     }
@@ -2050,87 +2133,126 @@
         strip.className = 'vh360-studio-audio-channel vh360-studio-audio-channel--input';
         strip.dataset.audioInputId = input.id;
         strip.dataset.mixerChannel = input.id;
-
         const status = document.createElement('span');
         status.className = 'vh360-studio-audio-status';
         status.dataset.mixerStatus = input.id;
-        status.textContent = audioInputStatusLabel('off');
+        status.innerHTML = '<span class="vh360-studio-audio-status__dot" aria-hidden="true"></span><span data-mixer-status-text></span>';
         strip.appendChild(status);
-
-        const name = document.createElement('input');
-        name.className = 'vh360-studio-audio-name-field';
-        name.type = 'text';
-        name.value = input.label;
-        name.maxLength = 48;
-        name.dataset.audioInputName = input.id;
-        name.setAttribute('aria-label', input.label + ' ' + getStudioString('audioInputNameLabel', 'name'));
+        const name = document.createElement('strong');
+        name.className = 'vh360-studio-audio-name';
+        name.dataset.audioInputDisplayName = input.id;
         strip.appendChild(name);
-
-        if (input.isPrimary) {
-            const badge = document.createElement('span');
-            badge.className = 'vh360-studio-audio-primary';
-            badge.textContent = getStudioString('primaryAudioInputBadge', 'Primary');
-            strip.appendChild(badge);
-        }
-
-        const select = document.createElement('select');
-        select.className = 'vh360-studio-audio-device-select';
-        select.dataset.audioInputDevice = input.id;
-        select.setAttribute('aria-label', input.label + ' ' + getStudioString('audioInputDeviceLabel', 'device'));
-        populateAudioInputDeviceSelect(select, input);
-        strip.appendChild(select);
-        const warning = document.createElement('p');
-        warning.className = 'vh360-studio-audio-warning';
-        warning.dataset.audioInputWarning = input.id;
-        warning.setAttribute('aria-live', 'polite');
-        warning.hidden = true;
-        strip.appendChild(warning);
-
+        const markers = document.createElement('div');
+        markers.className = 'vh360-studio-audio-markers';
+        const primary = document.createElement('span');
+        primary.className = 'vh360-studio-audio-primary-marker';
+        primary.dataset.audioInputPrimary = input.id;
+        primary.textContent = getStudioString('primaryAudioInputBadge', 'Primary');
+        markers.appendChild(primary);
+        const warningIcon = document.createElement('span');
+        warningIcon.className = 'vh360-studio-audio-warning-indicator';
+        warningIcon.dataset.audioInputWarningIndicator = input.id;
+        warningIcon.textContent = '!';
+        warningIcon.hidden = true;
+        markers.appendChild(warningIcon);
+        strip.appendChild(markers);
+        const readout = document.createElement('output');
+        readout.className = 'vh360-studio-audio-gain-readout';
+        readout.setAttribute('for', input.id + '-gain');
+        readout.dataset.mixerGainReadout = input.id;
+        readout.textContent = mixerGainToDb(input.volume);
+        strip.appendChild(readout);
         const body = document.createElement('div');
         body.className = 'vh360-studio-audio-strip-body';
         const gainLabel = document.createElement('label');
         gainLabel.className = 'vh360-studio-audio-gain';
         const gainSr = document.createElement('span');
         gainSr.className = 'screen-reader-text';
-        gainSr.textContent = input.label + ' ' + getStudioString('audioInputGainLabel', 'gain');
+        gainSr.textContent = input.label + ' ' + getStudioString('gainLabel', 'Gain');
         const gain = document.createElement('input');
-        gain.type = 'range';
-        gain.min = '0';
-        gain.max = '150';
-        gain.value = String(Math.round(input.volume * 100));
-        gain.dataset.mixerGain = input.id;
-        gainLabel.appendChild(gainSr);
-        gainLabel.appendChild(gain);
-        const meter = document.createElement('div');
-        meter.className = 'vh360-studio-meter';
-        meter.setAttribute('aria-label', input.label + ' ' + getStudioString('audioInputLevelLabel', 'level'));
-        const meterFill = document.createElement('span');
-        meterFill.dataset.mixerMeter = input.id;
-        if (input.isPrimary) { meterFill.dataset.micMeter = ''; }
-        meter.appendChild(meterFill);
-        body.appendChild(gainLabel);
-        body.appendChild(meter);
-        strip.appendChild(body);
-
-        const actions = document.createElement('div');
-        actions.className = 'vh360-studio-audio-actions';
-        const mute = document.createElement('button');
-        mute.type = 'button';
-        mute.className = 'vh360-studio-audio-mute';
-        mute.dataset.mixerMute = input.id;
-        mute.setAttribute('aria-pressed', input.muted ? 'true' : 'false');
-        mute.innerHTML = '<span class="screen-reader-text"></span>';
-        actions.appendChild(mute);
-        if (!input.isPrimary) {
-            const remove = document.createElement('button');
-            remove.type = 'button';
-            remove.className = 'vh360-studio-audio-remove';
-            remove.dataset.removeAudioInput = input.id;
-            remove.textContent = getStudioString('removeAudioInput', 'Remove');
-            actions.appendChild(remove);
-        }
+        gain.id = input.id + '-gain'; gain.type = 'range'; gain.min = '0'; gain.max = '150'; gain.value = String(Math.round(input.volume * 100)); gain.dataset.mixerGain = input.id;
+        gainLabel.appendChild(gainSr); gainLabel.appendChild(gain);
+        body.appendChild(gainLabel); body.appendChild(createMeterElement(input.id, input.label)); strip.appendChild(body);
+        const actions = document.createElement('div'); actions.className = 'vh360-studio-audio-actions';
+        const mute = document.createElement('button'); mute.type = 'button'; mute.className = 'vh360-studio-audio-mute'; mute.dataset.mixerMute = input.id; mute.setAttribute('aria-pressed', input.muted ? 'true' : 'false'); mute.innerHTML = '<span class="vh360-studio-audio-mute__icon" aria-hidden="true"></span><span class="screen-reader-text"></span>'; actions.appendChild(mute);
+        const settings = document.createElement('button'); settings.type = 'button'; settings.className = 'vh360-studio-audio-settings'; settings.dataset.openAudioInputSettings = input.id; settings.setAttribute('aria-haspopup', 'dialog'); settings.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19.4 13.5c.1-.5.1-1 .1-1.5s0-1-.1-1.5l2-1.5-2-3.4-2.4 1a8 8 0 0 0-2.6-1.5L14 2h-4l-.4 3.1A8 8 0 0 0 7 6.6l-2.4-1-2 3.4 2 1.5a8.8 8.8 0 0 0 0 3l-2 1.5 2 3.4 2.4-1a8 8 0 0 0 2.6 1.5L10 22h4l.4-3.1a8 8 0 0 0 2.6-1.5l2.4 1 2-3.4-2-1.5ZM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5Z"/></svg><span class="screen-reader-text"></span>'; actions.appendChild(settings);
         strip.appendChild(actions);
+        updateAudioInputAccessibility(input.id);
         return strip;
+    }
+
+    function commitAudioInputSettingsName() {
+        const input = state.audioInputs.get(state.audioInputSettingsId);
+        if (!input || !els.audioInputSettingsName) { return false; }
+        const inputIndex = Array.from(state.audioInputs.keys()).indexOf(input.id);
+        const nextLabel = sanitizeAudioInputLabel(els.audioInputSettingsName.value, Math.max(0, inputIndex));
+        if (els.audioInputSettingsName.value !== nextLabel) { els.audioInputSettingsName.value = nextLabel; }
+        if (input.label === nextLabel) { return false; }
+        input.label = nextLabel;
+        const channel = ensureAudioInputMixerChannel(input.id);
+        if (channel) { channel.label = input.label; }
+        saveAudioInputConfiguration();
+        updateMixerUi();
+        renderAudioInputSettings();
+        return true;
+    }
+
+    function renderAudioInputSettings() {
+        const input = state.audioInputs.get(state.audioInputSettingsId);
+        if (!input || !els.audioInputSettingsModal) { return; }
+        const label = input.label || getStudioString('audioInputFallbackLabel', 'Audio Input');
+        if (els.audioInputSettingsTitle) { els.audioInputSettingsTitle.textContent = getStudioString('audioInputSettingsTitle', 'Audio Input Settings') + ': ' + label; }
+        if (els.audioInputSettingsName && document.activeElement !== els.audioInputSettingsName) { els.audioInputSettingsName.value = label; }
+        if (els.audioInputSettingsDevice) { populateAudioInputDeviceSelect(els.audioInputSettingsDevice, input); }
+        if (els.audioInputSettingsPrimary) { els.audioInputSettingsPrimary.textContent = input.isPrimary ? getStudioString('primaryAudioInputDescription', 'Primary audio input') : getStudioString('secondaryAudioInputLabel', 'Secondary audio input'); }
+        if (els.audioInputSettingsStatus) { els.audioInputSettingsStatus.textContent = audioInputStatusLabel(audioInputStatus(input)); }
+        const warningText = [input.error, duplicateWarningForInput(input)].filter(Boolean).join(' ');
+        if (els.audioInputSettingsWarning) { els.audioInputSettingsWarning.textContent = warningText; els.audioInputSettingsWarning.hidden = !warningText; els.audioInputSettingsWarning.dataset.statusType = input.error ? 'error' : 'warning'; }
+        if (els.audioInputSettingsRemove) { els.audioInputSettingsRemove.hidden = !!input.isPrimary; els.audioInputSettingsRemove.disabled = !!input.isPrimary; }
+    }
+
+    function openAudioInputSettings(inputId, trigger) {
+        const input = state.audioInputs.get(inputId);
+        if (!input || !els.audioInputSettingsModal) { return; }
+        state.audioInputSettingsId = inputId;
+        state.audioInputSettingsTrigger = trigger || null;
+        renderAudioInputSettings();
+        els.audioInputSettingsModal.hidden = false;
+        window.setTimeout(() => {
+            const focusTarget = els.audioInputSettingsDevice && !els.audioInputSettingsDevice.disabled ? els.audioInputSettingsDevice : els.audioInputSettingsName;
+            if (focusTarget && typeof focusTarget.focus === 'function') { focusTarget.focus(); }
+        }, 0);
+    }
+
+    function closeAudioInputSettings() {
+        if (!els.audioInputSettingsModal || els.audioInputSettingsModal.hidden) { return; }
+        commitAudioInputSettingsName();
+        const closingId = state.audioInputSettingsId;
+        els.audioInputSettingsModal.hidden = true;
+        state.audioInputSettingsId = '';
+        const trigger = state.audioInputSettingsTrigger;
+        state.audioInputSettingsTrigger = null;
+        const restore = closingId && state.audioInputs.has(closingId) && trigger && document.contains(trigger) ? trigger : els.addAudioInput;
+        if (restore && typeof restore.focus === 'function') { restore.focus(); }
+    }
+
+    function removeAudioInput(inputId) {
+        const input = state.audioInputs.get(inputId);
+        if (!input) { return false; }
+        if (input.isPrimary) { studioDebugLog('[VH360 Studio] Refusing to remove the primary audio input', { inputId: input.id }); return false; }
+        input.removed = true;
+        input.status = 'removed';
+        stopAudioInput(input.id);
+        removeMixerChannel(input.mixerChannelId);
+        state.audioInputs.delete(input.id);
+        enforcePrimaryAudioInputInvariant();
+        saveAudioInputConfiguration();
+        renderAudioInputChannels();
+        syncMixerMeterTargets();
+        updateActiveDeviceSummary();
+        setDeviceStatus(getStudioString('audioInputRemoved', 'Audio input removed.'), 'success');
+        if (state.audioInputSettingsId === inputId) { closeAudioInputSettings(); }
+        return true;
     }
 
     function renderAudioInputChannels() {
@@ -2152,21 +2274,28 @@
             strip.dataset.audioInputStatus = status;
             const statusEl = strip.querySelector('[data-mixer-status]');
             if (statusEl) {
-                statusEl.textContent = audioInputStatusLabel(status);
+                const statusText = statusEl.querySelector('[data-mixer-status-text]');
+                if (statusText) { statusText.textContent = audioInputStatusLabel(status); } else { statusEl.textContent = audioInputStatusLabel(status); }
                 statusEl.dataset.statusState = status;
             }
-            const name = strip.querySelector('[data-audio-input-name]');
-            if (name && document.activeElement !== name) { name.value = input.label; }
-            populateAudioInputDeviceSelect(strip.querySelector('[data-audio-input-device]'), input);
-            const warning = strip.querySelector('[data-audio-input-warning]');
+            const name = strip.querySelector('[data-audio-input-display-name]');
+            if (name) { name.textContent = input.label; name.title = input.label; }
+            const primary = strip.querySelector('[data-audio-input-primary]');
+            if (primary) { primary.hidden = !input.isPrimary; }
+            const warning = strip.querySelector('[data-audio-input-warning-indicator]');
             if (warning) {
-                warning.textContent = warningMessage;
+                warning.title = warningMessage;
                 warning.hidden = !warningMessage;
             }
+            const gain = strip.querySelector('[data-mixer-gain]');
+            if (gain && document.activeElement !== gain) { gain.value = String(Math.round(input.volume * 100)); }
+            updateMixerGainReadout(input.id, input.volume);
             updateAudioInputAccessibility(input.id);
         });
         existing.forEach((el) => el.remove());
         updateAddAudioInputAvailability();
+        syncMixerMeterTargets();
+        renderAudioInputSettings();
     }
 
     function updateMixerUi() {
@@ -2180,42 +2309,104 @@
                     statusKey = channel.muted && hasLiveAudioTrack(input.stream) ? 'muted' : audioInputStatus(input);
                 }
                 root.querySelectorAll('[data-mixer-status="' + id + '"]').forEach((el) => {
-                    el.textContent = audioInputStatusLabel(statusKey);
+                    const statusText = el.querySelector('[data-mixer-status-text]');
+                    if (statusText) { statusText.textContent = audioInputStatusLabel(statusKey); } else { el.textContent = audioInputStatusLabel(statusKey); }
                     el.dataset.statusState = statusKey;
                 });
                 root.querySelectorAll('[data-mixer-mute="' + id + '"]').forEach((button) => { syncMixerMuteButton(button, channel); });
+                updateMixerGainReadout(id, channel.volume);
             });
-            root.querySelectorAll('[data-mixer-status="master"]').forEach((el) => { el.textContent = state.liveAudioMuted ? audioInputStatusLabel('muted') : audioInputStatusLabel('active'); });
+            root.querySelectorAll('[data-mixer-status="master"]').forEach((el) => { const statusKey = state.liveAudioMuted ? 'muted' : 'active'; const statusText = el.querySelector('[data-mixer-status-text]'); if (statusText) { statusText.textContent = audioInputStatusLabel(statusKey); } else { el.textContent = audioInputStatusLabel(statusKey); } el.dataset.statusState = statusKey; });
         }
         renderAudioInputChannels();
+    }
+
+    function readAnalyserDb(analyser, owner) {
+        const length = analyser.fftSize || 1024;
+        const useFloat = typeof analyser.getFloatTimeDomainData === 'function';
+        if (useFloat) {
+            owner.meterFloatData = owner.meterFloatData && owner.meterFloatData.length === length ? owner.meterFloatData : new Float32Array(length);
+            analyser.getFloatTimeDomainData(owner.meterFloatData);
+        } else {
+            owner.meterByteData = owner.meterByteData && owner.meterByteData.length === length ? owner.meterByteData : new Uint8Array(length);
+            analyser.getByteTimeDomainData(owner.meterByteData);
+        }
+        const data = useFloat ? owner.meterFloatData : owner.meterByteData;
+        let sum = 0;
+        let peak = 0;
+        for (let i = 0; i < data.length; i++) {
+            const sample = useFloat ? data[i] : (data[i] - 128) / 128;
+            const abs = Math.abs(sample);
+            sum += sample * sample;
+            if (abs > peak) { peak = abs; }
+        }
+        const minAmp = Math.pow(10, METER_FLOOR_DB / 20);
+        const rms = Math.sqrt(sum / (data.length || 1));
+        return {
+            rmsDb: Math.max(METER_FLOOR_DB, Math.min(0, 20 * Math.log10(Math.max(rms, minAmp)))),
+            peakDb: Math.max(METER_FLOOR_DB, Math.min(0, 20 * Math.log10(Math.max(peak, minAmp))))
+        };
+    }
+
+    function updateMeterState(stateObj, measurement, now, active) {
+        const delta = Math.max(1, now - (stateObj.lastUpdateTime || now));
+        stateObj.lastUpdateTime = now;
+        const targetDb = active ? measurement.rmsDb : METER_FLOOR_DB;
+        const timeConstant = targetDb > stateObj.displayDb ? METER_ATTACK_MS : METER_RELEASE_MS;
+        const alpha = 1 - Math.exp(-delta / timeConstant);
+        stateObj.displayDb += (targetDb - stateObj.displayDb) * alpha;
+        if (!active) { stateObj.displayDb = METER_FLOOR_DB; stateObj.peakDb = METER_FLOOR_DB; stateObj.peakHoldUntil = 0; stateObj.clipUntil = 0; return; }
+        if (measurement.peakDb >= stateObj.peakDb || now > stateObj.peakHoldUntil && stateObj.peakDb <= METER_FLOOR_DB) {
+            stateObj.peakDb = measurement.peakDb;
+            stateObj.peakHoldUntil = now + METER_PEAK_HOLD_MS;
+        } else if (now > stateObj.peakHoldUntil) {
+            stateObj.peakDb = Math.max(METER_FLOOR_DB, stateObj.peakDb - (METER_PEAK_DECAY_DB_PER_SECOND * delta / 1000));
+        }
+        if (measurement.peakDb >= METER_CLIP_DB) { stateObj.clipUntil = now + METER_CLIP_HOLD_MS; }
+    }
+
+    function renderMeterTargets(targets, stateObj, now) {
+        const rmsPercent = Math.max(0, Math.min(100, meterDbToPercent(stateObj.displayDb)));
+        const peakPercent = Math.max(0, Math.min(100, meterDbToPercent(stateObj.peakDb)));
+        targets.forEach((target) => {
+            if (target.fill) { target.fill.style.height = rmsPercent.toFixed(2) + '%'; target.fill.style.setProperty('--vh360-meter-level', rmsPercent.toFixed(2) + '%'); }
+            if (target.peak) { target.peak.style.bottom = 'calc(' + peakPercent.toFixed(2) + '% - ' + (peakPercent / 100 * 2).toFixed(2) + 'px)'; }
+            if (target.clip) { const clipping = now < stateObj.clipUntil; target.clip.classList.toggle('is-clipping', clipping); target.clip.setAttribute('aria-hidden', clipping ? 'false' : 'true'); }
+            if (target.meter && (!stateObj.lastAriaUpdateTime || now - stateObj.lastAriaUpdateTime >= METER_ARIA_UPDATE_MS)) {
+                const ariaDb = Math.max(METER_FLOOR_DB, Math.min(0, stateObj.displayDb));
+                target.meter.setAttribute('aria-valuenow', ariaDb.toFixed(0));
+                target.meter.setAttribute('aria-valuetext', (target.label || target.id) + ' ' + getStudioString('audioLevelLabel', 'Audio level') + ' ' + ariaDb.toFixed(1) + ' dBFS' + (now < stateObj.clipUntil ? ', ' + getStudioString('clippingLabel', 'Clipping') : ''));
+            }
+        });
+        if (!stateObj.lastAriaUpdateTime || now - stateObj.lastAriaUpdateTime >= METER_ARIA_UPDATE_MS) { stateObj.lastAriaUpdateTime = now; }
     }
 
     function startMixerMeters() {
         const mixer = state.audioMixer;
         if (!mixer || mixer.meterFrame) { return; }
-        const draw = () => {
-            Object.keys(mixer.channels).forEach((id) => {
-                const channel = mixer.channels[id];
-                const data = channel.meterData || (channel.meterData = new Uint8Array(channel.analyser.frequencyBinCount));
-                channel.analyser.getByteFrequencyData(data);
-                const average = data.reduce((sum, value) => sum + value, 0) / (data.length || 1);
-                const level = Math.min(100, Math.round((average / 255) * 100)) + '%';
-                root.querySelectorAll('[data-mixer-meter="' + id + '"]').forEach((el) => {
-                    el.style.setProperty('--vh360-meter-level', level);
-                    el.style.height = level;
+        syncMixerMeterTargets();
+        mixer.lastMeterRenderTime = 0;
+        const draw = (now) => {
+            if (!state.audioMixer || state.audioMixer !== mixer) { return; }
+            if (!mixer.lastMeterRenderTime || now - mixer.lastMeterRenderTime >= METER_UPDATE_INTERVAL_MS) {
+                mixer.lastMeterRenderTime = now;
+                Object.keys(mixer.channels || {}).forEach((id) => {
+                    const channel = mixer.channels[id];
+                    const active = !!(channel && channel.connected && !channel.unavailable && !channel.muted);
+                    const measurement = active ? readAnalyserDb(channel.analyser, channel) : { rmsDb: METER_FLOOR_DB, peakDb: METER_FLOOR_DB };
+                    channel.meterState = channel.meterState || { displayDb: METER_FLOOR_DB, peakDb: METER_FLOOR_DB, peakHoldUntil: 0, clipUntil: 0, lastUpdateTime: now, lastAriaUpdateTime: 0 };
+                    updateMeterState(channel.meterState, measurement, now, active);
+                    renderMeterTargets(channel.meterTargets || [], channel.meterState, now);
                 });
-            });
-            const masterData = mixer.masterMeterData || (mixer.masterMeterData = new Uint8Array(mixer.masterAnalyser.frequencyBinCount));
-            mixer.masterAnalyser.getByteFrequencyData(masterData);
-            const masterAverage = masterData.reduce((sum, value) => sum + value, 0) / (masterData.length || 1);
-            const masterLevel = Math.min(100, Math.round((masterAverage / 255) * 100)) + '%';
-            root.querySelectorAll('[data-mixer-meter="master"]').forEach((el) => {
-                el.style.setProperty('--vh360-meter-level', masterLevel);
-                el.style.height = masterLevel;
-            });
+                const masterActive = !state.liveAudioMuted;
+                const masterMeasurement = masterActive ? readAnalyserDb(mixer.masterAnalyser, mixer) : { rmsDb: METER_FLOOR_DB, peakDb: METER_FLOOR_DB };
+                mixer.masterMeterState = mixer.masterMeterState || { displayDb: METER_FLOOR_DB, peakDb: METER_FLOOR_DB, peakHoldUntil: 0, clipUntil: 0, lastUpdateTime: now, lastAriaUpdateTime: 0 };
+                updateMeterState(mixer.masterMeterState, masterMeasurement, now, masterActive);
+                renderMeterTargets(mixer.masterMeterTargets || [], mixer.masterMeterState, now);
+            }
             mixer.meterFrame = window.requestAnimationFrame(draw);
         };
-        draw();
+        mixer.meterFrame = window.requestAnimationFrame(draw);
     }
 
 
@@ -2270,12 +2461,13 @@
             mixer.context.close().catch(() => {});
         }
 
+        Object.keys(mixer.channels || {}).forEach((id) => { if (mixer.channels[id]) { mixer.channels[id].meterTargets = []; mixer.channels[id].meterFloatData = null; mixer.channels[id].meterByteData = null; } });
+        mixer.masterMeterTargets = [];
+        mixer.masterFloatData = null;
+        mixer.masterByteData = null;
         state.audioMixer = null;
-        root.querySelectorAll('[data-mixer-meter]').forEach((el) => {
-            el.style.setProperty('--vh360-meter-level', '0%');
-            el.style.height = '0%';
-        });
-        root.querySelectorAll('[data-mixer-status]').forEach((el) => { el.textContent = el.dataset.mixerStatus === 'master' ? audioInputStatusLabel('active') : audioInputStatusLabel('off'); });
+        root.querySelectorAll('[data-meter-channel]').forEach((meter) => resetMeterTarget({ meter, fill: meter.querySelector('[data-mixer-meter]'), peak: meter.querySelector('[data-mixer-peak]'), clip: meter.querySelector('[data-mixer-clip]'), label: meter.getAttribute('aria-label') || '' }));
+        root.querySelectorAll('[data-mixer-status]').forEach((el) => { const statusKey = el.dataset.mixerStatus === 'master' ? 'active' : 'off'; const statusText = el.querySelector('[data-mixer-status-text]'); if (statusText) { statusText.textContent = audioInputStatusLabel(statusKey); } else { el.textContent = audioInputStatusLabel(statusKey); } el.dataset.statusState = statusKey; });
         root.querySelectorAll('[data-mixer-mute]').forEach((button) => { syncMixerMuteButton(button, null, false); });
     }
 
@@ -3830,59 +4022,6 @@
     function stopPreview(options = {}) {
         const sourceId = options.sourceId || primaryCameraSourceId();
         return stopCameraSource(sourceId, options);
-    }
-
-    function isMicMeterDrivenByMixer() {
-        return Boolean(els.micMeter && els.micMeter.matches('[data-mixer-meter="mic"]'));
-    }
-
-    function setupAudioMeter(stream) {
-        teardownAudioMeter();
-        if (isMicMeterDrivenByMixer()) {
-            return;
-        }
-        const audioTracks = stream.getAudioTracks();
-        if (!audioTracks.length || !window.AudioContext && !window.webkitAudioContext) {
-            return;
-        }
-
-        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-        state.audioContext = new AudioContextClass();
-        const source = state.audioContext.createMediaStreamSource(new MediaStream(audioTracks));
-        state.analyser = state.audioContext.createAnalyser();
-        state.analyser.fftSize = 256;
-        source.connect(state.analyser);
-        drawMeter();
-    }
-
-    function drawMeter() {
-        if (!state.analyser || !els.micMeter || isMicMeterDrivenByMixer()) {
-            return;
-        }
-
-        const data = new Uint8Array(state.analyser.frequencyBinCount);
-        state.analyser.getByteFrequencyData(data);
-        const average = data.reduce((sum, value) => sum + value, 0) / data.length;
-        const level = Math.min(100, Math.round((average / 255) * 100)) + '%';
-        els.micMeter.style.setProperty('--vh360-meter-level', level);
-        els.micMeter.style.height = level;
-        state.meterFrame = window.requestAnimationFrame(drawMeter);
-    }
-
-    function teardownAudioMeter() {
-        if (state.meterFrame) {
-            window.cancelAnimationFrame(state.meterFrame);
-            state.meterFrame = null;
-        }
-        if (els.micMeter && !isMicMeterDrivenByMixer()) {
-            els.micMeter.style.setProperty('--vh360-meter-level', '0%');
-            els.micMeter.style.height = '0%';
-        }
-        if (state.audioContext) {
-            state.audioContext.close().catch(() => {});
-        }
-        state.audioContext = null;
-        state.analyser = null;
     }
 
     async function startScreenPreview(updateSelection = true) {
@@ -6354,6 +6493,11 @@
             }
         });
         document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && els.audioInputSettingsModal && !els.audioInputSettingsModal.hidden) {
+                event.preventDefault();
+                closeAudioInputSettings();
+                return;
+            }
             if (event.key === 'Escape' && els.cameraSourceModal && !els.cameraSourceModal.hidden) {
                 event.preventDefault();
                 closeCameraSourceModal();
@@ -6508,8 +6652,8 @@
                 renderAudioInputChannels();
                 setDeviceStatus(getStudioString('audioInputAdded', 'Audio input added.'), 'success');
                 const strip = els.audioInputChannels && els.audioInputChannels.querySelector('[data-audio-input-id="' + input.id + '"]');
-                const focusTarget = strip && strip.querySelector('[data-audio-input-device], [data-audio-input-name]');
-                if (focusTarget) { focusTarget.focus(); }
+                const settingsButton = strip && strip.querySelector('[data-open-audio-input-settings]');
+                openAudioInputSettings(input.id, settingsButton);
                 if (input.deviceId) {
                     startAudioInput(input.id, { reason: 'add-audio-input' }).catch((error) => setDeviceStatus(friendlyMediaError(error), 'warning'));
                 }
@@ -6523,60 +6667,15 @@
                 const channel = mixer && mixer.channels[input.dataset.mixerGain];
                 if (!channel) { return; }
                 channel.volume = (Number(input.value) || 0) / 100;
+                updateMixerGainReadout(channel.id, channel.volume);
                 const audioInput = state.audioInputs.get(channel.id);
                 if (audioInput) { audioInput.volume = normalizeMixerVolume(channel.volume, 1); scheduleAudioInputConfigurationSave(); }
                 applyMixerChannelGain(channel);
             });
-            els.audioMixer.addEventListener('change', (event) => {
-                const select = event.target.closest('[data-audio-input-device]');
-                if (!select || !els.audioMixer.contains(select)) { return; }
-                const input = state.audioInputs.get(select.dataset.audioInputDevice);
-                if (!input) { return; }
-                input.deviceId = select.value;
-                input.deviceLabel = select.value ? selectedDeviceLabel(select, '') : '';
-                input.error = '';
-                input.status = 'off';
-                if (input.isPrimary && els.micSelect) { els.micSelect.value = input.deviceId; }
-                saveAudioInputConfiguration();
-                refreshAudioInputDiagnostics();
-                startAudioInput(input.id, { force: true, reason: 'audio-input-device-change' }).catch((error) => {
-                    setDeviceStatus(friendlyMediaError(error), 'warning');
-                    refreshAudioInputDiagnostics();
-                });
-            });
-            els.audioMixer.addEventListener('blur', (event) => {
-                const name = event.target.closest('[data-audio-input-name]');
-                if (!name || !els.audioMixer.contains(name)) { return; }
-                const input = state.audioInputs.get(name.dataset.audioInputName);
-                if (!input) { return; }
-                const inputIndex = Array.from(state.audioInputs.keys()).indexOf(input.id);
-                input.label = sanitizeAudioInputLabel(name.value, Math.max(0, inputIndex));
-                const channel = ensureAudioInputMixerChannel(input.id);
-                if (channel) { channel.label = input.label; }
-                saveAudioInputConfiguration();
-                updateMixerUi();
-            }, true);
             els.audioMixer.addEventListener('click', (event) => {
-                const remove = event.target.closest('[data-remove-audio-input]');
-                if (remove && els.audioMixer.contains(remove)) {
-                    const input = state.audioInputs.get(remove.dataset.removeAudioInput);
-                    if (input && input.isPrimary) {
-                        studioDebugLog('[VH360 Studio] Refusing to remove the primary audio input', { inputId: input.id });
-                        return;
-                    }
-                    if (input && !input.isPrimary) {
-                        input.removed = true;
-                        input.status = 'removed';
-                        stopAudioInput(input.id);
-                        removeMixerChannel(input.mixerChannelId);
-                        state.audioInputs.delete(input.id);
-                        enforcePrimaryAudioInputInvariant();
-                        saveAudioInputConfiguration();
-                        renderAudioInputChannels();
-                        updateActiveDeviceSummary();
-                        setDeviceStatus(getStudioString('audioInputRemoved', 'Audio input removed.'), 'success');
-                        if (els.addAudioInput) { els.addAudioInput.focus(); }
-                    }
+                const settings = event.target.closest('[data-open-audio-input-settings]');
+                if (settings && els.audioMixer.contains(settings)) {
+                    openAudioInputSettings(settings.dataset.openAudioInputSettings, settings);
                     return;
                 }
                 const button = event.target.closest('[data-mixer-mute]');
@@ -6594,6 +6693,34 @@
                 updateMixerUi();
                 applyMixerChannelGain(channel);
             });
+        }
+        if (els.closeAudioInputSettings) {
+            els.closeAudioInputSettings.forEach((button) => button.addEventListener('click', closeAudioInputSettings));
+        }
+        if (els.audioInputSettingsName) {
+            els.audioInputSettingsName.addEventListener('change', commitAudioInputSettingsName);
+        }
+        if (els.audioInputSettingsDevice) {
+            els.audioInputSettingsDevice.addEventListener('change', () => {
+                const input = state.audioInputs.get(state.audioInputSettingsId);
+                if (!input) { return; }
+                input.deviceId = els.audioInputSettingsDevice.value;
+                input.deviceLabel = input.deviceId ? selectedDeviceLabel(els.audioInputSettingsDevice, '') : '';
+                input.error = '';
+                input.status = 'off';
+                if (input.isPrimary && els.micSelect) { els.micSelect.value = input.deviceId; storageSet(MIC_STORAGE_KEY, input.deviceId); }
+                saveAudioInputConfiguration();
+                refreshAudioInputDiagnostics();
+                renderAudioInputSettings();
+                startAudioInput(input.id, { force: true, reason: 'audio-input-device-change' }).catch((error) => {
+                    setDeviceStatus(friendlyMediaError(error), 'warning');
+                    refreshAudioInputDiagnostics();
+                    renderAudioInputSettings();
+                });
+            });
+        }
+        if (els.audioInputSettingsRemove) {
+            els.audioInputSettingsRemove.addEventListener('click', () => { removeAudioInput(state.audioInputSettingsId); });
         }
         if (els.qualitySelect) {
             els.qualitySelect.addEventListener('change', () => {
