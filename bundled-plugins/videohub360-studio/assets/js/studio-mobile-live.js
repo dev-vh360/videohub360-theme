@@ -80,6 +80,17 @@
         }
     }
 
+    function resetPersistentStatuses() {
+        setDeviceStatus('camera', text('cameraNotConnected', 'Camera: not connected'));
+        setDeviceStatus('microphone', text('microphoneNotConnected', 'Microphone: not connected'));
+        setDeviceStatus('connection', text('connectionNotLive', 'Connection: not live'));
+        state.serverStarted = false;
+        state.facingMode = 'user';
+        setReconnectBanner('', false);
+        all('[data-mobile-connection]').forEach(function (el) { el.textContent = text('connected', 'Connected'); });
+        resetMuteState();
+    }
+
     function setState(next) {
         state.name = next;
         all('[data-mobile-stage]').forEach(function (stage) {
@@ -311,6 +322,7 @@
         stopHeartbeat();
         window.clearInterval(state.durationTimer);
         await stopSession();
+        resetPersistentStatuses();
         if (cleanupVideoId) {
             try {
                 await bestEffortEnd(cleanupVideoId, false);
@@ -380,7 +392,8 @@
             startDuration();
             requestWakeLock();
         } catch (error) {
-            await rollbackFailedStart(error && error.message ? error.message : text('startFailed', 'The livestream could not start.'));
+            console.error('[VH360 Mobile Live] Start failed', error);
+            await rollbackFailedStart(text('startFailed', 'The livestream could not start. Devices and server state were cleaned up when possible.'));
         } finally {
             state.goLiveBusy = false;
             updateBusyStates();
@@ -408,6 +421,7 @@
             await bestEffortEnd(videoId, false);
             state.pendingCleanupVideoId = 0;
             state.videoId = 0;
+            resetPersistentStatuses();
             await releaseWakeLock();
             setState('ended');
             setStatus(text('ended', 'Livestream ended.'));
@@ -424,7 +438,7 @@
 
     async function returnToSetup() {
         await stopSession();
-        resetMuteState();
+        resetPersistentStatuses();
         setState('setup');
         setStatus('');
     }
@@ -557,7 +571,7 @@
 
         window.addEventListener('pagehide', function () {
             const cleanupVideoId = state.pendingCleanupVideoId || state.videoId;
-            if (state.pageExitEnding || state.endBusy || !cleanupVideoId || ['live', 'reconnecting', 'ending', 'end_failed'].indexOf(state.name) === -1) {
+            if (state.pageExitEnding || state.endBusy || !cleanupVideoId || ['creating_broadcast', 'connecting', 'live', 'reconnecting', 'ending', 'end_failed'].indexOf(state.name) === -1) {
                 return;
             }
             state.pageExitEnding = true;

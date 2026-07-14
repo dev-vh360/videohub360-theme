@@ -33,10 +33,28 @@
                 expiresAt: config.expiresAt || 0,
                 renewalTimer: 0,
                 renewalPromise: null,
+                recoveryPromise: null,
                 renewalFailures: 0,
+                active: true,
+                stopping: false,
+                generation: 0,
                 currentFacingMode: (config.videoConfig && config.videoConfig.facingMode) || 'user',
                 currentDeviceId: ''
             };
+
+            function currentGeneration() {
+                return state.generation;
+            }
+
+            function isOperationCurrent(generation) {
+                return state.active && !state.stopping && generation === state.generation;
+            }
+
+            function assertOperationCurrent(generation) {
+                if (!isOperationCurrent(generation)) {
+                    throw new Error('Broadcaster operation cancelled.');
+                }
+            }
 
             function mediaTrackSettings(track) {
                 if (!track || typeof track.getMediaStreamTrack !== 'function') {
@@ -60,7 +78,10 @@
                 return facingMode !== 'environment' && config.initialVideoSource !== 'screen';
             }
 
-            function playPreview() {
+            function playPreview(generation) {
+                if (typeof generation === 'number' && !isOperationCurrent(generation)) {
+                    return;
+                }
                 if (localContainer && state.videoTrack && typeof state.videoTrack.play === 'function') {
                     state.videoTrack.play(localContainer, { mirror: mirrorForFacing(state.currentFacingMode) });
                 }
@@ -99,6 +120,8 @@
             }
 
             async function prepareMedia() {
+                const generation = currentGeneration();
+                assertOperationCurrent(generation);
                 if (!window.AgoraRTC) {
                     throw new Error('Agora RTC SDK is unavailable.');
                 }
@@ -111,7 +134,12 @@
                             state.audioTrack = window.AgoraRTC.createCustomAudioTrack({ mediaStreamTrack: config.initialAudioMediaStreamTrack });
                             state.audioTrackOwnsSource = false;
                         } else {
-                            state.audioTrack = await window.AgoraRTC.createMicrophoneAudioTrack(config.audioConfig || {});
+                            const audioTrack = await window.AgoraRTC.createMicrophoneAudioTrack(config.audioConfig || {});
+                            if (!isOperationCurrent(generation)) {
+                                stopAndMaybeClose(audioTrack, true);
+                                throw new Error('Broadcaster operation cancelled.');
+                            }
+                            state.audioTrack = audioTrack;
                             state.audioTrackOwnsSource = true;
                         }
                         bindTrackLifecycle(state.audioTrack, 'audio', config.initialAudioMediaStreamTrack ? (config.audioSource || 'studio-mix') : 'microphone');
@@ -121,13 +149,19 @@
                             state.videoTrack = window.AgoraRTC.createCustomVideoTrack({ mediaStreamTrack: config.initialVideoMediaStreamTrack });
                             state.videoTrackOwnsSource = false;
                         } else {
-                            state.videoTrack = await window.AgoraRTC.createCameraVideoTrack(config.videoConfig || {});
+                            const videoTrack = await window.AgoraRTC.createCameraVideoTrack(config.videoConfig || {});
+                            if (!isOperationCurrent(generation)) {
+                                stopAndMaybeClose(videoTrack, true);
+                                throw new Error('Broadcaster operation cancelled.');
+                            }
+                            state.videoTrack = videoTrack;
                             state.videoTrackOwnsSource = true;
                         }
                         bindTrackLifecycle(state.videoTrack, 'video', config.initialVideoMediaStreamTrack ? (config.initialVideoSource || 'program') : 'camera');
                     }
+                    assertOperationCurrent(generation);
                     updateCurrentDeviceFromTrack();
-                    playPreview();
+                    playPreview(generation);
                     emit(root, 'media-prepared', {});
                     return state;
                 } catch (error) {
@@ -159,8 +193,14 @@
                 });
             }
 
-            function scheduleRenewal(expiresAt) {
+            function scheduleRenewal(expiresAt, generation) {
                 window.clearTimeout(state.renewalTimer);
+                if (typeof generation === 'number' && !isOperationCurrent(generation)) {
+                    return;
+                }
+                if (!state.active || state.stopping) {
+                    return;
+                }
                 state.expiresAt = Number(expiresAt) || 0;
                 if (!state.expiresAt) {
                     return;
@@ -184,29 +224,35 @@
                 });
             }
 
-            async function fetchFreshToken() {
+            async function fetchFreshToken(generation) {
+                assertOperationCurrent(generation);
                 const response = await requestServerToken();
+                assertOperationCurrent(generation);
                 const nextToken = response && response.token ? response.token : '';
                 if (!nextToken) {
                     throw new Error('Token refresh did not return a token.');
                 }
                 state.token = nextToken;
-                scheduleRenewal(response.expiresAt);
+                scheduleRenewal(response.expiresAt, generation);
                 return response;
             }
 
             async function renewToken(options) {
                 const settings = options || {};
+                const generation = currentGeneration();
+                assertOperationCurrent(generation);
                 if (state.renewalPromise) {
                     return state.renewalPromise;
                 }
                 state.renewalPromise = (async function () {
                     emit(root, 'token-renewal-start', { expired: !!settings.expired });
-                    const response = await fetchFreshToken();
+                    const response = await fetchFreshToken(generation);
                     if (!state.client || typeof state.client.renewToken !== 'function') {
                         throw new Error('Live client cannot renew tokens.');
                     }
+                    assertOperationCurrent(generation);
                     await state.client.renewToken(response.token);
+                    assertOperationCurrent(generation);
                     state.renewalFailures = 0;
                     emit(root, 'token-renewed', { expiresAt: response.expiresAt || 0, expired: !!settings.expired });
                     return response;
@@ -223,6 +269,7 @@
             }
 
             async function renewTokenWithRetry() {
+                const generation = currentGeneration();
                 let lastError = null;
                 for (let attempt = 0; attempt < 3; attempt += 1) {
                     try {
@@ -230,46 +277,66 @@
                     } catch (error) {
                         lastError = error;
                         await sleep(1000 * Math.pow(2, attempt));
+                        assertOperationCurrent(generation);
                     }
                 }
                 throw lastError || new Error('Token renewal failed.');
             }
 
             async function recoverExpiredToken() {
-                if (state.renewalPromise) {
-                    await state.renewalPromise.catch(function () {});
+                if (state.recoveryPromise) {
+                    return state.recoveryPromise;
                 }
-                let lastError = null;
-                for (let attempt = 0; attempt < 3; attempt += 1) {
-                    try {
-                        emit(root, 'token-recovery-start', { attempt: attempt + 1 });
-                        const response = await fetchFreshToken();
-                        await rejoinAndRepublish(response.token);
-                        state.renewalFailures = 0;
-                        emit(root, 'token-recovered', { attempt: attempt + 1, expiresAt: response.expiresAt || 0 });
-                        return true;
-                    } catch (error) {
-                        lastError = error;
-                        emit(root, 'token-recovery-error', { error: error, attempt: attempt + 1 });
-                        await sleep(1000 * Math.pow(2, attempt));
+                const generation = currentGeneration();
+                assertOperationCurrent(generation);
+                state.recoveryPromise = (async function () {
+                    if (state.renewalPromise) {
+                        await state.renewalPromise.catch(function () {});
                     }
+                    let lastError = null;
+                    for (let attempt = 0; attempt < 3; attempt += 1) {
+                        try {
+                            assertOperationCurrent(generation);
+                            emit(root, 'token-recovery-start', { attempt: attempt + 1 });
+                            const response = await fetchFreshToken(generation);
+                            await rejoinAndRepublish(response.token, generation);
+                            state.renewalFailures = 0;
+                            emit(root, 'token-recovered', { attempt: attempt + 1, expiresAt: response.expiresAt || 0 });
+                            return true;
+                        } catch (error) {
+                            lastError = error;
+                            emit(root, 'token-recovery-error', { error: error, attempt: attempt + 1 });
+                            await sleep(1000 * Math.pow(2, attempt));
+                        }
+                    }
+                    throw lastError || new Error('Token recovery failed.');
+                })();
+                try {
+                    return await state.recoveryPromise;
+                } finally {
+                    state.recoveryPromise = null;
                 }
-                throw lastError || new Error('Token recovery failed.');
             }
 
-            async function createClientIfNeeded(clientMode) {
+            async function createClientIfNeeded(clientMode, generation) {
+                assertOperationCurrent(generation);
                 if (!state.client) {
                     state.client = window.AgoraRTC.createClient({ mode: clientMode, codec: 'vp8' });
                     bindClientEvents();
                 }
+                assertOperationCurrent(generation);
                 if (clientMode === 'live' && typeof state.client.setClientRole === 'function') {
                     await state.client.setClientRole('host');
+                    assertOperationCurrent(generation);
                 }
             }
 
             async function connect(connectionConfig) {
+                const generation = currentGeneration();
+                assertOperationCurrent(generation);
                 const merged = Object.assign({}, config, connectionConfig || {});
                 await prepareMedia();
+                assertOperationCurrent(generation);
                 state.appId = merged.appId;
                 state.channelName = merged.channelName;
                 state.uid = Number(merged.uid);
@@ -278,12 +345,14 @@
                 config.videoId = merged.videoId || config.videoId;
 
                 try {
-                    await createClientIfNeeded(state.clientMode);
+                    await createClientIfNeeded(state.clientMode, generation);
                     await state.client.join(state.appId, state.channelName, state.token, state.uid);
+                    assertOperationCurrent(generation);
                     state.joined = true;
                     await state.client.publish([state.audioTrack, state.videoTrack].filter(Boolean));
+                    assertOperationCurrent(generation);
                     state.published = true;
-                    scheduleRenewal(merged.expiresAt);
+                    scheduleRenewal(merged.expiresAt, generation);
                     emit(root, 'published', { uid: state.uid, channelName: state.channelName });
                     return state;
                 } catch (error) {
@@ -304,7 +373,11 @@
                 }
             }
 
-            async function rejoinAndRepublish(token) {
+            async function rejoinAndRepublish(token, generation) {
+                assertOperationCurrent(generation);
+                if (!state.audioTrack || !state.videoTrack) {
+                    throw new Error('Cannot rejoin without prepared local tracks.');
+                }
                 emit(root, 'token-rejoin-start', {});
                 if (state.client && state.joined) {
                     if (state.published) {
@@ -314,10 +387,13 @@
                     await state.client.leave().catch(function () {});
                     state.joined = false;
                 }
-                await createClientIfNeeded(state.clientMode);
+                assertOperationCurrent(generation);
+                await createClientIfNeeded(state.clientMode, generation);
                 await state.client.join(state.appId, state.channelName, token || state.token || null, state.uid);
+                assertOperationCurrent(generation);
                 state.joined = true;
                 await state.client.publish([state.audioTrack, state.videoTrack].filter(Boolean));
+                assertOperationCurrent(generation);
                 state.published = true;
                 emit(root, 'published', { uid: state.uid, channelName: state.channelName, rejoined: true });
             }
@@ -339,6 +415,8 @@
             }
 
             async function switchCamera(preferredFacingMode) {
+                const generation = currentGeneration();
+                assertOperationCurrent(generation);
                 if (!state.videoTrack || !state.videoTrackOwnsSource) {
                     return false;
                 }
@@ -350,67 +428,92 @@
                 try {
                     if (typeof state.videoTrack.setDevice === 'function') {
                         await state.videoTrack.setDevice({ facingMode: targetFacing });
+                        assertOperationCurrent(generation);
                         state.currentFacingMode = targetFacing;
                         updateCurrentDeviceFromTrack();
-                        playPreview();
+                        playPreview(generation);
                         emit(root, 'camera-switched', getCurrentCameraState());
                         return true;
                     }
                 } catch (error) {
+                    if (!isOperationCurrent(generation)) {
+                        return false;
+                    }
                     // Continue to device-id fallback.
                 }
 
                 try {
                     const devices = await enumerateVideoInputs();
+                    assertOperationCurrent(generation);
                     const next = devices.find(function (device) {
                         return device.deviceId && device.deviceId !== previousDevice;
                     });
                     if (next && typeof state.videoTrack.setDevice === 'function') {
                         await state.videoTrack.setDevice(next.deviceId);
+                        assertOperationCurrent(generation);
                         state.currentFacingMode = targetFacing;
                         updateCurrentDeviceFromTrack();
                         state.currentDeviceId = next.deviceId;
-                        playPreview();
+                        playPreview(generation);
                         emit(root, 'camera-switched', getCurrentCameraState());
                         return true;
                     }
                 } catch (error) {
+                    if (!isOperationCurrent(generation)) {
+                        return false;
+                    }
                     // Continue to replacement-track fallback.
                 }
 
                 let replacement = null;
                 try {
                     replacement = await window.AgoraRTC.createCameraVideoTrack(Object.assign({}, config.videoConfig || {}, { facingMode: targetFacing }));
+                    if (!isOperationCurrent(generation)) {
+                        stopAndMaybeClose(replacement, true);
+                        return false;
+                    }
                     bindTrackLifecycle(replacement, 'video', 'camera');
                     if (state.client && state.published) {
                         await state.client.unpublish(previousTrack).catch(function () {});
+                        assertOperationCurrent(generation);
                         try {
                             await state.client.publish(replacement);
+                            assertOperationCurrent(generation);
                         } catch (publishError) {
-                            await state.client.publish(previousTrack).catch(function () {});
+                            if (isOperationCurrent(generation)) {
+                                await state.client.publish(previousTrack).catch(function () {});
+                            }
                             throw publishError;
                         }
                     }
                     state.videoTrack = replacement;
                     state.currentFacingMode = targetFacing;
+                    assertOperationCurrent(generation);
                     updateCurrentDeviceFromTrack();
-                    playPreview();
+                    playPreview(generation);
                     stopAndMaybeClose(previousTrack, true);
                     emit(root, 'camera-switched', getCurrentCameraState());
                     return true;
                 } catch (error) {
                     stopAndMaybeClose(replacement, true);
+                    if (!isOperationCurrent(generation)) {
+                        return false;
+                    }
                     state.videoTrack = previousTrack;
                     state.currentFacingMode = previousFacing;
                     state.currentDeviceId = previousDevice;
-                    playPreview();
+                    playPreview(generation);
                     emit(root, 'camera-switch-error', { error: error, facingMode: targetFacing });
                     throw error;
                 }
             }
 
             async function stop() {
+                state.active = false;
+                state.stopping = true;
+                state.generation += 1;
                 window.clearTimeout(state.renewalTimer);
+                state.renewalTimer = 0;
                 if (state.client && state.published) {
                     await state.client.unpublish().catch(function () {});
                 }
@@ -423,6 +526,8 @@
                 stopAndMaybeClose(state.videoTrack, state.videoTrackOwnsSource);
                 state.audioTrack = null;
                 state.videoTrack = null;
+                state.recoveryPromise = null;
+                state.renewalPromise = null;
                 emit(root, 'ended', {});
             }
 
