@@ -238,19 +238,13 @@
                     return;
                 }
                 if (mediaType === 'video') {
-                    if (record.videoTrack && typeof record.videoTrack.stop === 'function') {
-                        record.videoTrack.stop();
-                    }
+                    stopRemoteVideoPlayback(record);
                     record.videoTrack = null;
                     record.videoPublished = false;
-                    record.videoPlaying = false;
                 } else {
-                    if (record.audioTrack && typeof record.audioTrack.stop === 'function') {
-                        record.audioTrack.stop();
-                    }
+                    stopRemoteAudioPlayback(record);
                     record.audioTrack = null;
                     record.audioPublished = false;
-                    record.audioPlaying = false;
                 }
                 record.subscriptionState[mediaType] = 'unpublished';
                 emit(root, 'remote-track-unpublished', remoteDetail(record, mediaType));
@@ -396,6 +390,12 @@
 
             function handleAutoplayFailed() {
                 if (state.receiveRemoteParticipants && isOperationCurrent(currentGeneration())) {
+                    state.remoteParticipants.forEach(function (record) {
+                        if (record.audioTrack) {
+                            record.audioPlaying = false;
+                            record.audioPlaybackTrack = null;
+                        }
+                    });
                     emit(root, 'remote-audio-blocked', {});
                 }
             }

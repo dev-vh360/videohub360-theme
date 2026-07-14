@@ -55,7 +55,8 @@
                 audioBlocked: false,
                 headphoneNoticeShown: false,
                 focusReturn: null,
-                handlers: []
+                handlers: [],
+                uiHandlersBound: false
             };
 
             const remoteStage = root.querySelector('[data-mobile-remote-stage]');
@@ -494,6 +495,88 @@
                 state.participants.forEach(updateRecord);
             }
 
+            async function handleEnableParticipantAudio() {
+                if (state.stopped) {
+                    return;
+                }
+                audioButton.disabled = true;
+                let blocked = false;
+                try {
+                    if (window.AgoraRTC && typeof window.AgoraRTC.resumeAudioContext === 'function') {
+                        await window.AgoraRTC.resumeAudioContext();
+                    }
+                    state.participants.forEach(function (record) {
+                        if (record.hasAudio && state.session) {
+                            record.needsAudioPlay = true;
+                            if (state.session.playRemoteAudio(record.uid)) {
+                                record.needsAudioPlay = false;
+                            } else {
+                                blocked = true;
+                            }
+                        }
+                    });
+                } catch (error) {
+                    console.error('[VH360 Mobile Live] Participant audio retry failed', error);
+                    blocked = true;
+                } finally {
+                    showAudioFallback(blocked);
+                    audioButton.disabled = false;
+                }
+            }
+
+            function handleDrawerKeydown(event) {
+                if (state.stopped) {
+                    return;
+                }
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    closeDrawer();
+                    return;
+                }
+                if (event.key === 'Tab') {
+                    const items = focusableElements(drawer);
+                    if (!items.length) {
+                        event.preventDefault();
+                        return;
+                    }
+                    const first = items[0];
+                    const last = items[items.length - 1];
+                    if (event.shiftKey && document.activeElement === first) {
+                        event.preventDefault();
+                        last.focus();
+                    } else if (!event.shiftKey && document.activeElement === last) {
+                        event.preventDefault();
+                        first.focus();
+                    }
+                }
+            }
+
+            function bindUiHandlers() {
+                if (state.uiHandlersBound) {
+                    return;
+                }
+                if (audioButton) {
+                    audioButton.addEventListener('click', handleEnableParticipantAudio);
+                }
+                if (drawer) {
+                    drawer.addEventListener('keydown', handleDrawerKeydown);
+                }
+                state.uiHandlersBound = true;
+            }
+
+            function unbindUiHandlers() {
+                if (!state.uiHandlersBound) {
+                    return;
+                }
+                if (audioButton) {
+                    audioButton.removeEventListener('click', handleEnableParticipantAudio);
+                }
+                if (drawer) {
+                    drawer.removeEventListener('keydown', handleDrawerKeydown);
+                }
+                state.uiHandlersBound = false;
+            }
+
             function bindEvent(target, eventName, handler) {
                 target.addEventListener(eventName, handler);
                 state.handlers.push({ target: target, eventName: eventName, handler: handler });
@@ -505,6 +588,7 @@
                 }
                 state.stopped = false;
                 state.bound = true;
+                bindUiHandlers();
                 bindEvent(root, 'vh360:agora-broadcaster:remote-participant-published', handlePublished);
                 bindEvent(root, 'vh360:agora-broadcaster:remote-track-unpublished', handleUnpublished);
                 bindEvent(root, 'vh360:agora-broadcaster:remote-participants-reset', handleReset);
@@ -542,6 +626,7 @@
                 });
                 state.handlers = [];
                 state.bound = false;
+                unbindUiHandlers();
                 window.clearTimeout(state.identityTimer);
                 state.identityTimer = 0;
                 state.identityQueue.clear();
@@ -580,59 +665,6 @@
                 state.focusReturn = null;
             }
 
-            if (audioButton) {
-                audioButton.addEventListener('click', async function () {
-                    audioButton.disabled = true;
-                    let blocked = false;
-                    try {
-                        if (window.AgoraRTC && typeof window.AgoraRTC.resumeAudioContext === 'function') {
-                            await window.AgoraRTC.resumeAudioContext();
-                        }
-                        state.participants.forEach(function (record) {
-                            if (record.hasAudio && state.session) {
-                                record.needsAudioPlay = true;
-                                if (state.session.playRemoteAudio(record.uid)) {
-                                    record.needsAudioPlay = false;
-                                } else {
-                                    blocked = true;
-                                }
-                            }
-                        });
-                    } catch (error) {
-                        console.error('[VH360 Mobile Live] Participant audio retry failed', error);
-                        blocked = true;
-                    } finally {
-                        showAudioFallback(blocked);
-                        audioButton.disabled = false;
-                    }
-                });
-            }
-
-            if (drawer) {
-                drawer.addEventListener('keydown', function (event) {
-                    if (event.key === 'Escape') {
-                        event.preventDefault();
-                        closeDrawer();
-                        return;
-                    }
-                    if (event.key === 'Tab') {
-                        const items = focusableElements(drawer);
-                        if (!items.length) {
-                            event.preventDefault();
-                            return;
-                        }
-                        const first = items[0];
-                        const last = items[items.length - 1];
-                        if (event.shiftKey && document.activeElement === first) {
-                            event.preventDefault();
-                            last.focus();
-                        } else if (!event.shiftKey && document.activeElement === last) {
-                            event.preventDefault();
-                            first.focus();
-                        }
-                    }
-                });
-            }
 
             return {
                 setBroadcastContext: function (context) {
