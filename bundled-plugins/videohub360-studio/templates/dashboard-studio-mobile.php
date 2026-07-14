@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 $desktop_url = add_query_arg( array( 'tab' => 'studio', 'studio_mode' => 'desktop' ), remove_query_arg( 'studio_mode' ) );
 ?>
-<section class="vh360-studio-mobile-live" data-vh360-studio-mobile-live>
+<section class="vh360-mobile-live" data-vh360-studio-mobile-live>
     <header class="vh360-mobile-live__header">
         <div>
             <p class="vh360-mobile-live__eyebrow"><?php echo esc_html( function_exists( 'vh360_studio_get_display_name' ) ? vh360_studio_get_display_name() : sprintf( __( '%s Studio', 'videohub360-studio' ), get_bloginfo( 'name' ) ) ); ?></p>
@@ -112,7 +112,7 @@ $desktop_url = add_query_arg( array( 'tab' => 'studio', 'studio_mode' => 'deskto
     <div class="vh360-mobile-live__stage" data-mobile-stage="ended" tabindex="-1">
         <h3><?php esc_html_e( 'Livestream ended', 'videohub360-studio' ); ?></h3>
         <a data-mobile-open-video target="_blank" rel="noopener"><?php esc_html_e( 'Open Video', 'videohub360-studio' ); ?></a>
-        <a href="<?php echo esc_url( remove_query_arg( 'studio_mode' ) ); ?>"><?php esc_html_e( 'Return to Dashboard', 'videohub360-studio' ); ?></a>
+        <a href="<?php echo esc_url( remove_query_arg( array( 'tab', 'studio_mode' ) ) ); ?>"><?php esc_html_e( 'Return to Dashboard', 'videohub360-studio' ); ?></a>
         <button type="button" data-mobile-start-another><?php esc_html_e( 'Start Another Live', 'videohub360-studio' ); ?></button>
     </div>
 </section>

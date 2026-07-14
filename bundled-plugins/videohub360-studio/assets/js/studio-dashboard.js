@@ -6151,9 +6151,9 @@
                     return api('/broadcasts/' + state.broadcastVideoId + '/renew-token', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
                 },
             });
+            state.broadcastSession = session;
             await session.start();
             studioDebugLog('[VH360 Studio] Agora mixed audio diagnostics', { mixerId: state.audioMixer ? state.audioMixer.id : '', audioTrackId: getStudioMixedAudioTrack() ? getStudioMixedAudioTrack().id : '', agoraAudioTrackId: typeof session.getAudioTrackId === 'function' ? session.getAudioTrackId() : '' });
-            state.broadcastSession = session;
             state.liveAudioWarningActive = false;
             updateViewerLinkControls();
             state.broadcastReady = true;

@@ -31,7 +31,7 @@
         wakeLock: null,
         coverId: 0,
         liveStartedAt: 0,
-        goLiveSteps: {}
+        serverStarted: false
     };
 
     function text(key, fallback) {
@@ -53,6 +53,17 @@
             throw new Error(payload.message || text('requestFailed', 'Request failed. Please try again.'));
         }
         return payload;
+    }
+
+    function userMediaErrorMessage(error) {
+        const name = error && error.name ? error.name : '';
+        if (['NotAllowedError', 'PermissionDeniedError', 'SecurityError'].indexOf(name) !== -1) {
+            return text('permissionFailed', 'Camera or microphone access failed. Check browser permissions and try again.');
+        }
+        if (['NotFoundError', 'DevicesNotFoundError', 'OverconstrainedError'].indexOf(name) !== -1) {
+            return text('cameraRequired', 'A working camera preview is required before going live.');
+        }
+        return text('permissionFailed', 'Camera or microphone access failed. Check browser permissions and try again.');
     }
 
     function setStatus(message) {
@@ -87,7 +98,7 @@
             button.disabled = busy;
         });
         all('[data-mobile-end-live]').forEach(function (button) {
-            button.disabled = state.endBusy || !state.videoId;
+            button.disabled = state.endBusy || !(state.videoId || state.pendingCleanupVideoId);
         });
     }
 
@@ -202,14 +213,15 @@
         try {
             state.session = createSession();
             await state.session.prepareMedia();
-            setDeviceStatus('camera', 'Camera: connected');
-            setDeviceStatus('microphone', 'Microphone: connected');
+            state.facingMode = (state.session.getCurrentCameraState && state.session.getCurrentCameraState().facingMode) || 'user';
+            setDeviceStatus('camera', text('cameraConnected', 'Camera: connected'));
+            setDeviceStatus('microphone', text('microphoneConnected', 'Microphone: connected'));
             resetMuteState();
             setState('preview_ready');
             setStatus(text('previewReady', 'Camera and microphone preview is ready.'));
         } catch (error) {
             await stopSession();
-            const message = error && error.message ? error.message : text('permissionFailed', 'Camera or microphone access failed. Check browser permissions and try again.');
+            const message = userMediaErrorMessage(error);
             one('[data-mobile-error-message]').textContent = message;
             setState('error');
             setStatus(message);
@@ -309,7 +321,7 @@
         }
         state.videoId = 0;
         state.viewerUrl = '';
-        state.goLiveSteps = {};
+        state.serverStarted = false;
         setState(state.pendingCleanupVideoId ? 'end_failed' : 'error');
         setStatus(reason || text('startFailed', 'The livestream could not start. Devices and server state were cleaned up when possible.'));
     }
@@ -321,7 +333,7 @@
         }
         state.goLiveBusy = true;
         updateBusyStates();
-        state.goLiveSteps = {};
+        state.serverStarted = false;
 
         try {
             const payload = formPayload();
@@ -336,7 +348,6 @@
                 headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': cfg.nonce },
                 body: JSON.stringify(payload)
             });
-            state.goLiveSteps.broadcastCreated = true;
             const broadcast = created.broadcast || {};
             state.videoId = broadcast.videoId;
             state.viewerUrl = broadcast.viewerPermalink || '';
@@ -346,20 +357,16 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': cfg.nonce }
             });
-            state.goLiveSteps.credentialsPrepared = true;
 
             setState('connecting');
             setStatus(text('connectingLiveService', 'Connecting to the live service…'));
             await state.session.connect(Object.assign({}, prepared, { videoId: state.videoId }));
-            state.goLiveSteps.agoraJoined = true;
-            state.goLiveSteps.tracksPublished = true;
-
             await api('/broadcasts/' + state.videoId + '/started', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': cfg.nonce },
                 body: JSON.stringify({ job_id: 0 })
             });
-            state.goLiveSteps.serverMarkedStarted = true;
+            state.serverStarted = true;
 
             const livePreview = one('[data-mobile-live-preview]');
             const previewNode = one('[data-agora-local-preview]');
@@ -368,7 +375,7 @@
             }
             setState('live');
             setStatus(text('liveStarted', 'You are live. Keep this browser open.'));
-            setDeviceStatus('connection', text('connected', 'Connected'));
+            setDeviceStatus('connection', text('connectionConnected', 'Connection: connected'));
             startHeartbeat();
             startDuration();
             requestWakeLock();
@@ -433,7 +440,7 @@
     function handleConnectionChange(event) {
         const current = event.detail.current || '';
         all('[data-mobile-connection]').forEach(function (el) { el.textContent = current || text('connected', 'Connected'); });
-        setDeviceStatus('connection', 'Connection: ' + (current || text('connected', 'Connected')));
+        setDeviceStatus('connection', text('connectionLabel', 'Connection: ') + (current || text('connected', 'Connected')));
         if (current === 'RECONNECTING') {
             state.name = 'reconnecting';
             setReconnectBanner(text('reconnecting', 'Reconnecting… keep this page open. End Live remains available.'), true);
@@ -441,9 +448,11 @@
             return;
         }
         if (current === 'CONNECTED') {
-            state.name = 'live';
-            setReconnectBanner('', false);
-            setStatus(text('connected', 'Connected'));
+            if (state.serverStarted && state.name === 'reconnecting') {
+                state.name = 'live';
+                setReconnectBanner('', false);
+                setStatus(text('connected', 'Connected'));
+            }
             return;
         }
         if (current === 'DISCONNECTED' || current === 'FAILED') {
@@ -470,32 +479,62 @@
 
         all('[data-mobile-switch-camera]').forEach(function (button) {
             button.addEventListener('click', async function () {
-                state.facingMode = state.facingMode === 'user' ? 'environment' : 'user';
-                if (state.session) {
-                    await state.session.switchCamera(state.facingMode).catch(function () {
-                        setStatus(text('cameraSwitchFailed', 'Camera could not be switched.'));
-                    });
+                if (!state.session) {
+                    return;
+                }
+                const previousFacing = state.facingMode;
+                const targetFacing = previousFacing === 'user' ? 'environment' : 'user';
+                button.disabled = true;
+                try {
+                    await state.session.switchCamera(targetFacing);
+                    const cameraState = state.session.getCurrentCameraState ? state.session.getCurrentCameraState() : {};
+                    state.facingMode = cameraState.facingMode || targetFacing;
+                } catch (error) {
+                    state.facingMode = previousFacing;
+                    setStatus(text('cameraSwitchFailed', 'Camera could not be switched.'));
+                } finally {
+                    button.disabled = false;
                 }
             });
         });
 
         all('[data-mobile-mute-audio]').forEach(function (button) {
             button.addEventListener('click', async function () {
-                state.mutedAudio = !state.mutedAudio;
-                if (state.session) {
-                    await state.session.muteAudio(state.mutedAudio);
+                const previous = state.mutedAudio;
+                const next = !previous;
+                button.disabled = true;
+                try {
+                    if (state.session) {
+                        await state.session.muteAudio(next);
+                    }
+                    state.mutedAudio = next;
+                } catch (error) {
+                    state.mutedAudio = previous;
+                    setStatus(text('audioToggleFailed', 'Microphone state could not be changed.'));
+                } finally {
+                    syncMediaControls();
+                    button.disabled = false;
                 }
-                syncMediaControls();
             });
         });
 
         all('[data-mobile-mute-video]').forEach(function (button) {
             button.addEventListener('click', async function () {
-                state.mutedVideo = !state.mutedVideo;
-                if (state.session) {
-                    await state.session.muteVideo(state.mutedVideo);
+                const previous = state.mutedVideo;
+                const next = !previous;
+                button.disabled = true;
+                try {
+                    if (state.session) {
+                        await state.session.muteVideo(next);
+                    }
+                    state.mutedVideo = next;
+                } catch (error) {
+                    state.mutedVideo = previous;
+                    setStatus(text('videoToggleFailed', 'Camera state could not be changed.'));
+                } finally {
+                    syncMediaControls();
+                    button.disabled = false;
                 }
-                syncMediaControls();
             });
         });
 
@@ -510,18 +549,19 @@
         });
 
         window.addEventListener('beforeunload', function (event) {
-            if (['creating_broadcast', 'connecting', 'live', 'reconnecting', 'ending'].indexOf(state.name) !== -1) {
+            if (state.pendingCleanupVideoId || ['creating_broadcast', 'connecting', 'live', 'reconnecting', 'ending', 'end_failed'].indexOf(state.name) !== -1) {
                 event.preventDefault();
                 event.returnValue = '';
             }
         });
 
         window.addEventListener('pagehide', function () {
-            if (state.pageExitEnding || state.endBusy || !state.videoId || ['live', 'reconnecting', 'ending'].indexOf(state.name) === -1) {
+            const cleanupVideoId = state.pendingCleanupVideoId || state.videoId;
+            if (state.pageExitEnding || state.endBusy || !cleanupVideoId || ['live', 'reconnecting', 'ending', 'end_failed'].indexOf(state.name) === -1) {
                 return;
             }
             state.pageExitEnding = true;
-            const url = (cfg.restRoot || '').replace(/\/$/, '') + '/broadcasts/' + state.videoId + '/end';
+            const url = (cfg.restRoot || '').replace(/\/$/, '') + '/broadcasts/' + cleanupVideoId + '/end';
             window.fetch(url, {
                 method: 'POST',
                 keepalive: true,
@@ -540,6 +580,9 @@
         });
         root.addEventListener('vh360:agora-broadcaster:token-renewal-error', function () {
             setStatus(text('tokenRenewalFailed', 'Live connection renewal failed. The app will retry.'));
+        });
+        root.addEventListener('vh360:agora-broadcaster:token-recovery-error', function () {
+            setStatus(text('tokenRecoveryFailed', 'Live connection recovery failed. Keep this page open or end the livestream.'));
         });
         root.addEventListener('vh360:agora-broadcaster:camera-switch-error', function () {
             setStatus(text('cameraSwitchFailed', 'Camera could not be switched.'));

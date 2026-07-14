@@ -102,6 +102,9 @@
                 if (!window.AgoraRTC) {
                     throw new Error('Agora RTC SDK is unavailable.');
                 }
+                if (state.audioTrack && state.videoTrack) {
+                    return state;
+                }
                 try {
                     if (!state.audioTrack) {
                         if (config.initialAudioMediaStreamTrack && typeof window.AgoraRTC.createCustomAudioTrack === 'function') {
@@ -145,7 +148,7 @@
                     emit(root, 'connection-state-change', { current: current, previous: previous, reason: reason || '' });
                 });
                 state.client.on('token-privilege-will-expire', function () {
-                    renewToken({ expired: false }).catch(function (error) {
+                    renewTokenWithRetry().catch(function (error) {
                         emit(root, 'token-renewal-error', { error: error, expired: false });
                     });
                 });
@@ -164,7 +167,7 @@
                 }
                 const delay = Math.max(30000, (state.expiresAt * 1000) - Date.now() - 300000);
                 state.renewalTimer = window.setTimeout(function () {
-                    renewToken({ expired: false }).catch(function (error) {
+                    renewTokenWithRetry().catch(function (error) {
                         emit(root, 'token-renewal-error', { error: error, expired: false });
                     });
                 }, delay);
@@ -181,6 +184,17 @@
                 });
             }
 
+            async function fetchFreshToken() {
+                const response = await requestServerToken();
+                const nextToken = response && response.token ? response.token : '';
+                if (!nextToken) {
+                    throw new Error('Token refresh did not return a token.');
+                }
+                state.token = nextToken;
+                scheduleRenewal(response.expiresAt);
+                return response;
+            }
+
             async function renewToken(options) {
                 const settings = options || {};
                 if (state.renewalPromise) {
@@ -188,18 +202,12 @@
                 }
                 state.renewalPromise = (async function () {
                     emit(root, 'token-renewal-start', { expired: !!settings.expired });
-                    const response = await requestServerToken();
-                    const nextToken = response && response.token ? response.token : '';
-                    if (!nextToken) {
-                        throw new Error('Token renewal did not return a token.');
-                    }
+                    const response = await fetchFreshToken();
                     if (!state.client || typeof state.client.renewToken !== 'function') {
                         throw new Error('Live client cannot renew tokens.');
                     }
-                    await state.client.renewToken(nextToken);
-                    state.token = nextToken;
+                    await state.client.renewToken(response.token);
                     state.renewalFailures = 0;
-                    scheduleRenewal(response.expiresAt);
                     emit(root, 'token-renewed', { expiresAt: response.expiresAt || 0, expired: !!settings.expired });
                     return response;
                 })();
@@ -214,16 +222,35 @@
                 }
             }
 
-            async function recoverExpiredToken() {
+            async function renewTokenWithRetry() {
                 let lastError = null;
                 for (let attempt = 0; attempt < 3; attempt += 1) {
                     try {
-                        const response = await renewToken({ expired: true });
+                        return await renewToken({ expired: false });
+                    } catch (error) {
+                        lastError = error;
+                        await sleep(1000 * Math.pow(2, attempt));
+                    }
+                }
+                throw lastError || new Error('Token renewal failed.');
+            }
+
+            async function recoverExpiredToken() {
+                if (state.renewalPromise) {
+                    await state.renewalPromise.catch(function () {});
+                }
+                let lastError = null;
+                for (let attempt = 0; attempt < 3; attempt += 1) {
+                    try {
+                        emit(root, 'token-recovery-start', { attempt: attempt + 1 });
+                        const response = await fetchFreshToken();
                         await rejoinAndRepublish(response.token);
-                        emit(root, 'token-recovered', { attempt: attempt + 1 });
+                        state.renewalFailures = 0;
+                        emit(root, 'token-recovered', { attempt: attempt + 1, expiresAt: response.expiresAt || 0 });
                         return true;
                     } catch (error) {
                         lastError = error;
+                        emit(root, 'token-recovery-error', { error: error, attempt: attempt + 1 });
                         await sleep(1000 * Math.pow(2, attempt));
                     }
                 }
@@ -250,14 +277,31 @@
                 state.clientMode = merged.clientMode === 'rtc' ? 'rtc' : 'live';
                 config.videoId = merged.videoId || config.videoId;
 
-                await createClientIfNeeded(state.clientMode);
-                await state.client.join(state.appId, state.channelName, state.token, state.uid);
-                state.joined = true;
-                await state.client.publish([state.audioTrack, state.videoTrack].filter(Boolean));
-                state.published = true;
-                scheduleRenewal(merged.expiresAt);
-                emit(root, 'published', { uid: state.uid, channelName: state.channelName });
-                return state;
+                try {
+                    await createClientIfNeeded(state.clientMode);
+                    await state.client.join(state.appId, state.channelName, state.token, state.uid);
+                    state.joined = true;
+                    await state.client.publish([state.audioTrack, state.videoTrack].filter(Boolean));
+                    state.published = true;
+                    scheduleRenewal(merged.expiresAt);
+                    emit(root, 'published', { uid: state.uid, channelName: state.channelName });
+                    return state;
+                } catch (error) {
+                    if (state.client && state.published) {
+                        await state.client.unpublish().catch(function () {});
+                    }
+                    state.published = false;
+                    if (state.client && state.joined) {
+                        await state.client.leave().catch(function () {});
+                    }
+                    state.joined = false;
+                    stopAndMaybeClose(state.audioTrack, state.audioTrackOwnsSource);
+                    stopAndMaybeClose(state.videoTrack, state.videoTrackOwnsSource);
+                    state.audioTrack = null;
+                    state.videoTrack = null;
+                    emit(root, 'connect-error', { error: error });
+                    throw error;
+                }
             }
 
             async function rejoinAndRepublish(token) {
