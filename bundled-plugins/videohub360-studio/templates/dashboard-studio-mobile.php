@@ -106,6 +106,7 @@ $desktop_url = add_query_arg( array( 'tab' => 'studio', 'studio_mode' => 'deskto
                     <button type="button" data-mobile-close-participants><?php esc_html_e( 'Close participants', 'videohub360-studio' ); ?></button>
                 </div>
                 <div class="vh360-mobile-live__participant-list" data-mobile-participant-list></div>
+                <button class="vh360-mobile-live__danger vh360-mobile-live__drawer-end" type="button" data-mobile-end-live><?php esc_html_e( 'End Live', 'videohub360-studio' ); ?></button>
             </aside>
         </div>
     </div>

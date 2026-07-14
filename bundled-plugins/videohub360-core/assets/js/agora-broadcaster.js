@@ -44,7 +44,9 @@
                 receiveRemoteParticipants: !!config.receiveRemoteParticipants,
                 remoteParticipants: new Map(),
                 autoplayFailureBound: false,
-                autoplayFailureHandler: null
+                autoplayFailureHandler: null,
+                autoplayPreviousCallback: null,
+                autoplayWrapper: null
             };
 
             function makeCancellationError() {
@@ -114,12 +116,8 @@
             function resetRemoteSubscriptions(emitReset) {
                 state.remoteParticipants.forEach(function (record) {
                     stopRemotePlayback(record);
-                    record.audioTrack = null;
-                    record.videoTrack = null;
-                    record.audioPublished = false;
-                    record.videoPublished = false;
-                    record.subscriptionState = {};
                 });
+                state.remoteParticipants.clear();
                 if (emitReset) {
                     emit(root, 'remote-participants-reset', {});
                 }
@@ -139,6 +137,10 @@
                         audioPlaying: false,
                         videoPlaying: false,
                         videoQuality: 'auto',
+                        videoContainer: null,
+                        videoPlaybackTrack: null,
+                        audioPlaybackTrack: null,
+                        dualStreamEnabled: false,
                         subscriptionState: {}
                     };
                     state.remoteParticipants.set(key, record);
@@ -190,9 +192,19 @@
                     }
                     record.user = user;
                     if (mediaType === 'video') {
+                        if (record.videoTrack && record.videoTrack !== user.videoTrack) {
+                            stopRemotePlayback(record);
+                            record.videoContainer = null;
+                            record.videoPlaybackTrack = null;
+                        }
                         record.videoTrack = user.videoTrack || null;
                         record.videoPublished = !!record.videoTrack;
                     } else {
+                        if (record.audioTrack && record.audioTrack !== user.audioTrack && typeof record.audioTrack.stop === 'function') {
+                            record.audioTrack.stop();
+                            record.audioPlaybackTrack = null;
+                            record.audioPlaying = false;
+                        }
                         record.audioTrack = user.audioTrack || null;
                         record.audioPublished = !!record.audioTrack;
                     }
@@ -383,27 +395,28 @@
                 if (!state.receiveRemoteParticipants || state.autoplayFailureBound || !window.AgoraRTC) {
                     return;
                 }
-                state.autoplayFailureHandler = handleAutoplayFailed;
-                if (typeof window.AgoraRTC.onAutoplayFailed === 'function') {
-                    window.AgoraRTC.onAutoplayFailed(state.autoplayFailureHandler);
-                    state.autoplayFailureBound = true;
-                } else if (typeof window.AgoraRTC.on === 'function') {
-                    window.AgoraRTC.on('autoplay-failed', state.autoplayFailureHandler);
-                    state.autoplayFailureBound = true;
-                }
+                state.autoplayPreviousCallback = typeof window.AgoraRTC.onAutoplayFailed === 'function' ? window.AgoraRTC.onAutoplayFailed : null;
+                state.autoplayWrapper = function () {
+                    if (state.autoplayPreviousCallback) {
+                        state.autoplayPreviousCallback.apply(window.AgoraRTC, arguments);
+                    }
+                    handleAutoplayFailed();
+                };
+                window.AgoraRTC.onAutoplayFailed = state.autoplayWrapper;
+                state.autoplayFailureBound = true;
             }
 
             function unbindAutoplayFailure() {
-                if (!state.autoplayFailureBound || !window.AgoraRTC || !state.autoplayFailureHandler) {
+                if (!state.autoplayFailureBound || !window.AgoraRTC || !state.autoplayWrapper) {
                     return;
                 }
-                if (typeof window.AgoraRTC.offAutoplayFailed === 'function') {
-                    window.AgoraRTC.offAutoplayFailed(state.autoplayFailureHandler);
-                } else if (typeof window.AgoraRTC.off === 'function') {
-                    window.AgoraRTC.off('autoplay-failed', state.autoplayFailureHandler);
+                if (window.AgoraRTC.onAutoplayFailed === state.autoplayWrapper) {
+                    window.AgoraRTC.onAutoplayFailed = state.autoplayPreviousCallback;
                 }
                 state.autoplayFailureBound = false;
                 state.autoplayFailureHandler = null;
+                state.autoplayWrapper = null;
+                state.autoplayPreviousCallback = null;
             }
 
             async function syncRemotePublishedUsers(generation) {
@@ -841,11 +854,20 @@
                 if (!record || !record.videoTrack || !container || !isOperationCurrent(currentGeneration())) {
                     return false;
                 }
+                if (record.videoPlaying && record.videoPlaybackTrack === record.videoTrack && record.videoContainer === container) {
+                    return true;
+                }
                 try {
+                    if (record.videoPlaying && record.videoTrack && typeof record.videoTrack.stop === 'function') {
+                        record.videoTrack.stop();
+                    }
                     record.videoTrack.play(container);
                     record.videoPlaying = true;
+                    record.videoPlaybackTrack = record.videoTrack;
+                    record.videoContainer = container;
                     return true;
                 } catch (error) {
+                    record.videoPlaying = false;
                     emit(root, 'remote-video-error', { uid: record.uid, error: error });
                     return false;
                 }
@@ -856,6 +878,8 @@
                 if (record && record.videoTrack && typeof record.videoTrack.stop === 'function') {
                     record.videoTrack.stop();
                     record.videoPlaying = false;
+                    record.videoPlaybackTrack = null;
+                    record.videoContainer = null;
                     return true;
                 }
                 return false;
@@ -866,12 +890,17 @@
                 if (!record || !record.audioTrack || !isOperationCurrent(currentGeneration())) {
                     return false;
                 }
+                if (record.audioPlaying && record.audioPlaybackTrack === record.audioTrack) {
+                    return true;
+                }
                 try {
                     record.audioTrack.play();
                     record.audioPlaying = true;
+                    record.audioPlaybackTrack = record.audioTrack;
                     return true;
                 } catch (error) {
                     record.audioPlaying = false;
+                    record.audioPlaybackTrack = null;
                     emit(root, 'remote-audio-blocked', { uid: record.uid, error: error });
                     return false;
                 }
@@ -882,6 +911,7 @@
                 if (record && record.audioTrack && typeof record.audioTrack.stop === 'function') {
                     record.audioTrack.stop();
                     record.audioPlaying = false;
+                    record.audioPlaybackTrack = null;
                     return true;
                 }
                 return false;
@@ -889,7 +919,7 @@
 
             async function setRemoteVideoQuality(uid, quality) {
                 const record = state.remoteParticipants.get(normalizeRemoteUid(uid));
-                if (!record || !state.client || typeof state.client.setRemoteVideoStreamType !== 'function') {
+                if (!record || !record.videoTrack || !record.dualStreamEnabled || !state.client || typeof state.client.setRemoteVideoStreamType !== 'function') {
                     return false;
                 }
                 const streamType = quality === 'high' ? 0 : 1;

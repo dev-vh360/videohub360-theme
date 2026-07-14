@@ -274,7 +274,7 @@ body.vh360-mobile-live-active {
     inset: 0;
     display: grid;
     place-items: center;
-    background: color-mix(in srgb, var(--vh360-mobile-panel) 82%, black);
+    background: color-mix(in srgb, var(--vh360-mobile-panel) 82%, var(--vh360-mobile-text));
     color: var(--vh360-mobile-text);
     font-size: 2rem;
     font-weight: 900;
@@ -468,4 +468,9 @@ body.vh360-mobile-live-active {
 
 .vh360-mobile-live__participant-row.is-selected {
     border-color: var(--vh360-mobile-primary);
+}
+
+.vh360-mobile-live__drawer-end {
+    width: 100%;
+    margin-top: 1rem;
 }

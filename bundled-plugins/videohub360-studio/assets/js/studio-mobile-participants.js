@@ -27,6 +27,12 @@
         }).join('') || '?';
     }
 
+    function focusableElements(container) {
+        return Array.prototype.slice.call(container.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')).filter(function (el) {
+            return !el.disabled && !el.hidden;
+        });
+    }
+
     window.VH360StudioMobileParticipants = {
         create: function createParticipantController(options) {
             const root = options.root;
@@ -148,7 +154,11 @@
                     drawerState: rowState,
                     hasAudio: false,
                     hasVideo: false,
-                    rendered: false
+                    rendered: false,
+                    videoTrack: null,
+                    audioTrack: null,
+                    needsVideoPlay: false,
+                    needsAudioPlay: false
                 };
                 state.participants.set(key, record);
                 queueIdentity(key);
@@ -317,22 +327,27 @@
                 state.participants.forEach(function (record) {
                     const shouldRender = visible.has(record.uid);
                     if (record.hasVideo && shouldRender) {
-                        record.rendered = true;
-                        const ok = state.session.playRemoteVideo(record.uid, record.videoContainer);
-                        if (!ok) {
-                            record.rendered = false;
+                        const newlyVisible = !record.rendered;
+                        if (newlyVisible || record.needsVideoPlay) {
+                            const ok = state.session.playRemoteVideo(record.uid, record.videoContainer);
+                            record.rendered = !!ok;
+                            record.needsVideoPlay = !ok;
                         }
                     } else if (record.rendered) {
                         state.session.stopRemoteVideo(record.uid);
                         record.rendered = false;
                     }
-                    if (record.hasAudio) {
+                    if (record.hasAudio && record.needsAudioPlay) {
                         showHeadphoneNotice();
-                        if (!state.session.playRemoteAudio(record.uid)) {
+                        if (state.session.playRemoteAudio(record.uid)) {
+                            record.needsAudioPlay = false;
+                        } else {
                             showAudioFallback(true);
                         }
                     }
-                    tasks.push(Promise.resolve(state.session.setRemoteVideoQuality(record.uid, record.uid === state.selectedUid ? 'high' : 'low')).catch(function () { return false; }));
+                    if (record.hasVideo && record.rendered) {
+                        tasks.push(Promise.resolve(state.session.setRemoteVideoQuality(record.uid, record.uid === state.selectedUid ? 'high' : 'low')).catch(function () { return false; }));
+                    }
                     updateRecord(record);
                 });
                 await Promise.all(tasks);
@@ -344,8 +359,20 @@
                     return null;
                 }
                 const record = ensureRecord(uid);
-                record.hasVideo = !!(detail.videoAvailable || record.hasVideo);
-                record.hasAudio = !!(detail.audioAvailable || record.hasAudio);
+                if (detail.videoAvailable) {
+                    if (record.videoTrack !== detail.videoTrack) {
+                        record.videoTrack = detail.videoTrack || {};
+                        record.needsVideoPlay = true;
+                    }
+                    record.hasVideo = true;
+                }
+                if (detail.audioAvailable) {
+                    if (record.audioTrack !== detail.audioTrack) {
+                        record.audioTrack = detail.audioTrack || {};
+                        record.needsAudioPlay = true;
+                    }
+                    record.hasAudio = true;
+                }
                 if (!state.selectedUid && record.hasVideo) {
                     state.selectedUid = uid;
                 }
@@ -385,17 +412,22 @@
                 renderVisibleParticipants().catch(function () {});
             }
 
-            function handleReset() {
+            function clearTransportParticipants() {
                 state.participants.forEach(function (record) {
                     if (state.session) {
                         state.session.stopRemoteVideo(record.uid);
                         state.session.stopRemoteAudio(record.uid);
                     }
-                    record.hasVideo = false;
-                    record.hasAudio = false;
-                    record.rendered = false;
-                    updateRecord(record);
+                    record.tile.remove();
+                    record.drawerItem.remove();
                 });
+                state.participants.clear();
+                state.selectedUid = '';
+                emitCount();
+            }
+
+            function handleReset() {
+                clearTransportParticipants();
             }
 
             function handleLeft(event) {
@@ -418,6 +450,10 @@
 
             function selectParticipant(uid) {
                 state.selectedUid = normalizeUid(uid);
+                const selected = state.participants.get(state.selectedUid);
+                if (selected && selected.hasVideo && !selected.rendered) {
+                    selected.needsVideoPlay = true;
+                }
                 state.participants.forEach(updateRecord);
             }
 
@@ -472,15 +508,7 @@
                 window.clearTimeout(state.identityTimer);
                 state.identityTimer = 0;
                 state.identityQueue.clear();
-                state.participants.forEach(function (record) {
-                    if (state.session) {
-                        state.session.stopRemoteVideo(record.uid);
-                        state.session.stopRemoteAudio(record.uid);
-                    }
-                    record.tile.remove();
-                    record.drawerItem.remove();
-                });
-                state.participants.clear();
+                clearTransportParticipants();
                 closeDrawer();
                 showAudioFallback(false);
                 if (notice) {
@@ -522,8 +550,13 @@
                     }
                     let blocked = false;
                     state.participants.forEach(function (record) {
-                        if (record.hasAudio && state.session && !state.session.playRemoteAudio(record.uid)) {
-                            blocked = true;
+                        if (record.hasAudio && state.session) {
+                            record.needsAudioPlay = true;
+                            if (state.session.playRemoteAudio(record.uid)) {
+                                record.needsAudioPlay = false;
+                            } else {
+                                blocked = true;
+                            }
                         }
                     });
                     showAudioFallback(blocked);
@@ -535,6 +568,23 @@
                     if (event.key === 'Escape') {
                         event.preventDefault();
                         closeDrawer();
+                        return;
+                    }
+                    if (event.key === 'Tab') {
+                        const items = focusableElements(drawer);
+                        if (!items.length) {
+                            event.preventDefault();
+                            return;
+                        }
+                        const first = items[0];
+                        const last = items[items.length - 1];
+                        if (event.shiftKey && document.activeElement === first) {
+                            event.preventDefault();
+                            last.focus();
+                        } else if (!event.shiftKey && document.activeElement === last) {
+                            event.preventDefault();
+                            first.focus();
+                        }
                     }
                 });
             }
