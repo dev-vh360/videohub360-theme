@@ -255,6 +255,7 @@ class VH360_Studio_Assets {
                 'audioToggleFailed'         => __( 'Microphone state could not be changed.', 'videohub360-studio' ),
                 'videoToggleFailed'         => __( 'Camera state could not be changed.', 'videohub360-studio' ),
                 'tokenRecoveryFailed'       => __( 'Live connection recovery failed. Keep this page open or end the livestream.', 'videohub360-studio' ),
+                'localPreviewFailed'        => __( 'The livestream is active, but the local camera preview could not be displayed.', 'videohub360-studio' ),
                 'trackEnded'                => __( 'A media device disconnected. Check camera and microphone permissions.', 'videohub360-studio' ),
                 'muteMic'                   => __( 'Mute mic', 'videohub360-studio' ),
                 'unmuteMic'                 => __( 'Unmute mic', 'videohub360-studio' ),

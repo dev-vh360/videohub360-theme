@@ -282,6 +282,12 @@
         }, 1000);
     }
 
+    function nextAnimationFrame() {
+        return new Promise(function (resolve) {
+            window.requestAnimationFrame ? window.requestAnimationFrame(resolve) : window.setTimeout(resolve, 16);
+        });
+    }
+
     async function requestWakeLock() {
         if (navigator.wakeLock && navigator.wakeLock.request) {
             try {
@@ -380,13 +386,14 @@
             });
             state.serverStarted = true;
 
-            const livePreview = one('[data-mobile-live-preview]');
-            const previewNode = one('[data-agora-local-preview]');
-            if (livePreview && previewNode) {
-                livePreview.appendChild(previewNode);
-            }
             setState('live');
-            setStatus(text('liveStarted', 'You are live. Keep this browser open.'));
+            await nextAnimationFrame();
+            const livePreview = one('[data-mobile-live-preview]');
+            let localPreviewAttached = true;
+            if (state.session && typeof state.session.setLocalPreviewContainer === 'function') {
+                localPreviewAttached = state.session.setLocalPreviewContainer(livePreview);
+            }
+            setStatus(localPreviewAttached ? text('liveStarted', 'You are live. Keep this browser open.') : text('localPreviewFailed', 'The livestream is active, but the local camera preview could not be displayed.'));
             setDeviceStatus('connection', text('connectionConnected', 'Connection: connected'));
             startHeartbeat();
             startDuration();
@@ -600,6 +607,10 @@
         });
         root.addEventListener('vh360:agora-broadcaster:camera-switch-error', function () {
             setStatus(text('cameraSwitchFailed', 'Camera could not be switched.'));
+        });
+        root.addEventListener('vh360:agora-broadcaster:local-preview-error', function (event) {
+            console.error('[VH360 Mobile Live] Local preview render failed', event.detail && event.detail.error);
+            setStatus(text('localPreviewFailed', 'The livestream is active, but the local camera preview could not be displayed.'));
         });
     }
 

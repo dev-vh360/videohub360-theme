@@ -16,7 +16,7 @@
     window.VH360AgoraBroadcaster = {
         create: function createBroadcaster(config) {
             const root = config.container || document;
-            const localContainer = config.localContainer || root.querySelector('[data-agora-local-preview]') || root;
+            let currentLocalContainer = config.localContainer || root.querySelector('[data-agora-local-preview]') || root;
             const state = {
                 client: null,
                 audioTrack: null,
@@ -102,8 +102,13 @@
                 if (typeof generation === 'number' && !isOperationCurrent(generation)) {
                     return;
                 }
-                if (localContainer && state.videoTrack && typeof state.videoTrack.play === 'function') {
-                    state.videoTrack.play(localContainer, { mirror: mirrorForFacing(state.currentFacingMode) });
+                if (currentLocalContainer && state.videoTrack && typeof state.videoTrack.play === 'function') {
+                    try {
+                        state.videoTrack.play(currentLocalContainer, { mirror: mirrorForFacing(state.currentFacingMode) });
+                    } catch (error) {
+                        emit(root, 'local-preview-error', { error: error });
+                        throw error;
+                    }
                 }
             }
 
@@ -568,6 +573,29 @@
                 }
             }
 
+
+            function setLocalPreviewContainer(container) {
+                const generation = currentGeneration();
+                if (!container || !isOperationCurrent(generation)) {
+                    return false;
+                }
+                if (!state.videoTrack || typeof state.videoTrack.play !== 'function') {
+                    return false;
+                }
+                try {
+                    if (typeof state.videoTrack.stop === 'function') {
+                        state.videoTrack.stop();
+                    }
+                    currentLocalContainer = container;
+                    playPreview(generation);
+                    emit(root, 'local-preview-attached', getCurrentCameraState());
+                    return true;
+                } catch (error) {
+                    emit(root, 'local-preview-error', { error: error });
+                    return false;
+                }
+            }
+
             async function stop() {
                 state.active = false;
                 state.stopping = true;
@@ -608,6 +636,8 @@
                 stop: stop,
                 renewToken: renewToken,
                 switchCamera: switchCamera,
+                setLocalPreviewContainer: setLocalPreviewContainer,
+                attachLocalPreview: setLocalPreviewContainer,
                 isReadyToPublish: function () {
                     return Boolean(state.client && state.joined && state.published && (!state.client.connectionState || state.client.connectionState === 'CONNECTED'));
                 },
