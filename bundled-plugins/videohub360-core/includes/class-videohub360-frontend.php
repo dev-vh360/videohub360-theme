@@ -26,7 +26,6 @@ class VideoHub360_Frontend {
         add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_assets'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_course_assets'));
         add_filter('template_include', array($this, 'template_include'));
-        add_action('wp_head', array($this, 'add_viewport_meta'));
         
         // Register AJAX endpoints for built-in login form
         add_action('wp_ajax_nopriv_videohub360_builtin_login', array($this, 'handle_builtin_login'));
@@ -713,15 +712,6 @@ class VideoHub360_Frontend {
         return $template;
     }
 
-    
-    /**
-     * Add viewport meta tag
-     */
-    public function add_viewport_meta() {
-        if ($this->is_videohub360_page()) {
-            echo '<meta name="viewport" content="width=device-width, initial-scale=1.0">';
-        }
-    }
     
     /**
      * Check if current page is a VideoHub360 page
