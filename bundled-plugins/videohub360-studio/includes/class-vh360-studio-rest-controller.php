@@ -61,6 +61,17 @@ class VH360_Studio_REST_Controller {
             );
         }
 
+        register_rest_route(
+            'vh360-studio/v1',
+            '/broadcasts/(?P<video_id>\d+)/renew-token',
+            array(
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => array( $this, 'broadcast_renew_token' ),
+                'permission_callback' => array( $this, 'permissions_check' ),
+                'args'                => array( 'video_id' => $this->get_id_arg() ),
+            )
+        );
+
         foreach ( array( 'heartbeat', 'end' ) as $broadcast_action ) {
             register_rest_route(
                 'vh360-studio/v1',
@@ -629,6 +640,13 @@ class VH360_Studio_REST_Controller {
                 'required'          => false,
                 'sanitize_callback' => array( 'VH360_Studio_Quality_Presets', 'normalize' ),
             ),
+            'recording_intent'        => array(
+                'required'          => false,
+                'sanitize_callback' => 'sanitize_key',
+                'validate_callback' => function( $value ) {
+                    return null === $value || '' === $value || in_array( sanitize_key( $value ), array( 'browser', 'none' ), true );
+                },
+            ),
         );
     }
 
@@ -930,19 +948,23 @@ class VH360_Studio_REST_Controller {
         }
         update_post_meta( absint( $broadcast['videoId'] ), '_vh360_studio_controlled_live', 'yes' );
         update_post_meta( absint( $broadcast['videoId'] ), '_vh360_studio_host_user_id', get_current_user_id() );
-        $job = $this->jobs->create( get_current_user_id(), array(
-            'source_type'      => 'livestream_video',
-            'source_id'        => 'videohub360-' . absint( $broadcast['videoId'] ),
-            'live_video_id'    => absint( $broadcast['videoId'] ),
-            'room_id'          => sanitize_text_field( $broadcast['channelName'] ),
-            'recording_mode'   => 'browser',
-            'quality_preset'   => VH360_Studio_Quality_Presets::normalize( $request->get_param( 'quality_preset' ) ?: VH360_Studio_Quality_Presets::DEFAULT_PRESET ),
-            'storage_provider' => $this->default_replay_storage_provider(),
-        ) );
-        if ( ! is_wp_error( $job ) ) {
-            $this->update_live_replay_lifecycle( $job, 'created', 'no', 'no', 'no' );
+        $recording_intent = sanitize_key( $request->get_param( 'recording_intent' ) ?: 'browser' );
+        $job = null;
+        if ( 'browser' === $recording_intent ) {
+            $job = $this->jobs->create( get_current_user_id(), array(
+                'source_type'      => 'livestream_video',
+                'source_id'        => 'videohub360-' . absint( $broadcast['videoId'] ),
+                'live_video_id'    => absint( $broadcast['videoId'] ),
+                'room_id'          => sanitize_text_field( $broadcast['channelName'] ),
+                'recording_mode'   => 'browser',
+                'quality_preset'   => VH360_Studio_Quality_Presets::normalize( $request->get_param( 'quality_preset' ) ?: VH360_Studio_Quality_Presets::DEFAULT_PRESET ),
+                'storage_provider' => $this->default_replay_storage_provider(),
+            ) );
+            if ( ! is_wp_error( $job ) ) {
+                $this->update_live_replay_lifecycle( $job, 'created', 'no', 'no', 'no' );
+            }
         }
-        return rest_ensure_response( array( 'broadcast' => $broadcast, 'job' => $this->prepare_job_response( $job ) ) );
+        return rest_ensure_response( array( 'broadcast' => $broadcast, 'job' => $job ? $this->prepare_job_response( $job ) : null ) );
     }
 
     public function broadcast_prepare( WP_REST_Request $request ) {
@@ -966,6 +988,25 @@ class VH360_Studio_REST_Controller {
         if ( is_wp_error( $heartbeat ) ) { return $heartbeat; }
         VideoHub360_Livestream_Service::cleanup_stale_studio_broadcasts();
         return rest_ensure_response( array( 'ok' => true, 'server_time' => current_time( 'mysql' ), 'broadcast' => $heartbeat ) );
+    }
+
+    public function broadcast_renew_token( WP_REST_Request $request ) {
+        $service = $this->livestream_service();
+        if ( ! $service ) { return new WP_Error( 'vh360_studio_core_missing', __( 'VideoHub360 Core livestream service is unavailable.', 'videohub360-studio' ), array( 'status' => 500 ) ); }
+        $video_id = absint( $request['video_id'] );
+        if ( 'yes' !== get_post_meta( $video_id, '_vh360_studio_controlled_live', true ) ) {
+            return new WP_Error( 'vh360_studio_not_controlled', __( 'This is not a Studio-controlled livestream.', 'videohub360-studio' ), array( 'status' => 403 ) );
+        }
+        if ( 'yes' === get_post_meta( $video_id, '_vh360_stream_stopped', true ) ) {
+            return new WP_Error( 'vh360_studio_stream_ended', __( 'This livestream has ended.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
+        $host_user_id = absint( get_post_meta( $video_id, '_vh360_studio_host_user_id', true ) );
+        if ( $host_user_id && get_current_user_id() !== $host_user_id && ! current_user_can( 'edit_post', $video_id ) && ! current_user_can( 'manage_options' ) ) {
+            return new WP_Error( 'vh360_studio_forbidden', __( 'You cannot renew this livestream token.', 'videohub360-studio' ), array( 'status' => 403 ) );
+        }
+        $prepared = $service->prepare_agora_broadcast_data( $video_id, get_current_user_id() );
+        if ( is_wp_error( $prepared ) ) { return $prepared; }
+        return rest_ensure_response( array( 'token' => $prepared['token'], 'expiresAt' => $prepared['expiresAt'], 'uid' => $prepared['uid'], 'channelName' => $prepared['channelName'] ) );
     }
 
     public function broadcast_end( WP_REST_Request $request ) {

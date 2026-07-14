@@ -15,6 +15,7 @@ class VH360_Studio_Assets {
     public function __construct( VH360_Studio_Provider_Registry $registry ) {
         $this->registry = $registry;
         add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_dashboard_assets' ) );
+        add_action( 'wp_enqueue_scripts', array( $this, 'dequeue_mobile_orientation_lock_for_mobile_live' ), 100 );
     }
 
     public function enqueue_dashboard_assets() {
@@ -32,6 +33,29 @@ class VH360_Studio_Assets {
                 $this->asset_version( $locked_css )
             );
 
+            return;
+        }
+
+
+        $mode = class_exists( 'VH360_Studio_Plugin' ) ? VH360_Studio_Plugin::resolve_studio_mode() : 'entry';
+        if ( 'entry' === $mode ) {
+            $css_path = 'assets/css/studio-entry-router.css';
+            $js_path  = 'assets/js/studio-entry-router.js';
+            wp_enqueue_style( 'vh360-studio-entry-router', VH360_STUDIO_PLUGIN_URL . $css_path, array(), $this->asset_version( $css_path ) );
+            wp_enqueue_script( 'vh360-studio-entry-router', VH360_STUDIO_PLUGIN_URL . $js_path, array(), $this->asset_version( $js_path ), true );
+            return;
+        }
+        if ( 'mobile' === $mode ) {
+            $css_path          = 'assets/css/studio-mobile-live.css';
+            $participants_path = 'assets/js/studio-mobile-participants.js';
+            $js_path           = 'assets/js/studio-mobile-live.js';
+            wp_enqueue_style( 'vh360-studio-mobile-live', VH360_STUDIO_PLUGIN_URL . $css_path, array(), $this->asset_version( $css_path ) );
+            wp_enqueue_script( 'agora-rtc-sdk', 'https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js', array(), '4.20.0', true );
+            wp_enqueue_script( 'vh360-agora-broadcaster', VIDEOHUB360_ASSETS_URL . 'js/agora-broadcaster.js', array( 'agora-rtc-sdk' ), videohub360_asset_version( 'assets/js/agora-broadcaster.js' ), true );
+            wp_enqueue_script( 'vh360-studio-mobile-participants', VH360_STUDIO_PLUGIN_URL . $participants_path, array( 'vh360-agora-broadcaster' ), $this->asset_version( $participants_path ), true );
+            wp_enqueue_script( 'vh360-studio-mobile-live', VH360_STUDIO_PLUGIN_URL . $js_path, array( 'vh360-studio-mobile-participants' ), $this->asset_version( $js_path ), true );
+            wp_localize_script( 'vh360-studio-mobile-live', 'vh360StudioMobileLive', $this->mobile_localized_data() );
+            wp_dequeue_style( 'vh360-mobile-orientation-lock' );
             return;
         }
 
@@ -169,6 +193,12 @@ class VH360_Studio_Assets {
         );
     }
 
+    public function dequeue_mobile_orientation_lock_for_mobile_live() {
+        if ( $this->is_studio_dashboard_tab() && class_exists( 'VH360_Studio_Plugin' ) && 'mobile' === VH360_Studio_Plugin::resolve_studio_mode() ) {
+            wp_dequeue_style( 'vh360-mobile-orientation-lock' );
+        }
+    }
+
     private function is_studio_dashboard_tab() {
         $active_tab = function_exists( 'vh360_get_current_dashboard_tab' ) ? vh360_get_current_dashboard_tab() : '';
 
@@ -182,6 +212,78 @@ class VH360_Studio_Assets {
     private function asset_version( $relative_path ) {
         $file_path = VH360_STUDIO_PLUGIN_DIR . ltrim( $relative_path, '/' );
         return file_exists( $file_path ) ? VH360_STUDIO_VERSION . '-' . filemtime( $file_path ) : VH360_STUDIO_VERSION;
+    }
+
+    private function mobile_localized_data() {
+        return array(
+            'restRoot'          => esc_url_raw( rest_url( 'vh360-studio/v1' ) ),
+            'nonce'             => wp_create_nonce( 'wp_rest' ),
+            'ajaxUrl'           => admin_url( 'admin-ajax.php' ),
+            'identityNonce'     => wp_create_nonce( 'vh360_agora_identity' ),
+            'currentUserId'     => get_current_user_id(),
+            'mobileVideoConfig' => array(
+                'facingMode'       => 'user',
+                'encoderConfig'    => array( 'width' => 1280, 'height' => 720, 'frameRate' => 30, 'bitrateMin' => 800, 'bitrateMax' => 1800 ),
+                'optimizationMode' => 'balanced',
+            ),
+            'mobileAudioConfig' => array(),
+            'strings'           => array(
+                'requestFailed'             => __( 'Request failed. Please try again.', 'videohub360-studio' ),
+                'requestingPermissions'     => __( 'Requesting camera and microphone permissions…', 'videohub360-studio' ),
+                'previewReady'              => __( 'Camera and microphone preview is ready.', 'videohub360-studio' ),
+                'permissionFailed'          => __( 'Camera or microphone access failed. Check browser permissions and try again.', 'videohub360-studio' ),
+                'cameraRequired'            => __( 'A working camera preview is required before going live.', 'videohub360-studio' ),
+                'titleRequired'             => __( 'Enter a title before going live.', 'videohub360-studio' ),
+                'passcodeRequired'          => __( 'Enter a host passcode or turn off passcode access.', 'videohub360-studio' ),
+                'creatingBroadcast'         => __( 'Creating livestream…', 'videohub360-studio' ),
+                'connectingLiveService'     => __( 'Connecting to the live service…', 'videohub360-studio' ),
+                'liveStarted'               => __( 'You are live. Keep this browser open.', 'videohub360-studio' ),
+                'startFailed'               => __( 'The livestream could not start. Devices and server state were cleaned up when possible.', 'videohub360-studio' ),
+                'cleanupPending'            => __( 'A previous start attempt needs server cleanup before you can start another live.', 'videohub360-studio' ),
+                'endConfirm'                => __( 'End this livestream?', 'videohub360-studio' ),
+                'endingLive'                => __( 'Ending livestream…', 'videohub360-studio' ),
+                'ended'                     => __( 'Livestream ended.', 'videohub360-studio' ),
+                'endFailed'                 => __( 'The local stream stopped, but the server has not confirmed End Live. Retry End Live.', 'videohub360-studio' ),
+                'connected'                 => __( 'Connected', 'videohub360-studio' ),
+                'reconnecting'              => __( 'Reconnecting… keep this page open. End Live remains available.', 'videohub360-studio' ),
+                'disconnected'              => __( 'Disconnected. Try to reconnect or end the livestream.', 'videohub360-studio' ),
+                'tokenRenewalFailed'        => __( 'Live connection renewal failed. The app will retry.', 'videohub360-studio' ),
+                'cameraSwitchFailed'        => __( 'Camera could not be switched.', 'videohub360-studio' ),
+                'cameraNotConnected'        => __( 'Camera: not connected', 'videohub360-studio' ),
+                'microphoneNotConnected'    => __( 'Microphone: not connected', 'videohub360-studio' ),
+                'connectionNotLive'         => __( 'Connection: not live', 'videohub360-studio' ),
+                'cameraConnected'           => __( 'Camera: connected', 'videohub360-studio' ),
+                'microphoneConnected'       => __( 'Microphone: connected', 'videohub360-studio' ),
+                'connectionConnected'       => __( 'Connection: connected', 'videohub360-studio' ),
+                'connectionLabel'           => __( 'Connection: ', 'videohub360-studio' ),
+                'audioToggleFailed'         => __( 'Microphone state could not be changed.', 'videohub360-studio' ),
+                'videoToggleFailed'         => __( 'Camera state could not be changed.', 'videohub360-studio' ),
+                'tokenRecoveryFailed'       => __( 'Live connection recovery failed. Keep this page open or end the livestream.', 'videohub360-studio' ),
+                'localPreviewFailed'        => __( 'The livestream is active, but the local camera preview could not be displayed.', 'videohub360-studio' ),
+                'trackEnded'                => __( 'A media device disconnected. Check camera and microphone permissions.', 'videohub360-studio' ),
+                'muteMic'                   => __( 'Mute mic', 'videohub360-studio' ),
+                'unmuteMic'                 => __( 'Unmute mic', 'videohub360-studio' ),
+                'cameraOff'                 => __( 'Camera off', 'videohub360-studio' ),
+                'cameraOn'                  => __( 'Camera on', 'videohub360-studio' ),
+                'retryCameraMicrophone'     => __( 'Retry Camera and Microphone', 'videohub360-studio' ),
+                'participants'              => __( 'Participants', 'videohub360-studio' ),
+                'noParticipantsYet'         => __( 'No participants yet', 'videohub360-studio' ),
+                'oneParticipant'            => __( 'One participant', 'videohub360-studio' ),
+                'participantCount'          => __( '%d participants', 'videohub360-studio' ),
+                'participant'               => __( 'Participant', 'videohub360-studio' ),
+                'participantJoined'         => __( 'Participant joined', 'videohub360-studio' ),
+                'participantLeft'           => __( 'Participant left', 'videohub360-studio' ),
+                'microphoneMuted'           => __( 'Microphone muted', 'videohub360-studio' ),
+                'enableParticipantAudio'    => __( 'Enable participant audio', 'videohub360-studio' ),
+                'participantAudioFailed'    => __( 'Participant audio could not start.', 'videohub360-studio' ),
+                'headphonesRecommended'     => __( 'Headphones are recommended when monitoring participant audio.', 'videohub360-studio' ),
+                'participantVideoFailed'    => __( 'Interactive participant video could not be displayed.', 'videohub360-studio' ),
+                'participantIdentityFailed' => __( 'Participant identity could not be resolved.', 'videohub360-studio' ),
+                'you'                       => __( 'You', 'videohub360-studio' ),
+                'closeParticipants'         => __( 'Close participants', 'videohub360-studio' ),
+                'selectParticipant'         => __( 'Select participant', 'videohub360-studio' ),
+            ),
+        );
     }
 
     private function localized_data() {

@@ -1,0 +1,50 @@
+.vh360-studio-entry-router {
+    --vh360-entry-bg: var(--bg-color, Canvas);
+    --vh360-entry-panel: var(--bg-light, Canvas);
+    --vh360-entry-text: var(--text-color, CanvasText);
+    --vh360-entry-muted: var(--text-light, color-mix(in srgb, CanvasText 65%, Canvas));
+    --vh360-entry-border: var(--border-color, color-mix(in srgb, CanvasText 18%, Canvas));
+    --vh360-entry-primary: var(--primary-color, Highlight);
+    --vh360-entry-button-text: var(--button-text-color, HighlightText);
+    --vh360-entry-shadow: var(--shadow-1, 0 18px 50px color-mix(in srgb, CanvasText 18%, transparent));
+
+    min-height: 45vh;
+    display: grid;
+    place-items: center;
+    padding: 2rem;
+    background: var(--vh360-entry-bg);
+    color: var(--vh360-entry-text);
+}
+
+.vh360-studio-entry-router__card {
+    max-width: 720px;
+    background: var(--vh360-entry-panel);
+    border: 1px solid var(--vh360-entry-border);
+    border-radius: 24px;
+    padding: 2rem;
+    box-shadow: var(--vh360-entry-shadow);
+}
+
+.vh360-studio-entry-router__eyebrow {
+    color: var(--vh360-entry-muted);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.vh360-studio-entry-router__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.vh360-studio-entry-router a:focus-visible {
+    outline: 3px solid var(--vh360-entry-primary);
+    outline-offset: 3px;
+}
+
+.vh360-studio-entry-router .button-primary {
+    background: var(--vh360-entry-primary);
+    color: var(--vh360-entry-button-text);
+}
