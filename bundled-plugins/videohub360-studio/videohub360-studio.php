@@ -2,13 +2,14 @@
 /**
  * Plugin Name: VH360 Studio
  * Plugin URI: https://videohub360.com
- * Description: Optional VideoHub360 Studio foundation for live-session recording jobs, provider orchestration, and dashboard workflow integration.
+ * Description: VideoHub360 creator production interface for livestreaming, recording, overlays, audio mixing, and replay publishing.
  * Version: 0.1.0
  * Author: VideoHub360
  * Author URI: https://videohub360.com
  * Requires at least: 5.8
  * Tested up to: 6.8
  * Requires PHP: 7.4
+ * Requires Plugins: videohub360
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: videohub360-studio

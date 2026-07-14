@@ -22,6 +22,19 @@ class VH360_Studio_Assets {
             return;
         }
 
+        if ( ! VH360_Studio_Permissions::license_is_valid() ) {
+            $locked_css = 'assets/css/studio-license-lock.css';
+
+            wp_enqueue_style(
+                'vh360-studio-license-lock',
+                VH360_STUDIO_PLUGIN_URL . $locked_css,
+                array(),
+                $this->asset_version( $locked_css )
+            );
+
+            return;
+        }
+
         $css_path                = 'assets/css/studio-dashboard.css';
         $overlays_css_path       = 'assets/css/studio-overlays-workspace.css';
         $overlay_engine_css_path = 'assets/css/studio-overlay-engine.css';

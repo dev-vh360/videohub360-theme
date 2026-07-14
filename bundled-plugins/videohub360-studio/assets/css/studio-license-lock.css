@@ -1,0 +1,59 @@
+.vh360-studio-license-lock {
+    max-width: 42rem;
+    margin: clamp(2rem, 8vw, 5rem) auto;
+    padding: clamp(1.5rem, 4vw, 2.5rem);
+    color: var(--vh360-text-color, currentColor);
+    background: var(--vh360-card-bg, Canvas);
+    border: 1px solid var(--vh360-border-color, color-mix(in srgb, currentColor 16%, transparent));
+    border-radius: var(--vh360-border-radius, 1rem);
+    box-shadow: var(--vh360-card-shadow, 0 1rem 2.5rem color-mix(in srgb, currentColor 10%, transparent));
+    text-align: center;
+}
+
+.vh360-studio-license-lock__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    margin-bottom: 1rem;
+    border-radius: 999px;
+    background: var(--vh360-muted-bg, color-mix(in srgb, currentColor 8%, transparent));
+    font-size: 1.35rem;
+    line-height: 1;
+}
+
+.vh360-studio-license-lock__title {
+    margin: 0 0 0.75rem;
+    color: var(--vh360-heading-color, currentColor);
+    font-size: clamp(1.35rem, 4vw, 2rem);
+    line-height: 1.2;
+}
+
+.vh360-studio-license-lock__message {
+    max-width: 34rem;
+    margin: 0.75rem auto 0;
+    color: var(--vh360-muted-text, color-mix(in srgb, currentColor 72%, transparent));
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+.vh360-studio-license-lock__action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1.5rem;
+    padding: 0.75rem 1.15rem;
+    border-radius: var(--vh360-button-radius, 0.625rem);
+    background: var(--vh360-primary-color, LinkText);
+    color: var(--vh360-primary-contrast, Canvas);
+    font-weight: 700;
+    line-height: 1.2;
+    text-decoration: none;
+}
+
+.vh360-studio-license-lock__action:focus,
+.vh360-studio-license-lock__action:hover {
+    color: var(--vh360-primary-contrast, Canvas);
+    text-decoration: underline;
+}

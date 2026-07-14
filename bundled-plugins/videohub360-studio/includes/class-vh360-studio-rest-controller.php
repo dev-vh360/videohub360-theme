@@ -33,7 +33,7 @@ class VH360_Studio_REST_Controller {
             array(
                 'methods'             => WP_REST_Server::CREATABLE,
                 'callback'            => array( $this, 'create_broadcast' ),
-                'permission_callback' => array( $this, 'permissions_check' ),
+                'permission_callback' => array( $this, 'licensed_permissions_check' ),
                 'args'                => $this->get_broadcast_args(),
             )
         );
@@ -44,11 +44,24 @@ class VH360_Studio_REST_Controller {
             array(
                 'methods'             => WP_REST_Server::CREATABLE,
                 'callback'            => array( $this, 'upload_cover_image' ),
-                'permission_callback' => array( $this, 'permissions_check' ),
+                'permission_callback' => array( $this, 'licensed_permissions_check' ),
             )
         );
 
-        foreach ( array( 'prepare', 'started', 'heartbeat', 'end' ) as $broadcast_action ) {
+        foreach ( array( 'prepare', 'started' ) as $broadcast_action ) {
+            register_rest_route(
+                'vh360-studio/v1',
+                '/broadcasts/(?P<video_id>\d+)/' . $broadcast_action,
+                array(
+                    'methods'             => WP_REST_Server::CREATABLE,
+                    'callback'            => array( $this, 'broadcast_' . $broadcast_action ),
+                    'permission_callback' => array( $this, 'licensed_permissions_check' ),
+                    'args'                => array( 'video_id' => $this->get_id_arg() ),
+                )
+            );
+        }
+
+        foreach ( array( 'heartbeat', 'end' ) as $broadcast_action ) {
             register_rest_route(
                 'vh360-studio/v1',
                 '/broadcasts/(?P<video_id>\d+)/' . $broadcast_action,
@@ -74,7 +87,7 @@ class VH360_Studio_REST_Controller {
                 array(
                     'methods'             => WP_REST_Server::CREATABLE,
                     'callback'            => array( $this, 'upload_media_source' ),
-                    'permission_callback' => array( $this, 'permissions_check' ),
+                    'permission_callback' => array( $this, 'licensed_permissions_check' ),
                     'args'                => array( 'display_name' => $this->get_limited_text_arg( false, 120 ) ),
                 ),
             )
@@ -104,7 +117,7 @@ class VH360_Studio_REST_Controller {
                 array(
                     'methods'             => WP_REST_Server::CREATABLE,
                     'callback'            => array( $this, 'create_job' ),
-                    'permission_callback' => array( $this, 'permissions_check' ),
+                    'permission_callback' => array( $this, 'licensed_permissions_check' ),
                     'args'                => $this->get_setup_create_args(),
                 ),
             )
@@ -123,7 +136,7 @@ class VH360_Studio_REST_Controller {
                 array(
                     'methods'             => WP_REST_Server::EDITABLE,
                     'callback'            => array( $this, 'update_job' ),
-                    'permission_callback' => array( $this, 'permissions_check' ),
+                    'permission_callback' => array( $this, 'licensed_permissions_check' ),
                     'args'                => array_merge( array( 'id' => $this->get_id_arg() ), $this->get_update_args() ),
                 ),
             )
@@ -137,7 +150,7 @@ class VH360_Studio_REST_Controller {
             array(
                 'methods'             => WP_REST_Server::CREATABLE,
                 'callback'            => array( $this, 'start_recording' ),
-                'permission_callback' => array( $this, 'permissions_check' ),
+                'permission_callback' => array( $this, 'licensed_permissions_check' ),
                 'args'                => array(
                     'id'        => $this->get_id_arg(),
                     'mime_type' => $this->get_mime_type_arg( true ),
@@ -813,6 +826,16 @@ class VH360_Studio_REST_Controller {
         }
 
         return VH360_Studio_Permissions::user_can_access_studio( get_current_user_id() );
+    }
+
+    public function licensed_permissions_check( WP_REST_Request $request ) {
+        $access = $this->permissions_check( $request );
+
+        if ( is_wp_error( $access ) || true !== $access ) {
+            return $access;
+        }
+
+        return VH360_Studio_Permissions::license_permission_result();
     }
 
     private function prepare_job_response( $job ) {

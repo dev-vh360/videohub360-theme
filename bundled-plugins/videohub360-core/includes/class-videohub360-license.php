@@ -61,6 +61,7 @@ class VideoHub360_License {
         return array(
             'videohub360-core'           => 'videohub360/videohub360.php',
             'videohub360-community'      => 'videohub360-community/videohub360-community.php',
+            'videohub360-studio'         => 'videohub360-studio/videohub360-studio.php',
             'vh360-pwa-app'              => 'vh360-pwa-app/vh360-pwa-app.php',
             'videohub360-memberships'    => 'videohub360-memberships/videohub360-memberships.php',
             'videohub360-starter-sites'  => 'videohub360-starter-sites/videohub360-starter-sites.php',

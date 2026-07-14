@@ -55,6 +55,15 @@ function vh360_register_required_plugins() {
             'force_deactivation' => false,
         ),
         array(
+            'name'               => 'VideoHub360 Studio',
+            'slug'               => 'videohub360-studio',
+            'source'             => get_template_directory() . '/bundled-plugins/videohub360-studio.zip',
+            'required'           => true,
+            'version'            => '0.1.0',
+            'force_activation'   => true,
+            'force_deactivation' => false,
+        ),
+        array(
             'name'     => 'VideoHub360 Community',
             'slug'     => 'videohub360-community',
             'source'   => get_template_directory() . '/bundled-plugins/videohub360-community.zip',

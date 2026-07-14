@@ -55,6 +55,7 @@ function vh360_ss_get_plugin_file($plugin_slug) {
     $plugin_files = array(
         'videohub360' => 'videohub360/videohub360.php',
         'videohub360-core' => 'videohub360/videohub360.php',
+        'videohub360-studio' => 'videohub360-studio/videohub360-studio.php',
         'videohub360-community' => 'videohub360-community/videohub360-community.php',
         'vh360-pwa-app' => 'vh360-pwa-app/vh360-pwa-app.php',
         'videohub360-memberships' => 'videohub360-memberships/videohub360-memberships.php',
@@ -83,6 +84,43 @@ function vh360_ss_get_plugin_file($plugin_slug) {
     }
     
     return false;
+}
+
+
+/**
+ * Get platform-required plugin slugs for every Starter Site import.
+ *
+ * @return array Plugin slugs in dependency order.
+ */
+function vh360_ss_get_platform_required_plugins() {
+    return array(
+        'videohub360',
+        'videohub360-studio',
+    );
+}
+
+/**
+ * Merge platform requirements with demo-declared requirements.
+ *
+ * @param array $demo_plugins Demo required plugin slugs.
+ * @return array Effective required plugin slugs in install/activation order.
+ */
+function vh360_ss_get_effective_required_plugins( $demo_plugins ) {
+    $plugins = array_merge(
+        vh360_ss_get_platform_required_plugins(),
+        (array) $demo_plugins
+    );
+
+    $plugins = array_map(
+        'sanitize_key',
+        $plugins
+    );
+
+    return array_values(
+        array_unique(
+            array_filter( $plugins )
+        )
+    );
 }
 
 /**
@@ -162,6 +200,7 @@ function vh360_ss_get_bundled_plugin_path($plugin_slug) {
     $bundled_plugins = array(
         'videohub360' => 'videohub360-core.zip',
         'videohub360-core' => 'videohub360-core.zip',
+        'videohub360-studio' => 'videohub360-studio.zip',
         'videohub360-community' => 'videohub360-community.zip',
         'vh360-pwa-app' => 'vh360-pwa-app.zip',
         'videohub360-memberships' => 'videohub360-memberships.zip',
