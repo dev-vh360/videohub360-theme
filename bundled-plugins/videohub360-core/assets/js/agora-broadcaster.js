@@ -38,9 +38,29 @@
                 active: true,
                 stopping: false,
                 generation: 0,
+                pendingSdkPromises: new Set(),
                 currentFacingMode: (config.videoConfig && config.videoConfig.facingMode) || 'user',
                 currentDeviceId: ''
             };
+
+            function makeCancellationError() {
+                const error = new Error('Broadcaster operation cancelled.');
+                error.name = 'VH360BroadcasterOperationCancelled';
+                error.isOperationCancelled = true;
+                return error;
+            }
+
+            function isOperationCancelled(error) {
+                return Boolean(error && (error.isOperationCancelled || error.name === 'VH360BroadcasterOperationCancelled'));
+            }
+
+            function trackSdkPromise(promise) {
+                state.pendingSdkPromises.add(promise);
+                promise.finally(function () {
+                    state.pendingSdkPromises.delete(promise);
+                }).catch(function () {});
+                return promise;
+            }
 
             function currentGeneration() {
                 return state.generation;
@@ -52,7 +72,7 @@
 
             function assertOperationCurrent(generation) {
                 if (!isOperationCurrent(generation)) {
-                    throw new Error('Broadcaster operation cancelled.');
+                    throw makeCancellationError();
                 }
             }
 
@@ -137,7 +157,7 @@
                             const audioTrack = await window.AgoraRTC.createMicrophoneAudioTrack(config.audioConfig || {});
                             if (!isOperationCurrent(generation)) {
                                 stopAndMaybeClose(audioTrack, true);
-                                throw new Error('Broadcaster operation cancelled.');
+                                throw makeCancellationError();
                             }
                             state.audioTrack = audioTrack;
                             state.audioTrackOwnsSource = true;
@@ -152,7 +172,7 @@
                             const videoTrack = await window.AgoraRTC.createCameraVideoTrack(config.videoConfig || {});
                             if (!isOperationCurrent(generation)) {
                                 stopAndMaybeClose(videoTrack, true);
-                                throw new Error('Broadcaster operation cancelled.');
+                                throw makeCancellationError();
                             }
                             state.videoTrack = videoTrack;
                             state.videoTrackOwnsSource = true;
@@ -183,12 +203,16 @@
                 });
                 state.client.on('token-privilege-will-expire', function () {
                     renewTokenWithRetry().catch(function (error) {
-                        emit(root, 'token-renewal-error', { error: error, expired: false });
+                        if (!isOperationCancelled(error)) {
+                            emit(root, 'token-renewal-error', { error: error, expired: false });
+                        }
                     });
                 });
                 state.client.on('token-privilege-did-expire', function () {
                     recoverExpiredToken().catch(function (error) {
-                        emit(root, 'token-recovery-error', { error: error });
+                        if (!isOperationCancelled(error)) {
+                            emit(root, 'token-recovery-error', { error: error });
+                        }
                     });
                 });
             }
@@ -208,7 +232,9 @@
                 const delay = Math.max(30000, (state.expiresAt * 1000) - Date.now() - 300000);
                 state.renewalTimer = window.setTimeout(function () {
                     renewTokenWithRetry().catch(function (error) {
-                        emit(root, 'token-renewal-error', { error: error, expired: false });
+                        if (!isOperationCancelled(error)) {
+                            emit(root, 'token-renewal-error', { error: error, expired: false });
+                        }
                     });
                 }, delay);
             }
@@ -260,8 +286,10 @@
                 try {
                     return await state.renewalPromise;
                 } catch (error) {
-                    state.renewalFailures += 1;
-                    emit(root, 'token-renewal-error', { error: error, expired: !!settings.expired, failures: state.renewalFailures });
+                    if (!isOperationCancelled(error)) {
+                        state.renewalFailures += 1;
+                        emit(root, 'token-renewal-error', { error: error, expired: !!settings.expired, failures: state.renewalFailures });
+                    }
                     throw error;
                 } finally {
                     state.renewalPromise = null;
@@ -275,6 +303,9 @@
                     try {
                         return await renewToken({ expired: false });
                     } catch (error) {
+                        if (isOperationCancelled(error)) {
+                            throw error;
+                        }
                         lastError = error;
                         await sleep(1000 * Math.pow(2, attempt));
                         assertOperationCurrent(generation);
@@ -304,6 +335,9 @@
                             emit(root, 'token-recovered', { attempt: attempt + 1, expiresAt: response.expiresAt || 0 });
                             return true;
                         } catch (error) {
+                            if (isOperationCancelled(error)) {
+                                throw error;
+                            }
                             lastError = error;
                             emit(root, 'token-recovery-error', { error: error, attempt: attempt + 1 });
                             await sleep(1000 * Math.pow(2, attempt));
@@ -346,11 +380,22 @@
 
                 try {
                     await createClientIfNeeded(state.clientMode, generation);
-                    await state.client.join(state.appId, state.channelName, state.token, state.uid);
-                    assertOperationCurrent(generation);
+                    await trackSdkPromise(state.client.join(state.appId, state.channelName, state.token, state.uid));
+                    if (!isOperationCurrent(generation)) {
+                        await state.client.leave().catch(function () {});
+                        state.joined = false;
+                        throw makeCancellationError();
+                    }
                     state.joined = true;
-                    await state.client.publish([state.audioTrack, state.videoTrack].filter(Boolean));
-                    assertOperationCurrent(generation);
+                    const publishTracks = [state.audioTrack, state.videoTrack].filter(Boolean);
+                    await trackSdkPromise(state.client.publish(publishTracks));
+                    if (!isOperationCurrent(generation)) {
+                        await state.client.unpublish(publishTracks).catch(function () {});
+                        state.published = false;
+                        await state.client.leave().catch(function () {});
+                        state.joined = false;
+                        throw makeCancellationError();
+                    }
                     state.published = true;
                     scheduleRenewal(merged.expiresAt, generation);
                     emit(root, 'published', { uid: state.uid, channelName: state.channelName });
@@ -389,11 +434,22 @@
                 }
                 assertOperationCurrent(generation);
                 await createClientIfNeeded(state.clientMode, generation);
-                await state.client.join(state.appId, state.channelName, token || state.token || null, state.uid);
-                assertOperationCurrent(generation);
+                await trackSdkPromise(state.client.join(state.appId, state.channelName, token || state.token || null, state.uid));
+                if (!isOperationCurrent(generation)) {
+                    await state.client.leave().catch(function () {});
+                    state.joined = false;
+                    throw makeCancellationError();
+                }
                 state.joined = true;
-                await state.client.publish([state.audioTrack, state.videoTrack].filter(Boolean));
-                assertOperationCurrent(generation);
+                const publishTracks = [state.audioTrack, state.videoTrack].filter(Boolean);
+                await trackSdkPromise(state.client.publish(publishTracks));
+                if (!isOperationCurrent(generation)) {
+                    await state.client.unpublish(publishTracks).catch(function () {});
+                    state.published = false;
+                    await state.client.leave().catch(function () {});
+                    state.joined = false;
+                    throw makeCancellationError();
+                }
                 state.published = true;
                 emit(root, 'published', { uid: state.uid, channelName: state.channelName, rejoined: true });
             }
@@ -477,8 +533,12 @@
                         await state.client.unpublish(previousTrack).catch(function () {});
                         assertOperationCurrent(generation);
                         try {
-                            await state.client.publish(replacement);
-                            assertOperationCurrent(generation);
+                            await trackSdkPromise(state.client.publish(replacement));
+                            if (!isOperationCurrent(generation)) {
+                                await state.client.unpublish(replacement).catch(function () {});
+                                stopAndMaybeClose(replacement, true);
+                                throw makeCancellationError();
+                            }
                         } catch (publishError) {
                             if (isOperationCurrent(generation)) {
                                 await state.client.publish(previousTrack).catch(function () {});
@@ -514,11 +574,14 @@
                 state.generation += 1;
                 window.clearTimeout(state.renewalTimer);
                 state.renewalTimer = 0;
+                if (state.pendingSdkPromises.size) {
+                    await Promise.allSettled(Array.from(state.pendingSdkPromises));
+                }
                 if (state.client && state.published) {
                     await state.client.unpublish().catch(function () {});
                 }
                 state.published = false;
-                if (state.client && state.joined) {
+                if (state.client && (state.joined || state.client.connectionState === 'CONNECTED' || state.client.connectionState === 'CONNECTING')) {
                     await state.client.leave().catch(function () {});
                 }
                 state.joined = false;
