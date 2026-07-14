@@ -709,12 +709,37 @@ class VideoHub360_Ajax {
     }
 
     private function get_verified_participant_identity($post_id, $channel_name, $target_uid, $include_user_id = true) {
-        if (!class_exists('VideoHub360_Agora_Participant_Registry')) {
+        $target_uid = absint($target_uid);
+        if (!$target_uid) {
             return null;
         }
 
-        $identities = VideoHub360_Agora_Participant_Registry::get_identities($post_id, $channel_name, array($target_uid), $include_user_id);
-        return $identities[(string) absint($target_uid)] ?? null;
+        if (class_exists('VideoHub360_Agora_Participant_Registry')) {
+            $identities = VideoHub360_Agora_Participant_Registry::get_identities($post_id, $channel_name, array($target_uid), $include_user_id);
+            if (!empty($identities[(string) $target_uid])) {
+                return $identities[(string) $target_uid];
+            }
+        }
+
+        $studio_uid = absint(get_post_meta($post_id, '_vh360_studio_host_agora_uid', true));
+        if ($studio_uid && $studio_uid === $target_uid) {
+            $studio_user_id = absint(get_post_meta($post_id, '_vh360_studio_host_user_id', true));
+            $identity = array(
+                'uid' => $studio_uid,
+                'display_name' => $studio_user_id ? sanitize_text_field(get_the_author_meta('display_name', $studio_user_id)) : __('Host', 'videohub360'),
+                'avatar_url' => $studio_user_id ? esc_url_raw(get_avatar_url($studio_user_id)) : '',
+                'is_guest' => false,
+                'is_studio_host' => true,
+                'is_original_host' => true,
+                'source' => 'studio_host_meta',
+            );
+            if ($include_user_id) {
+                $identity['wordpress_user_id'] = $studio_user_id;
+            }
+            return $identity;
+        }
+
+        return null;
     }
 
     private function register_agora_participant_identity($post_id, $channel_name, $uid, $token_lifetime) {
@@ -1456,10 +1481,13 @@ public function handle_restart_stream() {
 
         $stored_channel_name = get_post_meta($post_id, '_vh360_agora_channel_name', true);
         $verified_target_identity = $this->get_verified_participant_identity($post_id, $stored_channel_name, $target_uid, true);
-        $target_user_id = $verified_target_identity ? absint($verified_target_identity['wordpress_user_id'] ?? 0) : 0;
-        if ($verified_target_identity && empty($display_name)) {
-            $display_name = sanitize_text_field($verified_target_identity['display_name'] ?? '');
+        if (!$verified_target_identity) {
+            wp_send_json_error(__('Could not verify the selected participant identity. Please wait for the participant to finish connecting and try again.', 'videohub360'));
+            return;
         }
+
+        $target_user_id = absint($verified_target_identity['wordpress_user_id'] ?? 0);
+        $display_name = sanitize_text_field($verified_target_identity['display_name'] ?? __('Participant', 'videohub360'));
         
         // Debug: Log incoming request for troubleshooting
         $debug_data = array(
@@ -2004,6 +2032,9 @@ public function handle_restart_stream() {
                 'is_original_host' => true,
                 'source' => 'studio_host_meta',
             );
+            if ($can_moderate) {
+                $identities[(string) $studio_uid]['wordpress_user_id'] = $studio_user_id;
+            }
         }
 
 

@@ -2253,18 +2253,23 @@ window.initializeAgoraPlayer = function(config) {
             .filter((key) => !verifiedIdentityCache.has(key));
         if (!keys.length) return {};
 
-        const formData = new FormData();
-        formData.append('action', 'vh360_lookup_agora_participant_identities');
-        formData.append('nonce', vh360Data.agoraIdentityNonce || vh360Data.agoraTokenNonce);
-        formData.append('post_id', vh360Data.postId);
-        formData.append('channel_name', config.channelName);
-        keys.slice(0, 50).forEach((key) => formData.append('uids[]', key));
+        const allIdentities = {};
+        for (let index = 0; index < keys.length; index += 50) {
+            const chunk = keys.slice(index, index + 50);
+            const formData = new FormData();
+            formData.append('action', 'vh360_lookup_agora_participant_identities');
+            formData.append('nonce', vh360Data.agoraIdentityNonce || vh360Data.agoraTokenNonce);
+            formData.append('post_id', vh360Data.postId);
+            formData.append('channel_name', config.channelName);
+            chunk.forEach((key) => formData.append('uids[]', key));
 
-        const response = await fetch(vh360Data.ajaxUrl, { method: 'POST', body: formData });
-        const data = await response.json();
-        const identities = data && data.success && data.data && data.data.identities ? data.data.identities : {};
-        Object.keys(identities).forEach((key) => applyVerifiedIdentity(key, identities[key]));
-        return identities;
+            const response = await fetch(vh360Data.ajaxUrl, { method: 'POST', body: formData });
+            const data = await response.json();
+            const identities = data && data.success && data.data && data.data.identities ? data.data.identities : {};
+            Object.assign(allIdentities, identities);
+            Object.keys(identities).forEach((key) => applyVerifiedIdentity(key, identities[key]));
+        }
+        return allIdentities;
     }
 
     function flushIdentityBatch() {
@@ -2272,16 +2277,20 @@ window.initializeAgoraPlayer = function(config) {
         queuedIdentityUids.clear();
         identityBatchTimer = null;
         if (!uids.length) return;
-        const request = lookupParticipantIdentities(uids).catch((error) => {
-            window.vh360Error('VideoHub360: Failed to batch lookup verified identities', error);
-            return {};
-        }).finally(() => {
-            uids.forEach((uid) => pendingIdentityRequests.delete(uid));
-        });
-        uids.forEach((uid) => pendingIdentityRequests.set(uid, request.then((identities) => {
-            const identity = identities[uid];
-            return identity && identity.display_name ? identity.display_name : null;
-        })));
+
+        for (let index = 0; index < uids.length; index += 50) {
+            const chunk = uids.slice(index, index + 50);
+            const request = lookupParticipantIdentities(chunk).catch((error) => {
+                window.vh360Error('VideoHub360: Failed to batch lookup verified identities', error);
+                return {};
+            }).finally(() => {
+                chunk.forEach((uid) => pendingIdentityRequests.delete(uid));
+            });
+            chunk.forEach((uid) => pendingIdentityRequests.set(uid, request.then((identities) => {
+                const identity = identities[uid];
+                return identity && identity.display_name ? identity.display_name : null;
+            })));
+        }
     }
 
     async function lookupDisplayNameByUID(uid) {
@@ -3727,9 +3736,6 @@ window.initializeAgoraPlayer = function(config) {
                 window.triggerImmediateModerationCheck = null;
             }
 
-            // Stop user info broadcasting
-            stopUserInfoBroadcasting();
-
             clearAgoraTokenRenewalTimer();
             latestAgoraTokenResponse = null;
             agoraTokenRecoveryInProgress = false;
@@ -4601,9 +4607,6 @@ window.initializeAgoraPlayer = function(config) {
 
             // Stop stream status polling
             stopStreamStatusPolling();
-
-            // Stop user info broadcasting
-            stopUserInfoBroadcasting();
 
             clearAgoraTokenRenewalTimer();
             latestAgoraTokenResponse = null;
