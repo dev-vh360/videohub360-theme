@@ -42,7 +42,9 @@
                 currentFacingMode: (config.videoConfig && config.videoConfig.facingMode) || 'user',
                 currentDeviceId: '',
                 receiveRemoteParticipants: !!config.receiveRemoteParticipants,
-                remoteParticipants: new Map()
+                remoteParticipants: new Map(),
+                autoplayFailureBound: false,
+                autoplayFailureHandler: null
             };
 
             function makeCancellationError() {
@@ -109,6 +111,20 @@
                 state.remoteParticipants.clear();
             }
 
+            function resetRemoteSubscriptions(emitReset) {
+                state.remoteParticipants.forEach(function (record) {
+                    stopRemotePlayback(record);
+                    record.audioTrack = null;
+                    record.videoTrack = null;
+                    record.audioPublished = false;
+                    record.videoPublished = false;
+                    record.subscriptionState = {};
+                });
+                if (emitReset) {
+                    emit(root, 'remote-participants-reset', {});
+                }
+            }
+
             function remoteRecord(uid, user) {
                 const key = normalizeRemoteUid(uid);
                 let record = state.remoteParticipants.get(key);
@@ -155,11 +171,11 @@
                 }
                 const record = remoteRecord(uid, user);
                 const trackKey = mediaType + 'Track';
+                const currentTrack = mediaType === 'video' ? user.videoTrack : user.audioTrack;
                 if (record.subscriptionState[mediaType] === 'subscribing') {
                     return;
                 }
-                if (record.subscriptionState[mediaType] === 'subscribed' && record[trackKey]) {
-                    emit(root, 'remote-participant-published', remoteDetail(record, mediaType));
+                if (record.subscriptionState[mediaType] === 'subscribed' && record[trackKey] && (!currentTrack || record[trackKey] === currentTrack)) {
                     return;
                 }
                 record.subscriptionState[mediaType] = 'subscribing';
@@ -356,6 +372,58 @@
                 }
             }
 
+
+            function handleAutoplayFailed() {
+                if (state.receiveRemoteParticipants && isOperationCurrent(currentGeneration())) {
+                    emit(root, 'remote-audio-blocked', {});
+                }
+            }
+
+            function bindAutoplayFailure() {
+                if (!state.receiveRemoteParticipants || state.autoplayFailureBound || !window.AgoraRTC) {
+                    return;
+                }
+                state.autoplayFailureHandler = handleAutoplayFailed;
+                if (typeof window.AgoraRTC.onAutoplayFailed === 'function') {
+                    window.AgoraRTC.onAutoplayFailed(state.autoplayFailureHandler);
+                    state.autoplayFailureBound = true;
+                } else if (typeof window.AgoraRTC.on === 'function') {
+                    window.AgoraRTC.on('autoplay-failed', state.autoplayFailureHandler);
+                    state.autoplayFailureBound = true;
+                }
+            }
+
+            function unbindAutoplayFailure() {
+                if (!state.autoplayFailureBound || !window.AgoraRTC || !state.autoplayFailureHandler) {
+                    return;
+                }
+                if (typeof window.AgoraRTC.offAutoplayFailed === 'function') {
+                    window.AgoraRTC.offAutoplayFailed(state.autoplayFailureHandler);
+                } else if (typeof window.AgoraRTC.off === 'function') {
+                    window.AgoraRTC.off('autoplay-failed', state.autoplayFailureHandler);
+                }
+                state.autoplayFailureBound = false;
+                state.autoplayFailureHandler = null;
+            }
+
+            async function syncRemotePublishedUsers(generation) {
+                if (!state.receiveRemoteParticipants || !state.client || !Array.isArray(state.client.remoteUsers)) {
+                    return;
+                }
+                for (const user of state.client.remoteUsers) {
+                    assertOperationCurrent(generation);
+                    if (!user || normalizeRemoteUid(user.uid) === localUidString()) {
+                        continue;
+                    }
+                    if (user.hasVideo || user.videoTrack) {
+                        await handleRemoteUserPublished(user, 'video');
+                    }
+                    if (user.hasAudio || user.audioTrack) {
+                        await handleRemoteUserPublished(user, 'audio');
+                    }
+                }
+            }
+
             function bindClientEvents() {
                 if (!state.client || typeof state.client.on !== 'function') {
                     return;
@@ -531,6 +599,7 @@
                 if (!state.client) {
                     state.client = window.AgoraRTC.createClient({ mode: clientMode, codec: 'vp8' });
                     bindClientEvents();
+                    bindAutoplayFailure();
                 }
                 assertOperationCurrent(generation);
                 if (clientMode === 'live' && typeof state.client.setClientRole === 'function') {
@@ -571,6 +640,7 @@
                         throw makeCancellationError();
                     }
                     state.published = true;
+                    await syncRemotePublishedUsers(generation);
                     scheduleRenewal(merged.expiresAt, generation);
                     emit(root, 'published', { uid: state.uid, channelName: state.channelName });
                     return state;
@@ -598,6 +668,7 @@
                     throw new Error('Cannot rejoin without prepared local tracks.');
                 }
                 emit(root, 'token-rejoin-start', {});
+                resetRemoteSubscriptions(true);
                 if (state.client && state.joined) {
                     if (state.published) {
                         await state.client.unpublish().catch(function () {});
@@ -625,6 +696,7 @@
                     throw makeCancellationError();
                 }
                 state.published = true;
+                await syncRemotePublishedUsers(generation);
                 emit(root, 'published', { uid: state.uid, channelName: state.channelName, rejoined: true });
             }
 
@@ -815,14 +887,14 @@
                 return false;
             }
 
-            function setRemoteVideoQuality(uid, quality) {
+            async function setRemoteVideoQuality(uid, quality) {
                 const record = state.remoteParticipants.get(normalizeRemoteUid(uid));
                 if (!record || !state.client || typeof state.client.setRemoteVideoStreamType !== 'function') {
                     return false;
                 }
                 const streamType = quality === 'high' ? 0 : 1;
                 try {
-                    state.client.setRemoteVideoStreamType(record.uid, streamType);
+                    await state.client.setRemoteVideoStreamType(record.uid, streamType);
                     record.videoQuality = quality || 'low';
                     return true;
                 } catch (error) {
@@ -855,6 +927,7 @@
                 }
                 state.joined = false;
                 clearRemoteParticipants();
+                unbindAutoplayFailure();
                 stopAndMaybeClose(state.audioTrack, state.audioTrackOwnsSource);
                 stopAndMaybeClose(state.videoTrack, state.videoTrackOwnsSource);
                 state.audioTrack = null;

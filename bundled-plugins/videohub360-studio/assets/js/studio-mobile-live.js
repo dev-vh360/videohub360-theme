@@ -431,7 +431,11 @@
                     channelName: prepared.channelName || prepared.channel_name || '',
                     localUid: prepared.uid || prepared.agoraUid || prepared.agora_uid || ''
                 });
-                participants.start();
+                if (typeof participants.bind === 'function') {
+                    participants.bind();
+                } else {
+                    participants.start();
+                }
             }
 
             setState('connecting');
@@ -452,10 +456,11 @@
                 localPreviewAttached = state.session.setLocalPreviewContainer(livePreview);
             }
             setImmersive(true);
+            await nextAnimationFrame();
             if (state.broadcastMode === 'interactive') {
                 all('[data-mobile-open-participants], [data-mobile-participant-count]').forEach(function (el) { el.hidden = false; });
-                if (state.participantController) {
-                    state.participantController.start();
+                if (state.participantController && typeof state.participantController.activateRendering === 'function') {
+                    await state.participantController.activateRendering();
                 }
             }
             setStatus(localPreviewAttached ? text('liveStarted', 'You are live. Keep this browser open.') : text('localPreviewFailed', 'The livestream is active, but the local camera preview could not be displayed.'));
