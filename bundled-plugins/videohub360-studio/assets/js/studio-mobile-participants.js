@@ -603,6 +603,9 @@
                 }
                 state.stopped = false;
                 state.bound = true;
+                if (audioButton) {
+                    audioButton.disabled = false;
+                }
                 bindUiHandlers();
                 bindEvent(root, 'vh360:agora-broadcaster:remote-participant-published', handlePublished);
                 bindEvent(root, 'vh360:agora-broadcaster:remote-track-unpublished', handleUnpublished);
@@ -636,6 +639,10 @@
             function stop() {
                 state.stopped = true;
                 state.audioRetryGeneration += 1;
+                if (audioButton) {
+                    audioButton.disabled = false;
+                    audioButton.hidden = true;
+                }
                 state.renderingActive = false;
                 state.handlers.forEach(function (entry) {
                     entry.target.removeEventListener(entry.eventName, entry.handler);
