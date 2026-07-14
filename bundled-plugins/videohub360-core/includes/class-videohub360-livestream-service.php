@@ -187,6 +187,21 @@ class VideoHub360_Livestream_Service {
         } elseif ( (bool) get_option( 'vh360_agora_require_tokens', 1 ) ) {
             return new WP_Error( 'vh360_livestream_missing_certificate', __( 'Agora App Certificate is required before Studio can broadcast.', 'videohub360' ), array( 'status' => 400 ) );
         }
+        if ( class_exists( 'VideoHub360_Agora_Participant_Registry' ) ) {
+            $studio_user_id = absint( get_post_meta( $post_id, '_vh360_studio_host_user_id', true ) ) ?: absint( $user_id ) ?: get_current_user_id();
+            VideoHub360_Agora_Participant_Registry::register( array(
+                'post_id' => $post_id,
+                'channel_name' => $channel,
+                'agora_uid' => $uid,
+                'wordpress_user_id' => $studio_user_id,
+                'display_name' => $studio_user_id ? get_the_author_meta( 'display_name', $studio_user_id ) : __( 'Host', 'videohub360' ),
+                'avatar_url' => $studio_user_id ? get_avatar_url( $studio_user_id ) : '',
+                'is_guest' => 0,
+                'is_studio_host' => $is_studio_controlled ? 1 : 0,
+                'lifetime' => max( HOUR_IN_SECONDS, absint( $expires_at - time() ) ),
+            ) );
+        }
+
         $agora_mode = get_post_meta( $post_id, '_vh360_agora_mode', true ) ?: 'broadcast';
         $client_mode = 'interactive' === $agora_mode ? 'rtc' : 'live';
         return array_merge( $this->get_livestream_data( $post_id ), array( 'appId' => $app_id, 'token' => $token, 'uid' => $uid, 'role' => 'host', 'expiresAt' => $expires_at, 'clientMode' => $client_mode ) );
