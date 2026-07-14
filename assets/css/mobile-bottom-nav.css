@@ -7,16 +7,13 @@
   --vh360-mobile-nav-content-height: 56px;
   --vh360-mobile-nav-safe-bottom: env(safe-area-inset-bottom, 0px);
   --vh360-mobile-nav-total-height: calc(var(--vh360-mobile-nav-content-height) + var(--vh360-mobile-nav-safe-bottom));
+  --vh360-mobile-nav-visual-offset: 0px;
 }
 
 @media (max-width: 768px) {
   /* Reserve space for the fixed bottom nav so it doesn't cover content */
   body.logged-in {
     padding-bottom: var(--vh360-mobile-nav-total-height);
-  }
-
-  html.vh360-pwa-standalone body.logged-in {
-    padding-bottom: var(--vh360-mobile-nav-measured-height, var(--vh360-mobile-nav-total-height));
   }
 
   /* Reduce header crowding for logged-in users (bottom nav becomes primary) */
@@ -163,20 +160,8 @@
   }
 
   html.vh360-pwa-standalone .vh360-mobile-bottom-nav {
-    transform: translate3d(0, 0, 0);
-    backface-visibility: hidden;
-    isolation: isolate;
+    bottom: var(--vh360-mobile-nav-visual-offset, 0px);
   }
-
-  html.vh360-pwa-standalone.vh360-mobile-nav-layer-reset .vh360-mobile-bottom-nav {
-    transform: none;
-  }
-
-  html.vh360-mobile-nav-is-settling .vh360-mobile-bottom-nav,
-  html.vh360-mobile-nav-is-settling .vh360-mobile-bottom-nav * {
-    transition: none !important;
-  }
-
 
   /* Drawer */
   .vh360-mobile-user-drawer {

@@ -4,7 +4,6 @@
   var html = document.documentElement;
   var nav = document.querySelector('.vh360-mobile-bottom-nav');
   var navItems = nav ? nav.querySelector('.vh360-mobile-bottom-nav__inner') : null;
-  var navMenu = nav ? nav.querySelector('.vh360-mobile-bottom-nav__menu') : null;
   var menuBtn = document.querySelector('.vh360-mobile-bottom-nav__menu-btn');
   var drawer = document.getElementById('vh360-mobile-user-drawer');
   var displayModeQuery = window.matchMedia ? window.matchMedia('(display-mode: standalone)') : null;
@@ -63,15 +62,9 @@
     });
   }
 
-  var navStabilizer = {
-    active: false,
-    generation: 0,
-    settleTimer: null,
-    frameOne: null,
-    frameTwo: null,
-    startedAt: 0,
-    lastMeasurement: null,
-    lastNavHeight: 0
+  var visualViewportController = {
+    viewportFrame: null,
+    lastOffset: 0
   };
 
   function debugLog(label, data) {
@@ -95,31 +88,11 @@
     return style.display !== 'none' && style.visibility !== 'hidden' && nav.getClientRects().length > 0;
   }
 
-  function readPixelCustomProperty(name, fallback) {
-    var value = window.getComputedStyle(html).getPropertyValue(name).trim();
-    var parsed = parseFloat(value);
-    return Number.isFinite(parsed) ? parsed : fallback;
-  }
-
-  function cancelPendingSettlement() {
-    if (navStabilizer.settleTimer) {
-      window.clearTimeout(navStabilizer.settleTimer);
-      navStabilizer.settleTimer = null;
-    }
-    if (navStabilizer.frameOne) {
-      window.cancelAnimationFrame(navStabilizer.frameOne);
-      navStabilizer.frameOne = null;
-    }
-    if (navStabilizer.frameTwo) {
-      window.cancelAnimationFrame(navStabilizer.frameTwo);
-      navStabilizer.frameTwo = null;
-    }
-  }
-
   function rectToObject(rect) {
     if (!rect) {
       return null;
     }
+
     return {
       top: rect.top,
       right: rect.right,
@@ -130,187 +103,132 @@
     };
   }
 
-  function measureNavigationHeight() {
-    var viewport = window.visualViewport || null;
-    var navRect = nav ? nav.getBoundingClientRect() : null;
-    var itemsRect = navItems ? navItems.getBoundingClientRect() : null;
-    var menuRect = navMenu ? navMenu.getBoundingClientRect() : null;
-    var itemRects = Array.prototype.map.call(nav ? nav.querySelectorAll('.vh360-mobile-bottom-nav__menu > li') : [], function (item) {
-      return rectToObject(item.getBoundingClientRect());
-    });
-    var labelRects = Array.prototype.map.call(nav ? nav.querySelectorAll('.vh360-mobile-bottom-nav__label') : [], function (label) {
-      return rectToObject(label.getBoundingClientRect());
-    });
-    var contentHeight = readPixelCustomProperty('--vh360-mobile-nav-content-height', 56);
-    var cssSafeBottom = readPixelCustomProperty('--vh360-mobile-nav-safe-bottom', 0);
-    var measuredSafeBottom = navRect && itemsRect ? Math.max(0, navRect.height - itemsRect.height) : 0;
-    var safeBottom = Math.max(cssSafeBottom, measuredSafeBottom);
-    var minimumHeight = contentHeight + safeBottom;
-    var measuredHeight = navRect ? Math.max(navRect.height, minimumHeight) : minimumHeight;
-    var visualViewportBottom = viewport ? viewport.offsetTop + viewport.height : window.innerHeight;
-    var tolerance = 1;
-    var geometryValid = !!(navRect && itemsRect && (!navMenu || menuRect)) &&
-      Math.abs(itemsRect.height - contentHeight) <= tolerance &&
-      (!menuRect || Math.abs(menuRect.width - navRect.width) <= tolerance) &&
-      itemRects.every(function (rect) {
-        return !rect || rect.bottom <= itemsRect.bottom + tolerance;
-      }) &&
-      labelRects.every(function (rect) {
-        return !rect || (rect.bottom <= itemsRect.bottom + tolerance && rect.bottom <= visualViewportBottom + tolerance);
-      });
+  function getLowestLabelRect() {
+    var labels = nav ? nav.querySelectorAll('.vh360-mobile-bottom-nav__label') : [];
+    var lowest = null;
 
-    return {
-      orientation: screen.orientation ? screen.orientation.type : window.orientation,
-      windowWidth: window.innerWidth,
-      windowHeight: window.innerHeight,
-      documentWidth: html.clientWidth,
-      documentHeight: html.clientHeight,
-      visualViewportWidth: viewport ? viewport.width : null,
+    labels.forEach(function (label) {
+      var rect = label.getBoundingClientRect();
+      if (!lowest || rect.bottom > lowest.bottom) {
+        lowest = rect;
+      }
+    });
+
+    return lowest;
+  }
+
+  function clearVisualViewportOffset(reason) {
+    if (visualViewportController.viewportFrame !== null) {
+      window.cancelAnimationFrame(visualViewportController.viewportFrame);
+      visualViewportController.viewportFrame = null;
+    }
+
+    visualViewportController.lastOffset = 0;
+    html.style.removeProperty('--vh360-mobile-nav-visual-offset');
+    debugLog('visual offset cleared', { reason: reason });
+  }
+
+  function calculateVisualViewportOffset(viewport) {
+    var layoutHeight = html.clientHeight;
+    var visualBottom = viewport.offsetTop + viewport.height;
+    var rawGap = Math.max(0, layoutHeight - visualBottom);
+    var navHeight = nav ? nav.getBoundingClientRect().height : 0;
+    var maxOffset = Math.max(0, navHeight || 0);
+    var clampedGap = Math.min(rawGap, maxOffset);
+    var devicePixelRatio = window.devicePixelRatio || 1;
+
+    return Math.round(clampedGap * devicePixelRatio) / devicePixelRatio;
+  }
+
+  function updateVisualViewportOffset() {
+    var viewport = window.visualViewport || null;
+    var active = isStandaloneMode() && isBottomNavVisible();
+    var scale = viewport && viewport.scale ? viewport.scale : 1;
+
+    if (!active || !viewport || Math.abs(scale - 1) > 0.01) {
+      clearVisualViewportOffset(!active ? 'inactive' : (!viewport ? 'missing visualViewport' : 'scaled viewport'));
+      return;
+    }
+
+    var nextOffset = calculateVisualViewportOffset(viewport);
+    if (Math.abs(nextOffset - visualViewportController.lastOffset) < 0.5) {
+      debugVisualViewportOffset(nextOffset, viewport, 'unchanged');
+      return;
+    }
+
+    visualViewportController.lastOffset = nextOffset;
+    html.style.setProperty('--vh360-mobile-nav-visual-offset', nextOffset.toFixed(2) + 'px');
+    debugVisualViewportOffset(nextOffset, viewport, 'applied');
+  }
+
+  function scheduleVisualViewportUpdate() {
+    if (visualViewportController.viewportFrame !== null) {
+      return;
+    }
+
+    visualViewportController.viewportFrame = window.requestAnimationFrame(function () {
+      visualViewportController.viewportFrame = null;
+      updateVisualViewportOffset();
+    });
+  }
+
+  function debugVisualViewportOffset(offset, viewport, status) {
+    if (!debugEnabled) {
+      return;
+    }
+
+    var navRect = nav ? nav.getBoundingClientRect() : null;
+    var innerRect = navItems ? navItems.getBoundingClientRect() : null;
+    var labelRect = getLowestLabelRect();
+    var visibleBottom = viewport ? viewport.offsetTop + viewport.height : null;
+
+    debugLog('visual viewport offset ' + status, {
+      documentElementClientHeight: html.clientHeight,
       visualViewportHeight: viewport ? viewport.height : null,
       visualViewportOffsetTop: viewport ? viewport.offsetTop : null,
-      visualViewportOffsetLeft: viewport ? viewport.offsetLeft : null,
+      visualViewportScale: viewport ? viewport.scale : null,
+      calculatedBottomGap: offset,
+      appliedCssOffset: window.getComputedStyle(html).getPropertyValue('--vh360-mobile-nav-visual-offset').trim() || '0px',
       navRect: rectToObject(navRect),
-      itemsRect: rectToObject(itemsRect),
-      menuRect: rectToObject(menuRect),
-      itemRects: itemRects,
-      labelRects: labelRects,
-      safeBottom: safeBottom,
-      contentHeight: contentHeight,
-      measuredHeight: measuredHeight,
-      geometryValid: geometryValid,
-      appliedBodyPadding: window.getComputedStyle(document.body).paddingBottom
-    };
-  }
-
-  function measurementsAreStable(first, second) {
-    var keys = ['windowWidth', 'windowHeight', 'documentWidth', 'documentHeight', 'visualViewportWidth', 'visualViewportHeight', 'measuredHeight'];
-    return keys.every(function (key) {
-      if (first[key] === null || second[key] === null) {
-        return true;
-      }
-      return Math.abs(first[key] - second[key]) <= 1;
+      innerRect: rectToObject(innerRect),
+      lowestLabelRect: rectToObject(labelRect),
+      visibleVisualViewportBottom: visibleBottom,
+      navBottomDelta: navRect && visibleBottom !== null ? Math.abs(navRect.bottom - visibleBottom) : null
     });
   }
 
-  function applyMeasuredNavigationHeight(measurement, generation) {
-    if (generation !== navStabilizer.generation || !navStabilizer.active) {
-      return;
-    }
-
-    if (!measurement.geometryValid) {
-      html.style.removeProperty('--vh360-mobile-nav-measured-height');
-      debugLog('invalid geometry, kept CSS fallback', Object.assign({ generation: generation }, measurement));
-      return;
-    }
-
-    navStabilizer.lastNavHeight = measurement.measuredHeight;
-    html.style.setProperty('--vh360-mobile-nav-measured-height', measurement.measuredHeight.toFixed(2) + 'px');
-    debugLog('applied', Object.assign({ generation: generation }, measurement));
-  }
-
-  function resetNavigationLayer(generation) {
-    if (generation !== navStabilizer.generation) {
-      return;
-    }
-
-    html.classList.add('vh360-mobile-nav-layer-reset');
-    if (nav) {
-      nav.getBoundingClientRect();
-    }
-    window.requestAnimationFrame(function () {
-      if (generation === navStabilizer.generation) {
-        html.classList.remove('vh360-mobile-nav-layer-reset');
-      }
-    });
-  }
-
-  function finishSettlement(measurement, generation) {
-    applyMeasuredNavigationHeight(measurement, generation);
-    resetNavigationLayer(generation);
-    if (generation === navStabilizer.generation) {
-      html.classList.remove('vh360-mobile-nav-is-settling');
-      navStabilizer.lastMeasurement = measurement;
-    }
-  }
-
-  function settleNavigationGeometry(generation) {
-    if (generation !== navStabilizer.generation || !navStabilizer.active) {
-      return;
-    }
-
-    navStabilizer.frameOne = window.requestAnimationFrame(function () {
-      var first = measureNavigationHeight();
-      navStabilizer.frameTwo = window.requestAnimationFrame(function () {
-        var second = measureNavigationHeight();
-        var elapsed = window.performance.now() - navStabilizer.startedAt;
-
-        debugLog('measured', { generation: generation, first: first, second: second });
-
-        if ((!measurementsAreStable(first, second) || !second.geometryValid) && elapsed < 1200) {
-          navStabilizer.settleTimer = window.setTimeout(function () {
-            settleNavigationGeometry(generation);
-          }, elapsed < 250 ? 100 : 250);
-          return;
-        }
-
-        finishSettlement(second, generation);
-      });
-    });
-  }
-
-  function scheduleNavigationSettlement() {
-    navStabilizer.active = isStandaloneMode() && isBottomNavVisible();
-
-    if (!navStabilizer.active) {
-      cancelPendingSettlement();
-      html.classList.remove('vh360-mobile-nav-is-settling', 'vh360-mobile-nav-layer-reset');
-      html.style.removeProperty('--vh360-mobile-nav-measured-height');
-      debugLog('inactive', { standalone: isStandaloneMode(), hasNav: !!nav, visible: isBottomNavVisible() });
-      return;
-    }
-
-    navStabilizer.generation += 1;
-    cancelPendingSettlement();
-    navStabilizer.startedAt = window.performance.now();
-    navStabilizer.lastMeasurement = null;
-    html.classList.add('vh360-mobile-nav-is-settling');
-    html.style.removeProperty('--vh360-mobile-nav-measured-height');
-
-    debugLog('scheduled', { generation: navStabilizer.generation, standalone: isStandaloneMode() });
-    navStabilizer.settleTimer = window.setTimeout(function () {
-      settleNavigationGeometry(navStabilizer.generation);
-    }, 0);
-  }
-
-  function initNavigationStabilizer() {
+  function initVisualViewportAnchoring() {
     if (!nav) {
       return;
     }
 
-    scheduleNavigationSettlement();
-
-    if (screen.orientation && typeof screen.orientation.addEventListener === 'function') {
-      screen.orientation.addEventListener('change', scheduleNavigationSettlement);
-    } else {
-      window.addEventListener('orientationchange', scheduleNavigationSettlement);
-    }
-
-    window.addEventListener('resize', scheduleNavigationSettlement);
-    window.addEventListener('pageshow', scheduleNavigationSettlement);
+    scheduleVisualViewportUpdate();
 
     if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', scheduleNavigationSettlement);
+      window.visualViewport.addEventListener('scroll', scheduleVisualViewportUpdate, { passive: true });
+      window.visualViewport.addEventListener('resize', scheduleVisualViewportUpdate, { passive: true });
+    } else {
+      window.addEventListener('scroll', scheduleVisualViewportUpdate, { passive: true });
     }
+
+    if (screen.orientation && typeof screen.orientation.addEventListener === 'function') {
+      screen.orientation.addEventListener('change', scheduleVisualViewportUpdate);
+    } else {
+      window.addEventListener('orientationchange', scheduleVisualViewportUpdate);
+    }
+
+    window.addEventListener('resize', scheduleVisualViewportUpdate);
+    window.addEventListener('pageshow', scheduleVisualViewportUpdate);
 
     if (displayModeQuery) {
       if (typeof displayModeQuery.addEventListener === 'function') {
-        displayModeQuery.addEventListener('change', scheduleNavigationSettlement);
+        displayModeQuery.addEventListener('change', scheduleVisualViewportUpdate);
       } else if (typeof displayModeQuery.addListener === 'function') {
-        displayModeQuery.addListener(scheduleNavigationSettlement);
+        displayModeQuery.addListener(scheduleVisualViewportUpdate);
       }
     }
   }
 
   initDrawer();
-  initNavigationStabilizer();
+  initVisualViewportAnchoring();
 })();
