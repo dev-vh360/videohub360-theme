@@ -7,7 +7,7 @@
  */
 
 @media (max-width: 900px) and (orientation: landscape) {
-  body::before {
+  body:not(.vh360-studio-mobile-live)::before {
     content: "Please rotate your device to portrait.";
     position: fixed;
     inset: 0;
@@ -24,7 +24,7 @@
   }
 
   /* Hide app UI while showing the overlay */
-  body > * {
+  body:not(.vh360-studio-mobile-live) > * {
     visibility: hidden;
   }
 }

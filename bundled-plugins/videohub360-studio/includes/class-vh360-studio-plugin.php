@@ -32,6 +32,7 @@ class VH360_Studio_Plugin {
         VH360_Studio_Overlay_Repository::register_post_type();
 
         add_filter( 'vh360_dashboard_tabs_registry', array( $this, 'register_dashboard_tab' ), 20, 2 );
+        add_filter( 'body_class', array( $this, 'body_classes' ) );
         VH360_Studio_Recording_Cleanup::schedule();
         add_action( VH360_Studio_Recording_Cleanup::HOOK, array( new VH360_Studio_Recording_Cleanup( $this->jobs ), 'run' ) );
 
@@ -73,6 +74,22 @@ class VH360_Studio_Plugin {
         return $tabs;
     }
 
+    public static function resolve_studio_mode() {
+        $mode = isset( $_GET['studio_mode'] ) ? sanitize_key( wp_unslash( $_GET['studio_mode'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        if ( in_array( $mode, array( 'mobile', 'desktop' ), true ) ) {
+            return $mode;
+        }
+        return 'entry';
+    }
+
+    public function body_classes( $classes ) {
+        $is_studio_tab = ( function_exists( 'vh360_get_current_dashboard_tab' ) && 'studio' === vh360_get_current_dashboard_tab() ) || ( isset( $_GET['tab'] ) && 'studio' === sanitize_key( wp_unslash( $_GET['tab'] ) ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        if ( $is_studio_tab && 'mobile' === self::resolve_studio_mode() ) {
+            $classes[] = 'vh360-studio-mobile-live';
+        }
+        return $classes;
+    }
+
     public function render_dashboard_tab( $user_id ) {
         if ( ! VH360_Studio_Permissions::user_can_access_studio( $user_id ) ) {
             printf( '<p>%s</p>', esc_html( sprintf( __( 'You do not have permission to access %s.', 'videohub360-studio' ), function_exists( 'vh360_studio_get_display_name' ) ? vh360_studio_get_display_name() : __( 'Studio', 'videohub360-studio' ) ) ) );
@@ -81,6 +98,16 @@ class VH360_Studio_Plugin {
 
         if ( ! VH360_Studio_Permissions::license_is_valid() ) {
             include VH360_STUDIO_TEMPLATES_DIR . 'dashboard-studio-locked.php';
+            return;
+        }
+
+        $mode = self::resolve_studio_mode();
+        if ( 'entry' === $mode ) {
+            include VH360_STUDIO_TEMPLATES_DIR . 'dashboard-studio-entry.php';
+            return;
+        }
+        if ( 'mobile' === $mode ) {
+            include VH360_STUDIO_TEMPLATES_DIR . 'dashboard-studio-mobile.php';
             return;
         }
 

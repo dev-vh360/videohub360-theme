@@ -1,157 +1,21 @@
 (function (window) {
     'use strict';
-
-    function emit(target, name, detail) {
-        (target || window).dispatchEvent(new CustomEvent('vh360:agora-broadcaster:' + name, { detail: detail || {} }));
-    }
-
-    window.VH360AgoraBroadcaster = {
-        create: function (config) {
-            const state = { client: null, audioTrack: null, audioTrackOwnsSource: true, videoTrack: null, videoTrackOwnsSource: true, joined: false, published: false };
-            const root = config.container || document;
-            const localContainer = config.localContainer || root.querySelector('[data-agora-local-preview]') || root;
-
-            function bindTrackLifecycle(track, kind, source) {
-                if (!track) { return; }
-                const detail = { kind: kind, source: source, reason: 'ended' };
-                const notifyEnded = function (reason) {
-                    const eventDetail = Object.assign({}, detail, { reason: reason || 'ended' });
-                    emit(root, 'track-ended', eventDetail);
-                    emit(root, 'track-state-change', Object.assign({}, eventDetail, { state: 'ended' }));
-                };
-                if (typeof track.on === 'function') {
-                    track.on('track-ended', function () { notifyEnded('agora-track-ended'); });
-                }
-                if (typeof track.getMediaStreamTrack === 'function') {
-                    const mediaTrack = track.getMediaStreamTrack();
-                    if (mediaTrack && typeof mediaTrack.addEventListener === 'function') {
-                        mediaTrack.addEventListener('ended', function () { notifyEnded('media-track-ended'); }, { once: true });
-                    }
-                }
-            }
-
-            async function start() {
-                if (!window.AgoraRTC) {
-                    throw new Error('Agora RTC SDK is unavailable.');
-                }
-                const clientMode = config.clientMode === 'rtc' ? 'rtc' : 'live';
-                state.client = window.AgoraRTC.createClient({ mode: clientMode, codec: 'vp8' });
-                if (state.client && typeof state.client.on === 'function') {
-                    state.client.on('connection-state-change', function (current, previous, reason) {
-                        emit(root, 'connection-state-change', {
-                            current: current,
-                            previous: previous,
-                            reason: reason || ''
-                        });
-                    });
-                }
-                if (clientMode === 'live' && typeof state.client.setClientRole === 'function') {
-                    await state.client.setClientRole('host');
-                }
-                if (config.initialAudioMediaStreamTrack && typeof window.AgoraRTC.createCustomAudioTrack === 'function') {
-                    state.audioTrack = window.AgoraRTC.createCustomAudioTrack({
-                        mediaStreamTrack: config.initialAudioMediaStreamTrack
-                    });
-                    state.audioTrackOwnsSource = false;
-                } else {
-                    state.audioTrack = await window.AgoraRTC.createMicrophoneAudioTrack(config.audioConfig || {});
-                    state.audioTrackOwnsSource = true;
-                }
-                if (config.initialVideoMediaStreamTrack && typeof window.AgoraRTC.createCustomVideoTrack === 'function') {
-                    state.videoTrack = window.AgoraRTC.createCustomVideoTrack({
-                        mediaStreamTrack: config.initialVideoMediaStreamTrack
-                    });
-                    state.videoTrackOwnsSource = false;
-                } else {
-                    state.videoTrack = await window.AgoraRTC.createCameraVideoTrack(config.videoConfig || {});
-                    state.videoTrackOwnsSource = true;
-                }
-                bindTrackLifecycle(state.audioTrack, 'audio', config.initialAudioMediaStreamTrack ? 'studio-mix' : 'microphone');
-                bindTrackLifecycle(state.videoTrack, 'video', config.initialVideoMediaStreamTrack ? 'program' : 'camera');
-                if (localContainer) {
-                    state.videoTrack.play(localContainer, { mirror: config.initialVideoSource !== 'screen' });
-                }
-                await state.client.join(config.appId, config.channelName, config.token || null, Number(config.uid));
-                state.joined = true;
-                await state.client.publish([state.audioTrack, state.videoTrack]);
-                state.published = true;
-                emit(root, 'published', { uid: config.uid, channelName: config.channelName });
-                return state;
-            }
-
-            async function stop() {
-                if (state.client && state.published) {
-                    await state.client.unpublish().catch(function () {});
-                }
-                if (state.audioTrack) {
-                    state.audioTrack.stop();
-                    if (state.audioTrackOwnsSource && typeof state.audioTrack.close === 'function') { state.audioTrack.close(); }
-                    state.audioTrack = null;
-                    state.audioTrackOwnsSource = true;
-                }
-                if (state.videoTrack) {
-                    stopAndMaybeCloseVideoTrack(state.videoTrack, state.videoTrackOwnsSource);
-                    state.videoTrack = null;
-                    state.videoTrackOwnsSource = true;
-                }
-                if (state.client && state.joined) {
-                    await state.client.leave().catch(function () {});
-                }
-                state.joined = false;
-                state.published = false;
-                emit(root, 'ended', {});
-            }
-
-            function stopAndMaybeCloseVideoTrack(track, ownsSource) {
-                if (!track || !ownsSource) {
-                    return;
-                }
-                if (typeof track.stop === 'function') {
-                    track.stop();
-                }
-                if (typeof track.close === 'function') {
-                    track.close();
-                }
-            }
-
-            function isReadyToPublish() {
-                return Boolean(
-                    state.client &&
-                    state.joined &&
-                    state.published &&
-                    (!state.client.connectionState || state.client.connectionState === 'CONNECTED')
-                );
-            }
-
-            return {
-                start: start,
-                stop: stop,
-                isReadyToPublish: isReadyToPublish,
-                muteAudio: function (muted) { return state.audioTrack && state.audioTrack.setEnabled(!muted); },
-                muteVideo: function (muted) { return state.videoTrack && state.videoTrack.setEnabled(!muted); },
-                getAudioTrackId: function () {
-                    if (state.audioTrack && typeof state.audioTrack.getMediaStreamTrack === 'function') {
-                        const track = state.audioTrack.getMediaStreamTrack();
-                        return track ? track.id : '';
-                    }
-                    return '';
-                },
-                getLocalMediaStream: function () {
-                    const tracks = [];
-                    if (state.audioTrack && typeof state.audioTrack.getMediaStreamTrack === 'function') {
-                        tracks.push(state.audioTrack.getMediaStreamTrack());
-                    }
-                    if (state.videoTrack && typeof state.videoTrack.getMediaStreamTrack === 'function') {
-                        tracks.push(state.videoTrack.getMediaStreamTrack());
-                    }
-                    return tracks.length ? new MediaStream(tracks) : null;
-                },
-                getState: function () {
-                    return Object.assign({}, state, {
-                        connectionState: state.client ? state.client.connectionState || '' : ''
-                    });
-                }
-            };
-        }
-    };
+    function emit(target, name, detail) { (target || window).dispatchEvent(new CustomEvent('vh360:agora-broadcaster:' + name, { detail: detail || {} })); }
+    window.VH360AgoraBroadcaster = { create: function (config) {
+        const state = { client: null, audioTrack: null, audioTrackOwnsSource: true, videoTrack: null, videoTrackOwnsSource: true, joined: false, published: false, channelName: config.channelName || '', uid: config.uid || 0, token: config.token || '', expiresAt: config.expiresAt || 0, renewalTimer: 0, currentFacingMode: (config.videoConfig && config.videoConfig.facingMode) || 'user', currentDeviceId: '' };
+        const root = config.container || document; const localContainer = config.localContainer || root.querySelector('[data-agora-local-preview]') || root;
+        function bindTrackLifecycle(track, kind, source) { if (!track) { return; } const notify = reason => { emit(root, 'track-ended', { kind, source, reason: reason || 'ended' }); emit(root, 'track-state-change', { kind, source, reason: reason || 'ended', state: 'ended' }); }; if (track.on) { track.on('track-ended', () => notify('agora-track-ended')); } if (track.getMediaStreamTrack) { const mt = track.getMediaStreamTrack(); if (mt && mt.addEventListener) { mt.addEventListener('ended', () => notify('media-track-ended'), { once: true }); } } }
+        function stopAndMaybeClose(track, owns) { if (!track) { return; } if (track.stop) { track.stop(); } if (owns && track.close) { track.close(); } }
+        async function prepareMedia() { if (!window.AgoraRTC) { throw new Error('Agora RTC SDK is unavailable.'); } if (state.audioTrack && state.videoTrack) { return state; } if (!state.audioTrack) { if (config.initialAudioMediaStreamTrack && window.AgoraRTC.createCustomAudioTrack) { state.audioTrack = window.AgoraRTC.createCustomAudioTrack({ mediaStreamTrack: config.initialAudioMediaStreamTrack }); state.audioTrackOwnsSource = false; } else { state.audioTrack = await window.AgoraRTC.createMicrophoneAudioTrack(config.audioConfig || {}); state.audioTrackOwnsSource = true; } bindTrackLifecycle(state.audioTrack, 'audio', config.initialAudioMediaStreamTrack ? (config.audioSource || 'studio-mix') : 'microphone'); } if (!state.videoTrack) { if (config.initialVideoMediaStreamTrack && window.AgoraRTC.createCustomVideoTrack) { state.videoTrack = window.AgoraRTC.createCustomVideoTrack({ mediaStreamTrack: config.initialVideoMediaStreamTrack }); state.videoTrackOwnsSource = false; } else { state.videoTrack = await window.AgoraRTC.createCameraVideoTrack(config.videoConfig || {}); state.videoTrackOwnsSource = true; } bindTrackLifecycle(state.videoTrack, 'video', config.initialVideoMediaStreamTrack ? (config.initialVideoSource || 'program') : 'camera'); } if (localContainer && state.videoTrack && state.videoTrack.play) { state.videoTrack.play(localContainer, { mirror: state.currentFacingMode !== 'environment' && config.initialVideoSource !== 'screen' }); } emit(root, 'media-prepared', {}); return state; }
+        function bindClientEvents() { if (!state.client || !state.client.on) { return; } state.client.on('connection-state-change', (current, previous, reason) => emit(root, 'connection-state-change', { current, previous, reason: reason || '' })); state.client.on('token-privilege-will-expire', renewToken); state.client.on('token-privilege-did-expire', renewToken); }
+        function scheduleRenewal(expiresAt) { clearTimeout(state.renewalTimer); state.expiresAt = Number(expiresAt) || 0; if (!state.expiresAt) { return; } const delay = Math.max(30000, (state.expiresAt * 1000) - Date.now() - 300000); state.renewalTimer = setTimeout(renewToken, delay); }
+        async function renewToken(token) { let next = token; let expires = 0; if (!next && typeof config.renewToken === 'function') { const res = await config.renewToken({ videoId: config.videoId, channelName: state.channelName, uid: state.uid }); next = res && res.token; expires = res && res.expiresAt; } if (!next || !state.client || !state.client.renewToken) { return false; } await state.client.renewToken(next); state.token = next; scheduleRenewal(expires); emit(root, 'token-renewed', { expiresAt: expires }); return true; }
+        async function connect(connectionConfig) { const c = Object.assign({}, config, connectionConfig || {}); await prepareMedia(); const clientMode = c.clientMode === 'rtc' ? 'rtc' : 'live'; if (!state.client) { state.client = window.AgoraRTC.createClient({ mode: clientMode, codec: 'vp8' }); bindClientEvents(); } if (clientMode === 'live' && state.client.setClientRole) { await state.client.setClientRole('host'); } state.channelName = c.channelName; state.uid = Number(c.uid); state.token = c.token || null; await state.client.join(c.appId, c.channelName, state.token, state.uid); state.joined = true; await state.client.publish([state.audioTrack, state.videoTrack].filter(Boolean)); state.published = true; scheduleRenewal(c.expiresAt); emit(root, 'published', { uid: state.uid, channelName: state.channelName }); return state; }
+        async function start() { await prepareMedia(); return connect(config); }
+        async function switchCamera(preferredFacingMode) { if (!state.videoTrack || !state.videoTrackOwnsSource) { return false; } const facing = preferredFacingMode || (state.currentFacingMode === 'user' ? 'environment' : 'user'); try { if (state.videoTrack.setDevice) { await state.videoTrack.setDevice({ facingMode: facing }); state.currentFacingMode = facing; return true; } } catch (e) {}
+            const devices = (window.AgoraRTC.getCameras ? await window.AgoraRTC.getCameras() : (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices ? (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput') : [])); const next = devices.find(d => d.deviceId && d.deviceId !== state.currentDeviceId) || devices[0]; if (next && state.videoTrack.setDevice) { await state.videoTrack.setDevice(next.deviceId); state.currentDeviceId = next.deviceId; state.currentFacingMode = facing; return true; }
+            const old = state.videoTrack; const newTrack = await window.AgoraRTC.createCameraVideoTrack(Object.assign({}, config.videoConfig || {}, { facingMode: facing })); bindTrackLifecycle(newTrack, 'video', 'camera'); if (state.client && state.published) { await state.client.unpublish(old).catch(() => {}); await state.client.publish(newTrack); } stopAndMaybeClose(old, true); state.videoTrack = newTrack; state.currentFacingMode = facing; if (localContainer) { newTrack.play(localContainer, { mirror: facing !== 'environment' }); } return true; }
+        async function stop() { clearTimeout(state.renewalTimer); if (state.client && state.published) { await state.client.unpublish().catch(() => {}); } stopAndMaybeClose(state.audioTrack, state.audioTrackOwnsSource); stopAndMaybeClose(state.videoTrack, state.videoTrackOwnsSource); state.audioTrack = null; state.videoTrack = null; if (state.client && state.joined) { await state.client.leave().catch(() => {}); } state.joined = false; state.published = false; emit(root, 'ended', {}); }
+        return { start, prepareMedia, connect, stop, renewToken, switchCamera, isReadyToPublish: () => Boolean(state.client && state.joined && state.published && (!state.client.connectionState || state.client.connectionState === 'CONNECTED')), muteAudio: muted => state.audioTrack && state.audioTrack.setEnabled(!muted), muteVideo: muted => state.videoTrack && state.videoTrack.setEnabled(!muted), getCurrentCameraState: () => ({ facingMode: state.currentFacingMode, deviceId: state.currentDeviceId }), getAudioTrackId: () => { if (state.audioTrack && state.audioTrack.getMediaStreamTrack) { const t = state.audioTrack.getMediaStreamTrack(); return t ? t.id : ''; } return ''; }, getLocalMediaStream: () => { const tracks = []; if (state.audioTrack && state.audioTrack.getMediaStreamTrack) { tracks.push(state.audioTrack.getMediaStreamTrack()); } if (state.videoTrack && state.videoTrack.getMediaStreamTrack) { tracks.push(state.videoTrack.getMediaStreamTrack()); } return tracks.length ? new MediaStream(tracks) : null; }, getState: () => Object.assign({}, state, { connectionState: state.client ? state.client.connectionState || '' : '' }) };
+    } };
 })(window);

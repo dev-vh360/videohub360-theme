@@ -6110,7 +6110,7 @@
             } else if (audioSummary.failed > 0) {
                 setBroadcastStatus(formatAudioInputSummary(audioSummary, 'live'), 'warning');
             }
-            const created = await api('/broadcasts', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify(broadcastPayload()) });
+            const created = await api('/broadcasts', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify(Object.assign({}, broadcastPayload(), { recording_intent: 'browser' })) });
             const broadcast = created.broadcast || {};
             state.broadcastVideoId = broadcast.videoId;
             state.activeJobId = created.job && created.job.id ? created.job.id : state.activeJobId;

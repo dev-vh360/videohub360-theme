@@ -35,6 +35,27 @@ class VH360_Studio_Assets {
             return;
         }
 
+
+        $mode = class_exists( 'VH360_Studio_Plugin' ) ? VH360_Studio_Plugin::resolve_studio_mode() : 'entry';
+        if ( 'entry' === $mode ) {
+            $css_path = 'assets/css/studio-entry-router.css';
+            $js_path  = 'assets/js/studio-entry-router.js';
+            wp_enqueue_style( 'vh360-studio-entry-router', VH360_STUDIO_PLUGIN_URL . $css_path, array(), $this->asset_version( $css_path ) );
+            wp_enqueue_script( 'vh360-studio-entry-router', VH360_STUDIO_PLUGIN_URL . $js_path, array(), $this->asset_version( $js_path ), true );
+            return;
+        }
+        if ( 'mobile' === $mode ) {
+            $css_path = 'assets/css/studio-mobile-live.css';
+            $js_path  = 'assets/js/studio-mobile-live.js';
+            wp_enqueue_style( 'vh360-studio-mobile-live', VH360_STUDIO_PLUGIN_URL . $css_path, array(), $this->asset_version( $css_path ) );
+            wp_enqueue_script( 'agora-rtc-sdk', 'https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js', array(), '4.20.0', true );
+            wp_enqueue_script( 'vh360-agora-broadcaster', VIDEOHUB360_ASSETS_URL . 'js/agora-broadcaster.js', array( 'agora-rtc-sdk' ), videohub360_asset_version( 'assets/js/agora-broadcaster.js' ), true );
+            wp_enqueue_script( 'vh360-studio-mobile-live', VH360_STUDIO_PLUGIN_URL . $js_path, array( 'vh360-agora-broadcaster' ), $this->asset_version( $js_path ), true );
+            wp_localize_script( 'vh360-studio-mobile-live', 'vh360StudioMobileLive', $this->mobile_localized_data() );
+            wp_dequeue_style( 'mobile-orientation-lock' );
+            return;
+        }
+
         $css_path                = 'assets/css/studio-dashboard.css';
         $overlays_css_path       = 'assets/css/studio-overlays-workspace.css';
         $overlay_engine_css_path = 'assets/css/studio-overlay-engine.css';
@@ -182,6 +203,16 @@ class VH360_Studio_Assets {
     private function asset_version( $relative_path ) {
         $file_path = VH360_STUDIO_PLUGIN_DIR . ltrim( $relative_path, '/' );
         return file_exists( $file_path ) ? VH360_STUDIO_VERSION . '-' . filemtime( $file_path ) : VH360_STUDIO_VERSION;
+    }
+
+    private function mobile_localized_data() {
+        return array(
+            'restRoot' => esc_url_raw( rest_url( 'vh360-studio/v1' ) ),
+            'nonce' => wp_create_nonce( 'wp_rest' ),
+            'currentUserId' => get_current_user_id(),
+            'mobileVideoConfig' => array( 'facingMode' => 'user', 'encoderConfig' => array( 'width' => 1280, 'height' => 720, 'frameRate' => 30, 'bitrateMin' => 800, 'bitrateMax' => 1800 ), 'optimizationMode' => 'motion' ),
+            'mobileAudioConfig' => array(),
+        );
     }
 
     private function localized_data() {
