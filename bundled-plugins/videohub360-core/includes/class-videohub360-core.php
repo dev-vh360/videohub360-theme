@@ -164,8 +164,8 @@ class VideoHub360_Core {
             });
         }
         
-        // Upgrade to version 2.8 - Add server-authoritative Agora participant identity registry.
-        if (version_compare($current_version, '2.8', '<')) {
+        // Upgrade to version 2.9 - Add server-authoritative Agora participant identity registry.
+        if (version_compare($current_version, '2.9', '<')) {
             self::create_database_tables();
         }
 
@@ -731,7 +731,7 @@ class VideoHub360_Core {
         }
         
         // Set database version options
-        update_option('videohub360_chat_db_version', '2.8');
+        update_option('videohub360_chat_db_version', '2.9');
     }
     
     /**

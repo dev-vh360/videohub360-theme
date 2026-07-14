@@ -198,6 +198,7 @@ class VideoHub360_Livestream_Service {
                 'avatar_url' => $studio_user_id ? get_avatar_url( $studio_user_id ) : '',
                 'is_guest' => 0,
                 'is_studio_host' => $is_studio_controlled ? 1 : 0,
+                'is_original_host' => 1,
                 'lifetime' => max( HOUR_IN_SECONDS, absint( $expires_at - time() ) ),
             ) );
         }

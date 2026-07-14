@@ -586,10 +586,7 @@ window.initializeAgoraPlayer = function(config) {
     let switchingCooldown = 1000; // 1 second cooldown to prevent rapid switching on desktop
     let isVolumenIndicationEnabled = false;
 
-    // Display name resolution tracking
-    let userInfoBroadcastInterval = null;
-    let userInfoBroadcastEndTime = null;
-    let pendingDisplayNameRequests = new Set();
+    // Server-verified participant identity tracking
     const verifiedIdentityCache = new Map();
     const pendingIdentityRequests = new Map();
 
@@ -973,7 +970,9 @@ window.initializeAgoraPlayer = function(config) {
     }
 
     function resolveWordPressUserId(uid, options = {}) {
+        const cachedIdentity = verifiedIdentityCache.get(normalizeParticipantUid(uid));
         if (Object.prototype.hasOwnProperty.call(options, 'wordpressUserId')) return options.wordpressUserId || null;
+        if (cachedIdentity && cachedIdentity.wordpressUserId) return cachedIdentity.wordpressUserId;
         if (isStudioHostUid(uid)) return config.studioHostUserId || null;
         if (remoteUsers[uid] && remoteUsers[uid].wordpressUserId) return remoteUsers[uid].wordpressUserId;
         if (currentUserUID && String(uid) === String(currentUserUID)) return config.viewerUserId || security.user_id || null;
@@ -981,7 +980,9 @@ window.initializeAgoraPlayer = function(config) {
     }
 
     function resolveParticipantDisplayName(uid, options = {}) {
+        const cachedIdentity = verifiedIdentityCache.get(normalizeParticipantUid(uid));
         if (options.displayName) return options.displayName;
+        if (cachedIdentity && cachedIdentity.displayName) return cachedIdentity.displayName;
         if (isStudioHostUid(uid) && config.studioHostDisplayName) return config.studioHostDisplayName;
         if (remoteUsers[uid] && remoteUsers[uid].displayName) return remoteUsers[uid].displayName;
         if (currentUserUID && String(uid) === String(currentUserUID)) return config.viewerDisplayName || config.displayName || security.display_name || 'Participant';
@@ -998,7 +999,7 @@ window.initializeAgoraPlayer = function(config) {
                 agoraUid: key,
                 wordpressUserId: resolveWordPressUserId(key, options),
                 isLocal: !!options.isLocal || (currentUserUID && key === String(currentUserUID)),
-                isOriginalHost: !!options.isOriginalHost || key === String(originalHostUID || ''),
+                isOriginalHost: !!options.isOriginalHost || key === String(originalHostUID || '') || !!(verifiedIdentityCache.get(key) && verifiedIdentityCache.get(key).isOriginalHost),
                 isActiveSpeaker: false,
                 audioTrack: null,
                 videoTrack: null,
@@ -2208,84 +2209,115 @@ window.initializeAgoraPlayer = function(config) {
         }
     });
 
-    function broadcastUserInfo() {
-        // Identity is resolved through the server registry; client broadcasts are not authoritative.
-        return;
-        if (currentUserUID && security.display_name) {
-            const userInfo = {
-                type: 'user_info',
-                displayName: security.display_name,
-                fromUserId: security.user_id || 0,
-                fromUID: currentUserUID,
-                isOriginalHost: isOriginalHost // Include original host status
-            };
+    // Server-authoritative participant identity resolution.
+    let identityBatchTimer = null;
+    const queuedIdentityUids = new Set();
 
-            window.vh360Log('VideoHub360: Broadcasting user info:', userInfo);
-            sendDataStreamMessage(userInfo);
+    function applyVerifiedIdentity(uid, identity) {
+        const key = normalizeParticipantUid(uid);
+        if (!key || !identity || !identity.display_name) return null;
+        const verified = {
+            displayName: identity.display_name,
+            wordpressUserId: identity.wordpress_user_id || null,
+            avatarUrl: identity.avatar_url || '',
+            isGuest: !!identity.is_guest,
+            isStudioHost: !!identity.is_studio_host,
+            isOriginalHost: !!identity.is_original_host || !!identity.is_studio_host
+        };
+        verifiedIdentityCache.set(key, verified);
+        if (verified.isOriginalHost && !originalHostUID) {
+            originalHostUID = key;
         }
+        if (verified.isOriginalHost && !isOriginalHost && config.agoraMode === 'interactive') {
+            setTimeout(checkAndSetInitialHostView, 0);
+        }
+        if (remoteUsers[key]) {
+            remoteUsers[key].displayName = verified.displayName;
+            remoteUsers[key].wordpressUserId = verified.wordpressUserId || remoteUsers[key].wordpressUserId;
+            remoteUsers[key].isOriginalHost = verified.isOriginalHost;
+        }
+        const participant = participantRegistry.get(key);
+        if (participant) {
+            participant.displayName = verified.displayName;
+            participant.wordpressUserId = verified.wordpressUserId || participant.wordpressUserId;
+            participant.avatarUrl = verified.avatarUrl || participant.avatarUrl;
+            participant.isOriginalHost = participant.isOriginalHost || verified.isOriginalHost;
+            updateParticipantTile(participant);
+        }
+        updateRemoteUserDisplayName(key, verified.displayName);
+        return verified;
     }
 
-    // Server-authoritative participant identity resolution.
+    async function lookupParticipantIdentities(uids) {
+        const keys = Array.from(new Set((uids || []).map(normalizeParticipantUid).filter(Boolean)))
+            .filter((key) => !verifiedIdentityCache.has(key));
+        if (!keys.length) return {};
+
+        const formData = new FormData();
+        formData.append('action', 'vh360_lookup_agora_participant_identities');
+        formData.append('nonce', vh360Data.agoraIdentityNonce || vh360Data.agoraTokenNonce);
+        formData.append('post_id', vh360Data.postId);
+        formData.append('channel_name', config.channelName);
+        keys.slice(0, 50).forEach((key) => formData.append('uids[]', key));
+
+        const response = await fetch(vh360Data.ajaxUrl, { method: 'POST', body: formData });
+        const data = await response.json();
+        const identities = data && data.success && data.data && data.data.identities ? data.data.identities : {};
+        Object.keys(identities).forEach((key) => applyVerifiedIdentity(key, identities[key]));
+        return identities;
+    }
+
+    function flushIdentityBatch() {
+        const uids = Array.from(queuedIdentityUids);
+        queuedIdentityUids.clear();
+        identityBatchTimer = null;
+        if (!uids.length) return;
+        const request = lookupParticipantIdentities(uids).catch((error) => {
+            window.vh360Error('VideoHub360: Failed to batch lookup verified identities', error);
+            return {};
+        }).finally(() => {
+            uids.forEach((uid) => pendingIdentityRequests.delete(uid));
+        });
+        uids.forEach((uid) => pendingIdentityRequests.set(uid, request.then((identities) => {
+            const identity = identities[uid];
+            return identity && identity.display_name ? identity.display_name : null;
+        })));
+    }
+
     async function lookupDisplayNameByUID(uid) {
         const key = normalizeParticipantUid(uid);
         if (!key) return null;
         if (verifiedIdentityCache.has(key)) return verifiedIdentityCache.get(key).displayName;
         if (isStudioHostUid(key) && config.studioHostDisplayName) {
-            const studioIdentity = {
-                displayName: config.studioHostDisplayName,
-                wordpressUserId: config.studioHostUserId || null,
-                avatarUrl: config.studioHostAvatarUrl || config.studioHostAvatar || '',
-                isStudioHost: true
-            };
-            verifiedIdentityCache.set(key, studioIdentity);
-            return studioIdentity.displayName;
+            const studioIdentity = applyVerifiedIdentity(key, {
+                uid: key,
+                display_name: config.studioHostDisplayName,
+                wordpress_user_id: config.studioHostUserId || null,
+                avatar_url: config.studioHostAvatarUrl || config.studioHostAvatar || '',
+                is_studio_host: true,
+                is_original_host: true
+            });
+            return studioIdentity ? studioIdentity.displayName : null;
         }
         if (pendingIdentityRequests.has(key)) return pendingIdentityRequests.get(key);
 
-        const request = (async () => {
-            try {
-                const formData = new FormData();
-                formData.append('action', 'vh360_lookup_agora_participant_identities');
-                formData.append('nonce', vh360Data.agoraIdentityNonce || vh360Data.agoraTokenNonce);
-                formData.append('post_id', vh360Data.postId);
-                formData.append('channel_name', config.channelName);
-                formData.append('uids[]', key);
-
-                const response = await fetch(vh360Data.ajaxUrl, { method: 'POST', body: formData });
-                const data = await response.json();
-                const identity = data && data.success && data.data && data.data.identities ? data.data.identities[key] : null;
-                if (!identity || !identity.display_name) return null;
-
-                const verified = {
-                    displayName: identity.display_name,
-                    wordpressUserId: identity.wordpress_user_id || null,
-                    avatarUrl: identity.avatar_url || '',
-                    isGuest: !!identity.is_guest,
-                    isStudioHost: !!identity.is_studio_host
-                };
-                verifiedIdentityCache.set(key, verified);
-                if (remoteUsers[key]) {
-                    remoteUsers[key].displayName = verified.displayName;
-                    remoteUsers[key].wordpressUserId = verified.wordpressUserId || remoteUsers[key].wordpressUserId;
+        queuedIdentityUids.add(key);
+        const request = new Promise((resolve) => {
+            const poll = () => {
+                if (!pendingIdentityRequests.has(key) && verifiedIdentityCache.has(key)) {
+                    resolve(verifiedIdentityCache.get(key).displayName);
+                } else if (!pendingIdentityRequests.has(key) && !queuedIdentityUids.has(key)) {
+                    resolve(null);
+                } else {
+                    setTimeout(poll, 25);
                 }
-                const participant = participantRegistry.get(key);
-                if (participant) {
-                    participant.displayName = verified.displayName;
-                    participant.wordpressUserId = verified.wordpressUserId || participant.wordpressUserId;
-                    participant.avatarUrl = verified.avatarUrl || participant.avatarUrl;
-                    participant.isOriginalHost = participant.isOriginalHost || verified.isStudioHost;
-                    updateParticipantTile(participant);
-                }
-                return verified.displayName;
-            } catch (error) {
-                window.vh360Error('VideoHub360: Failed to lookup verified identity for UID', uid, error);
-                return null;
-            } finally {
-                pendingIdentityRequests.delete(key);
-            }
-        })();
-
+            };
+            setTimeout(poll, 25);
+        });
         pendingIdentityRequests.set(key, request);
+        if (!identityBatchTimer) {
+            identityBatchTimer = setTimeout(flushIdentityBatch, 25);
+        }
         return request;
     }
 
@@ -2304,36 +2336,7 @@ window.initializeAgoraPlayer = function(config) {
 
     function resolveExistingRemoteIdentities() {
         const uids = Object.keys(remoteUsers || {});
-        uids.forEach((uid) => resolveAndUpdateDisplayName(uid));
-    }
-
-    function startUserInfoBroadcasting() {
-        // Server registry now owns identity synchronization; do not broadcast browser-asserted names.
-        return;
-        // Broadcast user info for 60 seconds after joining to ensure late joiners get it (extended from 30s)
-        userInfoBroadcastEndTime = Date.now() + 60000; // 60 seconds
-
-        // Initial broadcast
-        broadcastUserInfo();
-
-        // Set up interval for periodic broadcasting
-        userInfoBroadcastInterval = setInterval(() => {
-            if (Date.now() < userInfoBroadcastEndTime) {
-                broadcastUserInfo();
-            } else {
-                stopUserInfoBroadcasting();
-            }
-        }, 3000); // Broadcast every 3 seconds (more frequent)
-
-        window.vh360Log('VideoHub360: Started periodic user info broadcasting for 60 seconds (every 3 seconds)');
-    }
-
-    function stopUserInfoBroadcasting() {
-        if (userInfoBroadcastInterval) {
-            clearInterval(userInfoBroadcastInterval);
-            userInfoBroadcastInterval = null;
-            window.vh360Log('VideoHub360: Stopped periodic user info broadcasting');
-        }
+        if (uids.length) lookupParticipantIdentities(uids);
     }
 
     function updateRemoteUserDisplayName(uid, displayName) {
@@ -2396,62 +2399,11 @@ window.initializeAgoraPlayer = function(config) {
             }, 200);
         }
 
-        if (false && data.type === 'user_info') {
-            window.vh360Log('Agora: Received user_info data:', data);
+        if (data.type === 'user_info') {
+            return;
+        }
 
-            // Track original host UID when we receive their user_info broadcast
-            if (data.isOriginalHost && !originalHostUID) {
-                originalHostUID = data.fromUID;
-                window.vh360Log('VideoHub360: Original host UID identified:', originalHostUID);
-
-                // If we're not the original host and haven't set up initial view yet,
-                // check if we should show the original host in main view
-                if (!isOriginalHost && config.agoraMode === 'interactive') {
-                    checkAndSetInitialHostView();
-                }
-            }
-
-            // Find the remote user by their Agora UID (data sent contains fromUserId which is WordPress ID)
-            let targetUID = null;
-
-            // First try to find by fromUID (direct UID match)
-            if (data.fromUID && remoteUsers[data.fromUID]) {
-                targetUID = data.fromUID;
-                window.vh360Log('Agora: Found user by fromUID:', targetUID);
-            }
-
-            // Look for this user's UID by checking if any remote user has this WordPress user ID
-            if (!targetUID) {
-                for (const uid in remoteUsers) {
-                    if (remoteUsers[uid].wordpressUserId === data.fromUserId) {
-                        targetUID = uid;
-                        window.vh360Log('Agora: Found user by WordPress user ID match:', uid);
-                        break;
-                    }
-                }
-            }
-
-            if (targetUID && remoteUsers[targetUID]) {
-                window.vh360Log('Agora: Updating user info for UID:', targetUID, 'WordPress ID:', data.fromUserId);
-                remoteUsers[targetUID].displayName = data.displayName;
-                remoteUsers[targetUID].wordpressUserId = data.fromUserId;
-                const participant = getOrCreateParticipant(targetUID, { displayName: data.displayName, wordpressUserId: data.fromUserId, isOriginalHost: data.isOriginalHost });
-                participant.wordpressUserId = data.fromUserId || participant.wordpressUserId;
-                updateParticipantTile(participant);
-                updateRemoteUserDisplayName(targetUID, data.displayName);
-            } else {
-                // If we can't find an existing remote user, store the info for when they join
-                window.vh360Log('Agora: Storing user info for future use:', data);
-                if (!window.pendingUserInfo) {
-                    window.pendingUserInfo = {};
-                }
-                window.pendingUserInfo[data.fromUID] = {
-                    displayName: data.displayName,
-                    wordpressUserId: data.fromUserId,
-                    isOriginalHost: data.isOriginalHost
-                };
-            }
-        } else if (data.type === 'moderation_action') {
+        if (data.type === 'moderation_action') {
             window.vh360Log('Agora: ⚡ CRITICAL: Received moderation_action data:', data);
             handleModerationAction(data);
 
@@ -2568,7 +2520,6 @@ window.initializeAgoraPlayer = function(config) {
             return;
         }
 
-        getOrCreateParticipant(user.uid, { displayName: 'Participant' });
         resolveAndUpdateDisplayName(user.uid);
         playParticipantJoinedSound(user.uid);
     });
@@ -2664,7 +2615,6 @@ window.initializeAgoraPlayer = function(config) {
             if (initialDisplayName === 'Participant' || initialDisplayName.startsWith('User ')) {
                 resolveAndUpdateDisplayName(user.uid);
             }
-            broadcastUserInfo();
             refreshFeaturedParticipantTiles();
         }
         if (mediaType === "audio") {
@@ -2691,7 +2641,6 @@ window.initializeAgoraPlayer = function(config) {
             if (displayName === 'Participant' || displayName.startsWith('User ')) {
                 resolveAndUpdateDisplayName(user.uid);
             }
-            broadcastUserInfo();
         }
     });
 
@@ -3826,11 +3775,6 @@ window.initializeAgoraPlayer = function(config) {
             clearAllParticipantTiles();
             currentUserUID = null; // Clear stored UID
 
-            // Clear pending user info
-            if (window.pendingUserInfo) {
-                window.pendingUserInfo = {};
-            }
-
             window.vh360Log('Agora: Disconnection and cleanup completed');
 
         } catch (error) {
@@ -4103,6 +4047,7 @@ window.initializeAgoraPlayer = function(config) {
         formData.append('post_id', vh360Data.postId);
         formData.append('channel_name', channelName);
         formData.append('uid', String(normalizedUid));
+        formData.append('uid_signature', config.uidSignature || '');
         formData.append('role', role || 'audience');
         // Only append passcode when requesting presenter/host access.
         formData.append('passcode', presenterPasscode || '');
@@ -4602,9 +4547,6 @@ window.initializeAgoraPlayer = function(config) {
             }
 
             await initDataStream();
-
-            // Start periodic user info broadcasting for 30 seconds
-            startUserInfoBroadcasting();
 
             if (currentRole === "host") {
                 window.vh360Log('VideoHub360: User is host, starting publishing...');
