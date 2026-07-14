@@ -56,7 +56,8 @@
                 headphoneNoticeShown: false,
                 focusReturn: null,
                 handlers: [],
-                uiHandlersBound: false
+                uiHandlersBound: false,
+                audioRetryGeneration: 0
             };
 
             const remoteStage = root.querySelector('[data-mobile-remote-stage]');
@@ -495,17 +496,29 @@
                 state.participants.forEach(updateRecord);
             }
 
+            function isAudioRetryCurrent(generation) {
+                return !state.stopped && state.bound && generation === state.audioRetryGeneration;
+            }
+
             async function handleEnableParticipantAudio() {
-                if (state.stopped) {
+                if (state.stopped || !state.bound) {
                     return;
                 }
+                state.audioRetryGeneration += 1;
+                const generation = state.audioRetryGeneration;
                 audioButton.disabled = true;
                 let blocked = false;
                 try {
                     if (window.AgoraRTC && typeof window.AgoraRTC.resumeAudioContext === 'function') {
                         await window.AgoraRTC.resumeAudioContext();
                     }
+                    if (!isAudioRetryCurrent(generation)) {
+                        return;
+                    }
                     state.participants.forEach(function (record) {
+                        if (!isAudioRetryCurrent(generation)) {
+                            return;
+                        }
                         if (record.hasAudio && state.session) {
                             record.needsAudioPlay = true;
                             if (state.session.playRemoteAudio(record.uid)) {
@@ -519,8 +532,10 @@
                     console.error('[VH360 Mobile Live] Participant audio retry failed', error);
                     blocked = true;
                 } finally {
-                    showAudioFallback(blocked);
-                    audioButton.disabled = false;
+                    if (isAudioRetryCurrent(generation)) {
+                        showAudioFallback(blocked);
+                        audioButton.disabled = false;
+                    }
                 }
             }
 
@@ -620,6 +635,7 @@
 
             function stop() {
                 state.stopped = true;
+                state.audioRetryGeneration += 1;
                 state.renderingActive = false;
                 state.handlers.forEach(function (entry) {
                     entry.target.removeEventListener(entry.eventName, entry.handler);
