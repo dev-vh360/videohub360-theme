@@ -46,12 +46,14 @@ class VH360_Studio_Assets {
             return;
         }
         if ( 'mobile' === $mode ) {
-            $css_path = 'assets/css/studio-mobile-live.css';
-            $js_path  = 'assets/js/studio-mobile-live.js';
+            $css_path          = 'assets/css/studio-mobile-live.css';
+            $participants_path = 'assets/js/studio-mobile-participants.js';
+            $js_path           = 'assets/js/studio-mobile-live.js';
             wp_enqueue_style( 'vh360-studio-mobile-live', VH360_STUDIO_PLUGIN_URL . $css_path, array(), $this->asset_version( $css_path ) );
             wp_enqueue_script( 'agora-rtc-sdk', 'https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js', array(), '4.20.0', true );
             wp_enqueue_script( 'vh360-agora-broadcaster', VIDEOHUB360_ASSETS_URL . 'js/agora-broadcaster.js', array( 'agora-rtc-sdk' ), videohub360_asset_version( 'assets/js/agora-broadcaster.js' ), true );
-            wp_enqueue_script( 'vh360-studio-mobile-live', VH360_STUDIO_PLUGIN_URL . $js_path, array( 'vh360-agora-broadcaster' ), $this->asset_version( $js_path ), true );
+            wp_enqueue_script( 'vh360-studio-mobile-participants', VH360_STUDIO_PLUGIN_URL . $participants_path, array( 'vh360-agora-broadcaster' ), $this->asset_version( $participants_path ), true );
+            wp_enqueue_script( 'vh360-studio-mobile-live', VH360_STUDIO_PLUGIN_URL . $js_path, array( 'vh360-studio-mobile-participants' ), $this->asset_version( $js_path ), true );
             wp_localize_script( 'vh360-studio-mobile-live', 'vh360StudioMobileLive', $this->mobile_localized_data() );
             wp_dequeue_style( 'vh360-mobile-orientation-lock' );
             return;
@@ -216,6 +218,8 @@ class VH360_Studio_Assets {
         return array(
             'restRoot'          => esc_url_raw( rest_url( 'vh360-studio/v1' ) ),
             'nonce'             => wp_create_nonce( 'wp_rest' ),
+            'ajaxUrl'           => admin_url( 'admin-ajax.php' ),
+            'identityNonce'     => wp_create_nonce( 'vh360_agora_identity' ),
             'currentUserId'     => get_current_user_id(),
             'mobileVideoConfig' => array(
                 'facingMode'       => 'user',
@@ -262,6 +266,22 @@ class VH360_Studio_Assets {
                 'cameraOff'                 => __( 'Camera off', 'videohub360-studio' ),
                 'cameraOn'                  => __( 'Camera on', 'videohub360-studio' ),
                 'retryCameraMicrophone'     => __( 'Retry Camera and Microphone', 'videohub360-studio' ),
+                'participants'              => __( 'Participants', 'videohub360-studio' ),
+                'noParticipantsYet'         => __( 'No participants yet', 'videohub360-studio' ),
+                'oneParticipant'            => __( 'One participant', 'videohub360-studio' ),
+                'participantCount'          => __( '%d participants', 'videohub360-studio' ),
+                'participant'               => __( 'Participant', 'videohub360-studio' ),
+                'participantJoined'         => __( 'Participant joined', 'videohub360-studio' ),
+                'participantLeft'           => __( 'Participant left', 'videohub360-studio' ),
+                'microphoneMuted'           => __( 'Microphone muted', 'videohub360-studio' ),
+                'enableParticipantAudio'    => __( 'Enable participant audio', 'videohub360-studio' ),
+                'participantAudioFailed'    => __( 'Participant audio could not start.', 'videohub360-studio' ),
+                'headphonesRecommended'     => __( 'Headphones are recommended when monitoring participant audio.', 'videohub360-studio' ),
+                'participantVideoFailed'    => __( 'Interactive participant video could not be displayed.', 'videohub360-studio' ),
+                'participantIdentityFailed' => __( 'Participant identity could not be resolved.', 'videohub360-studio' ),
+                'you'                       => __( 'You', 'videohub360-studio' ),
+                'closeParticipants'         => __( 'Close participants', 'videohub360-studio' ),
+                'selectParticipant'         => __( 'Select participant', 'videohub360-studio' ),
             ),
         );
     }

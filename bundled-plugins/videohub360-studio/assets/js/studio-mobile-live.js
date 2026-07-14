@@ -31,7 +31,12 @@
         wakeLock: null,
         coverId: 0,
         liveStartedAt: 0,
-        serverStarted: false
+        serverStarted: false,
+        broadcastMode: 'broadcast',
+        participantController: null,
+        participantCount: 0,
+        immersive: false,
+        participantAudioBlocked: false
     };
 
     function text(key, fallback) {
@@ -80,6 +85,44 @@
         }
     }
 
+    function setImmersive(active) {
+        state.immersive = !!active;
+        root.classList.toggle('is-immersive', !!active);
+        document.body.classList.toggle('vh360-mobile-live-active', !!active);
+    }
+
+    function stopParticipantController() {
+        if (state.participantController) {
+            state.participantController.stop();
+            state.participantController = null;
+        }
+        state.participantCount = 0;
+        state.participantAudioBlocked = false;
+        root.classList.remove('has-remote-participants');
+        setImmersive(false);
+        all('[data-mobile-open-participants], [data-mobile-participant-count]').forEach(function (el) { el.hidden = true; });
+    }
+
+    function ensureParticipantController() {
+        const enabled = state.broadcastMode === 'interactive';
+        if (!enabled || !window.VH360StudioMobileParticipants) {
+            return null;
+        }
+        if (!state.participantController) {
+            state.participantController = window.VH360StudioMobileParticipants.create({
+                root: root,
+                session: state.session,
+                enabled: true,
+                ajaxUrl: cfg.ajaxUrl,
+                identityNonce: cfg.identityNonce,
+                strings: strings
+            });
+        } else if (state.participantController.setSession) {
+            state.participantController.setSession(state.session);
+        }
+        return state.participantController;
+    }
+
     function resetPersistentStatuses() {
         setDeviceStatus('camera', text('cameraNotConnected', 'Camera: not connected'));
         setDeviceStatus('microphone', text('microphoneNotConnected', 'Microphone: not connected'));
@@ -89,6 +132,7 @@
         setReconnectBanner('', false);
         all('[data-mobile-connection]').forEach(function (el) { el.textContent = text('connected', 'Connected'); });
         resetMuteState();
+        stopParticipantController();
     }
 
     function setState(next) {
@@ -196,16 +240,19 @@
     }
 
     function createSession() {
+        state.broadcastMode = (one('[data-mobile-agora-mode]') || {}).value === 'interactive' ? 'interactive' : 'broadcast';
         return window.VH360AgoraBroadcaster.create({
             container: root,
             localContainer: one('[data-agora-local-preview]'),
             videoConfig: cfg.mobileVideoConfig,
             audioConfig: cfg.mobileAudioConfig || {},
+            receiveRemoteParticipants: state.broadcastMode === 'interactive',
             renewToken: renewToken
         });
     }
 
     async function stopSession() {
+        stopParticipantController();
         if (state.session) {
             await state.session.stop().catch(function () {});
             state.session = null;
@@ -355,6 +402,7 @@
 
         try {
             const payload = formPayload();
+            state.broadcastMode = payload.agora_mode === 'interactive' ? 'interactive' : 'broadcast';
             validateForm(payload);
             setState('creating_broadcast');
             setStatus(text('creatingBroadcast', 'Creating livestream…'));
@@ -376,6 +424,16 @@
                 headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': cfg.nonce }
             });
 
+            const participants = ensureParticipantController();
+            if (participants) {
+                participants.setBroadcastContext({
+                    videoId: state.videoId,
+                    channelName: prepared.channelName || prepared.channel_name || '',
+                    localUid: prepared.uid || prepared.agoraUid || prepared.agora_uid || ''
+                });
+                participants.start();
+            }
+
             setState('connecting');
             setStatus(text('connectingLiveService', 'Connecting to the live service…'));
             await state.session.connect(Object.assign({}, prepared, { videoId: state.videoId }));
@@ -392,6 +450,13 @@
             let localPreviewAttached = true;
             if (state.session && typeof state.session.setLocalPreviewContainer === 'function') {
                 localPreviewAttached = state.session.setLocalPreviewContainer(livePreview);
+            }
+            setImmersive(true);
+            if (state.broadcastMode === 'interactive') {
+                all('[data-mobile-open-participants], [data-mobile-participant-count]').forEach(function (el) { el.hidden = false; });
+                if (state.participantController) {
+                    state.participantController.start();
+                }
             }
             setStatus(localPreviewAttached ? text('liveStarted', 'You are live. Keep this browser open.') : text('localPreviewFailed', 'The livestream is active, but the local camera preview could not be displayed.'));
             setDeviceStatus('connection', text('connectionConnected', 'Connection: connected'));
@@ -559,6 +624,23 @@
             });
         });
 
+        const openParticipants = one('[data-mobile-open-participants]');
+        const closeParticipants = one('[data-mobile-close-participants]');
+        if (openParticipants) {
+            openParticipants.addEventListener('click', function () {
+                if (state.participantController) {
+                    state.participantController.openDrawer();
+                }
+            });
+        }
+        if (closeParticipants) {
+            closeParticipants.addEventListener('click', function () {
+                if (state.participantController) {
+                    state.participantController.closeDrawer();
+                }
+            });
+        }
+
         one('[data-mobile-agora-mode]').addEventListener('change', updateAdvancedControls);
         one('[data-mobile-everyone-host]').addEventListener('change', updateAdvancedControls);
         one('[data-mobile-require-passcode]').addEventListener('change', updateAdvancedControls);
@@ -611,6 +693,9 @@
         root.addEventListener('vh360:agora-broadcaster:local-preview-error', function (event) {
             console.error('[VH360 Mobile Live] Local preview render failed', event.detail && event.detail.error);
             setStatus(text('localPreviewFailed', 'The livestream is active, but the local camera preview could not be displayed.'));
+        });
+        root.addEventListener('vh360:mobile-participants:count', function (event) {
+            state.participantCount = (event.detail && event.detail.count) || 0;
         });
     }
 

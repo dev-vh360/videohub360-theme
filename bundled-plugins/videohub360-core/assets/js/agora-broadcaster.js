@@ -40,7 +40,9 @@
                 generation: 0,
                 pendingSdkPromises: new Set(),
                 currentFacingMode: (config.videoConfig && config.videoConfig.facingMode) || 'user',
-                currentDeviceId: ''
+                currentDeviceId: '',
+                receiveRemoteParticipants: !!config.receiveRemoteParticipants,
+                remoteParticipants: new Map()
             };
 
             function makeCancellationError() {
@@ -74,6 +76,161 @@
                 if (!isOperationCurrent(generation)) {
                     throw makeCancellationError();
                 }
+            }
+
+
+
+            function normalizeRemoteUid(uid) {
+                return uid === null || typeof uid === 'undefined' ? '' : String(uid);
+            }
+
+            function localUidString() {
+                return normalizeRemoteUid(state.uid);
+            }
+
+            function stopRemotePlayback(record) {
+                if (!record) {
+                    return;
+                }
+                if (record.videoTrack && typeof record.videoTrack.stop === 'function') {
+                    record.videoTrack.stop();
+                }
+                if (record.audioTrack && typeof record.audioTrack.stop === 'function') {
+                    record.audioTrack.stop();
+                }
+                record.audioPlaying = false;
+                record.videoPlaying = false;
+            }
+
+            function clearRemoteParticipants() {
+                state.remoteParticipants.forEach(function (record) {
+                    stopRemotePlayback(record);
+                });
+                state.remoteParticipants.clear();
+            }
+
+            function remoteRecord(uid, user) {
+                const key = normalizeRemoteUid(uid);
+                let record = state.remoteParticipants.get(key);
+                if (!record) {
+                    record = {
+                        uid: key,
+                        user: user || null,
+                        audioTrack: null,
+                        videoTrack: null,
+                        audioPublished: false,
+                        videoPublished: false,
+                        audioPlaying: false,
+                        videoPlaying: false,
+                        videoQuality: 'auto',
+                        subscriptionState: {}
+                    };
+                    state.remoteParticipants.set(key, record);
+                }
+                if (user) {
+                    record.user = user;
+                }
+                return record;
+            }
+
+            function remoteDetail(record, mediaType) {
+                return {
+                    uid: record.uid,
+                    mediaType: mediaType || '',
+                    audioAvailable: !!record.audioTrack,
+                    videoAvailable: !!record.videoTrack,
+                    audioTrack: record.audioTrack || null,
+                    videoTrack: record.videoTrack || null
+                };
+            }
+
+            async function handleRemoteUserPublished(user, mediaType) {
+                const generation = currentGeneration();
+                if (!state.receiveRemoteParticipants || !user || !mediaType || !state.client) {
+                    return;
+                }
+                const uid = normalizeRemoteUid(user.uid);
+                if (!uid || uid === localUidString() || !isOperationCurrent(generation)) {
+                    return;
+                }
+                const record = remoteRecord(uid, user);
+                const trackKey = mediaType + 'Track';
+                if (record.subscriptionState[mediaType] === 'subscribing') {
+                    return;
+                }
+                if (record.subscriptionState[mediaType] === 'subscribed' && record[trackKey]) {
+                    emit(root, 'remote-participant-published', remoteDetail(record, mediaType));
+                    return;
+                }
+                record.subscriptionState[mediaType] = 'subscribing';
+                try {
+                    await trackSdkPromise(state.client.subscribe(user, mediaType));
+                    if (!isOperationCurrent(generation) || !state.receiveRemoteParticipants) {
+                        const lateTrack = mediaType === 'video' ? user.videoTrack : user.audioTrack;
+                        if (lateTrack && typeof lateTrack.stop === 'function') {
+                            lateTrack.stop();
+                        }
+                        throw makeCancellationError();
+                    }
+                    record.user = user;
+                    if (mediaType === 'video') {
+                        record.videoTrack = user.videoTrack || null;
+                        record.videoPublished = !!record.videoTrack;
+                    } else {
+                        record.audioTrack = user.audioTrack || null;
+                        record.audioPublished = !!record.audioTrack;
+                    }
+                    record.subscriptionState[mediaType] = 'subscribed';
+                    emit(root, 'remote-participant-published', remoteDetail(record, mediaType));
+                    emit(root, mediaType === 'video' ? 'remote-video-published' : 'remote-audio-published', remoteDetail(record, mediaType));
+                } catch (error) {
+                    record.subscriptionState[mediaType] = 'error';
+                    if (!isOperationCancelled(error)) {
+                        emit(root, 'remote-subscription-error', { uid: uid, mediaType: mediaType, error: error });
+                    }
+                }
+            }
+
+            function handleRemoteUserUnpublished(user, mediaType) {
+                if (!state.receiveRemoteParticipants || !user || !mediaType) {
+                    return;
+                }
+                const uid = normalizeRemoteUid(user.uid);
+                const record = state.remoteParticipants.get(uid);
+                if (!record) {
+                    return;
+                }
+                if (mediaType === 'video') {
+                    if (record.videoTrack && typeof record.videoTrack.stop === 'function') {
+                        record.videoTrack.stop();
+                    }
+                    record.videoTrack = null;
+                    record.videoPublished = false;
+                    record.videoPlaying = false;
+                } else {
+                    if (record.audioTrack && typeof record.audioTrack.stop === 'function') {
+                        record.audioTrack.stop();
+                    }
+                    record.audioTrack = null;
+                    record.audioPublished = false;
+                    record.audioPlaying = false;
+                }
+                record.subscriptionState[mediaType] = 'unpublished';
+                emit(root, 'remote-track-unpublished', remoteDetail(record, mediaType));
+            }
+
+            function handleRemoteUserLeft(user) {
+                if (!state.receiveRemoteParticipants || !user) {
+                    return;
+                }
+                const uid = normalizeRemoteUid(user.uid);
+                const record = state.remoteParticipants.get(uid);
+                if (!record) {
+                    return;
+                }
+                stopRemotePlayback(record);
+                state.remoteParticipants.delete(uid);
+                emit(root, 'remote-participant-left', { uid: uid });
             }
 
             function mediaTrackSettings(track) {
@@ -220,6 +377,18 @@
                         }
                     });
                 });
+                if (state.receiveRemoteParticipants) {
+                    state.client.on('user-joined', function (user) {
+                        if (user && normalizeRemoteUid(user.uid) !== localUidString()) {
+                            emit(root, 'remote-user-joined', { uid: normalizeRemoteUid(user.uid) });
+                        }
+                    });
+                    state.client.on('user-published', function (user, mediaType) {
+                        handleRemoteUserPublished(user, mediaType).catch(function () {});
+                    });
+                    state.client.on('user-unpublished', handleRemoteUserUnpublished);
+                    state.client.on('user-left', handleRemoteUserLeft);
+                }
             }
 
             function scheduleRenewal(expiresAt, generation) {
@@ -591,9 +760,81 @@
                     emit(root, 'local-preview-attached', getCurrentCameraState());
                     return true;
                 } catch (error) {
-                    emit(root, 'local-preview-error', { error: error });
                     return false;
                 }
+            }
+
+            function playRemoteVideo(uid, container) {
+                const record = state.remoteParticipants.get(normalizeRemoteUid(uid));
+                if (!record || !record.videoTrack || !container || !isOperationCurrent(currentGeneration())) {
+                    return false;
+                }
+                try {
+                    record.videoTrack.play(container);
+                    record.videoPlaying = true;
+                    return true;
+                } catch (error) {
+                    emit(root, 'remote-video-error', { uid: record.uid, error: error });
+                    return false;
+                }
+            }
+
+            function stopRemoteVideo(uid) {
+                const record = state.remoteParticipants.get(normalizeRemoteUid(uid));
+                if (record && record.videoTrack && typeof record.videoTrack.stop === 'function') {
+                    record.videoTrack.stop();
+                    record.videoPlaying = false;
+                    return true;
+                }
+                return false;
+            }
+
+            function playRemoteAudio(uid) {
+                const record = state.remoteParticipants.get(normalizeRemoteUid(uid));
+                if (!record || !record.audioTrack || !isOperationCurrent(currentGeneration())) {
+                    return false;
+                }
+                try {
+                    record.audioTrack.play();
+                    record.audioPlaying = true;
+                    return true;
+                } catch (error) {
+                    record.audioPlaying = false;
+                    emit(root, 'remote-audio-blocked', { uid: record.uid, error: error });
+                    return false;
+                }
+            }
+
+            function stopRemoteAudio(uid) {
+                const record = state.remoteParticipants.get(normalizeRemoteUid(uid));
+                if (record && record.audioTrack && typeof record.audioTrack.stop === 'function') {
+                    record.audioTrack.stop();
+                    record.audioPlaying = false;
+                    return true;
+                }
+                return false;
+            }
+
+            function setRemoteVideoQuality(uid, quality) {
+                const record = state.remoteParticipants.get(normalizeRemoteUid(uid));
+                if (!record || !state.client || typeof state.client.setRemoteVideoStreamType !== 'function') {
+                    return false;
+                }
+                const streamType = quality === 'high' ? 0 : 1;
+                try {
+                    state.client.setRemoteVideoStreamType(record.uid, streamType);
+                    record.videoQuality = quality || 'low';
+                    return true;
+                } catch (error) {
+                    emit(root, 'remote-video-quality-error', { uid: record.uid, error: error });
+                    return false;
+                }
+            }
+
+            function getRemoteParticipants() {
+                return Array.from(state.remoteParticipants.values()).map(function (record) {
+                    return remoteDetail(record);
+                });
             }
 
             async function stop() {
@@ -613,6 +854,7 @@
                     await state.client.leave().catch(function () {});
                 }
                 state.joined = false;
+                clearRemoteParticipants();
                 stopAndMaybeClose(state.audioTrack, state.audioTrackOwnsSource);
                 stopAndMaybeClose(state.videoTrack, state.videoTrackOwnsSource);
                 state.audioTrack = null;
@@ -638,6 +880,12 @@
                 switchCamera: switchCamera,
                 setLocalPreviewContainer: setLocalPreviewContainer,
                 attachLocalPreview: setLocalPreviewContainer,
+                playRemoteVideo: playRemoteVideo,
+                stopRemoteVideo: stopRemoteVideo,
+                playRemoteAudio: playRemoteAudio,
+                stopRemoteAudio: stopRemoteAudio,
+                setRemoteVideoQuality: setRemoteVideoQuality,
+                getRemoteParticipants: getRemoteParticipants,
                 isReadyToPublish: function () {
                     return Boolean(state.client && state.joined && state.published && (!state.client.connectionState || state.client.connectionState === 'CONNECTED'));
                 },

@@ -77,20 +77,37 @@ $desktop_url = add_query_arg( array( 'tab' => 'studio', 'studio_mode' => 'deskto
     </div>
 
     <div class="vh360-mobile-live__stage" data-mobile-stage="live" tabindex="-1">
-        <div class="vh360-mobile-live__preview" data-mobile-live-preview></div>
-        <div class="vh360-mobile-live__connection-banner" data-mobile-reconnect-banner hidden></div>
-        <div class="vh360-mobile-live__livebar">
-            <strong><?php esc_html_e( 'LIVE', 'videohub360-studio' ); ?></strong>
-            <span data-mobile-duration>00:00</span>
-            <span data-mobile-connection><?php esc_html_e( 'Connected', 'videohub360-studio' ); ?></span>
+        <div class="vh360-mobile-live__interactive-stage" data-mobile-interactive-stage>
+            <div class="vh360-mobile-live__remote-stage" data-mobile-remote-stage></div>
+            <div class="vh360-mobile-live__host-tile" data-mobile-host-tile>
+                <div class="vh360-mobile-live__host-video" data-mobile-live-preview></div>
+                <span class="vh360-mobile-live__tile-name"><?php esc_html_e( 'You', 'videohub360-studio' ); ?></span>
+            </div>
+            <div class="vh360-mobile-live__top-overlay">
+                <strong><?php esc_html_e( 'LIVE', 'videohub360-studio' ); ?></strong>
+                <span data-mobile-duration>00:00</span>
+                <span data-mobile-connection><?php esc_html_e( 'Connected', 'videohub360-studio' ); ?></span>
+                <span data-mobile-participant-count hidden><?php esc_html_e( 'No participants yet', 'videohub360-studio' ); ?></span>
+            </div>
+            <div class="vh360-mobile-live__connection-banner" data-mobile-reconnect-banner hidden></div>
+            <p class="vh360-mobile-live__participant-notice" data-mobile-participant-notice hidden></p>
+            <button class="vh360-mobile-live__audio-enable" type="button" data-mobile-enable-participant-audio hidden><?php esc_html_e( 'Enable participant audio', 'videohub360-studio' ); ?></button>
+            <div class="vh360-mobile-live__bottom-controls">
+                <button type="button" data-mobile-switch-camera><?php esc_html_e( 'Switch camera', 'videohub360-studio' ); ?></button>
+                <button type="button" data-mobile-mute-audio aria-pressed="false"><?php esc_html_e( 'Mute mic', 'videohub360-studio' ); ?></button>
+                <button type="button" data-mobile-mute-video aria-pressed="false"><?php esc_html_e( 'Camera off', 'videohub360-studio' ); ?></button>
+                <button type="button" data-mobile-open-participants hidden><?php esc_html_e( 'Participants', 'videohub360-studio' ); ?></button>
+                <a data-mobile-open-viewer target="_blank" rel="noopener"><?php esc_html_e( 'Open Viewer', 'videohub360-studio' ); ?></a>
+                <button class="vh360-mobile-live__danger" type="button" data-mobile-end-live><?php esc_html_e( 'End Live', 'videohub360-studio' ); ?></button>
+            </div>
+            <aside class="vh360-mobile-live__participant-drawer" data-mobile-participant-drawer role="dialog" aria-modal="false" aria-hidden="true" hidden>
+                <div class="vh360-mobile-live__participant-drawer-header">
+                    <h3><?php esc_html_e( 'Participants', 'videohub360-studio' ); ?></h3>
+                    <button type="button" data-mobile-close-participants><?php esc_html_e( 'Close participants', 'videohub360-studio' ); ?></button>
+                </div>
+                <div class="vh360-mobile-live__participant-list" data-mobile-participant-list></div>
+            </aside>
         </div>
-        <div class="vh360-mobile-live__controls">
-            <button type="button" data-mobile-switch-camera><?php esc_html_e( 'Switch camera', 'videohub360-studio' ); ?></button>
-            <button type="button" data-mobile-mute-audio aria-pressed="false"><?php esc_html_e( 'Mute mic', 'videohub360-studio' ); ?></button>
-            <button type="button" data-mobile-mute-video aria-pressed="false"><?php esc_html_e( 'Camera off', 'videohub360-studio' ); ?></button>
-            <a data-mobile-open-viewer target="_blank" rel="noopener"><?php esc_html_e( 'Open Viewer', 'videohub360-studio' ); ?></a>
-        </div>
-        <button class="vh360-mobile-live__danger" type="button" data-mobile-end-live><?php esc_html_e( 'End Live', 'videohub360-studio' ); ?></button>
     </div>
 
     <div class="vh360-mobile-live__stage" data-mobile-stage="ending" tabindex="-1">
