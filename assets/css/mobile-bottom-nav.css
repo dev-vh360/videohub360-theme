@@ -31,21 +31,24 @@
     bottom: 0;
     z-index: 9999;
     background: var(--mobile-nav-bg-color, #ffffff);
-    border-top: 1px solid var(--mobile-nav-border-color, #e5e7eb);
+    border-top: 0;
+    box-shadow: inset 0 1px 0 var(--mobile-nav-border-color, #e5e7eb);
     box-sizing: border-box;
+    height: var(--vh360-mobile-nav-total-height);
     min-height: var(--vh360-mobile-nav-total-height);
     padding-bottom: var(--vh360-mobile-nav-safe-bottom);
     overflow: visible;
   }
 
   .vh360-mobile-bottom-nav__inner {
+    width: 100%;
     height: var(--vh360-mobile-nav-content-height);
     min-height: var(--vh360-mobile-nav-content-height);
-    flex: 0 0 var(--vh360-mobile-nav-content-height);
+    box-sizing: border-box;
     display: flex;
     align-items: stretch;
-    justify-content: space-around;
-    overflow: visible;
+    justify-content: stretch;
+    overflow: hidden;
   }
 
   /* When driven by wp_nav_menu */
@@ -54,38 +57,53 @@
     margin: 0;
     padding: 0;
     display: flex;
-    align-items: center;
-    justify-content: space-around;
+    align-items: stretch;
+    justify-content: stretch;
     width: 100%;
-    height: var(--vh360-mobile-nav-content-height);
-    min-height: var(--vh360-mobile-nav-content-height);
-    flex: 0 0 var(--vh360-mobile-nav-content-height);
+    height: 100%;
+    min-height: 0;
+    flex: 1 1 100%;
+    box-sizing: border-box;
+    overflow: hidden;
   }
 
   .vh360-mobile-bottom-nav__menu > li {
     flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+    height: 100%;
+    min-height: 0;
     display: flex;
-    justify-content: center;
-    min-height: var(--vh360-mobile-nav-content-height);
+    align-items: stretch;
+    justify-content: stretch;
+    box-sizing: border-box;
+    overflow: hidden;
   }
 
   .vh360-mobile-bottom-nav__item {
-    flex: 1 0 auto;
-    min-height: var(--vh360-mobile-nav-content-height);
-    flex-shrink: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    box-sizing: border-box;
+    flex: 1 1 auto;
     text-decoration: none;
     color: var(--mobile-nav-item-color, #6b7280);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: 3px;
     position: relative;
     font-size: 11px;
-    padding: 6px 0;
+    padding: 4px 0;
     background: transparent;
     border: 0;
     cursor: pointer;
+  }
+
+  .vh360-mobile-bottom-nav__item::before,
+  .vh360-mobile-bottom-nav__item::after {
+    box-sizing: border-box;
   }
 
   /* Active state from WordPress current-menu-item class */
@@ -102,9 +120,12 @@
 
   .vh360-mobile-bottom-nav__label {
     display: block;
-    flex-shrink: 0;
-    line-height: 1.2;
+    flex: 0 0 auto;
+    max-width: 100%;
+    line-height: 1;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .vh360-mobile-bottom-nav__badge {
@@ -125,6 +146,7 @@
   .vh360-mobile-bottom-nav__avatar {
     width: 26px;
     height: 26px;
+    flex: 0 0 26px;
     border-radius: 999px;
     overflow: hidden;
     display: inline-flex;

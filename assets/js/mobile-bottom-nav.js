@@ -4,6 +4,7 @@
   var html = document.documentElement;
   var nav = document.querySelector('.vh360-mobile-bottom-nav');
   var navItems = nav ? nav.querySelector('.vh360-mobile-bottom-nav__inner') : null;
+  var navMenu = nav ? nav.querySelector('.vh360-mobile-bottom-nav__menu') : null;
   var menuBtn = document.querySelector('.vh360-mobile-bottom-nav__menu-btn');
   var drawer = document.getElementById('vh360-mobile-user-drawer');
   var displayModeQuery = window.matchMedia ? window.matchMedia('(display-mode: standalone)') : null;
@@ -133,12 +134,30 @@
     var viewport = window.visualViewport || null;
     var navRect = nav ? nav.getBoundingClientRect() : null;
     var itemsRect = navItems ? navItems.getBoundingClientRect() : null;
+    var menuRect = navMenu ? navMenu.getBoundingClientRect() : null;
+    var itemRects = Array.prototype.map.call(nav ? nav.querySelectorAll('.vh360-mobile-bottom-nav__menu > li') : [], function (item) {
+      return rectToObject(item.getBoundingClientRect());
+    });
+    var labelRects = Array.prototype.map.call(nav ? nav.querySelectorAll('.vh360-mobile-bottom-nav__label') : [], function (label) {
+      return rectToObject(label.getBoundingClientRect());
+    });
     var contentHeight = readPixelCustomProperty('--vh360-mobile-nav-content-height', 56);
     var cssSafeBottom = readPixelCustomProperty('--vh360-mobile-nav-safe-bottom', 0);
     var measuredSafeBottom = navRect && itemsRect ? Math.max(0, navRect.height - itemsRect.height) : 0;
     var safeBottom = Math.max(cssSafeBottom, measuredSafeBottom);
     var minimumHeight = contentHeight + safeBottom;
     var measuredHeight = navRect ? Math.max(navRect.height, minimumHeight) : minimumHeight;
+    var visualViewportBottom = viewport ? viewport.offsetTop + viewport.height : window.innerHeight;
+    var tolerance = 1;
+    var geometryValid = !!(navRect && itemsRect && (!navMenu || menuRect)) &&
+      Math.abs(itemsRect.height - contentHeight) <= tolerance &&
+      (!menuRect || Math.abs(menuRect.width - navRect.width) <= tolerance) &&
+      itemRects.every(function (rect) {
+        return !rect || rect.bottom <= itemsRect.bottom + tolerance;
+      }) &&
+      labelRects.every(function (rect) {
+        return !rect || (rect.bottom <= itemsRect.bottom + tolerance && rect.bottom <= visualViewportBottom + tolerance);
+      });
 
     return {
       orientation: screen.orientation ? screen.orientation.type : window.orientation,
@@ -152,12 +171,13 @@
       visualViewportOffsetLeft: viewport ? viewport.offsetLeft : null,
       navRect: rectToObject(navRect),
       itemsRect: rectToObject(itemsRect),
-      labelRects: Array.prototype.map.call(nav ? nav.querySelectorAll('.vh360-mobile-bottom-nav__label') : [], function (label) {
-        return rectToObject(label.getBoundingClientRect());
-      }),
+      menuRect: rectToObject(menuRect),
+      itemRects: itemRects,
+      labelRects: labelRects,
       safeBottom: safeBottom,
       contentHeight: contentHeight,
       measuredHeight: measuredHeight,
+      geometryValid: geometryValid,
       appliedBodyPadding: window.getComputedStyle(document.body).paddingBottom
     };
   }
@@ -174,6 +194,12 @@
 
   function applyMeasuredNavigationHeight(measurement, generation) {
     if (generation !== navStabilizer.generation || !navStabilizer.active) {
+      return;
+    }
+
+    if (!measurement.geometryValid) {
+      html.style.removeProperty('--vh360-mobile-nav-measured-height');
+      debugLog('invalid geometry, kept CSS fallback', Object.assign({ generation: generation }, measurement));
       return;
     }
 
@@ -220,7 +246,7 @@
 
         debugLog('measured', { generation: generation, first: first, second: second });
 
-        if (!measurementsAreStable(first, second) && elapsed < 1200) {
+        if ((!measurementsAreStable(first, second) || !second.geometryValid) && elapsed < 1200) {
           navStabilizer.settleTimer = window.setTimeout(function () {
             settleNavigationGeometry(generation);
           }, elapsed < 250 ? 100 : 250);
