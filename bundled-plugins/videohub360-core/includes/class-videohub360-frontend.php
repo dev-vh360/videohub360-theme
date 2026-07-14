@@ -485,6 +485,7 @@ class VideoHub360_Frontend {
             'chatMessageLimit' => intval(get_option('videohub360_chat_message_limit', 500)),
             'shareEmailNonce' => wp_create_nonce('videohub360_share_email_nonce'),
             'agoraTokenNonce' => wp_create_nonce('vh360_agora_token'),
+            'agoraIdentityNonce' => wp_create_nonce('vh360_agora_identity'),
             'endStreamNonce' => wp_create_nonce('vh360_end_stream'),
             'streamStatusNonce' => wp_create_nonce('vh360_agora_token'), // Use same nonce
             'moderationNonce' => wp_create_nonce('videohub360_chat_nonce'), // Use same nonce for consistency

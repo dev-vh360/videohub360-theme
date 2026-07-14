@@ -52,6 +52,7 @@ require_once VIDEOHUB360_PLUGIN_DIR . 'includes/renderers/render-chat.php';
 require_once VIDEOHUB360_PLUGIN_DIR . 'includes/renderers/render-livestream.php';
 require_once VIDEOHUB360_PLUGIN_DIR . 'includes/renderers/render-single-video-sidebar.php';
 require_once VIDEOHUB360_PLUGIN_DIR . 'includes/renderers/render-single-video-modals.php';
+require_once VIDEOHUB360_PLUGIN_DIR . 'includes/class-videohub360-agora-participant-registry.php';
 require_once VIDEOHUB360_PLUGIN_DIR . 'includes/class-videohub360-livestream-service.php';
 add_action('init', array('VideoHub360_Livestream_Service', 'register_stale_cleanup'));
 
@@ -99,6 +100,7 @@ function videohub360_init() {
  */
 function videohub360_activate() {
     // Load the core class for activation
+    require_once VIDEOHUB360_PLUGIN_DIR . 'includes/class-videohub360-agora-participant-registry.php';
     require_once VIDEOHUB360_PLUGIN_DIR . 'includes/class-videohub360-core.php';
     
     // Run activation
@@ -431,43 +433,29 @@ if (!function_exists('videohub360_render_author_badge')) {
  * @return array|null Configuration array or null if not an Agora livestream
  */
 
-if (!function_exists('videohub360_get_or_create_guest_agora_uid')) {
-    function videohub360_get_or_create_guest_agora_uid() {
-        $cookie_name = 'vh360_guest_agora_uid';
+if (!function_exists('videohub360_generate_agora_session_uid')) {
+    function videohub360_generate_agora_session_uid() {
         $min_uid = 1000000000;
         $max_uid = 2147483647;
 
-        if (isset($_COOKIE[$cookie_name])) {
-            $existing_uid = absint(wp_unslash($_COOKIE[$cookie_name]));
-            if ($existing_uid >= $min_uid && $existing_uid <= $max_uid) {
-                return $existing_uid;
-            }
-        }
-
         try {
-            $guest_uid = random_int($min_uid, $max_uid);
+            return random_int($min_uid, $max_uid);
         } catch (Exception $e) {
-            $guest_uid = $min_uid + wp_rand(1, ($max_uid - $min_uid));
+            return $min_uid + wp_rand(1, ($max_uid - $min_uid));
         }
+    }
+}
 
-        if (!headers_sent()) {
-            $cookie_options = array(
-                'expires'  => time() + MONTH_IN_SECONDS,
-                'path'     => COOKIEPATH ? COOKIEPATH : '/',
-                'secure'   => is_ssl(),
-                'httponly' => false,
-                'samesite' => 'Lax',
-            );
+if (!function_exists('videohub360_sign_agora_session_uid')) {
+    function videohub360_sign_agora_session_uid($post_id, $channel_name, $uid, $user_id = 0) {
+        $payload = absint($post_id) . '|' . sanitize_text_field($channel_name) . '|' . absint($uid) . '|' . absint($user_id);
+        return hash_hmac('sha256', $payload, wp_salt('nonce'));
+    }
+}
 
-            if (defined('COOKIE_DOMAIN') && COOKIE_DOMAIN) {
-                $cookie_options['domain'] = COOKIE_DOMAIN;
-            }
-
-            setcookie($cookie_name, (string) $guest_uid, $cookie_options);
-            $_COOKIE[$cookie_name] = (string) $guest_uid;
-        }
-
-        return $guest_uid;
+if (!function_exists('videohub360_get_or_create_guest_agora_uid')) {
+    function videohub360_get_or_create_guest_agora_uid() {
+        return videohub360_generate_agora_session_uid();
     }
 }
 
@@ -513,7 +501,8 @@ if (!function_exists('videohub360_get_livestream_bootstrap_data')) {
         $studio_host_display_name = $studio_host_user_id ? get_the_author_meta('display_name', $studio_host_user_id) : '';
         $viewer_avatar_url = $viewer_user_id ? get_avatar_url($viewer_user_id) : '';
         $studio_host_avatar_url = $studio_host_user_id ? get_avatar_url($studio_host_user_id) : '';
-        $agora_uid = $is_studio_controlled ? videohub360_get_or_create_guest_agora_uid() : ($is_logged_in ? $user_id : videohub360_get_or_create_guest_agora_uid());
+        $agora_uid = videohub360_generate_agora_session_uid();
+        $agora_uid_signature = videohub360_sign_agora_session_uid($post_id, $fields['agora_channel_name'], $agora_uid, $viewer_user_id);
         
         // Determine role
         $role = 'audience';
@@ -598,6 +587,7 @@ if (!function_exists('videohub360_get_livestream_bootstrap_data')) {
             'mode' => $agora_mode,
             'agoraMode' => $fields['agora_mode'],
             'uid' => $agora_uid,
+            'uidSignature' => $agora_uid_signature,
             'isHost' => ($role === 'host'),
             'isOriginalHost' => $is_studio_controlled ? false : $is_original_host,
             'studioControlled' => $is_studio_controlled,

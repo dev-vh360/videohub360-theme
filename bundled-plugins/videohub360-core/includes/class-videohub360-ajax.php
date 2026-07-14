@@ -306,6 +306,8 @@ class VideoHub360_Ajax {
         add_action('wp_ajax_nopriv_vh360_get_stream_status', array($this, 'handle_get_stream_status'));
         
         // Display name lookup for Agora participants
+        add_action('wp_ajax_vh360_lookup_agora_participant_identities', array($this, 'handle_lookup_agora_participant_identities'));
+        add_action('wp_ajax_nopriv_vh360_lookup_agora_participant_identities', array($this, 'handle_lookup_agora_participant_identities'));
         add_action('wp_ajax_videohub360_lookup_display_name', array($this, 'handle_lookup_display_name'));
         add_action('wp_ajax_nopriv_videohub360_lookup_display_name', array($this, 'handle_lookup_display_name'));
         
@@ -626,6 +628,157 @@ class VideoHub360_Ajax {
      * $_POST['role'] is treated as an untrusted hint only.
      * The server-approved role is always returned in the response.
      */
+    private function verify_agora_session_uid($post_id, $channel_name, $uid, $signature) {
+        if (!function_exists('videohub360_sign_agora_session_uid')) {
+            return false;
+        }
+
+        $expected = videohub360_sign_agora_session_uid($post_id, $channel_name, $uid, get_current_user_id());
+        return is_string($signature) && hash_equals($expected, sanitize_text_field($signature));
+    }
+
+    private function current_user_is_original_livestream_host($post_id) {
+        $post = get_post($post_id);
+        if (!$post || !is_user_logged_in()) {
+            return false;
+        }
+
+        $current_user_id = get_current_user_id();
+        return current_user_can('manage_options')
+            || current_user_can('edit_post', $post_id)
+            || ((int) $post->post_author === (int) $current_user_id);
+    }
+
+    private function can_access_agora_livestream($post_id) {
+        $post = get_post($post_id);
+        if (!$post || $post->post_type !== 'videohub360') {
+            return new WP_Error('vh360_invalid_livestream', __('Invalid video post.', 'videohub360'));
+        }
+
+        if ('publish' !== $post->post_status && !current_user_can('read_post', $post_id) && !current_user_can('edit_post', $post_id)) {
+            return new WP_Error('vh360_livestream_denied', __('You do not have permission to access this livestream.', 'videohub360'));
+        }
+
+        $required_plan = function_exists('vh360_post_requires_membership')
+            ? vh360_post_requires_membership($post_id)
+            : false;
+
+        if (function_exists('videohub360_user_can_access_lesson') && function_exists('videohub360_course_features_enabled') && videohub360_course_features_enabled()) {
+            if (!videohub360_user_can_access_lesson($post_id, get_current_user_id()) && !current_user_can('edit_post', $post_id) && !current_user_can('manage_options')) {
+                return new WP_Error('vh360_course_denied', __('Your course access does not allow access to this livestream.', 'videohub360'));
+            }
+        } elseif ($required_plan) {
+            $current_user_id = get_current_user_id();
+            if (!$current_user_id) {
+                return new WP_Error('vh360_login_required', __('You must be logged in to access this livestream.', 'videohub360'));
+            }
+
+            $has_access = ('any' === $required_plan)
+                ? (function_exists('vh360_user_has_active_membership') ? vh360_user_has_active_membership($current_user_id) : false)
+                : (function_exists('vh360_user_has_membership_plan') ? vh360_user_has_membership_plan($current_user_id, $required_plan) : false);
+
+            if (!$has_access && !current_user_can('edit_post', $post_id) && !current_user_can('manage_options')) {
+                return new WP_Error('vh360_membership_denied', __('Your membership does not allow access to this livestream.', 'videohub360'));
+            }
+        }
+
+        $appointment_event_id = get_post_meta($post_id, '_vh360_appointment_event_id', true);
+        if ($appointment_event_id) {
+            if (!is_user_logged_in()) {
+                return new WP_Error('vh360_appointment_login_required', __('You must be logged in to join this appointment session', 'videohub360'));
+            }
+
+            $current_user_id = get_current_user_id();
+            if (function_exists('vh360_can_user_join_appointment_room')) {
+                $join_check = vh360_can_user_join_appointment_room($post_id, $current_user_id);
+                if (empty($join_check['can_join'])) {
+                    return new WP_Error('vh360_appointment_denied', $join_check['message'] ?? __('You do not have permission to join this appointment session', 'videohub360'));
+                }
+            } else {
+                $is_admin      = current_user_can('manage_options');
+                $is_room_owner = ((int) $post->post_author === (int) $current_user_id);
+                $client_id     = get_post_meta($post_id, '_vh360_appointment_client_id', true);
+                $is_client     = ($client_id && (int) $client_id === (int) $current_user_id);
+                if (!$is_admin && !$is_room_owner && !$is_client) {
+                    return new WP_Error('vh360_appointment_denied', __('You do not have permission to join this appointment session', 'videohub360'));
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private function get_verified_participant_identity($post_id, $channel_name, $target_uid, $include_user_id = true) {
+        $target_uid = absint($target_uid);
+        if (!$target_uid) {
+            return null;
+        }
+
+        if (class_exists('VideoHub360_Agora_Participant_Registry')) {
+            $identities = VideoHub360_Agora_Participant_Registry::get_identities($post_id, $channel_name, array($target_uid), $include_user_id);
+            if (!empty($identities[(string) $target_uid])) {
+                return $identities[(string) $target_uid];
+            }
+        }
+
+        $studio_uid = absint(get_post_meta($post_id, '_vh360_studio_host_agora_uid', true));
+        if ($studio_uid && $studio_uid === $target_uid) {
+            $studio_user_id = absint(get_post_meta($post_id, '_vh360_studio_host_user_id', true));
+            $identity = array(
+                'uid' => $studio_uid,
+                'display_name' => $studio_user_id ? sanitize_text_field(get_the_author_meta('display_name', $studio_user_id)) : __('Host', 'videohub360'),
+                'avatar_url' => $studio_user_id ? esc_url_raw(get_avatar_url($studio_user_id)) : '',
+                'is_guest' => false,
+                'is_studio_host' => true,
+                'is_original_host' => true,
+                'source' => 'studio_host_meta',
+            );
+            if ($include_user_id) {
+                $identity['wordpress_user_id'] = $studio_user_id;
+            }
+            return $identity;
+        }
+
+        return null;
+    }
+
+    private function register_agora_participant_identity($post_id, $channel_name, $uid, $token_lifetime) {
+        if (!class_exists('VideoHub360_Agora_Participant_Registry')) {
+            return;
+        }
+
+        $user_id = get_current_user_id();
+        if ($user_id) {
+            $user = get_userdata($user_id);
+            $display_name = $user ? $user->display_name : __('Participant', 'videohub360');
+            $avatar_url = get_avatar_url($user_id);
+            $is_guest = 0;
+            $guest_identifier = '';
+        } else {
+            $guest_identifier = 'guest_' . substr(wp_hash(($uid ?: '') . '|' . ($post_id ?: '') . '|' . ($_SERVER['REMOTE_ADDR'] ?? '')), 0, 12);
+            $display_name = __('Guest', 'videohub360');
+            $avatar_url = '';
+            $is_guest = 1;
+        }
+
+        $is_original_host = $this->current_user_is_original_livestream_host($post_id)
+            && 'yes' !== get_post_meta($post_id, '_vh360_studio_controlled_live', true);
+
+        VideoHub360_Agora_Participant_Registry::register(array(
+            'post_id' => $post_id,
+            'channel_name' => $channel_name,
+            'agora_uid' => $uid,
+            'wordpress_user_id' => $user_id,
+            'guest_identifier' => $guest_identifier,
+            'display_name' => $display_name,
+            'avatar_url' => $avatar_url,
+            'is_guest' => $is_guest,
+            'is_studio_host' => 0,
+            'is_original_host' => $is_original_host ? 1 : 0,
+            'lifetime' => $token_lifetime,
+        ));
+    }
+
     public function handle_generate_agora_token() {
         // Verify nonce for security.
         if (!wp_verify_nonce($_POST['nonce'] ?? '', 'vh360_agora_token')) {
@@ -643,6 +796,7 @@ class VideoHub360_Ajax {
         $post_id        = absint($_POST['post_id'] ?? 0);
         $channel_name   = sanitize_text_field($_POST['channel_name'] ?? '');
         $uid            = absint($_POST['uid'] ?? 0);
+        $uid_signature  = sanitize_text_field($_POST['uid_signature'] ?? '');
         $requested_role = sanitize_text_field($_POST['role'] ?? 'audience');
         $passcode       = sanitize_text_field($_POST['passcode'] ?? '');
 
@@ -681,6 +835,11 @@ class VideoHub360_Ajax {
             return;
         }
 
+        if (!$this->verify_agora_session_uid($post_id, $channel_name, $uid, $uid_signature)) {
+            wp_send_json_error(__('Invalid livestream session identity.', 'videohub360'));
+            return;
+        }
+
         // Validate channel name matches the post's stored channel name.
         $stored_channel_name = get_post_meta($post_id, '_vh360_agora_channel_name', true);
         if ($stored_channel_name && $stored_channel_name !== $channel_name) {
@@ -688,70 +847,13 @@ class VideoHub360_Ajax {
             return;
         }
 
-        // === Membership / course purchase gate ===
-        // Mirror the same access logic used by the single-video template so that
-        // the token endpoint and the page template enforce the same rules.
-        $required_plan = function_exists('vh360_post_requires_membership')
-            ? vh360_post_requires_membership($post_id)
-            : false;
-
-        if (function_exists('videohub360_user_can_access_lesson') && function_exists('videohub360_course_features_enabled') && videohub360_course_features_enabled()) {
-            if (!videohub360_user_can_access_lesson($post_id, get_current_user_id()) && !current_user_can('edit_post', $post_id) && !current_user_can('manage_options')) {
-                wp_send_json_error(__('Your course access does not allow access to this livestream.', 'videohub360'));
-                return;
-            }
-        } elseif ($required_plan) {
-            $current_user_id = get_current_user_id();
-
-            if (!$current_user_id) {
-                wp_send_json_error(__('You must be logged in to access this livestream.', 'videohub360'));
-                return;
-            }
-
-            if ($required_plan === 'any') {
-                $has_access = function_exists('vh360_user_has_active_membership')
-                    ? vh360_user_has_active_membership($current_user_id)
-                    : false;
-            } else {
-                $has_access = function_exists('vh360_user_has_membership_plan')
-                    ? vh360_user_has_membership_plan($current_user_id, $required_plan)
-                    : false;
-            }
-
-            if (!$has_access && !current_user_can('edit_post', $post_id) && !current_user_can('manage_options')) {
-                wp_send_json_error(__('Your membership does not allow access to this livestream.', 'videohub360'));
-                return;
-            }
-        }
-
-        // === Appointment room access control ===
-        $appointment_event_id = get_post_meta($post_id, '_vh360_appointment_event_id', true);
-        if ($appointment_event_id) {
-            if (!is_user_logged_in()) {
-                wp_send_json_error('You must be logged in to join this appointment session');
-                return;
-            }
-
-            $current_user_id = get_current_user_id();
-
-            if (function_exists('vh360_can_user_join_appointment_room')) {
-                $join_check = vh360_can_user_join_appointment_room($post_id, $current_user_id);
-                if (!$join_check['can_join']) {
-                    wp_send_json_error($join_check['message']);
-                    return;
-                }
-            } else {
-                // Fallback when helper is not loaded.
-                $is_admin      = current_user_can('manage_options');
-                $is_room_owner = ((int) $post->post_author === (int) $current_user_id);
-                $client_id     = get_post_meta($post_id, '_vh360_appointment_client_id', true);
-                $is_client     = ($client_id && (int) $client_id === (int) $current_user_id);
-
-                if (!$is_admin && !$is_room_owner && !$is_client) {
-                    wp_send_json_error('You do not have permission to join this appointment session');
-                    return;
-                }
-            }
+        // === Membership / course / appointment access gate ===
+        // Shared with identity lookup so unauthorized visitors cannot retrieve
+        // the room's participant identity map.
+        $access_check = $this->can_access_agora_livestream($post_id);
+        if (is_wp_error($access_check)) {
+            wp_send_json_error($access_check->get_error_message());
+            return;
         }
 
         // === Moderation check ===
@@ -808,6 +910,8 @@ class VideoHub360_Ajax {
                     return;
                 }
 
+                $this->register_agora_participant_identity($post_id, $channel_name, $uid, $token_lifetime);
+
                 // Development mode: tokens disabled by admin.
                 wp_send_json_success(array(
                     'token'      => '',
@@ -844,6 +948,8 @@ class VideoHub360_Ajax {
                 wp_send_json_error(__('Failed to generate access token.', 'videohub360'));
                 return;
             }
+
+            $this->register_agora_participant_identity($post_id, $channel_name, $uid, $token_lifetime);
 
             // Return the server-approved role so the frontend can treat it as authoritative.
             wp_send_json_success(array(
@@ -1342,7 +1448,8 @@ public function handle_restart_stream() {
         // Validate and sanitize input - parse post_id early for permission check
         $post_id = absint($_POST['post_id'] ?? 0);
         $target_uid = absint($_POST['target_uid'] ?? 0);
-        $target_user_id = absint($_POST['target_user_id'] ?? 0);
+        // Browser-supplied target_user_id is intentionally ignored. It is resolved
+        // below from the server-authoritative Agora participant registry.
         $target_ip = sanitize_text_field($_POST['target_ip'] ?? '');
         $action_type = sanitize_text_field($_POST['action_type'] ?? '');
         $display_name = sanitize_text_field($_POST['display_name'] ?? '');
@@ -1371,6 +1478,16 @@ public function handle_restart_stream() {
             wp_send_json_error(__('You do not have permission to moderate participants.', 'videohub360'));
             return;
         }
+
+        $stored_channel_name = get_post_meta($post_id, '_vh360_agora_channel_name', true);
+        $verified_target_identity = $this->get_verified_participant_identity($post_id, $stored_channel_name, $target_uid, true);
+        if (!$verified_target_identity) {
+            wp_send_json_error(__('Could not verify the selected participant identity. Please wait for the participant to finish connecting and try again.', 'videohub360'));
+            return;
+        }
+
+        $target_user_id = absint($verified_target_identity['wordpress_user_id'] ?? 0);
+        $display_name = sanitize_text_field($verified_target_identity['display_name'] ?? __('Participant', 'videohub360'));
         
         // Debug: Log incoming request for troubleshooting
         $debug_data = array(
@@ -1823,77 +1940,110 @@ public function handle_restart_stream() {
      * Handle display name lookup for Agora participants
      */
     public function handle_lookup_display_name() {
-        // This endpoint is available to both logged-in and guest users
-        // since they need to see each other's display names in the stream
-        
-        // Validate input
-        $uid = intval($_POST['uid'] ?? 0);
-        $wordpress_user_id = intval($_POST['wordpress_user_id'] ?? 0);
-        
-        if (!$uid) {
-            wp_send_json_error(__('Invalid UID provided.', 'videohub360'));
+        // Compatibility wrapper for older clients. It preserves the legacy top-level
+        // response shape but resolves only through the server-authoritative registry.
+        $post_id = absint($_POST['post_id'] ?? 0);
+        $channel_name = sanitize_text_field($_POST['channel_name'] ?? '');
+        $uid = absint($_POST['uid'] ?? 0);
+        if (!$post_id || !$uid) {
+            wp_send_json_error(__('Invalid identity lookup request.', 'videohub360'));
             return;
         }
-        
-        try {
-            $user = null;
-            $lookup_method = '';
-            
-            // First try with provided WordPress user ID if available
-            if ($wordpress_user_id > 0) {
-                $user = get_user_by('ID', $wordpress_user_id);
-                $lookup_method = 'wordpress_user_id';
-            }
-            
-            // If not found, try to find by UID in user meta (for direct Agora UID mapping)
-            if (!$user || is_wp_error($user)) {
-                global $wpdb;
-                $user_id = $wpdb->get_var($wpdb->prepare(
-                    "SELECT user_id FROM {$wpdb->usermeta} 
-                     WHERE meta_key = 'vh360_agora_uid' AND meta_value = %s",
-                    $uid
-                ));
-                
-                if ($user_id) {
-                    $user = get_user_by('ID', $user_id);
-                    $lookup_method = 'agora_uid_meta';
-                }
-            }
-            
-            // If still not found, try using UID as WordPress user ID (legacy behavior)
-            if (!$user || is_wp_error($user)) {
-                $user = get_user_by('ID', $uid);
-                $lookup_method = 'uid_as_user_id';
-            }
-            
-            if ($user && !is_wp_error($user)) {
-                // User found - return their display name
-                wp_send_json_success(array(
-                    'uid' => $uid,
-                    'wordpress_user_id' => $user->ID,
-                    'display_name' => $user->display_name,
-                    'source' => $lookup_method
-                ));
-            } else {
-                // User not found - this might be a guest or invalid UID
-                wp_send_json_success(array(
-                    'uid' => $uid,
-                    'display_name' => "User {$uid}",
-                    'source' => 'fallback'
-                ));
-            }
-            
-        } catch (Exception $e) {
-            
-            // Return fallback name instead of error to maintain stream functionality
+
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'vh360_agora_identity') && !wp_verify_nonce($_POST['nonce'] ?? '', 'vh360_agora_token')) {
+            wp_send_json_error(__('Invalid nonce.', 'videohub360'));
+            return;
+        }
+
+        $access_check = $this->can_access_agora_livestream($post_id);
+        if (is_wp_error($access_check)) {
+            wp_send_json_error($access_check->get_error_message());
+            return;
+        }
+
+        $stored_channel_name = get_post_meta($post_id, '_vh360_agora_channel_name', true);
+        if (empty($channel_name)) {
+            $channel_name = $stored_channel_name;
+        }
+        if ($stored_channel_name && $stored_channel_name !== $channel_name) {
+            wp_send_json_error(__('Invalid channel for this livestream.', 'videohub360'));
+            return;
+        }
+
+        $can_moderate = $this->user_can_moderate(get_current_user_id(), $post_id);
+        $identity = $this->get_verified_participant_identity($post_id, $channel_name, $uid, $can_moderate);
+        if (!$identity) {
             wp_send_json_success(array(
                 'uid' => $uid,
-                'display_name' => "User {$uid}",
-                'source' => 'error_fallback'
+                'display_name' => __('Participant', 'videohub360'),
+                'source' => 'unresolved',
             ));
+            return;
         }
+
+        wp_send_json_success($identity);
     }
-    
+
+    public function handle_lookup_agora_participant_identities() {
+        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'vh360_agora_identity') && !wp_verify_nonce($_POST['nonce'] ?? '', 'vh360_agora_token')) {
+            wp_send_json_error(__('Invalid nonce.', 'videohub360'));
+            return;
+        }
+
+        if (!$this->check_rate_limit('lookup_agora_participant_identities', 60)) {
+            wp_send_json_error(__('Too many identity lookup requests. Please wait a moment and try again.', 'videohub360'));
+            return;
+        }
+
+        $post_id = absint($_POST['post_id'] ?? 0);
+        $channel_name = sanitize_text_field($_POST['channel_name'] ?? '');
+        $uids_raw = $_POST['uids'] ?? ($_POST['uid'] ?? array());
+        $uids = is_array($uids_raw) ? $uids_raw : explode(',', (string) $uids_raw);
+        $uids = array_slice(array_values(array_unique(array_filter(array_map('absint', $uids)))), 0, 50);
+
+        $access_check = $this->can_access_agora_livestream($post_id);
+        if (is_wp_error($access_check) || empty($uids)) {
+            wp_send_json_error(is_wp_error($access_check) ? $access_check->get_error_message() : __('Invalid identity lookup request.', 'videohub360'));
+            return;
+        }
+
+        $stored_channel_name = get_post_meta($post_id, '_vh360_agora_channel_name', true);
+        if (empty($channel_name)) {
+            $channel_name = $stored_channel_name;
+        }
+        if ($stored_channel_name && $stored_channel_name !== $channel_name) {
+            wp_send_json_error(__('Invalid channel for this livestream.', 'videohub360'));
+            return;
+        }
+
+        $can_moderate = $this->user_can_moderate(get_current_user_id(), $post_id);
+        $identities = class_exists('VideoHub360_Agora_Participant_Registry')
+            ? VideoHub360_Agora_Participant_Registry::get_identities($post_id, $channel_name, $uids, $can_moderate)
+            : array();
+        $studio_uid = absint(get_post_meta($post_id, '_vh360_studio_host_agora_uid', true));
+        if ($studio_uid && in_array($studio_uid, $uids, true) && empty($identities[(string) $studio_uid])) {
+            $studio_user_id = absint(get_post_meta($post_id, '_vh360_studio_host_user_id', true));
+            $identities[(string) $studio_uid] = array(
+                'uid' => $studio_uid,
+                'display_name' => $studio_user_id ? sanitize_text_field(get_the_author_meta('display_name', $studio_user_id)) : __('Host', 'videohub360'),
+                'avatar_url' => $studio_user_id ? esc_url_raw(get_avatar_url($studio_user_id)) : '',
+                'is_guest' => false,
+                'is_studio_host' => true,
+                'is_original_host' => true,
+                'source' => 'studio_host_meta',
+            );
+            if ($can_moderate) {
+                $identities[(string) $studio_uid]['wordpress_user_id'] = $studio_user_id;
+            }
+        }
+
+
+        wp_send_json_success(array(
+            'identities' => $identities,
+            'identity_map' => $identities,
+        ));
+    }
+
     /**
      * Handle remove timeout AJAX
      */

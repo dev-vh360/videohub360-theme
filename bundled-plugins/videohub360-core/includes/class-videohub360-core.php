@@ -164,6 +164,11 @@ class VideoHub360_Core {
             });
         }
         
+        // Upgrade to version 2.9 - Add server-authoritative Agora participant identity registry.
+        if (version_compare($current_version, '2.9', '<')) {
+            self::create_database_tables();
+        }
+
         // Check for moderation columns only in admin context or during upgrade
         if (is_admin()) {
             $this->ensure_moderation_columns();
@@ -720,9 +725,13 @@ class VideoHub360_Core {
         ) $charset_collate;";
         
         $result_playlist_items = dbDelta($playlist_items_sql);
+
+        if (class_exists('VideoHub360_Agora_Participant_Registry')) {
+            VideoHub360_Agora_Participant_Registry::create_table();
+        }
         
         // Set database version options
-        update_option('videohub360_chat_db_version', '2.7');
+        update_option('videohub360_chat_db_version', '2.9');
     }
     
     /**
