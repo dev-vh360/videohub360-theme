@@ -100,7 +100,7 @@ $desktop_url = add_query_arg( array( 'tab' => 'studio', 'studio_mode' => 'deskto
                 <a data-mobile-open-viewer target="_blank" rel="noopener"><?php esc_html_e( 'Open Viewer', 'videohub360-studio' ); ?></a>
                 <button class="vh360-mobile-live__danger" type="button" data-mobile-end-live><?php esc_html_e( 'End Live', 'videohub360-studio' ); ?></button>
             </div>
-            <aside class="vh360-mobile-live__participant-drawer" data-mobile-participant-drawer role="dialog" aria-modal="false" aria-hidden="true" hidden>
+            <aside class="vh360-mobile-live__participant-drawer" data-mobile-participant-drawer role="dialog" aria-modal="true" aria-hidden="true" hidden>
                 <div class="vh360-mobile-live__participant-drawer-header">
                     <h3><?php esc_html_e( 'Participants', 'videohub360-studio' ); ?></h3>
                     <button type="button" data-mobile-close-participants><?php esc_html_e( 'Close participants', 'videohub360-studio' ); ?></button>

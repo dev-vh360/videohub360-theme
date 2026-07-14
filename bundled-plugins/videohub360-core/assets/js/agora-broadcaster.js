@@ -44,7 +44,6 @@
                 receiveRemoteParticipants: !!config.receiveRemoteParticipants,
                 remoteParticipants: new Map(),
                 autoplayFailureBound: false,
-                autoplayFailureHandler: null,
                 autoplayPreviousCallback: null,
                 autoplayWrapper: null
             };
@@ -92,18 +91,32 @@
                 return normalizeRemoteUid(state.uid);
             }
 
-            function stopRemotePlayback(record) {
+            function stopRemoteVideoPlayback(record) {
                 if (!record) {
                     return;
                 }
                 if (record.videoTrack && typeof record.videoTrack.stop === 'function') {
                     record.videoTrack.stop();
                 }
+                record.videoPlaying = false;
+                record.videoPlaybackTrack = null;
+                record.videoContainer = null;
+            }
+
+            function stopRemoteAudioPlayback(record) {
+                if (!record) {
+                    return;
+                }
                 if (record.audioTrack && typeof record.audioTrack.stop === 'function') {
                     record.audioTrack.stop();
                 }
                 record.audioPlaying = false;
-                record.videoPlaying = false;
+                record.audioPlaybackTrack = null;
+            }
+
+            function stopRemotePlayback(record) {
+                stopRemoteVideoPlayback(record);
+                stopRemoteAudioPlayback(record);
             }
 
             function clearRemoteParticipants() {
@@ -193,17 +206,13 @@
                     record.user = user;
                     if (mediaType === 'video') {
                         if (record.videoTrack && record.videoTrack !== user.videoTrack) {
-                            stopRemotePlayback(record);
-                            record.videoContainer = null;
-                            record.videoPlaybackTrack = null;
+                            stopRemoteVideoPlayback(record);
                         }
                         record.videoTrack = user.videoTrack || null;
                         record.videoPublished = !!record.videoTrack;
                     } else {
-                        if (record.audioTrack && record.audioTrack !== user.audioTrack && typeof record.audioTrack.stop === 'function') {
-                            record.audioTrack.stop();
-                            record.audioPlaybackTrack = null;
-                            record.audioPlaying = false;
+                        if (record.audioTrack && record.audioTrack !== user.audioTrack) {
+                            stopRemoteAudioPlayback(record);
                         }
                         record.audioTrack = user.audioTrack || null;
                         record.audioPublished = !!record.audioTrack;
@@ -414,7 +423,6 @@
                     window.AgoraRTC.onAutoplayFailed = state.autoplayPreviousCallback;
                 }
                 state.autoplayFailureBound = false;
-                state.autoplayFailureHandler = null;
                 state.autoplayWrapper = null;
                 state.autoplayPreviousCallback = null;
             }
@@ -875,11 +883,8 @@
 
             function stopRemoteVideo(uid) {
                 const record = state.remoteParticipants.get(normalizeRemoteUid(uid));
-                if (record && record.videoTrack && typeof record.videoTrack.stop === 'function') {
-                    record.videoTrack.stop();
-                    record.videoPlaying = false;
-                    record.videoPlaybackTrack = null;
-                    record.videoContainer = null;
+                if (record && record.videoTrack) {
+                    stopRemoteVideoPlayback(record);
                     return true;
                 }
                 return false;
@@ -908,10 +913,8 @@
 
             function stopRemoteAudio(uid) {
                 const record = state.remoteParticipants.get(normalizeRemoteUid(uid));
-                if (record && record.audioTrack && typeof record.audioTrack.stop === 'function') {
-                    record.audioTrack.stop();
-                    record.audioPlaying = false;
-                    record.audioPlaybackTrack = null;
+                if (record && record.audioTrack) {
+                    stopRemoteAudioPlayback(record);
                     return true;
                 }
                 return false;

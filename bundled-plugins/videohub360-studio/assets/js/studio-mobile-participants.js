@@ -161,7 +161,14 @@
                     needsAudioPlay: false
                 };
                 state.participants.set(key, record);
-                queueIdentity(key);
+                if (state.identityCache.has(key)) {
+                    const cachedIdentity = state.identityCache.get(key);
+                    if (cachedIdentity) {
+                        applyIdentity(key, cachedIdentity);
+                    }
+                } else {
+                    queueIdentity(key);
+                }
                 updateRecord(record);
                 emitCount();
                 return record;
@@ -309,6 +316,29 @@
                 }
             }
 
+            function resetParticipantAudioUi() {
+                showAudioFallback(false);
+                state.headphoneNoticeShown = false;
+                if (notice) {
+                    notice.hidden = true;
+                    notice.textContent = '';
+                }
+            }
+
+            function reevaluateParticipantAudioUi() {
+                const hasAudio = Array.from(state.participants.values()).some(function (record) {
+                    return record.hasAudio;
+                });
+                const hasBlocked = Array.from(state.participants.values()).some(function (record) {
+                    return record.hasAudio && record.needsAudioPlay;
+                });
+                if (!hasAudio) {
+                    resetParticipantAudioUi();
+                } else {
+                    showAudioFallback(hasBlocked);
+                }
+            }
+
             function showHeadphoneNotice() {
                 if (!notice || state.headphoneNoticeShown) {
                     return;
@@ -400,15 +430,20 @@
                     state.session && state.session.stopRemoteVideo(record.uid);
                     record.hasVideo = false;
                     record.rendered = false;
+                    record.videoTrack = null;
+                    record.needsVideoPlay = false;
                 }
                 if (detail.mediaType === 'audio') {
                     state.session && state.session.stopRemoteAudio(record.uid);
                     record.hasAudio = false;
+                    record.audioTrack = null;
+                    record.needsAudioPlay = false;
                 }
                 if (state.selectedUid === record.uid && !record.hasVideo) {
                     state.selectedUid = '';
                 }
                 updateRecord(record);
+                reevaluateParticipantAudioUi();
                 renderVisibleParticipants().catch(function () {});
             }
 
@@ -423,6 +458,7 @@
                 });
                 state.participants.clear();
                 state.selectedUid = '';
+                resetParticipantAudioUi();
                 emitCount();
             }
 
@@ -445,6 +481,7 @@
                     state.selectedUid = '';
                 }
                 emitCount();
+                reevaluateParticipantAudioUi();
                 renderVisibleParticipants().catch(function () {});
             }
 
@@ -544,22 +581,30 @@
             }
 
             if (audioButton) {
-                audioButton.addEventListener('click', function () {
-                    if (window.AgoraRTC && typeof window.AgoraRTC.resumeAudioContext === 'function') {
-                        Promise.resolve(window.AgoraRTC.resumeAudioContext()).catch(function () {});
-                    }
+                audioButton.addEventListener('click', async function () {
+                    audioButton.disabled = true;
                     let blocked = false;
-                    state.participants.forEach(function (record) {
-                        if (record.hasAudio && state.session) {
-                            record.needsAudioPlay = true;
-                            if (state.session.playRemoteAudio(record.uid)) {
-                                record.needsAudioPlay = false;
-                            } else {
-                                blocked = true;
-                            }
+                    try {
+                        if (window.AgoraRTC && typeof window.AgoraRTC.resumeAudioContext === 'function') {
+                            await window.AgoraRTC.resumeAudioContext();
                         }
-                    });
-                    showAudioFallback(blocked);
+                        state.participants.forEach(function (record) {
+                            if (record.hasAudio && state.session) {
+                                record.needsAudioPlay = true;
+                                if (state.session.playRemoteAudio(record.uid)) {
+                                    record.needsAudioPlay = false;
+                                } else {
+                                    blocked = true;
+                                }
+                            }
+                        });
+                    } catch (error) {
+                        console.error('[VH360 Mobile Live] Participant audio retry failed', error);
+                        blocked = true;
+                    } finally {
+                        showAudioFallback(blocked);
+                        audioButton.disabled = false;
+                    }
                 });
             }
 
