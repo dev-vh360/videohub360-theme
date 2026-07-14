@@ -104,7 +104,6 @@
 
 .vh360-mobile-live button,
 .vh360-mobile-live .button,
-.vh360-mobile-live a[data-mobile-open-viewer],
 .vh360-mobile-live a[data-mobile-open-video] {
     min-height: 48px;
     border: 1px solid var(--vh360-mobile-border);
@@ -360,6 +359,29 @@ body.vh360-mobile-live-active {
     padding: 0.5rem;
     border-radius: 22px;
     background: color-mix(in srgb, var(--vh360-mobile-bg) 78%, transparent);
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+    transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.vh360-mobile-live.controls-hidden .vh360-mobile-live__bottom-controls {
+    opacity: 0;
+    transform: translateY(calc(100% + 1rem));
+    pointer-events: none;
+}
+
+.vh360-mobile-live.controls-visible .vh360-mobile-live__bottom-controls,
+.vh360-mobile-live:not(.controls-hidden) .vh360-mobile-live__bottom-controls {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .vh360-mobile-live__bottom-controls {
+        transition: none;
+    }
 }
 
 .vh360-mobile-live__bottom-controls > * {

@@ -674,6 +674,7 @@
                 if (close) {
                     close.focus();
                 }
+                root.dispatchEvent(new CustomEvent('vh360:mobile-participants:drawer-opened'));
             }
 
             function closeDrawer() {
@@ -686,6 +687,7 @@
                     state.focusReturn.focus();
                 }
                 state.focusReturn = null;
+                root.dispatchEvent(new CustomEvent('vh360:mobile-participants:drawer-closed'));
             }
 
 

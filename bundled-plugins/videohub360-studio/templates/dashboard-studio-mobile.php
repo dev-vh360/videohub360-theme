@@ -92,12 +92,11 @@ $desktop_url = add_query_arg( array( 'tab' => 'studio', 'studio_mode' => 'deskto
             <div class="vh360-mobile-live__connection-banner" data-mobile-reconnect-banner hidden></div>
             <p class="vh360-mobile-live__participant-notice" data-mobile-participant-notice hidden></p>
             <button class="vh360-mobile-live__audio-enable" type="button" data-mobile-enable-participant-audio hidden><?php esc_html_e( 'Enable participant audio', 'videohub360-studio' ); ?></button>
-            <div class="vh360-mobile-live__bottom-controls">
+            <div class="vh360-mobile-live__bottom-controls" data-mobile-live-controls>
                 <button type="button" data-mobile-switch-camera><?php esc_html_e( 'Switch camera', 'videohub360-studio' ); ?></button>
                 <button type="button" data-mobile-mute-audio aria-pressed="false"><?php esc_html_e( 'Mute mic', 'videohub360-studio' ); ?></button>
                 <button type="button" data-mobile-mute-video aria-pressed="false"><?php esc_html_e( 'Camera off', 'videohub360-studio' ); ?></button>
                 <button type="button" data-mobile-open-participants hidden><?php esc_html_e( 'Participants', 'videohub360-studio' ); ?></button>
-                <a data-mobile-open-viewer target="_blank" rel="noopener"><?php esc_html_e( 'Open Viewer', 'videohub360-studio' ); ?></a>
                 <button class="vh360-mobile-live__danger" type="button" data-mobile-end-live><?php esc_html_e( 'End Live', 'videohub360-studio' ); ?></button>
             </div>
             <aside class="vh360-mobile-live__participant-drawer" data-mobile-participant-drawer role="dialog" aria-modal="true" aria-hidden="true" hidden>
@@ -117,7 +116,6 @@ $desktop_url = add_query_arg( array( 'tab' => 'studio', 'studio_mode' => 'deskto
 
     <div class="vh360-mobile-live__stage" data-mobile-stage="end_failed" tabindex="-1">
         <p><?php esc_html_e( 'The server has not confirmed that the livestream ended.', 'videohub360-studio' ); ?></p>
-        <a data-mobile-open-viewer target="_blank" rel="noopener"><?php esc_html_e( 'Open Viewer', 'videohub360-studio' ); ?></a>
         <button type="button" data-mobile-end-live><?php esc_html_e( 'End Live Again', 'videohub360-studio' ); ?></button>
     </div>
 

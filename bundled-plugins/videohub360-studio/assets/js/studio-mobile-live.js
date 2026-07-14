@@ -36,7 +36,9 @@
         participantController: null,
         participantCount: 0,
         immersive: false,
-        participantAudioBlocked: false
+        participantAudioBlocked: false,
+        controlsVisible: true,
+        controlsHideTimer: 0
     };
 
     function text(key, fallback) {
@@ -85,10 +87,111 @@
         }
     }
 
+
+    function liveControls() {
+        return one('[data-mobile-live-controls]');
+    }
+
+    function participantDrawerOpen() {
+        const drawer = one('[data-mobile-participant-drawer]');
+        return !!(drawer && !drawer.hidden && drawer.getAttribute('aria-hidden') !== 'true');
+    }
+
+    function controlsMustRemainVisible() {
+        return participantDrawerOpen() || state.endBusy || ['reconnecting', 'ending', 'end_failed'].indexOf(state.name) !== -1;
+    }
+
+    function focusableControls(container) {
+        return Array.prototype.slice.call(container.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'));
+    }
+
+    function setControlsFocusability(hidden) {
+        const controls = liveControls();
+        if (!controls) {
+            return;
+        }
+        if ('inert' in controls) {
+            controls.inert = hidden;
+        }
+        controls.setAttribute('aria-hidden', hidden ? 'true' : 'false');
+        focusableControls(controls).forEach(function (el) {
+            if (hidden) {
+                if (!Object.prototype.hasOwnProperty.call(el.dataset, 'mobileSavedTabindex')) {
+                    el.dataset.mobileSavedTabindex = el.getAttribute('tabindex') || '';
+                }
+                el.setAttribute('tabindex', '-1');
+            } else if (Object.prototype.hasOwnProperty.call(el.dataset, 'mobileSavedTabindex')) {
+                if (el.dataset.mobileSavedTabindex) {
+                    el.setAttribute('tabindex', el.dataset.mobileSavedTabindex);
+                } else {
+                    el.removeAttribute('tabindex');
+                }
+                delete el.dataset.mobileSavedTabindex;
+            }
+        });
+    }
+
+    function clearControlsHideTimer() {
+        if (state.controlsHideTimer) {
+            window.clearTimeout(state.controlsHideTimer);
+            state.controlsHideTimer = 0;
+        }
+    }
+
+    function hideLiveControls() {
+        const controls = liveControls();
+        if (!controls || state.name !== 'live' || controlsMustRemainVisible()) {
+            return;
+        }
+        if (controls.contains(document.activeElement)) {
+            scheduleControlsHide();
+            return;
+        }
+        state.controlsVisible = false;
+        root.classList.remove('controls-visible');
+        root.classList.add('controls-hidden');
+        setControlsFocusability(true);
+    }
+
+    function scheduleControlsHide() {
+        clearControlsHideTimer();
+        if (state.name !== 'live' || controlsMustRemainVisible()) {
+            return;
+        }
+        state.controlsHideTimer = window.setTimeout(hideLiveControls, 4000);
+    }
+
+    function showLiveControls(options) {
+        const opts = options || {};
+        const controls = liveControls();
+        if (!controls) {
+            return;
+        }
+        clearControlsHideTimer();
+        state.controlsVisible = true;
+        root.classList.add('controls-visible');
+        root.classList.remove('controls-hidden');
+        setControlsFocusability(false);
+        if (!opts.keepVisible && !controlsMustRemainVisible()) {
+            scheduleControlsHide();
+        }
+    }
+
+    function resetLiveControls() {
+        clearControlsHideTimer();
+        state.controlsVisible = true;
+        root.classList.remove('controls-hidden');
+        root.classList.add('controls-visible');
+        setControlsFocusability(false);
+    }
+
     function setImmersive(active) {
         state.immersive = !!active;
         root.classList.toggle('is-immersive', !!active);
         document.body.classList.toggle('vh360-mobile-live-active', !!active);
+        if (!active) {
+            resetLiveControls();
+        }
     }
 
     function stopParticipantController() {
@@ -351,7 +454,7 @@
     }
 
     function setViewerLinks(url) {
-        all('[data-mobile-open-viewer], [data-mobile-open-video]').forEach(function (link) {
+        all('[data-mobile-open-video]').forEach(function (link) {
             if (url) {
                 link.href = url;
             }
@@ -373,6 +476,7 @@
     async function rollbackFailedStart(reason) {
         const cleanupVideoId = state.videoId;
         stopHeartbeat();
+        clearControlsHideTimer();
         window.clearInterval(state.durationTimer);
         await stopSession();
         resetPersistentStatuses();
@@ -456,6 +560,7 @@
                 localPreviewAttached = state.session.setLocalPreviewContainer(livePreview);
             }
             setImmersive(true);
+            showLiveControls();
             await nextAnimationFrame();
             if (state.broadcastMode === 'interactive') {
                 all('[data-mobile-open-participants], [data-mobile-participant-count]').forEach(function (el) { el.hidden = false; });
@@ -483,14 +588,20 @@
         if (state.endBusy || !videoId) {
             return;
         }
-        if (!opts.skipConfirm && !window.confirm(text('endConfirm', 'End this livestream?'))) {
-            return;
+        if (!opts.skipConfirm) {
+            showLiveControls({ keepVisible: true });
+            if (!window.confirm(text('endConfirm', 'End this livestream?'))) {
+                scheduleControlsHide();
+                return;
+            }
         }
         state.endBusy = true;
         updateBusyStates();
         setState('ending');
+        showLiveControls({ keepVisible: true });
         setStatus(text('endingLive', 'Ending livestream…'));
         stopHeartbeat();
+        clearControlsHideTimer();
         window.clearInterval(state.durationTimer);
 
         try {
@@ -506,6 +617,7 @@
             state.pendingCleanupVideoId = videoId;
             setViewerLinks(state.viewerUrl);
             setState('end_failed');
+            showLiveControls({ keepVisible: true });
             setStatus(text('endFailed', 'The local stream stopped, but the server has not confirmed End Live. Retry End Live.'));
         } finally {
             state.endBusy = false;
@@ -514,6 +626,7 @@
     }
 
     async function returnToSetup() {
+        clearControlsHideTimer();
         await stopSession();
         resetPersistentStatuses();
         setState('setup');
@@ -535,6 +648,7 @@
         if (current === 'RECONNECTING') {
             state.name = 'reconnecting';
             setReconnectBanner(text('reconnecting', 'Reconnecting… keep this page open. End Live remains available.'), true);
+            showLiveControls({ keepVisible: true });
             setStatus(text('reconnecting', 'Reconnecting… keep this page open. End Live remains available.'));
             return;
         }
@@ -543,11 +657,13 @@
                 state.name = 'live';
                 setReconnectBanner('', false);
                 setStatus(text('connected', 'Connected'));
+                scheduleControlsHide();
             }
             return;
         }
         if (current === 'DISCONNECTED' || current === 'FAILED') {
             setReconnectBanner(text('disconnected', 'Disconnected. Try to reconnect or end the livestream.'), true);
+            showLiveControls({ keepVisible: true });
             setStatus(text('disconnected', 'Disconnected. Try to reconnect or end the livestream.'));
         }
     }
@@ -567,6 +683,27 @@
         all('[data-mobile-back-setup]').forEach(function (button) { button.addEventListener('click', returnToSetup); });
         all('[data-mobile-end-live]').forEach(function (button) { button.addEventListener('click', function () { endLive(); }); });
         one('[data-mobile-start-another]').addEventListener('click', function () { window.location.href = window.location.href; });
+
+
+        const liveStage = one('[data-mobile-interactive-stage]');
+        const controls = liveControls();
+        if (liveStage) {
+            liveStage.addEventListener('click', function (event) {
+                if (event.target.closest('button, a, input, select, textarea, label, summary, details, [role="button"], [role="dialog"], [data-mobile-participant-uid], [data-mobile-participant-drawer], [data-mobile-enable-participant-audio]')) {
+                    return;
+                }
+                showLiveControls();
+            });
+            liveStage.addEventListener('focusin', showLiveControls);
+        }
+        if (controls) {
+            controls.addEventListener('click', scheduleControlsHide);
+            controls.addEventListener('focusin', showLiveControls);
+        }
+        const participantAudioButton = one('[data-mobile-enable-participant-audio]');
+        if (participantAudioButton) {
+            participantAudioButton.addEventListener('click', scheduleControlsHide);
+        }
 
         all('[data-mobile-switch-camera]').forEach(function (button) {
             button.addEventListener('click', async function () {
@@ -634,6 +771,7 @@
         if (openParticipants) {
             openParticipants.addEventListener('click', function () {
                 if (state.participantController) {
+                    showLiveControls({ keepVisible: true });
                     state.participantController.openDrawer();
                 }
             });
@@ -642,6 +780,7 @@
             closeParticipants.addEventListener('click', function () {
                 if (state.participantController) {
                     state.participantController.closeDrawer();
+                    scheduleControlsHide();
                 }
             });
         }
@@ -664,6 +803,7 @@
         });
 
         window.addEventListener('pagehide', function () {
+            clearControlsHideTimer();
             const cleanupVideoId = state.pendingCleanupVideoId || state.videoId;
             if (state.pageExitEnding || state.endBusy || !cleanupVideoId || ['creating_broadcast', 'connecting', 'live', 'reconnecting', 'ending', 'end_failed'].indexOf(state.name) === -1) {
                 return;
@@ -697,10 +837,17 @@
         });
         root.addEventListener('vh360:agora-broadcaster:local-preview-error', function (event) {
             console.error('[VH360 Mobile Live] Local preview render failed', event.detail && event.detail.error);
+            showLiveControls({ keepVisible: true });
             setStatus(text('localPreviewFailed', 'The livestream is active, but the local camera preview could not be displayed.'));
         });
         root.addEventListener('vh360:mobile-participants:count', function (event) {
             state.participantCount = (event.detail && event.detail.count) || 0;
+        });
+        root.addEventListener('vh360:mobile-participants:drawer-opened', function () {
+            showLiveControls({ keepVisible: true });
+        });
+        root.addEventListener('vh360:mobile-participants:drawer-closed', function () {
+            scheduleControlsHide();
         });
     }
 
