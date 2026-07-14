@@ -1,1 +1,49 @@
-.vh360-studio-entry-router{min-height:45vh;display:grid;place-items:center;padding:2rem}.vh360-studio-entry-router__card{max-width:720px;background:#101827;color:#fff;border-radius:24px;padding:2rem;box-shadow:0 18px 50px rgba(0,0,0,.2)}.vh360-studio-entry-router__eyebrow{text-transform:uppercase;letter-spacing:.12em;color:#8fd3ff;font-weight:700}.vh360-studio-entry-router__actions{display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.5rem}
+.vh360-studio-entry-router {
+    --vh360-entry-bg: var(--vh360-studio-app-bg, var(--vh360-app-background, Canvas));
+    --vh360-entry-panel: var(--vh360-studio-panel-bg, var(--vh360-surface-color, Canvas));
+    --vh360-entry-text: var(--vh360-studio-text, var(--vh360-text-color, CanvasText));
+    --vh360-entry-muted: var(--vh360-studio-muted, var(--vh360-muted-text-color, color-mix(in srgb, CanvasText 65%, Canvas)));
+    --vh360-entry-border: var(--vh360-studio-panel-border, var(--vh360-border-color, color-mix(in srgb, CanvasText 18%, Canvas)));
+    --vh360-entry-primary: var(--vh360-studio-primary, var(--vh360-primary-color, Highlight));
+    --vh360-entry-button-text: var(--vh360-studio-button-text, HighlightText);
+
+    min-height: 45vh;
+    display: grid;
+    place-items: center;
+    padding: 2rem;
+    background: var(--vh360-entry-bg);
+    color: var(--vh360-entry-text);
+}
+
+.vh360-studio-entry-router__card {
+    max-width: 720px;
+    background: var(--vh360-entry-panel);
+    border: 1px solid var(--vh360-entry-border);
+    border-radius: 24px;
+    padding: 2rem;
+    box-shadow: 0 18px 50px color-mix(in srgb, CanvasText 18%, transparent);
+}
+
+.vh360-studio-entry-router__eyebrow {
+    color: var(--vh360-entry-muted);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.vh360-studio-entry-router__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.vh360-studio-entry-router a:focus-visible {
+    outline: 3px solid var(--vh360-entry-primary);
+    outline-offset: 3px;
+}
+
+.vh360-studio-entry-router .button-primary {
+    background: var(--vh360-entry-primary);
+    color: var(--vh360-entry-button-text);
+}

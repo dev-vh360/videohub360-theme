@@ -55,6 +55,7 @@ $overlay_tool_descriptions = array(
             </button>
         </div>
         <div class="vh360-studio-topbar-links" aria-live="polite">
+            <a href="<?php echo esc_url( add_query_arg( array( 'tab' => 'studio', 'studio_mode' => 'mobile' ), remove_query_arg( 'studio_mode' ) ) ); ?>" class="vh360-studio-button vh360-studio-button--secondary vh360-studio-button--compact" data-studio-mode-choice="mobile"><?php esc_html_e( 'Open Mobile Live', 'videohub360-studio' ); ?></a>
             <button type="button" class="vh360-studio-button vh360-studio-button--secondary vh360-studio-button--compact vh360-studio-attention-button" data-open-studio-diagnostics hidden>
                 <?php esc_html_e( 'Studio needs attention', 'videohub360-studio' ); ?>
             </button>

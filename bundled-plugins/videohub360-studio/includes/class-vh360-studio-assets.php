@@ -15,6 +15,7 @@ class VH360_Studio_Assets {
     public function __construct( VH360_Studio_Provider_Registry $registry ) {
         $this->registry = $registry;
         add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_dashboard_assets' ) );
+        add_action( 'wp_enqueue_scripts', array( $this, 'dequeue_mobile_orientation_lock_for_mobile_live' ), 100 );
     }
 
     public function enqueue_dashboard_assets() {
@@ -52,7 +53,7 @@ class VH360_Studio_Assets {
             wp_enqueue_script( 'vh360-agora-broadcaster', VIDEOHUB360_ASSETS_URL . 'js/agora-broadcaster.js', array( 'agora-rtc-sdk' ), videohub360_asset_version( 'assets/js/agora-broadcaster.js' ), true );
             wp_enqueue_script( 'vh360-studio-mobile-live', VH360_STUDIO_PLUGIN_URL . $js_path, array( 'vh360-agora-broadcaster' ), $this->asset_version( $js_path ), true );
             wp_localize_script( 'vh360-studio-mobile-live', 'vh360StudioMobileLive', $this->mobile_localized_data() );
-            wp_dequeue_style( 'mobile-orientation-lock' );
+            wp_dequeue_style( 'vh360-mobile-orientation-lock' );
             return;
         }
 
@@ -190,6 +191,12 @@ class VH360_Studio_Assets {
         );
     }
 
+    public function dequeue_mobile_orientation_lock_for_mobile_live() {
+        if ( $this->is_studio_dashboard_tab() && class_exists( 'VH360_Studio_Plugin' ) && 'mobile' === VH360_Studio_Plugin::resolve_studio_mode() ) {
+            wp_dequeue_style( 'vh360-mobile-orientation-lock' );
+        }
+    }
+
     private function is_studio_dashboard_tab() {
         $active_tab = function_exists( 'vh360_get_current_dashboard_tab' ) ? vh360_get_current_dashboard_tab() : '';
 
@@ -207,11 +214,44 @@ class VH360_Studio_Assets {
 
     private function mobile_localized_data() {
         return array(
-            'restRoot' => esc_url_raw( rest_url( 'vh360-studio/v1' ) ),
-            'nonce' => wp_create_nonce( 'wp_rest' ),
-            'currentUserId' => get_current_user_id(),
-            'mobileVideoConfig' => array( 'facingMode' => 'user', 'encoderConfig' => array( 'width' => 1280, 'height' => 720, 'frameRate' => 30, 'bitrateMin' => 800, 'bitrateMax' => 1800 ), 'optimizationMode' => 'motion' ),
+            'restRoot'          => esc_url_raw( rest_url( 'vh360-studio/v1' ) ),
+            'nonce'             => wp_create_nonce( 'wp_rest' ),
+            'currentUserId'     => get_current_user_id(),
+            'mobileVideoConfig' => array(
+                'facingMode'       => 'user',
+                'encoderConfig'    => array( 'width' => 1280, 'height' => 720, 'frameRate' => 30, 'bitrateMin' => 800, 'bitrateMax' => 1800 ),
+                'optimizationMode' => 'balanced',
+            ),
             'mobileAudioConfig' => array(),
+            'strings'           => array(
+                'requestFailed'             => __( 'Request failed. Please try again.', 'videohub360-studio' ),
+                'requestingPermissions'     => __( 'Requesting camera and microphone permissions…', 'videohub360-studio' ),
+                'previewReady'              => __( 'Camera and microphone preview is ready.', 'videohub360-studio' ),
+                'permissionFailed'          => __( 'Camera or microphone access failed. Check browser permissions and try again.', 'videohub360-studio' ),
+                'cameraRequired'            => __( 'A working camera preview is required before going live.', 'videohub360-studio' ),
+                'titleRequired'             => __( 'Enter a title before going live.', 'videohub360-studio' ),
+                'passcodeRequired'          => __( 'Enter a host passcode or turn off passcode access.', 'videohub360-studio' ),
+                'creatingBroadcast'         => __( 'Creating livestream…', 'videohub360-studio' ),
+                'connectingLiveService'     => __( 'Connecting to the live service…', 'videohub360-studio' ),
+                'liveStarted'               => __( 'You are live. Keep this browser open.', 'videohub360-studio' ),
+                'startFailed'               => __( 'The livestream could not start. Devices and server state were cleaned up when possible.', 'videohub360-studio' ),
+                'cleanupPending'            => __( 'A previous start attempt needs server cleanup before you can start another live.', 'videohub360-studio' ),
+                'endConfirm'                => __( 'End this livestream?', 'videohub360-studio' ),
+                'endingLive'                => __( 'Ending livestream…', 'videohub360-studio' ),
+                'ended'                     => __( 'Livestream ended.', 'videohub360-studio' ),
+                'endFailed'                 => __( 'The local stream stopped, but the server has not confirmed End Live. Retry End Live.', 'videohub360-studio' ),
+                'connected'                 => __( 'Connected', 'videohub360-studio' ),
+                'reconnecting'              => __( 'Reconnecting… keep this page open. End Live remains available.', 'videohub360-studio' ),
+                'disconnected'              => __( 'Disconnected. Try to reconnect or end the livestream.', 'videohub360-studio' ),
+                'tokenRenewalFailed'        => __( 'Live connection renewal failed. The app will retry.', 'videohub360-studio' ),
+                'cameraSwitchFailed'        => __( 'Camera could not be switched.', 'videohub360-studio' ),
+                'trackEnded'                => __( 'A media device disconnected. Check camera and microphone permissions.', 'videohub360-studio' ),
+                'muteMic'                   => __( 'Mute mic', 'videohub360-studio' ),
+                'unmuteMic'                 => __( 'Unmute mic', 'videohub360-studio' ),
+                'cameraOff'                 => __( 'Camera off', 'videohub360-studio' ),
+                'cameraOn'                  => __( 'Camera on', 'videohub360-studio' ),
+                'retryCameraMicrophone'     => __( 'Retry Camera and Microphone', 'videohub360-studio' ),
+            ),
         );
     }
 

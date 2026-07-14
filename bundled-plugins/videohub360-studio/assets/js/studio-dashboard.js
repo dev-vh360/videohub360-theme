@@ -2,6 +2,11 @@
     'use strict';
 
     const root = document.querySelector('[data-vh360-studio-dashboard]');
+    document.querySelectorAll('[data-studio-mode-choice]').forEach(function (link) {
+        link.addEventListener('click', function () {
+            try { window.localStorage.setItem('vh360StudioMode', link.getAttribute('data-studio-mode-choice')); } catch (error) {}
+        });
+    });
     if (!root || !window.vh360StudioDashboard) {
         return;
     }
@@ -6130,6 +6135,8 @@
                 appId: prepared.appId,
                 channelName: prepared.channelName,
                 token: prepared.token,
+                videoId: state.broadcastVideoId,
+                expiresAt: prepared.expiresAt,
                 uid: prepared.uid,
                 clientMode: prepared.clientMode,
                 container: root,
@@ -6140,6 +6147,9 @@
                 videoConfig: agoraVideoConfigFromPreset(),
                 initialVideoMediaStreamTrack: state.programOutputStream ? state.programOutputStream.getVideoTracks()[0] : null,
                 initialVideoSource: state.programSource || '',
+                renewToken: function () {
+                    return api('/broadcasts/' + state.broadcastVideoId + '/renew-token', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
+                },
             });
             await session.start();
             studioDebugLog('[VH360 Studio] Agora mixed audio diagnostics', { mixerId: state.audioMixer ? state.audioMixer.id : '', audioTrackId: getStudioMixedAudioTrack() ? getStudioMixedAudioTrack().id : '', agoraAudioTrackId: typeof session.getAudioTrackId === 'function' ? session.getAudioTrackId() : '' });
