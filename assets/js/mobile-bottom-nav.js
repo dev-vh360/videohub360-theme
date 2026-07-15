@@ -5,6 +5,14 @@
   var menuBtn = document.querySelector('.vh360-mobile-bottom-nav__menu-btn');
   var drawer = document.getElementById('vh360-mobile-user-drawer');
 
+  function getPwaScrollElement() {
+    if (!html.classList.contains('vh360-pwa-standalone')) {
+      return null;
+    }
+
+    return document.querySelector('[data-vh360-pwa-scroll]');
+  }
+
   function initDrawer() {
     if (!menuBtn || !drawer) {
       return;
@@ -12,6 +20,8 @@
 
     var closeElements = drawer.querySelectorAll('[data-vh360-drawer-close]');
     var previouslyFocused = null;
+    var lockedScrollElement = null;
+    var previousScrollOverflow = '';
 
     function openDrawer() {
       previouslyFocused = document.activeElement;
@@ -19,7 +29,13 @@
       drawer.setAttribute('aria-hidden', 'false');
       menuBtn.setAttribute('aria-expanded', 'true');
       html.classList.add('vh360-drawer-open');
-      document.body.style.overflow = 'hidden';
+      lockedScrollElement = getPwaScrollElement();
+      if (lockedScrollElement) {
+        previousScrollOverflow = lockedScrollElement.style.overflow;
+        lockedScrollElement.style.overflow = 'hidden';
+      } else {
+        document.body.style.overflow = 'hidden';
+      }
     }
 
     function closeDrawer() {
@@ -27,7 +43,13 @@
       drawer.setAttribute('aria-hidden', 'true');
       menuBtn.setAttribute('aria-expanded', 'false');
       html.classList.remove('vh360-drawer-open');
-      document.body.style.overflow = '';
+      if (lockedScrollElement) {
+        lockedScrollElement.style.overflow = previousScrollOverflow;
+        lockedScrollElement = null;
+        previousScrollOverflow = '';
+      } else {
+        document.body.style.overflow = '';
+      }
       if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
         previouslyFocused.focus();
       }

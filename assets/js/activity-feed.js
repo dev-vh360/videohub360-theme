@@ -19,6 +19,55 @@
         infiniteScrollEnabled: true
     };
     
+
+    function getScrollContext() {
+        if (window.VH360ScrollContext) {
+            return window.VH360ScrollContext;
+        }
+
+        return {
+            getElement: function() {
+                var shellScroller = document.querySelector('[data-vh360-pwa-scroll]');
+                var standalone = document.documentElement.classList.contains('vh360-pwa-standalone') || window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+                return standalone && shellScroller ? shellScroller : window;
+            },
+            getScrollTop: function() { return window.scrollY || window.pageYOffset || 0; },
+            getViewportHeight: function() { return window.innerHeight || document.documentElement.clientHeight; },
+            getScrollHeight: function() { return Math.max(document.body.scrollHeight, document.documentElement.scrollHeight); }
+        };
+    }
+
+    function getScrollEventTarget() {
+        const element = getScrollContext().getElement();
+        return element === window ? window : element;
+    }
+
+    function getElementTopWithinScroller($element) {
+        const element = $element.get(0);
+        const scroller = getScrollContext().getElement();
+
+        if (!element) {
+            return 0;
+        }
+
+        if (scroller === window) {
+            return $element.offset().top;
+        }
+
+        return element.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+    }
+
+    function scrollContextTo(top, duration) {
+        const scroller = getScrollContext().getElement();
+
+        if (scroller === window) {
+            $('html, body').animate({ scrollTop: top }, duration);
+            return;
+        }
+
+        $(scroller).animate({ scrollTop: top }, duration);
+    }
+
     // DOM elements
     const $filterTabs = $('.vh360-filter-tab');
     const $activityStream = $('#vh360-activity-stream');
@@ -37,7 +86,7 @@
         
         // Infinite scroll
         if (state.infiniteScrollEnabled) {
-            $(window).on('scroll', throttle(handleScroll, 200));
+            $(getScrollEventTarget()).on('scroll.vh360ActivityFeed', throttle(handleScroll, 200));
         }
         
         // Parse URL parameters on load
@@ -57,8 +106,8 @@
         }
         
         // Add sticky shadow on scroll
-        $(window).on('scroll', function() {
-            if ($(window).scrollTop() > 0) {
+        $(getScrollEventTarget()).on('scroll.vh360ActivityTabs', function() {
+            if (getScrollContext().getScrollTop() > 0) {
                 $tabs.addClass('is-sticky');
             } else {
                 $tabs.removeClass('is-sticky');
@@ -132,9 +181,9 @@
         
         // Check if load more button is in viewport
         if ($loadMoreBtn.length) {
-            const btnOffset = $loadMoreBtn.offset().top;
-            const scrollTop = $(window).scrollTop();
-            const windowHeight = $(window).height();
+            const btnOffset = getElementTopWithinScroller($loadMoreBtn);
+            const scrollTop = getScrollContext().getScrollTop();
+            const windowHeight = getScrollContext().getViewportHeight();
             
             if (scrollTop + windowHeight >= btnOffset - 200) {
                 loadActivities(false);
@@ -275,10 +324,8 @@
      * Scroll to activity stream
      */
     function scrollToStream() {
-        const streamOffset = $activityStream.offset().top - 100;
-        $('html, body').animate({
-            scrollTop: streamOffset
-        }, 400);
+        const streamOffset = getElementTopWithinScroller($activityStream) - 100;
+        scrollContextTo(streamOffset, 400);
     }
     
     /**
@@ -289,10 +336,10 @@
             return false;
         }
         
-        const elementTop = $element.offset().top;
+        const elementTop = getElementTopWithinScroller($element);
         const elementBottom = elementTop + $element.outerHeight();
-        const viewportTop = $(window).scrollTop();
-        const viewportBottom = viewportTop + $(window).height();
+        const viewportTop = getScrollContext().getScrollTop();
+        const viewportBottom = viewportTop + getScrollContext().getViewportHeight();
         
         return elementBottom > viewportTop && elementTop < viewportBottom;
     }
@@ -312,9 +359,9 @@
         state.infiniteScrollEnabled = enable;
         
         if (enable) {
-            $(window).on('scroll', throttle(handleScroll, 200));
+            $(getScrollEventTarget()).on('scroll.vh360ActivityFeed', throttle(handleScroll, 200));
         } else {
-            $(window).off('scroll');
+            $(getScrollEventTarget()).off('scroll.vh360ActivityFeed');
         }
     }
     
@@ -466,11 +513,10 @@
         const $target = $(targetId);
         
         if ($target.length) {
-            const offset = $target.offset().top - 100; // 100px from top for header
+            const offset = getElementTopWithinScroller($target) - 100; // 100px from top for header
             
-            $('html, body').animate({
-                scrollTop: offset
-            }, 400, function() {
+            scrollContextTo(offset, 400);
+            window.setTimeout(function() {
                 // Focus first comment or comment input for accessibility
                 const $firstComment = $target.find('.vh360-comment').first();
                 if ($firstComment.length) {
@@ -1211,10 +1257,9 @@ const VH360ShareSystem = (function($) {
     function scrollToComments(postId) {
         const $commentsSection = $('#vh360-comments-section-' + postId);
         if ($commentsSection.length) {
-            const offset = $commentsSection.offset().top - 100;
-            $('html, body').animate({
-                scrollTop: offset
-            }, 400, function() {
+            const offset = getElementTopWithinScroller($commentsSection) - 100;
+            scrollContextTo(offset, 400);
+            window.setTimeout(function() {
                 // Focus on comment input for accessibility
                 const $textarea = $commentsSection.find('textarea').first();
                 if ($textarea.length) {

@@ -22,6 +22,9 @@ if (!defined('ABSPATH')) {
 <body <?php body_class(); ?>>
 <?php wp_body_open(); ?>
 
+<div class="vh360-pwa-app-shell">
+    <div class="vh360-pwa-app-scroll" data-vh360-pwa-scroll>
+
 <?php 
 // Show urgent bulletin banner
 $urgent_bulletins = vh360_get_urgent_bulletins();

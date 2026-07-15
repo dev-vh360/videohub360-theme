@@ -285,3 +285,55 @@
     display: none !important;
   }
 }
+
+@media (max-width: 768px) {
+  html.vh360-pwa-standalone,
+  html.vh360-pwa-standalone body.logged-in {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  html.vh360-pwa-standalone body.logged-in {
+    padding-bottom: 0;
+  }
+
+  html.vh360-pwa-standalone body.logged-in .vh360-pwa-app-shell {
+    position: relative;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  html.vh360-pwa-standalone body.logged-in .vh360-pwa-app-scroll {
+    min-width: 0;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  html.vh360-pwa-standalone body.logged-in .vh360-pwa-app-scroll .site {
+    min-height: 100%;
+  }
+
+  html.vh360-pwa-standalone body.logged-in .vh360-mobile-bottom-nav {
+    position: relative;
+    inset: auto;
+    bottom: auto;
+    grid-row: 2;
+    width: 100%;
+    height: var(--vh360-mobile-nav-total-height);
+    min-height: var(--vh360-mobile-nav-total-height);
+    flex: 0 0 var(--vh360-mobile-nav-total-height);
+    z-index: 20;
+  }
+
+  html.vh360-pwa-standalone body.logged-in .vh360-mobile-user-drawer {
+    position: absolute;
+    inset: 0;
+  }
+}

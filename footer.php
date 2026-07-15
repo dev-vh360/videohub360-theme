@@ -16,6 +16,12 @@ if (function_exists('vh360_is_auth_page') && vh360_is_auth_page() && get_theme_m
     echo '</div><!-- #content -->';
     echo '</div><!-- .site-layout-wrapper -->';
     echo '</div><!-- #page -->';
+    echo '</div><!-- .vh360-pwa-app-scroll -->';
+    if (is_user_logged_in()) {
+        get_template_part('template-parts/navigation/mobile-bottom-nav');
+        get_template_part('template-parts/navigation/mobile-user-drawer');
+    }
+    echo '</div><!-- .vh360-pwa-app-shell -->';
     wp_footer(); // Required for WordPress and plugins to enqueue scripts/styles
     echo '</body></html>';
     return;
@@ -97,10 +103,14 @@ if (function_exists('vh360_is_auth_page') && vh360_is_auth_page() && get_theme_m
 
 </div><!-- #page -->
 
+</div><!-- .vh360-pwa-app-scroll -->
+
 <?php if ( is_user_logged_in() ) : ?>
     <?php get_template_part( 'template-parts/navigation/mobile-bottom-nav' ); ?>
     <?php get_template_part( 'template-parts/navigation/mobile-user-drawer' ); ?>
 <?php endif; ?>
+
+</div><!-- .vh360-pwa-app-shell -->
 
 <?php wp_footer(); ?>
 

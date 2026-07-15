@@ -5,6 +5,30 @@
 (function() {
 	'use strict';
 
+
+function vh360GetScrollContext() {
+	if (window.VH360ScrollContext) {
+		return window.VH360ScrollContext;
+	}
+
+	return {
+		getElement: function() {
+			var shellScroller = document.querySelector('[data-vh360-pwa-scroll]');
+			var standalone = document.documentElement.classList.contains('vh360-pwa-standalone') || window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+			return standalone && shellScroller ? shellScroller : window;
+		},
+		getScrollTop: function() { return window.scrollY || window.pageYOffset || 0; },
+		getViewportHeight: function() { return window.innerHeight || document.documentElement.clientHeight; },
+		getScrollHeight: function() { return Math.max(document.body.scrollHeight, document.documentElement.scrollHeight); }
+	};
+}
+
+function vh360GetScrollEventTarget() {
+	var element = vh360GetScrollContext().getElement();
+	return element === window ? window : element;
+}
+
+
 	// Debug logging helper - only log when __VH360_DEBUG is enabled
 	const vh360Log = (...args) => { if (window.__VH360_DEBUG) console.log(...args); };
 
@@ -197,12 +221,13 @@
 				// Handle auto-prompt on scroll (optional)
 				if (VH360Push.autoPrompt && VH360Push.autoPromptScroll) {
 					var vh360ScrollTriggered = false;
-					window.addEventListener('scroll', function() {
+					vh360GetScrollEventTarget().addEventListener('scroll', function() {
 						if (vh360ScrollTriggered) return;
-						var docHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
-						var winHeight = window.innerHeight || document.documentElement.clientHeight;
+						var scrollContext = vh360GetScrollContext();
+						var docHeight = scrollContext.getScrollHeight();
+						var winHeight = scrollContext.getViewportHeight();
 						if (docHeight <= winHeight) return;
-						var percent = (window.scrollY / (docHeight - winHeight)) * 100;
+						var percent = (scrollContext.getScrollTop() / (docHeight - winHeight)) * 100;
 						if (percent >= 50) { // fixed 50% threshold for Phase 1
 							vh360ScrollTriggered = true;
 							OneSignal.Slidedown.promptPush();

@@ -65,6 +65,26 @@
 
   updateStandaloneClass();
 
+  window.VH360ScrollContext = window.VH360ScrollContext || {
+    getElement: function () {
+      var shellScroller = document.querySelector('[data-vh360-pwa-scroll]');
+      return isStandalone() && shellScroller ? shellScroller : window;
+    },
+    getScrollTop: function () {
+      var element = this.getElement();
+      return element === window ? (window.scrollY || window.pageYOffset || 0) : element.scrollTop;
+    },
+    getViewportHeight: function () {
+      var element = this.getElement();
+      return element === window ? (window.innerHeight || document.documentElement.clientHeight) : element.clientHeight;
+    },
+    getScrollHeight: function () {
+      var element = this.getElement();
+      return element === window ? Math.max(document.body.scrollHeight, document.documentElement.scrollHeight) : element.scrollHeight;
+    }
+  };
+
+
   function storageKey() {
     return 'vh360_pwa_install_banner_dismissed_until';
   }
@@ -230,22 +250,24 @@
     indicator.textContent = 'Pull to refresh';
     document.body.appendChild(indicator);
     var startY = 0, pulling = false, ready = false, threshold = 86;
-    document.addEventListener('touchstart', function (e) {
-      if (!isStandalone() || window.scrollY > 0 || isIgnoredRefreshTarget(e.target)) return;
+    var scrollTarget = window.VH360ScrollContext.getElement();
+    var touchTarget = scrollTarget === window ? document : scrollTarget;
+    touchTarget.addEventListener('touchstart', function (e) {
+      if (!isStandalone() || window.VH360ScrollContext.getScrollTop() > 0 || isIgnoredRefreshTarget(e.target)) return;
       startY = e.touches && e.touches[0] ? e.touches[0].clientY : 0;
       pulling = true; ready = false;
     }, { passive: true });
-    document.addEventListener('touchmove', function (e) {
+    touchTarget.addEventListener('touchmove', function (e) {
       if (!pulling || !e.touches || !e.touches[0]) return;
       var diff = e.touches[0].clientY - startY;
-      if (diff <= 0 || window.scrollY > 0) return;
+      if (diff <= 0 || window.VH360ScrollContext.getScrollTop() > 0) return;
       if (e.cancelable) e.preventDefault();
       ready = diff > threshold;
       indicator.textContent = ready ? 'Release to refresh' : 'Pull to refresh';
       indicator.style.transform = 'translate(-50%, ' + Math.min(diff / 2, 70) + 'px)';
       indicator.classList.add('is-visible');
     }, { passive: false });
-    document.addEventListener('touchend', function () {
+    touchTarget.addEventListener('touchend', function () {
       if (!pulling) return;
       pulling = false;
       if (ready) {
@@ -422,6 +444,7 @@
       }
     } catch (e) {}
     updateStandaloneClass();
+
     // Modal container
     ensureModal();
     // Default label ("How to install") unless/until the browser provides a native prompt.
