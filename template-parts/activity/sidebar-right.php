@@ -16,6 +16,7 @@ if (!defined('ABSPATH')) {
 $show_recommended_users = get_theme_mod('vh360_show_recommended_users', true);
 $show_ad_space = get_theme_mod('vh360_show_activity_ad_space', false);
 $activity_ad_privacy_type = get_theme_mod('vh360_activity_ad_privacy_type', 'contextual');
+$vh360_consent_active = function_exists('videohub360_consent_is_enabled') && videohub360_consent_is_enabled();
 
 // Get widget titles
 $who_to_follow_title = get_theme_mod('vh360_who_to_follow_title', __('Who to Follow', 'videohub360-theme'));
@@ -29,7 +30,7 @@ $recommended_users = function_exists('vh360_get_recommended_profiles') ? vh360_g
     <?php if ($show_ad_space) : ?>
     <!-- Ad Slot Widget Area -->
     <?php if (is_active_sidebar('activity-feed-ad')) : ?>
-        <?php if ('personalized' === $activity_ad_privacy_type) : ?>
+        <?php if ('personalized' === $activity_ad_privacy_type && $vh360_consent_active) : ?>
             <div class="vh360-sidebar-widget vh360-ad-slot vh360-ad-slot--blocked" data-vh360-activity-ad-slot data-vh360-activity-ad-blocked>
                 <div class="vh360-widget-content">
                     <p><?php esc_html_e('This advertising space is available after advertising privacy choices are enabled.', 'videohub360-theme'); ?></p>

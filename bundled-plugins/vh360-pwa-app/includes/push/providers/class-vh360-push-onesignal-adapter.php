@@ -131,14 +131,13 @@ class VH360_Push_OneSignal_Adapter implements VH360_PWA_Push_Adapter_Interface {
 	 */
 	public function get_frontend_bootstrap( array $settings ) : array {
 		// Never expose REST API key to frontend
-		// Use the VH360 service worker (vh360-sw.js) as the single SW for scope '/'
-		// and merge OneSignal into it. This prevents SW scope conflicts.
+		// Use a dedicated provider worker path/scope so the optional push worker does not replace the root VH360 PWA worker.
 		return array(
 			'provider'         => 'onesignal',
 			'appId'            => $settings['app_id'] ?? '',
-			'swPath'           => '/OneSignalSDKWorker.js',
-			'swUpdaterPath'    => '/OneSignalSDKUpdaterWorker.js',
-			'swScope'          => $settings['sw_scope'] ?? '/onesignal/',
+			'swPath'           => '/push/onesignal/OneSignalSDKWorker.js',
+			'swUpdaterPath'    => '/push/onesignal/OneSignalSDKUpdaterWorker.js',
+			'swScope'          => $settings['sw_scope'] ?? '/push/onesignal/',
 			'autoPrompt'       => false,
 			'autoPromptDelay'  => 0,
 			'autoPromptScroll' => false,

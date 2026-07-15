@@ -22,6 +22,8 @@ class VideoHub360_Consent_Manager {
         add_action('wp_ajax_nopriv_vh360_save_consent', array($this, 'ajax_save_consent'));
         add_action('wp_ajax_vh360_activity_ad_markup', array($this, 'ajax_activity_ad_markup'));
         add_action('wp_ajax_nopriv_vh360_activity_ad_markup', array($this, 'ajax_activity_ad_markup'));
+        add_action('wp_ajax_vh360_consent_state', array($this, 'ajax_consent_state'));
+        add_action('wp_ajax_nopriv_vh360_consent_state', array($this, 'ajax_consent_state'));
         add_action('wp_print_scripts', array($this, 'gate_registered_scripts'), 100);
         add_action('wp_print_footer_scripts', array($this, 'gate_registered_scripts'), 100);
     }
@@ -118,7 +120,33 @@ class VideoHub360_Consent_Manager {
     }
     public function services() { return $this->services; }
 
+    private function validate_public_request_context() {
+        if ('POST' !== strtoupper($_SERVER['REQUEST_METHOD'] ?? '')) {
+            return false;
+        }
+        $home = wp_parse_url(home_url('/'));
+        $allowed_host = isset($home['host']) ? strtolower($home['host']) : '';
+        $origin = isset($_SERVER['HTTP_ORIGIN']) ? wp_parse_url(esc_url_raw(wp_unslash($_SERVER['HTTP_ORIGIN']))) : array();
+        if (!empty($origin['host']) && strtolower($origin['host']) !== $allowed_host) {
+            return false;
+        }
+        $fetch_site = isset($_SERVER['HTTP_SEC_FETCH_SITE']) ? strtolower(sanitize_text_field(wp_unslash($_SERVER['HTTP_SEC_FETCH_SITE']))) : '';
+        if ($fetch_site && !in_array($fetch_site, array('same-origin', 'same-site', 'none'), true)) {
+            return false;
+        }
+        if (empty($origin['host']) && empty($fetch_site) && !empty($_SERVER['HTTP_REFERER'])) {
+            $referer = wp_parse_url(esc_url_raw(wp_unslash($_SERVER['HTTP_REFERER'])));
+            if (!empty($referer['host']) && strtolower($referer['host']) !== $allowed_host) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public function ajax_save_consent() {
+        if (!$this->validate_public_request_context()) {
+            wp_send_json_error(array('message' => 'Invalid request context'), 403);
+        }
         $settings = $this->get_settings();
         if ('disabled' === $settings['mode']) wp_send_json_success($this->get_state());
         $old = $this->get_state();
@@ -139,7 +167,17 @@ class VideoHub360_Consent_Manager {
         setcookie(self::COOKIE, wp_json_encode($data), array('expires'=>$expires,'path'=>'/','domain'=>COOKIE_DOMAIN,'secure'=>is_ssl(),'httponly'=>false,'samesite'=>'Lax'));
     }
 
+    public function ajax_consent_state() {
+        if (!$this->validate_public_request_context()) {
+            wp_send_json_error(array('message' => 'Invalid request context'), 403);
+        }
+        wp_send_json_success(array('gpc' => $this->gpc_active()));
+    }
+
     public function ajax_activity_ad_markup() {
+        if (!$this->validate_public_request_context()) {
+            wp_send_json_error(array('message' => 'Invalid request context'), 403);
+        }
         if (!$this->has_consent('advertising')) wp_send_json_error(array('message'=>'consent_required'), 403);
         ob_start();
         if (is_active_sidebar('activity-feed-ad')) dynamic_sidebar('activity-feed-ad');

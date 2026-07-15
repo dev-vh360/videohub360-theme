@@ -21,10 +21,13 @@ class VH360_PWA_Endpoints {
 		add_rewrite_rule( '^' . preg_quote( VH360_PWA_OFFLINE_SLUG, '#' ) . '$', 'index.php?vh360_pwa_endpoint=offline', 'top' );
 		add_rewrite_rule( '^' . preg_quote( VH360_PWA_LAUNCH_SHELL_SLUG, '#' ) . '$', 'index.php?vh360_pwa_endpoint=launch_shell', 'top' );
 		
-		// OneSignal service worker endpoints
+		// Dedicated OneSignal worker endpoints for new consent-aware subscriptions.
+		add_rewrite_rule( '^push/onesignal/OneSignalSDKWorker\.js$', 'index.php?vh360_pwa_endpoint=onesignal_worker', 'top' );
+		add_rewrite_rule( '^push/onesignal/OneSignalSDKUpdaterWorker\.js$', 'index.php?vh360_pwa_endpoint=onesignal_updater', 'top' );
+
+		// Legacy root worker endpoints are retained for existing subscriber migration/delivery.
 		add_rewrite_rule( '^OneSignalSDKWorker\.js$', 'index.php?vh360_pwa_endpoint=onesignal_worker', 'top' );
 		add_rewrite_rule( '^OneSignalSDKUpdaterWorker\.js$', 'index.php?vh360_pwa_endpoint=onesignal_updater', 'top' );
-		// OneSignalSDK.sw.js is an alternative path that some OneSignal configurations use - maps to same endpoint
 		add_rewrite_rule( '^OneSignalSDK\.sw\.js$', 'index.php?vh360_pwa_endpoint=onesignal_worker', 'top' );
 	}
 	

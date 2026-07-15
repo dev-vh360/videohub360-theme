@@ -36,14 +36,17 @@
   function syncWpConsentApi(){
     var map = { necessary:'functional', preferences:'preferences', analytics:'statistics-anonymous', advertising:'marketing' };
     var detail = {};
+    var hasWpSetter = typeof window.wp_set_consent === 'function';
     Object.keys(map).forEach(function(cat){
       var value = cat === 'necessary' || !!(state.choices && state.choices[cat]);
       detail[map[cat]] = value ? 'allow' : 'deny';
-      if(typeof window.wp_set_consent === 'function'){
+      if(hasWpSetter){
         try { window.wp_set_consent(map[cat], detail[map[cat]]); } catch(e) {}
       }
     });
-    document.dispatchEvent(new CustomEvent('wp_listen_for_consent_change', { detail: detail }));
+    if(!hasWpSetter){
+      document.dispatchEvent(new CustomEvent('wp_listen_for_consent_change', { detail: detail }));
+    }
   }
 
   var knownKeys = [
@@ -68,15 +71,19 @@
   function hideRoots(){ roots().forEach(function(r){ var b = banner(r); if(b) b.hidden = true; r.hidden = true; }); }
   function dismissBanner(){ roots().forEach(function(r){ var b = banner(r); if(b) b.hidden = true; }); }
 
+  function showError(message){ document.querySelectorAll('.vh360-consent-error').forEach(function(el){ el.textContent = message || 'Your privacy choice could not be saved. Please try again.'; el.hidden = false; }); }
+  function clearError(){ document.querySelectorAll('.vh360-consent-error').forEach(function(el){ el.textContent = ''; el.hidden = true; }); }
   function save(choices, notice){
     var fd = new FormData();
     fd.append('action','vh360_save_consent'); fd.append('notice_acknowledged', notice ? '1' : '0');
     ['preferences','analytics','advertising'].forEach(function(c){ fd.append('choices[' + c + ']', choices[c] ? '1' : '0'); });
+    clearError();
     return fetch(cfg.ajaxUrl,{ method:'POST', credentials:'same-origin', body:fd }).then(function(r){ return r.json(); }).then(function(res){
-      if(res && res.success){ state = resolveState(); cleanup(); fire(); syncWpConsentApi(); }
-      return state;
-    });
+      if(res && res.success){ state = resolveState(); cleanup(); fire(); syncWpConsentApi(); return state; }
+      throw new Error((res && res.data && res.data.message) || 'save_failed');
+    }).catch(function(error){ showError(error && error.message ? error.message : 'save_failed'); throw error; });
   }
+  function refreshServerState(){ var fd = new FormData(); fd.append('action','vh360_consent_state'); return fetch(cfg.ajaxUrl,{ method:'POST', credentials:'same-origin', body:fd }).then(function(r){ return r.json(); }).then(function(res){ if(res && res.success && res.data && res.data.gpc){ state.gpc = true; state.choices.advertising = false; } return state; }).catch(function(){ return state; }); }
   function fire(){ loadActivityAds(); document.dispatchEvent(new CustomEvent('vh360:consent-changed',{ detail: state })); activateScripts(); }
   function cleanup(){ if(has('preferences')) return; Object.keys(keys).forEach(function(k){ try{ localStorage.removeItem(k); }catch(e){} }); }
 
@@ -182,10 +189,10 @@
     if(t.classList.contains('vh360-consent-open') || t.dataset.vh360ConsentAction === 'manage'){ e.preventDefault(); openPrefs(); }
     if(t.classList.contains('vh360-consent-close')){ e.preventDefault(); hideRoots(); }
     if(t.classList.contains('vh360-consent-modal-close')){ e.preventDefault(); closePrefs(false); }
-    if(t.dataset.vh360ConsentAction === 'acknowledge'){ e.preventDefault(); save({ preferences:true, analytics:true, advertising:!(navigator.globalPrivacyControl === true) }, true).then(function(){ closePrefs(true); hideRoots(); }); }
-    if(t.dataset.vh360ConsentAction === 'accept-all'){ e.preventDefault(); save({ preferences:true, analytics:true, advertising:!(navigator.globalPrivacyControl === true) }, true).then(function(){ closePrefs(true); hideRoots(); }); }
-    if(t.dataset.vh360ConsentAction === 'reject-optional'){ e.preventDefault(); save({ preferences:false, analytics:false, advertising:false }, true).then(function(){ closePrefs(true); hideRoots(); }); }
-    if(t.dataset.vh360ConsentAction === 'save'){ e.preventDefault(); var c = {}; document.querySelectorAll('[data-vh360-consent-category]').forEach(function(i){ c[i.getAttribute('data-vh360-consent-category')] = i.checked; }); save(c,true).then(function(){ closePrefs(true); }); }
+    if(t.dataset.vh360ConsentAction === 'acknowledge'){ e.preventDefault(); save({ preferences:true, analytics:true, advertising:!(navigator.globalPrivacyControl === true) }, true).then(function(){ closePrefs(true); hideRoots(); }).catch(function(){}); }
+    if(t.dataset.vh360ConsentAction === 'accept-all'){ e.preventDefault(); save({ preferences:true, analytics:true, advertising:!(navigator.globalPrivacyControl === true) }, true).then(function(){ closePrefs(true); hideRoots(); }).catch(function(){}); }
+    if(t.dataset.vh360ConsentAction === 'reject-optional'){ e.preventDefault(); save({ preferences:false, analytics:false, advertising:false }, true).then(function(){ closePrefs(true); hideRoots(); }).catch(function(){}); }
+    if(t.dataset.vh360ConsentAction === 'save'){ e.preventDefault(); var c = {}; document.querySelectorAll('[data-vh360-consent-category]').forEach(function(i){ c[i.getAttribute('data-vh360-consent-category')] = i.checked; }); save(c,true).then(function(){ closePrefs(true); }).catch(function(){}); }
   });
   document.addEventListener('keydown',function(e){
     var m = modal(); if(!m || m.hidden) return;
@@ -196,5 +203,5 @@
     if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
     else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
   });
-  document.addEventListener('DOMContentLoaded',function(){ state = resolveState(); knownKeys.forEach(window.VH360Storage.registerPreferenceKey); if(state.needs_choice) setRootVisible(true); updateUi(); cleanup(); loadActivityAds(); activateScripts(); });
+  document.addEventListener('DOMContentLoaded',function(){ state = resolveState(); knownKeys.forEach(window.VH360Storage.registerPreferenceKey); refreshServerState().then(function(){ syncWpConsentApi(); if(state.needs_choice) setRootVisible(true); updateUi(); cleanup(); loadActivityAds(); activateScripts(); }); });
 })();

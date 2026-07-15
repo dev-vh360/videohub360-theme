@@ -4,3 +4,4 @@ function videohub360_consent_manager() { return class_exists('VideoHub360_Consen
 function videohub360_has_consent($category) { $m = videohub360_consent_manager(); return $m ? $m->has_consent($category) : true; }
 function videohub360_register_consent_service($slug, $args) { $m = videohub360_consent_manager(); return $m ? $m->services()->register($slug, $args) : false; }
 function videohub360_has_service_consent($slug) { $m = videohub360_consent_manager(); return $m ? $m->services()->has($slug) : true; }
+function videohub360_consent_is_enabled() { $m = videohub360_consent_manager(); return $m ? $m->is_enabled() : false; }

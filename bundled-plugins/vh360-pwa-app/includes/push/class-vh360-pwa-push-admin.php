@@ -189,8 +189,8 @@ class VH360_PWA_Push_Admin {
 			$settings['providers']['onesignal'] = array(
 				'app_id'             => sanitize_text_field( $os_input['app_id'] ?? '' ),
 				'rest_api_key'       => sanitize_text_field( $new_api_key ),
-				'sw_mode'            => 'root_proxy', // Fixed for Phase 1
-				'sw_scope'           => '/',
+				'sw_mode'            => 'dedicated',
+				'sw_scope'           => '/push/onesignal/',
 				'default_click_url'  => esc_url_raw( $os_input['default_click_url'] ?? home_url( '/' ) ),
 				'default_icon_url'   => esc_url_raw( $os_input['default_icon_url'] ?? '' ),
 				'auto_prompt'        => ! empty( $os_input['auto_prompt'] ),
@@ -1688,10 +1688,10 @@ $settings = $this->push_manager->get_settings();
 		);
 
 		// Check SW scope
-		$sw_scope = $settings['providers']['onesignal']['sw_scope'] ?? '/';
-		$results['sw_scope_root'] = array(
-			'passed' => '/' === $sw_scope,
-			'error'  => '/' === $sw_scope ? '' : sprintf( __( 'Current scope: %s', 'vh360-pwa-app' ), $sw_scope ),
+		$sw_scope = $settings['providers']['onesignal']['sw_scope'] ?? '/push/onesignal/';
+		$results['sw_scope_dedicated'] = array(
+			'passed' => '/push/onesignal/' === $sw_scope,
+			'error'  => '/push/onesignal/' === $sw_scope ? '' : sprintf( __( 'Current scope: %s', 'vh360-pwa-app' ), $sw_scope ),
 		);
 
 		// Check CDN blocking

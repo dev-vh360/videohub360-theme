@@ -5,12 +5,16 @@
 (function() {
 	'use strict';
 
-var VH360StorageCompat = window.VH360Storage || {
-  getPreference: function(key, def){ try { var value = window['localStorage'].getItem(key); return value === null ? def : value; } catch (e) { return def; } },
-  setPreference: function(key, value){ try { window['localStorage'].setItem(key, value); } catch (e) {} },
-  removePreference: function(key){ try { window['localStorage'].removeItem(key); } catch (e) {} },
-  registerPreferenceKey: function(){}
-};
+var VH360StorageCompat = window.VH360Storage || (function(){
+  var memory = {};
+  function persistentAllowed(){ return !window.VH360ConsentExpected; }
+  return {
+    getPreference: function(key, def){ if(!persistentAllowed()) { return Object.prototype.hasOwnProperty.call(memory, key) ? memory[key] : def; } try { var value = window['localStorage'].getItem(key); return value === null ? def : value; } catch (e) { return def; } },
+    setPreference: function(key, value){ memory[key] = value; if(!persistentAllowed()) { return; } try { window['localStorage'].setItem(key, value); } catch (e) {} },
+    removePreference: function(key){ delete memory[key]; if(!persistentAllowed()) { return; } try { window['localStorage'].removeItem(key); } catch (e) {} },
+    registerPreferenceKey: function(){}
+  };
+})();
 
 	// Debug logging helper - only log when __VH360_DEBUG is enabled
 	const vh360Log = (...args) => { if (window.__VH360_DEBUG) console.log(...args); };
@@ -49,7 +53,7 @@ var VH360StorageCompat = window.VH360Storage || {
 			script.src = VH360Push.sdkUrl;
 			script.async = true;
 			script.onload = resolve;
-			script.onerror = reject;
+			script.onerror = function(error) { vh360OneSignalSdkLoading = null; reject(error); };
 			document.head.appendChild(script);
 		});
 		return vh360OneSignalSdkLoading;
@@ -190,6 +194,10 @@ var VH360StorageCompat = window.VH360Storage || {
 		}
 		vh360OneSignalInitStarted = true;
 		loadOneSignalSdk().then(function() {
+			if (!hasPreferenceConsent()) {
+				vh360OneSignalInitStarted = false;
+				return;
+			}
 			window.OneSignalDeferred = window.OneSignalDeferred || [];
 			OneSignalDeferred.push(async function(OneSignal) {
 				try {
@@ -243,8 +251,44 @@ var VH360StorageCompat = window.VH360Storage || {
 		});
 		}).catch(function(error) {
 			vh360OneSignalInitStarted = false;
+			vh360OneSignalSdkLoading = null;
 			vh360Log('Push setup is waiting for preferences consent or provider SDK availability.', error);
 		});
+	}
+
+	function deactivateOneSignal() {
+		vh360OneSignalInitStarted = false;
+		if (typeof OneSignalDeferred === 'undefined') {
+			updateSubscriptionUI();
+			return;
+		}
+		try {
+			OneSignalDeferred.push(async function(OneSignal) {
+				try {
+					if (OneSignal && OneSignal.User && typeof OneSignal.User.logout === 'function') {
+						await OneSignal.User.logout();
+					}
+				} catch (e) {}
+				try {
+					if (OneSignal && OneSignal.User && OneSignal.User.PushSubscription && typeof OneSignal.User.PushSubscription.optOut === 'function') {
+						await OneSignal.User.PushSubscription.optOut();
+					}
+				} catch (e2) {}
+				vh360OneSignalInitialized = false;
+				updateSubscriptionUI();
+			});
+		} catch (e3) {
+			vh360OneSignalInitialized = false;
+			updateSubscriptionUI();
+		}
+	}
+
+	function handlePushConsentChange() {
+		if (hasPreferenceConsent()) {
+			initOneSignal();
+		} else {
+			deactivateOneSignal();
+		}
 	}
 
 	function getNativePermission(OneSignal) {
@@ -440,13 +484,13 @@ var VH360StorageCompat = window.VH360Storage || {
 	if (document.readyState === 'loading') {
 		document.addEventListener('DOMContentLoaded', function() {
 			displayContextWarnings();
-			initOneSignal();
-			document.addEventListener('vh360:consent-changed', initOneSignal);
+			handlePushConsentChange();
+			document.addEventListener('vh360:consent-changed', handlePushConsentChange);
 		});
 	} else {
 		displayContextWarnings();
-		initOneSignal();
-		document.addEventListener('vh360:consent-changed', initOneSignal);
+		handlePushConsentChange();
+		document.addEventListener('vh360:consent-changed', handlePushConsentChange);
 	}
 
 })();

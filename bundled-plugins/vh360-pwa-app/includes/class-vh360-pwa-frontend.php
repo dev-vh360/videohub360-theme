@@ -167,8 +167,8 @@ class VH360_PWA_Frontend {
 	/**
 	 * Determine whether this plugin should skip registering its own service worker.
 	 *
-	 * When OneSignal is active, it registers/owns the root-scope service worker.
-	 * Registering a second SW at the same scope causes conflicts and intermittent failures.
+	 * The first-party VH360 service worker should always own the root scope.
+	 * Optional push providers use dedicated worker scopes after consent.
 	 */
 	private function should_skip_sw_registration() : bool {
 		// The first-party VH360 service worker provides manifest/offline/update behavior and must
