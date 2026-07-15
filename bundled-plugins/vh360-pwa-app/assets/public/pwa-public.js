@@ -61,12 +61,6 @@
     } else {
       document.documentElement.classList.remove('vh360-pwa-standalone');
     }
-
-    if (isIOS()) {
-      document.documentElement.classList.add('vh360-pwa-ios');
-    } else {
-      document.documentElement.classList.remove('vh360-pwa-ios');
-    }
   }
 
   updateStandaloneClass();
