@@ -107,7 +107,7 @@ class VH360_PWA_Frontend {
 				'showIosOnboarding' => ! empty( $opts['show_ios_onboarding'] ) ? 1 : 0,
 				'debugMode' => ! empty( $opts['debug_mode'] ) ? 1 : 0,
 				'isAdmin'   => current_user_can( 'manage_options' ) ? 1 : 0,
-				// If OneSignal is active, it must own the root scope service worker.
+				// If the optional push SDK is blocked by Preferences consent, keep the core VH360 service worker active.
 				'skipSWRegister'     => $this->should_skip_sw_registration() ? 1 : 0,
 				'appShortName'       => ! empty( $opts['short_name'] ) ? (string) $opts['short_name'] : get_bloginfo( 'name' ),
 				'enablePullToRefresh' => ! empty( $opts['enable_pull_to_refresh'] ) ? 1 : 0,
@@ -186,6 +186,9 @@ class VH360_PWA_Frontend {
 		}
 		$adapter = $push_manager->get_adapter( $active_provider );
 		if ( ! $adapter ) {
+			return false;
+		}
+		if ( function_exists( 'videohub360_has_consent' ) && ! videohub360_has_consent( 'preferences' ) ) {
 			return false;
 		}
 		$provider_settings = $settings['providers'][ $active_provider ] ?? array();

@@ -111,12 +111,12 @@ class VH360_Push_OneSignal_Adapter implements VH360_PWA_Push_Adapter_Interface {
 			return; // Don't load SDK if config is invalid
 		}
 
-		$has_preferences_consent = ! function_exists('videohub360_has_consent') || videohub360_has_consent('preferences');
+		$has_preferences_consent = ! function_exists( 'videohub360_has_consent' ) || videohub360_has_consent( 'preferences' );
 
 		// OneSignal SDK
 		$sdk_version = defined( 'VH360_PWA_ONESIGNAL_SDK_VERSION' ) ? VH360_PWA_ONESIGNAL_SDK_VERSION : 'v16';
 		if ( $has_preferences_consent ) {
-		wp_enqueue_script(
+			wp_enqueue_script(
 			'onesignal-sdk',
 			'https://cdn.onesignal.com/sdks/web/' . $sdk_version . '/OneSignalSDK.page.js',
 			array(),
@@ -125,7 +125,7 @@ class VH360_Push_OneSignal_Adapter implements VH360_PWA_Push_Adapter_Interface {
 				'in_footer' => true,
 				'strategy'  => 'defer',
 			)
-		);
+			);
 		}
 
 		// Our initialization script
@@ -154,10 +154,12 @@ class VH360_Push_OneSignal_Adapter implements VH360_PWA_Push_Adapter_Interface {
 			'swPath'           => '/' . VH360_PWA_SW_SLUG,
 			'swUpdaterPath'    => '/' . VH360_PWA_SW_SLUG,
 			'swScope'          => $settings['sw_scope'] ?? '/',
-			'autoPrompt'       => ! empty( $settings['auto_prompt'] ),
-			'autoPromptDelay'  => absint( $settings['auto_prompt_delay'] ?? 0 ),
-			'autoPromptScroll' => ! empty( $settings['auto_prompt_scroll'] ),
-			'autoPromptLogin'  => ! empty( $settings['auto_prompt_login'] ),
+			'autoPrompt'       => false,
+			'autoPromptDelay'  => 0,
+			'autoPromptScroll' => false,
+			'autoPromptLogin'  => false,
+			'sdkUrl'           => 'https://cdn.onesignal.com/sdks/web/' . ( defined( 'VH360_PWA_ONESIGNAL_SDK_VERSION' ) ? VH360_PWA_ONESIGNAL_SDK_VERSION : 'v16' ) . '/OneSignalSDK.page.js',
+			'consentManaged'   => function_exists( 'videohub360_has_consent' ),
 		);
 	}
 

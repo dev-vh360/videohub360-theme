@@ -14,9 +14,45 @@ var VH360StorageCompat = window.VH360Storage || {
 
 	// Debug logging helper - only log when __VH360_DEBUG is enabled
 	const vh360Log = (...args) => { if (window.__VH360_DEBUG) console.log(...args); };
+	var vh360OneSignalInitStarted = false;
+	var vh360OneSignalInitialized = false;
+	var vh360OneSignalSdkLoading = null;
 
 	if (typeof VH360Push === 'undefined') {
 		return;
+	}
+
+
+	function hasPreferenceConsent() {
+		return !window.VH360Consent || window.VH360Consent.has('preferences');
+	}
+
+	function openConsentPreferences() {
+		if (window.VH360Consent && typeof window.VH360Consent.openPreferences === 'function') {
+			window.VH360Consent.openPreferences();
+		}
+	}
+
+	function loadOneSignalSdk() {
+		if (typeof OneSignalDeferred !== 'undefined') {
+			return Promise.resolve();
+		}
+		if (vh360OneSignalSdkLoading) {
+			return vh360OneSignalSdkLoading;
+		}
+		if (!VH360Push.sdkUrl) {
+			return Promise.reject(new Error('Push SDK URL is unavailable.'));
+		}
+		window.OneSignalDeferred = window.OneSignalDeferred || [];
+		vh360OneSignalSdkLoading = new Promise(function(resolve, reject) {
+			var script = document.createElement('script');
+			script.src = VH360Push.sdkUrl;
+			script.async = true;
+			script.onload = resolve;
+			script.onerror = reject;
+			document.head.appendChild(script);
+		});
+		return vh360OneSignalSdkLoading;
 	}
 
 	/**
@@ -145,18 +181,18 @@ var VH360StorageCompat = window.VH360Storage || {
 
 	// Initialize OneSignal
 	function initOneSignal() {
-		if (window.VH360Consent && !window.VH360Consent.has('preferences')) {
+		if (vh360OneSignalInitStarted || vh360OneSignalInitialized) {
+			return;
+		}
+		if (!hasPreferenceConsent()) {
 			vh360Log('[VH360 Push] Waiting for preferences consent before initializing push provider.');
 			return;
 		}
-		if (typeof OneSignalDeferred === 'undefined') {
-			vh360Log('Push setup is waiting for preferences consent or provider SDK availability.');
-			return;
-		}
-
-		window.OneSignalDeferred = window.OneSignalDeferred || [];
-		OneSignalDeferred.push(async function(OneSignal) {
-			try {
+		vh360OneSignalInitStarted = true;
+		loadOneSignalSdk().then(function() {
+			window.OneSignalDeferred = window.OneSignalDeferred || [];
+			OneSignalDeferred.push(async function(OneSignal) {
+				try {
 				await OneSignal.init({
 					appId: VH360Push.appId,
 					serviceWorkerParam: {
@@ -181,6 +217,7 @@ var VH360StorageCompat = window.VH360Storage || {
 					}
 				}
 
+				vh360OneSignalInitialized = true;
 				// Update UI based on subscription state
 				updateSubscriptionUI();
 
@@ -198,39 +235,15 @@ var VH360StorageCompat = window.VH360Storage || {
 					}
 				}
 
-				// Handle auto-prompt with delay
-				if (VH360Push.autoPrompt && VH360Push.autoPromptDelay > 0) {
-					setTimeout(function() {
-						OneSignal.Slidedown.promptPush();
-					}, VH360Push.autoPromptDelay * 1000);
-				}
-			
-				// Handle auto-prompt on scroll (optional)
-				if (VH360Push.autoPrompt && VH360Push.autoPromptScroll) {
-					var vh360ScrollTriggered = false;
-					window.addEventListener('scroll', function() {
-						if (vh360ScrollTriggered) return;
-						var docHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
-						var winHeight = window.innerHeight || document.documentElement.clientHeight;
-						if (docHeight <= winHeight) return;
-						var percent = (window.scrollY / (docHeight - winHeight)) * 100;
-						if (percent >= 50) { // fixed 50% threshold for Phase 1
-							vh360ScrollTriggered = true;
-							OneSignal.Slidedown.promptPush();
-						}
-					}, { passive: true });
-				}
-
-				// Handle auto-prompt after login (optional)
-				if (VH360Push.autoPrompt && VH360Push.autoPromptLogin) {
-					document.addEventListener('vh360:user:login', function() {
-						OneSignal.Slidedown.promptPush();
-					});
-				}
+				// Automatic browser notification permission prompts are intentionally disabled.
 
 			} catch (error) {
 				console.error('OneSignal initialization error:', error);
 			}
+		});
+		}).catch(function(error) {
+			vh360OneSignalInitStarted = false;
+			vh360Log('Push setup is waiting for preferences consent or provider SDK availability.', error);
 		});
 	}
 
@@ -259,8 +272,14 @@ var VH360StorageCompat = window.VH360Storage || {
 			return;
 		}
 
+		if (!hasPreferenceConsent()) {
+			containers.forEach(function(container) { hideAllStates(container); showState(container, 'unsubscribed'); });
+			return;
+		}
+
 		if (typeof OneSignalDeferred === 'undefined' || typeof window.OneSignal === 'undefined') {
-			// Show unsupported
+			initOneSignal();
+			// Show unsupported until the provider SDK finishes loading
 			containers.forEach(function(container) {
 				hideAllStates(container);
 				showState(container, 'unsupported');
@@ -367,9 +386,12 @@ var VH360StorageCompat = window.VH360Storage || {
 	}
 
 	function handleSubscribe(button) {
-		if (typeof OneSignalDeferred === 'undefined') {
-			alert('Push notifications are not available.');
+		if (!hasPreferenceConsent()) {
+			openConsentPreferences();
 			return;
+		}
+		if (typeof OneSignalDeferred === 'undefined') {
+			initOneSignal();
 		}
 
 		var container = button.closest('[data-vh360-push-subscribe]');
@@ -378,7 +400,8 @@ var VH360StorageCompat = window.VH360Storage || {
 			showState(container, 'loading');
 		}
 
-		OneSignalDeferred.push(async function(OneSignal) {
+		loadOneSignalSdk().then(function() {
+			OneSignalDeferred.push(async function(OneSignal) {
 			try {
 				// Prefer direct permission + opt-in when available (more reliable than slidedown alone)
 				if (OneSignal && OneSignal.Notifications && typeof OneSignal.Notifications.requestPermission === 'function') {
@@ -406,6 +429,10 @@ var VH360StorageCompat = window.VH360Storage || {
 					showState(container, 'unsupported');
 				}
 			}
+		});
+		}).catch(function(error) {
+			console.error('Error loading push provider SDK:', error);
+			if (container) { hideAllStates(container); showState(container, 'unsupported'); }
 		});
 	}
 

@@ -22,7 +22,7 @@ class VideoHub360_Consent_Manager {
         add_action('wp_ajax_nopriv_vh360_save_consent', array($this, 'ajax_save_consent'));
         add_action('wp_ajax_vh360_activity_ad_markup', array($this, 'ajax_activity_ad_markup'));
         add_action('wp_ajax_nopriv_vh360_activity_ad_markup', array($this, 'ajax_activity_ad_markup'));
-        add_action('wp_enqueue_scripts', array($this, 'gate_registered_scripts'), 1);
+        add_action('wp_print_scripts', array($this, 'gate_registered_scripts'), 100);
     }
 
     public function get_settings() {
@@ -94,7 +94,7 @@ class VideoHub360_Consent_Manager {
         $mode = $settings['mode'];
         $cookie = $this->decode_cookie($cookie_value);
         $valid_policy = !empty($cookie) && $cookie['policy_version'] === (string) $settings['policy_version'];
-        $gpc = $this->gpc_active() || !empty($cookie['gpc']);
+        $gpc = $this->gpc_active();
         $choices = array('necessary' => true, 'preferences' => true, 'analytics' => true, 'advertising' => true);
         if ('strict' === $mode) $choices = array('necessary' => true, 'preferences' => false, 'analytics' => false, 'advertising' => false);
         if ($valid_policy && isset($cookie['choices'])) foreach (array('preferences','analytics','advertising') as $cat) $choices[$cat] = !empty($cookie['choices'][$cat]);
@@ -136,7 +136,7 @@ class VideoHub360_Consent_Manager {
     public function set_cookie($data) {
         $settings = $this->get_settings();
         $expires = time() + (DAY_IN_SECONDS * absint($settings['expiration_days']));
-        setcookie(self::COOKIE, wp_json_encode($data), array('expires'=>$expires,'path'=>COOKIEPATH ? COOKIEPATH : '/','domain'=>COOKIE_DOMAIN,'secure'=>is_ssl(),'httponly'=>false,'samesite'=>'Lax'));
+        setcookie(self::COOKIE, wp_json_encode($data), array('expires'=>$expires,'path'=>'/','domain'=>COOKIE_DOMAIN,'secure'=>is_ssl(),'httponly'=>false,'samesite'=>'Lax'));
     }
 
     public function ajax_activity_ad_markup() {

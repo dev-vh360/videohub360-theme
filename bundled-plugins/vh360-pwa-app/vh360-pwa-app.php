@@ -3,7 +3,7 @@
  * Plugin Name: VH360 PWA & App
  * Plugin URI: https://videohub360.com
  * Description: Adds PWA capabilities (manifest, service worker, offline fallback, install prompt) for the Videohub360 Theme.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: VideoHub360
  * Author URI: https://videohub360.com
  * Text Domain: vh360-pwa-app
@@ -22,7 +22,7 @@ if ( defined( 'VH360_PWA_APP_VERSION' ) ) {
 	return;
 }
 
-define( 'VH360_PWA_APP_VERSION', '1.0.0' );
+define( 'VH360_PWA_APP_VERSION', '1.0.1' );
 define( 'VH360_PWA_APP_FILE', __FILE__ );
 define( 'VH360_PWA_APP_DIR', plugin_dir_path( __FILE__ ) );
 define( 'VH360_PWA_APP_URL', plugin_dir_url( __FILE__ ) );
