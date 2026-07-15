@@ -63,15 +63,6 @@
     }
   }
 
-  function updateMobileNavClass() {
-    var hasMobileNav = !!document.querySelector('.vh360-mobile-bottom-nav');
-
-    document.documentElement.classList.toggle(
-      'vh360-pwa-has-mobile-bottom-nav',
-      hasMobileNav
-    );
-  }
-
   updateStandaloneClass();
 
   function storageKey() {
@@ -431,7 +422,6 @@
       }
     } catch (e) {}
     updateStandaloneClass();
-    updateMobileNavClass();
     // Modal container
     ensureModal();
     // Default label ("How to install") unless/until the browser provides a native prompt.
