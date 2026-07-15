@@ -26,6 +26,7 @@
         const mobileClose = $('.vh360-search-bar-centered__mobile-close');
         
         let searchTimeout = null;
+        let mobileSearchLocked = false;
         let currentQuery = '';
         let currentFilter = 'all';
         let lastResults = null;
@@ -52,7 +53,14 @@
         function openMobileSearch() {
             isMobileSearchActive = true;
             searchContainer.addClass('mobile-search-active');
-            $('body').css('overflow', 'hidden'); // Prevent background scrolling
+            if (!mobileSearchLocked) {
+                if (window.VH360ScrollContext && window.VH360ScrollContext.lock) {
+                    window.VH360ScrollContext.lock('centered-mobile-search');
+                } else {
+                    $('body').css('overflow', 'hidden');
+                }
+                mobileSearchLocked = true;
+            } // Prevent background scrolling
             
             // Focus input after animation
             setTimeout(function() {
@@ -63,7 +71,14 @@
         function closeMobileSearch() {
             isMobileSearchActive = false;
             searchContainer.removeClass('mobile-search-active');
-            $('body').css('overflow', ''); // Restore scrolling
+            if (mobileSearchLocked) {
+                if (window.VH360ScrollContext && window.VH360ScrollContext.unlock) {
+                    window.VH360ScrollContext.unlock('centered-mobile-search');
+                } else {
+                    $('body').css('overflow', '');
+                }
+                mobileSearchLocked = false;
+            } // Restore scrolling
             hideDropdown();
             searchInput.val(''); // Clear search
             currentQuery = '';

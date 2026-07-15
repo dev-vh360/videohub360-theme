@@ -22,6 +22,8 @@
         if (!toggle || !menu) {
             return;
         }
+
+        var hamburgerMenuLocked = false;
         
         /**
          * Open hamburger menu
@@ -30,6 +32,12 @@
             menu.setAttribute('aria-hidden', 'false');
             toggle.setAttribute('aria-expanded', 'true');
             document.body.classList.add('hamburger-menu-open');
+            if (!hamburgerMenuLocked) {
+                if (window.VH360ScrollContext && window.VH360ScrollContext.lock) {
+                    window.VH360ScrollContext.lock('header-hamburger-menu');
+                }
+                hamburgerMenuLocked = true;
+            }
             
             // Focus first menu item
             var firstMenuItem = menu.querySelector('a');
@@ -47,6 +55,12 @@
             menu.setAttribute('aria-hidden', 'true');
             toggle.setAttribute('aria-expanded', 'false');
             document.body.classList.remove('hamburger-menu-open');
+            if (hamburgerMenuLocked) {
+                if (window.VH360ScrollContext && window.VH360ScrollContext.unlock) {
+                    window.VH360ScrollContext.unlock('header-hamburger-menu');
+                }
+                hamburgerMenuLocked = false;
+            }
             toggle.focus();
         }
         

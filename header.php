@@ -173,10 +173,13 @@ if (!defined('ABSPATH')) {
             }
             function forceUnlockAll() {
                 if (!lockState) return;
-                var reasons = Object.keys(lockState.reasons);
-                reasons.forEach(function (key) { lockState.reasons[key] = 0; });
-                lockState.total = 1;
-                unlock(reasons[0] || 'default');
+                var el = lockState.element;
+                if (el === window) {
+                    if (document.body) document.body.style.overflow = lockState.previousOverflow;
+                } else if (el) {
+                    el.style.overflow = lockState.previousOverflow;
+                }
+                lockState = null;
             }
             return { isAppShellActive: isAppShellActive, updateActiveClass: updateActiveClass, getElement: getElement, getEventTarget: getElement, getScrollTop: getScrollTop, getViewportHeight: getViewportHeight, getScrollHeight: getScrollHeight, getElementTop: getElementTop, scrollTo: scrollToTop, scrollElementIntoView: scrollElementIntoView, lock: lock, unlock: unlock, forceUnlockAll: forceUnlockAll };
         }());

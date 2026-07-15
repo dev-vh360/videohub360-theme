@@ -29,7 +29,7 @@
             getElement: function() {
                 var shellScroller = document.querySelector('[data-vh360-pwa-scroll]');
                 var standalone = document.documentElement.classList.contains('vh360-pwa-standalone') || window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-                var active = document.documentElement.classList.contains('vh360-pwa-app-shell-active') || (standalone && document.body && document.body.classList.contains('logged-in') && shellScroller);
+                var active = document.documentElement.classList.contains('vh360-pwa-app-shell-active');
                 return active && shellScroller ? shellScroller : window;
             },
             getScrollTop: function() { var element = this.getElement(); return element === window ? (window.scrollY || window.pageYOffset || 0) : element.scrollTop; },

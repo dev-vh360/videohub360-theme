@@ -657,6 +657,8 @@
         }
     });
 
+    var vh360CommunityLightboxLocked = false;
+
     // Open lightbox when clicking on community post images
     $(document).on('click', 'a.vh360-image-lightbox', function(e) {
         e.preventDefault();
@@ -670,6 +672,12 @@
             $image.attr('src', imageUrl);
             $overlay.addClass('vh360-lightbox-active');
             $('body').addClass('vh360-lightbox-open');
+            if (!vh360CommunityLightboxLocked) {
+                if (window.VH360ScrollContext && window.VH360ScrollContext.lock) {
+                    window.VH360ScrollContext.lock('community-image-lightbox');
+                }
+                vh360CommunityLightboxLocked = true;
+            }
         }
         
         return false;
@@ -679,6 +687,12 @@
     function vh360CloseLightbox() {
         $('#vh360-lightbox-overlay').removeClass('vh360-lightbox-active');
         $('body').removeClass('vh360-lightbox-open');
+        if (vh360CommunityLightboxLocked) {
+            if (window.VH360ScrollContext && window.VH360ScrollContext.unlock) {
+                window.VH360ScrollContext.unlock('community-image-lightbox');
+            }
+            vh360CommunityLightboxLocked = false;
+        }
     }
 
     // Close lightbox when clicking close button

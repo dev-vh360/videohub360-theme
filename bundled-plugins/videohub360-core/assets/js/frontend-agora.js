@@ -5762,7 +5762,11 @@ window.initializeAgoraPlayer = function(config) {
             setupBroadcastFullscreenPresentation(player, { nativeFullscreenBypassed: true });
         }
 
-        document.body.style.top = '-' + iosImmersiveScrollY + 'px';
+        if (iosImmersiveScrollElement === window) {
+            document.body.style.top = '-' + iosImmersiveScrollY + 'px';
+        } else {
+            document.body.style.top = '';
+        }
 
         isIOSImmersiveFullscreen = true;
 
