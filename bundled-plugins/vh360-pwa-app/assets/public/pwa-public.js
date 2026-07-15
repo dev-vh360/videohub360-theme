@@ -64,6 +64,9 @@
   }
 
   updateStandaloneClass();
+  if (window.VH360ScrollContext && window.VH360ScrollContext.updateActiveClass) {
+    window.VH360ScrollContext.updateActiveClass();
+  }
 
   window.VH360ScrollContext = window.VH360ScrollContext || {
     getElement: function () {
@@ -444,6 +447,9 @@
       }
     } catch (e) {}
     updateStandaloneClass();
+    if (window.VH360ScrollContext && window.VH360ScrollContext.updateActiveClass) {
+      window.VH360ScrollContext.updateActiveClass();
+    }
 
     // Modal container
     ensureModal();

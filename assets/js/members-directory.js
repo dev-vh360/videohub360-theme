@@ -437,7 +437,7 @@
      * Scroll to top of members grid
      */
     function scrollToTop() {
-        $('html, body').animate({
+        window.VH360ScrollContext && window.VH360ScrollContext.scrollTo ? window.VH360ScrollContext.scrollTo($('.vh360-members-controls').offset().top - 20, { behavior: 'smooth' }) : $('html, body').animate({
             scrollTop: $('.vh360-members-controls').offset().top - 20
         }, 400);
     }

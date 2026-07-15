@@ -29,11 +29,13 @@
             getElement: function() {
                 var shellScroller = document.querySelector('[data-vh360-pwa-scroll]');
                 var standalone = document.documentElement.classList.contains('vh360-pwa-standalone') || window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-                return standalone && shellScroller ? shellScroller : window;
+                var active = document.documentElement.classList.contains('vh360-pwa-app-shell-active') || (standalone && document.body && document.body.classList.contains('logged-in') && shellScroller);
+                return active && shellScroller ? shellScroller : window;
             },
-            getScrollTop: function() { return window.scrollY || window.pageYOffset || 0; },
-            getViewportHeight: function() { return window.innerHeight || document.documentElement.clientHeight; },
-            getScrollHeight: function() { return Math.max(document.body.scrollHeight, document.documentElement.scrollHeight); }
+            getScrollTop: function() { var element = this.getElement(); return element === window ? (window.scrollY || window.pageYOffset || 0) : element.scrollTop; },
+            getViewportHeight: function() { var element = this.getElement(); return element === window ? (window.innerHeight || document.documentElement.clientHeight) : element.clientHeight; },
+            getScrollHeight: function() { var element = this.getElement(); return element === window ? Math.max(document.body.scrollHeight, document.documentElement.scrollHeight) : element.scrollHeight; },
+            scrollTo: function(top, options) { var element = this.getElement(); if (element === window) { window.scrollTo({ top: top, behavior: options && options.behavior || 'auto' }); } else { element.scrollTop = top; } }
         };
     }
 

@@ -23,6 +23,7 @@
         currentIndex: 0,
         items: [],
         scrollY: 0,
+        scrollElement: null,
         $lightbox: null,
         isOpen: false,
 
@@ -222,7 +223,11 @@
             var self = this;
 
             // Store scroll position
-            this.scrollY = window.pageYOffset || document.documentElement.scrollTop;
+            this.scrollElement = window.VH360ScrollContext ? window.VH360ScrollContext.getElement() : window;
+            this.scrollY = window.VH360ScrollContext ? window.VH360ScrollContext.getScrollTop() : (window.pageYOffset || document.documentElement.scrollTop);
+            if (window.VH360ScrollContext && window.VH360ScrollContext.lock) {
+                window.VH360ScrollContext.lock('gallery-lightbox');
+            }
 
             // Get items
             this.items = this.getItems($gallery);
@@ -267,7 +272,14 @@
             this.$lightbox.find('.vh360-gallery-lightbox-image').attr('src', '');
 
             // Restore scroll position
-            window.scrollTo(0, this.scrollY);
+            if (window.VH360ScrollContext && window.VH360ScrollContext.unlock) {
+                window.VH360ScrollContext.unlock('gallery-lightbox');
+            }
+            if (this.scrollElement && this.scrollElement !== window) {
+                this.scrollElement.scrollTop = this.scrollY;
+            } else {
+                window.scrollTo(0, this.scrollY);
+            }
 
             // Reset state
             this.currentGallery = null;

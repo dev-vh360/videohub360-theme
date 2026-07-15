@@ -531,6 +531,7 @@ window.initializeAgoraPlayer = function(config) {
     // iOS immersive fullscreen state
     let isIOSImmersiveFullscreen = false;
     let iosImmersiveScrollY = 0;
+    let iosImmersiveScrollElement = null;
     let iosImmersivePreviousActiveElement = null;
     let iosImmersiveOriginalParent = null;
     let iosImmersivePlaceholder = null;
@@ -5745,7 +5746,11 @@ window.initializeAgoraPlayer = function(config) {
             return;
         }
 
-        iosImmersiveScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+        iosImmersiveScrollElement = window.VH360ScrollContext ? window.VH360ScrollContext.getElement() : window;
+        iosImmersiveScrollY = window.VH360ScrollContext ? window.VH360ScrollContext.getScrollTop() : (window.scrollY || document.documentElement.scrollTop || 0);
+        if (window.VH360ScrollContext && window.VH360ScrollContext.lock) {
+            window.VH360ScrollContext.lock('ios-immersive-video');
+        }
         iosImmersivePreviousActiveElement = document.activeElement;
 
         portalIOSImmersivePlayer(player);
@@ -5799,7 +5804,15 @@ window.initializeAgoraPlayer = function(config) {
 
         document.body.style.top = '';
 
-        window.scrollTo(0, iosImmersiveScrollY || 0);
+        if (window.VH360ScrollContext && window.VH360ScrollContext.unlock) {
+            window.VH360ScrollContext.unlock('ios-immersive-video');
+        }
+        if (iosImmersiveScrollElement && iosImmersiveScrollElement !== window) {
+            iosImmersiveScrollElement.scrollTop = iosImmersiveScrollY || 0;
+        } else {
+            window.scrollTo(0, iosImmersiveScrollY || 0);
+        }
+        iosImmersiveScrollElement = null;
 
         isIOSImmersiveFullscreen = false;
 

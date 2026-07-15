@@ -5,12 +5,8 @@
   var menuBtn = document.querySelector('.vh360-mobile-bottom-nav__menu-btn');
   var drawer = document.getElementById('vh360-mobile-user-drawer');
 
-  function getPwaScrollElement() {
-    if (!html.classList.contains('vh360-pwa-standalone')) {
-      return null;
-    }
-
-    return document.querySelector('[data-vh360-pwa-scroll]');
+  function getScrollContext() {
+    return window.VH360ScrollContext || null;
   }
 
   function initDrawer() {
@@ -20,8 +16,7 @@
 
     var closeElements = drawer.querySelectorAll('[data-vh360-drawer-close]');
     var previouslyFocused = null;
-    var lockedScrollElement = null;
-    var previousScrollOverflow = '';
+    var usedScrollContextLock = false;
 
     function openDrawer() {
       previouslyFocused = document.activeElement;
@@ -29,10 +24,10 @@
       drawer.setAttribute('aria-hidden', 'false');
       menuBtn.setAttribute('aria-expanded', 'true');
       html.classList.add('vh360-drawer-open');
-      lockedScrollElement = getPwaScrollElement();
-      if (lockedScrollElement) {
-        previousScrollOverflow = lockedScrollElement.style.overflow;
-        lockedScrollElement.style.overflow = 'hidden';
+      var scrollContext = getScrollContext();
+      if (scrollContext && typeof scrollContext.lock === 'function') {
+        scrollContext.lock('mobile-bottom-nav-drawer');
+        usedScrollContextLock = true;
       } else {
         document.body.style.overflow = 'hidden';
       }
@@ -43,10 +38,10 @@
       drawer.setAttribute('aria-hidden', 'true');
       menuBtn.setAttribute('aria-expanded', 'false');
       html.classList.remove('vh360-drawer-open');
-      if (lockedScrollElement) {
-        lockedScrollElement.style.overflow = previousScrollOverflow;
-        lockedScrollElement = null;
-        previousScrollOverflow = '';
+      var scrollContext = getScrollContext();
+      if (usedScrollContextLock && scrollContext && typeof scrollContext.unlock === 'function') {
+        scrollContext.unlock('mobile-bottom-nav-drawer');
+        usedScrollContextLock = false;
       } else {
         document.body.style.overflow = '';
       }

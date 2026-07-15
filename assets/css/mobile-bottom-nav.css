@@ -287,17 +287,17 @@
 }
 
 @media (max-width: 768px) {
-  html.vh360-pwa-standalone,
-  html.vh360-pwa-standalone body.logged-in {
+  html.vh360-pwa-app-shell-active,
+  html.vh360-pwa-app-shell-active body.logged-in {
     height: 100%;
     overflow: hidden;
   }
 
-  html.vh360-pwa-standalone body.logged-in {
+  html.vh360-pwa-app-shell-active body.logged-in {
     padding-bottom: 0;
   }
 
-  html.vh360-pwa-standalone body.logged-in .vh360-pwa-app-shell {
+  html.vh360-pwa-app-shell-active body.logged-in .vh360-pwa-app-shell {
     position: relative;
     display: grid;
     grid-template-rows: minmax(0, 1fr) auto;
@@ -307,7 +307,7 @@
     overflow: hidden;
   }
 
-  html.vh360-pwa-standalone body.logged-in .vh360-pwa-app-scroll {
+  html.vh360-pwa-app-shell-active body.logged-in .vh360-pwa-app-scroll {
     min-width: 0;
     min-height: 0;
     overflow-x: hidden;
@@ -316,11 +316,11 @@
     overscroll-behavior-y: contain;
   }
 
-  html.vh360-pwa-standalone body.logged-in .vh360-pwa-app-scroll .site {
+  html.vh360-pwa-app-shell-active body.logged-in .vh360-pwa-app-scroll .site {
     min-height: 100%;
   }
 
-  html.vh360-pwa-standalone body.logged-in .vh360-mobile-bottom-nav {
+  html.vh360-pwa-app-shell-active body.logged-in .vh360-mobile-bottom-nav {
     position: relative;
     inset: auto;
     bottom: auto;
@@ -332,8 +332,24 @@
     z-index: 20;
   }
 
-  html.vh360-pwa-standalone body.logged-in .vh360-mobile-user-drawer {
+  html.vh360-pwa-app-shell-active body.logged-in .vh360-mobile-user-drawer {
     position: absolute;
     inset: 0;
+  }
+}
+
+
+@media (max-width: 768px) {
+  html.vh360-pwa-app-shell-active #wpadminbar {
+    display: none;
+  }
+
+  html.vh360-pwa-app-shell-active {
+    margin-top: 0 !important;
+  }
+
+  html.vh360-pwa-app-shell-active body.vh360-modal-open .vh360-pwa-app-scroll,
+  html.vh360-pwa-app-shell-active body.search-modal-open .vh360-pwa-app-scroll {
+    overflow: hidden;
   }
 }

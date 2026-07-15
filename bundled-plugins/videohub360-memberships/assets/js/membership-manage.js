@@ -196,7 +196,7 @@
         var $button = $('.vh360-start-subscription[data-plan-key="' + config.selectedPlan + '"]').first();
 
         if ($card.length) {
-            $('html, body').animate({ scrollTop: Math.max(0, $card.offset().top - 80) }, 250);
+            window.VH360ScrollContext && window.VH360ScrollContext.scrollTo ? window.VH360ScrollContext.scrollTo(Math.max(0, $card.offset().top - 80), { behavior: 'smooth' }) : $('html, body').animate({ scrollTop: Math.max(0, $card.offset().top - 80) }, 250);
         }
 
         if (!$button.length || $button.data('vh360AutoCheckoutStarted')) {
