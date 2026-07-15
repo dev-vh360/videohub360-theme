@@ -49,7 +49,7 @@ class VH360_PWA_Frontend {
 		echo '<meta name="apple-mobile-web-app-capable" content="yes">' . "\n";
 		echo '<meta name="apple-mobile-web-app-title" content="' . esc_attr( $app_title ) . '">' . "\n";
 		echo '<meta name="mobile-web-app-capable" content="yes">' . "\n";
-		echo '<meta name="apple-mobile-web-app-status-bar-style" content="default">' . "\n";
+		echo '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">' . "\n";
 		if ( $apple_icon ) {
 			echo '<link rel="apple-touch-icon" href="' . $apple_icon . '">' . "\n";
 		}
