@@ -50,4 +50,12 @@ html.vh360-pwa-standalone{overscroll-behavior-y:contain}
     html .vh360-bulletin-banner .vh360-bulletin-banner-container {
         padding-top: calc(1rem + env(safe-area-inset-top, 0px));
     }
+
+    /*
+     * When the urgent bulletin is the topmost element, it owns the safe-area
+     * spacing. Do not apply the inset a second time inside the site header.
+     */
+    html body > .vh360-bulletin-banner + #page .site-header {
+        padding-top: 10px;
+    }
 }
