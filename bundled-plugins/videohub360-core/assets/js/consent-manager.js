@@ -1,12 +1,51 @@
 (function(){
   'use strict';
   var cfg = window.VH360ConsentConfig || {};
-  var state = cfg.state || { choices: { necessary: true, preferences: true, analytics: true, advertising: true }, mode: 'disabled' };
+  var state = resolveState();
   var memory = {};
   var keys = {};
   var rootSelector = '[data-vh360-consent-root]';
   var lastFocus = null;
+  var bannerWasVisible = false;
   var inerted = [];
+
+  function readConsentCookie(){
+    var name = (cfg.cookieName || 'vh360_consent') + '=';
+    var parts = document.cookie ? document.cookie.split(';') : [];
+    for(var i = 0; i < parts.length; i++){
+      var part = parts[i].trim();
+      if(part.indexOf(name) === 0){
+        try { return JSON.parse(decodeURIComponent(part.slice(name.length))); } catch(e) { try { return JSON.parse(part.slice(name.length)); } catch(e2) { return {}; } }
+      }
+    }
+    return {};
+  }
+  function resolveState(){
+    var settings = cfg.settings || {};
+    var mode = settings.mode || 'disabled';
+    var cookie = readConsentCookie();
+    var validPolicy = cookie && cookie.policy_version === String(settings.policy_version || '1');
+    var choices = { necessary:true, preferences:true, analytics:true, advertising:true };
+    if(mode === 'strict') choices = { necessary:true, preferences:false, analytics:false, advertising:false };
+    if(validPolicy && cookie.choices){ ['preferences','analytics','advertising'].forEach(function(cat){ choices[cat] = !!cookie.choices[cat]; }); }
+    if(mode === 'disabled' || mode === 'notice') choices = { necessary:true, preferences:true, analytics:true, advertising:true };
+    var gpc = navigator.globalPrivacyControl === true;
+    if(gpc) choices.advertising = false;
+    return { mode:mode, enabled:mode !== 'disabled', policy_version:String(settings.policy_version || '1'), choices:choices, gpc:gpc, needs_choice:(mode !== 'disabled' && (!validPolicy || (mode === 'notice' && !cookie.notice_acknowledged))) };
+  }
+  function syncWpConsentApi(){
+    var map = { necessary:'functional', preferences:'preferences', analytics:'statistics-anonymous', advertising:'marketing' };
+    var detail = {};
+    Object.keys(map).forEach(function(cat){
+      var value = cat === 'necessary' || !!(state.choices && state.choices[cat]);
+      detail[map[cat]] = value ? 'allow' : 'deny';
+      if(typeof window.wp_set_consent === 'function'){
+        try { window.wp_set_consent(map[cat], detail[map[cat]]); } catch(e) {}
+      }
+    });
+    document.dispatchEvent(new CustomEvent('wp_listen_for_consent_change', { detail: detail }));
+  }
+
   var knownKeys = [
     'vh360_members_view', 'vh360_recent_emojis', 'vh360_quality_prefs', 'vh360-layout-view-preference', 'vh360StudioMode',
     'vh360_community_menu_expanded', 'vh360_pwa_install_banner_dismissed_until',
@@ -31,10 +70,10 @@
 
   function save(choices, notice){
     var fd = new FormData();
-    fd.append('action','vh360_save_consent'); fd.append('nonce',cfg.nonce || ''); fd.append('notice_acknowledged', notice ? '1' : '0');
+    fd.append('action','vh360_save_consent'); fd.append('notice_acknowledged', notice ? '1' : '0');
     ['preferences','analytics','advertising'].forEach(function(c){ fd.append('choices[' + c + ']', choices[c] ? '1' : '0'); });
     return fetch(cfg.ajaxUrl,{ method:'POST', credentials:'same-origin', body:fd }).then(function(r){ return r.json(); }).then(function(res){
-      if(res && res.success){ state = res.data; cleanup(); fire(); }
+      if(res && res.success){ state = resolveState(); cleanup(); fire(); syncWpConsentApi(); }
       return state;
     });
   }
@@ -57,6 +96,7 @@
   }
   function openPrefs(){
     var m = modal(); if(!m) return;
+    bannerWasVisible = roots().some(function(r){ var b = banner(r); return b && !r.hidden && !b.hidden; });
     setRootVisible(false);
     updateUi();
     lastFocus = document.activeElement;
@@ -69,14 +109,15 @@
     var m = modal(); if(m) m.hidden = true;
     inertBackground(false);
     document.documentElement.classList.remove('vh360-consent-modal-open');
-    if(dismiss) hideRoots();
-    if(lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
+    if(dismiss) { hideRoots(); }
+    else if(bannerWasVisible) { setRootVisible(true); }
+    if(lastFocus && typeof lastFocus.focus === 'function' && (!lastFocus.closest || !lastFocus.closest('[hidden]'))) lastFocus.focus();
   }
   function updateUi(){
     document.querySelectorAll('[data-vh360-consent-category]').forEach(function(i){
       var cat = i.getAttribute('data-vh360-consent-category');
       i.checked = has(cat);
-      i.disabled = cat === 'advertising' && navigator.globalPrivacyControl === true;
+      i.disabled = cat === 'advertising' && (navigator.globalPrivacyControl === true || state.gpc);
     });
     document.querySelectorAll('.vh360-consent-gpc').forEach(function(e){ e.hidden = !(navigator.globalPrivacyControl === true || state.gpc); });
     document.querySelectorAll('[data-vh360-consent-notice-only]').forEach(function(e){ e.hidden = !isNotice(); });
@@ -121,10 +162,11 @@
   function loadActivityAds(){
     if(!api.hasService('activity-feed-ad-slot')) return;
     document.querySelectorAll('[data-vh360-activity-ad-blocked]').forEach(function(slot){
-      if(slot.dataset.vh360Loaded) return; slot.dataset.vh360Loaded = '1';
-      var fd = new FormData(); fd.append('action','vh360_activity_ad_markup'); fd.append('nonce',cfg.activityAdNonce || '');
+      if(slot.dataset.vh360Loaded) return;
+      var fd = new FormData(); fd.append('action','vh360_activity_ad_markup');
       fetch(cfg.ajaxUrl,{ method:'POST', credentials:'same-origin', body:fd }).then(function(r){ return r.json(); }).then(function(res){
         if(!res || !res.success || !res.data || !res.data.html) return;
+        slot.dataset.vh360Loaded = '1';
         var wrap = document.createElement('div'); wrap.innerHTML = res.data.html;
         slot.replaceChildren.apply(slot, Array.prototype.slice.call(wrap.childNodes));
         executeInsertedScripts(slot);
@@ -154,5 +196,5 @@
     if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
     else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
   });
-  document.addEventListener('DOMContentLoaded',function(){ knownKeys.forEach(window.VH360Storage.registerPreferenceKey); if(state.needs_choice) setRootVisible(true); updateUi(); cleanup(); loadActivityAds(); activateScripts(); });
+  document.addEventListener('DOMContentLoaded',function(){ state = resolveState(); knownKeys.forEach(window.VH360Storage.registerPreferenceKey); if(state.needs_choice) setRootVisible(true); updateUi(); cleanup(); loadActivityAds(); activateScripts(); });
 })();

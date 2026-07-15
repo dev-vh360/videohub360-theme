@@ -23,6 +23,7 @@ class VideoHub360_Consent_Manager {
         add_action('wp_ajax_vh360_activity_ad_markup', array($this, 'ajax_activity_ad_markup'));
         add_action('wp_ajax_nopriv_vh360_activity_ad_markup', array($this, 'ajax_activity_ad_markup'));
         add_action('wp_print_scripts', array($this, 'gate_registered_scripts'), 100);
+        add_action('wp_print_footer_scripts', array($this, 'gate_registered_scripts'), 100);
     }
 
     public function get_settings() {
@@ -118,7 +119,6 @@ class VideoHub360_Consent_Manager {
     public function services() { return $this->services; }
 
     public function ajax_save_consent() {
-        check_ajax_referer('vh360_consent_nonce', 'nonce');
         $settings = $this->get_settings();
         if ('disabled' === $settings['mode']) wp_send_json_success($this->get_state());
         $old = $this->get_state();
@@ -140,7 +140,6 @@ class VideoHub360_Consent_Manager {
     }
 
     public function ajax_activity_ad_markup() {
-        check_ajax_referer('vh360_activity_ad_nonce', 'nonce');
         if (!$this->has_consent('advertising')) wp_send_json_error(array('message'=>'consent_required'), 403);
         ob_start();
         if (is_active_sidebar('activity-feed-ad')) dynamic_sidebar('activity-feed-ad');
@@ -149,9 +148,12 @@ class VideoHub360_Consent_Manager {
     }
 
     public function gate_registered_scripts() {
+        if (!apply_filters('videohub360_consent_enable_php_script_dequeue', false)) {
+            return;
+        }
         $blocked = apply_filters('videohub360_consent_script_handles', array());
         foreach ($blocked as $handle => $category) if (!$this->has_consent($category)) wp_dequeue_script($handle);
     }
 
-    public function frontend_config() { return array('ajaxUrl'=>admin_url('admin-ajax.php'),'nonce'=>wp_create_nonce('vh360_consent_nonce'),'activityAdNonce'=>wp_create_nonce('vh360_activity_ad_nonce'),'settings'=>$this->get_settings(),'state'=>$this->get_state(),'services'=>$this->services->all(),'cookieName'=>self::COOKIE); }
+    public function frontend_config() { return array('ajaxUrl'=>admin_url('admin-ajax.php'),'settings'=>$this->get_settings(),'services'=>$this->services->all(),'cookieName'=>self::COOKIE); }
 }

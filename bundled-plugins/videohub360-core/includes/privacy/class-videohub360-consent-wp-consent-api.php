@@ -12,9 +12,9 @@ class VideoHub360_Consent_WP_Consent_API {
 
     public function __construct($manager) {
         $this->manager = $manager;
-        foreach ($this->map as $wp_category) {
-            add_filter('wp_consent_api_registered_' . $wp_category, '__return_true');
-        }
+        $plugin = defined('VIDEOHUB360_PLUGIN_FILE') ? plugin_basename(VIDEOHUB360_PLUGIN_FILE) : 'videohub360/videohub360.php';
+        add_filter('wp_consent_api_registered_' . $plugin, '__return_true');
+        add_filter('wp_get_consent_type', array($this, 'get_consent_type'));
         add_filter('videohub360_wp_consent_api_map', array($this, 'get_map'));
         add_filter('videohub360_consent_state', array($this, 'maybe_apply_external_override'), 20, 3);
         add_action('videohub360_consent_changed', array($this, 'sync_to_wp_consent_api'), 10, 2);
@@ -22,6 +22,18 @@ class VideoHub360_Consent_WP_Consent_API {
 
     public function get_map() {
         return $this->map;
+    }
+
+    public function get_consent_type($type = '') {
+        $settings = $this->manager ? $this->manager->get_settings() : array();
+        $mode = isset($settings['mode']) ? $settings['mode'] : 'disabled';
+        if ('strict' === $mode) {
+            return 'optin';
+        }
+        if ('opt_out' === $mode) {
+            return 'optout';
+        }
+        return $type;
     }
 
     public function maybe_apply_external_override($state, $settings, $cookie) {

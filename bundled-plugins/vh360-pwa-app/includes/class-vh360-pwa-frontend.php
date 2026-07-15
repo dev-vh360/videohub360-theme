@@ -171,29 +171,9 @@ class VH360_PWA_Frontend {
 	 * Registering a second SW at the same scope causes conflicts and intermittent failures.
 	 */
 	private function should_skip_sw_registration() : bool {
-		$push_manager = VH360_PWA_App::instance()->push_manager;
-		if ( ! $push_manager ) {
-			return false;
-		}
-		$settings = $push_manager->get_settings();
-		$mode = $settings['mode'] ?? '';
-		if ( 'provider' !== $mode && 'hybrid' !== $mode ) {
-			return false;
-		}
-		$active_provider = $settings['active_provider'] ?? '';
-		if ( 'onesignal' !== $active_provider ) {
-			return false;
-		}
-		$adapter = $push_manager->get_adapter( $active_provider );
-		if ( ! $adapter ) {
-			return false;
-		}
-		if ( function_exists( 'videohub360_has_consent' ) && ! videohub360_has_consent( 'preferences' ) ) {
-			return false;
-		}
-		$provider_settings = $settings['providers'][ $active_provider ] ?? array();
-		$errors = $adapter->validate_settings( $provider_settings );
-		return empty( $errors );
+		// The first-party VH360 service worker provides manifest/offline/update behavior and must
+		// remain independent of optional third-party push consent or SDK availability.
+		return false;
 	}
 
 	public function register_widgets() : void {

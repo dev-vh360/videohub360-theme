@@ -305,17 +305,6 @@ function vh360_pwa_build_sw_script( ?array $opts = null ) : string {
 		$strategy = 'safe';
 	}
 	$onesignal = array();
-	$push_settings = get_option( 'vh360_pwa_push_settings', array() );
-	if ( is_array( $push_settings ) ) {
-		$mode = (string) ( $push_settings['mode'] ?? '' );
-		$active_provider = (string) ( $push_settings['active_provider'] ?? '' );
-		$providers = $push_settings['providers'] ?? array();
-		$onesignal_settings = ( isset( $providers['onesignal'] ) && is_array( $providers['onesignal'] ) ) ? $providers['onesignal'] : array();
-		if ( in_array( $mode, array( 'provider', 'hybrid' ), true ) && 'onesignal' === $active_provider && ! empty( $onesignal_settings['app_id'] ) ) {
-			$sdk_version = defined( 'VH360_PWA_ONESIGNAL_SDK_VERSION' ) ? VH360_PWA_ONESIGNAL_SDK_VERSION : 'v16';
-			$onesignal = array( 'importUrl' => 'https://cdn.onesignal.com/sdks/web/' . $sdk_version . '/OneSignalSDK.sw.js' );
-		}
-	}
 	$payload = array(
 		'cacheVersion' => $effective_cache_version,
 		'strategy'     => $strategy,

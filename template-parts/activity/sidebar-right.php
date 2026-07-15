@@ -29,7 +29,7 @@ $recommended_users = function_exists('vh360_get_recommended_profiles') ? vh360_g
     <?php if ($show_ad_space) : ?>
     <!-- Ad Slot Widget Area -->
     <?php if (is_active_sidebar('activity-feed-ad')) : ?>
-        <?php if ('personalized' === $activity_ad_privacy_type && function_exists('videohub360_has_service_consent') && !videohub360_has_service_consent('activity-feed-ad-slot')) : ?>
+        <?php if ('personalized' === $activity_ad_privacy_type) : ?>
             <div class="vh360-sidebar-widget vh360-ad-slot vh360-ad-slot--blocked" data-vh360-activity-ad-slot data-vh360-activity-ad-blocked>
                 <div class="vh360-widget-content">
                     <p><?php esc_html_e('This advertising space is available after advertising privacy choices are enabled.', 'videohub360-theme'); ?></p>

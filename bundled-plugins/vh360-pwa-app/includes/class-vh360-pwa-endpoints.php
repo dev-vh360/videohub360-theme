@@ -149,8 +149,8 @@ class VH360_PWA_Endpoints {
 		header( 'Content-Type: application/javascript; charset=utf-8', true );
 		header( 'Service-Worker-Allowed: /', true );
 
-		// Import the VH360 service worker once; it owns the controlled OneSignal import.
-		echo "importScripts('/" . esc_js( VH360_PWA_SW_SLUG ) . "?v=" . esc_js( (string) vh360_pwa_get_asset_version() ) . "');\n";
+		$sdk_version = defined( 'VH360_PWA_ONESIGNAL_SDK_VERSION' ) ? VH360_PWA_ONESIGNAL_SDK_VERSION : 'v16';
+		echo "importScripts('https://cdn.onesignal.com/sdks/web/" . esc_js( $sdk_version ) . "/OneSignalSDK.sw.js');\n";
 	}
 
 	/**
@@ -161,7 +161,7 @@ class VH360_PWA_Endpoints {
 		header( 'Content-Type: application/javascript; charset=utf-8', true );
 		header( 'Service-Worker-Allowed: /', true );
 
-		// Import the VH360 service worker once; it owns the controlled OneSignal import.
-		echo "importScripts('/" . esc_js( VH360_PWA_SW_SLUG ) . "?v=" . esc_js( (string) vh360_pwa_get_asset_version() ) . "');\n";
+		$sdk_version = defined( 'VH360_PWA_ONESIGNAL_SDK_VERSION' ) ? VH360_PWA_ONESIGNAL_SDK_VERSION : 'v16';
+		echo "importScripts('https://cdn.onesignal.com/sdks/web/" . esc_js( $sdk_version ) . "/OneSignalSDK.sw.js');\n";
 	}
 }
