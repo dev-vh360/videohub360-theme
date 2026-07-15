@@ -1,17 +1,24 @@
 (function () {
     'use strict';
+
+var VH360StorageCompat = window.VH360Storage || {
+  getPreference: function(key, def){ try { var value = window['localStorage'].getItem(key); return value === null ? def : value; } catch (e) { return def; } },
+  setPreference: function(key, value){ try { window['localStorage'].setItem(key, value); } catch (e) {} },
+  removePreference: function(key){ try { window['localStorage'].removeItem(key); } catch (e) {} },
+  registerPreferenceKey: function(){}
+};
     const root = document.querySelector('[data-vh360-studio-entry-router]');
     if (!root) { return; }
     const key = 'vh360StudioMode';
     const params = new URLSearchParams(window.location.search);
     const explicit = params.get('studio_mode');
-    function remember(mode) { try { window.localStorage.setItem(key, mode); } catch (e) {} }
+    function remember(mode) { try { VH360StorageCompat.setPreference(key, mode); } catch (e) {} }
     root.querySelectorAll('[data-studio-mode-choice]').forEach(function (link) {
         link.addEventListener('click', function () { remember(link.getAttribute('data-studio-mode-choice')); });
     });
     if (explicit === 'mobile' || explicit === 'desktop') { remember(explicit); return; }
     let stored = '';
-    try { stored = window.localStorage.getItem(key) || ''; } catch (e) {}
+    try { stored = VH360StorageCompat.getPreference(key) || ''; } catch (e) {}
     const mode = (stored === 'mobile' || stored === 'desktop') ? stored : (function () {
         const compact = window.matchMedia && window.matchMedia('(max-width: 900px)').matches;
         const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;

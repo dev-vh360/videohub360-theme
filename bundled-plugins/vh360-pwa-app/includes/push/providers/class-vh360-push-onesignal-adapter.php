@@ -111,8 +111,11 @@ class VH360_Push_OneSignal_Adapter implements VH360_PWA_Push_Adapter_Interface {
 			return; // Don't load SDK if config is invalid
 		}
 
+		$has_preferences_consent = ! function_exists('videohub360_has_consent') || videohub360_has_consent('preferences');
+
 		// OneSignal SDK
 		$sdk_version = defined( 'VH360_PWA_ONESIGNAL_SDK_VERSION' ) ? VH360_PWA_ONESIGNAL_SDK_VERSION : 'v16';
+		if ( $has_preferences_consent ) {
 		wp_enqueue_script(
 			'onesignal-sdk',
 			'https://cdn.onesignal.com/sdks/web/' . $sdk_version . '/OneSignalSDK.page.js',
@@ -123,12 +126,13 @@ class VH360_Push_OneSignal_Adapter implements VH360_PWA_Push_Adapter_Interface {
 				'strategy'  => 'defer',
 			)
 		);
+		}
 
 		// Our initialization script
 		wp_enqueue_script(
 			'vh360-pwa-push-public',
 			VH360_PWA_APP_URL . 'assets/public/push-public.js',
-			array( 'onesignal-sdk' ),
+			$has_preferences_consent ? array( 'onesignal-sdk' ) : array(),
 			vh360_pwa_app_asset_version('assets/public/push-public.js'),
 			array(
 				'in_footer' => true,

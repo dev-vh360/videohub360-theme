@@ -1,6 +1,13 @@
 (function () {
   'use strict';
 
+var VH360StorageCompat = window.VH360Storage || {
+  getPreference: function(key, def){ try { var value = window['localStorage'].getItem(key); return value === null ? def : value; } catch (e) { return def; } },
+  setPreference: function(key, value){ try { window['localStorage'].setItem(key, value); } catch (e) {} },
+  removePreference: function(key){ try { window['localStorage'].removeItem(key); } catch (e) {} },
+  registerPreferenceKey: function(){}
+};
+
   // Safe access to localized settings
   var CFG = window.VH360PWA || {};
   var swUrl = CFG.swUrl || '/vh360-sw.js';
@@ -71,7 +78,7 @@
 
   function dismissedUntil() {
     try {
-      return parseInt(localStorage.getItem(storageKey()) || '0', 10);
+      return parseInt(VH360StorageCompat.getPreference(storageKey()) || '0', 10);
     } catch (e) {
       return 0;
     }
@@ -80,7 +87,7 @@
   function setDismissed(days) {
     try {
       var ms = Date.now() + (days * 24 * 60 * 60 * 1000);
-      localStorage.setItem(storageKey(), String(ms));
+      VH360StorageCompat.setPreference(storageKey(), String(ms));
     } catch (e) {}
   }
 
@@ -359,7 +366,7 @@
 
       // Simple banner reset.
       if (params.get('vh360_pwa_reset') === '1') {
-        try { localStorage.removeItem(storageKey()); } catch (e1) {}
+        try { VH360StorageCompat.removePreference(storageKey()); } catch (e1) {}
         ranTool = true;
       }
 
@@ -391,7 +398,7 @@
 
         if (tool === 'reset_device') {
           // Reset banner dismissal as part of the full reset.
-          try { localStorage.removeItem(storageKey()); } catch (e2) {}
+          try { VH360StorageCompat.removePreference(storageKey()); } catch (e2) {}
         }
 
         Promise.all(tasks).then(function () {

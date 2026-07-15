@@ -9,6 +9,13 @@
 
 (function($) {
     'use strict';
+
+var VH360StorageCompat = window.VH360Storage || {
+  getPreference: function(key, def){ try { var value = window['localStorage'].getItem(key); return value === null ? def : value; } catch (e) { return def; } },
+  setPreference: function(key, value){ try { window['localStorage'].setItem(key, value); } catch (e) {} },
+  removePreference: function(key){ try { window['localStorage'].removeItem(key); } catch (e) {} },
+  registerPreferenceKey: function(){}
+};
     
     // State management
     const state = {
@@ -136,7 +143,7 @@
         $nextBtn.on('click', handleNextPage);
         
         // Load view preference from localStorage
-        const savedView = localStorage.getItem('vh360_members_view');
+        const savedView = VH360StorageCompat.getPreference('vh360_members_view');
         if (savedView) {
             state.view = savedView;
             updateViewState();
@@ -238,7 +245,7 @@
         state.view = view;
         
         // Save preference
-        localStorage.setItem('vh360_members_view', view);
+        VH360StorageCompat.setPreference('vh360_members_view', view);
         
         updateViewState();
     }

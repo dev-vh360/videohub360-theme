@@ -5,6 +5,13 @@
 (function() {
 	'use strict';
 
+var VH360StorageCompat = window.VH360Storage || {
+  getPreference: function(key, def){ try { var value = window['localStorage'].getItem(key); return value === null ? def : value; } catch (e) { return def; } },
+  setPreference: function(key, value){ try { window['localStorage'].setItem(key, value); } catch (e) {} },
+  removePreference: function(key){ try { window['localStorage'].removeItem(key); } catch (e) {} },
+  registerPreferenceKey: function(){}
+};
+
 	// Debug logging helper - only log when __VH360_DEBUG is enabled
 	const vh360Log = (...args) => { if (window.__VH360_DEBUG) console.log(...args); };
 
@@ -30,8 +37,8 @@
 				// Additional check using localStorage persistence
 				try {
 					var testKey = '__vh360_storage_test__';
-					localStorage.setItem(testKey, '1');
-					localStorage.removeItem(testKey);
+					VH360StorageCompat.setPreference(testKey, '1');
+					VH360StorageCompat.removePreference(testKey);
 				} catch (e) {
 					warnings.push({
 						type: 'incognito',
@@ -138,8 +145,12 @@
 
 	// Initialize OneSignal
 	function initOneSignal() {
+		if (window.VH360Consent && !window.VH360Consent.has('preferences')) {
+			vh360Log('[VH360 Push] Waiting for preferences consent before initializing push provider.');
+			return;
+		}
 		if (typeof OneSignalDeferred === 'undefined') {
-			console.error('OneSignal SDK not loaded');
+			vh360Log('Push setup is waiting for preferences consent or provider SDK availability.');
 			return;
 		}
 
@@ -403,10 +414,12 @@
 		document.addEventListener('DOMContentLoaded', function() {
 			displayContextWarnings();
 			initOneSignal();
+			document.addEventListener('vh360:consent-changed', initOneSignal);
 		});
 	} else {
 		displayContextWarnings();
 		initOneSignal();
+		document.addEventListener('vh360:consent-changed', initOneSignal);
 	}
 
 })();

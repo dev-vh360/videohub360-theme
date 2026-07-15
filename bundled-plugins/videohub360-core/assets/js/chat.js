@@ -1,3 +1,10 @@
+
+var VH360StorageCompat = window.VH360Storage || {
+  getPreference: function(key, def){ try { var value = window['localStorage'].getItem(key); return value === null ? def : value; } catch (e) { return def; } },
+  setPreference: function(key, value){ try { window['localStorage'].setItem(key, value); } catch (e) {} },
+  removePreference: function(key){ try { window['localStorage'].removeItem(key); } catch (e) {} },
+  registerPreferenceKey: function(){}
+};
 /* VideoHub360 patched: debug flag + vh360 namespace (non-destructive) */
 if (typeof window !== 'undefined') {
   window.vh360 = window.vh360 || {};
@@ -1577,7 +1584,7 @@ if (typeof window !== 'undefined') {
     // Load recent emojis from localStorage
     function loadRecentEmojis() {
         try {
-            var recent = localStorage.getItem('vh360_recent_emojis');
+            var recent = VH360StorageCompat.getPreference('vh360_recent_emojis');
             if (recent) {
                 emojiCategories.recent.emojis = JSON.parse(recent);
             }
@@ -1589,7 +1596,7 @@ if (typeof window !== 'undefined') {
     // Save recent emojis to localStorage
     function saveRecentEmojis() {
         try {
-            localStorage.setItem('vh360_recent_emojis', JSON.stringify(emojiCategories.recent.emojis));
+            VH360StorageCompat.setPreference('vh360_recent_emojis', JSON.stringify(emojiCategories.recent.emojis));
         } catch (e) {
             if (window.__VH360_DEBUG) console.warn('Failed to save recent emojis:', e);
         }

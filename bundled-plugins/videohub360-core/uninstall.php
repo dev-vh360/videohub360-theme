@@ -55,6 +55,7 @@ if ($delete_on_uninstall) {
     delete_option('videohub360_location_filter_label');
     // Remove the flag so deletion does not persist after reinstall
     delete_option('videohub360_delete_on_uninstall');
+    delete_option('vh360_consent_settings');
 
     // Remove user meta data (if any)
     delete_metadata('user', 0, 'videohub360_user_preference', '', true);

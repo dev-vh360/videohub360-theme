@@ -1,6 +1,13 @@
 (function () {
     'use strict';
 
+var VH360StorageCompat = window.VH360Storage || {
+  getPreference: function(key, def){ try { var value = window['localStorage'].getItem(key); return value === null ? def : value; } catch (e) { return def; } },
+  setPreference: function(key, value){ try { window['localStorage'].setItem(key, value); } catch (e) {} },
+  removePreference: function(key){ try { window['localStorage'].removeItem(key); } catch (e) {} },
+  registerPreferenceKey: function(){}
+};
+
     const CONFIG = {
         defaultWidth: 400,
         minWidth: 320,
@@ -29,19 +36,19 @@
     const storage = {
         get(key) {
             try {
-                return window.localStorage.getItem(key);
+                return VH360StorageCompat.getPreference(key);
             } catch (error) {
                 return null;
             }
         },
         set(key, value) {
             try {
-                window.localStorage.setItem(key, value);
+                VH360StorageCompat.setPreference(key, value);
             } catch (error) {}
         },
         remove(key) {
             try {
-                window.localStorage.removeItem(key);
+                VH360StorageCompat.removePreference(key);
             } catch (error) {}
         },
     };

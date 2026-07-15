@@ -16,6 +16,13 @@ if (typeof window !== 'undefined') {
 // Simple direct implementation without complex initialization
 (function() {
     'use strict';
+
+var VH360StorageCompat = window.VH360Storage || {
+  getPreference: function(key, def){ try { var value = window['localStorage'].getItem(key); return value === null ? def : value; } catch (e) { return def; } },
+  setPreference: function(key, value){ try { window['localStorage'].setItem(key, value); } catch (e) {} },
+  removePreference: function(key){ try { window['localStorage'].removeItem(key); } catch (e) {} },
+  registerPreferenceKey: function(){}
+};
     
     let settingsOverlay = null;
     let isOpen = false;
@@ -110,7 +117,7 @@ if (typeof window !== 'undefined') {
             
             // Try localStorage as final fallback
             try {
-                const prefs = JSON.parse(localStorage.getItem('vh360_quality_prefs') || '{}');
+                const prefs = JSON.parse(VH360StorageCompat.getPreference('vh360_quality_prefs') || '{}');
                 if (prefs.quality) {
                     currentQuality.key = prefs.quality;
                 }
@@ -531,7 +538,7 @@ if (typeof window !== 'undefined') {
             
             // Override with localStorage if available
             try {
-                const prefs = JSON.parse(localStorage.getItem('vh360_quality_prefs') || '{}');
+                const prefs = JSON.parse(VH360StorageCompat.getPreference('vh360_quality_prefs') || '{}');
                 if (prefs.quality && presets[prefs.quality]) {
                     currentQuality = {
                         key: prefs.quality,
@@ -633,7 +640,7 @@ if (typeof window !== 'undefined') {
             
             // Override with localStorage if available
             try {
-                const prefs = JSON.parse(localStorage.getItem('vh360_quality_prefs') || '{}');
+                const prefs = JSON.parse(VH360StorageCompat.getPreference('vh360_quality_prefs') || '{}');
                 if (prefs.mirror && mirrors[prefs.mirror]) {
                     currentMirror = {
                         key: prefs.mirror,
@@ -942,9 +949,9 @@ if (typeof window !== 'undefined') {
                 
                 // Always save to localStorage as backup
                 try {
-                    const prefs = JSON.parse(localStorage.getItem('vh360_quality_prefs') || '{}');
+                    const prefs = JSON.parse(VH360StorageCompat.getPreference('vh360_quality_prefs') || '{}');
                     prefs.quality = quality;
-                    localStorage.setItem('vh360_quality_prefs', JSON.stringify(prefs));
+                    VH360StorageCompat.setPreference('vh360_quality_prefs', JSON.stringify(prefs));
                     if (window.__VH360_DEBUG) console.log('VideoHub360 Unified Settings: Quality preference saved to localStorage');
                 } catch (e) {
                     if (window.__VH360_DEBUG) console.warn('VideoHub360 Unified Settings: Failed to save quality preference:', e);
@@ -1008,9 +1015,9 @@ if (typeof window !== 'undefined') {
                 
                 // Always save to localStorage as backup
                 try {
-                    const prefs = JSON.parse(localStorage.getItem('vh360_quality_prefs') || '{}');
+                    const prefs = JSON.parse(VH360StorageCompat.getPreference('vh360_quality_prefs') || '{}');
                     prefs.mirror = mirror;
-                    localStorage.setItem('vh360_quality_prefs', JSON.stringify(prefs));
+                    VH360StorageCompat.setPreference('vh360_quality_prefs', JSON.stringify(prefs));
                     if (window.__VH360_DEBUG) console.log('VideoHub360 Unified Settings: Mirror preference saved to localStorage');
                 } catch (e) {
                     if (window.__VH360_DEBUG) console.warn('VideoHub360 Unified Settings: Failed to save mirror preference:', e);
