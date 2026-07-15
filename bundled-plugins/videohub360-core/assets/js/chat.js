@@ -211,17 +211,17 @@ if (typeof window !== 'undefined') {
                 case 'shortcode':
                     // Shortcode content is already rendered in PHP, just show modal
                     loginModal.classList.add('active');
-                    document.body.style.overflow = 'hidden';
+                    if (window.VH360ScrollContext && window.VH360ScrollContext.lock) { window.VH360ScrollContext.lock('videohub360-chat-modal'); } else { document.body.style.overflow = 'hidden'; }
                     break;
                 default: // 'default'
                     loginModal.classList.add('active');
-                    document.body.style.overflow = 'hidden';
+                    if (window.VH360ScrollContext && window.VH360ScrollContext.lock) { window.VH360ScrollContext.lock('videohub360-chat-modal'); } else { document.body.style.overflow = 'hidden'; }
                     break;
             }
         } else {
             // Fallback to default behavior
             loginModal.classList.add('active');
-            document.body.style.overflow = 'hidden';
+            if (window.VH360ScrollContext && window.VH360ScrollContext.lock) { window.VH360ScrollContext.lock('videohub360-chat-modal'); } else { document.body.style.overflow = 'hidden'; }
         }
     }
     
@@ -277,7 +277,7 @@ if (typeof window !== 'undefined') {
     }
     function closeLoginModal() {
         loginModal.classList.remove('active');
-        document.body.style.overflow = '';
+        if (window.VH360ScrollContext && window.VH360ScrollContext.unlock) { window.VH360ScrollContext.unlock('videohub360-chat-modal'); } else { document.body.style.overflow = ''; }
     }
     if (loginModalClose) loginModalClose.addEventListener('click', closeLoginModal);
     if (loginModal) {
@@ -1052,7 +1052,7 @@ if (typeof window !== 'undefined') {
     function cleanup() {
         document.removeEventListener('keydown', handleEscapeKey);
         if (observer) observer.disconnect();
-        document.body.style.overflow = '';
+        if (window.VH360ScrollContext && window.VH360ScrollContext.unlock) { window.VH360ScrollContext.unlock('videohub360-chat-modal'); } else { document.body.style.overflow = ''; }
     }
     function closeModerationModal() {
         if (modal && modal.parentNode) {
@@ -1200,7 +1200,7 @@ if (typeof window !== 'undefined') {
 
     // ACTIVATE the modal and lock scroll (required to show it)
     modal.classList.add('active');
-    document.body.style.overflow = 'hidden';
+    if (window.VH360ScrollContext && window.VH360ScrollContext.lock) { window.VH360ScrollContext.lock('videohub360-chat-modal'); } else { document.body.style.overflow = 'hidden'; }
 
     // Close modal when clicking outside the content
     modal.addEventListener('click', function(e) {

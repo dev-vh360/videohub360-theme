@@ -89,9 +89,13 @@
             const filter = $('.vh360-event-filter.active').data('filter');
             
             // Scroll to top
-            $('html, body').animate({
-                scrollTop: $('#vh360-events-list-container').offset().top - 100
-            }, 300);
+            if (window.VH360ScrollContext && window.VH360ScrollContext.scrollElementIntoView) {
+                window.VH360ScrollContext.scrollElementIntoView($('#vh360-events-list-container').get(0), 100, { behavior: 'smooth' });
+            } else {
+                $('html, body').animate({
+                    scrollTop: $('#vh360-events-list-container').offset().top - 100
+                }, 300);
+            }
             
             VH360Events.loadEvents(filter, parseInt(page));
         },

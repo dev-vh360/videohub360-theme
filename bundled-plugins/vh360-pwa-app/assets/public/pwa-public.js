@@ -71,7 +71,7 @@
   window.VH360ScrollContext = window.VH360ScrollContext || {
     getElement: function () {
       var shellScroller = document.querySelector('[data-vh360-pwa-scroll]');
-      return isStandalone() && shellScroller ? shellScroller : window;
+      return document.documentElement.classList.contains('vh360-pwa-app-shell-active') && shellScroller ? shellScroller : window;
     },
     getScrollTop: function () {
       var element = this.getElement();
@@ -254,19 +254,31 @@
   function initRefreshControls() {
     if (!isStandalone()) return;
     if (!CFG.enablePullToRefresh) return;
+    if (document.querySelector('.vh360-pwa-ptr')) return;
+
     var indicator = document.createElement('div');
     indicator.className = 'vh360-pwa-ptr';
     indicator.textContent = 'Pull to refresh';
     document.body.appendChild(indicator);
+
     var startY = 0, pulling = false, ready = false, threshold = 86;
-    var scrollTarget = window.VH360ScrollContext.getElement();
-    var touchTarget = scrollTarget === window ? document : scrollTarget;
-    touchTarget.addEventListener('touchstart', function (e) {
+    var touchTarget = null;
+
+    function resetPull() {
+      pulling = false;
+      ready = false;
+      indicator.classList.remove('is-visible');
+      indicator.style.transform = '';
+    }
+
+    function onTouchStart(e) {
       if (!isStandalone() || window.VH360ScrollContext.getScrollTop() > 0 || isIgnoredRefreshTarget(e.target)) return;
       startY = e.touches && e.touches[0] ? e.touches[0].clientY : 0;
-      pulling = true; ready = false;
-    }, { passive: true });
-    touchTarget.addEventListener('touchmove', function (e) {
+      pulling = true;
+      ready = false;
+    }
+
+    function onTouchMove(e) {
       if (!pulling || !e.touches || !e.touches[0]) return;
       var diff = e.touches[0].clientY - startY;
       if (diff <= 0 || window.VH360ScrollContext.getScrollTop() > 0) return;
@@ -275,18 +287,36 @@
       indicator.textContent = ready ? 'Release to refresh' : 'Pull to refresh';
       indicator.style.transform = 'translate(-50%, ' + Math.min(diff / 2, 70) + 'px)';
       indicator.classList.add('is-visible');
-    }, { passive: false });
-    touchTarget.addEventListener('touchend', function () {
+    }
+
+    function onTouchEnd() {
       if (!pulling) return;
       pulling = false;
       if (ready) {
         indicator.textContent = 'Refreshing…';
         setTimeout(function () { window.location.reload(); }, 120);
       } else {
-        indicator.classList.remove('is-visible');
-        indicator.style.transform = '';
+        resetPull();
       }
-    }, { passive: true });
+    }
+
+    function bindPullTarget() {
+      var scrollTarget = window.VH360ScrollContext.getElement();
+      var nextTarget = scrollTarget === window ? document : scrollTarget;
+      if (touchTarget) {
+        touchTarget.removeEventListener('touchstart', onTouchStart);
+        touchTarget.removeEventListener('touchmove', onTouchMove);
+        touchTarget.removeEventListener('touchend', onTouchEnd);
+      }
+      resetPull();
+      touchTarget = nextTarget;
+      touchTarget.addEventListener('touchstart', onTouchStart, { passive: true });
+      touchTarget.addEventListener('touchmove', onTouchMove, { passive: false });
+      touchTarget.addEventListener('touchend', onTouchEnd, { passive: true });
+    }
+
+    bindPullTarget();
+    window.addEventListener('vh360:scrollcontextchange', bindPullTarget);
   }
 
   var reloadingForUpdate = false;

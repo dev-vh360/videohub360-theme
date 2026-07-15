@@ -402,7 +402,7 @@ if (typeof window !== 'undefined') {
         settingsOverlay.querySelector('.vh360-unified-settings-panel').style.transform = 'scale(1)';
         
         // Prevent body scroll
-        document.body.style.overflow = 'hidden';
+        if (window.VH360ScrollContext && window.VH360ScrollContext.lock) { window.VH360ScrollContext.lock('unified-settings'); } else { document.body.style.overflow = 'hidden'; }
         
         // Bind close events
         bindOverlayEvents();
@@ -421,7 +421,7 @@ if (typeof window !== 'undefined') {
         setTimeout(() => {
             if (!isOpen && settingsOverlay) {
                 settingsOverlay.style.display = 'none';
-                document.body.style.overflow = '';
+                if (window.VH360ScrollContext && window.VH360ScrollContext.unlock) { window.VH360ScrollContext.unlock('unified-settings'); } else { document.body.style.overflow = ''; }
             }
         }, 300);
         

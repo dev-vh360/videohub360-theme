@@ -88,9 +88,13 @@
             const page = parseInt(url.searchParams.get('paged')) || 1;
             
             // Scroll to top of results
-            $('html, body').animate({
-                scrollTop: $('#vh360-blog-results-container').offset().top - 100
-            }, 300);
+            if (window.VH360ScrollContext && window.VH360ScrollContext.scrollElementIntoView) {
+                window.VH360ScrollContext.scrollElementIntoView($('#vh360-blog-results-container').get(0), 100, { behavior: 'smooth' });
+            } else {
+                $('html, body').animate({
+                    scrollTop: $('#vh360-blog-results-container').offset().top - 100
+                }, 300);
+            }
             
             VH360Blog.loadPosts(page);
         },

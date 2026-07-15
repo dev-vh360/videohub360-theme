@@ -15,7 +15,7 @@ function vh360GetScrollContext() {
 		getElement: function() {
 			var shellScroller = document.querySelector('[data-vh360-pwa-scroll]');
 			var standalone = document.documentElement.classList.contains('vh360-pwa-standalone') || window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-			var active = document.documentElement.classList.contains('vh360-pwa-app-shell-active') || (standalone && document.body && document.body.classList.contains('logged-in') && shellScroller);
+			var active = document.documentElement.classList.contains('vh360-pwa-app-shell-active');
 			return active && shellScroller ? shellScroller : window;
 		},
 		getScrollTop: function() { var element = this.getElement(); return element === window ? (window.scrollY || window.pageYOffset || 0) : element.scrollTop; },
@@ -222,18 +222,34 @@ function vh360GetScrollEventTarget() {
 				// Handle auto-prompt on scroll (optional)
 				if (VH360Push.autoPrompt && VH360Push.autoPromptScroll) {
 					var vh360ScrollTriggered = false;
-					vh360GetScrollEventTarget().addEventListener('scroll', function() {
+					var vh360PushScrollTarget = null;
+					function vh360PushScrollHandler() {
 						if (vh360ScrollTriggered) return;
 						var scrollContext = vh360GetScrollContext();
 						var docHeight = scrollContext.getScrollHeight();
 						var winHeight = scrollContext.getViewportHeight();
 						if (docHeight <= winHeight) return;
 						var percent = (scrollContext.getScrollTop() / (docHeight - winHeight)) * 100;
-						if (percent >= 50) { // fixed 50% threshold for Phase 1
+						if (percent >= 50) {
 							vh360ScrollTriggered = true;
+							if (vh360PushScrollTarget) {
+								vh360PushScrollTarget.removeEventListener('scroll', vh360PushScrollHandler);
+							}
 							OneSignal.Slidedown.promptPush();
 						}
-					}, { passive: true });
+					}
+					function vh360BindPushScrollTarget() {
+						var nextTarget = vh360GetScrollEventTarget();
+						if (vh360PushScrollTarget) {
+							vh360PushScrollTarget.removeEventListener('scroll', vh360PushScrollHandler);
+						}
+						vh360PushScrollTarget = nextTarget;
+						if (!vh360ScrollTriggered) {
+							vh360PushScrollTarget.addEventListener('scroll', vh360PushScrollHandler, { passive: true });
+						}
+					}
+					vh360BindPushScrollTarget();
+					window.addEventListener('vh360:scrollcontextchange', vh360BindPushScrollTarget);
 				}
 
 				// Handle auto-prompt after login (optional)

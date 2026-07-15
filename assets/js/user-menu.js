@@ -67,7 +67,7 @@
             
             // Prevent body scroll on mobile
             if (window.innerWidth <= MOBILE_BREAKPOINT) {
-                document.body.style.overflow = 'hidden';
+                if (window.VH360ScrollContext && window.VH360ScrollContext.lock) { window.VH360ScrollContext.lock('user-menu'); } else { document.body.style.overflow = 'hidden'; }
             }
         }
         
@@ -87,7 +87,7 @@
             }, 200);
             
             // Restore body scroll
-            document.body.style.overflow = '';
+            if (window.VH360ScrollContext && window.VH360ScrollContext.unlock) { window.VH360ScrollContext.unlock('user-menu'); } else { document.body.style.overflow = ''; }
         }
         
         /**
@@ -189,7 +189,7 @@
             resizeTimer = setTimeout(function() {
                 if (isOpen && window.innerWidth > MOBILE_BREAKPOINT) {
                     // Restore body scroll when resizing from mobile to desktop
-                    document.body.style.overflow = '';
+                    if (window.VH360ScrollContext && window.VH360ScrollContext.unlock) { window.VH360ScrollContext.unlock('user-menu'); } else { document.body.style.overflow = ''; }
                 }
             }, 250);
         });

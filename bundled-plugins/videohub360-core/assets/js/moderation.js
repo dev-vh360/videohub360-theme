@@ -99,7 +99,7 @@ if (typeof window !== 'undefined') {
         
         isModalOpen = true;
         moderationModal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
+        if (window.VH360ScrollContext && window.VH360ScrollContext.lock) { window.VH360ScrollContext.lock('moderation-panel'); } else { document.body.style.overflow = 'hidden'; }
         
         // Show loading state
         showLoadingState();
@@ -117,7 +117,7 @@ if (typeof window !== 'undefined') {
         
         isModalOpen = false;
         moderationModal.style.display = 'none';
-        document.body.style.overflow = '';
+        if (window.VH360ScrollContext && window.VH360ScrollContext.unlock) { window.VH360ScrollContext.unlock('moderation-panel'); } else { document.body.style.overflow = ''; }
         
         // Clear auto-refresh
         if (refreshInterval) {

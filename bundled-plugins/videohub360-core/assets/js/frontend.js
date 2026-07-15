@@ -90,12 +90,12 @@ if (typeof window !== 'undefined') {
     if (shareBtn) {
         shareBtn.addEventListener('click', function() {
             modalOverlay.classList.add('active');
-            document.body.style.overflow = 'hidden';
+            if (window.VH360ScrollContext && window.VH360ScrollContext.lock) { window.VH360ScrollContext.lock('core-frontend-modal'); } else { document.body.style.overflow = 'hidden'; }
         });
     }
     function closeModal() {
         modalOverlay.classList.remove('active');
-        document.body.style.overflow = '';
+        if (window.VH360ScrollContext && window.VH360ScrollContext.unlock) { window.VH360ScrollContext.unlock('core-frontend-modal'); } else { document.body.style.overflow = ''; }
     }
     if (modalClose) modalClose.addEventListener('click', closeModal);
     if (modalOverlay) {

@@ -61,6 +61,22 @@ if (!defined('ABSPATH')) {
                     element.scrollTop = top || 0;
                 }
             }
+            function migrateLockElement(newElement) {
+                if (!lockState || lockState.element === newElement) return;
+                var oldElement = lockState.element;
+                if (oldElement === window) {
+                    if (document.body) document.body.style.overflow = lockState.previousOverflow;
+                } else if (oldElement) {
+                    oldElement.style.overflow = lockState.previousOverflow;
+                }
+                lockState.element = newElement;
+                lockState.previousOverflow = newElement === window ? (document.body ? document.body.style.overflow : '') : newElement.style.overflow;
+                if (newElement === window) {
+                    if (document.body) document.body.style.overflow = 'hidden';
+                } else if (newElement) {
+                    newElement.style.overflow = 'hidden';
+                }
+            }
             function updateActiveClass() {
                 var oldActive = html.classList.contains('vh360-pwa-app-shell-active');
                 var oldElement = getElement();
@@ -70,6 +86,7 @@ if (!defined('ABSPATH')) {
                 var newElement = getElement();
                 if (oldElement !== newElement) {
                     setScrollTopFor(newElement, oldTop);
+                    migrateLockElement(newElement);
                     window.dispatchEvent(new CustomEvent('vh360:scrollcontextchange', { detail: { oldElement: oldElement, newElement: newElement, scrollTop: oldTop } }));
                 } else if (oldActive !== nextActive) {
                     window.dispatchEvent(new CustomEvent('vh360:scrollcontextchange', { detail: { oldElement: oldElement, newElement: newElement, scrollTop: oldTop } }));
@@ -115,19 +132,27 @@ if (!defined('ABSPATH')) {
             function lock(reason) {
                 var el = getElement();
                 if (!lockState) {
-                    lockState = { element: el, previousOverflow: el === window ? (document.body ? document.body.style.overflow : '') : el.style.overflow, reasons: {} };
+                    lockState = { element: el, previousOverflow: el === window ? (document.body ? document.body.style.overflow : '') : el.style.overflow, reasons: {}, total: 0 };
                     if (el === window) {
                         if (document.body) document.body.style.overflow = 'hidden';
                     } else {
                         el.style.overflow = 'hidden';
                     }
                 }
-                lockState.reasons[reason || 'default'] = true;
+                reason = reason || 'default';
+                lockState.reasons[reason] = (lockState.reasons[reason] || 0) + 1;
+                lockState.total += 1;
             }
             function unlock(reason) {
                 if (!lockState) return;
-                delete lockState.reasons[reason || 'default'];
-                if (Object.keys(lockState.reasons).length > 0) return;
+                reason = reason || 'default';
+                if (!lockState.reasons[reason]) return;
+                lockState.reasons[reason] -= 1;
+                lockState.total = Math.max(0, lockState.total - 1);
+                if (lockState.reasons[reason] <= 0) {
+                    delete lockState.reasons[reason];
+                }
+                if (lockState.total > 0) return;
                 var el = lockState.element;
                 if (el === window) {
                     if (document.body) document.body.style.overflow = lockState.previousOverflow;
@@ -146,7 +171,14 @@ if (!defined('ABSPATH')) {
                 if (standaloneMq.addEventListener) standaloneMq.addEventListener('change', function () { if (standaloneMq.matches) html.classList.add('vh360-pwa-standalone'); updateActiveClass(); });
                 else if (standaloneMq.addListener) standaloneMq.addListener(updateActiveClass);
             }
-            return { isAppShellActive: isAppShellActive, updateActiveClass: updateActiveClass, getElement: getElement, getEventTarget: getElement, getScrollTop: getScrollTop, getViewportHeight: getViewportHeight, getScrollHeight: getScrollHeight, getElementTop: getElementTop, scrollTo: scrollToTop, scrollElementIntoView: scrollElementIntoView, lock: lock, unlock: unlock };
+            function forceUnlockAll() {
+                if (!lockState) return;
+                var reasons = Object.keys(lockState.reasons);
+                reasons.forEach(function (key) { lockState.reasons[key] = 0; });
+                lockState.total = 1;
+                unlock(reasons[0] || 'default');
+            }
+            return { isAppShellActive: isAppShellActive, updateActiveClass: updateActiveClass, getElement: getElement, getEventTarget: getElement, getScrollTop: getScrollTop, getViewportHeight: getViewportHeight, getScrollHeight: getScrollHeight, getElementTop: getElementTop, scrollTo: scrollToTop, scrollElementIntoView: scrollElementIntoView, lock: lock, unlock: unlock, forceUnlockAll: forceUnlockAll };
         }());
     }());
     </script>
