@@ -222,13 +222,6 @@
         open: function($gallery, index) {
             var self = this;
 
-            // Store scroll position
-            this.scrollElement = window.VH360ScrollContext ? window.VH360ScrollContext.getElement() : window;
-            this.scrollY = window.VH360ScrollContext ? window.VH360ScrollContext.getScrollTop() : (window.pageYOffset || document.documentElement.scrollTop);
-            if (window.VH360ScrollContext && window.VH360ScrollContext.lock) {
-                window.VH360ScrollContext.lock('gallery-lightbox');
-            }
-
             // Get items
             this.items = this.getItems($gallery);
             this.currentGallery = $gallery;
@@ -236,6 +229,13 @@
 
             if (this.items.length === 0) {
                 return;
+            }
+
+            // Store and lock the active scroll source only after confirming the lightbox can open.
+            this.scrollElement = window.VH360ScrollContext ? window.VH360ScrollContext.getElement() : window;
+            this.scrollY = window.VH360ScrollContext ? window.VH360ScrollContext.getScrollTop() : (window.pageYOffset || document.documentElement.scrollTop);
+            if (window.VH360ScrollContext && window.VH360ScrollContext.lock) {
+                window.VH360ScrollContext.lock('gallery-lightbox');
             }
 
             // Show lightbox

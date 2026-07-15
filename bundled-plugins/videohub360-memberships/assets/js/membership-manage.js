@@ -196,7 +196,7 @@
         var $button = $('.vh360-start-subscription[data-plan-key="' + config.selectedPlan + '"]').first();
 
         if ($card.length) {
-            window.VH360ScrollContext && window.VH360ScrollContext.scrollTo ? window.VH360ScrollContext.scrollTo(Math.max(0, $card.offset().top - 80), { behavior: 'smooth' }) : $('html, body').animate({ scrollTop: Math.max(0, $card.offset().top - 80) }, 250);
+            window.VH360ScrollContext && window.VH360ScrollContext.scrollElementIntoView ? window.VH360ScrollContext.scrollElementIntoView($card.get(0), 80, { behavior: 'smooth' }) : $('html, body').animate({ scrollTop: Math.max(0, $card.offset().top - 80) }, 250);
         }
 
         if (!$button.length || $button.data('vh360AutoCheckoutStarted')) {

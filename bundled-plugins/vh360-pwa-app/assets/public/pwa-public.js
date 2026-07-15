@@ -143,6 +143,9 @@
     body.innerHTML = html;
     modal.classList.remove('vh360-pwa-hidden');
     document.documentElement.classList.add('vh360-pwa-modal-open');
+    if (window.VH360ScrollContext && window.VH360ScrollContext.lock) {
+      window.VH360ScrollContext.lock('pwa-install-modal');
+    }
   }
 
   function closeModal() {
@@ -150,6 +153,9 @@
     if (!modal) return;
     modal.classList.add('vh360-pwa-hidden');
     document.documentElement.classList.remove('vh360-pwa-modal-open');
+    if (window.VH360ScrollContext && window.VH360ScrollContext.unlock) {
+      window.VH360ScrollContext.unlock('pwa-install-modal');
+    }
   }
 
   function showChromeEdgeInstructions() {

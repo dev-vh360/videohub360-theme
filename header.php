@@ -23,47 +23,63 @@ if (!defined('ABSPATH')) {
             html.classList.add('vh360-pwa-standalone');
         }
         window.VH360ScrollContext = window.VH360ScrollContext || (function () {
-            var lockCount = 0;
-            var previousOverflow = '';
+            var lockState = null;
             function isStandalone() {
                 return html.classList.contains('vh360-pwa-standalone') || window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
             }
             function isMobile() {
                 return window.matchMedia ? window.matchMedia('(max-width: 768px)').matches : window.innerWidth <= 768;
             }
-            function isAppShellActive() {
-                var body = document.body;
-                var scroll = document.querySelector('[data-vh360-pwa-scroll]');
-                var shell = document.querySelector('.vh360-pwa-app-shell');
+            function hasShellMarkup() {
+                return !!(document.querySelector('[data-vh360-pwa-scroll]') && document.querySelector('.vh360-pwa-app-shell'));
+            }
+            function hasVisibleBottomNav() {
                 var nav = document.querySelector('.vh360-mobile-bottom-nav');
-                var navVisible = false;
-                if (nav) {
-                    var style = window.getComputedStyle(nav);
-                    navVisible = style.display !== 'none' && style.visibility !== 'hidden';
-                }
-                return !!(isStandalone() && body && body.classList.contains('logged-in') && isMobile() && shell && scroll && nav && navVisible);
+                if (!nav) return false;
+                var style = window.getComputedStyle(nav);
+                return style.display !== 'none' && style.visibility !== 'hidden';
             }
-            var transferredWindowScroll = false;
-            function updateActiveClass() {
-                var active = isAppShellActive();
-                var wasActive = html.classList.contains('vh360-pwa-app-shell-active');
-                html.classList.toggle('vh360-pwa-app-shell-active', active);
-                if (active && !wasActive && !transferredWindowScroll) {
-                    var scroll = document.querySelector('[data-vh360-pwa-scroll]');
-                    var top = window.scrollY || window.pageYOffset || 0;
-                    if (scroll && top > 0) {
-                        scroll.scrollTop = top;
-                    }
-                    transferredWindowScroll = true;
-                }
+            function isEarlyEligible() {
+                return !!(isStandalone() && document.body && document.body.classList.contains('logged-in') && isMobile());
             }
-            function getElement() {
-                updateActiveClass();
+            function isAppShellActive() {
+                return !!(isEarlyEligible() && hasShellMarkup() && hasVisibleBottomNav());
+            }
+            function selectedElementFromClass() {
                 return html.classList.contains('vh360-pwa-app-shell-active') ? document.querySelector('[data-vh360-pwa-scroll]') : window;
             }
+            function getElement() {
+                return selectedElementFromClass() || window;
+            }
+            function getScrollTopFor(element) {
+                return element === window ? (window.scrollY || window.pageYOffset || 0) : element.scrollTop;
+            }
+            function setScrollTopFor(element, top) {
+                if (element === window) {
+                    window.scrollTo(0, top || 0);
+                } else if (element) {
+                    element.scrollTop = top || 0;
+                }
+            }
+            function updateActiveClass() {
+                var oldActive = html.classList.contains('vh360-pwa-app-shell-active');
+                var oldElement = getElement();
+                var oldTop = getScrollTopFor(oldElement);
+                var nextActive = isAppShellActive() || (!hasShellMarkup() && isEarlyEligible());
+                html.classList.toggle('vh360-pwa-app-shell-active', nextActive);
+                var newElement = getElement();
+                if (oldElement !== newElement) {
+                    setScrollTopFor(newElement, oldTop);
+                    window.dispatchEvent(new CustomEvent('vh360:scrollcontextchange', { detail: { oldElement: oldElement, newElement: newElement, scrollTop: oldTop } }));
+                } else if (oldActive !== nextActive) {
+                    window.dispatchEvent(new CustomEvent('vh360:scrollcontextchange', { detail: { oldElement: oldElement, newElement: newElement, scrollTop: oldTop } }));
+                }
+                if (nextActive && hasShellMarkup() && !isAppShellActive()) {
+                    html.classList.remove('vh360-pwa-app-shell-active');
+                }
+            }
             function getScrollTop() {
-                var el = getElement();
-                return el === window ? (window.scrollY || window.pageYOffset || 0) : el.scrollTop;
+                return getScrollTopFor(getElement());
             }
             function getViewportHeight() {
                 var el = getElement();
@@ -72,6 +88,15 @@ if (!defined('ABSPATH')) {
             function getScrollHeight() {
                 var el = getElement();
                 return el === window ? Math.max(document.body ? document.body.scrollHeight : 0, document.documentElement.scrollHeight) : el.scrollHeight;
+            }
+            function getElementTop(element) {
+                var el = getElement();
+                if (!element) return 0;
+                if (el === window) {
+                    var rect = element.getBoundingClientRect();
+                    return rect.top + getScrollTopFor(window);
+                }
+                return element.getBoundingClientRect().top - el.getBoundingClientRect().top + el.scrollTop;
             }
             function scrollToTop(top, options) {
                 var el = getElement();
@@ -84,28 +109,32 @@ if (!defined('ABSPATH')) {
                     el.scrollTop = top;
                 }
             }
-            function lock() {
-                var el = getElement();
-                lockCount += 1;
-                if (lockCount > 1) return;
-                if (el === window) {
-                    previousOverflow = document.body ? document.body.style.overflow : '';
-                    if (document.body) document.body.style.overflow = 'hidden';
-                } else {
-                    previousOverflow = el.style.overflow;
-                    el.style.overflow = 'hidden';
-                }
+            function scrollElementIntoView(element, offset, options) {
+                scrollToTop(Math.max(0, getElementTop(element) - (offset || 0)), options || {});
             }
-            function unlock() {
+            function lock(reason) {
                 var el = getElement();
-                lockCount = Math.max(0, lockCount - 1);
-                if (lockCount > 0) return;
-                if (el === window) {
-                    if (document.body) document.body.style.overflow = previousOverflow;
-                } else {
-                    el.style.overflow = previousOverflow;
+                if (!lockState) {
+                    lockState = { element: el, previousOverflow: el === window ? (document.body ? document.body.style.overflow : '') : el.style.overflow, reasons: {} };
+                    if (el === window) {
+                        if (document.body) document.body.style.overflow = 'hidden';
+                    } else {
+                        el.style.overflow = 'hidden';
+                    }
                 }
-                previousOverflow = '';
+                lockState.reasons[reason || 'default'] = true;
+            }
+            function unlock(reason) {
+                if (!lockState) return;
+                delete lockState.reasons[reason || 'default'];
+                if (Object.keys(lockState.reasons).length > 0) return;
+                var el = lockState.element;
+                if (el === window) {
+                    if (document.body) document.body.style.overflow = lockState.previousOverflow;
+                } else if (el) {
+                    el.style.overflow = lockState.previousOverflow;
+                }
+                lockState = null;
             }
             window.addEventListener('pageshow', updateActiveClass);
             window.addEventListener('resize', updateActiveClass);
@@ -117,7 +146,7 @@ if (!defined('ABSPATH')) {
                 if (standaloneMq.addEventListener) standaloneMq.addEventListener('change', function () { if (standaloneMq.matches) html.classList.add('vh360-pwa-standalone'); updateActiveClass(); });
                 else if (standaloneMq.addListener) standaloneMq.addListener(updateActiveClass);
             }
-            return { isAppShellActive: isAppShellActive, updateActiveClass: updateActiveClass, getElement: getElement, getEventTarget: getElement, getScrollTop: getScrollTop, getViewportHeight: getViewportHeight, getScrollHeight: getScrollHeight, scrollTo: scrollToTop, lock: lock, unlock: unlock };
+            return { isAppShellActive: isAppShellActive, updateActiveClass: updateActiveClass, getElement: getElement, getEventTarget: getElement, getScrollTop: getScrollTop, getViewportHeight: getViewportHeight, getScrollHeight: getScrollHeight, getElementTop: getElementTop, scrollTo: scrollToTop, scrollElementIntoView: scrollElementIntoView, lock: lock, unlock: unlock };
         }());
     }());
     </script>

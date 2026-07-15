@@ -328,9 +328,13 @@
             $('.vh360-post-create-form').before(errorHtml);
             
             // Scroll to error
-            $('html, body').animate({
-                scrollTop: $('.vh360-form-error').offset().top - 100
-            }, 300);
+            if (window.VH360ScrollContext && window.VH360ScrollContext.scrollElementIntoView) {
+                window.VH360ScrollContext.scrollElementIntoView($('.vh360-form-error').get(0), 100, { behavior: 'smooth' });
+            } else {
+                $('html, body').animate({
+                    scrollTop: $('.vh360-form-error').offset().top - 100
+                }, 300);
+            }
         },
 
         /**

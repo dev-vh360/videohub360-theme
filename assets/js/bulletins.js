@@ -274,7 +274,7 @@
             const $target = $(target);
             
             if ($target.length) {
-                window.VH360ScrollContext && window.VH360ScrollContext.scrollTo ? window.VH360ScrollContext.scrollTo($target.offset().top - 100, { behavior: 'smooth' }) : $('html, body').animate({
+                window.VH360ScrollContext && window.VH360ScrollContext.scrollElementIntoView ? window.VH360ScrollContext.scrollElementIntoView($target.get(0), 100, { behavior: 'smooth' }) : $('html, body').animate({
                     scrollTop: $target.offset().top - 100
                 }, 500);
             }

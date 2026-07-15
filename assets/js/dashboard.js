@@ -664,9 +664,13 @@
                     // Scroll to first error
                     var $firstError = $form.find('.error').first();
                     if ($firstError.length) {
-                        $('html, body').animate({
-                            scrollTop: $firstError.offset().top - 100
-                        }, 300);
+                        if (window.VH360ScrollContext && window.VH360ScrollContext.scrollElementIntoView) {
+                            window.VH360ScrollContext.scrollElementIntoView($firstError.get(0), 100, { behavior: 'smooth' });
+                        } else {
+                            $('html, body').animate({
+                                scrollTop: $firstError.offset().top - 100
+                            }, 300);
+                        }
                     }
                 }
             });
@@ -853,9 +857,13 @@
                 .slideDown(300);
             
             // Scroll to message
-            $('html, body').animate({
-                scrollTop: $messageDiv.offset().top - 100
-            }, 300);
+            if (window.VH360ScrollContext && window.VH360ScrollContext.scrollElementIntoView) {
+                window.VH360ScrollContext.scrollElementIntoView($messageDiv.get(0), 100, { behavior: 'smooth' });
+            } else {
+                $('html, body').animate({
+                    scrollTop: $messageDiv.offset().top - 100
+                }, 300);
+            }
             
             // Auto-hide success messages after 5 seconds
             if (type === 'success') {
@@ -1316,7 +1324,7 @@
 
                 // Show form and scroll to it.
                 $formWrap.slideDown(300);
-                $('html, body').animate({ scrollTop: $formWrap.offset().top - 80 }, 300);
+                if (window.VH360ScrollContext && window.VH360ScrollContext.scrollElementIntoView) { window.VH360ScrollContext.scrollElementIntoView($formWrap.get(0), 80, { behavior: 'smooth' }); } else { $('html, body').animate({ scrollTop: $formWrap.offset().top - 80 }, 300); }
             });
 
             function deleteCourse(courseId, courseName, deleteLessons) {

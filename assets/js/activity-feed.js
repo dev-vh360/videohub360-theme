@@ -44,12 +44,34 @@
         return element === window ? window : element;
     }
 
+    let activityScrollHandler = null;
+    let activityScrollTarget = null;
+    let activityTabsHandler = null;
+    let activityTabsTarget = null;
+
+    function bindActivityScroll() {
+        if (!state.infiniteScrollEnabled) {
+            return;
+        }
+        const nextTarget = getScrollEventTarget();
+        if (activityScrollTarget && activityScrollHandler) {
+            $(activityScrollTarget).off('scroll.vh360ActivityFeed', activityScrollHandler);
+        }
+        activityScrollHandler = throttle(handleScroll, 200);
+        activityScrollTarget = nextTarget;
+        $(activityScrollTarget).on('scroll.vh360ActivityFeed', activityScrollHandler);
+    }
+
     function getElementTopWithinScroller($element) {
         const element = $element.get(0);
         const scroller = getScrollContext().getElement();
 
         if (!element) {
             return 0;
+        }
+
+        if (getScrollContext().getElementTop) {
+            return getScrollContext().getElementTop(element);
         }
 
         if (scroller === window) {
@@ -61,6 +83,11 @@
 
     function scrollContextTo(top, duration) {
         const scroller = getScrollContext().getElement();
+
+        if (getScrollContext().scrollTo && scroller !== window) {
+            $(scroller).animate({ scrollTop: top }, duration);
+            return;
+        }
 
         if (scroller === window) {
             $('html, body').animate({ scrollTop: top }, duration);
@@ -87,9 +114,8 @@
         $loadMoreBtn.on('click', handleLoadMore);
         
         // Infinite scroll
-        if (state.infiniteScrollEnabled) {
-            $(getScrollEventTarget()).on('scroll.vh360ActivityFeed', throttle(handleScroll, 200));
-        }
+        bindActivityScroll();
+        window.addEventListener('vh360:scrollcontextchange', bindActivityScroll);
         
         // Parse URL parameters on load
         parseUrlParams();
@@ -108,13 +134,23 @@
         }
         
         // Add sticky shadow on scroll
-        $(getScrollEventTarget()).on('scroll.vh360ActivityTabs', function() {
-            if (getScrollContext().getScrollTop() > 0) {
-                $tabs.addClass('is-sticky');
-            } else {
-                $tabs.removeClass('is-sticky');
+        function bindTabsScroll() {
+            const nextTarget = getScrollEventTarget();
+            if (activityTabsTarget && activityTabsHandler) {
+                $(activityTabsTarget).off('scroll.vh360ActivityTabs', activityTabsHandler);
             }
-        });
+            activityTabsHandler = function() {
+                if (getScrollContext().getScrollTop() > 0) {
+                    $tabs.addClass('is-sticky');
+                } else {
+                    $tabs.removeClass('is-sticky');
+                }
+            };
+            activityTabsTarget = nextTarget;
+            $(activityTabsTarget).on('scroll.vh360ActivityTabs', activityTabsHandler);
+        }
+        bindTabsScroll();
+        window.addEventListener('vh360:scrollcontextchange', bindTabsScroll);
     }
     
     /**
@@ -361,9 +397,11 @@
         state.infiniteScrollEnabled = enable;
         
         if (enable) {
-            $(getScrollEventTarget()).on('scroll.vh360ActivityFeed', throttle(handleScroll, 200));
+            bindActivityScroll();
         } else {
-            $(getScrollEventTarget()).off('scroll.vh360ActivityFeed');
+            if (activityScrollTarget && activityScrollHandler) {
+                $(activityScrollTarget).off('scroll.vh360ActivityFeed', activityScrollHandler);
+            }
         }
     }
     
@@ -524,7 +562,7 @@
                 if ($firstComment.length) {
                     $firstComment.attr('tabindex', '-1').focus();
                 }
-            });
+            }, 400);
         }
     }
     
@@ -1267,7 +1305,7 @@ const VH360ShareSystem = (function($) {
                 if ($textarea.length) {
                     $textarea.focus();
                 }
-            });
+            }, 400);
         }
     }
     
