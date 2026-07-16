@@ -26,6 +26,9 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 	var vh360OneSignalInitPromise = null;
 	var vh360OneSignalTransitionId = 0;
 	var vh360OneSignalListenersRegistered = false;
+	var vh360OneSignalLifecyclePromise = Promise.resolve();
+	var vh360OneSignalLastReconciledConsent = null;
+	var vh360OneSignalLastLoggedInUserId = null;
 
 	if (typeof VH360Push === 'undefined') {
 		return;
@@ -240,28 +243,41 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 		});
 	}
 
-	async function activateOneSignalConsent(OneSignal, transitionId) {
-		if (transitionId !== vh360OneSignalTransitionId || !hasPreferenceConsent()) {
-			return;
-		}
-		if (OneSignal && typeof OneSignal.setConsentGiven === 'function') {
-			OneSignal.setConsentGiven(true);
-		}
-		if (transitionId !== vh360OneSignalTransitionId || !hasPreferenceConsent()) {
-			return;
-		}
-		if (VH360Push.currentUserId && VH360Push.currentUserId > 0 && OneSignal && typeof OneSignal.login === 'function') {
-			try {
-				await OneSignal.login(String(VH360Push.currentUserId));
-				vh360Log('[VH360 Push] OneSignal external user ID set:', VH360Push.currentUserId);
-			} catch (err) {
-				console.error('[VH360 Push] Failed to set OneSignal external user ID:', err);
+	async function applyOneSignalConsentState(OneSignal, consentActive) {
+		var userId = VH360Push.currentUserId && VH360Push.currentUserId > 0 ? String(VH360Push.currentUserId) : null;
+
+		if (consentActive) {
+			if (OneSignal && typeof OneSignal.setConsentGiven === 'function' && vh360OneSignalLastReconciledConsent !== true) {
+				OneSignal.setConsentGiven(true);
 			}
-		}
-		if (transitionId !== vh360OneSignalTransitionId || !hasPreferenceConsent()) {
+			if (userId && OneSignal && typeof OneSignal.login === 'function' && vh360OneSignalLastLoggedInUserId !== userId) {
+				try {
+					await OneSignal.login(userId);
+					vh360Log('[VH360 Push] OneSignal external user ID set:', userId);
+					vh360OneSignalLastLoggedInUserId = userId;
+				} catch (err) {
+					console.error('[VH360 Push] Failed to set OneSignal external user ID:', err);
+				}
+			}
+			vh360OneSignalLastReconciledConsent = true;
 			return;
 		}
-		updateSubscriptionUI();
+
+		try {
+			if (OneSignal && OneSignal.User && OneSignal.User.PushSubscription && typeof OneSignal.User.PushSubscription.optOut === 'function') {
+				await OneSignal.User.PushSubscription.optOut();
+			}
+		} catch (e) {}
+		try {
+			if (OneSignal && typeof OneSignal.logout === 'function') {
+				await OneSignal.logout();
+			}
+		} catch (e2) {}
+		if (OneSignal && typeof OneSignal.setConsentGiven === 'function') {
+			OneSignal.setConsentGiven(false);
+		}
+		vh360OneSignalLastLoggedInUserId = null;
+		vh360OneSignalLastReconciledConsent = false;
 	}
 
 	function registerOneSignalListeners(OneSignal) {
@@ -333,56 +349,54 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 		return vh360OneSignalInitPromise;
 	}
 
-	async function deactivateOneSignal(transitionId) {
-		vh360OneSignalInitStarted = false;
+	async function getOneSignalForCurrentConsent(consentActive) {
+		if (consentActive) {
+			return initOneSignal();
+		}
+		if (vh360OneSignalInitPromise) {
+			return vh360OneSignalInitPromise;
+		}
+		if (typeof window.OneSignalDeferred !== 'undefined') {
+			return withOneSignal(function(provider) { return provider; });
+		}
+		return null;
+	}
+
+	async function reconcilePushConsent(requestedTransition) {
+		var consentActive = hasPreferenceConsent();
 		var OneSignal = null;
 		try {
-			if (vh360OneSignalInitPromise) {
-				OneSignal = await vh360OneSignalInitPromise;
-			} else if (typeof window.OneSignalDeferred !== 'undefined') {
-				OneSignal = await withOneSignal(function(provider) { return provider; });
-			}
-		} catch (e) {
+			OneSignal = await getOneSignalForCurrentConsent(consentActive);
+		} catch (error) {
+			vh360Log('Push setup is waiting for preferences consent or provider SDK availability.', error);
 			updateSubscriptionUI();
-			return;
+			return null;
 		}
-		if (!OneSignal || transitionId !== vh360OneSignalTransitionId || hasPreferenceConsent()) {
+		consentActive = hasPreferenceConsent();
+		if (!OneSignal) {
 			updateSubscriptionUI();
-			return;
+			return null;
 		}
-		try {
-			if (OneSignal.User && OneSignal.User.PushSubscription && typeof OneSignal.User.PushSubscription.optOut === 'function') {
-				await OneSignal.User.PushSubscription.optOut();
-			}
-		} catch (e2) {}
-		if (transitionId !== vh360OneSignalTransitionId || hasPreferenceConsent()) { return; }
-		try {
-			if (typeof OneSignal.logout === 'function') {
-				await OneSignal.logout();
-			}
-		} catch (e3) {}
-		if (transitionId !== vh360OneSignalTransitionId || hasPreferenceConsent()) { return; }
-		if (typeof OneSignal.setConsentGiven === 'function') {
-			OneSignal.setConsentGiven(false);
+		await applyOneSignalConsentState(OneSignal, consentActive);
+		if (requestedTransition !== vh360OneSignalTransitionId) {
+			return reconcilePushConsent(vh360OneSignalTransitionId);
 		}
-		if (transitionId === vh360OneSignalTransitionId) {
-			updateSubscriptionUI();
-		}
+		updateSubscriptionUI();
+		return OneSignal;
+	}
+
+	function queuePushConsentReconciliation() {
+		var requestedTransition = ++vh360OneSignalTransitionId;
+		vh360OneSignalLifecyclePromise = vh360OneSignalLifecyclePromise
+			.catch(function() {})
+			.then(function() {
+				return reconcilePushConsent(requestedTransition);
+			});
+		return vh360OneSignalLifecyclePromise;
 	}
 
 	function handlePushConsentChange() {
-		var transitionId = ++vh360OneSignalTransitionId;
-		if (hasPreferenceConsent()) {
-			initOneSignal().then(function(OneSignal) {
-				if (OneSignal) {
-					return activateOneSignalConsent(OneSignal, transitionId);
-				}
-			}).catch(function(error) {
-				vh360Log('Push setup is waiting for preferences consent or provider SDK availability.', error);
-			});
-		} else {
-			deactivateOneSignal(transitionId);
-		}
+		queuePushConsentReconciliation();
 	}
 
 	function getNativePermission(OneSignal) {
@@ -538,14 +552,15 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 			showState(container, 'loading');
 		}
 
-		initOneSignal().then(async function(OneSignal) {
+		queuePushConsentReconciliation().then(async function() {
 			try {
-				if (!OneSignal || !hasPreferenceConsent()) {
+				await vh360OneSignalLifecyclePromise.catch(function() {});
+				if (!hasPreferenceConsent()) {
 					openConsentPreferences();
 					return;
 				}
-				await activateOneSignalConsent(OneSignal, vh360OneSignalTransitionId);
-				if (!hasPreferenceConsent()) {
+				var OneSignal = await initOneSignal();
+				if (!OneSignal || !hasPreferenceConsent()) {
 					openConsentPreferences();
 					return;
 				}
