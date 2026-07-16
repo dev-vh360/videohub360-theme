@@ -18,7 +18,8 @@
     z-index: var(--vh360-z-modal);
 }
 
-.vh360-consent-root--notice {
+.vh360-consent-root--notice,
+.vh360-consent-root--choices {
     left: 50%;
     right: auto;
     width: 80vw;
