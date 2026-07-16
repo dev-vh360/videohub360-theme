@@ -521,7 +521,7 @@ class VH360_PWA_Push_Admin {
 				'label' => __( 'HTTPS enabled', 'vh360-pwa-app' ),
 				'test'  => 'check_https',
 			),
-			'sw_scope_root' => array(
+			'sw_scope_dedicated' => array(
 				'label' => __( 'Service worker scope is dedicated (/push/onesignal/)', 'vh360-pwa-app' ),
 				'test'  => 'check_sw_scope',
 			),
@@ -873,7 +873,7 @@ class VH360_PWA_Push_Admin {
 		// Service Worker endpoints check
 		$sw_urls = array(
 			'/push/onesignal/OneSignalSDKWorker.js' => 'Dedicated OneSignal Worker',
-			'/OneSignalSDKUpdaterWorker.js' => 'OneSignal Updater',
+			'/push/onesignal/OneSignalSDKUpdaterWorker.js' => 'Dedicated OneSignal Updater',
 		);
 
 		foreach ( $sw_urls as $path => $label ) {
@@ -1205,7 +1205,7 @@ class VH360_PWA_Push_Admin {
 		$report .= "Service Worker Checks:\n";
 		$sw_urls = array(
 			'/push/onesignal/OneSignalSDKWorker.js' => 'Dedicated OneSignal Worker',
-			'/OneSignalSDKUpdaterWorker.js' => 'OneSignal Updater',
+			'/push/onesignal/OneSignalSDKUpdaterWorker.js' => 'Dedicated OneSignal Updater',
 		);
 		foreach ( $sw_urls as $path => $label ) {
 			$url = home_url( $path );
@@ -1663,8 +1663,8 @@ $settings = $this->push_manager->get_settings();
 			);
 		}
 
-		// Check OneSignalSDKUpdaterWorker.js
-		$sw_updater_url = home_url( '/OneSignalSDKUpdaterWorker.js' );
+		// Check dedicated OneSignalSDKUpdaterWorker.js.
+		$sw_updater_url = home_url( '/push/onesignal/OneSignalSDKUpdaterWorker.js' );
 		$response = wp_remote_get( $sw_updater_url, array( 'timeout' => 10 ) );
 		if ( is_wp_error( $response ) ) {
 			$results['sw_updater_js'] = array(
