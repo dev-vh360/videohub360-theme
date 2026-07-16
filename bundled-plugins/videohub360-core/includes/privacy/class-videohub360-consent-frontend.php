@@ -14,9 +14,9 @@ class VideoHub360_Consent_Frontend {
     public function assets() {
         if (!$this->manager->is_enabled()) return;
 
-        wp_enqueue_style('vh360-consent-manager', VIDEOHUB360_PLUGIN_URL . 'assets/css/variables.css', array(), VIDEOHUB360_VERSION);
-        wp_enqueue_style('vh360-consent-ui', VIDEOHUB360_PLUGIN_URL . 'assets/css/consent-manager.css', array('vh360-consent-manager'), VIDEOHUB360_VERSION);
-        wp_enqueue_script('vh360-consent-manager', VIDEOHUB360_PLUGIN_URL . 'assets/js/consent-manager.js', array(), VIDEOHUB360_VERSION, false);
+        wp_enqueue_style('vh360-consent-manager', VIDEOHUB360_PLUGIN_URL . 'assets/css/variables.css', array(), videohub360_asset_version('assets/css/variables.css'));
+        wp_enqueue_style('vh360-consent-ui', VIDEOHUB360_PLUGIN_URL . 'assets/css/consent-manager.css', array('vh360-consent-manager'), videohub360_asset_version('assets/css/consent-manager.css'));
+        wp_enqueue_script('vh360-consent-manager', VIDEOHUB360_PLUGIN_URL . 'assets/js/consent-manager.js', array(), videohub360_asset_version('assets/js/consent-manager.js'), false);
         wp_add_inline_script('vh360-consent-manager', 'window.VH360ConsentExpected=true;', 'before');
         wp_localize_script('vh360-consent-manager', 'VH360ConsentConfig', $this->manager->frontend_config());
     }
