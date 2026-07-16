@@ -135,8 +135,8 @@ class VH360_Push_OneSignal_Adapter implements VH360_PWA_Push_Adapter_Interface {
 		return array(
 			'provider'         => 'onesignal',
 			'appId'            => $settings['app_id'] ?? '',
-			'swPath'           => '/push/onesignal/OneSignalSDKWorker.js',
-			'swUpdaterPath'    => '/push/onesignal/OneSignalSDKUpdaterWorker.js',
+			'swPath'           => 'push/onesignal/OneSignalSDKWorker.js',
+			'swUpdaterPath'    => 'push/onesignal/OneSignalSDKUpdaterWorker.js',
 			'swScope'          => $settings['sw_scope'] ?? '/push/onesignal/',
 			'autoPrompt'       => false,
 			'autoPromptDelay'  => 0,

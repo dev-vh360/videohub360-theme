@@ -397,7 +397,7 @@ class VH360_PWA_Push_Admin {
 		}
 		
 		// Check service worker accessibility
-		$sw_worker_url = home_url( '/OneSignalSDKWorker.js' );
+		$sw_worker_url = home_url( '/push/onesignal/OneSignalSDKWorker.js' );
 		$sw_response = wp_remote_get( $sw_worker_url, array( 'timeout' => 10 ) );
 		$sw_status = ! is_wp_error( $sw_response ) && 200 === wp_remote_retrieve_response_code( $sw_response );
 		if ( ! $sw_status ) {
@@ -510,7 +510,7 @@ class VH360_PWA_Push_Admin {
 		// Define checklist items
 		$checklist_items = array(
 			'sw_worker_js' => array(
-				'label' => __( 'OneSignalSDKWorker.js returns 200 and contains JavaScript', 'vh360-pwa-app' ),
+				'label' => __( 'Dedicated OneSignal worker returns 200 and contains JavaScript', 'vh360-pwa-app' ),
 				'test'  => 'check_sw_worker',
 			),
 			'sw_updater_js' => array(
@@ -522,7 +522,7 @@ class VH360_PWA_Push_Admin {
 				'test'  => 'check_https',
 			),
 			'sw_scope_root' => array(
-				'label' => __( 'Service worker scope is root (/)', 'vh360-pwa-app' ),
+				'label' => __( 'Service worker scope is dedicated (/push/onesignal/)', 'vh360-pwa-app' ),
 				'test'  => 'check_sw_scope',
 			),
 			'test_subscription' => array(
@@ -688,7 +688,7 @@ class VH360_PWA_Push_Admin {
 		// Service Worker mode (fixed)
 		echo '<tr><th scope="row">' . esc_html__( 'Service Worker Delivery', 'vh360-pwa-app' ) . '</th><td>';
 		echo '<strong>' . esc_html__( 'Managed by plugin', 'vh360-pwa-app' ) . '</strong>';
-		echo '<p class="description">' . esc_html__( 'The plugin automatically serves OneSignal service worker files at the site root. No manual file upload required.', 'vh360-pwa-app' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'The plugin serves new OneSignal service worker files from /push/onesignal/ and retains legacy root files during migration. No manual file upload required.', 'vh360-pwa-app' ) . '</p>';
 		echo '</td></tr>';
 
 		echo '</table>';
@@ -872,7 +872,7 @@ class VH360_PWA_Push_Admin {
 
 		// Service Worker endpoints check
 		$sw_urls = array(
-			'/OneSignalSDKWorker.js'        => 'OneSignal Worker',
+			'/push/onesignal/OneSignalSDKWorker.js' => 'Dedicated OneSignal Worker',
 			'/OneSignalSDKUpdaterWorker.js' => 'OneSignal Updater',
 		);
 
@@ -1063,7 +1063,7 @@ class VH360_PWA_Push_Admin {
 		echo '<h3 style="margin-top:0;">' . esc_html__( 'Common Issue: CDN/Cache Blocking', 'vh360-pwa-app' ) . '</h3>';
 		echo '<p>' . esc_html__( 'If service worker files return 403/404 errors, your CDN or caching plugin may be blocking them. Whitelist these paths:', 'vh360-pwa-app' ) . '</p>';
 		echo '<ul>';
-		echo '<li><code>/OneSignalSDKWorker.js</code></li>';
+		echo '<li><code>/push/onesignal/OneSignalSDKWorker.js</code></li><li><code>/push/onesignal/OneSignalSDKUpdaterWorker.js</code></li><li><code>/OneSignalSDKWorker.js</code> (legacy migration)</li>';
 		echo '<li><code>/OneSignalSDKUpdaterWorker.js</code></li>';
 		echo '</ul>';
 		echo '<p>' . esc_html__( 'Refer to your CDN/cache plugin documentation for instructions on excluding URLs.', 'vh360-pwa-app' ) . '</p>';
@@ -1204,7 +1204,7 @@ class VH360_PWA_Push_Admin {
 		// Service worker checks
 		$report .= "Service Worker Checks:\n";
 		$sw_urls = array(
-			'/OneSignalSDKWorker.js'        => 'OneSignal Worker',
+			'/push/onesignal/OneSignalSDKWorker.js' => 'Dedicated OneSignal Worker',
 			'/OneSignalSDKUpdaterWorker.js' => 'OneSignal Updater',
 		);
 		foreach ( $sw_urls as $path => $label ) {
@@ -1645,8 +1645,8 @@ $settings = $this->push_manager->get_settings();
 		$settings = $this->push_manager->get_settings();
 		$results = array();
 
-		// Check OneSignalSDKWorker.js
-		$sw_worker_url = home_url( '/OneSignalSDKWorker.js' );
+		// Check dedicated OneSignal worker.
+		$sw_worker_url = home_url( '/push/onesignal/OneSignalSDKWorker.js' );
 		$response = wp_remote_get( $sw_worker_url, array( 'timeout' => 10 ) );
 		if ( is_wp_error( $response ) ) {
 			$results['sw_worker_js'] = array(

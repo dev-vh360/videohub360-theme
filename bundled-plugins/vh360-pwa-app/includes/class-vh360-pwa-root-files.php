@@ -10,7 +10,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Why this exists:
  * - Browsers require service workers to be fetched from the scope they control (typically site root).
  * - Many hosts/CDNs do not forward WordPress rewrite endpoints consistently for SW/manifest requests.
- * - OneSignal specifically looks for /OneSignalSDKWorker.js and /OneSignalSDK.sw.js at the web root.
+ * - Legacy OneSignal subscribers may still request root workers during migration.
+ * - New consent-aware subscriptions use the dedicated /push/onesignal/ worker directory.
  *
  * This class ensures those files exist as real files so 404s do not return.
  */
@@ -92,22 +93,27 @@ final class VH360_PWA_Root_Files {
 	}
 
 	private static function maybe_write_onesignal_workers( string $root ) : array {
-		// OneSignal requires both filenames at the site root. Use a managed wrapper that imports OneSignal's SW
-		// and then imports VH360's SW for offline fallback.
-		// Chrome requires some event handlers (notably 'message') to be registered during initial evaluation.
-		// Add a harmless no-op handler before importing OneSignal to avoid warnings.
-		$vh360_sw_url = '/vh360-sw.js?v=' . rawurlencode( (string) vh360_pwa_get_asset_version() );
-
-		$wrapper = "/* VH360 Managed File: OneSignal service worker wrapper */\n" .
+		$sdk_version = defined( 'VH360_PWA_ONESIGNAL_SDK_VERSION' ) ? VH360_PWA_ONESIGNAL_SDK_VERSION : 'v16';
+		$wrapper = "/* VH360 Managed File: OneSignal service worker migration wrapper */\n" .
 			"self.addEventListener('message', function () {});\n" .
 			"try {\n" .
-			"  importScripts('" . esc_js( $vh360_sw_url ) . "');\n" .
-			"} catch (e) {}\n";
+			"  importScripts('https://cdn.onesignal.com/sdks/web/" . esc_js( $sdk_version ) . "/OneSignalSDK.sw.js');\n" .
+			"} catch (e) {}\n" .
+			"/* Legacy root wrappers are retained during migration for existing subscribers. New subscriptions use /push/onesignal/. */\n";
 
 		$results = array();
 		foreach ( array( 'OneSignalSDKWorker.js', 'OneSignalSDK.sw.js', 'OneSignalSDKUpdaterWorker.js' ) as $file ) {
 			$path = $root . $file;
 			$results[ $file ] = self::write_managed_file( $path, $wrapper, $file, false );
+		}
+
+		$dedicated_dir = trailingslashit( $root . 'push/onesignal' );
+		if ( ! is_dir( $dedicated_dir ) ) {
+			wp_mkdir_p( $dedicated_dir );
+		}
+		foreach ( array( 'OneSignalSDKWorker.js', 'OneSignalSDKUpdaterWorker.js' ) as $file ) {
+			$path = $dedicated_dir . $file;
+			$results[ 'push/onesignal/' . $file ] = self::write_managed_file( $path, $wrapper, $file, true );
 		}
 		return $results;
 	}

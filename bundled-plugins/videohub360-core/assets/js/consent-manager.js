@@ -71,11 +71,22 @@
   function hideRoots(){ roots().forEach(function(r){ var b = banner(r); if(b) b.hidden = true; r.hidden = true; }); }
   function dismissBanner(){ roots().forEach(function(r){ var b = banner(r); if(b) b.hidden = true; }); }
 
+
+  function requestToken(){
+    var name = 'vh360_consent_request=';
+    var existing = (document.cookie || '').split(';').map(function(part){ return part.trim(); }).filter(function(part){ return part.indexOf(name) === 0; })[0];
+    if(existing) return existing.slice(name.length);
+    var token = '';
+    try { var bytes = new Uint8Array(16); window.crypto.getRandomValues(bytes); token = Array.prototype.map.call(bytes, function(b){ return ('0' + b.toString(16)).slice(-2); }).join(''); } catch(e) { token = String(Date.now()) + String(Math.random()).slice(2); }
+    document.cookie = name + token + '; path=/; SameSite=Strict' + (location.protocol === 'https:' ? '; Secure' : '');
+    return token;
+  }
+
   function showError(message){ document.querySelectorAll('.vh360-consent-error').forEach(function(el){ el.textContent = message || 'Your privacy choice could not be saved. Please try again.'; el.hidden = false; }); }
   function clearError(){ document.querySelectorAll('.vh360-consent-error').forEach(function(el){ el.textContent = ''; el.hidden = true; }); }
   function save(choices, notice){
     var fd = new FormData();
-    fd.append('action','vh360_save_consent'); fd.append('notice_acknowledged', notice ? '1' : '0');
+    fd.append('action','vh360_save_consent'); fd.append('notice_acknowledged', notice ? '1' : '0'); fd.append('request_token', requestToken());
     ['preferences','analytics','advertising'].forEach(function(c){ fd.append('choices[' + c + ']', choices[c] ? '1' : '0'); });
     clearError();
     return fetch(cfg.ajaxUrl,{ method:'POST', credentials:'same-origin', body:fd }).then(function(r){ return r.json(); }).then(function(res){
@@ -83,7 +94,7 @@
       throw new Error((res && res.data && res.data.message) || 'save_failed');
     }).catch(function(error){ showError(error && error.message ? error.message : 'save_failed'); throw error; });
   }
-  function refreshServerState(){ var fd = new FormData(); fd.append('action','vh360_consent_state'); return fetch(cfg.ajaxUrl,{ method:'POST', credentials:'same-origin', body:fd }).then(function(r){ return r.json(); }).then(function(res){ if(res && res.success && res.data && res.data.gpc){ state.gpc = true; state.choices.advertising = false; } return state; }).catch(function(){ return state; }); }
+  function refreshServerState(){ var fd = new FormData(); fd.append('action','vh360_consent_state'); fd.append('request_token', requestToken()); return fetch(cfg.ajaxUrl,{ method:'POST', credentials:'same-origin', body:fd }).then(function(r){ return r.json(); }).then(function(res){ if(res && res.success && res.data && res.data.gpc){ state.gpc = true; state.choices.advertising = false; } return state; }).catch(function(){ return state; }); }
   function fire(){ loadActivityAds(); document.dispatchEvent(new CustomEvent('vh360:consent-changed',{ detail: state })); activateScripts(); }
   function cleanup(){ if(has('preferences')) return; Object.keys(keys).forEach(function(k){ try{ localStorage.removeItem(k); }catch(e){} }); }
 
@@ -170,7 +181,7 @@
     if(!api.hasService('activity-feed-ad-slot')) return;
     document.querySelectorAll('[data-vh360-activity-ad-blocked]').forEach(function(slot){
       if(slot.dataset.vh360Loaded) return;
-      var fd = new FormData(); fd.append('action','vh360_activity_ad_markup');
+      var fd = new FormData(); fd.append('action','vh360_activity_ad_markup'); fd.append('request_token', requestToken());
       fetch(cfg.ajaxUrl,{ method:'POST', credentials:'same-origin', body:fd }).then(function(r){ return r.json(); }).then(function(res){
         if(!res || !res.success || !res.data || !res.data.html) return;
         slot.dataset.vh360Loaded = '1';

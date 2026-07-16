@@ -134,13 +134,32 @@ class VideoHub360_Consent_Manager {
         if ($fetch_site && !in_array($fetch_site, array('same-origin', 'same-site', 'none'), true)) {
             return false;
         }
-        if (empty($origin['host']) && empty($fetch_site) && !empty($_SERVER['HTTP_REFERER'])) {
-            $referer = wp_parse_url(esc_url_raw(wp_unslash($_SERVER['HTTP_REFERER'])));
-            if (!empty($referer['host']) && strtolower($referer['host']) !== $allowed_host) {
+        $home_scheme = isset($home['scheme']) ? strtolower($home['scheme']) : (is_ssl() ? 'https' : 'http');
+        $home_port = isset($home['port']) ? (int) $home['port'] : ('https' === $home_scheme ? 443 : 80);
+        $matches_origin = function($parts) use ($allowed_host, $home_scheme, $home_port) {
+            if (empty($parts['host'])) {
                 return false;
             }
+            $scheme = isset($parts['scheme']) ? strtolower($parts['scheme']) : '';
+            $port = isset($parts['port']) ? (int) $parts['port'] : ('https' === $scheme ? 443 : 80);
+            return strtolower($parts['host']) === $allowed_host && $scheme === $home_scheme && $port === $home_port;
+        };
+        if (!empty($origin['host']) && !$matches_origin($origin)) {
+            return false;
         }
-        return true;
+        if (empty($origin['host']) && empty($fetch_site) && !empty($_SERVER['HTTP_REFERER'])) {
+            $referer = wp_parse_url(esc_url_raw(wp_unslash($_SERVER['HTTP_REFERER'])));
+            if (!$matches_origin($referer)) {
+                return false;
+            }
+            return true;
+        }
+        if (!empty($origin['host']) || !empty($fetch_site)) {
+            return true;
+        }
+        $cookie_token = isset($_COOKIE['vh360_consent_request']) ? sanitize_text_field(wp_unslash($_COOKIE['vh360_consent_request'])) : '';
+        $request_token = isset($_POST['request_token']) ? sanitize_text_field(wp_unslash($_POST['request_token'])) : '';
+        return $cookie_token && $request_token && hash_equals($cookie_token, $request_token);
     }
 
     public function ajax_save_consent() {

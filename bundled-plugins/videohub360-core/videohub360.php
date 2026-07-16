@@ -3,7 +3,7 @@
 Plugin Name: VideoHub360
 Plugin URI: https://videohub360.com
 Description: Complete video management platform with custom post types, live streaming capabilities, Elementor widget, and chat functionality for WordPress.
-Version: 1.0.3
+Version: 1.0.4
 Author: VideoHub360
 Author URI: https://videohub360.com
 Requires at least: 5.0
@@ -25,7 +25,7 @@ define('VIDEOHUB360_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('VIDEOHUB360_INCLUDES_DIR', VIDEOHUB360_PLUGIN_DIR . 'includes/');
 define('VIDEOHUB360_ASSETS_URL', VIDEOHUB360_PLUGIN_URL . 'assets/');
 define('VIDEOHUB360_TEMPLATES_DIR', VIDEOHUB360_PLUGIN_DIR . 'templates/');
-define('VIDEOHUB360_VERSION', '1.0.3');
+define('VIDEOHUB360_VERSION', '1.0.4');
 
 
 /**
