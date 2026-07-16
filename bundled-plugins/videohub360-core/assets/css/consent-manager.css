@@ -1,4 +1,5 @@
-.vh360-consent-root {
+.vh360-consent-root,
+.vh360-consent-open {
     --vh360-consent-background: var(--bg-color, var(--vh360-bg-white));
     --vh360-consent-text: var(--text-color, var(--vh360-color-dark));
     --vh360-consent-muted-text: var(--text-light, var(--vh360-color-medium));
@@ -8,6 +9,9 @@
     --vh360-consent-button-text: var(--button-text-color, var(--vh360-color-white));
     --vh360-consent-button-hover-text: var(--button-hover-text-color, var(--vh360-color-white));
     --vh360-consent-focus: var(--primary-color, var(--vh360-color-primary));
+}
+
+.vh360-consent-root {
     position: fixed;
     left: var(--vh360-spacing-lg);
     right: var(--vh360-spacing-lg);
@@ -127,12 +131,6 @@
 }
 
 .vh360-consent-floating {
-    --vh360-consent-border: var(--border-color, var(--vh360-color-border));
-    --vh360-consent-primary: var(--button-bg-color, var(--primary-color, var(--vh360-color-primary)));
-    --vh360-consent-primary-hover: var(--button-hover-bg-color, var(--secondary-color, var(--vh360-color-primary-dark)));
-    --vh360-consent-button-text: var(--button-text-color, var(--vh360-color-white));
-    --vh360-consent-button-hover-text: var(--button-hover-text-color, var(--vh360-color-white));
-    --vh360-consent-focus: var(--primary-color, var(--vh360-color-primary));
     position: fixed;
     right: var(--vh360-spacing-lg);
     bottom: var(--vh360-spacing-lg);
