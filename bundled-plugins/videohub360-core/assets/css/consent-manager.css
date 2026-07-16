@@ -1,8 +1,24 @@
 .vh360-consent-root {
+    --vh360-consent-background: var(--bg-color, var(--vh360-bg-white));
+    --vh360-consent-text: var(--text-color, var(--vh360-color-dark));
+    --vh360-consent-muted-text: var(--text-light, var(--vh360-color-medium));
+    --vh360-consent-border: var(--border-color, var(--vh360-color-border));
+    --vh360-consent-primary: var(--button-bg-color, var(--primary-color, var(--vh360-color-primary)));
+    --vh360-consent-primary-hover: var(--button-hover-bg-color, var(--secondary-color, var(--vh360-color-primary-dark)));
+    --vh360-consent-button-text: var(--button-text-color, var(--vh360-color-white));
+    --vh360-consent-button-hover-text: var(--button-hover-text-color, var(--vh360-color-white));
+    --vh360-consent-focus: var(--primary-color, var(--vh360-color-primary));
     position: fixed;
     left: var(--vh360-spacing-lg);
     right: var(--vh360-spacing-lg);
     z-index: var(--vh360-z-modal);
+}
+
+.vh360-consent-root--notice {
+    left: 50%;
+    right: auto;
+    width: 80vw;
+    transform: translateX(-50%);
 }
 
 .vh360-consent-bottom {
@@ -15,12 +31,22 @@
 
 .vh360-consent-banner,
 .vh360-consent-panel {
-    background: var(--vh360-bg-white);
-    color: var(--vh360-color-dark);
-    border: 1px solid var(--vh360-color-border);
+    background: var(--vh360-consent-background);
+    color: var(--vh360-consent-text);
+    border: 1px solid var(--vh360-consent-border);
     border-radius: var(--vh360-radius-lg);
     padding: var(--vh360-spacing-2xl);
-    box-shadow: 0 8px 24px color-mix(in srgb, var(--vh360-color-black) 16%, transparent);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--vh360-consent-text) 16%, transparent);
+}
+
+.vh360-consent-banner h2,
+.vh360-consent-panel h2 {
+    color: var(--vh360-consent-text);
+}
+
+.vh360-consent-banner p,
+.vh360-consent-panel p {
+    color: var(--vh360-consent-muted-text);
 }
 
 .vh360-consent-actions {
@@ -33,12 +59,45 @@
 .vh360-consent-actions button,
 .vh360-consent-panel button,
 .vh360-consent-open {
-    border: 1px solid var(--vh360-color-border);
+    border: 1px solid var(--vh360-consent-border);
     border-radius: var(--vh360-radius-md);
     padding: .65rem 1rem;
-    background: var(--vh360-color-primary);
-    color: var(--vh360-color-white);
+    background: var(--vh360-consent-primary);
+    color: var(--vh360-consent-button-text);
     cursor: pointer;
+    transition: background-color .2s ease, color .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+
+.vh360-consent-actions button:hover,
+.vh360-consent-panel button:hover,
+.vh360-consent-open:hover {
+    background: var(--vh360-consent-primary-hover);
+    color: var(--vh360-consent-button-hover-text);
+}
+
+.vh360-consent-actions button:disabled,
+.vh360-consent-panel button:disabled,
+.vh360-consent-open:disabled {
+    cursor: not-allowed;
+    opacity: .6;
+}
+
+.vh360-consent-root a {
+    color: var(--vh360-consent-primary);
+    text-decoration-color: currentColor;
+    text-underline-offset: .15em;
+    transition: color .2s ease;
+}
+
+.vh360-consent-root a:hover {
+    color: var(--vh360-consent-primary-hover);
+}
+
+.vh360-consent-root a:focus-visible,
+.vh360-consent-root button:focus-visible,
+.vh360-consent-open:focus-visible {
+    outline: 2px solid var(--vh360-consent-focus);
+    outline-offset: 2px;
 }
 
 .vh360-consent-close,
@@ -49,7 +108,7 @@
 .vh360-consent-modal {
     position: fixed;
     inset: 0;
-    background: color-mix(in srgb, var(--vh360-color-black) 45%, transparent);
+    background: color-mix(in srgb, var(--text-color, var(--vh360-color-dark)) 45%, transparent);
     z-index: var(--vh360-z-system);
     display: grid;
     place-items: center;
@@ -64,9 +123,16 @@
 .vh360-consent-panel label {
     display: block;
     margin: .75rem 0;
+    color: var(--vh360-consent-text);
 }
 
 .vh360-consent-floating {
+    --vh360-consent-border: var(--border-color, var(--vh360-color-border));
+    --vh360-consent-primary: var(--button-bg-color, var(--primary-color, var(--vh360-color-primary)));
+    --vh360-consent-primary-hover: var(--button-hover-bg-color, var(--secondary-color, var(--vh360-color-primary-dark)));
+    --vh360-consent-button-text: var(--button-text-color, var(--vh360-color-white));
+    --vh360-consent-button-hover-text: var(--button-hover-text-color, var(--vh360-color-white));
+    --vh360-consent-focus: var(--primary-color, var(--vh360-color-primary));
     position: fixed;
     right: var(--vh360-spacing-lg);
     bottom: var(--vh360-spacing-lg);
@@ -78,7 +144,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .vh360-consent-root * {
+    .vh360-consent-root *,
+    .vh360-consent-open {
         transition: none !important;
         animation: none !important;
     }
@@ -89,9 +156,12 @@
         display: grid;
     }
 
-    .vh360-consent-root {
+    .vh360-consent-root,
+    .vh360-consent-root--notice {
         left: 0;
         right: 0;
+        width: auto;
+        transform: none;
     }
 
     .vh360-consent-bottom {

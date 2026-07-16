@@ -34,12 +34,13 @@ class VideoHub360_Consent_Frontend {
         $settings = $this->manager->get_settings();
         $policy = $settings['privacy_policy_url'];
         $is_notice_only = $this->manager->is_notice_only();
+        $root_class = $is_notice_only ? 'vh360-consent-root--notice' : 'vh360-consent-root--choices';
 
         if (!$policy && $settings['privacy_policy_page_id']) {
             $policy = get_permalink($settings['privacy_policy_page_id']);
         }
         ?>
-        <div class="vh360-consent-root vh360-consent-<?php echo esc_attr($settings['banner_position']); ?>" data-vh360-consent-root hidden>
+        <div class="vh360-consent-root <?php echo esc_attr($root_class); ?> vh360-consent-<?php echo esc_attr($settings['banner_position']); ?>" data-vh360-consent-root hidden>
             <section class="vh360-consent-banner" role="region" aria-label="<?php esc_attr_e('Privacy notice', 'videohub360'); ?>">
                 <?php if ($is_notice_only) : ?>
                     <h2><?php esc_html_e('Privacy notice', 'videohub360'); ?></h2>
