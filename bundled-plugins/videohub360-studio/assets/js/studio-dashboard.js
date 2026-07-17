@@ -344,24 +344,28 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 
     function normalizeAgoraLocalVideoStats(stats) {
         const actual = {};
-        const fields = [
+        const directFields = [
             'sendResolutionWidth',
             'sendResolutionHeight',
             'sendFrameRate',
-            'sendBitrate',
-            'targetSendBitrate',
             'captureFrameRate',
             'encodeDelay',
-            'sendPacketLossRate',
+            'currentPacketLossRate',
             'totalDuration',
             'totalFreezeTime'
         ];
         const source = stats && typeof stats === 'object' ? stats : {};
-        fields.forEach((field) => {
+        directFields.forEach((field) => {
             if (typeof source[field] !== 'undefined') {
                 actual[field] = source[field];
             }
         });
+        if (typeof source.sendBitrate !== 'undefined') {
+            actual.sendBitrateKbps = Math.round(Number(source.sendBitrate) / 1000);
+        }
+        if (typeof source.targetSendBitrate !== 'undefined') {
+            actual.targetSendBitrateKbps = Math.round(Number(source.targetSendBitrate) / 1000);
+        }
         if (typeof source.sendResolutionWidth !== 'undefined' || typeof source.sendResolutionHeight !== 'undefined') {
             actual.width = typeof source.sendResolutionWidth !== 'undefined' ? source.sendResolutionWidth : null;
             actual.height = typeof source.sendResolutionHeight !== 'undefined' ? source.sendResolutionHeight : null;
