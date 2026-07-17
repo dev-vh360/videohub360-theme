@@ -1636,3 +1636,73 @@ body.vh360-ios-immersive-active #vh360-view-dropdown-menu {
         right: auto;
     }
 }
+
+/* Touch fullscreen Speaker/Focus: dock non-featured participants in a right rail.
+   The explicit class is owned by frontend-agora.js so desktop and portrait retain
+   the existing horizontal rail without depending on viewport width. */
+#vh360-agora-local-player.vh360-persistent-speaker-stage.vh360-thumbnail-rail-vertical {
+    --vh360-landscape-rail-width: clamp(104px, 15vw, 144px);
+    --vh360-landscape-thumbnail-height: calc(var(--vh360-landscape-rail-width) * 0.5625);
+    --vh360-landscape-rail-gap: 8px;
+    --vh360-landscape-rail-right: calc(8px + env(safe-area-inset-right, 0px));
+    --vh360-landscape-rail-top: calc(68px + env(safe-area-inset-top, 0px));
+    --vh360-landscape-rail-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+}
+
+#vh360-agora-local-player.vh360-persistent-speaker-stage.vh360-thumbnail-rail-vertical .vh360-participant-tile:not(.is-featured) {
+    top: calc(var(--vh360-landscape-rail-top) + (var(--vh360-thumbnail-index, 0) * (var(--vh360-landscape-thumbnail-height) + var(--vh360-landscape-rail-gap))) - var(--vh360-thumbnail-scroll-offset, 0px));
+    right: var(--vh360-landscape-rail-right);
+    bottom: auto;
+    left: auto;
+    width: var(--vh360-landscape-rail-width);
+    height: var(--vh360-landscape-thumbnail-height);
+    min-width: var(--vh360-landscape-rail-width);
+    min-height: var(--vh360-landscape-thumbnail-height);
+}
+
+#vh360-agora-local-player.vh360-persistent-speaker-stage.vh360-thumbnail-rail-vertical .vh360-participant-tile.is-featured {
+    top: calc(var(--vh360-speaker-stage-padding) + env(safe-area-inset-top, 0px));
+    right: calc(var(--vh360-landscape-rail-right) + var(--vh360-landscape-rail-width) + var(--vh360-landscape-rail-gap));
+    bottom: calc(var(--vh360-agora-controls-height) + env(safe-area-inset-bottom, 0px));
+    left: calc(var(--vh360-speaker-stage-padding) + env(safe-area-inset-left, 0px));
+}
+
+#vh360-agora-local-player.vh360-persistent-speaker-stage.vh360-thumbnail-rail-vertical.has-single-participant .vh360-participant-tile.is-featured {
+    right: calc(var(--vh360-speaker-stage-padding) + env(safe-area-inset-right, 0px));
+}
+
+#vh360-agora-local-player.vh360-persistent-speaker-stage.vh360-thumbnail-rail-vertical.has-thumbnail-overflow::before,
+#vh360-agora-local-player.vh360-persistent-speaker-stage.vh360-thumbnail-rail-vertical.has-thumbnail-overflow::after {
+    right: var(--vh360-landscape-rail-right);
+    left: auto;
+    width: var(--vh360-landscape-rail-width);
+    height: 30px;
+    bottom: auto;
+}
+
+#vh360-agora-local-player.vh360-persistent-speaker-stage.vh360-thumbnail-rail-vertical.has-thumbnail-overflow::before {
+    top: var(--vh360-landscape-rail-top);
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0));
+}
+
+#vh360-agora-local-player.vh360-persistent-speaker-stage.vh360-thumbnail-rail-vertical.has-thumbnail-overflow::after {
+    top: calc(100% - var(--vh360-landscape-rail-bottom) - 30px);
+    background: linear-gradient(0deg, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0));
+}
+
+/* Geometry probe for JS: resolves the CSS clamp/calc/env rail bounds without
+   altering persistent participant tiles or receiving pointer events. */
+#vh360-agora-local-player.vh360-persistent-speaker-stage .vh360-thumbnail-rail-viewport {
+    display: none;
+}
+
+#vh360-agora-local-player.vh360-persistent-speaker-stage.vh360-thumbnail-rail-vertical .vh360-thumbnail-rail-viewport {
+    display: block;
+    position: absolute;
+    top: var(--vh360-landscape-rail-top);
+    right: var(--vh360-landscape-rail-right);
+    bottom: var(--vh360-landscape-rail-bottom);
+    width: var(--vh360-landscape-rail-width);
+    pointer-events: none;
+    opacity: 0;
+}

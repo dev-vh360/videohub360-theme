@@ -4910,3 +4910,25 @@ body.vh360-broadcast-fullscreen-active #vh360-ios-immersive-exit-btn {
 .vh360-agora-control-label {
     min-width: 0;
 }
+
+/* Center compact fullscreen controls in the featured region when the
+   persistent participant stage has a docked right rail. */
+#vh360-agora-player.vh360-landscape-participant-rail-active {
+    --vh360-landscape-rail-width: clamp(104px, 15vw, 144px);
+    --vh360-landscape-rail-gap: 8px;
+    --vh360-landscape-rail-right: calc(8px + env(safe-area-inset-right, 0px));
+    --vh360-featured-region-right: calc(var(--vh360-landscape-rail-right) + var(--vh360-landscape-rail-width) + var(--vh360-landscape-rail-gap));
+}
+
+body.vh360-ios-immersive-active
+#vh360-agora-player.vh360-ios-immersive-fullscreen.vh360-landscape-participant-rail-active:not(.vh360-broadcast-fullscreen)
+#vh360-agora-controls.vh360-mobile-controls-simple,
+#vh360-agora-player.vh360-landscape-participant-rail-active:fullscreen #vh360-agora-controls.vh360-mobile-controls-simple,
+#vh360-agora-player.vh360-landscape-participant-rail-active:-webkit-full-screen #vh360-agora-controls.vh360-mobile-controls-simple {
+    left: calc((100% - var(--vh360-featured-region-right) + env(safe-area-inset-left, 0px)) / 2) !important;
+    right: auto !important;
+    width: max-content !important;
+    max-width: calc(100% - var(--vh360-featured-region-right) - env(safe-area-inset-left, 0px) - 24px) !important;
+    margin: 0 !important;
+    transform: translateX(-50%) !important;
+}
