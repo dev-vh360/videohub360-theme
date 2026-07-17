@@ -534,6 +534,8 @@ window.initializeAgoraPlayer = function(config) {
     let iosImmersivePreviousActiveElement = null;
     let iosImmersiveOriginalParent = null;
     let iosImmersivePlaceholder = null;
+    let iosImmersiveViewportAnimationFrame = null;
+    let iosImmersiveViewportSyncTimers = [];
     let broadcastFullscreenControlsTimer = null;
     let broadcastFullscreenTapHandler = null;
 
@@ -5735,6 +5737,68 @@ window.initializeAgoraPlayer = function(config) {
         document.body.appendChild(exitBtn);
     }
 
+    function getIOSImmersiveViewportDimensions() {
+        const visualViewport = window.visualViewport;
+        const documentElement = document.documentElement;
+        const body = document.body;
+        const fallbackWidth = window.innerWidth || documentElement.clientWidth || (body ? body.clientWidth : 0);
+        const fallbackHeight = window.innerHeight || documentElement.clientHeight || (body ? body.clientHeight : 0);
+
+        return {
+            width: (visualViewport && visualViewport.width) || fallbackWidth,
+            height: (visualViewport && visualViewport.height) || fallbackHeight
+        };
+    }
+
+    function cancelIOSImmersiveViewportSynchronization() {
+        if (iosImmersiveViewportAnimationFrame !== null) {
+            window.cancelAnimationFrame(iosImmersiveViewportAnimationFrame);
+            iosImmersiveViewportAnimationFrame = null;
+        }
+
+        iosImmersiveViewportSyncTimers.forEach((timer) => window.clearTimeout(timer));
+        iosImmersiveViewportSyncTimers = [];
+    }
+
+    function synchronizeIOSImmersiveViewport() {
+        if (!isIOSImmersiveFullscreen) {
+            return;
+        }
+
+        const player = document.getElementById('vh360-agora-player');
+        if (!player) {
+            return;
+        }
+
+        const viewport = getIOSImmersiveViewportDimensions();
+        player.style.setProperty('--vh360-visual-viewport-width', viewport.width + 'px');
+        player.style.setProperty('--vh360-visual-viewport-height', viewport.height + 'px');
+        updateIOSImmersiveOrientationClass(player, viewport.width, viewport.height);
+
+        if (typeof window.vh360RefreshFeaturedParticipantTiles === 'function') {
+            window.vh360RefreshFeaturedParticipantTiles();
+        }
+        scheduleThumbnailRailOverflowUpdate();
+    }
+
+    function scheduleIOSImmersiveViewportSynchronization() {
+        cancelIOSImmersiveViewportSynchronization();
+        synchronizeIOSImmersiveViewport();
+
+        iosImmersiveViewportAnimationFrame = window.requestAnimationFrame(() => {
+            iosImmersiveViewportAnimationFrame = null;
+            synchronizeIOSImmersiveViewport();
+        });
+
+        [100, 250].forEach((delay) => {
+            const timer = window.setTimeout(() => {
+                iosImmersiveViewportSyncTimers = iosImmersiveViewportSyncTimers.filter((pendingTimer) => pendingTimer !== timer);
+                synchronizeIOSImmersiveViewport();
+            }, delay);
+            iosImmersiveViewportSyncTimers.push(timer);
+        });
+    }
+
     function enterIOSImmersiveFullscreen() {
         const player = document.getElementById('vh360-agora-player');
         if (!player) {
@@ -5761,7 +5825,7 @@ window.initializeAgoraPlayer = function(config) {
 
         isIOSImmersiveFullscreen = true;
 
-        updateIOSImmersiveOrientationClass();
+        scheduleIOSImmersiveViewportSynchronization();
 
         updateIOSImmersiveFullscreenButton(true);
 
@@ -5780,11 +5844,15 @@ window.initializeAgoraPlayer = function(config) {
 
         const player = document.getElementById('vh360-agora-player');
 
+        cancelIOSImmersiveViewportSynchronization();
+
         document.documentElement.classList.remove('vh360-ios-immersive-active');
         document.body.classList.remove('vh360-ios-immersive-active');
 
         if (player) {
             clearBroadcastFullscreenVideoPath(player);
+            player.style.removeProperty('--vh360-visual-viewport-width');
+            player.style.removeProperty('--vh360-visual-viewport-height');
             player.classList.remove(
                 'vh360-ios-immersive-fullscreen',
                 'vh360-ios-immersive-portaled',
@@ -5792,6 +5860,8 @@ window.initializeAgoraPlayer = function(config) {
                 'vh360-ios-immersive-portrait'
             );
         }
+
+        document.documentElement.style.removeProperty('--vh360-visual-viewport-height');
 
         teardownBroadcastFullscreenPresentation();
 
@@ -5839,15 +5909,11 @@ window.initializeAgoraPlayer = function(config) {
         }
     }
 
-    function updateIOSImmersiveOrientationClass() {
-        var player = document.getElementById('vh360-agora-player');
-
+    function updateIOSImmersiveOrientationClass(player, viewportWidth, viewportHeight) {
         if (!player || !isIOSImmersiveFullscreen) {
             return;
         }
 
-        var viewportWidth = window.visualViewport ? window.visualViewport.width : window.innerWidth;
-        var viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
         var isLandscape = viewportWidth !== viewportHeight
             ? viewportWidth > viewportHeight
             : window.matchMedia('(orientation: landscape)').matches;
@@ -5862,35 +5928,19 @@ window.initializeAgoraPlayer = function(config) {
         });
     }
 
-    // Handle orientation changes while in iOS immersive mode
-    window.addEventListener('orientationchange', function () {
+    function handleIOSImmersiveViewportEvent() {
         if (!isIOSImmersiveFullscreen) {
             return;
         }
-        setTimeout(function () {
-            updateIOSImmersiveOrientationClass();
+        scheduleIOSImmersiveViewportSynchronization();
+    }
 
-            window.dispatchEvent(new Event('resize'));
+    window.addEventListener('resize', handleIOSImmersiveViewportEvent);
+    window.addEventListener('orientationchange', handleIOSImmersiveViewportEvent);
 
-            if (typeof updateMobileLayout === 'function') {
-                updateMobileLayout();
-            }
-        }, 250);
-    });
-
-    // Keep visual viewport height custom property updated while in immersive mode
     if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', function () {
-            if (!isIOSImmersiveFullscreen) {
-                return;
-            }
-            document.documentElement.style.setProperty(
-                '--vh360-visual-viewport-height',
-                window.visualViewport.height + 'px'
-            );
-
-            updateIOSImmersiveOrientationClass();
-        });
+        window.visualViewport.addEventListener('resize', handleIOSImmersiveViewportEvent);
+        window.visualViewport.addEventListener('scroll', handleIOSImmersiveViewportEvent);
     }
 
     // Function to update mobile controls visibility when role changes
