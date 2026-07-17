@@ -1689,3 +1689,20 @@ body.vh360-ios-immersive-active #vh360-view-dropdown-menu {
     top: calc(100% - var(--vh360-landscape-rail-bottom) - 30px);
     background: linear-gradient(0deg, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0));
 }
+
+/* Geometry probe for JS: resolves the CSS clamp/calc/env rail bounds without
+   altering persistent participant tiles or receiving pointer events. */
+#vh360-agora-local-player.vh360-persistent-speaker-stage .vh360-thumbnail-rail-viewport {
+    display: none;
+}
+
+#vh360-agora-local-player.vh360-persistent-speaker-stage.vh360-thumbnail-rail-vertical .vh360-thumbnail-rail-viewport {
+    display: block;
+    position: absolute;
+    top: var(--vh360-landscape-rail-top);
+    right: var(--vh360-landscape-rail-right);
+    bottom: var(--vh360-landscape-rail-bottom);
+    width: var(--vh360-landscape-rail-width);
+    pointer-events: none;
+    opacity: 0;
+}

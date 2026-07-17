@@ -722,6 +722,18 @@ window.initializeAgoraPlayer = function(config) {
         return stage && stage.classList.contains('vh360-thumbnail-rail-vertical') ? 'vertical' : 'horizontal';
     }
 
+    function ensureThumbnailRailViewport(stage) {
+        if (!stage) return null;
+        let viewport = stage.querySelector(':scope > .vh360-thumbnail-rail-viewport');
+        if (!viewport) {
+            viewport = document.createElement('div');
+            viewport.className = 'vh360-thumbnail-rail-viewport';
+            viewport.setAttribute('aria-hidden', 'true');
+            stage.appendChild(viewport);
+        }
+        return viewport;
+    }
+
     function updateThumbnailRailLayoutMode(stage) {
         if (!stage) return 'horizontal';
         const player = stage.closest('#vh360-agora-player') || document.getElementById('vh360-agora-player');
@@ -738,10 +750,12 @@ window.initializeAgoraPlayer = function(config) {
         const useVerticalRail = (isImmersive || isNativeFullscreen) && isLandscape && isTouchDevice && !isGallery && !isBroadcast;
         const previousAxis = stage.dataset.thumbnailRailAxis || 'horizontal';
         const axis = useVerticalRail ? 'vertical' : 'horizontal';
+        const hasThumbnails = stage.querySelectorAll('.vh360-participant-tile[data-thumbnail-index]').length > 0;
 
         stage.classList.toggle('vh360-thumbnail-rail-vertical', useVerticalRail);
         stage.dataset.thumbnailRailAxis = axis;
-        if (player) player.classList.toggle('vh360-landscape-participant-rail-active', useVerticalRail);
+        if (useVerticalRail) ensureThumbnailRailViewport(stage);
+        if (player) player.classList.toggle('vh360-landscape-participant-rail-active', useVerticalRail && hasThumbnails);
         if (previousAxis !== axis) {
             stage.style.setProperty('--vh360-thumbnail-scroll-offset', '0px');
             stage.dataset.thumbnailScrollOffset = '0';
@@ -753,33 +767,53 @@ window.initializeAgoraPlayer = function(config) {
         if (!stage) return null;
         const axis = getThumbnailRailAxis(stage);
         const styles = window.getComputedStyle(stage);
-        const thumbnailWidth = parseStagePixelValue(styles, axis === 'vertical' ? '--vh360-landscape-rail-width' : '--vh360-thumbnail-width', 160);
-        const thumbnailHeight = parseStagePixelValue(styles, axis === 'vertical' ? '--vh360-landscape-thumbnail-height' : '--vh360-thumbnail-height', 90);
-        const thumbnailGap = parseStagePixelValue(styles, axis === 'vertical' ? '--vh360-landscape-rail-gap' : '--vh360-thumbnail-gap', 10);
         const stagePadding = parseStagePixelValue(styles, '--vh360-speaker-stage-padding', 16);
         const controlsHeight = parseStagePixelValue(styles, '--vh360-agora-controls-height', 64);
-        const thumbnailRailHeight = parseStagePixelValue(styles, '--vh360-thumbnail-rail-height', thumbnailHeight);
         const thumbnailCount = stage.querySelectorAll('.vh360-participant-tile[data-thumbnail-index]').length;
         const rect = stage.getBoundingClientRect();
 
         if (axis === 'vertical') {
-            const railRight = parseStagePixelValue(styles, '--vh360-landscape-rail-right', 8);
-            const railTopInset = parseStagePixelValue(styles, '--vh360-landscape-rail-top', 68);
-            const railBottomInset = parseStagePixelValue(styles, '--vh360-landscape-rail-bottom', 72);
-            const availableHeight = Math.max(0, stage.clientHeight - railTopInset - railBottomInset);
+            const railViewport = ensureThumbnailRailViewport(stage);
+            const railRect = railViewport.getBoundingClientRect();
+            const tiles = Array.from(stage.querySelectorAll('.vh360-participant-tile[data-thumbnail-index]'))
+                .sort((a, b) => Number(a.dataset.thumbnailIndex) - Number(b.dataset.thumbnailIndex));
+            const firstTileRect = tiles[0] ? tiles[0].getBoundingClientRect() : null;
+            const secondTileRect = tiles[1] ? tiles[1].getBoundingClientRect() : null;
+            const thumbnailWidth = firstTileRect ? firstTileRect.width : railRect.width;
+            const thumbnailHeight = firstTileRect ? firstTileRect.height : thumbnailWidth * 0.5625;
+            const thumbnailGap = firstTileRect && secondTileRect
+                ? Math.max(0, secondTileRect.top - firstTileRect.bottom)
+                : 8;
+            const availableHeight = Math.max(0, railRect.height);
             const totalHeight = thumbnailCount > 0 ? (thumbnailCount * thumbnailHeight) + (Math.max(0, thumbnailCount - 1) * thumbnailGap) : 0;
             const maxScroll = Math.max(0, totalHeight - availableHeight);
-            const railLeft = Math.max(rect.left, rect.right - railRight - thumbnailWidth);
-            return { axis, thumbnailCount, thumbnailWidth, thumbnailHeight, thumbnailGap, railRight, railTopInset, railBottomInset, availableHeight, totalHeight, maxScroll, railLeft, railRight: rect.right - railRight, railTop: rect.top + railTopInset, railBottom: rect.bottom - railBottomInset };
+            return {
+                axis,
+                thumbnailCount,
+                thumbnailWidth,
+                thumbnailHeight,
+                thumbnailGap,
+                availableHeight,
+                totalHeight,
+                maxScroll,
+                railLeft: railRect.left,
+                railRightEdge: railRect.right,
+                railTop: railRect.top,
+                railBottom: railRect.bottom
+            };
         }
 
+        const thumbnailWidth = parseStagePixelValue(styles, '--vh360-thumbnail-width', 160);
+        const thumbnailHeight = parseStagePixelValue(styles, '--vh360-thumbnail-height', 90);
+        const thumbnailGap = parseStagePixelValue(styles, '--vh360-thumbnail-gap', 10);
+        const thumbnailRailHeight = parseStagePixelValue(styles, '--vh360-thumbnail-rail-height', thumbnailHeight);
         const thumbnailBottom = controlsHeight + stagePadding;
         const availableWidth = Math.max(0, stage.clientWidth - (stagePadding * 2));
         const totalWidth = thumbnailCount > 0 ? (thumbnailCount * thumbnailWidth) + (Math.max(0, thumbnailCount - 1) * thumbnailGap) : 0;
         const maxScroll = Math.max(0, totalWidth - availableWidth);
         const railTop = Math.max(rect.top, rect.bottom - thumbnailBottom - thumbnailRailHeight - stagePadding);
         const railBottom = Math.max(railTop, rect.bottom - controlsHeight);
-        return { axis, thumbnailCount, thumbnailWidth, thumbnailHeight, thumbnailGap, stagePadding, controlsHeight, thumbnailRailHeight, availableWidth, totalWidth, maxScroll, railTop, railBottom, railLeft: rect.left, railRight: rect.right };
+        return { axis, thumbnailCount, thumbnailWidth, thumbnailHeight, thumbnailGap, stagePadding, controlsHeight, thumbnailRailHeight, availableWidth, totalWidth, maxScroll, railTop, railBottom, railLeft: rect.left, railRightEdge: rect.right };
     }
 
     function getThumbnailScrollOffset(stage) {
@@ -831,7 +865,7 @@ window.initializeAgoraPlayer = function(config) {
 
     function isPointInThumbnailRail(stage, clientX, clientY) {
         const metrics = getThumbnailRailMetrics(stage);
-        return !!metrics && clientX >= metrics.railLeft && clientX <= metrics.railRight && clientY >= metrics.railTop && clientY <= metrics.railBottom;
+        return !!metrics && clientX >= metrics.railLeft && clientX <= metrics.railRightEdge && clientY >= metrics.railTop && clientY <= metrics.railBottom;
     }
 
     function shouldIgnoreThumbnailRailEventTarget(target) {
@@ -984,11 +1018,14 @@ window.initializeAgoraPlayer = function(config) {
                 stage.removeEventListener('touchend', thumbnailRailHandlers.touchEnd);
                 stage.removeEventListener('touchcancel', thumbnailRailHandlers.touchEnd);
             }
-            stage.classList.remove('has-thumbnail-overflow', 'is-thumbnail-rail-dragging', 'is-thumbnail-scrolled-start', 'is-thumbnail-scrolled-end');
+            stage.classList.remove('has-thumbnail-overflow', 'is-thumbnail-rail-dragging', 'is-thumbnail-scrolled-start', 'is-thumbnail-scrolled-end', 'vh360-thumbnail-rail-vertical');
+            const player = stage.closest('#vh360-agora-player') || document.getElementById('vh360-agora-player');
+            if (player) player.classList.remove('vh360-landscape-participant-rail-active');
             stage.style.removeProperty('--vh360-thumbnail-scroll-offset');
             delete stage.dataset.thumbnailMaxScroll;
             delete stage.dataset.thumbnailScrollOffset;
             delete stage.dataset.thumbnailCount;
+            delete stage.dataset.thumbnailRailAxis;
         }
         if (thumbnailRailHandlers.resize) {
             window.removeEventListener('resize', thumbnailRailHandlers.resize);
