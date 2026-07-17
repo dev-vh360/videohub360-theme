@@ -526,6 +526,7 @@ window.initializeAgoraPlayer = function(config) {
     let hasServerApprovedPublishToken = false;
     let currentUserUID = null; // Store the current user's Agora UID after joining
     let isAgoraSessionJoined = false;
+    let isAgoraSessionReplacementInProgress = false;
     let latestAgoraTokenResponse = null;
     let agoraTokenRenewalInProgress = false;
     let agoraTokenRecoveryInProgress = false;
@@ -2623,8 +2624,14 @@ window.initializeAgoraPlayer = function(config) {
     }
 
     function beginAgoraSessionReplacement(reason) {
+        isAgoraSessionReplacementInProgress = true;
         isAgoraSessionJoined = false;
         resetRemoteSubscriptionSession(reason);
+    }
+
+    function completeAgoraSessionReplacement(joined) {
+        isAgoraSessionReplacementInProgress = false;
+        isAgoraSessionJoined = !!joined;
     }
 
     function currentRemotePublicationGeneration(uid, mediaType) {
@@ -2719,7 +2726,7 @@ window.initializeAgoraPlayer = function(config) {
     }
 
     async function subscribeToRemotePublication(user, mediaType, options = {}) {
-        if (!isAgoraSessionJoined || !client || client.connectionState !== 'CONNECTED' || !isRemotePublicationCurrent(user, mediaType)) return;
+        if (isAgoraSessionReplacementInProgress || !isAgoraSessionJoined || !client || client.connectionState !== 'CONNECTED' || !isRemotePublicationCurrent(user, mediaType)) return;
         const key = remoteSubscriptionKey(user.uid, mediaType);
         const generation = currentRemotePublicationGeneration(user.uid, mediaType);
         let state = remoteSubscriptionStates.get(key) || {
@@ -2931,16 +2938,14 @@ window.initializeAgoraPlayer = function(config) {
     }
 
     client.on("user-published", (user, mediaType) => {
-        if (isBeingModerated || !isAgoraSessionJoined || !client || client.connectionState !== 'CONNECTED') return;
+        if (isBeingModerated || isAgoraSessionReplacementInProgress || !isAgoraSessionJoined || !client || client.connectionState !== 'CONNECTED') return;
         const currentUser = getCurrentRemoteUser(user && user.uid) || user;
         if (!currentUser || !currentUser.uid) return;
         const key = remoteSubscriptionKey(currentUser.uid, mediaType);
         const state = remoteSubscriptionStates.get(key);
-        // Only retain a state when it is demonstrably attached to the current publication.
-        if (!state || !isRemotePublicationReady(currentUser, mediaType, state)) {
-            if (state) clearRemoteSubscription(currentUser.uid, mediaType, state);
-            advanceRemotePublicationGeneration(currentUser.uid, mediaType);
-        }
+        if (state) clearRemoteSubscription(currentUser.uid, mediaType, state);
+        // Agora's publication event is authoritative; never infer its identity from an old track or DOM binding.
+        advanceRemotePublicationGeneration(currentUser.uid, mediaType);
         subscribeToRemotePublication(currentUser, mediaType);
     });
     client.on("user-unpublished", (user, mediaType) => {
@@ -3197,7 +3202,7 @@ window.initializeAgoraPlayer = function(config) {
         } else if (curState === "RECONNECTING") {
             window.vh360Log("Agora: Attempting to reconnect...");
             markRemoteVideosAsReconnecting();
-        } else if (curState === "CONNECTED" && prevState !== "CONNECTED") {
+        } else if (curState === "CONNECTED" && prevState !== "CONNECTED" && !isAgoraSessionReplacementInProgress) {
             window.vh360Log("Agora: Successfully reconnected");
             clearRemoteVideosReconnectingState();
             isAgoraSessionJoined = true;
@@ -3762,16 +3767,21 @@ window.initializeAgoraPlayer = function(config) {
         }
 
         const rejoinUid = tokenResponse.uid || config.uid;
-        await client.join(
-            config.appId,
-            tokenResponse.channel || config.channelName,
-            tokenResponse.token,
-            Number(rejoinUid)
-        );
+        try {
+            await client.join(
+                config.appId,
+                tokenResponse.channel || config.channelName,
+                tokenResponse.token,
+                Number(rejoinUid)
+            );
+        } catch (joinError) {
+            completeAgoraSessionReplacement(false);
+            throw joinError;
+        }
 
         latestAgoraTokenResponse = tokenResponse;
         currentUserUID = Number(tokenResponse.uid || config.uid);
-        isAgoraSessionJoined = true;
+        completeAgoraSessionReplacement(true);
         currentRole = 'host';
         isPresenter = true;
         reconcileRemoteSubscriptions('host-token-rejoin');
@@ -4550,12 +4560,13 @@ window.initializeAgoraPlayer = function(config) {
                     Number(tokenResponse.uid || renewalUid)
                 );
             } catch (joinError) {
+                completeAgoraSessionReplacement(false);
                 window.vh360Warn('VideoHub360: Expired token rejoin failed:', joinError);
                 return false;
             }
 
             currentUserUID = Number(joinedUid || tokenResponse.uid || renewalUid);
-            isAgoraSessionJoined = true;
+            completeAgoraSessionReplacement(true);
             reconcileRemoteSubscriptions('token-rejoin');
             scheduleRemoteReconciliation('token-rejoin-stabilization', 750);
 
