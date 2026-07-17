@@ -130,6 +130,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
         broadcastStarting: false,
         broadcastReady: false,
         broadcastEnding: false,
+        statsDiagnosticTimers: [],
         programSwitching: false,
         liveAudioMuted: false,
         liveVideoMuted: false,
@@ -324,10 +325,94 @@ var VH360StorageCompat = window.VH360Storage || (function(){
         root.classList.toggle(className, Boolean(active));
     }
 
+    function isStudioDebugEnabled() {
+        return window.__VH360_STUDIO_DEBUG === true;
+    }
+
     function studioDebugLog() {
-        if (window.__VH360_STUDIO_DEBUG === true && window.console && typeof window.console.info === 'function') {
+        if (isStudioDebugEnabled() && window.console && typeof window.console.info === 'function') {
             window.console.info.apply(window.console, arguments);
         }
+    }
+
+    function clearAgoraStatsDiagnosticTimers() {
+        (state.statsDiagnosticTimers || []).forEach((timerId) => {
+            window.clearTimeout(timerId);
+        });
+        state.statsDiagnosticTimers = [];
+    }
+
+    function normalizeAgoraLocalVideoStats(stats) {
+        const actual = {};
+        const fields = [
+            'sendResolutionWidth',
+            'sendResolutionHeight',
+            'sendFrameRate',
+            'sendBitrate',
+            'targetSendBitrate',
+            'captureFrameRate',
+            'encodeDelay',
+            'sendPacketLossRate',
+            'totalDuration',
+            'totalFreezeTime'
+        ];
+        const source = stats && typeof stats === 'object' ? stats : {};
+        fields.forEach((field) => {
+            if (typeof source[field] !== 'undefined') {
+                actual[field] = source[field];
+            }
+        });
+        if (typeof source.sendResolutionWidth !== 'undefined' || typeof source.sendResolutionHeight !== 'undefined') {
+            actual.width = typeof source.sendResolutionWidth !== 'undefined' ? source.sendResolutionWidth : null;
+            actual.height = typeof source.sendResolutionHeight !== 'undefined' ? source.sendResolutionHeight : null;
+        }
+        return actual;
+    }
+
+    function logAgoraVideoStatsSample(session, label, requestedConfig, programVideoTrack) {
+        if (!isStudioDebugEnabled() || !session || session !== state.broadcastSession || state.broadcastEnding || (!state.broadcastStarting && !state.broadcastReady) || typeof session.getLocalVideoStats !== 'function') {
+            return;
+        }
+        Promise.resolve()
+            .then(() => session.getLocalVideoStats())
+            .then((stats) => {
+                if (session !== state.broadcastSession || state.broadcastEnding || (!state.broadcastStarting && !state.broadcastReady)) {
+                    return;
+                }
+                studioDebugLog('[VH360 Studio] Agora local video stats — ' + label, {
+                    preset: getSelectedPresetKey(),
+                    requested: requestedConfig,
+                    canvas: { width: state.programWidth, height: state.programHeight },
+                    captureTrackSettings: programVideoTrack && typeof programVideoTrack.getSettings === 'function' ? programVideoTrack.getSettings() : {},
+                    actual: normalizeAgoraLocalVideoStats(stats),
+                    raw: stats
+                });
+            })
+            .catch((error) => {
+                if (session === state.broadcastSession && !state.broadcastEnding) {
+                    studioDebugLog('[VH360 Studio] Agora local video stats unavailable — ' + label, {
+                        message: error && error.message ? error.message : String(error)
+                    });
+                }
+            });
+    }
+
+    function scheduleAgoraVideoStatsDiagnostics(session, requestedConfig, programVideoTrack) {
+        clearAgoraStatsDiagnosticTimers();
+        if (!isStudioDebugEnabled()) {
+            return;
+        }
+        [
+            { delay: 3000, label: '3 seconds' },
+            { delay: 8000, label: '8 seconds' },
+            { delay: 15000, label: '15 seconds' }
+        ].forEach((sample) => {
+            const timerId = window.setTimeout(() => {
+                state.statsDiagnosticTimers = state.statsDiagnosticTimers.filter((id) => id !== timerId);
+                logAgoraVideoStatsSample(session, sample.label, requestedConfig, programVideoTrack);
+            }, sample.delay);
+            state.statsDiagnosticTimers.push(timerId);
+        });
     }
 
     function isMediaSource(sourceId) {
@@ -5887,6 +5972,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 
     function cleanup(options = {}) {
         state.studioTearingDown = true;
+        clearAgoraStatsDiagnosticTimers();
         flushCameraSourceConfigurationSave();
         flushAudioInputConfigurationSave();
         state.audioInputTestRequestId++;
@@ -6110,6 +6196,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
     }
 
     async function goLive() {
+        clearAgoraStatsDiagnosticTimers();
         const supportError = requiredSupportError('live');
         if (supportError) {
             setBroadcastStatus(supportError, 'error');
@@ -6202,9 +6289,10 @@ var VH360StorageCompat = window.VH360Storage || (function(){
                 preset: getSelectedPresetKey(),
                 canvas: { width: state.programWidth, height: state.programHeight },
                 captureTrackSettings: programVideoTrack && typeof programVideoTrack.getSettings === 'function' ? programVideoTrack.getSettings() : {},
-                customVideoConfig: customVideoConfig,
-                localVideoStats: typeof session.getLocalVideoStats === 'function' ? session.getLocalVideoStats() : {}
+                customVideoConfig: customVideoConfig
             });
+            logAgoraVideoStatsSample(session, 'initial', customVideoConfig, programVideoTrack);
+            scheduleAgoraVideoStatsDiagnostics(session, customVideoConfig, programVideoTrack);
             studioDebugLog('[VH360 Studio] Agora mixed audio diagnostics', { mixerId: state.audioMixer ? state.audioMixer.id : '', audioTrackId: getStudioMixedAudioTrack() ? getStudioMixedAudioTrack().id : '', agoraAudioTrackId: typeof session.getAudioTrackId === 'function' ? session.getAudioTrackId() : '' });
             state.liveAudioWarningActive = false;
             updateViewerLinkControls();
@@ -6224,6 +6312,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
                 setBroadcastStatus(strings.liveStarted, 'success');
             }
         } catch (error) {
+            clearAgoraStatsDiagnosticTimers();
             const failedVideoId = state.broadcastVideoId;
             if (state.broadcastSession) {
                 await state.broadcastSession.stop().catch(() => {});
@@ -6285,6 +6374,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
             window.clearInterval(state.heartbeatTimer);
             state.heartbeatTimer = null;
         }
+        clearAgoraStatsDiagnosticTimers();
         if (state.broadcastSession) {
             await state.broadcastSession.stop();
             state.broadcastSession = null;
@@ -6960,6 +7050,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
         window.addEventListener('pagehide', (event) => {
             flushCameraSourceConfigurationSave();
             flushAudioInputConfigurationSave();
+            clearAgoraStatsDiagnosticTimers();
             if (event.persisted) {
                 state.pageStoredInBackForwardCache = true;
                 return;
