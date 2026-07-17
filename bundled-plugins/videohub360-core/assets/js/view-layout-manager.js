@@ -147,6 +147,7 @@ class ViewLayoutManager {
         }
         const existingMenu = document.getElementById('vh360-view-dropdown-menu');
         if (existingMenu) {
+            existingMenu.classList.remove('vh360-view-dropdown-menu--fullscreen');
             existingMenu.remove();
         }
         
@@ -278,6 +279,12 @@ class ViewLayoutManager {
         if (shouldMove) {
             parent.appendChild(this.viewDropdownMenu);
         }
+
+        // The portal destination, rather than a page-level fullscreen class, is
+        // authoritative. This prevents fullscreen stacking styles from leaking
+        // into normal playback after the menu has been restored to the body.
+        const isFullscreenPortal = !!fullscreenElement && this.viewDropdownMenu.parentElement === fullscreenElement;
+        this.viewDropdownMenu.classList.toggle('vh360-view-dropdown-menu--fullscreen', isFullscreenPortal);
 
         if (window.__VH360_DEBUG) {
             console.log('[VH360 Layout Manager] View dropdown portal sync', {
@@ -462,12 +469,32 @@ class ViewLayoutManager {
         menu.hidden = false;
         const isMobileViewport = viewportWidth <= 768;
         const isFullscreenContext = !!this.getActiveFullscreenElement();
+        const isMobileLandscapeFullscreen = isFullscreenContext &&
+            viewportWidth > viewportHeight && viewportHeight <= 500;
         const maxMenuWidth = Math.max(160, viewportWidth - (margin * 2));
-        const maxMenuHeight = Math.max(120, viewportHeight - (isMobileViewport && isFullscreenContext ? 96 : margin * 2));
-        const menuWidth = Math.min(menu.offsetWidth || 172, maxMenuWidth);
+        const maxMenuHeight = Math.max(120, viewportHeight - (
+            isMobileLandscapeFullscreen ? 72 : (isMobileViewport && isFullscreenContext ? 96 : margin * 2)
+        ));
+        let menuWidth = Math.min(menu.offsetWidth || 172, maxMenuWidth);
         const menuHeight = Math.min(menu.offsetHeight || 140, maxMenuHeight);
         const minLeft = viewportOffsetLeft + margin;
-        const maxLeft = viewportOffsetLeft + viewportWidth - menuWidth - margin;
+        let maxRight = viewportOffsetLeft + viewportWidth - margin;
+        const agoraPlayer = document.getElementById('vh360-agora-player');
+
+        // The rail probe is sized by CSS, so its measured edge accounts for
+        // safe areas and the rendered rail width without duplicating that math.
+        if (agoraPlayer && agoraPlayer.classList.contains('vh360-landscape-participant-rail-active')) {
+            const railViewport = agoraPlayer.querySelector('.vh360-thumbnail-rail-viewport');
+            if (railViewport) {
+                const railRect = railViewport.getBoundingClientRect();
+                if (railRect.width > 0 && railRect.left > minLeft) {
+                    maxRight = Math.min(maxRight, railRect.left - margin);
+                }
+            }
+        }
+
+        menuWidth = Math.min(menuWidth, Math.max(0, maxRight - minLeft));
+        const maxLeft = Math.max(minLeft, maxRight - menuWidth);
         const minTop = viewportOffsetTop + margin;
         const maxTop = viewportOffsetTop + viewportHeight - menuHeight - margin;
         const left = Math.max(minLeft, Math.min(toggleRect.right - menuWidth, maxLeft));
@@ -1027,6 +1054,7 @@ class ViewLayoutManager {
             selector.remove();
         }
         if (this.viewDropdownMenu && this.viewDropdownMenu.parentElement) {
+            this.viewDropdownMenu.classList.remove('vh360-view-dropdown-menu--fullscreen');
             this.viewDropdownMenu.remove();
         }
         this.viewSelector = null;
