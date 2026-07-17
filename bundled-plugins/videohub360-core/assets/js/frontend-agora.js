@@ -514,6 +514,7 @@ window.initializeAgoraPlayer = function(config) {
     let remoteUsers = {};
     // Session-only subscription state prevents duplicate subscribe calls and stale retries.
     const remoteSubscriptionStates = new Map();
+    const remotePublicationGenerations = new Map();
     const REMOTE_SUBSCRIPTION_MAX_ATTEMPTS = 5;
     let remoteReconciliationTimer = null;
     let isAudioMuted = false;
@@ -2621,12 +2622,29 @@ window.initializeAgoraPlayer = function(config) {
         return `${normalizeParticipantUid(uid)}:${mediaType}`;
     }
 
+    function beginAgoraSessionReplacement(reason) {
+        isAgoraSessionJoined = false;
+        resetRemoteSubscriptionSession(reason);
+    }
+
+    function currentRemotePublicationGeneration(uid, mediaType) {
+        return remotePublicationGenerations.get(remoteSubscriptionKey(uid, mediaType)) || 0;
+    }
+
+    function advanceRemotePublicationGeneration(uid, mediaType) {
+        const key = remoteSubscriptionKey(uid, mediaType);
+        const generation = currentRemotePublicationGeneration(uid, mediaType) + 1;
+        remotePublicationGenerations.set(key, generation);
+        return generation;
+    }
+
     function resetRemoteSubscriptionSession(reason) {
         remoteSubscriptionSession += 1;
         remoteSubscriptionStates.forEach((state) => {
             if (state.timer) clearTimeout(state.timer);
         });
         remoteSubscriptionStates.clear();
+        remotePublicationGenerations.clear();
         if (remoteReconciliationTimer) clearTimeout(remoteReconciliationTimer);
         remoteReconciliationTimer = null;
         window.vh360Log('Agora: Remote subscription session reset', { reason, session: remoteSubscriptionSession });
@@ -2649,7 +2667,7 @@ window.initializeAgoraPlayer = function(config) {
     }
 
     function isCurrentRemoteSubscriptionState(key, state) {
-        return state.session === remoteSubscriptionSession && remoteSubscriptionStates.get(key) === state;
+        return state.session === remoteSubscriptionSession && state.publicationGeneration === currentRemotePublicationGeneration(state.uid, state.mediaType) && remoteSubscriptionStates.get(key) === state;
     }
 
     function isRemotePublicationCurrent(user, mediaType, session) {
@@ -2701,16 +2719,15 @@ window.initializeAgoraPlayer = function(config) {
     }
 
     async function subscribeToRemotePublication(user, mediaType, options = {}) {
-        if (!isRemotePublicationCurrent(user, mediaType)) return;
+        if (!isAgoraSessionJoined || !client || client.connectionState !== 'CONNECTED' || !isRemotePublicationCurrent(user, mediaType)) return;
         const key = remoteSubscriptionKey(user.uid, mediaType);
-        let state = remoteSubscriptionStates.get(key) || { attempts: 0, status: 'idle', timer: null, session: remoteSubscriptionSession, sdkSubscribed: false, retryPhase: null, publicationTrack: null };
-        const currentTrack = mediaType === 'video' ? user.videoTrack : user.audioTrack;
-        if (state.session !== remoteSubscriptionSession) return;
-        // A changed remote track is a new publication, not evidence that the old SDK subscription is reusable.
-        if (state.publicationTrack && currentTrack && state.publicationTrack !== currentTrack) {
-            clearRemoteSubscription(user.uid, mediaType, state);
-            state = { attempts: 0, status: 'idle', timer: null, session: remoteSubscriptionSession, sdkSubscribed: false, retryPhase: null, publicationTrack: currentTrack };
-        }
+        const generation = currentRemotePublicationGeneration(user.uid, mediaType);
+        let state = remoteSubscriptionStates.get(key) || {
+            uid: user.uid, mediaType, attempts: 0, status: 'idle', timer: null,
+            session: remoteSubscriptionSession, publicationGeneration: generation,
+            sdkSubscribed: false, retryPhase: null, publicationTrack: null
+        };
+        if (state.session !== remoteSubscriptionSession || state.publicationGeneration !== generation) return;
         if (!remoteSubscriptionStates.has(key)) remoteSubscriptionStates.set(key, state);
         if (state.status === 'subscribing' || state.status === 'attaching') return;
         if (state.timer) { clearTimeout(state.timer); state.timer = null; }
@@ -2794,8 +2811,7 @@ window.initializeAgoraPlayer = function(config) {
                     clearUnpublishedRemoteMedia(user.uid, mediaType);
                     return;
                 }
-                const currentTrack = mediaType === 'video' ? user.videoTrack : user.audioTrack;
-                if (state && state.publicationTrack && currentTrack && state.publicationTrack !== currentTrack) {
+                if (state && state.publicationGeneration !== currentRemotePublicationGeneration(user.uid, mediaType)) {
                     clearRemoteSubscription(user.uid, mediaType, state);
                 }
                 if (!isRemotePublicationReady(user, mediaType, remoteSubscriptionStates.get(remoteSubscriptionKey(user.uid, mediaType)))) {
@@ -2915,18 +2931,21 @@ window.initializeAgoraPlayer = function(config) {
     }
 
     client.on("user-published", (user, mediaType) => {
-        if (isBeingModerated) return;
+        if (isBeingModerated || !isAgoraSessionJoined || !client || client.connectionState !== 'CONNECTED') return;
         const currentUser = getCurrentRemoteUser(user && user.uid) || user;
         if (!currentUser || !currentUser.uid) return;
         const key = remoteSubscriptionKey(currentUser.uid, mediaType);
         const state = remoteSubscriptionStates.get(key);
-        const currentTrack = mediaType === 'video' ? currentUser.videoTrack : currentUser.audioTrack;
-        if (state && state.status === 'ready' && state.publicationTrack === currentTrack && isRemotePublicationReady(currentUser, mediaType, state)) return;
-        if (state && state.publicationTrack && currentTrack && state.publicationTrack !== currentTrack) clearRemoteSubscription(currentUser.uid, mediaType, state);
+        // Only retain a state when it is demonstrably attached to the current publication.
+        if (!state || !isRemotePublicationReady(currentUser, mediaType, state)) {
+            if (state) clearRemoteSubscription(currentUser.uid, mediaType, state);
+            advanceRemotePublicationGeneration(currentUser.uid, mediaType);
+        }
         subscribeToRemotePublication(currentUser, mediaType);
     });
     client.on("user-unpublished", (user, mediaType) => {
         clearRemoteSubscription(user.uid, mediaType);
+        advanceRemotePublicationGeneration(user.uid, mediaType);
         if (mediaType === "video") {
             const participant = getOrCreateParticipant(user.uid);
             if (participant) {
@@ -3726,7 +3745,7 @@ window.initializeAgoraPlayer = function(config) {
         }
 
         // The next join is a new Agora session; old subscriptions cannot be reused.
-        resetRemoteSubscriptionSession('host-token-rejoin');
+        beginAgoraSessionReplacement('host-token-rejoin');
 
         // Stop and release any existing local tracks before leaving.
         await stopPublishing();
@@ -4020,6 +4039,7 @@ window.initializeAgoraPlayer = function(config) {
             }
 
             clearAgoraTokenRenewalTimer();
+            isAgoraSessionJoined = false;
             resetRemoteSubscriptionSession('channel-leave');
             latestAgoraTokenResponse = null;
             agoraTokenRecoveryInProgress = false;
@@ -4520,7 +4540,7 @@ window.initializeAgoraPlayer = function(config) {
                 return false;
             }
 
-            resetRemoteSubscriptionSession('expired-token-rejoin');
+            beginAgoraSessionReplacement('expired-token-rejoin');
             let joinedUid;
             try {
                 joinedUid = await client.join(
@@ -4900,6 +4920,7 @@ window.initializeAgoraPlayer = function(config) {
             stopStreamStatusPolling();
 
             clearAgoraTokenRenewalTimer();
+            isAgoraSessionJoined = false;
             resetRemoteSubscriptionSession('channel-leave');
             latestAgoraTokenResponse = null;
             agoraTokenRecoveryInProgress = false;
