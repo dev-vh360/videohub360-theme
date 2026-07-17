@@ -272,6 +272,49 @@
                 return mediaTrack && typeof mediaTrack.getSettings === 'function' ? mediaTrack.getSettings() : {};
             }
 
+            function positiveNumber(value) {
+                value = Number(value);
+                return Number.isFinite(value) && value > 0 ? value : 0;
+            }
+
+            function normalizedCustomVideoConfig() {
+                const requested = config.customVideoConfig || {};
+                const customConfig = { mediaStreamTrack: config.initialVideoMediaStreamTrack };
+                const width = positiveNumber(requested.width);
+                const height = positiveNumber(requested.height);
+                const frameRate = positiveNumber(requested.frameRate);
+                const bitrateMin = positiveNumber(requested.bitrateMin);
+                const bitrateMax = positiveNumber(requested.bitrateMax);
+
+                if (width) { customConfig.width = width; }
+                if (height) { customConfig.height = height; }
+                if (frameRate) { customConfig.frameRate = frameRate; }
+                if (bitrateMin && (!bitrateMax || bitrateMin <= bitrateMax)) { customConfig.bitrateMin = bitrateMin; }
+                if (bitrateMax) { customConfig.bitrateMax = bitrateMax; }
+                if (requested.optimizationMode === 'detail' || requested.optimizationMode === 'motion') {
+                    customConfig.optimizationMode = requested.optimizationMode;
+                }
+                return customConfig;
+            }
+
+            function createConfiguredCustomVideoTrack() {
+                const customConfig = normalizedCustomVideoConfig();
+                try {
+                    const track = window.AgoraRTC.createCustomVideoTrack(customConfig);
+                    emit(root, 'custom-video-track-created', { config: customConfig });
+                    return track;
+                } catch (error) {
+                    if (!customConfig.optimizationMode) {
+                        throw error;
+                    }
+                    const fallbackConfig = Object.assign({}, customConfig);
+                    delete fallbackConfig.optimizationMode;
+                    const track = window.AgoraRTC.createCustomVideoTrack(fallbackConfig);
+                    emit(root, 'custom-video-track-created', { config: fallbackConfig, optimizationModeFallback: true });
+                    return track;
+                }
+            }
+
             function updateCurrentDeviceFromTrack() {
                 const settings = mediaTrackSettings(state.videoTrack);
                 if (settings.deviceId) {
@@ -359,7 +402,7 @@
                     }
                     if (!state.videoTrack) {
                         if (config.initialVideoMediaStreamTrack && typeof window.AgoraRTC.createCustomVideoTrack === 'function') {
-                            state.videoTrack = window.AgoraRTC.createCustomVideoTrack({ mediaStreamTrack: config.initialVideoMediaStreamTrack });
+                            state.videoTrack = createConfiguredCustomVideoTrack();
                             state.videoTrackOwnsSource = false;
                         } else {
                             const videoTrack = await window.AgoraRTC.createCameraVideoTrack(config.videoConfig || {});
@@ -1008,6 +1051,11 @@
                         return track ? track.id : '';
                     }
                     return '';
+                },
+                getLocalVideoStats: function () {
+                    return state.client && typeof state.client.getLocalVideoStats === 'function'
+                        ? state.client.getLocalVideoStats()
+                        : {};
                 },
                 getLocalMediaStream: function () {
                     const tracks = [];
