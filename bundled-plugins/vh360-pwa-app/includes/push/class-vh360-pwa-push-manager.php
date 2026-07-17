@@ -62,8 +62,8 @@ class VH360_PWA_Push_Manager {
 				'onesignal' => array(
 					'app_id'              => '',
 					'rest_api_key'        => '',
-					'sw_mode'             => 'root_proxy',
-					'sw_scope'            => '/',
+					'sw_mode'             => 'dedicated',
+					'sw_scope'            => '/push/onesignal/',
 					'default_click_url'   => home_url( '/' ),
 					'default_icon_url'    => '',
 					'auto_prompt'         => false,
@@ -106,7 +106,13 @@ class VH360_PWA_Push_Manager {
 			}
 		}
 
-		return array_merge( $defaults, $settings );
+		$settings = array_merge( $defaults, $settings );
+		if ( isset( $settings['providers']['onesignal']['sw_scope'] ) && '/' === $settings['providers']['onesignal']['sw_scope'] ) {
+			$settings['providers']['onesignal']['sw_scope'] = '/push/onesignal/';
+			$settings['providers']['onesignal']['sw_mode'] = 'dedicated';
+		}
+
+		return $settings;
 	}
 
 	/**

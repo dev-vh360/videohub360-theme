@@ -111,30 +111,19 @@ class VH360_Push_OneSignal_Adapter implements VH360_PWA_Push_Adapter_Interface {
 			return; // Don't load SDK if config is invalid
 		}
 
-		// OneSignal SDK
-		$sdk_version = defined( 'VH360_PWA_ONESIGNAL_SDK_VERSION' ) ? VH360_PWA_ONESIGNAL_SDK_VERSION : 'v16';
-		wp_enqueue_script(
-			'onesignal-sdk',
-			'https://cdn.onesignal.com/sdks/web/' . $sdk_version . '/OneSignalSDK.page.js',
-			array(),
-			null,
-			array(
-				'in_footer' => true,
-				'strategy'  => 'defer',
-			)
-		);
-
-		// Our initialization script
+		// Always enqueue the first-party initializer. It dynamically loads the optional
+		// provider SDK on the client only after Preferences consent is present.
 		wp_enqueue_script(
 			'vh360-pwa-push-public',
 			VH360_PWA_APP_URL . 'assets/public/push-public.js',
-			array( 'onesignal-sdk' ),
+			array(),
 			vh360_pwa_app_asset_version('assets/public/push-public.js'),
 			array(
 				'in_footer' => true,
 				'strategy'  => 'defer',
 			)
 		);
+
 	}
 
 	/**
@@ -142,18 +131,19 @@ class VH360_Push_OneSignal_Adapter implements VH360_PWA_Push_Adapter_Interface {
 	 */
 	public function get_frontend_bootstrap( array $settings ) : array {
 		// Never expose REST API key to frontend
-		// Use the VH360 service worker (vh360-sw.js) as the single SW for scope '/'
-		// and merge OneSignal into it. This prevents SW scope conflicts.
+		// Use a dedicated provider worker path/scope so the optional push worker does not replace the root VH360 PWA worker.
 		return array(
 			'provider'         => 'onesignal',
 			'appId'            => $settings['app_id'] ?? '',
-			'swPath'           => '/' . VH360_PWA_SW_SLUG,
-			'swUpdaterPath'    => '/' . VH360_PWA_SW_SLUG,
-			'swScope'          => $settings['sw_scope'] ?? '/',
-			'autoPrompt'       => ! empty( $settings['auto_prompt'] ),
-			'autoPromptDelay'  => absint( $settings['auto_prompt_delay'] ?? 0 ),
-			'autoPromptScroll' => ! empty( $settings['auto_prompt_scroll'] ),
-			'autoPromptLogin'  => ! empty( $settings['auto_prompt_login'] ),
+			'swPath'           => 'push/onesignal/OneSignalSDKWorker.js',
+			'swUpdaterPath'    => 'push/onesignal/OneSignalSDKUpdaterWorker.js',
+			'swScope'          => $settings['sw_scope'] ?? '/push/onesignal/',
+			'autoPrompt'       => false,
+			'autoPromptDelay'  => 0,
+			'autoPromptScroll' => false,
+			'autoPromptLogin'  => false,
+			'sdkUrl'           => 'https://cdn.onesignal.com/sdks/web/' . ( defined( 'VH360_PWA_ONESIGNAL_SDK_VERSION' ) ? VH360_PWA_ONESIGNAL_SDK_VERSION : 'v16' ) . '/OneSignalSDK.page.js',
+			'consentManaged'   => function_exists( 'videohub360_has_consent' ),
 		);
 	}
 

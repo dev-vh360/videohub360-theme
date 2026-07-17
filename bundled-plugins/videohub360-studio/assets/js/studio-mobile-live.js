@@ -1,6 +1,17 @@
 (function () {
     'use strict';
 
+var VH360StorageCompat = window.VH360Storage || (function(){
+  var memory = {};
+  function persistentAllowed(){ return !window.VH360ConsentExpected; }
+  return {
+    getPreference: function(key, def){ if(!persistentAllowed()) { return Object.prototype.hasOwnProperty.call(memory, key) ? memory[key] : def; } try { var value = window['localStorage'].getItem(key); return value === null ? def : value; } catch (e) { return def; } },
+    setPreference: function(key, value){ memory[key] = value; if(!persistentAllowed()) { return; } try { window['localStorage'].setItem(key, value); } catch (e) {} },
+    removePreference: function(key){ delete memory[key]; if(!persistentAllowed()) { return; } try { window['localStorage'].removeItem(key); } catch (e) {} },
+    registerPreferenceKey: function(){}
+  };
+})();
+
     const root = document.querySelector('[data-vh360-studio-mobile-live]');
     const cfg = window.vh360StudioMobileLive || {};
     const strings = cfg.strings || {};
@@ -10,7 +21,7 @@
     }
 
     try {
-        window.localStorage.setItem('vh360StudioMode', 'mobile');
+        VH360StorageCompat.setPreference('vh360StudioMode', 'mobile');
     } catch (error) {}
 
     const state = {
@@ -671,7 +682,7 @@
     function bindModeChoices() {
         all('[data-studio-mode-choice]').forEach(function (link) {
             link.addEventListener('click', function () {
-                try { window.localStorage.setItem('vh360StudioMode', link.getAttribute('data-studio-mode-choice')); } catch (error) {}
+                try { VH360StorageCompat.setPreference('vh360StudioMode', link.getAttribute('data-studio-mode-choice')); } catch (error) {}
             });
         });
     }

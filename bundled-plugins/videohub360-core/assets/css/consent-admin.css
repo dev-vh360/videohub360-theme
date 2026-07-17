@@ -1,0 +1,101 @@
+.vh360-consent-admin {
+    max-width: 1180px;
+}
+
+.vh360-consent-admin-intro {
+    max-width: 780px;
+}
+
+.vh360-consent-admin-layout {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.vh360-consent-admin-card {
+    box-sizing: border-box;
+    margin: 0;
+    max-width: none;
+    padding: 20px 24px;
+}
+
+.vh360-consent-admin-card h2 {
+    margin: 0 0 18px;
+}
+
+.vh360-consent-admin-field {
+    margin: 0 0 18px;
+}
+
+.vh360-consent-admin-field > label,
+.vh360-consent-admin-field > strong {
+    display: block;
+    margin-bottom: 6px;
+}
+
+.vh360-consent-admin-field input.regular-text {
+    box-sizing: border-box;
+    max-width: 520px;
+    width: 100%;
+}
+
+.vh360-consent-admin-field input[type="number"] {
+    width: 110px;
+}
+
+.vh360-consent-admin-field .description {
+    margin: 6px 0 0;
+    max-width: 620px;
+}
+
+.vh360-consent-admin-mode-card {
+    grid-column: 1 / -1;
+}
+
+.vh360-consent-admin-mode-status {
+    margin: 14px 0 6px;
+}
+
+.vh360-consent-admin-badge {
+    display: inline-block;
+    border: 1px solid var(--wp-admin-theme-color);
+    border-radius: 999px;
+    color: var(--wp-admin-theme-color);
+    font-weight: 600;
+    line-height: 1.8;
+    padding: 0 10px;
+}
+
+.vh360-consent-admin-callout {
+    margin: 16px 0 0;
+}
+
+.vh360-consent-admin-callout p,
+.vh360-consent-admin-integrations p {
+    max-width: 780px;
+}
+
+.vh360-consent-admin-integrations {
+    margin-top: 20px;
+}
+
+.vh360-consent-admin-save-action {
+    margin: 24px 0 0;
+}
+
+@media (max-width: 782px) {
+    .vh360-consent-admin-layout {
+        display: block;
+    }
+
+    .vh360-consent-admin-card {
+        margin: 0 0 16px;
+        padding: 16px;
+    }
+
+    .vh360-consent-admin-field input.regular-text,
+    .vh360-consent-admin-field select {
+        max-width: 100%;
+    }
+}

@@ -5,11 +5,102 @@
 (function() {
 	'use strict';
 
+var VH360StorageCompat = window.VH360Storage || (function(){
+  var memory = {};
+  function persistentAllowed(){ return !window.VH360ConsentExpected; }
+  return {
+    getPreference: function(key, def){ if(!persistentAllowed()) { return Object.prototype.hasOwnProperty.call(memory, key) ? memory[key] : def; } try { var value = window['localStorage'].getItem(key); return value === null ? def : value; } catch (e) { return def; } },
+    setPreference: function(key, value){ memory[key] = value; if(!persistentAllowed()) { return; } try { window['localStorage'].setItem(key, value); } catch (e) {} },
+    removePreference: function(key){ delete memory[key]; if(!persistentAllowed()) { return; } try { window['localStorage'].removeItem(key); } catch (e) {} },
+    registerPreferenceKey: function(){}
+  };
+})();
+
 	// Debug logging helper - only log when __VH360_DEBUG is enabled
 	const vh360Log = (...args) => { if (window.__VH360_DEBUG) console.log(...args); };
+	var vh360OneSignalInitStarted = false;
+	var vh360OneSignalInitialized = false;
+	var vh360OneSignalSdkLoading = null;
+	var vh360OneSignalSdkLoaded = typeof window.OneSignal !== 'undefined';
+	var vh360OneSignalDeferredOwned = false;
+	var vh360OneSignalInitPromise = null;
+	var vh360OneSignalTransitionId = 0;
+	var vh360OneSignalListenersRegistered = false;
+	var vh360OneSignalLifecyclePromise = Promise.resolve();
+	var vh360OneSignalLastReconciledConsent = null;
+	var vh360OneSignalLastLoggedInUserId = null;
 
 	if (typeof VH360Push === 'undefined') {
 		return;
+	}
+
+
+	function hasPreferenceConsent() {
+		if (window.VH360ConsentExpected && !window.VH360Consent) {
+			return false;
+		}
+		if (!window.VH360Consent) {
+			return true;
+		}
+		return window.VH360Consent.has('preferences');
+	}
+
+	function openConsentPreferences() {
+		if (window.VH360Consent && typeof window.VH360Consent.openPreferences === 'function') {
+			window.VH360Consent.openPreferences();
+		}
+	}
+
+	function resetOneSignalSdkLoader() {
+		vh360OneSignalSdkLoading = null;
+		vh360OneSignalSdkLoaded = typeof window.OneSignal !== 'undefined';
+		if (!vh360OneSignalSdkLoaded && vh360OneSignalDeferredOwned && Array.isArray(window.OneSignalDeferred)) {
+			try {
+				delete window.OneSignalDeferred;
+			} catch (e) {
+				window.OneSignalDeferred = undefined;
+			}
+			vh360OneSignalDeferredOwned = false;
+		}
+	}
+
+	function loadOneSignalSdk() {
+		if (vh360OneSignalSdkLoaded && typeof window.OneSignal !== 'undefined') {
+			return Promise.resolve();
+		}
+		if (vh360OneSignalSdkLoading) {
+			return vh360OneSignalSdkLoading;
+		}
+		if (!VH360Push.sdkUrl) {
+			return Promise.reject(new Error('Push SDK URL is unavailable.'));
+		}
+		if (typeof window.OneSignalDeferred === 'undefined') {
+			window.OneSignalDeferred = [];
+			vh360OneSignalDeferredOwned = true;
+		} else {
+			vh360OneSignalDeferredOwned = false;
+		}
+		vh360OneSignalSdkLoading = new Promise(function(resolve, reject) {
+			var script = document.createElement('script');
+			script.src = VH360Push.sdkUrl;
+			script.async = true;
+			script.setAttribute('data-vh360-onesignal-sdk', '1');
+			script.onload = function() {
+				vh360OneSignalSdkLoaded = true;
+				vh360OneSignalSdkLoading = null;
+				resolve();
+			};
+			script.onerror = function(error) {
+				if (script.parentNode) {
+					script.parentNode.removeChild(script);
+				}
+				vh360OneSignalInitStarted = false;
+				resetOneSignalSdkLoader();
+				reject(error);
+			};
+			document.head.appendChild(script);
+		});
+		return vh360OneSignalSdkLoading;
 	}
 
 	/**
@@ -30,8 +121,8 @@
 				// Additional check using localStorage persistence
 				try {
 					var testKey = '__vh360_storage_test__';
-					localStorage.setItem(testKey, '1');
-					localStorage.removeItem(testKey);
+					VH360StorageCompat.setPreference(testKey, '1');
+					VH360StorageCompat.removePreference(testKey);
 				} catch (e) {
 					warnings.push({
 						type: 'incognito',
@@ -136,16 +227,97 @@
 		});
 	}
 
-	// Initialize OneSignal
-	function initOneSignal() {
-		if (typeof OneSignalDeferred === 'undefined') {
-			console.error('OneSignal SDK not loaded');
+	function withOneSignal(callback) {
+		return new Promise(function(resolve, reject) {
+			if (typeof window.OneSignalDeferred === 'undefined') {
+				reject(new Error('Push provider SDK is not loaded.'));
+				return;
+			}
+			window.OneSignalDeferred.push(async function(OneSignal) {
+				try {
+					resolve(await callback(OneSignal));
+				} catch (error) {
+					reject(error);
+				}
+			});
+		});
+	}
+
+	async function applyOneSignalConsentState(OneSignal, consentActive) {
+		var userId = VH360Push.currentUserId && VH360Push.currentUserId > 0 ? String(VH360Push.currentUserId) : null;
+
+		if (consentActive) {
+			if (OneSignal && typeof OneSignal.setConsentGiven === 'function' && vh360OneSignalLastReconciledConsent !== true) {
+				OneSignal.setConsentGiven(true);
+			}
+			if (userId && OneSignal && typeof OneSignal.login === 'function' && vh360OneSignalLastLoggedInUserId !== userId) {
+				try {
+					await OneSignal.login(userId);
+					vh360Log('[VH360 Push] OneSignal external user ID set:', userId);
+					vh360OneSignalLastLoggedInUserId = userId;
+				} catch (err) {
+					console.error('[VH360 Push] Failed to set OneSignal external user ID:', err);
+				}
+			}
+			vh360OneSignalLastReconciledConsent = true;
 			return;
 		}
 
-		window.OneSignalDeferred = window.OneSignalDeferred || [];
-		OneSignalDeferred.push(async function(OneSignal) {
+		try {
+			if (OneSignal && OneSignal.User && OneSignal.User.PushSubscription && typeof OneSignal.User.PushSubscription.optOut === 'function') {
+				await OneSignal.User.PushSubscription.optOut();
+			}
+		} catch (e) {}
+		try {
+			if (OneSignal && typeof OneSignal.logout === 'function') {
+				await OneSignal.logout();
+			}
+		} catch (e2) {}
+		if (OneSignal && typeof OneSignal.setConsentGiven === 'function') {
+			OneSignal.setConsentGiven(false);
+		}
+		vh360OneSignalLastLoggedInUserId = null;
+		vh360OneSignalLastReconciledConsent = false;
+	}
+
+	function registerOneSignalListeners(OneSignal) {
+		if (vh360OneSignalListenersRegistered) {
+			return;
+		}
+		vh360OneSignalListenersRegistered = true;
+		if (OneSignal && OneSignal.Notifications && typeof OneSignal.Notifications.addEventListener === 'function') {
 			try {
+				OneSignal.Notifications.addEventListener('permissionChange', updateSubscriptionUI);
+			} catch (e) {}
+		}
+		if (OneSignal && OneSignal.User && OneSignal.User.PushSubscription && typeof OneSignal.User.PushSubscription.addEventListener === 'function') {
+			try {
+				OneSignal.User.PushSubscription.addEventListener('change', updateSubscriptionUI);
+			} catch (e2) {}
+		}
+	}
+
+	// Initialize OneSignal once per page. Consent changes are serialized separately.
+	function initOneSignal() {
+		if (vh360OneSignalInitialized && typeof window.OneSignalDeferred !== 'undefined') {
+			return withOneSignal(function(OneSignal) { return OneSignal; });
+		}
+		if (vh360OneSignalInitPromise) {
+			return vh360OneSignalInitPromise;
+		}
+		if (!hasPreferenceConsent()) {
+			vh360Log('[VH360 Push] Waiting for preferences consent before initializing push provider.');
+			return Promise.resolve(null);
+		}
+		vh360OneSignalInitStarted = true;
+		vh360OneSignalInitPromise = loadOneSignalSdk().then(function() {
+			return withOneSignal(async function(OneSignal) {
+				if (OneSignal && typeof OneSignal.setConsentRequired === 'function') {
+					OneSignal.setConsentRequired(true);
+				}
+				if (OneSignal && typeof OneSignal.setConsentGiven === 'function') {
+					OneSignal.setConsentGiven(hasPreferenceConsent());
+				}
 				await OneSignal.init({
 					appId: VH360Push.appId,
 					serviceWorkerParam: {
@@ -159,68 +331,72 @@
 					notificationClickHandlerMatch: 'origin',
 					notificationClickHandlerAction: 'navigate'
 				});
-
-				// Set external user ID if user is logged in
-				if (VH360Push.currentUserId && VH360Push.currentUserId > 0) {
-					try {
-						await OneSignal.login(String(VH360Push.currentUserId));
-						vh360Log('[VH360 Push] OneSignal external user ID set:', VH360Push.currentUserId);
-					} catch (err) {
-						console.error('[VH360 Push] Failed to set OneSignal external user ID:', err);
-					}
+				vh360OneSignalInitialized = true;
+				vh360OneSignalInitStarted = false;
+				registerOneSignalListeners(OneSignal);
+				if (!hasPreferenceConsent() && OneSignal && typeof OneSignal.setConsentGiven === 'function') {
+					OneSignal.setConsentGiven(false);
 				}
-
-				// Update UI based on subscription state
-				updateSubscriptionUI();
-
-				// Listen for permission/subscription changes.
-				if (OneSignal && OneSignal.Notifications && typeof OneSignal.Notifications.addEventListener === 'function') {
-					try {
-						OneSignal.Notifications.addEventListener('permissionChange', function() {
-							updateSubscriptionUI();
-						});
-						OneSignal.Notifications.addEventListener('subscriptionChange', function() {
-							updateSubscriptionUI();
-						});
-					} catch (e) {
-						// no-op
-					}
-				}
-
-				// Handle auto-prompt with delay
-				if (VH360Push.autoPrompt && VH360Push.autoPromptDelay > 0) {
-					setTimeout(function() {
-						OneSignal.Slidedown.promptPush();
-					}, VH360Push.autoPromptDelay * 1000);
-				}
-			
-				// Handle auto-prompt on scroll (optional)
-				if (VH360Push.autoPrompt && VH360Push.autoPromptScroll) {
-					var vh360ScrollTriggered = false;
-					window.addEventListener('scroll', function() {
-						if (vh360ScrollTriggered) return;
-						var docHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
-						var winHeight = window.innerHeight || document.documentElement.clientHeight;
-						if (docHeight <= winHeight) return;
-						var percent = (window.scrollY / (docHeight - winHeight)) * 100;
-						if (percent >= 50) { // fixed 50% threshold for Phase 1
-							vh360ScrollTriggered = true;
-							OneSignal.Slidedown.promptPush();
-						}
-					}, { passive: true });
-				}
-
-				// Handle auto-prompt after login (optional)
-				if (VH360Push.autoPrompt && VH360Push.autoPromptLogin) {
-					document.addEventListener('vh360:user:login', function() {
-						OneSignal.Slidedown.promptPush();
-					});
-				}
-
-			} catch (error) {
-				console.error('OneSignal initialization error:', error);
-			}
+				return OneSignal;
+			});
+		}).catch(function(error) {
+			vh360OneSignalInitStarted = false;
+			vh360OneSignalInitialized = false;
+			vh360OneSignalInitPromise = null;
+			console.error('OneSignal initialization error:', error);
+			throw error;
 		});
+		return vh360OneSignalInitPromise;
+	}
+
+	async function getOneSignalForCurrentConsent(consentActive) {
+		if (consentActive) {
+			return initOneSignal();
+		}
+		if (vh360OneSignalInitPromise) {
+			return vh360OneSignalInitPromise;
+		}
+		if (typeof window.OneSignalDeferred !== 'undefined') {
+			return withOneSignal(function(provider) { return provider; });
+		}
+		return null;
+	}
+
+	async function reconcilePushConsent(requestedTransition) {
+		var consentActive = hasPreferenceConsent();
+		var OneSignal = null;
+		try {
+			OneSignal = await getOneSignalForCurrentConsent(consentActive);
+		} catch (error) {
+			vh360Log('Push setup is waiting for preferences consent or provider SDK availability.', error);
+			updateSubscriptionUI();
+			return null;
+		}
+		consentActive = hasPreferenceConsent();
+		if (!OneSignal) {
+			updateSubscriptionUI();
+			return null;
+		}
+		await applyOneSignalConsentState(OneSignal, consentActive);
+		if (requestedTransition !== vh360OneSignalTransitionId) {
+			return reconcilePushConsent(vh360OneSignalTransitionId);
+		}
+		updateSubscriptionUI();
+		return OneSignal;
+	}
+
+	function queuePushConsentReconciliation() {
+		var requestedTransition = ++vh360OneSignalTransitionId;
+		vh360OneSignalLifecyclePromise = vh360OneSignalLifecyclePromise
+			.catch(function() {})
+			.then(function() {
+				return reconcilePushConsent(requestedTransition);
+			});
+		return vh360OneSignalLifecyclePromise;
+	}
+
+	function handlePushConsentChange() {
+		queuePushConsentReconciliation();
 	}
 
 	function getNativePermission(OneSignal) {
@@ -248,8 +424,14 @@
 			return;
 		}
 
+		if (!hasPreferenceConsent()) {
+			containers.forEach(function(container) { hideAllStates(container); showState(container, 'unsubscribed'); });
+			return;
+		}
+
 		if (typeof OneSignalDeferred === 'undefined' || typeof window.OneSignal === 'undefined') {
-			// Show unsupported
+			initOneSignal();
+			// Show unsupported until the provider SDK finishes loading
 			containers.forEach(function(container) {
 				hideAllStates(container);
 				showState(container, 'unsupported');
@@ -356,9 +538,12 @@
 	}
 
 	function handleSubscribe(button) {
-		if (typeof OneSignalDeferred === 'undefined') {
-			alert('Push notifications are not available.');
+		if (!hasPreferenceConsent()) {
+			openConsentPreferences();
 			return;
+		}
+		if (typeof OneSignalDeferred === 'undefined') {
+			initOneSignal();
 		}
 
 		var container = button.closest('[data-vh360-push-subscribe]');
@@ -367,19 +552,29 @@
 			showState(container, 'loading');
 		}
 
-		OneSignalDeferred.push(async function(OneSignal) {
+		queuePushConsentReconciliation().then(async function() {
 			try {
+				await vh360OneSignalLifecyclePromise.catch(function() {});
+				if (!hasPreferenceConsent()) {
+					openConsentPreferences();
+					return;
+				}
+				var OneSignal = await initOneSignal();
+				if (!OneSignal || !hasPreferenceConsent()) {
+					openConsentPreferences();
+					return;
+				}
 				// Prefer direct permission + opt-in when available (more reliable than slidedown alone)
-				if (OneSignal && OneSignal.Notifications && typeof OneSignal.Notifications.requestPermission === 'function') {
+				if (OneSignal.Notifications && typeof OneSignal.Notifications.requestPermission === 'function') {
 					await OneSignal.Notifications.requestPermission();
-				} else {
+				} else if (OneSignal.Slidedown && typeof OneSignal.Slidedown.promptPush === 'function') {
 					await OneSignal.Slidedown.promptPush();
 				}
 
 				// Ensure we actually opt-in if permission is granted.
 				try {
 					var perm = await getNativePermission(OneSignal);
-					if (perm === 'granted' && OneSignal && OneSignal.User && OneSignal.User.PushSubscription && typeof OneSignal.User.PushSubscription.optIn === 'function') {
+					if (perm === 'granted' && hasPreferenceConsent() && OneSignal.User && OneSignal.User.PushSubscription && typeof OneSignal.User.PushSubscription.optIn === 'function') {
 						await OneSignal.User.PushSubscription.optIn();
 					}
 				} catch (e) {}
@@ -395,6 +590,9 @@
 					showState(container, 'unsupported');
 				}
 			}
+		}).catch(function(error) {
+			console.error('Error loading push provider SDK:', error);
+			if (container) { hideAllStates(container); showState(container, 'unsupported'); }
 		});
 	}
 
@@ -402,11 +600,13 @@
 	if (document.readyState === 'loading') {
 		document.addEventListener('DOMContentLoaded', function() {
 			displayContextWarnings();
-			initOneSignal();
+			handlePushConsentChange();
+			document.addEventListener('vh360:consent-changed', handlePushConsentChange);
 		});
 	} else {
 		displayContextWarnings();
-		initOneSignal();
+		handlePushConsentChange();
+		document.addEventListener('vh360:consent-changed', handlePushConsentChange);
 	}
 
 })();

@@ -70,5 +70,35 @@ function vh360_register_activity_sidebar_customizer($wp_customize) {
         'type'        => 'checkbox',
         'priority'    => 30,
     ));
+
+    // Activity ad privacy classification.
+    $wp_customize->add_setting('vh360_activity_ad_privacy_type', array(
+        'default'           => 'contextual',
+        'sanitize_callback' => 'vh360_sanitize_activity_ad_privacy_type',
+        'transport'         => 'refresh',
+    ));
+
+    $wp_customize->add_control('vh360_activity_ad_privacy_type', array(
+        'label'       => __('Activity Ad Privacy Type', 'videohub360-theme'),
+        'description' => __('Choose contextual for first-party/contextual creative. Choose personalized when the widget may include tracking, profiling, retargeting, pixels, or cross-site advertising.', 'videohub360-theme'),
+        'section'     => 'vh360_activity_sidebar',
+        'type'        => 'select',
+        'choices'     => array(
+            'contextual'   => __('Contextual', 'videohub360-theme'),
+            'personalized' => __('Personalized', 'videohub360-theme'),
+        ),
+        'priority'    => 35,
+    ));
 }
 add_action('customize_register', 'vh360_register_activity_sidebar_customizer');
+
+
+/**
+ * Sanitize Activity Feed ad privacy type.
+ *
+ * @param string $value Submitted value.
+ * @return string
+ */
+function vh360_sanitize_activity_ad_privacy_type($value) {
+    return in_array($value, array('contextual', 'personalized'), true) ? $value : 'contextual';
+}

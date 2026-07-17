@@ -45,7 +45,7 @@ class VideoHub360_Ajax {
         } elseif (is_user_logged_in()) {
             $identifier = get_current_user_id();
         } else {
-            $identifier = sanitize_text_field($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+            $identifier = hash_hmac('sha256', sanitize_text_field($_SERVER['REMOTE_ADDR'] ?? 'unknown'), wp_salt('nonce'));
         }
         
         $key = "vh360_rate_limit_{$action}_{$identifier}";
@@ -2403,87 +2403,62 @@ public function handle_restart_stream() {
      * @since 1.0.0
      */
     public function handle_track_ad_click() {
-        // Rate limiting - allow up to 10 clicks per minute per user/IP
+        if (!check_ajax_referer('vh360_ad_click_nonce', 'nonce', false)) {
+            wp_send_json_error(array('message' => 'Invalid nonce'));
+            return;
+        }
+
+        // Rate limiting - allow up to 10 clicks per minute per user/IP.
         if (!$this->check_rate_limit('ad_click', 10)) {
-            // Silently fail for rate limit to not disrupt user experience
             wp_send_json_success(array('message' => 'Rate limit'));
             return;
         }
-        
-        // Get and validate input
+
         $post_id = isset($_POST['post_id']) ? absint($_POST['post_id']) : 0;
-        $ad_type = isset($_POST['ad_type']) ? sanitize_text_field($_POST['ad_type']) : '';
-        
-        // Validate post ID
+        $ad_type = isset($_POST['ad_type']) ? sanitize_key($_POST['ad_type']) : '';
+
         if ($post_id <= 0) {
             wp_send_json_error(array('message' => 'Invalid post ID'));
             return;
         }
-        
-        // Validate ad type
+
         $valid_ad_types = array('preroll', 'midroll', 'postroll');
         if (!in_array($ad_type, $valid_ad_types, true)) {
             wp_send_json_error(array('message' => 'Invalid ad type'));
             return;
         }
-        
-        // Verify the post exists and is the correct type
+
         $post = get_post($post_id);
         if (!$post || $post->post_type !== 'videohub360') {
             wp_send_json_error(array('message' => 'Invalid video post'));
             return;
         }
-        
-        // Check if tracking is enabled
+
         $tracking_enabled = get_option('vh360_ad_click_tracking_enabled', 0);
         if (!$tracking_enabled) {
-            // Tracking disabled, return success but don't track
             wp_send_json_success(array('message' => 'Tracking disabled'));
             return;
         }
-        
-        // Collect tracking data
-        $user_id = get_current_user_id();
-        $timestamp = current_time('mysql');
-        $user_ip = sanitize_text_field($_SERVER['REMOTE_ADDR'] ?? '');
-        $user_agent = sanitize_text_field($_SERVER['HTTP_USER_AGENT'] ?? '');
-        
-        // Store in post meta (simple approach for MVP)
-        // Format: array of click events
-        $meta_key = '_vh360_ad_clicks_' . $ad_type;
-        $existing_clicks = get_post_meta($post_id, $meta_key, true);
-        if (!is_array($existing_clicks)) {
-            $existing_clicks = array();
+
+        if (function_exists('videohub360_has_consent') && !videohub360_has_consent('analytics')) {
+            wp_send_json_success(array('message' => 'Analytics consent unavailable'));
+            return;
         }
-        
-        // Add new click event
-        $existing_clicks[] = array(
-            'timestamp' => $timestamp,
-            'user_id' => $user_id,
-            'ip_hash' => hash('sha256', $user_ip), // Hash IP for privacy
-            'user_agent' => substr($user_agent, 0, 200) // Limit length
-        );
-        
-        // Keep only last 100 clicks to avoid meta bloat
-        if (count($existing_clicks) > 100) {
-            $existing_clicks = array_slice($existing_clicks, -100);
-        }
-        
-        update_post_meta($post_id, $meta_key, $existing_clicks);
-        
-        // Also increment a simple counter for quick stats
+
+        // Consent-aware measurement stores aggregate counters only. Legacy detailed
+        // arrays are preserved but no longer receive new user/IP/user-agent events.
         $counter_key = '_vh360_ad_clicks_count_' . $ad_type;
         $current_count = get_post_meta($post_id, $counter_key, true);
         $current_count = $current_count ? intval($current_count) : 0;
         update_post_meta($post_id, $counter_key, $current_count + 1);
-        
+
         wp_send_json_success(array(
             'message' => 'Click tracked',
             'post_id' => $post_id,
             'ad_type' => $ad_type
         ));
     }
-    
+
     /**
      * Handle get chart data AJAX request
      */

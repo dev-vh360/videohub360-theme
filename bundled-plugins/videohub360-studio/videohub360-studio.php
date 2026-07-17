@@ -3,7 +3,7 @@
  * Plugin Name: VH360 Studio
  * Plugin URI: https://videohub360.com
  * Description: VideoHub360 creator production interface for livestreaming, recording, overlays, audio mixing, and replay publishing.
- * Version: 0.1.0
+ * Version: 0.1.3
  * Author: VideoHub360
  * Author URI: https://videohub360.com
  * Requires at least: 5.8
@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'VH360_STUDIO_VERSION', '0.1.0' );
+define( 'VH360_STUDIO_VERSION', '0.1.3' );
 define( 'VH360_STUDIO_PLUGIN_FILE', __FILE__ );
 define( 'VH360_STUDIO_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'VH360_STUDIO_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

@@ -107,7 +107,7 @@ class VH360_PWA_Frontend {
 				'showIosOnboarding' => ! empty( $opts['show_ios_onboarding'] ) ? 1 : 0,
 				'debugMode' => ! empty( $opts['debug_mode'] ) ? 1 : 0,
 				'isAdmin'   => current_user_can( 'manage_options' ) ? 1 : 0,
-				// If OneSignal is active, it must own the root scope service worker.
+				// If the optional push SDK is blocked by Preferences consent, keep the core VH360 service worker active.
 				'skipSWRegister'     => $this->should_skip_sw_registration() ? 1 : 0,
 				'appShortName'       => ! empty( $opts['short_name'] ) ? (string) $opts['short_name'] : get_bloginfo( 'name' ),
 				'enablePullToRefresh' => ! empty( $opts['enable_pull_to_refresh'] ) ? 1 : 0,
@@ -167,30 +167,13 @@ class VH360_PWA_Frontend {
 	/**
 	 * Determine whether this plugin should skip registering its own service worker.
 	 *
-	 * When OneSignal is active, it registers/owns the root-scope service worker.
-	 * Registering a second SW at the same scope causes conflicts and intermittent failures.
+	 * The first-party VH360 service worker should always own the root scope.
+	 * Optional push providers use dedicated worker scopes after consent.
 	 */
 	private function should_skip_sw_registration() : bool {
-		$push_manager = VH360_PWA_App::instance()->push_manager;
-		if ( ! $push_manager ) {
-			return false;
-		}
-		$settings = $push_manager->get_settings();
-		$mode = $settings['mode'] ?? '';
-		if ( 'provider' !== $mode && 'hybrid' !== $mode ) {
-			return false;
-		}
-		$active_provider = $settings['active_provider'] ?? '';
-		if ( 'onesignal' !== $active_provider ) {
-			return false;
-		}
-		$adapter = $push_manager->get_adapter( $active_provider );
-		if ( ! $adapter ) {
-			return false;
-		}
-		$provider_settings = $settings['providers'][ $active_provider ] ?? array();
-		$errors = $adapter->validate_settings( $provider_settings );
-		return empty( $errors );
+		// The first-party VH360 service worker provides manifest/offline/update behavior and must
+		// remain independent of optional third-party push consent or SDK availability.
+		return false;
 	}
 
 	public function register_widgets() : void {

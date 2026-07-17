@@ -12,6 +12,17 @@
 (function($) {
     'use strict';
 
+var VH360StorageCompat = window.VH360Storage || (function(){
+  var memory = {};
+  function persistentAllowed(){ return !window.VH360ConsentExpected; }
+  return {
+    getPreference: function(key, def){ if(!persistentAllowed()) { return Object.prototype.hasOwnProperty.call(memory, key) ? memory[key] : def; } try { var value = window['localStorage'].getItem(key); return value === null ? def : value; } catch (e) { return def; } },
+    setPreference: function(key, value){ memory[key] = value; if(!persistentAllowed()) { return; } try { window['localStorage'].setItem(key, value); } catch (e) {} },
+    removePreference: function(key){ delete memory[key]; if(!persistentAllowed()) { return; } try { window['localStorage'].removeItem(key); } catch (e) {} },
+    registerPreferenceKey: function(){}
+  };
+})();
+
     // Storage key for the expanded state (non-compact mode only)
     const STORAGE_KEY = 'vh360_community_menu_expanded';
     
@@ -35,7 +46,7 @@
      */
     function getStorageItem(key) {
         try {
-            return localStorage.getItem(key);
+            return VH360StorageCompat.getPreference(key);
         } catch (e) {
             // localStorage may not be available in some browsers/privacy modes
             return null;
@@ -50,7 +61,7 @@
      */
     function setStorageItem(key, value) {
         try {
-            localStorage.setItem(key, value);
+            VH360StorageCompat.setPreference(key, value);
         } catch (e) {
             // Silently fail if localStorage is not available
         }

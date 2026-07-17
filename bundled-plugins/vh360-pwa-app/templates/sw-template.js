@@ -1,15 +1,6 @@
 /* global VH360_PWA */
 
-// If push notifications are enabled, we merge OneSignal into this service worker.
-// This avoids service-worker scope conflicts (only one SW can control '/').
-// IMPORTANT: importScripts must run at initial evaluation time.
-try {
-  if (VH360_PWA && VH360_PWA.onesignal && VH360_PWA.onesignal.importUrl) {
-    importScripts(VH360_PWA.onesignal.importUrl);
-  }
-} catch (e) {
-  // Ignore OneSignal import failures so PWA caching still works.
-}
+// Optional push providers must not be imported by the always-on first-party PWA worker.
 
 const CACHE_PREFIX = 'vh360-pwa-';
 const STATIC_CACHE = `${CACHE_PREFIX}static-${VH360_PWA.cacheVersion}`;

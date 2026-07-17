@@ -73,6 +73,13 @@ class VideoHub360_Core {
         require_once VIDEOHUB360_INCLUDES_DIR . 'helpers/livestream-messages.php';
         require_once VIDEOHUB360_INCLUDES_DIR . 'helpers/course-access-helpers.php';
         require_once VIDEOHUB360_INCLUDES_DIR . 'helpers/video-ad-helpers.php';
+        require_once VIDEOHUB360_INCLUDES_DIR . 'privacy/class-videohub360-consent-services.php';
+        require_once VIDEOHUB360_INCLUDES_DIR . 'privacy/class-videohub360-consent-manager.php';
+        require_once VIDEOHUB360_INCLUDES_DIR . 'privacy/class-videohub360-consent-admin.php';
+        require_once VIDEOHUB360_INCLUDES_DIR . 'privacy/class-videohub360-consent-frontend.php';
+        require_once VIDEOHUB360_INCLUDES_DIR . 'privacy/class-videohub360-consent-privacy-tools.php';
+        require_once VIDEOHUB360_INCLUDES_DIR . 'privacy/class-videohub360-consent-wp-consent-api.php';
+        require_once VIDEOHUB360_INCLUDES_DIR . 'privacy/consent-functions.php';
         
         // Load component classes
         require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-post-types.php';
@@ -100,6 +107,14 @@ class VideoHub360_Core {
      * Initialize plugin components
      */
     private function init_components() {
+        $this->components['consent'] = VideoHub360_Consent_Manager::get_instance();
+        $this->components['consent']->init();
+        $this->components['consent_admin'] = new VideoHub360_Consent_Admin($this->components['consent']);
+        $this->components['consent_frontend'] = new VideoHub360_Consent_Frontend($this->components['consent']);
+        $this->components['consent_privacy_tools'] = new VideoHub360_Consent_Privacy_Tools();
+        if (function_exists('wp_has_consent') || function_exists('wp_set_consent')) {
+            $this->components['consent_wp_api'] = new VideoHub360_Consent_WP_Consent_API($this->components['consent']);
+        }
         $this->components['post_types'] = new VideoHub360_Post_Types();
         $this->components['admin'] = new VideoHub360_Admin();
         $this->components['frontend'] = new VideoHub360_Frontend();

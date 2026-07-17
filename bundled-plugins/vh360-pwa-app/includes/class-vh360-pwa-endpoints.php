@@ -21,10 +21,13 @@ class VH360_PWA_Endpoints {
 		add_rewrite_rule( '^' . preg_quote( VH360_PWA_OFFLINE_SLUG, '#' ) . '$', 'index.php?vh360_pwa_endpoint=offline', 'top' );
 		add_rewrite_rule( '^' . preg_quote( VH360_PWA_LAUNCH_SHELL_SLUG, '#' ) . '$', 'index.php?vh360_pwa_endpoint=launch_shell', 'top' );
 		
-		// OneSignal service worker endpoints
+		// Dedicated OneSignal worker endpoints for new consent-aware subscriptions.
+		add_rewrite_rule( '^push/onesignal/OneSignalSDKWorker\.js$', 'index.php?vh360_pwa_endpoint=onesignal_worker', 'top' );
+		add_rewrite_rule( '^push/onesignal/OneSignalSDKUpdaterWorker\.js$', 'index.php?vh360_pwa_endpoint=onesignal_updater', 'top' );
+
+		// Legacy root worker endpoints are retained for existing subscriber migration/delivery.
 		add_rewrite_rule( '^OneSignalSDKWorker\.js$', 'index.php?vh360_pwa_endpoint=onesignal_worker', 'top' );
 		add_rewrite_rule( '^OneSignalSDKUpdaterWorker\.js$', 'index.php?vh360_pwa_endpoint=onesignal_updater', 'top' );
-		// OneSignalSDK.sw.js is an alternative path that some OneSignal configurations use - maps to same endpoint
 		add_rewrite_rule( '^OneSignalSDK\.sw\.js$', 'index.php?vh360_pwa_endpoint=onesignal_worker', 'top' );
 	}
 	
@@ -149,8 +152,8 @@ class VH360_PWA_Endpoints {
 		header( 'Content-Type: application/javascript; charset=utf-8', true );
 		header( 'Service-Worker-Allowed: /', true );
 
-		// Import the VH360 service worker once; it owns the controlled OneSignal import.
-		echo "importScripts('/" . esc_js( VH360_PWA_SW_SLUG ) . "?v=" . esc_js( (string) vh360_pwa_get_asset_version() ) . "');\n";
+		$sdk_version = defined( 'VH360_PWA_ONESIGNAL_SDK_VERSION' ) ? VH360_PWA_ONESIGNAL_SDK_VERSION : 'v16';
+		echo "importScripts('https://cdn.onesignal.com/sdks/web/" . esc_js( $sdk_version ) . "/OneSignalSDK.sw.js');\n";
 	}
 
 	/**
@@ -161,7 +164,7 @@ class VH360_PWA_Endpoints {
 		header( 'Content-Type: application/javascript; charset=utf-8', true );
 		header( 'Service-Worker-Allowed: /', true );
 
-		// Import the VH360 service worker once; it owns the controlled OneSignal import.
-		echo "importScripts('/" . esc_js( VH360_PWA_SW_SLUG ) . "?v=" . esc_js( (string) vh360_pwa_get_asset_version() ) . "');\n";
+		$sdk_version = defined( 'VH360_PWA_ONESIGNAL_SDK_VERSION' ) ? VH360_PWA_ONESIGNAL_SDK_VERSION : 'v16';
+		echo "importScripts('https://cdn.onesignal.com/sdks/web/" . esc_js( $sdk_version ) . "/OneSignalSDK.sw.js');\n";
 	}
 }

@@ -1,3 +1,14 @@
+
+var VH360StorageCompat = window.VH360Storage || (function(){
+  var memory = {};
+  function persistentAllowed(){ return !window.VH360ConsentExpected; }
+  return {
+    getPreference: function(key, def){ if(!persistentAllowed()) { return Object.prototype.hasOwnProperty.call(memory, key) ? memory[key] : def; } try { var value = window['localStorage'].getItem(key); return value === null ? def : value; } catch (e) { return def; } },
+    setPreference: function(key, value){ memory[key] = value; if(!persistentAllowed()) { return; } try { window['localStorage'].setItem(key, value); } catch (e) {} },
+    removePreference: function(key){ delete memory[key]; if(!persistentAllowed()) { return; } try { window['localStorage'].removeItem(key); } catch (e) {} },
+    registerPreferenceKey: function(){}
+  };
+})();
 /* VideoHub360 patched: debug flag + vh360 namespace (non-destructive) */
 if (typeof window !== 'undefined') {
   window.vh360 = window.vh360 || {};
@@ -79,7 +90,7 @@ class ViewLayoutManager {
     
     loadUserPreference() {
         try {
-            const saved = localStorage.getItem('vh360-layout-view-preference');
+            const saved = VH360StorageCompat.getPreference('vh360-layout-view-preference');
             // Keep Phase 2 supported views; migrate only unsupported legacy layouts.
             if (saved === 'large-gallery') {
                 if (window.__VH360_DEBUG) console.log('Migrating unsupported legacy preference to speaker view');
@@ -97,7 +108,7 @@ class ViewLayoutManager {
     
     saveUserPreference() {
         try {
-            localStorage.setItem('vh360-layout-view-preference', this.currentView);
+            VH360StorageCompat.setPreference('vh360-layout-view-preference', this.currentView);
         } catch (e) {
             if (window.__VH360_DEBUG) console.log('Could not save layout view preference:', e);
         }

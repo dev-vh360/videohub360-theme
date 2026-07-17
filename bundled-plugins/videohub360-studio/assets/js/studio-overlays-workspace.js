@@ -1,6 +1,17 @@
 (function () {
     'use strict';
 
+var VH360StorageCompat = window.VH360Storage || (function(){
+  var memory = {};
+  function persistentAllowed(){ return !window.VH360ConsentExpected; }
+  return {
+    getPreference: function(key, def){ if(!persistentAllowed()) { return Object.prototype.hasOwnProperty.call(memory, key) ? memory[key] : def; } try { var value = window['localStorage'].getItem(key); return value === null ? def : value; } catch (e) { return def; } },
+    setPreference: function(key, value){ memory[key] = value; if(!persistentAllowed()) { return; } try { window['localStorage'].setItem(key, value); } catch (e) {} },
+    removePreference: function(key){ delete memory[key]; if(!persistentAllowed()) { return; } try { window['localStorage'].removeItem(key); } catch (e) {} },
+    registerPreferenceKey: function(){}
+  };
+})();
+
     const CONFIG = {
         defaultWidth: 400,
         minWidth: 320,
@@ -29,19 +40,19 @@
     const storage = {
         get(key) {
             try {
-                return window.localStorage.getItem(key);
+                return VH360StorageCompat.getPreference(key);
             } catch (error) {
                 return null;
             }
         },
         set(key, value) {
             try {
-                window.localStorage.setItem(key, value);
+                VH360StorageCompat.setPreference(key, value);
             } catch (error) {}
         },
         remove(key) {
             try {
-                window.localStorage.removeItem(key);
+                VH360StorageCompat.removePreference(key);
             } catch (error) {}
         },
     };
