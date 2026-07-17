@@ -29,7 +29,7 @@ function shouldBypass(request) {
   if (/(^|\/)(live|video|videos|watch)(\/|$)/i.test(p)) return true;
   if (isVh360NetworkOnlyPath(p) || isVh360NetworkOnlyQuery(url)) return true;
   // Player-critical assets must be fetched through the network, never an old SW cache.
-  if (/\/videohub360-core\/assets\/(?:js\/(?:frontend-agora|view-layout-manager|livestream|frontend|simplified-mobile-controls|video-quality-manager|unified-settings-manager)\.js|css\/(?:multi-view-layouts|frontend|simplified-mobile-controls)\.css)$/i.test(p)) return true;
+  if (/\/(?:videohub360|videohub360-core)\/assets\/(?:js\/(?:frontend-agora|view-layout-manager|livestream|frontend|simplified-mobile-controls|video-quality-manager|unified-settings-manager)\.js|css\/(?:multi-view-layouts|frontend|simplified-mobile-controls)\.css)$/i.test(p)) return true;
   if (/agora|AgoraRTC|frontend-agora|agora-broadcaster/i.test(p)) return true;
 
   // Avoid preview, nonces, actions.

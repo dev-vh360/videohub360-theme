@@ -226,6 +226,11 @@ function vh360_pwa_get_vh360_network_only_paths() : array {
 	if ( $post_type && ! empty( $post_type->rewrite['slug'] ) ) {
 		$paths[] = '/' . trim( (string) $post_type->rewrite['slug'], '/' ) . '/';
 	}
+	// Use the resolved archive URL so WordPress permalink fronts and subdirectories are included.
+	$archive_url = get_post_type_archive_link( 'videohub360' );
+	if ( $archive_url ) {
+		$paths[] = (string) wp_parse_url( $archive_url, PHP_URL_PATH );
+	}
 	// Covers installations before rewrite rules are initialized and non-pretty links.
 	$paths[] = '/videohub360/';
 	$paths = apply_filters( 'vh360_pwa_network_only_paths', $paths, $post_type );
