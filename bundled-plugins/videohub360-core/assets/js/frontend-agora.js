@@ -512,6 +512,10 @@ window.initializeAgoraPlayer = function(config) {
     let localTracks = { videoTrack: null, audioTrack: null };
 
     let remoteUsers = {};
+    // Session-only subscription state prevents duplicate subscribe calls and stale retries.
+    const remoteSubscriptionStates = new Map();
+    const REMOTE_SUBSCRIPTION_MAX_ATTEMPTS = 5;
+    let remoteReconciliationTimer = null;
     let isAudioMuted = false;
     let isVideoMuted = false;
     let isPresenter = false;
@@ -2610,28 +2614,22 @@ window.initializeAgoraPlayer = function(config) {
         playParticipantJoinedSound(user.uid);
     });
 
-    client.on("user-published", async (user, mediaType) => {
-        // Prevent any UI updates if user is being moderated
-        if (isBeingModerated) {
-            window.vh360Log('Agora: Ignoring user-published event - user is being moderated');
-            return;
-        }
-
-        try {
-            await client.subscribe(user, mediaType);
-            window.vh360Log('Agora: public page subscribed to user media', {
-                uid: user && user.uid,
-                mediaType: mediaType
-            });
-        } catch (subscribeError) {
-            window.vh360Warn('Agora: Failed to subscribe to remote user media:', {
-                uid: user && user.uid,
-                mediaType,
-                error: subscribeError
-            });
-            return;
-        }
-
+    function remoteSubscriptionKey(uid, mediaType) { return `${normalizeParticipantUid(uid)}:${mediaType}`; }
+    function clearRemoteSubscription(uid, mediaType) { const key = remoteSubscriptionKey(uid, mediaType), state = remoteSubscriptionStates.get(key); if (state && state.timer) clearTimeout(state.timer); remoteSubscriptionStates.delete(key); }
+    function clearRemoteSubscriptionsForUser(uid) { ['audio', 'video'].forEach((type) => clearRemoteSubscription(uid, type)); }
+    function isRemotePublicationCurrent(user, mediaType) { if (!client || !user || !user.uid || !['audio', 'video'].includes(mediaType) || String(user.uid) === String(currentUserUID)) return false; const current = (client.remoteUsers || []).find((remote) => String(remote.uid) === String(user.uid)); return !!current && (mediaType === 'video' ? current.hasVideo !== false : current.hasAudio !== false); }
+    function scheduleRemoteReconciliation(reason, delay = 0) { if (remoteReconciliationTimer) clearTimeout(remoteReconciliationTimer); remoteReconciliationTimer = setTimeout(() => { remoteReconciliationTimer = null; reconcileRemoteSubscriptions(reason); }, delay); }
+    async function subscribeToRemotePublication(user, mediaType, options = {}) {
+        if (!isRemotePublicationCurrent(user, mediaType)) return;
+        const key = remoteSubscriptionKey(user.uid, mediaType), state = remoteSubscriptionStates.get(key) || { attempts: 0, status: 'idle', timer: null };
+        if (state.status === 'subscribing' || state.status === 'subscribed') return;
+        if (state.timer) { clearTimeout(state.timer); state.timer = null; } if (options.freshAttempt) state.attempts = 0;
+        state.status = 'subscribing'; state.attempts += 1; remoteSubscriptionStates.set(key, state);
+        try { await client.subscribe(user, mediaType); if (!isRemotePublicationCurrent(user, mediaType)) { clearRemoteSubscription(user.uid, mediaType); return; } state.status = 'subscribed'; state.timer = null; state.lastError = null; remoteSubscriptionStates.set(key, state); await attachSubscribedRemotePublication(user, mediaType); if (state.attempts > 1) window.vh360Log('Agora: Remote subscription recovered', { uid: user.uid, mediaType, attempt: state.attempts }); }
+        catch (error) { state.lastError = (error && (error.code || error.message)) || 'unknown'; if (!isRemotePublicationCurrent(user, mediaType)) { clearRemoteSubscription(user.uid, mediaType); return; } if (state.attempts >= REMOTE_SUBSCRIPTION_MAX_ATTEMPTS) { state.status = 'failed'; state.timer = null; remoteSubscriptionStates.set(key, state); window.vh360Warn('Agora: Remote subscription attempts exhausted', { uid: user.uid, mediaType, attempt: state.attempts, error: state.lastError }); return; } state.status = 'retry-waiting'; const delay = Math.min(4000, 500 * Math.pow(2, state.attempts - 1)) + Math.floor(Math.random() * 150); state.timer = setTimeout(() => { state.timer = null; if (isRemotePublicationCurrent(user, mediaType)) subscribeToRemotePublication(user, mediaType); }, delay); remoteSubscriptionStates.set(key, state); window.vh360Warn('Agora: Remote subscription failed; retry scheduled', { uid: user.uid, mediaType, attempt: state.attempts, delay, error: state.lastError }); }
+    }
+    function reconcileRemoteSubscriptions(reason) { if (!client || !currentUserUID) return; window.vh360Log('Agora: Remote subscription reconciliation started', { reason }); (client.remoteUsers || []).forEach((user) => { if (!user || String(user.uid) === String(currentUserUID)) return; ['video', 'audio'].forEach((mediaType) => { const published = mediaType === 'video' ? user.hasVideo : user.hasAudio, state = remoteSubscriptionStates.get(remoteSubscriptionKey(user.uid, mediaType)); if (published && (!state || state.status !== 'subscribed')) { window.vh360Log('Agora: Reconciliation repairing remote publication', { uid: user.uid, mediaType, reason }); subscribeToRemotePublication(user, mediaType, { freshAttempt: state && state.status === 'failed' }); } }); }); }
+    async function attachSubscribedRemotePublication(user, mediaType) {
         if (mediaType === "video") {
             window.vh360Log('[VH360 Public Live] Remote video received', {
                 remoteUid: user && user.uid,
@@ -2728,9 +2726,11 @@ window.initializeAgoraPlayer = function(config) {
                 resolveAndUpdateDisplayName(user.uid);
             }
         }
-    });
+    }
 
+    client.on("user-published", (user, mediaType) => { if (!isBeingModerated) subscribeToRemotePublication(user, mediaType); });
     client.on("user-unpublished", (user, mediaType) => {
+        clearRemoteSubscription(user.uid, mediaType);
         if (mediaType === "video") {
             const participant = getOrCreateParticipant(user.uid);
             if (participant) {
@@ -2776,6 +2776,7 @@ window.initializeAgoraPlayer = function(config) {
             return;
         }
 
+        clearRemoteSubscriptionsForUser(user.uid);
         removeParticipantTile(user.uid);
         if (remoteUsers[user.uid]) delete remoteUsers[user.uid];
         participantJoinSoundThrottle.delete(user.uid);
@@ -2984,6 +2985,7 @@ window.initializeAgoraPlayer = function(config) {
         } else if (curState === "CONNECTED" && prevState === "RECONNECTING") {
             window.vh360Log("Agora: Successfully reconnected");
             clearRemoteVideosReconnectingState();
+            scheduleRemoteReconciliation('reconnected', 750);
             // Clear any error messages
             const localPlayer = document.getElementById("vh360-agora-local-player");
             if (localPlayer) {
@@ -3814,6 +3816,10 @@ window.initializeAgoraPlayer = function(config) {
             }
 
             clearAgoraTokenRenewalTimer();
+            remoteSubscriptionStates.forEach((state) => { if (state.timer) clearTimeout(state.timer); });
+            remoteSubscriptionStates.clear();
+            if (remoteReconciliationTimer) clearTimeout(remoteReconciliationTimer);
+            remoteReconciliationTimer = null;
             latestAgoraTokenResponse = null;
             agoraTokenRecoveryInProgress = false;
 
@@ -4327,6 +4333,8 @@ window.initializeAgoraPlayer = function(config) {
             }
 
             currentUserUID = Number(joinedUid || tokenResponse.uid || renewalUid);
+            reconcileRemoteSubscriptions('token-rejoin');
+            scheduleRemoteReconciliation('token-rejoin-stabilization', 750);
 
             if (config.mode === 'live' && client && typeof client.setClientRole === 'function') {
                 try {
@@ -4582,6 +4590,8 @@ window.initializeAgoraPlayer = function(config) {
             window.vh360Log('Agora: Successfully joined channel with UID:', uid);
             window.vh360Log('VideoHub360: Role after successful join:', currentRole);
             currentUserUID = uid; // Store the current user's UID for later use
+            reconcileRemoteSubscriptions('joined');
+            scheduleRemoteReconciliation('join-stabilization', 750);
             resolveExistingRemoteIdentities();
             if (tokenResponse.expiresAt) {
                 scheduleAgoraTokenRenewal(tokenResponse.expiresAt);
@@ -4686,6 +4696,10 @@ window.initializeAgoraPlayer = function(config) {
             stopStreamStatusPolling();
 
             clearAgoraTokenRenewalTimer();
+            remoteSubscriptionStates.forEach((state) => { if (state.timer) clearTimeout(state.timer); });
+            remoteSubscriptionStates.clear();
+            if (remoteReconciliationTimer) clearTimeout(remoteReconciliationTimer);
+            remoteReconciliationTimer = null;
             latestAgoraTokenResponse = null;
             agoraTokenRecoveryInProgress = false;
 
@@ -4788,6 +4802,7 @@ window.initializeAgoraPlayer = function(config) {
                 window.vh360Log('VideoHub360: Paused stream status polling (page hidden)');
             }
         } else {
+            if (client && currentUserUID) scheduleRemoteReconciliation('visibility-resume', 500);
             if (isStreamStatusPollingActive && !streamStatusPollInterval) {
                 streamStatusPollInterval = setInterval(checkStreamStatus, 3000);
                 checkStreamStatus(); // Check immediately when page becomes visible
