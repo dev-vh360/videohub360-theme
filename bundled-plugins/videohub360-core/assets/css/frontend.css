@@ -4201,7 +4201,7 @@ body.vh360-ios-immersive-active {
 #vh360-agora-player.vh360-ios-immersive-fullscreen {
     position: fixed !important;
     inset: 0 !important;
-    width: 100vw !important;
+    width: var(--vh360-visual-viewport-width, 100vw) !important;
     height: var(--vh360-visual-viewport-height, 100dvh) !important;
     min-height: var(--vh360-visual-viewport-height, 100dvh) !important;
     max-height: var(--vh360-visual-viewport-height, 100dvh) !important;
@@ -4364,7 +4364,7 @@ body.vh360-ios-immersive-active #vh360-ios-immersive-exit-btn {
 body.vh360-ios-immersive-active > #vh360-agora-player.vh360-ios-immersive-fullscreen {
     position: fixed !important;
     inset: 0 !important;
-    width: 100vw !important;
+    width: var(--vh360-visual-viewport-width, 100vw) !important;
     height: var(--vh360-visual-viewport-height, 100dvh) !important;
     min-height: var(--vh360-visual-viewport-height, 100dvh) !important;
     max-height: var(--vh360-visual-viewport-height, 100dvh) !important;

@@ -1098,10 +1098,8 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
 
 #vh360-agora-player:fullscreen,
 #vh360-agora-player:-webkit-full-screen,
-#vh360-agora-player.vh360-ios-immersive-fullscreen,
 #vh360-agora-player:fullscreen #vh360-agora-local-player.vh360-persistent-speaker-stage,
-#vh360-agora-player:-webkit-full-screen #vh360-agora-local-player.vh360-persistent-speaker-stage,
-#vh360-agora-player.vh360-ios-immersive-fullscreen #vh360-agora-local-player.vh360-persistent-speaker-stage {
+#vh360-agora-player:-webkit-full-screen #vh360-agora-local-player.vh360-persistent-speaker-stage {
     width: 100vw;
     height: 100vh;
     height: 100dvh;
@@ -1115,12 +1113,21 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
 }
 
 #vh360-agora-player:fullscreen #vh360-agora-local-player.vh360-persistent-speaker-stage,
-#vh360-agora-player:-webkit-full-screen #vh360-agora-local-player.vh360-persistent-speaker-stage,
-#vh360-agora-player.vh360-ios-immersive-fullscreen #vh360-agora-local-player.vh360-persistent-speaker-stage {
+#vh360-agora-player:-webkit-full-screen #vh360-agora-local-player.vh360-persistent-speaker-stage {
     width: 100%;
     height: 100%;
     min-height: 100vh;
     min-height: 100dvh;
+    aspect-ratio: auto;
+    overflow: hidden;
+}
+
+/* Custom iOS immersive mode uses the player-owned visual viewport measurement. */
+#vh360-agora-player.vh360-ios-immersive-fullscreen #vh360-agora-local-player.vh360-persistent-speaker-stage {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
     aspect-ratio: auto;
     overflow: hidden;
 }
@@ -1442,6 +1449,14 @@ body.vh360-ios-immersive-active #vh360-view-dropdown-menu {
         gap: 8px;
         padding: 8px 8px calc(var(--vh360-agora-controls-height, 84px) + 8px);
     }
+}
+
+/* Keep the persistent stage constrained to the measured immersive player in every view. */
+#vh360-agora-player.vh360-ios-immersive-fullscreen .vh360-gallery-view #vh360-agora-local-player.vh360-persistent-speaker-stage {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
 }
 
 /* Broadcast fullscreen final overrides.
