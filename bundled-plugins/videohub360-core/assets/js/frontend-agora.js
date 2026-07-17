@@ -524,6 +524,7 @@ window.initializeAgoraPlayer = function(config) {
     // Set only after server returns role:'host' AND the token is applied via renewToken() or rejoin.
     let hasServerApprovedPublishToken = false;
     let currentUserUID = null; // Store the current user's Agora UID after joining
+    let isAgoraSessionJoined = false;
     let latestAgoraTokenResponse = null;
     let agoraTokenRenewalInProgress = false;
     let agoraTokenRecoveryInProgress = false;
@@ -2647,6 +2648,10 @@ window.initializeAgoraPlayer = function(config) {
         return (client && client.remoteUsers || []).find((user) => String(user.uid) === String(uid));
     }
 
+    function isCurrentRemoteSubscriptionState(key, state) {
+        return state.session === remoteSubscriptionSession && remoteSubscriptionStates.get(key) === state;
+    }
+
     function isRemotePublicationCurrent(user, mediaType, session) {
         if (session !== undefined && session !== remoteSubscriptionSession) return false;
         if (!client || !user || !user.uid || !['audio', 'video'].includes(mediaType) || String(user.uid) === String(currentUserUID)) return false;
@@ -2674,7 +2679,7 @@ window.initializeAgoraPlayer = function(config) {
     }
 
     function scheduleRemoteSubscriptionRetry(user, mediaType, state, error) {
-        if (!isRemotePublicationCurrent(user, mediaType, state.session)) return;
+        if (!isCurrentRemoteSubscriptionState(remoteSubscriptionKey(user.uid, mediaType), state) || !isRemotePublicationCurrent(user, mediaType, state.session)) return;
         if (state.attempts >= REMOTE_SUBSCRIPTION_MAX_ATTEMPTS) {
             state.status = 'failed';
             state.lastError = error;
@@ -2687,7 +2692,9 @@ window.initializeAgoraPlayer = function(config) {
         state.lastError = error;
         state.timer = setTimeout(() => {
             state.timer = null;
-            if (remoteSubscriptionStates.get(remoteSubscriptionKey(user.uid, mediaType)) === state && isRemotePublicationCurrent(user, mediaType, state.session)) subscribeToRemotePublication(user, mediaType);
+            if (remoteSubscriptionStates.get(remoteSubscriptionKey(user.uid, mediaType)) !== state) return;
+            const currentUser = getCurrentRemoteUser(user.uid);
+            if (currentUser && isRemotePublicationCurrent(currentUser, mediaType, state.session)) subscribeToRemotePublication(currentUser, mediaType);
         }, delay);
         remoteSubscriptionStates.set(remoteSubscriptionKey(user.uid, mediaType), state);
         window.vh360Warn('Agora: Remote subscription retry scheduled', { uid: user.uid, mediaType, attempt: state.attempts, delay, error });
@@ -2696,8 +2703,15 @@ window.initializeAgoraPlayer = function(config) {
     async function subscribeToRemotePublication(user, mediaType, options = {}) {
         if (!isRemotePublicationCurrent(user, mediaType)) return;
         const key = remoteSubscriptionKey(user.uid, mediaType);
-        const state = remoteSubscriptionStates.get(key) || { attempts: 0, status: 'idle', timer: null, session: remoteSubscriptionSession, sdkSubscribed: false, retryPhase: null };
+        let state = remoteSubscriptionStates.get(key) || { attempts: 0, status: 'idle', timer: null, session: remoteSubscriptionSession, sdkSubscribed: false, retryPhase: null, publicationTrack: null };
+        const currentTrack = mediaType === 'video' ? user.videoTrack : user.audioTrack;
         if (state.session !== remoteSubscriptionSession) return;
+        // A changed remote track is a new publication, not evidence that the old SDK subscription is reusable.
+        if (state.publicationTrack && currentTrack && state.publicationTrack !== currentTrack) {
+            clearRemoteSubscription(user.uid, mediaType, state);
+            state = { attempts: 0, status: 'idle', timer: null, session: remoteSubscriptionSession, sdkSubscribed: false, retryPhase: null, publicationTrack: currentTrack };
+        }
+        if (!remoteSubscriptionStates.has(key)) remoteSubscriptionStates.set(key, state);
         if (state.status === 'subscribing' || state.status === 'attaching') return;
         if (state.timer) { clearTimeout(state.timer); state.timer = null; }
         if (options.freshAttempt || state.status === 'failed') state.attempts = 0;
@@ -2713,7 +2727,7 @@ window.initializeAgoraPlayer = function(config) {
                 state.attempts += 1;
                 remoteSubscriptionStates.set(key, state);
                 await client.subscribe(user, mediaType);
-                if (!isRemotePublicationCurrent(user, mediaType, state.session)) return;
+                if (!isCurrentRemoteSubscriptionState(key, state) || !isRemotePublicationCurrent(user, mediaType, state.session)) return;
                 state.sdkSubscribed = true;
                 state.retryPhase = null;
                 state.status = 'sdk-subscribed';
@@ -2721,11 +2735,12 @@ window.initializeAgoraPlayer = function(config) {
             state.status = 'attaching';
             remoteSubscriptionStates.set(key, state);
             const attached = await attachSubscribedRemotePublication(user, mediaType);
-            if (!isRemotePublicationCurrent(user, mediaType, state.session)) return;
+            if (!isCurrentRemoteSubscriptionState(key, state) || !isRemotePublicationCurrent(user, mediaType, state.session)) return;
             if (!attached) throw new Error('Remote track attachment was not ready');
             state.status = 'ready';
             state.retryPhase = null;
             state.track = mediaType === 'video' ? user.videoTrack : user.audioTrack;
+            state.publicationTrack = state.track;
             state.lastError = null;
             remoteSubscriptionStates.set(key, state);
             if (state.attempts > 1) window.vh360Log('Agora: Remote subscription recovered', { uid: user.uid, mediaType, attempt: state.attempts });
@@ -2741,7 +2756,10 @@ window.initializeAgoraPlayer = function(config) {
         const participant = participantRegistry.get(normalizeParticipantUid(uid));
         if (!participant) return;
         if (mediaType === 'video') {
-            if (participant.videoContainerElement) participant.videoContainerElement.replaceChildren();
+            if (participant.videoContainerElement) {
+                if (window.videoElementManager) window.videoElementManager.unregisterTrackBinding(participant.videoContainerElement.id);
+                participant.videoContainerElement.replaceChildren();
+            }
             participant.videoTrack = null;
             participant.cameraOn = false;
         } else {
@@ -2752,7 +2770,7 @@ window.initializeAgoraPlayer = function(config) {
     }
 
     function reconcileRemoteSubscriptions(reason) {
-        if (!client || !currentUserUID) return;
+        if (!client || !currentUserUID || !isAgoraSessionJoined || client.connectionState !== 'CONNECTED') return;
         window.vh360Log('Agora: Remote subscription reconciliation started', { reason });
         const currentUsers = client.remoteUsers || [];
         const currentIds = new Set(currentUsers.map((user) => normalizeParticipantUid(user.uid)));
@@ -2776,7 +2794,11 @@ window.initializeAgoraPlayer = function(config) {
                     clearUnpublishedRemoteMedia(user.uid, mediaType);
                     return;
                 }
-                if (!isRemotePublicationReady(user, mediaType, state)) {
+                const currentTrack = mediaType === 'video' ? user.videoTrack : user.audioTrack;
+                if (state && state.publicationTrack && currentTrack && state.publicationTrack !== currentTrack) {
+                    clearRemoteSubscription(user.uid, mediaType, state);
+                }
+                if (!isRemotePublicationReady(user, mediaType, remoteSubscriptionStates.get(remoteSubscriptionKey(user.uid, mediaType)))) {
                     window.vh360Log('Agora: Reconciliation repairing remote publication', { uid: user.uid, mediaType, reason });
                     subscribeToRemotePublication(user, mediaType, { freshAttempt: state && state.status === 'failed' });
                 }
@@ -2893,9 +2915,15 @@ window.initializeAgoraPlayer = function(config) {
     }
 
     client.on("user-published", (user, mediaType) => {
-        if (!isBeingModerated) {
-            subscribeToRemotePublication(user, mediaType);
-        }
+        if (isBeingModerated) return;
+        const currentUser = getCurrentRemoteUser(user && user.uid) || user;
+        if (!currentUser || !currentUser.uid) return;
+        const key = remoteSubscriptionKey(currentUser.uid, mediaType);
+        const state = remoteSubscriptionStates.get(key);
+        const currentTrack = mediaType === 'video' ? currentUser.videoTrack : currentUser.audioTrack;
+        if (state && state.status === 'ready' && state.publicationTrack === currentTrack && isRemotePublicationReady(currentUser, mediaType, state)) return;
+        if (state && state.publicationTrack && currentTrack && state.publicationTrack !== currentTrack) clearRemoteSubscription(currentUser.uid, mediaType, state);
+        subscribeToRemotePublication(currentUser, mediaType);
     });
     client.on("user-unpublished", (user, mediaType) => {
         clearRemoteSubscription(user.uid, mediaType);
@@ -3150,10 +3178,11 @@ window.initializeAgoraPlayer = function(config) {
         } else if (curState === "RECONNECTING") {
             window.vh360Log("Agora: Attempting to reconnect...");
             markRemoteVideosAsReconnecting();
-        } else if (curState === "CONNECTED" && prevState === "RECONNECTING") {
+        } else if (curState === "CONNECTED" && prevState !== "CONNECTED") {
             window.vh360Log("Agora: Successfully reconnected");
             clearRemoteVideosReconnectingState();
-            scheduleRemoteReconciliation('reconnected', 750);
+            isAgoraSessionJoined = true;
+            scheduleRemoteReconciliation('connection-restored', 750);
             // Clear any error messages
             const localPlayer = document.getElementById("vh360-agora-local-player");
             if (localPlayer) {
@@ -3703,6 +3732,7 @@ window.initializeAgoraPlayer = function(config) {
         await stopPublishing();
 
         try {
+            isAgoraSessionJoined = false;
             await client.leave();
         } catch (leaveError) {
             window.vh360Warn('VideoHub360: client.leave() before host rejoin failed:', leaveError);
@@ -3722,6 +3752,7 @@ window.initializeAgoraPlayer = function(config) {
 
         latestAgoraTokenResponse = tokenResponse;
         currentUserUID = Number(tokenResponse.uid || config.uid);
+        isAgoraSessionJoined = true;
         currentRole = 'host';
         isPresenter = true;
         reconcileRemoteSubscriptions('host-token-rejoin');
@@ -4504,6 +4535,7 @@ window.initializeAgoraPlayer = function(config) {
             }
 
             currentUserUID = Number(joinedUid || tokenResponse.uid || renewalUid);
+            isAgoraSessionJoined = true;
             reconcileRemoteSubscriptions('token-rejoin');
             scheduleRemoteReconciliation('token-rejoin-stabilization', 750);
 
@@ -4761,6 +4793,7 @@ window.initializeAgoraPlayer = function(config) {
             window.vh360Log('Agora: Successfully joined channel with UID:', uid);
             window.vh360Log('VideoHub360: Role after successful join:', currentRole);
             currentUserUID = uid; // Store the current user's UID for later use
+            isAgoraSessionJoined = true;
             reconcileRemoteSubscriptions('joined');
             scheduleRemoteReconciliation('join-stabilization', 750);
             resolveExistingRemoteIdentities();
@@ -4880,6 +4913,7 @@ window.initializeAgoraPlayer = function(config) {
 
             await stopPublishing();
             hasServerApprovedPublishToken = false;
+            isAgoraSessionJoined = false;
             await client.leave();
             const localPlayer = document.getElementById("vh360-agora-local-player");
             if (localPlayer) {
@@ -4970,7 +5004,7 @@ window.initializeAgoraPlayer = function(config) {
                 window.vh360Log('VideoHub360: Paused stream status polling (page hidden)');
             }
         } else {
-            if (client && currentUserUID) scheduleRemoteReconciliation('visibility-resume', 500);
+            if (client && currentUserUID && isAgoraSessionJoined && client.connectionState === 'CONNECTED') scheduleRemoteReconciliation('visibility-resume', 500);
             if (isStreamStatusPollingActive && !streamStatusPollInterval) {
                 streamStatusPollInterval = setInterval(checkStreamStatus, 3000);
                 checkStreamStatus(); // Check immediately when page becomes visible
