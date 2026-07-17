@@ -229,6 +229,9 @@ function vh360_pwa_get_vh360_network_only_paths() : array {
 	// Covers installations before rewrite rules are initialized and non-pretty links.
 	$paths[] = '/videohub360/';
 	$paths = apply_filters( 'vh360_pwa_network_only_paths', $paths, $post_type );
+	$home_path = (string) wp_parse_url( home_url( '/' ), PHP_URL_PATH );
+	$home_path = '/' . trim( $home_path, '/' );
+	if ( '/' !== $home_path ) { $home_path .= '/'; }
 	$normalized = array();
 	foreach ( (array) $paths as $path ) {
 		$path = wp_parse_url( (string) $path, PHP_URL_PATH );
@@ -237,6 +240,9 @@ function vh360_pwa_get_vh360_network_only_paths() : array {
 			$path .= '/';
 		}
 		$normalized[] = $path;
+		if ( '/' !== $home_path ) {
+			$normalized[] = $home_path . ltrim( $path, '/' );
+		}
 	}
 	return array_values( array_unique( $normalized ) );
 }
@@ -343,7 +349,7 @@ function vh360_pwa_build_sw_script( ?array $opts = null ) : string {
 		'homeOrigin'   => home_url(),
 		'onesignal'    => $onesignal,
 		'networkOnlyPaths' => vh360_pwa_get_vh360_network_only_paths(),
-		'networkOnlyQueryVars' => array( 'post_type' => 'videohub360', 'vh360_video' => '1' ),
+		'networkOnlyQueryVars' => array( 'videohub360' => true, 'post_type' => 'videohub360' ),
 	);
 	$template = file_exists( VH360_PWA_APP_DIR . 'templates/sw-template.js' ) ? file_get_contents( VH360_PWA_APP_DIR . 'templates/sw-template.js' ) : '';
 	return "/* VH360 Managed File: vh360-sw.js */\n// VH360 Service Worker\nconst VH360_PWA = " . wp_json_encode( $payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . ";\n" . $template;
