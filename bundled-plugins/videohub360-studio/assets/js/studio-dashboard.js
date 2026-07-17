@@ -4836,8 +4836,13 @@ var VH360StorageCompat = window.VH360Storage || (function(){
         }
         const preset = getSelectedPreset();
         const resolution = preset.resolution ? preset.resolution.width + '×' + preset.resolution.height : '';
-        const bitrate = preset.video_bitrate ? ' · ~' + Math.round(Number(preset.video_bitrate) / 1000000 * 10) / 10 + ' Mbps video' : '';
-        els.qualityDetails.textContent = preset.label + ' · ' + resolution + ' · ' + preset.fps + 'fps' + bitrate + '. Higher quality creates larger files and longer uploads.';
+        const liveBitrate = preset.video_bitrate_min && preset.video_bitrate
+            ? ' · Live ' + (Math.round(Number(preset.video_bitrate_min) / 100000) / 10) + '–' + (Math.round(Number(preset.video_bitrate) / 100000) / 10) + ' Mbps'
+            : '';
+        const recordingBitrate = preset.video_bitrate
+            ? ' · Recording ~' + (Math.round(Number(preset.video_bitrate) / 100000) / 10) + ' Mbps'
+            : '';
+        els.qualityDetails.textContent = preset.label + ' · ' + resolution + ' · ' + preset.fps + 'fps' + liveBitrate + recordingBitrate + '. Higher quality creates larger files and longer uploads.';
     }
 
 
@@ -6079,6 +6084,26 @@ var VH360StorageCompat = window.VH360Storage || (function(){
         return videoConfig;
     }
 
+    function agoraCustomVideoConfigFromPreset() {
+        const preset = getSelectedPreset();
+        const customConfig = {};
+        if (preset.resolution) {
+            customConfig.width = Number(preset.resolution.width);
+            customConfig.height = Number(preset.resolution.height);
+        }
+        if (preset.fps) {
+            customConfig.frameRate = Number(preset.fps);
+        }
+        if (preset.video_bitrate_min) {
+            customConfig.bitrateMin = Math.round(Number(preset.video_bitrate_min) / 1000);
+        }
+        if (preset.video_bitrate) {
+            customConfig.bitrateMax = Math.round(Number(preset.video_bitrate) / 1000);
+        }
+        customConfig.optimizationMode = 'detail';
+        return customConfig;
+    }
+
     function agoraAudioConfigFromSelection() {
         const primary = primaryAudioInput();
         return primary && primary.deviceId ? { microphoneId: primary.deviceId } : {};
@@ -6142,6 +6167,14 @@ var VH360StorageCompat = window.VH360Storage || (function(){
             studioDebugLog('[VH360 Studio] Studio broadcaster UID', prepared.uid);
             applyProgramCanvasResolution();
             ensureProgramCompositor();
+            const customVideoConfig = agoraCustomVideoConfigFromPreset();
+            const programVideoTrack = state.programOutputStream ? state.programOutputStream.getVideoTracks()[0] : null;
+            studioDebugLog('[VH360 Studio] Program track quality configuration', {
+                preset: getSelectedPresetKey(),
+                canvas: { width: state.programWidth, height: state.programHeight },
+                captureTrackSettings: programVideoTrack && typeof programVideoTrack.getSettings === 'function' ? programVideoTrack.getSettings() : {},
+                customVideoConfig: customVideoConfig
+            });
             const session = window.VH360AgoraBroadcaster.create({
                 appId: prepared.appId,
                 channelName: prepared.channelName,
@@ -6156,7 +6189,8 @@ var VH360StorageCompat = window.VH360Storage || (function(){
                 initialAudioMediaStreamTrack: getStudioMixedAudioTrack(),
                 audioSource: 'studio-mix',
                 videoConfig: agoraVideoConfigFromPreset(),
-                initialVideoMediaStreamTrack: state.programOutputStream ? state.programOutputStream.getVideoTracks()[0] : null,
+                customVideoConfig: customVideoConfig,
+                initialVideoMediaStreamTrack: programVideoTrack,
                 initialVideoSource: state.programSource || '',
                 renewToken: function () {
                     return api('/broadcasts/' + state.broadcastVideoId + '/renew-token', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } });
@@ -6164,6 +6198,13 @@ var VH360StorageCompat = window.VH360Storage || (function(){
             });
             state.broadcastSession = session;
             await session.start();
+            studioDebugLog('[VH360 Studio] Agora Program track published', {
+                preset: getSelectedPresetKey(),
+                canvas: { width: state.programWidth, height: state.programHeight },
+                captureTrackSettings: programVideoTrack && typeof programVideoTrack.getSettings === 'function' ? programVideoTrack.getSettings() : {},
+                customVideoConfig: customVideoConfig,
+                localVideoStats: typeof session.getLocalVideoStats === 'function' ? session.getLocalVideoStats() : {}
+            });
             studioDebugLog('[VH360 Studio] Agora mixed audio diagnostics', { mixerId: state.audioMixer ? state.audioMixer.id : '', audioTrackId: getStudioMixedAudioTrack() ? getStudioMixedAudioTrack().id : '', agoraAudioTrackId: typeof session.getAudioTrackId === 'function' ? session.getAudioTrackId() : '' });
             state.liveAudioWarningActive = false;
             updateViewerLinkControls();
@@ -6894,6 +6935,9 @@ var VH360StorageCompat = window.VH360Storage || (function(){
                 renderProgramLiveControls();
                 setBroadcastStatus('Program video output ended. Restart the live broadcast if viewers cannot see video.', 'warning');
             }
+        });
+        root.addEventListener('vh360:agora-broadcaster:custom-video-track-created', (event) => {
+            studioDebugLog('[VH360 Studio] Agora custom Program track created', event.detail || {});
         });
         root.addEventListener('vh360:agora-broadcaster:connection-state-change', (event) => {
             const detail = event.detail || {};
