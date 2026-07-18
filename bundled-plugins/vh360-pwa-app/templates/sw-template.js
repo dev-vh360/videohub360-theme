@@ -20,13 +20,16 @@ function shouldBypass(request) {
   if (!isSameOrigin(request.url)) return true;
 
   const url = new URL(request.url);
-  const p = url.pathname || '';
+  const p = decodeURIComponent(url.pathname || '');
 
   // Never cache admin/auth/REST/ajax or highly personalized commerce/community areas.
   if (p.startsWith('/wp-admin') || p.startsWith('/wp-login.php')) return true;
   if (p.includes('/wp-json') || p.includes('/admin-ajax.php')) return true;
   if (/(^|\/)(dashboard|service|my-account|account|cart|checkout|messages|notifications|login|logout|register|members|settings|billing|subscription|subscriptions|orders|payment-methods)(\/|$)/i.test(p)) return true;
   if (/(^|\/)(live|video|videos|watch)(\/|$)/i.test(p)) return true;
+  if (isVh360NetworkOnlyPath(p) || isVh360NetworkOnlyQuery(url)) return true;
+  // Player-critical assets must be fetched through the network, never an old SW cache.
+  if (/\/(?:videohub360|videohub360-core)\/assets\/(?:js\/(?:frontend-agora|view-layout-manager|livestream|frontend|simplified-mobile-controls|video-quality-manager|unified-settings-manager)\.js|css\/(?:multi-view-layouts|frontend|simplified-mobile-controls)\.css)$/i.test(p)) return true;
   if (/agora|AgoraRTC|frontend-agora|agora-broadcaster/i.test(p)) return true;
 
   // Avoid preview, nonces, actions.
@@ -37,6 +40,22 @@ function shouldBypass(request) {
   }
 
   return false;
+}
+
+function isVh360NetworkOnlyPath(pathname) {
+  const path = `/${String(pathname || '').replace(/^\/+|\/+$/g, '')}/`;
+  const routes = Array.isArray(VH360_PWA.networkOnlyPaths) ? VH360_PWA.networkOnlyPaths : [];
+  return routes.some((route) => {
+    const normalized = `/${String(route || '').replace(/^\/+|\/+$/g, '')}/`;
+    return normalized !== '//' && (path === normalized || path.startsWith(normalized));
+  });
+}
+
+function isVh360NetworkOnlyQuery(url) {
+  const query = VH360_PWA.networkOnlyQueryVars || {};
+  return Object.keys(query).some((key) => query[key] === true
+    ? url.searchParams.has(key) && url.searchParams.get(key) !== ''
+    : url.searchParams.get(key) === String(query[key]));
 }
 
 function isNavigationRequest(request) {
@@ -68,7 +87,7 @@ function isFastLaunchRequest(request) {
 
 function isStaticAsset(request) {
   const url = new URL(request.url);
-  const p = url.pathname || '';
+  const p = decodeURIComponent(url.pathname || '');
   return /\.(?:css|js|mjs|png|jpg|jpeg|gif|webp|svg|ico|woff|woff2|ttf|otf)$/.test(p);
 }
 
@@ -165,7 +184,10 @@ async function staleWhileRevalidate(request) {
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
-  if (shouldBypass(req)) return;
+  if (shouldBypass(req)) {
+    if (isNavigationRequest(req)) event.respondWith(fetch(req).catch(() => caches.match(VH360_PWA.offlineUrl)));
+    return;
+  }
 
   if (isStaticAsset(req)) {
     event.respondWith(cacheFirst(req));
