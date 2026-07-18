@@ -66,7 +66,20 @@ class VH360_Studio_Admin {
 
     public function sanitize_provider( $value ) {
         $value = sanitize_key( $value );
-        return $this->registry->has_storage_provider( $value ) ? $value : 'videopress';
+        if ( 'local' === $value ) {
+            $value = 'local_media';
+        }
+
+        if ( $this->registry->has_storage_provider( $value ) ) {
+            return $value;
+        }
+
+        $current = sanitize_key( get_option( 'vh360_studio_default_replay_storage_provider', '' ) );
+        if ( 'local' === $current ) {
+            $current = 'local_media';
+        }
+
+        return $this->registry->has_storage_provider( $current ) ? $current : 'videopress';
     }
 
     public function sanitize_api_key( $value ) {
@@ -212,7 +225,8 @@ class VH360_Studio_Admin {
 
     public function render_page() {
         if ( ! current_user_can( 'manage_options' ) ) { return; }
-        $providers = $this->registry->get_storage_providers();
+        $providers          = $this->registry->get_storage_providers();
+        $selected_provider  = $this->sanitize_provider( get_option( 'vh360_studio_default_replay_storage_provider', 'videopress' ) );
         ?>
         <div class="wrap vh360-studio-admin">
             <h1><?php esc_html_e( 'VH360 Studio Settings', 'videohub360-studio' ); ?></h1>
@@ -224,7 +238,7 @@ class VH360_Studio_Admin {
                 </tbody></table>
                 <h2><?php esc_html_e( 'Replay Provider Settings', 'videohub360-studio' ); ?></h2>
                 <table class="form-table" role="presentation"><tbody>
-                    <tr><th><label for="vh360-default-provider"><?php esc_html_e( 'Default replay storage provider', 'videohub360-studio' ); ?></label></th><td><select id="vh360-default-provider" name="vh360_studio_default_replay_storage_provider"><?php foreach ( $providers as $id => $provider ) : ?><option value="<?php echo esc_attr( $id ); ?>" <?php selected( get_option( 'vh360_studio_default_replay_storage_provider', 'videopress' ), $id ); ?>><?php echo esc_html( $provider->get_label() ); ?></option><?php endforeach; ?></select></td></tr>
+                    <tr><th><label for="vh360-default-provider"><?php esc_html_e( 'Default replay storage provider', 'videohub360-studio' ); ?></label></th><td><select id="vh360-default-provider" name="vh360_studio_default_replay_storage_provider"><?php foreach ( $providers as $id => $provider ) : ?><option value="<?php echo esc_attr( $id ); ?>" <?php selected( $selected_provider, $id ); ?>><?php echo esc_html( $provider->get_label() ); ?></option><?php endforeach; ?></select></td></tr>
                     <?php $this->text_row( 'vh360_studio_publitio_api_key', __( 'Publitio API Key', 'videohub360-studio' ) ); ?>
                     <tr><th><?php esc_html_e( 'Publitio upload mode', 'videohub360-studio' ); ?></th><td><select name="vh360_studio_publitio_upload_mode"><option value="server_relay" <?php selected( get_option( 'vh360_studio_publitio_upload_mode', 'server_relay' ), 'server_relay' ); ?>><?php esc_html_e( 'Server relay upload', 'videohub360-studio' ); ?></option><option value="direct_browser" <?php selected( get_option( 'vh360_studio_publitio_upload_mode', 'server_relay' ), 'direct_browser' ); ?>><?php esc_html_e( 'Direct browser upload', 'videohub360-studio' ); ?></option></select><p class="description"><?php esc_html_e( 'Server relay remains the fallback. Direct browser upload requires an unsigned Publitio Upload Preset.', 'videohub360-studio' ); ?></p></td></tr>
                     <tr><th><label for="vh360_studio_publitio_upload_preset_id"><?php esc_html_e( 'Publitio Upload Preset ID', 'videohub360-studio' ); ?></label></th><td><input type="text" class="regular-text" id="vh360_studio_publitio_upload_preset_id" name="vh360_studio_publitio_upload_preset_id" value="<?php echo esc_attr( get_option( 'vh360_studio_publitio_upload_preset_id', '' ) ); ?>"><p class="description"><?php esc_html_e( 'Required for direct browser uploads. Create an Upload Preset in Publitio and enable unsigned uploads for that preset. The preset ID is visible to authorized Studio users; do not enter an API secret here.', 'videohub360-studio' ); ?></p></td></tr>
