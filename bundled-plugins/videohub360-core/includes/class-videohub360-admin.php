@@ -164,14 +164,6 @@ class VideoHub360_Admin {
     
 
     /**
-     * Sanitize Studio replay destination option values.
-     */
-    private function sanitize_studio_replay_storage_provider($provider) {
-        $provider = sanitize_key($provider);
-        return in_array($provider, array('videopress', 'local'), true) ? $provider : 'videopress';
-    }
-
-    /**
      * Enqueue admin assets
      */
     public function enqueue_admin_assets($hook) {
@@ -392,7 +384,6 @@ class VideoHub360_Admin {
             update_option('vh360_agora_app_id', sanitize_text_field($_POST['vh360_agora_app_id']));
             update_option('vh360_agora_app_certificate', sanitize_text_field($_POST['vh360_agora_app_certificate']));
             update_option('vh360_agora_require_tokens', isset($_POST['vh360_agora_require_tokens']) ? 1 : 0);
-            update_option('vh360_studio_default_replay_storage_provider', $this->sanitize_studio_replay_storage_provider($_POST['vh360_studio_default_replay_storage_provider'] ?? 'videopress'));
             
             // Update YouTube Live Auto-Broadcast settings
             update_option('vh360_youtube_live_enabled', isset($_POST['vh360_youtube_live_enabled']) ? 1 : 0);
@@ -500,7 +491,6 @@ class VideoHub360_Admin {
         $single_video_layout_default = videohub360_sanitize_single_video_layout_value(get_option('videohub360_single_video_layout_default', 'sidebar'), array('sidebar', 'full-width'), 'sidebar');
         $course_lesson_layout_default = videohub360_sanitize_single_video_layout_value(get_option('videohub360_course_lesson_layout_default', 'full-width'), array('inherit', 'sidebar', 'full-width'), 'full-width');
         $livestream_video_layout_default = videohub360_sanitize_single_video_layout_value(get_option('videohub360_livestream_video_layout_default', 'full-width'), array('inherit', 'sidebar', 'full-width'), 'full-width');
-        $studio_default_replay_storage_provider = $this->sanitize_studio_replay_storage_provider(get_option('vh360_studio_default_replay_storage_provider', 'videopress'));
     
         
         $chat_enabled = get_option('videohub360_chat_enabled', 1);
@@ -849,16 +839,6 @@ class VideoHub360_Admin {
                                     ⚠️ Warning: Tokenless Agora access is not recommended for production. Enable this option before going live.
                                 </p>
                             <?php endif; ?>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Studio Default Replay Destination</th>
-                        <td>
-                            <select name="vh360_studio_default_replay_storage_provider">
-                                <option value="videopress" <?php selected($studio_default_replay_storage_provider, 'videopress'); ?>>VideoPress / WordPress Media Library</option>
-                                <option value="local" <?php selected($studio_default_replay_storage_provider, 'local'); ?>>Local Media Library</option>
-                            </select>
-                            <p class="description">Admin-only default used silently by VH360 Studio when it creates new recording jobs.</p>
                         </td>
                     </tr>
                     </tbody>
