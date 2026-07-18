@@ -25,6 +25,10 @@ class VH360_Studio_Replay_Publisher {
     }
 
     public function prepare( array $job ) {
+        if ( isset( $job['source_type'] ) && 'appointment_session' === sanitize_key( $job['source_type'] ) ) {
+            return new WP_Error( 'vh360_studio_private_appointment_replay_forbidden', __( 'Private appointment recordings cannot be published through the Live Room replay workflow.', 'videohub360-studio' ), array( 'status' => 403 ) );
+        }
+
         $provider = $this->get_provider( $job );
         if ( is_wp_error( $provider ) ) {
             return $provider;
@@ -57,6 +61,10 @@ class VH360_Studio_Replay_Publisher {
     }
 
     public function publish( array $job ) {
+        if ( isset( $job['source_type'] ) && 'appointment_session' === sanitize_key( $job['source_type'] ) ) {
+            return new WP_Error( 'vh360_studio_private_appointment_replay_forbidden', __( 'Private appointment recordings cannot be published through the Live Room replay workflow.', 'videohub360-studio' ), array( 'status' => 403 ) );
+        }
+
         $provider = $this->get_provider( $job );
         if ( is_wp_error( $provider ) ) {
             return $provider;
@@ -141,6 +149,10 @@ class VH360_Studio_Replay_Publisher {
     }
 
     public function complete_verified_publish( array $job, array $published ) {
+        if ( isset( $job['source_type'] ) && 'appointment_session' === sanitize_key( $job['source_type'] ) ) {
+            return new WP_Error( 'vh360_studio_private_appointment_replay_forbidden', __( 'Private appointment recordings cannot be published through the Live Room replay workflow.', 'videohub360-studio' ), array( 'status' => 403 ) );
+        }
+
         $provider = $this->get_provider( $job, false );
         if ( is_wp_error( $provider ) ) {
             return $provider;

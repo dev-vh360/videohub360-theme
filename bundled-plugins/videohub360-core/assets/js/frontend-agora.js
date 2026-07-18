@@ -662,6 +662,20 @@ window.initializeAgoraPlayer = function(config) {
         security.avatar_url = config.viewerAvatarUrl || config.viewerAvatar || security.avatar_url || config.avatarUrl || '';
     }
 
+    const vh360BeforeLeaveHandlers = new Set();
+    const vh360BeforeEndHandlers = new Set();
+    async function runAgoraLifecycleHandlers(handlers) {
+        for (const handler of Array.from(handlers)) {
+            await handler();
+        }
+    }
+    window.vh360AgoraLifecycle = {
+        registerBeforeLeave: (handler) => { if (typeof handler === 'function') { vh360BeforeLeaveHandlers.add(handler); } },
+        registerBeforeEnd: (handler) => { if (typeof handler === 'function') { vh360BeforeEndHandlers.add(handler); } },
+        unregisterBeforeLeave: (handler) => vh360BeforeLeaveHandlers.delete(handler),
+        unregisterBeforeEnd: (handler) => vh360BeforeEndHandlers.delete(handler)
+    };
+
     // === Helper Functions ===
 
     /**
@@ -4105,6 +4119,7 @@ window.initializeAgoraPlayer = function(config) {
     if (leaveBtn) {
         leaveBtn.addEventListener('click', async () => {
             if (confirm('Leave the livestream?')) {
+                await runAgoraLifecycleHandlers(vh360BeforeLeaveHandlers);
                 await leaveChannel();
             }
         });
@@ -4112,6 +4127,7 @@ window.initializeAgoraPlayer = function(config) {
     if (endStreamBtn && canModerate) {
         endStreamBtn.addEventListener('click', async () => {
             if (confirm('End the entire livestream for all participants? This action cannot be undone.')) {
+                await runAgoraLifecycleHandlers(vh360BeforeEndHandlers);
                 endStreamBtn.disabled = true;
                 endStreamBtn.textContent = 'Ending...';
                 try {
@@ -5491,6 +5507,12 @@ window.initializeAgoraPlayer = function(config) {
         isVolumeIndicationEnabled: () => isVolumenIndicationEnabled,
         volumeThreshold,
         switchingCooldown
+    };
+    window.vh360AgoraState = {
+        isJoined: () => isAgoraSessionJoined,
+        currentRole: () => currentRole,
+        activeSpeaker: () => activeSpeakerUid,
+        localTracks: () => localTracks
     };
 
     // Initialize debug flag for view transition logging

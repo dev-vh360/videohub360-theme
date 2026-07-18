@@ -764,7 +764,7 @@ class VH360_Studio_REST_Controller {
         $payload['status']           = VH360_Studio_Recording_Jobs::STATUS_CREATED;
         $payload['recording_mode']   = isset( $payload['recording_mode'] ) ? $payload['recording_mode'] : 'browser';
         $payload['source_type']      = isset( $payload['source_type'] ) ? $payload['source_type'] : 'studio_setup';
-        $payload['storage_provider'] = $this->default_replay_storage_provider();
+        $payload['storage_provider'] = VH360_Studio_Replay_Storage_Settings::resolve_default_provider();
 
         return $payload;
     }
@@ -796,41 +796,7 @@ class VH360_Studio_REST_Controller {
     }
 
     private function default_replay_storage_provider() {
-        $registry  = VH360_Studio_Plugin::instance()->registry();
-        $raw_saved = get_option( 'vh360_studio_default_replay_storage_provider', '' );
-        $saved     = $this->normalize_storage_provider_id( $raw_saved );
-
-        if ( $saved && $this->storage_provider_is_available( $registry, $saved ) ) {
-            return $saved;
-        }
-
-        if ( $this->storage_provider_is_available( $registry, 'videopress' ) ) {
-            return 'videopress';
-        }
-
-        if ( $this->storage_provider_is_available( $registry, 'publitio' ) ) {
-            return 'publitio';
-        }
-
-        if ( $this->storage_provider_is_available( $registry, 'bunny_stream' ) ) {
-            return 'bunny_stream';
-        }
-
-        if ( $this->storage_provider_is_available( $registry, 'local_media' ) ) {
-            return 'local_media';
-        }
-
-        return 'videopress';
-    }
-
-    private function storage_provider_is_available( VH360_Studio_Provider_Registry $registry, $provider_id ) {
-        $provider = $registry->get_storage_provider( sanitize_key( $provider_id ) );
-        return $provider && $provider->is_available();
-    }
-
-    private function normalize_storage_provider_id( $provider ) {
-        $provider = sanitize_key( $provider );
-        return 'local' === $provider ? 'local_media' : $provider;
+        return VH360_Studio_Replay_Storage_Settings::resolve_default_provider();
     }
 
     public function validate_optional_url( $value ) {

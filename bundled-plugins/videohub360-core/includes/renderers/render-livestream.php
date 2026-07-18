@@ -15,13 +15,13 @@ if (!defined('ABSPATH')) exit;
 if (!function_exists('videohub360_render_livestream')) {
     function videohub360_render_livestream($fields, $chat_enabled = false, $chat_placement = 'inline', $is_user_logged_in = false, $user_avatar = '', $user_display_name = '', $user_logout_url = '', $hide_settings = false) {
         $player_html = '<div class="vh360-livestream-player-wrap">';
-        
+
         // Add interactive class for Agora Interactive Mode
         $iframe_class = 'vh360-livestream-iframe';
         if ($fields['type'] === 'agora' && $fields['agora_mode'] === 'interactive') {
             $iframe_class .= ' vh360-agora-interactive-container';
         }
-        
+
         $player_html .= '<div class="' . $iframe_class . '">';
         if ($fields['type'] === 'embed' && !empty($fields['embed_code'])) {
             // Sanitize custom embed code to avoid XSS. Allow only safe iframe attributes.
@@ -111,8 +111,8 @@ if (!function_exists('videohub360_render_livestream')) {
 
             // Enhanced host detection - check if user can manage this live room
             // User can manage if: admin OR can edit_post OR is post_author
-            $is_original_host = current_user_can('manage_options') 
-                || current_user_can('edit_post', get_the_ID()) 
+            $is_original_host = current_user_can('manage_options')
+                || current_user_can('edit_post', get_the_ID())
                 || $is_owner;
             $can_moderate = $is_original_host || current_user_can('moderate_comments') || current_user_can('manage_options');
             $is_studio_controlled = 'yes' === get_post_meta(get_the_ID(), '_vh360_studio_controlled_live', true);
@@ -160,7 +160,7 @@ if (!function_exists('videohub360_render_livestream')) {
             $post_id = get_the_ID();
             $appointment_event_id = get_post_meta($post_id, '_vh360_appointment_event_id', true);
             $is_appointment = !empty($appointment_event_id);
-            
+
             $player_html .= '<div id="vh360-join-livestream-overlay" class="vh360-join-livestream-overlay">';
 $player_html .= '<div class="vh360-overlay-content">';
 $player_html .= '<div class="vh360-overlay-icon">🔴</div>';
@@ -169,7 +169,7 @@ if ($is_appointment && function_exists('vh360_get_appointment_session_state')) {
     // Appointment room - use timing-aware messaging
     $current_user_id = get_current_user_id();
     $session_state = vh360_get_appointment_session_state($post_id, $current_user_id);
-    
+
     if ($is_original_host) {
         // Professional view
         if ($session_state['status'] === 'ended') {
@@ -243,22 +243,22 @@ $player_html .= '</div>';
             $player_html .= '<div id="vh360-agora-remote-players" class="vh360-remote-players-initial"></div>';
 
             $player_html .= '<div id="vh360-agora-controls" class="vh360-mobile-controls-simple">';
-            
+
             // All buttons in single container for simplified mobile controls
             $player_html .= '<button id="vh360-agora-mute-audio" class="vh360-agora-control-btn vh360-agora-control-btn-text vh360-hidden">🎤 Mute</button>';
             $player_html .= '<button id="vh360-agora-mute-video" class="vh360-agora-control-btn vh360-agora-control-btn-text vh360-hidden">📹 Camera</button>';
-            
+
             // Show join presenter button for non-moderators in interactive mode when either:
-            // 1. Host passcode is set, OR 
+            // 1. Host passcode is set, OR
             // 2. "Allow Everyone to be Host" is enabled
-            if (!$can_moderate && $fields['agora_mode'] === 'interactive' && 
+            if (!$can_moderate && $fields['agora_mode'] === 'interactive' &&
                 (!empty($fields['host_passcode']) || $fields['agora_everyone_is_host'] === 'yes')) {
                 $player_html .= '<button id="vh360-agora-join-presenter" class="vh360-agora-control-btn vh360-agora-control-btn-text vh360-hidden">🎭 Go Live</button>';
             }
-            
+
             // Spacer to push right-aligned buttons to the right
             $player_html .= '<div class="vh360-controls-spacer"></div>';
-            
+
             // REORDERED RIGHT-SIDE BUTTONS:
             // 3rd to last: Leave button (with door icon)
             $player_html .= '<button id="vh360-agora-leave" class="vh360-agora-control-btn vh360-agora-control-btn-icon vh360-agora-btn-leave" title="Leave">';
@@ -267,20 +267,34 @@ $player_html .= '</div>';
             $player_html .= '<path d="M14,6V4H5V20H14V18H16V20A2,2 0 0,1 14,22H5A2,2 0 0,1 3,20V4A2,2 0 0,1 5,2H14A2,2 0 0,1 16,4V6H14M20.5,11L18.5,9V10H10V14H18.5V15L20.5,13Z"/>';
             $player_html .= '</svg>';
             $player_html .= '</button>';
-            
+
 
             // End stream button (if applicable, between leave and fullscreen)
             if ($is_original_host && ! $is_studio_controlled) {
                 $player_html .= '<button id="vh360-agora-end-stream" class="vh360-agora-control-btn vh360-agora-control-btn-text vh360-agora-btn-end">End Stream</button>';
             }
-            
+
+            $extra_host_controls = apply_filters(
+                'vh360_agora_host_controls_html',
+                '',
+                $post_id,
+                $fields,
+                array(
+                    'is_original_host'  => $is_original_host,
+                    'can_moderate'      => $can_moderate,
+                    'studio_controlled' => $is_studio_controlled,
+                    'is_appointment'    => $is_appointment,
+                )
+            );
+            $player_html .= $extra_host_controls;
+
             // 2nd to last: Fullscreen button (with fullscreen icon, no text)
             $player_html .= '<button id="vh360-agora-fullscreen-btn" class="vh360-agora-control-btn vh360-agora-control-btn-icon" title="Toggle fullscreen">';
             $player_html .= '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">';
             $player_html .= '<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>';
             $player_html .= '</svg>';
             $player_html .= '</button>';
-            
+
             // Last: Unified Settings/Gear button (replaces moderation panel button)
             // Skip settings button if hide_settings is true (e.g., for Live Room context)
             if (!$hide_settings) {
@@ -299,9 +313,9 @@ $player_html .= '</div>';
                     $player_html .= '</button>';
                 }
             }
-            
+
             $player_html .= '</div>';
-            
+
             $player_html .= '</div>';
             }
         } else {

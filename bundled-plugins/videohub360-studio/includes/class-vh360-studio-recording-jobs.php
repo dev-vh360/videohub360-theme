@@ -39,11 +39,11 @@ class VH360_Studio_Recording_Jobs {
     }
 
     public function allowed_source_types() {
-        return array( 'studio_setup', 'live_room', 'livestream_video' );
+        return array( 'studio_setup', 'live_room', 'livestream_video', 'appointment_session' );
     }
 
     public function allowed_recording_modes() {
-        return array( 'browser' );
+        return array( 'browser', 'local_private' );
     }
 
     public function transition_map() {
@@ -173,6 +173,27 @@ class VH360_Studio_Recording_Jobs {
         }
 
         return $out;
+    }
+
+
+
+    public function active_statuses() {
+        return array( self::STATUS_CREATED, self::STATUS_RECORDING, self::STATUS_STOPPING, self::STATUS_UPLOADING, self::STATUS_PROCESSING );
+    }
+
+    public function find_active_live_room_job( $post_id ) {
+        return $this->find_active_room_recording( $post_id, 'live_room', $this->active_statuses() );
+    }
+
+    public function find_active_appointment_recording( $post_id ) {
+        return $this->find_active_room_recording( $post_id, 'appointment_session', array( self::STATUS_CREATED, self::STATUS_RECORDING, self::STATUS_STOPPING, 'preparing_download' ) );
+    }
+
+    private function find_active_room_recording( $post_id, $source_type, array $statuses ) {
+        global $wpdb;
+        $placeholders = implode( ',', array_fill( 0, count( $statuses ), '%s' ) );
+        $args = array_merge( array( sanitize_key( $source_type ), absint( $post_id ) ), array_map( 'sanitize_key', $statuses ) );
+        return $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . VH360_Studio_Database::table_name() . " WHERE source_type = %s AND live_video_id = %d AND status IN ($placeholders) ORDER BY created_at DESC LIMIT 1", $args ), ARRAY_A );
     }
 
     public function create( $user_id, $data ) {
