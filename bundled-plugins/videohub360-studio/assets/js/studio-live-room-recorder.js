@@ -34,6 +34,10 @@
     function setActiveRecordingState(state) { activeState = state; showIndicator(state === 'recording' || state === 'starting'); }
     function hasUnsavedRecordingData() { return starting || !!stopPromise || !!(recorder && recorder.hasUnsavedData && recorder.hasUnsavedData()) || !!(localRecorder && localRecorder.state === 'recording') || localChunks.length > 0 || appointmentDownloadPending || !!appointmentBlob; }
     function beforeUnload(event) { if (hasUnsavedRecordingData()) { event.preventDefault(); event.returnValue = ''; return ''; } }
+    function hasLocalAppointmentRecovery() { return config.recordingPurpose === 'appointment_session' && (localChunks.length > 0 || !!appointmentBlob || appointmentDownloadPending || activeState === 'download_pending'); }
+    function browserCaptureMayStillOwnData(state) { return state && ['created', 'recording', 'stopping'].indexOf(String(state.state || '')) !== -1; }
+    function isRecordingElsewhere(state) { return !!(state && state.active && state.heartbeat_fresh && browserCaptureMayStillOwnData(state) && !recorder && !localRecorder && !hasLocalAppointmentRecovery() && activeState !== 'recording' && activeState !== 'starting'); }
+    function ownsLocalRecordingState() { return !!(recorder || localRecorder || localChunks.length || appointmentBlob || appointmentDownloadPending || activeState === 'download_pending' || activeState === 'recording' || activeState === 'starting'); }
 
     function start() {
         if (starting || activeState === 'recording') { return; }
@@ -292,9 +296,10 @@
 
     function stopBeforeEnd() {
         return rest('/live-rooms/' + config.postId + '/recording').then(function (state) {
-            var activeElsewhere = state && state.active && state.heartbeat_fresh && !recorder && !localRecorder && activeState !== 'recording' && activeState !== 'starting';
+            var activeElsewhere = isRecordingElsewhere(state);
             if (activeElsewhere) {
-                setActiveRecordingState('recording_elsewhere');
+                activeState = 'recording_elsewhere';
+                showIndicator(!!state.recording_active);
                 setLabel('Recording in another tab');
                 setStatus('Stop the recording in the original recording tab before ending this Live Room.');
                 if (button) { button.disabled = true; }
@@ -303,7 +308,9 @@
             return stop();
         }).catch(function (error) {
             if (error && error.message && error.message.indexOf('another tab') !== -1) { throw error; }
-            return stop();
+            if (ownsLocalRecordingState()) { return stop(); }
+            setStatus('Unable to verify the active recording. Please try again before ending the Live Room.');
+            throw new Error('Unable to verify the active recording. Please try again before ending the Live Room.');
         });
     }
 
@@ -315,14 +322,13 @@
             if (activeState === 'failed' && recorder) { return; }
             if (state.failure_stage === 'finalization_failed' && state.job_id) { activeJobId = Number(state.job_id); setActiveRecordingState('failed'); setLabel('Retry Finalization'); if (button) { button.disabled = false; } showFinalizationRecoveryPanel('Recording assembly failed. You can retry finalization after reloading because the uploaded chunks remain on the server.'); return; }
             if ((state.failure_stage === 'publishing_prepare_failed' || state.failure_stage === 'publishing_start_failed') && state.job_id) { activeJobId = Number(state.job_id); setActiveRecordingState('failed'); setLabel('Retry Publishing'); if (button) { button.disabled = false; } showPublishingRecoveryPanel('Replay publishing failed. You can retry publishing after ending the room.'); return; }
-            var activeElsewhere = state.active && state.heartbeat_fresh && !recorder && !localRecorder && activeState !== 'recording' && activeState !== 'starting';
-            if (activeElsewhere) { setActiveRecordingState('recording_elsewhere'); setLabel('Recording in another tab'); setStatus('Recording is active in another browser tab. Stop it there before ending the Live Room.'); if (button) { button.disabled = true; } return; }
+            var activeElsewhere = isRecordingElsewhere(state);
+            if (activeElsewhere) { activeState = 'recording_elsewhere'; showIndicator(!!state.recording_active); setLabel('Recording in another tab'); setStatus('Recording is active in another browser tab. Stop it there before ending the Live Room.'); if (button) { button.disabled = true; } return; }
             if (!button) { return; }
             if (state.replay_ready) { setActiveRecordingState('ready'); setLabel('Replay Ready'); button.disabled = true; return; }
             if (state.replay_failed || state.state === 'failed') { setActiveRecordingState('idle'); setLabel('Record Again'); button.disabled = false; return; }
             if (state.replay_processing || state.state === 'processing' || state.state === 'uploading') { setActiveRecordingState('processing'); setLabel('Processing…'); button.disabled = true; return; }
-            var hasLocalAppointmentRecovery = config.recordingPurpose === 'appointment_session' && (localChunks.length > 0 || !!appointmentBlob || appointmentDownloadPending || activeState === 'download_pending');
-            if (state.active && !recorder && !localRecorder && state.recovery_available && !state.heartbeat_fresh && !hasLocalAppointmentRecovery) { setActiveRecordingState('interrupted'); setLabel('Clear Interrupted Recording'); button.disabled = false; setError(config.recordingPurpose === 'appointment_session' ? 'Recording was interrupted in this browser. Any undownloaded private recording data was lost.' : 'Recording was interrupted in this browser. The unsaved browser media cannot be recovered.'); return; }
+            if (state.active && !recorder && !localRecorder && state.recovery_available && !state.heartbeat_fresh && !hasLocalAppointmentRecovery()) { setActiveRecordingState('interrupted'); setLabel('Clear Interrupted Recording'); button.disabled = false; setError(config.recordingPurpose === 'appointment_session' ? 'Recording was interrupted in this browser. Any undownloaded private recording data was lost.' : 'Recording was interrupted in this browser. The unsaved browser media cannot be recovered.'); return; }
             if (!state.active && activeState === 'processing') { setActiveRecordingState('idle'); setLabel(config.recordingPurpose === 'appointment_session' ? 'Record Privately' : 'Record'); button.disabled = false; }
         }
         rest('/live-rooms/' + config.postId + '/recording').then(restoreState).catch(function (error) { window.console && console.warn('Unable to restore recording state.', error); });

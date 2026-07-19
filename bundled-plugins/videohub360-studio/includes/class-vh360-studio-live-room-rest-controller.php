@@ -254,6 +254,7 @@ class VH360_Studio_Live_Room_REST_Controller {
         if ( is_wp_error( $job ) ) {
             return $job;
         }
+        update_option( 'vh360_recording_heartbeat_' . absint( $job['id'] ), time(), false );
 
         update_post_meta( $post_id, '_vh360_appointment_recording_state', 'recording' );
         update_post_meta( $post_id, '_vh360_appointment_recording_started_at', current_time( 'mysql' ) );
@@ -288,6 +289,7 @@ class VH360_Studio_Live_Room_REST_Controller {
         if ( is_wp_error( $job ) ) {
             return $job;
         }
+        update_option( 'vh360_recording_heartbeat_' . absint( $job['id'] ), time(), false );
 
         update_post_meta( $post_id, '_vh360_live_room_recording_state', 'created' );
         update_post_meta( $post_id, '_vh360_live_room_recording_job_id', absint( $job['id'] ) );
