@@ -66,6 +66,7 @@
         this.maxTotalRecordingSize = options.maxTotalRecordingSize || 0;
         this.queuedBytes = 0;
         this.terminalError = null;
+        this.terminalHandled = false;
         this.browserSessionId = '';
         this.recorder = null;
         this.startedAt = 0;
@@ -74,6 +75,7 @@
         this.onStatus = options.onStatus || function () {};
         this.onError = options.onError || function () {};
         this.onServerStoppingConfirmed = options.onServerStoppingConfirmed || function () {};
+        this.onTerminalUploadError = options.onTerminalUploadError || function () {};
         this.maxRetries = options.maxRetries || 3;
         this.retryDelayMs = options.retryDelayMs || 750;
         this.stopPromise = null;
@@ -157,6 +159,7 @@
         this.pending.clear();
         this.failed.clear();
         this.onError(this.terminalError);
+        if (!this.terminalHandled) { this.terminalHandled = true; this.onTerminalUploadError(this.terminalError); }
     };
 
     RecordingClient.prototype.uploadChunk = function (blob, index) {

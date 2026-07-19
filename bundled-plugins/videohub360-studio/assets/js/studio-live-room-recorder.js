@@ -85,8 +85,29 @@
         }).catch(function (error) { if (button) { button.disabled = false; } setError(error && (error.message || error.code) || error); throw error; });
     }
 
+
+    function handleProviderTerminalUploadFailure(error) {
+        clearInterval(timer);
+        cleanupMedia();
+        closeRecordingHeartbeat();
+        notifyRecordingState('live_room_recording_stopped');
+        window.removeEventListener('beforeunload', beforeUnload);
+        setActiveRecordingState('idle');
+        setLabel('Record Again');
+        setError(error && (error.message || error.code) || error || 'Recording could not be saved.');
+        var jobId = activeJobId;
+        recorder = null;
+        activeJobId = 0;
+        if (jobId) {
+            rest('/jobs/' + jobId + '/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json' } }).catch(function (cancelError) {
+                window.console && console.warn('Unable to cancel terminally failed recording job; it may already be failed.', cancelError);
+            });
+        }
+        if (button) { button.disabled = false; }
+    }
+
     function startProviderBacked(response, stream) {
-        recorder = new window.VH360StudioRecordingClient.RecordingClient({ restRoot: config.restRoot, nonce: config.nonce, jobId: activeJobId, stream: stream, mimeType: window.VH360StudioRecordingClient.supportedMimeType(), bits: qualityBits(), onStatus: function (state) { setActiveRecordingState(state); if (state === 'uploading') { setLabel('Uploading…'); } if (state === 'processing') { setLabel('Processing…'); } }, onError: function (error) { setError(error && error.message || error); }, onServerStoppingConfirmed: function () { notifyRecordingState('live_room_recording_stopped'); } });
+        recorder = new window.VH360StudioRecordingClient.RecordingClient({ restRoot: config.restRoot, nonce: config.nonce, jobId: activeJobId, stream: stream, mimeType: window.VH360StudioRecordingClient.supportedMimeType(), bits: qualityBits(), onStatus: function (state) { setActiveRecordingState(state); if (state === 'uploading') { setLabel('Uploading…'); } if (state === 'processing') { setLabel('Processing…'); } }, onError: function (error) { setError(error && error.message || error); }, onServerStoppingConfirmed: function () { notifyRecordingState('live_room_recording_stopped'); }, onTerminalUploadError: handleProviderTerminalUploadFailure });
         return recorder.start().then(function () { startHeartbeat(); setActiveRecordingState('recording'); notifyRecordingState('live_room_recording_started'); timer = setInterval(tick, 1000); tick(); window.addEventListener('beforeunload', beforeUnload); return response; });
     }
 

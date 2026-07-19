@@ -217,7 +217,7 @@ class VH360_Studio_REST_Controller {
                 'permission_callback' => array( $this, 'permissions_check' ),
                 'args'                => array(
                     'id'              => $this->get_id_arg(),
-                    'expected_chunks' => $this->get_positive_int_arg( true ),
+                    'expected_chunks' => $this->get_positive_int_arg( false ),
                 ),
             )
         );
