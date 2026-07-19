@@ -72,6 +72,9 @@
         this.onError = options.onError || function () {};
         this.maxRetries = options.maxRetries || 3;
         this.retryDelayMs = options.retryDelayMs || 750;
+        this.stopPromise = null;
+        this.finalizePromise = null;
+        this.publishStarted = false;
     }
 
     RecordingClient.prototype.start = function () {
@@ -185,6 +188,10 @@
         });
     };
 
+    RecordingClient.prototype.hasUnsavedData = function () {
+        return !!(this.recorder && this.recorder.state === 'recording') || this.pending.size > 0 || this.uploadQueue.length > 0 || this.activeUploads > 0 || this.failed.size > 0 || !!this.stopPromise || !!this.finalizePromise && !this.publishStarted;
+    };
+
     RecordingClient.prototype.finishStoppedRecording = function () {
         var self = this;
         return this.waitForUploads().then(function () {
@@ -199,36 +206,47 @@
 
     RecordingClient.prototype.stop = function () {
         var self = this;
+        if (this.stopPromise) { return this.stopPromise; }
         if (!this.recorder || this.recorder.state === 'inactive') {
-            return this.stoppedAt ? this.finishStoppedRecording() : Promise.resolve();
+            this.stopPromise = this.stoppedAt ? this.finishStoppedRecording() : Promise.resolve();
+            return this.stopPromise.finally(function () { self.stopPromise = null; });
         }
         this.onStatus('stopping');
-        return new Promise(function (resolve, reject) {
+        this.stopPromise = new Promise(function (resolve, reject) {
             self.recorder.addEventListener('stop', resolve, { once: true });
             try { self.recorder.stop(); } catch (error) { reject(error); }
         }).then(function () {
             self.stoppedAt = Date.now();
             self.finalChunkCount = self.chunkIndex;
             return self.finishStoppedRecording();
-        });
+        }).finally(function () { self.stopPromise = null; });
+        return this.stopPromise;
+    };
+
+    RecordingClient.prototype.statusValues = function (response) {
+        if (!response) { return []; }
+        return ['job_status', 'status', 'publish_provider_status', 'provider_status', 'publish_status'].map(function (key) {
+            return response[key] ? String(response[key]).toLowerCase() : '';
+        }).filter(Boolean);
     };
 
     RecordingClient.prototype.publishIsReady = function (response) {
+        if (response && response.replay_video_id && response.replay_url) { return true; }
         var ready = ['ready', 'published', 'local_media_ready', 'publitio_ready', 'publitio_direct_ready', 'bunny_stream_ready'];
-        return !!response && ready.indexOf(String(response.job_status || response.status || response.publish_provider_status || response.provider_status || '').toLowerCase()) !== -1 || !!(response && response.replay_video_id && response.replay_url);
+        return this.statusValues(response).some(function (status) { return ready.indexOf(status) !== -1; });
     };
 
     RecordingClient.prototype.publishIsFailed = function (response) {
         var failed = ['failed', 'error', 'publish_failed', 'upload_failed', 'bunny_stream_failed', 'publitio_failed'];
-        return !!response && failed.indexOf(String(response.job_status || response.status || response.publish_provider_status || response.provider_status || '').toLowerCase()) !== -1;
+        return this.statusValues(response).some(function (status) { return failed.indexOf(status) !== -1; });
     };
 
     RecordingClient.prototype.pollPublishingStatus = function (intervalMs, timeoutMs) {
         var self = this, started = Date.now();
         function poll() {
             return api(self.restRoot, self.nonce, '/jobs/' + self.jobId + '/publishing/status', { method: 'GET' }).then(function (status) {
+                if (self.publishIsFailed(status)) { self.onStatus('failed'); throw status; }
                 if (self.publishIsReady(status)) { self.onStatus('ready'); return status; }
-                if (self.publishIsFailed(status)) { throw status; }
                 if (Date.now() - started > timeoutMs) { return status; }
                 self.onStatus('processing');
                 return new Promise(function (resolve) { window.setTimeout(resolve, intervalMs); }).then(poll);
@@ -237,20 +255,32 @@
         return poll();
     };
 
-    RecordingClient.prototype.finalizeAndPublish = function () {
+    RecordingClient.prototype.secureLocalRecordingData = function () {
         var self = this;
-        this.onStatus('uploading');
-        return api(this.restRoot, this.nonce, '/jobs/' + this.jobId + '/recording/finalize', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expected_chunks: this.finalChunkCount })
+        if (this.finalizePromise) { return this.finalizePromise; }
+        this.finalizePromise = this.stop().then(function () {
+            self.onStatus('uploading');
+            return api(self.restRoot, self.nonce, '/jobs/' + self.jobId + '/recording/finalize', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expected_chunks: self.finalChunkCount })
+            });
         }).then(function () {
             self.onStatus('processing');
             return api(self.restRoot, self.nonce, '/jobs/' + self.jobId + '/publishing/prepare', { method: 'POST', headers: { 'Content-Type': 'application/json' } }).catch(function () { return {}; });
         }).then(function () {
             return api(self.restRoot, self.nonce, '/jobs/' + self.jobId + '/publishing/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
         }).then(function (published) {
-            if (self.publishIsReady(published)) { self.onStatus('ready'); return published; }
+            self.publishStarted = true;
             if (self.publishIsFailed(published)) { throw published; }
-            self.onStatus('processing');
+            self.onStatus(self.publishIsReady(published) ? 'ready' : 'processing');
+            return published;
+        }).finally(function () { self.finalizePromise = null; });
+        return this.finalizePromise;
+    };
+
+    RecordingClient.prototype.finalizeAndPublish = function () {
+        var self = this;
+        return this.secureLocalRecordingData().then(function (published) {
+            if (self.publishIsReady(published)) { return published; }
             return self.pollPublishingStatus(5000, 10 * 60 * 1000);
         });
     };

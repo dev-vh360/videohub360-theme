@@ -11,6 +11,7 @@
         this.ctx = this.canvas.getContext('2d');
         this.timer = null;
         this.trackVideos = new Map();
+        this.previousFeaturedUid = null;
     }
     Compositor.prototype.participants = function () { return window.vh360AgoraParticipants instanceof Map ? Array.from(window.vh360AgoraParticipants.values()) : Object.values(window.vh360AgoraParticipants || {}); };
     Compositor.prototype.layout = function () { var manager = window.vh360LayoutManager || window.viewLayoutManager || (window.vh360 && window.vh360.viewLayoutManager); return { view: manager && manager.currentView ? manager.currentView : 'gallery', pinned: manager && typeof manager.getPinnedParticipantUid === 'function' ? manager.getPinnedParticipantUid() : (manager && manager.pinnedParticipantUid), active: window.vh360AgoraState && window.vh360AgoraState.activeSpeaker ? window.vh360AgoraState.activeSpeaker() : null }; };
@@ -41,11 +42,18 @@
         ctx.fillText(name.slice(0, 60), x + 40, y + h - 40);
     };
     Compositor.prototype.drawGrid = function (parts, x, y, width, height) { var self = this, count = Math.max(parts.length, 1), cols = Math.ceil(Math.sqrt(count)), rows = Math.ceil(count / cols), w = width / cols, h = height / rows; parts.forEach(function (p, i) { self.drawParticipant(p, x + (i % cols) * w, y + Math.floor(i / cols) * h, w, h, false); }); };
+    Compositor.prototype.featuredParticipant = function (parts, layout) {
+        var uid = layout.view === 'focus' ? layout.pinned : (layout.active || this.previousFeaturedUid);
+        var featured = uid ? parts.find(function (p) { return String(p.uid || p.agoraUid) === String(uid); }) : null;
+        featured = featured || parts.find(function (p) { return p.isOriginalHost || p.isLocal; }) || parts.find(function (p) { return p.videoTrack || p.audioTrack; }) || parts[0];
+        if (featured) { this.previousFeaturedUid = String(featured.uid || featured.agoraUid); }
+        return featured;
+    };
     Compositor.prototype.draw = function () {
-        var ctx = this.ctx, parts = this.participants(), layout = this.layout(), featuredUid = layout.view === 'focus' ? layout.pinned : layout.active;
+        var ctx = this.ctx, parts = this.participants(), layout = this.layout();
         ctx.fillStyle = '#020617'; ctx.fillRect(0, 0, this.width, this.height);
-        if ((layout.view === 'speaker' || layout.view === 'focus') && featuredUid) {
-            var featured = parts.find(function (p) { return String(p.uid || p.agoraUid) === String(featuredUid); }) || parts[0];
+        if ((layout.view === 'speaker' || layout.view === 'focus') && parts.length) {
+            var featured = this.featuredParticipant(parts, layout);
             var rest = parts.filter(function (p) { return p !== featured; });
             this.drawParticipant(featured, 0, 0, this.width, Math.round(this.height * 0.78), true);
             this.drawGrid(rest, 0, Math.round(this.height * 0.78), this.width, Math.round(this.height * 0.22));

@@ -65,7 +65,7 @@ class VH360_Studio_Live_Room_REST_Controller {
             }
             return new WP_Error( 'vh360_recording_state_not_found', __( 'Recording state not found.', 'videohub360-studio' ), array( 'status' => 404 ) );
         }
-        if ( VH360_Studio_Permissions::current_user_can_record_live_room( $post_id ) || current_user_can( 'read_post', $post_id ) || ( 'publish' === get_post_status( $post_id ) && ! post_password_required( $post_id ) ) ) {
+        if ( VH360_Studio_Permissions::current_user_can_record_live_room( $post_id ) || $this->current_user_can_view_room_state( $post_id ) ) {
             return true;
         }
         return new WP_Error( 'vh360_recording_state_forbidden', __( 'You are not allowed to view this recording state.', 'videohub360-studio' ), array( 'status' => 403 ) );
@@ -163,6 +163,25 @@ class VH360_Studio_Live_Room_REST_Controller {
         }
 
         return rest_ensure_response( array( 'job_id' => absint( $job['id'] ), 'state' => sanitize_key( $job['status'] ) ) );
+    }
+
+
+    private function current_user_can_view_room_state( $post_id ) {
+        $user_id = get_current_user_id();
+        if ( current_user_can( 'read_post', $post_id ) || current_user_can( 'edit_post', $post_id ) ) {
+            return true;
+        }
+        $can_view = ( 'publish' === get_post_status( $post_id ) && ! post_password_required( $post_id ) );
+        if ( $can_view && function_exists( 'videohub360_course_features_enabled' ) && function_exists( 'videohub360_user_can_access_lesson' ) && videohub360_course_features_enabled() ) {
+            $can_view = videohub360_user_can_access_lesson( $post_id, $user_id );
+        }
+        if ( $can_view && function_exists( 'vh360_post_requires_membership' ) ) {
+            $required_plan = vh360_post_requires_membership( $post_id );
+            if ( $required_plan ) {
+                $can_view = $user_id && ( 'any' === $required_plan ? ( function_exists( 'vh360_user_has_active_membership' ) && vh360_user_has_active_membership( $user_id ) ) : ( function_exists( 'vh360_user_has_membership_plan' ) && vh360_user_has_membership_plan( $user_id, $required_plan ) ) );
+            }
+        }
+        return (bool) apply_filters( 'vh360_live_room_recording_state_can_view', $can_view, $post_id, $user_id );
     }
 
     private function create_appointment_session( $post_id, $channel ) {

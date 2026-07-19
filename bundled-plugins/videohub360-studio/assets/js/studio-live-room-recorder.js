@@ -1,7 +1,7 @@
 (function (window, document) {
     'use strict';
     var config = window.vh360StudioLiveRoomRecorder || {};
-    var button, indicator, recorder, localRecorder, localChunks = [], compositor, mixer, startedAt = 0, timer, activeJobId = 0, starting = false, activeState = 'idle';
+    var button, indicator, recorder, localRecorder, localChunks = [], appointmentBlob = null, appointmentDownloadPending = false, stopPromise = null, compositor, mixer, startedAt = 0, timer, activeJobId = 0, starting = false, activeState = 'idle';
 
     function rest(path, options) { return window.VH360StudioRecordingClient.api(config.restRoot, config.nonce, path, options); }
     function setLabel(text) { if (button) { button.textContent = text; } }
@@ -24,7 +24,8 @@
     function cleanupMedia() { if (compositor) { compositor.stop(); } if (mixer) { mixer.stop(); } compositor = null; mixer = null; }
     function notifyRecordingState(kind) { if (window.sendDataStreamMessage) { window.sendDataStreamMessage({ type: kind, roomId: config.postId, recordingPurpose: config.recordingPurpose }); } }
     function setActiveRecordingState(state) { activeState = state; showIndicator(state === 'recording' || state === 'starting' || state === 'stopping'); }
-    function beforeUnload(event) { if (activeState !== 'idle' && activeState !== 'ready' && activeState !== 'download_ready' && activeState !== 'failed') { event.preventDefault(); event.returnValue = ''; return ''; } }
+    function hasUnsavedRecordingData() { return starting || !!stopPromise || !!(recorder && recorder.hasUnsavedData && recorder.hasUnsavedData()) || !!(localRecorder && localRecorder.state === 'recording') || localChunks.length > 0 || appointmentDownloadPending || !!appointmentBlob; }
+    function beforeUnload(event) { if (hasUnsavedRecordingData()) { event.preventDefault(); event.returnValue = ''; return ''; } }
 
     function start() {
         if (starting || activeState === 'recording') { return; }
@@ -82,8 +83,28 @@
 
     function stopProviderBacked() {
         if (!recorder) { return Promise.resolve(); }
+        if (recorder.publishStarted) { return Promise.resolve(); }
+        if (stopPromise) { return stopPromise; }
         if (button) { button.disabled = true; } setLabel('Stopping…'); clearInterval(timer); setActiveRecordingState('stopping');
-        return recorder.stop().then(function () { notifyRecordingState('live_room_recording_stopped'); setLabel('Uploading…'); return recorder.finalizeAndPublish(); }).then(function (result) { var ready = recorder && recorder.publishIsReady && recorder.publishIsReady(result); setActiveRecordingState(ready ? 'ready' : 'processing'); setLabel(ready ? 'Replay Ready' : 'Processing…'); if (ready) { window.removeEventListener('beforeunload', beforeUnload); cleanupMedia(); recorder = null; } }).catch(function (error) { setActiveRecordingState('failed'); setLabel(recorder && recorder.failed && recorder.failed.size ? 'Retry Uploads' : 'Record'); setError(error && (error.message || error.code) || error); throw error; }).finally(function () { if (button) { button.disabled = false; } });
+        stopPromise = recorder.secureLocalRecordingData().then(function (result) {
+            notifyRecordingState('live_room_recording_stopped');
+            var ready = recorder && recorder.publishIsReady && recorder.publishIsReady(result);
+            setActiveRecordingState(ready ? 'ready' : 'processing'); setLabel(ready ? 'Replay Ready' : 'Processing…');
+            window.removeEventListener('beforeunload', beforeUnload); cleanupMedia();
+            monitorProviderProcessing(result);
+            return result;
+        }).catch(function (error) {
+            setActiveRecordingState('failed'); setLabel(recorder && recorder.failed && recorder.failed.size ? 'Retry Uploads' : 'Record'); setError(error && (error.message || error.code) || error); throw error;
+        }).finally(function () { stopPromise = null; if (button) { button.disabled = false; } });
+        return stopPromise;
+    }
+
+    function monitorProviderProcessing(initialResult) {
+        if (!recorder) { return; }
+        if (recorder.publishIsReady(initialResult)) { setLabel('Replay Ready'); activeState = 'ready'; recorder = null; return; }
+        recorder.pollPublishingStatus(5000, 10 * 60 * 1000).then(function (result) {
+            if (recorder && recorder.publishIsReady(result)) { setActiveRecordingState('ready'); setLabel('Replay Ready'); recorder = null; }
+        }).catch(function (error) { setActiveRecordingState('failed'); setLabel('Replay Failed'); setError(error && (error.message || error.code) || error); });
     }
 
     function stopLocalPrivate() {
@@ -93,11 +114,12 @@
             var duration = Math.max(0, Math.round((Date.now() - startedAt) / 1000));
             setLabel('Preparing File…'); setActiveRecordingState('preparing_download');
             return rest('/live-rooms/' + config.postId + '/recordings/' + activeJobId + '/local-private', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: 'preparing_download', duration_seconds: duration, mime_type: localRecorder.mimeType || 'video/webm' }) }).then(function () {
-                var blob = new Blob(localChunks, { type: localRecorder.mimeType || 'video/webm' });
-                prepareAppointmentDownload(blob, duration);
+                appointmentBlob = new Blob(localChunks, { type: localRecorder.mimeType || 'video/webm' });
+                appointmentDownloadPending = true;
+                prepareAppointmentDownload(appointmentBlob, duration);
                 return Promise.resolve({ state: 'preparing_download' });
             });
-        }).then(function () { setActiveRecordingState('download_ready'); notifyRecordingState('live_room_recording_stopped'); setLabel('Download Prepared'); cleanupMedia(); }).catch(function (error) { setActiveRecordingState('failed'); setLabel('Record Privately'); setError(error && (error.message || error.code) || error); if (activeJobId) { rest('/live-rooms/' + config.postId + '/recordings/' + activeJobId + '/local-private', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: 'failed', error_message: error && error.message || 'Local file preparation failed.' }) }).catch(function () {}); } throw error; }).finally(function () { localRecorder = null; if (button) { button.disabled = false; } });
+        }).then(function () { setActiveRecordingState('download_pending'); notifyRecordingState('live_room_recording_stopped'); setLabel('Download Prepared'); cleanupMedia(); }).catch(function (error) { setActiveRecordingState('failed'); setLabel('Record Privately'); setError(error && (error.message || error.code) || error); if (activeJobId) { rest('/live-rooms/' + config.postId + '/recordings/' + activeJobId + '/local-private', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: 'failed', error_message: error && error.message || 'Local file preparation failed.' }) }).catch(function () {}); } throw error; }).finally(function () { localRecorder = null; if (button) { button.disabled = false; } });
     }
 
 
@@ -109,12 +131,29 @@
         download.textContent = 'Download Recording';
         download.addEventListener('click', function () {
             window.VH360StudioRecordingClient.downloadBlob(blob, filename);
-            rest('/live-rooms/' + config.postId + '/recordings/' + activeJobId + '/local-private', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: 'download_ready', duration_seconds: duration || 0, mime_type: blob.type }) }).catch(function () {});
-            localChunks = [];
-            window.removeEventListener('beforeunload', beforeUnload);
-            download.remove();
+            download.disabled = true;
+            download.textContent = 'Closing Recording…';
+            finalizeAppointmentDownload(blob, duration, download);
         });
         if (button && button.parentElement) { button.parentElement.appendChild(download); }
+    }
+
+
+    function finalizeAppointmentDownload(blob, duration, download) {
+        rest('/live-rooms/' + config.postId + '/recordings/' + activeJobId + '/local-private', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: 'download_ready', duration_seconds: duration || 0, mime_type: blob.type }) }).then(function () {
+            localChunks = [];
+            appointmentBlob = null;
+            appointmentDownloadPending = false;
+            activeJobId = 0;
+            setActiveRecordingState('idle');
+            setLabel('Record Privately');
+            window.removeEventListener('beforeunload', beforeUnload);
+            download.remove();
+        }).catch(function (error) {
+            download.disabled = false;
+            download.textContent = 'Retry Close Recording';
+            setError((error && error.message) || 'File download was initiated, but the recording session still needs to be closed server-side.');
+        });
     }
 
     function init() {
@@ -124,7 +163,7 @@
         window.addEventListener('vh360:agora-data-message', function (event) { var data = event.detail || {}; if (data.type === 'live_room_recording_started' || data.type === 'live_room_recording_stopped') { rest('/live-rooms/' + config.postId + '/recording').then(function (state) { showIndicator(!!(state.recording_active || state.active && state.state === 'recording')); }).catch(function () {}); } });
         if (!button) { return; }
         if (!hasDesktopSupport()) { setLabel(config.desktopOnlyMessage || 'Recording unavailable'); return; }
-        button.classList.remove('vh360-hidden'); button.addEventListener('click', function () { if (activeState === 'recording' || activeState === 'failed' && recorder && recorder.failed && recorder.failed.size) { stop().catch(function () {}); } else if (activeState !== 'processing') { start(); } });
+        button.classList.remove('vh360-hidden'); button.addEventListener('click', function () { if (activeState === 'recording' || activeState === 'failed' && recorder && recorder.failed && recorder.failed.size) { stop().catch(function () {}); } else if (activeState === 'ready') { button.disabled = true; } else if (activeState !== 'processing' && activeState !== 'download_pending') { start(); } });
         if (window.vh360AgoraLifecycle) { window.vh360AgoraLifecycle.registerBeforeLeave(stop); window.vh360AgoraLifecycle.registerBeforeEnd(stop); }
     }
     document.addEventListener('DOMContentLoaded', init);
