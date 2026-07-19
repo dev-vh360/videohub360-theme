@@ -84,7 +84,7 @@ class VH360_Studio_Live_Room_REST_Controller {
             'recording_purpose'   => $purpose,
             'active'              => (bool) $job,
             'job_active'          => (bool) $job,
-            'recording_active'    => in_array( $state, array( 'created', 'recording', 'stopping' ), true ),
+            'recording_active'    => in_array( $state, array( 'created', 'recording' ), true ),
             'replay_processing'   => in_array( $state, array( 'uploading', 'processing' ), true ),
             'state'               => $state,
             'started_at'          => $job && ! empty( $job['started_at'] ) ? $job['started_at'] : get_post_meta( $post_id, 'appointment_session' === $purpose ? '_vh360_appointment_recording_started_at' : '_vh360_live_room_recording_started_at', true ),

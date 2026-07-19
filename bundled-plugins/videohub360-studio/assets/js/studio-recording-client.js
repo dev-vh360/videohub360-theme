@@ -282,6 +282,29 @@
         return this.finalizePromise;
     };
 
+
+
+    RecordingClient.prototype.retryPublishing = function () {
+        var self = this;
+        if (!this.finalized) { return this.secureLocalRecordingData(); }
+        this.failureStage = '';
+        this.onStatus('processing');
+        return api(this.restRoot, this.nonce, '/jobs/' + this.jobId + '/publishing/prepare', { method: 'POST', headers: { 'Content-Type': 'application/json' } }).catch(function (error) {
+            self.failureStage = 'publishing_prepare_failed';
+            throw error;
+        }).then(function () {
+            return api(self.restRoot, self.nonce, '/jobs/' + self.jobId + '/publishing/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' } }).catch(function (error) {
+                self.failureStage = 'publishing_start_failed';
+                throw error;
+            });
+        }).then(function (published) {
+            if (self.publishIsFailed(published)) { self.failureStage = 'provider_failed'; throw published; }
+            self.publishStarted = true;
+            self.onStatus(self.publishIsReady(published) ? 'ready' : 'processing');
+            return published;
+        });
+    };
+
     RecordingClient.prototype.finalizeAndPublish = function () {
         var self = this;
         return this.secureLocalRecordingData().then(function (published) {
