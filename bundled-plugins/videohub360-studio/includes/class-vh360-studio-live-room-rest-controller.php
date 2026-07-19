@@ -58,9 +58,10 @@ class VH360_Studio_Live_Room_REST_Controller {
         }
         if ( 'appointment_session' === $this->recording_purpose( $post_id ) ) {
             $user_id = get_current_user_id();
-            $professional_id = absint( get_post_meta( $post_id, '_vh360_appointment_professional_id', true ) );
-            $client_id       = absint( get_post_meta( $post_id, '_vh360_appointment_client_id', true ) );
-            if ( $user_id && ( VH360_Studio_Permissions::current_user_can_record_live_room( $post_id ) || $user_id === $professional_id || $user_id === $client_id || current_user_can( 'edit_post', $post_id ) ) ) {
+            if ( current_user_can( 'manage_options' ) || current_user_can( 'edit_post', $post_id ) || VH360_Studio_Permissions::current_user_can_record_live_room( $post_id ) ) {
+                return true;
+            }
+            if ( $user_id && function_exists( 'vh360_can_user_view_appointment_page' ) && vh360_can_user_view_appointment_page( $post_id, $user_id ) ) {
                 return true;
             }
             return new WP_Error( 'vh360_recording_state_not_found', __( 'Recording state not found.', 'videohub360-studio' ), array( 'status' => 404 ) );
@@ -85,6 +86,7 @@ class VH360_Studio_Live_Room_REST_Controller {
             'recording_active'    => in_array( $state, array( 'created', 'recording', 'stopping' ), true ),
             'replay_processing'   => in_array( $state, array( 'uploading', 'processing' ), true ),
             'state'               => $state,
+            'job_id'              => $job ? absint( $job['id'] ) : 0,
             'started_at'          => $job && ! empty( $job['started_at'] ) ? $job['started_at'] : get_post_meta( $post_id, 'appointment_session' === $purpose ? '_vh360_appointment_recording_started_at' : '_vh360_live_room_recording_started_at', true ),
         );
 
@@ -147,6 +149,12 @@ class VH360_Studio_Live_Room_REST_Controller {
         $duration = absint( $request->get_param( 'duration_seconds' ) );
         $mime     = sanitize_mime_type( $request->get_param( 'mime_type' ) );
         if ( 'preparing_download' === $state ) {
+            if ( VH360_Studio_Recording_Jobs::STATUS_RECORDING === $job['status'] ) {
+                $job = $this->jobs->mark_stopping( $job['id'], get_current_user_id(), $duration );
+                if ( is_wp_error( $job ) ) {
+                    return $job;
+                }
+            }
             $job = $this->jobs->mark_preparing_download( $job['id'], get_current_user_id(), $duration, $mime );
         } elseif ( 'download_ready' === $state ) {
             $job = $this->jobs->mark_local_private_ready( $job['id'], get_current_user_id(), $duration, $mime );
@@ -168,7 +176,7 @@ class VH360_Studio_Live_Room_REST_Controller {
 
     private function current_user_can_view_room_state( $post_id ) {
         $user_id = get_current_user_id();
-        if ( current_user_can( 'read_post', $post_id ) || current_user_can( 'edit_post', $post_id ) ) {
+        if ( current_user_can( 'manage_options' ) || current_user_can( 'edit_post', $post_id ) ) {
             return true;
         }
         $can_view = ( 'publish' === get_post_status( $post_id ) && ! post_password_required( $post_id ) );
@@ -217,7 +225,6 @@ class VH360_Studio_Live_Room_REST_Controller {
                 'post_id'              => $post_id,
                 'appointment_event_id' => get_post_meta( $post_id, '_vh360_appointment_event_id', true ),
                 'quality_preset'       => VH360_Studio_Quality_Presets::DEFAULT_PRESET,
-                'session_token'        => wp_create_nonce( 'vh360_appointment_recording_' . $post_id . '_' . get_current_user_id() . '_' . $session ),
                 'started_by'           => get_current_user_id(),
                 'job'                  => $job,
             )
