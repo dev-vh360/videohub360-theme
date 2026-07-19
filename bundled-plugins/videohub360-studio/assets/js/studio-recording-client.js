@@ -75,6 +75,7 @@
         this.stopPromise = null;
         this.finalizePromise = null;
         this.publishStarted = false;
+        this.serverStopPromise = null;
         this.stopConfirmed = false;
         this.finalized = false;
         this.failureStage = '';
@@ -195,16 +196,21 @@
         return !!(this.recorder && this.recorder.state === 'recording') || this.pending.size > 0 || this.uploadQueue.length > 0 || this.activeUploads > 0 || this.failed.size > 0 || !!this.stopPromise || !!this.finalizePromise && !this.publishStarted;
     };
 
+    RecordingClient.prototype.markServerStopping = function () {
+        var self = this;
+        if (this.stopConfirmed) { return Promise.resolve({ status: 'stopping' }); }
+        if (this.serverStopPromise) { return this.serverStopPromise; }
+        var duration = Math.max(0, Math.round((this.stoppedAt - this.startedAt) / 1000));
+        this.serverStopPromise = api(this.restRoot, this.nonce, '/jobs/' + this.jobId + '/recording/stop', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ duration_seconds: duration })
+        }).then(function (stopped) { self.stopConfirmed = true; return stopped; }).catch(function (error) { self.failureStage = 'stop_failed'; throw error; }).finally(function () { self.serverStopPromise = null; });
+        return this.serverStopPromise;
+    };
+
     RecordingClient.prototype.finishStoppedRecording = function () {
         var self = this;
-        return this.waitForUploads().then(function () {
+        return this.markServerStopping().then(function () { return self.waitForUploads(); }).then(function () {
             if (self.failed.size) { return self.retryFailedChunks().then(function () { if (self.failed.size) { throw new Error('Some recording chunks failed to upload. Retry is still available while this page remains open.'); } }); }
-        }).then(function () {
-            var duration = Math.max(0, Math.round((self.stoppedAt - self.startedAt) / 1000));
-            if (self.stopConfirmed) { return Promise.resolve({ status: 'stopping' }); }
-            return api(self.restRoot, self.nonce, '/jobs/' + self.jobId + '/recording/stop', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ duration_seconds: duration })
-            }).then(function (stopped) { self.stopConfirmed = true; return stopped; }).catch(function (error) { self.failureStage = 'stop_failed'; throw error; });
         });
     };
 

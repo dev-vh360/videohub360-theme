@@ -233,6 +233,10 @@ class VH360_Studio_Recording_Jobs {
 
 
 
+    public function touch( $id, $user_id ) {
+        return $this->update_record( $id, $user_id, array(), true );
+    }
+
     public function mark_preparing_download( $id, $user_id, $duration_seconds = 0, $mime_type = '' ) {
         $data = array(
             'status'           => self::STATUS_PREPARING_DOWNLOAD,

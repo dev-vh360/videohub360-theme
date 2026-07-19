@@ -38,6 +38,15 @@ class VH360_Studio_Live_Room_REST_Controller {
         );
         register_rest_route(
             $this->namespace,
+            '/live-rooms/(?P<post_id>\d+)/recordings/(?P<id>\d+)/heartbeat',
+            array(
+                'methods'             => 'POST',
+                'callback'            => array( $this, 'heartbeat_recording' ),
+                'permission_callback' => array( $this, 'can_record' ),
+            )
+        );
+        register_rest_route(
+            $this->namespace,
             '/live-rooms/(?P<post_id>\d+)/recordings/(?P<id>\d+)/local-private',
             array(
                 'methods'             => 'POST',
@@ -79,6 +88,8 @@ class VH360_Studio_Live_Room_REST_Controller {
 
         $state       = $job ? sanitize_key( $job['status'] ) : 'idle';
         $can_manage  = VH360_Studio_Permissions::current_user_can_record_live_room( $post_id ) || current_user_can( 'edit_post', $post_id ) || current_user_can( 'manage_options' );
+        $heartbeat_stale_seconds = absint( apply_filters( 'vh360_live_room_recording_heartbeat_stale_seconds', 120 ) );
+        $heartbeat_fresh = $job && ! empty( $job['updated_at'] ) && strtotime( $job['updated_at'] . ' UTC' ) >= time() - $heartbeat_stale_seconds;
         $response = array(
             'post_id'             => $post_id,
             'recording_purpose'   => $purpose,
@@ -92,7 +103,8 @@ class VH360_Studio_Live_Room_REST_Controller {
 
         if ( $can_manage ) {
             $response['job_id']             = $job ? absint( $job['id'] ) : 0;
-            $response['recovery_available'] = (bool) $job;
+            $response['recovery_available'] = (bool) $job && ! $heartbeat_fresh && absint( $job['user_id'] ) === get_current_user_id();
+            $response['heartbeat_fresh']    = (bool) $heartbeat_fresh;
         }
 
 
@@ -142,6 +154,17 @@ class VH360_Studio_Live_Room_REST_Controller {
         } finally {
             delete_option( $lock );
         }
+    }
+
+    public function heartbeat_recording( WP_REST_Request $request ) {
+        $post_id = absint( $request['post_id'] );
+        $job = $this->jobs->get( absint( $request['id'] ), get_current_user_id() );
+        if ( ! $job || absint( $job['live_video_id'] ) !== $post_id || ! in_array( sanitize_key( $job['status'] ), array( 'created', 'recording', 'stopping', 'preparing_download' ), true ) ) {
+            return new WP_Error( 'vh360_recording_heartbeat_not_found', __( 'Recording session not found.', 'videohub360-studio' ), array( 'status' => 404 ) );
+        }
+        $job = $this->jobs->touch( $job['id'], get_current_user_id() );
+        if ( is_wp_error( $job ) ) { return $job; }
+        return rest_ensure_response( array( 'job_id' => absint( $job['id'] ), 'updated_at' => $job['updated_at'] ) );
     }
 
     public function update_local_private_recording( WP_REST_Request $request ) {
