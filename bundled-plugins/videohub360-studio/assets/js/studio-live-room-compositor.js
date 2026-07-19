@@ -38,7 +38,7 @@
         ctx.rect(x + pad, y + pad, w - pad * 2, h - pad * 2);
         ctx.clip();
         ctx.fillStyle = '#101827'; ctx.fillRect(x + pad, y + pad, w - pad * 2, h - pad * 2);
-        if (hasCamera && video && video.readyState >= 2) {
+        if (hasCamera && video && video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
             var scale = Math.max((w - pad * 2) / video.videoWidth, (h - pad * 2) / video.videoHeight), dw = video.videoWidth * scale, dh = video.videoHeight * scale;
             try { ctx.drawImage(video, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh); } catch (e) {}
         } else {
@@ -66,8 +66,11 @@
         if ((layout.view === 'speaker' || layout.view === 'focus') && parts.length) {
             var featured = this.featuredParticipant(parts, layout);
             var rest = parts.filter(function (p) { return p !== featured; });
-            this.drawParticipant(featured, 0, 0, this.width, Math.round(this.height * 0.78), true);
-            this.drawGrid(rest, 0, Math.round(this.height * 0.78), this.width, Math.round(this.height * 0.22));
+            var featuredHeight = rest.length ? Math.round(this.height * 0.78) : this.height;
+            this.drawParticipant(featured, 0, 0, this.width, featuredHeight, true);
+            if (rest.length) {
+                this.drawGrid(rest, 0, featuredHeight, this.width, this.height - featuredHeight);
+            }
         } else { this.drawGrid(parts, 0, 0, this.width, this.height); }
     };
     Compositor.prototype.start = function () { var self = this; this.draw(); this.timer = setInterval(function () { self.draw(); }, 1000 / this.fps); this.captureStream = this.canvas.captureStream(this.fps); return this.captureStream; };

@@ -14,7 +14,18 @@
     }
 
     function supportedMimeType() {
-        var candidates = ['video/mp4;codecs=h264,aac', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+        var candidates = [
+            'video/mp4;codecs="avc3.640028,mp4a.40.2"',
+            'video/mp4;codecs="avc3.42E01E,mp4a.40.2"',
+            'video/mp4;codecs="avc1.640028,mp4a.40.2"',
+            'video/mp4;codecs="avc1.42E01E,mp4a.40.2"',
+            'video/mp4;codecs="avc1.424028,mp4a.40.2"',
+            'video/mp4;codecs=h264,aac',
+            'video/mp4',
+            'video/webm;codecs=vp9,opus',
+            'video/webm;codecs=vp8,opus',
+            'video/webm'
+        ];
         if (!window.MediaRecorder) { return ''; }
         return candidates.find(function (type) { return MediaRecorder.isTypeSupported(type); }) || '';
     }
@@ -105,6 +116,12 @@
             self.chunkMs = Number(settings.preferred_chunk_duration || start.preferred_chunk_duration || self.chunkMs);
             self.recorder.addEventListener('dataavailable', function (event) {
                 if (event.data && event.data.size) { self.queueBlob(event.data); }
+            });
+            self.recorder.addEventListener('error', function (event) {
+                var recorderError = event && event.error ? event.error : new Error('The browser media recorder stopped unexpectedly.');
+                if (!recorderError.code) { recorderError.code = 'vh360_studio_media_recorder_failed'; }
+                recorderError.retryable = false;
+                self.handleTerminalUploadError(recorderError);
             });
             self.recorder.start(self.chunkMs);
             self.startedAt = Date.now();
