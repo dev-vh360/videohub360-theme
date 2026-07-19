@@ -845,6 +845,7 @@ class ViewLayoutManager {
             this.debugLog(`Completed view transition to ${viewType}`);
         }, 100);
         
+        window.dispatchEvent(new CustomEvent('vh360:agora-layout-changed', { detail: { previousView: oldView, currentView: this.currentView, pinnedParticipantUid: this.pinnedParticipantUid } }));
         if (window.__VH360_DEBUG) console.log(`Switched from ${oldView} to ${viewType} view`);
     }
     
@@ -857,6 +858,7 @@ class ViewLayoutManager {
         if (typeof window.vh360RefreshFeaturedParticipantTiles === 'function') {
             window.vh360RefreshFeaturedParticipantTiles();
         }
+        window.dispatchEvent(new CustomEvent('vh360:agora-focus-changed', { detail: { pinnedParticipantUid: this.pinnedParticipantUid } }));
     }
 
     unpinParticipant(options = {}) {
@@ -869,6 +871,7 @@ class ViewLayoutManager {
         } else if (typeof window.vh360RefreshFeaturedParticipantTiles === 'function') {
             window.vh360RefreshFeaturedParticipantTiles();
         }
+        window.dispatchEvent(new CustomEvent('vh360:agora-focus-changed', { detail: { previousPinnedParticipantUid: oldUid, pinnedParticipantUid: this.pinnedParticipantUid } }));
     }
 
     toggleParticipantFocus(uid) {

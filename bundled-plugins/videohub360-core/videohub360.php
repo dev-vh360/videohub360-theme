@@ -50,6 +50,7 @@ if (!function_exists('videohub360_asset_version')) {
 // Load renderer functions
 require_once VIDEOHUB360_PLUGIN_DIR . 'includes/renderers/render-chat.php';
 require_once VIDEOHUB360_PLUGIN_DIR . 'includes/renderers/render-livestream.php';
+require_once VIDEOHUB360_PLUGIN_DIR . 'includes/renderers/render-replay.php';
 require_once VIDEOHUB360_PLUGIN_DIR . 'includes/renderers/render-single-video-sidebar.php';
 require_once VIDEOHUB360_PLUGIN_DIR . 'includes/renderers/render-single-video-modals.php';
 require_once VIDEOHUB360_PLUGIN_DIR . 'includes/class-videohub360-agora-participant-registry.php';

@@ -1,6 +1,18 @@
 (function (window) {
     'use strict';
 
+    function api(root, nonce, path, options) {
+        options = options || {};
+        options.headers = options.headers || {};
+        if (nonce) { options.headers['X-WP-Nonce'] = nonce; }
+        return fetch(root + path, options).then(function (response) {
+            return response.json().catch(function () { return {}; }).then(function (data) {
+                if (!response.ok) { throw data; }
+                return data;
+            });
+        });
+    }
+
     function supportedMimeType() {
         var candidates = ['video/mp4;codecs=h264,aac', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
         if (!window.MediaRecorder) { return ''; }
@@ -25,5 +37,151 @@
         return 'appointment-recording-' + now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) + '-' + pad(now.getHours()) + pad(now.getMinutes()) + '.' + ext;
     }
 
-    window.VH360StudioRecordingClient = { supportedMimeType: supportedMimeType, downloadBlob: downloadBlob, appointmentFilename: appointmentFilename };
+    function sha256Blob(blob) {
+        if (!window.crypto || !window.crypto.subtle || !blob || typeof blob.arrayBuffer !== 'function') {
+            return Promise.resolve('');
+        }
+        return window.crypto.subtle.digest('SHA-256', blob.arrayBuffer()).then(function (digest) {
+            return Array.from(new Uint8Array(digest)).map(function (byte) { return byte.toString(16).padStart(2, '0'); }).join('');
+        });
+    }
+
+    function RecordingClient(options) {
+        this.restRoot = options.restRoot;
+        this.nonce = options.nonce;
+        this.jobId = options.jobId;
+        this.stream = options.stream;
+        this.mimeType = options.mimeType || supportedMimeType();
+        this.bits = options.bits || {};
+        this.chunkMs = options.chunkMs || 5000;
+        this.chunkIndex = 0;
+        this.pending = new Set();
+        this.failed = new Map();
+        this.uploadQueue = [];
+        this.activeUploads = 0;
+        this.maxConcurrency = options.maxConcurrency || 2;
+        this.maxChunkSize = options.maxChunkSize || 8 * 1024 * 1024;
+        this.browserSessionId = '';
+        this.recorder = null;
+        this.startedAt = 0;
+        this.stoppedAt = 0;
+        this.finalChunkCount = 0;
+        this.onStatus = options.onStatus || function () {};
+        this.onError = options.onError || function () {};
+    }
+
+    RecordingClient.prototype.start = function () {
+        var self = this;
+        var mediaOptions = this.mimeType ? { mimeType: this.mimeType } : {};
+        if (this.bits.videoBitsPerSecond) { mediaOptions.videoBitsPerSecond = Number(this.bits.videoBitsPerSecond); }
+        if (this.bits.audioBitsPerSecond) { mediaOptions.audioBitsPerSecond = Number(this.bits.audioBitsPerSecond); }
+        this.recorder = new MediaRecorder(this.stream, mediaOptions);
+        this.mimeType = this.recorder.mimeType || this.mimeType;
+        return api(this.restRoot, this.nonce, '/jobs/' + this.jobId + '/recording/start', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mime_type: this.mimeType })
+        }).then(function (start) {
+            self.browserSessionId = start.browser_session_id;
+            self.mimeType = start.mime_type || self.mimeType;
+            self.recorder.addEventListener('dataavailable', function (event) {
+                if (event.data && event.data.size) { self.queueBlob(event.data); }
+            });
+            self.recorder.start(self.chunkMs);
+            self.startedAt = Date.now();
+            self.onStatus('recording');
+            return start;
+        });
+    };
+
+    RecordingClient.prototype.queueBlob = function (blob) {
+        var offset = 0;
+        var type = blob.type || this.mimeType;
+        do {
+            var end = Math.min(blob.size, offset + this.maxChunkSize);
+            var part = blob.slice(offset, end, type);
+            var index = this.chunkIndex++;
+            this.pending.add(index);
+            this.uploadQueue.push({ index: index, blob: part });
+            offset = end;
+        } while (offset < blob.size);
+        this.scheduleUploads();
+    };
+
+    RecordingClient.prototype.scheduleUploads = function () {
+        var self = this;
+        while (this.activeUploads < this.maxConcurrency && this.uploadQueue.length) {
+            (function (task) {
+                self.activeUploads += 1;
+                self.uploadChunk(task.blob, task.index).catch(function (error) { self.onError(error); }).finally(function () {
+                    self.activeUploads = Math.max(0, self.activeUploads - 1);
+                    self.scheduleUploads();
+                });
+            })(this.uploadQueue.shift());
+        }
+    };
+
+    RecordingClient.prototype.uploadChunk = function (blob, index) {
+        var self = this;
+        return sha256Blob(blob).then(function (checksum) {
+            var form = new FormData();
+            form.append('browser_session_id', self.browserSessionId);
+            form.append('chunk_index', String(index));
+            form.append('mime_type', blob.type || self.mimeType);
+            if (checksum) { form.append('chunk_checksum', checksum); }
+            form.append('chunk', blob, 'chunk-' + index + (self.mimeType.indexOf('mp4') !== -1 ? '.mp4' : '.webm'));
+            return api(self.restRoot, self.nonce, '/jobs/' + self.jobId + '/chunks', { method: 'POST', body: form });
+        }).then(function () {
+            self.pending.delete(index);
+            self.failed.delete(index);
+        }).catch(function (error) {
+            self.pending.delete(index);
+            self.failed.set(index, blob);
+            throw error;
+        });
+    };
+
+    RecordingClient.prototype.waitForUploads = function () {
+        var self = this;
+        return new Promise(function (resolve) {
+            function poll() {
+                if (!self.pending.size && !self.uploadQueue.length && !self.activeUploads) { resolve(); return; }
+                window.setTimeout(poll, 250);
+            }
+            poll();
+        });
+    };
+
+    RecordingClient.prototype.stop = function () {
+        var self = this;
+        if (!this.recorder || this.recorder.state === 'inactive') { return Promise.resolve(); }
+        this.onStatus('stopping');
+        return new Promise(function (resolve, reject) {
+            self.recorder.addEventListener('stop', resolve, { once: true });
+            try { self.recorder.stop(); } catch (error) { reject(error); }
+        }).then(function () {
+            self.stoppedAt = Date.now();
+            self.finalChunkCount = self.chunkIndex;
+            return self.waitForUploads();
+        }).then(function () {
+            if (self.failed.size) { throw new Error('Some recording chunks failed to upload.'); }
+            var duration = Math.max(0, Math.round((self.stoppedAt - self.startedAt) / 1000));
+            return api(self.restRoot, self.nonce, '/jobs/' + self.jobId + '/recording/stop', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ duration_seconds: duration })
+            });
+        });
+    };
+
+    RecordingClient.prototype.finalizeAndPublish = function () {
+        var self = this;
+        this.onStatus('uploading');
+        return api(this.restRoot, this.nonce, '/jobs/' + this.jobId + '/recording/finalize', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expected_chunks: this.finalChunkCount })
+        }).then(function () {
+            self.onStatus('processing');
+            return api(self.restRoot, self.nonce, '/jobs/' + self.jobId + '/publishing/prepare', { method: 'POST', headers: { 'Content-Type': 'application/json' } }).catch(function () { return {}; });
+        }).then(function () {
+            return api(self.restRoot, self.nonce, '/jobs/' + self.jobId + '/publishing/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+        });
+    };
+
+    window.VH360StudioRecordingClient = { supportedMimeType: supportedMimeType, downloadBlob: downloadBlob, appointmentFilename: appointmentFilename, RecordingClient: RecordingClient, api: api };
 })(window);

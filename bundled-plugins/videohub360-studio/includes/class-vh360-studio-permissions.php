@@ -133,7 +133,7 @@ class VH360_Studio_Permissions {
             return true;
         }
 
-        $professional_keys = array( '_vh360_appointment_professional_user_id', '_vh360_professional_user_id', '_vh360_provider_user_id' );
+        $professional_keys = array( '_vh360_appointment_professional_id', '_vh360_appointment_professional_user_id', '_vh360_professional_user_id', '_vh360_provider_user_id' );
         foreach ( $professional_keys as $key ) {
             $professional_id = absint( get_post_meta( $post_id, $key, true ) );
             if ( $professional_id && $professional_id === absint( $user_id ) ) {

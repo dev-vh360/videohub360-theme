@@ -10,25 +10,48 @@
         this.canvas.height = this.height;
         this.ctx = this.canvas.getContext('2d');
         this.timer = null;
+        this.trackVideos = new Map();
     }
     Compositor.prototype.participants = function () { return window.vh360AgoraParticipants instanceof Map ? Array.from(window.vh360AgoraParticipants.values()) : Object.values(window.vh360AgoraParticipants || {}); };
-    Compositor.prototype.draw = function () {
-        var ctx = this.ctx, parts = this.participants(), count = Math.max(parts.length, 1), cols = Math.ceil(Math.sqrt(count)), rows = Math.ceil(count / cols), w = this.width / cols, h = this.height / rows;
-        ctx.fillStyle = '#101827'; ctx.fillRect(0, 0, this.width, this.height);
-        parts.forEach(function (p, i) {
-            var x = (i % cols) * w, y = Math.floor(i / cols) * h;
-            ctx.fillStyle = '#1f2937'; ctx.fillRect(x + 8, y + 8, w - 16, h - 16);
-            var video = p.videoElement || p.video || (p.container && p.container.querySelector && p.container.querySelector('video'));
-            if (video && video.readyState >= 2 && !video.paused) {
-                try { ctx.drawImage(video, x + 8, y + 8, w - 16, h - 16); } catch (e) {}
-            } else {
-                ctx.fillStyle = '#374151'; ctx.beginPath(); ctx.arc(x + w / 2, y + h / 2 - 20, 54, 0, Math.PI * 2); ctx.fill();
+    Compositor.prototype.layout = function () { var manager = window.vh360LayoutManager || window.viewLayoutManager || (window.vh360 && window.vh360.viewLayoutManager); return { view: manager && manager.currentView ? manager.currentView : 'gallery', pinned: manager && typeof manager.getPinnedParticipantUid === 'function' ? manager.getPinnedParticipantUid() : (manager && manager.pinnedParticipantUid), active: window.vh360AgoraState && window.vh360AgoraState.activeSpeaker ? window.vh360AgoraState.activeSpeaker() : null }; };
+    Compositor.prototype.videoFor = function (p) {
+        var video = p.videoElement || p.video || (p.videoContainerElement && p.videoContainerElement.querySelector && p.videoContainerElement.querySelector('video')) || (p.tileElement && p.tileElement.querySelector && p.tileElement.querySelector('video')) || (p.container && p.container.querySelector && p.container.querySelector('video'));
+        if (video) { return video; }
+        if (p.videoTrack && p.videoTrack.getMediaStreamTrack) {
+            var id = p.uid || p.agoraUid;
+            if (!this.trackVideos.has(id)) {
+                var hidden = document.createElement('video'); hidden.muted = true; hidden.playsInline = true; hidden.autoplay = true; hidden.srcObject = new MediaStream([p.videoTrack.getMediaStreamTrack()]); hidden.play().catch(function () {}); this.trackVideos.set(id, hidden);
             }
-            ctx.fillStyle = 'rgba(0,0,0,.65)'; ctx.fillRect(x + 24, y + h - 68, w - 48, 44);
-            ctx.fillStyle = '#fff'; ctx.font = '24px sans-serif'; ctx.fillText(p.displayName || p.name || p.uid || 'Participant', x + 40, y + h - 39);
-        });
+            return this.trackVideos.get(id);
+        }
+        return null;
+    };
+    Compositor.prototype.drawParticipant = function (p, x, y, w, h, featured) {
+        var ctx = this.ctx, pad = featured ? 0 : 8, video = this.videoFor(p), hasCamera = p.cameraOn !== false && p.videoTrack !== null;
+        ctx.fillStyle = '#101827'; ctx.fillRect(x + pad, y + pad, w - pad * 2, h - pad * 2);
+        if (hasCamera && video && video.readyState >= 2) {
+            var scale = Math.max((w - pad * 2) / video.videoWidth, (h - pad * 2) / video.videoHeight), dw = video.videoWidth * scale, dh = video.videoHeight * scale;
+            try { ctx.drawImage(video, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh); } catch (e) {}
+        } else {
+            ctx.fillStyle = '#374151'; ctx.fillRect(x + pad, y + pad, w - pad * 2, h - pad * 2); ctx.fillStyle = '#6b7280'; ctx.beginPath(); ctx.arc(x + w / 2, y + h / 2 - 20, 54, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.fillStyle = 'rgba(0,0,0,.68)'; ctx.fillRect(x + 24, y + h - 72, Math.max(120, w - 48), 48);
+        ctx.fillStyle = '#fff'; ctx.font = featured ? '30px sans-serif' : '24px sans-serif';
+        var name = (p.displayName || p.name || p.uid || 'Participant') + (p.isOriginalHost ? ' · Host' : '') + ((!p.audioTrack || p.audioOn === false) ? ' · Mic off' : '');
+        ctx.fillText(name.slice(0, 60), x + 40, y + h - 40);
+    };
+    Compositor.prototype.drawGrid = function (parts, x, y, width, height) { var self = this, count = Math.max(parts.length, 1), cols = Math.ceil(Math.sqrt(count)), rows = Math.ceil(count / cols), w = width / cols, h = height / rows; parts.forEach(function (p, i) { self.drawParticipant(p, x + (i % cols) * w, y + Math.floor(i / cols) * h, w, h, false); }); };
+    Compositor.prototype.draw = function () {
+        var ctx = this.ctx, parts = this.participants(), layout = this.layout(), featuredUid = layout.view === 'focus' ? layout.pinned : layout.active;
+        ctx.fillStyle = '#020617'; ctx.fillRect(0, 0, this.width, this.height);
+        if ((layout.view === 'speaker' || layout.view === 'focus') && featuredUid) {
+            var featured = parts.find(function (p) { return String(p.uid || p.agoraUid) === String(featuredUid); }) || parts[0];
+            var rest = parts.filter(function (p) { return p !== featured; });
+            this.drawParticipant(featured, 0, 0, this.width, Math.round(this.height * 0.78), true);
+            this.drawGrid(rest, 0, Math.round(this.height * 0.78), this.width, Math.round(this.height * 0.22));
+        } else { this.drawGrid(parts, 0, 0, this.width, this.height); }
     };
     Compositor.prototype.start = function () { var self = this; this.draw(); this.timer = setInterval(function () { self.draw(); }, 1000 / this.fps); return this.canvas.captureStream(this.fps); };
-    Compositor.prototype.stop = function () { if (this.timer) { clearInterval(this.timer); } };
+    Compositor.prototype.stop = function () { if (this.timer) { clearInterval(this.timer); } this.trackVideos.forEach(function (video) { video.srcObject = null; }); this.trackVideos.clear(); };
     window.VH360LiveRoomCompositor = Compositor;
 })(window);

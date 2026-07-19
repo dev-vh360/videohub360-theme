@@ -21,12 +21,16 @@ if (!function_exists('videohub360_render_livestream') || !function_exists('video
     // Load renderer functions if not already loaded
     $render_chat_path = WP_PLUGIN_DIR . '/videohub360-core/includes/renderers/render-chat.php';
     $render_livestream_path = WP_PLUGIN_DIR . '/videohub360-core/includes/renderers/render-livestream.php';
+    $render_replay_path = WP_PLUGIN_DIR . '/videohub360-core/includes/renderers/render-replay.php';
     
     if (file_exists($render_chat_path)) {
         require_once $render_chat_path;
     }
     if (file_exists($render_livestream_path)) {
         require_once $render_livestream_path;
+    }
+    if (file_exists($render_replay_path)) {
+        require_once $render_replay_path;
     }
     
     // If still not available, show error and exit
@@ -90,6 +94,8 @@ $livestream_fields = [
 
 // Check if this is an appointment Live Room
 $is_appointment_room = !empty(get_post_meta($post_id, '_vh360_appointment_event_id', true));
+
+$studio_replay_state = function_exists('videohub360_get_studio_replay_state') ? videohub360_get_studio_replay_state($post_id) : array('ready' => false, 'pending' => false, 'failed' => false);
 
 // Determine if livestream is effectively live
 // For appointment rooms, always render the livestream UI when livestream mode is enabled
@@ -163,6 +169,18 @@ $can_moderate = vh360_user_can_manage_live_room($post_id) || current_user_can('m
                         $hide_settings = !vh360_user_can_manage_live_room(get_the_ID());
                         echo videohub360_render_livestream($livestream_fields, $chat_enabled, $chat_placement, $is_user_logged_in, $user_avatar, $user_display_name, $user_logout_url, $hide_settings); 
                         ?>
+                    </div>
+                <?php elseif (!$is_appointment_room && !empty($studio_replay_state['pending'])) : ?>
+                    <div class="vh360-offline-wrapper vh360-replay-processing-wrapper">
+                        <?php echo function_exists('videohub360_render_studio_replay') ? videohub360_render_studio_replay($post_id) : esc_html__('Replay is processing. Please check back soon.', 'videohub360-theme'); ?>
+                    </div>
+                <?php elseif (!$is_appointment_room && !empty($studio_replay_state['ready'])) : ?>
+                    <div class="vh360-studio-replay-wrapper">
+                        <?php echo function_exists('videohub360_render_studio_replay') ? videohub360_render_studio_replay($post_id) : ''; ?>
+                    </div>
+                <?php elseif (!$is_appointment_room && !empty($studio_replay_state['failed'])) : ?>
+                    <div class="vh360-offline-wrapper vh360-replay-failed-wrapper">
+                        <div class="vh360-offline-message"><?php esc_html_e('Replay processing failed.', 'videohub360-theme'); ?></div>
                     </div>
                 <?php else : ?>
                     <div class="vh360-offline-wrapper">

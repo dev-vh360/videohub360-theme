@@ -18,6 +18,7 @@ class VH360_Studio_Recording_Jobs {
     const STATUS_READY      = 'ready';
     const STATUS_FAILED     = 'failed';
     const STATUS_CANCELLED  = 'cancelled';
+    const STATUS_PREPARING_DOWNLOAD = 'preparing_download';
 
     private $registry;
 
@@ -35,6 +36,7 @@ class VH360_Studio_Recording_Jobs {
             self::STATUS_READY,
             self::STATUS_FAILED,
             self::STATUS_CANCELLED,
+            self::STATUS_PREPARING_DOWNLOAD,
         );
     }
 
@@ -50,10 +52,11 @@ class VH360_Studio_Recording_Jobs {
         return array(
             self::STATUS_CREATED    => array( self::STATUS_RECORDING, self::STATUS_CANCELLED ),
             self::STATUS_RECORDING  => array( self::STATUS_STOPPING, self::STATUS_FAILED, self::STATUS_CANCELLED ),
-            self::STATUS_STOPPING   => array( self::STATUS_UPLOADING, self::STATUS_FAILED, self::STATUS_CANCELLED ),
+            self::STATUS_STOPPING   => array( self::STATUS_UPLOADING, self::STATUS_PREPARING_DOWNLOAD, self::STATUS_FAILED, self::STATUS_CANCELLED ),
             self::STATUS_UPLOADING  => array( self::STATUS_PROCESSING, self::STATUS_FAILED, self::STATUS_CANCELLED ),
             self::STATUS_PROCESSING => array( self::STATUS_READY, self::STATUS_FAILED ),
             self::STATUS_READY      => array(),
+            self::STATUS_PREPARING_DOWNLOAD => array( self::STATUS_READY, self::STATUS_FAILED, self::STATUS_CANCELLED ),
             self::STATUS_FAILED     => array(),
             self::STATUS_CANCELLED  => array(),
         );
@@ -149,6 +152,14 @@ class VH360_Studio_Recording_Jobs {
             return new WP_Error( 'vh360_studio_invalid_status_transition', __( 'Invalid recording job status transition.', 'videohub360-studio' ), array( 'status' => 409 ) );
         }
 
+        if ( $existing ) {
+            foreach ( array( 'source_type', 'source_id', 'live_video_id', 'room_id', 'recording_mode', 'quality_preset', 'storage_provider', 'user_id', 'replay_video_id' ) as $immutable_key ) {
+                if ( array_key_exists( $immutable_key, $out ) && array_key_exists( $immutable_key, $existing ) && (string) $out[ $immutable_key ] !== (string) $existing[ $immutable_key ] ) {
+                    return new WP_Error( 'vh360_studio_immutable_recording_identity', __( 'Recording identity fields cannot be changed after creation.', 'videohub360-studio' ), array( 'status' => 400 ) );
+                }
+            }
+        }
+
         if ( isset( $out['quality_preset'] ) ) {
             $out['quality_preset'] = VH360_Studio_Quality_Presets::normalize( $out['quality_preset'] );
         }
@@ -186,7 +197,7 @@ class VH360_Studio_Recording_Jobs {
     }
 
     public function find_active_appointment_recording( $post_id ) {
-        return $this->find_active_room_recording( $post_id, 'appointment_session', array( self::STATUS_CREATED, self::STATUS_RECORDING, self::STATUS_STOPPING, 'preparing_download' ) );
+        return $this->find_active_room_recording( $post_id, 'appointment_session', array( self::STATUS_CREATED, self::STATUS_RECORDING, self::STATUS_STOPPING, self::STATUS_PREPARING_DOWNLOAD ) );
     }
 
     private function find_active_room_recording( $post_id, $source_type, array $statuses ) {
@@ -218,6 +229,32 @@ class VH360_Studio_Recording_Jobs {
         $wpdb->insert( VH360_Studio_Database::table_name(), $row );
 
         return $wpdb->insert_id ? $this->get( $wpdb->insert_id, $user_id ) : new WP_Error( 'vh360_studio_create_failed', __( 'Unable to create recording job.', 'videohub360-studio' ), array( 'status' => 500 ) );
+    }
+
+
+
+    public function mark_preparing_download( $id, $user_id, $duration_seconds = 0, $mime_type = '' ) {
+        $data = array(
+            'status'           => self::STATUS_PREPARING_DOWNLOAD,
+            'stopped_at'       => current_time( 'mysql' ),
+            'duration_seconds' => absint( $duration_seconds ),
+        );
+        if ( $mime_type ) {
+            $data['mime_type'] = sanitize_mime_type( $mime_type );
+        }
+        return $this->update( $id, $user_id, $data );
+    }
+
+    public function mark_local_private_ready( $id, $user_id, $duration_seconds = 0, $mime_type = '' ) {
+        $data = array(
+            'status'           => self::STATUS_READY,
+            'completed_at'     => current_time( 'mysql' ),
+            'duration_seconds' => absint( $duration_seconds ),
+        );
+        if ( $mime_type ) {
+            $data['mime_type'] = sanitize_mime_type( $mime_type );
+        }
+        return $this->update( $id, $user_id, $data );
     }
 
     public function get( $id, $user_id = 0 ) {

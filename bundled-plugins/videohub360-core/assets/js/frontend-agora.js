@@ -697,6 +697,10 @@ window.initializeAgoraPlayer = function(config) {
     const participantRegistry = new Map();
     window.vh360AgoraParticipants = participantRegistry;
 
+    function dispatchAgoraParticipantEvent(type, participant) {
+        window.dispatchEvent(new CustomEvent(type, { detail: { participant: participant, uid: participant && participant.uid } }));
+    }
+
     let thumbnailRailStage = null;
     let thumbnailRailResizeTimeout = null;
     let thumbnailRailPointerState = null;
@@ -1106,6 +1110,7 @@ window.initializeAgoraPlayer = function(config) {
                 audioOn: false
             };
             participantRegistry.set(key, participant);
+            dispatchAgoraParticipantEvent('vh360:agora-participant-added', participant);
         } else {
             participant.wordpressUserId = resolveWordPressUserId(key, { wordpressUserId: participant.wordpressUserId || options.wordpressUserId });
             participant.displayName = resolveParticipantDisplayName(key, { displayName: options.displayName || participant.displayName });
@@ -1358,6 +1363,7 @@ window.initializeAgoraPlayer = function(config) {
         if (speakerBadge && participant.videoTrack && participant.cameraOn !== false) {
             speakerBadge.style.display = 'none';
         }
+        dispatchAgoraParticipantEvent('vh360:agora-participant-updated', participant);
     }
 
     function getPinnedParticipantUidFromLayout() {
@@ -1517,6 +1523,7 @@ window.initializeAgoraPlayer = function(config) {
         }
         if (tile) tile.remove();
         participantRegistry.delete(key);
+        if (participant) { dispatchAgoraParticipantEvent('vh360:agora-participant-removed', participant); }
         if (remoteUsers && remoteUsers[key]) {
             delete remoteUsers[key];
         }
@@ -2229,21 +2236,25 @@ window.initializeAgoraPlayer = function(config) {
                         // For moderation actions, also trigger local event as backup
                         if (data.type === 'moderation_action') {
                             window.dispatchEvent(new CustomEvent('agoraDataMessage', { detail: JSON.parse(message) }));
+                            window.dispatchEvent(new CustomEvent('vh360:agora-data-message', { detail: JSON.parse(message) }));
                         }
                     } catch (streamError) {
                         window.vh360Warn("Agora: Failed to send data stream message:", streamError);
                         // Fallback to local event when stream message fails
                         window.dispatchEvent(new CustomEvent('agoraDataMessage', { detail: JSON.parse(message) }));
+                            window.dispatchEvent(new CustomEvent('vh360:agora-data-message', { detail: JSON.parse(message) }));
                     }
                 } else {
                     // Data stream not available - polling will handle moderation
                     window.dispatchEvent(new CustomEvent('agoraDataMessage', { detail: JSON.parse(message) }));
+                            window.dispatchEvent(new CustomEvent('vh360:agora-data-message', { detail: JSON.parse(message) }));
                 }
             } else {
                 window.vh360Warn("Agora: Client not connected, cannot send data stream message");
                 // Graceful degradation - still trigger local handling for non-critical messages
                 if (data.type !== 'user_info') {
                     window.dispatchEvent(new CustomEvent('agoraDataMessage', { detail: data }));
+                    window.dispatchEvent(new CustomEvent('vh360:agora-data-message', { detail: data }));
                 }
             }
         } catch (error) {
@@ -2274,6 +2285,7 @@ window.initializeAgoraPlayer = function(config) {
                 });
             }
 
+            window.dispatchEvent(new CustomEvent('vh360:agora-data-message', { detail: data }));
             handleDataMessage(data);
         } catch (error) {
             window.vh360Error('Agora: Failed to parse data stream message', error);
