@@ -274,10 +274,10 @@
                 return terminalCleanupPromise || handleProviderTerminalUploadFailure(error);
             }
             setActiveRecordingState('failed');
-            if (currentRecorder && currentRecorder.failureStage === 'publishing_prepare_failed') { setLabel('Retry Publishing'); showPublishingRecoveryPanel('Publishing preparation failed. You can retry publishing after ending the room.'); }
-            else if (currentRecorder && currentRecorder.failureStage === 'publishing_start_failed') { setLabel('Retry Publishing'); showPublishingRecoveryPanel('Replay publishing did not start. You can retry publishing after ending the room.'); }
+            if (currentRecorder && currentRecorder.failureStage === 'publishing_prepare_failed') { setLabel('Retry Publishing'); showPublishingRecoveryPanel('Publishing preparation failed. You can retry publishing after ending the ' + sessionLabel() + '.'); }
+            else if (currentRecorder && currentRecorder.failureStage === 'publishing_start_failed') { setLabel('Retry Publishing'); showPublishingRecoveryPanel('Replay publishing did not start. You can retry publishing after ending the ' + sessionLabel() + '.'); }
             else if (currentRecorder && currentRecorder.failureStage === 'provider_failed') { recoveryAction = ''; setActiveRecordingState('idle'); setLabel('Record Again'); setStatus('Replay publishing failed. No ready replay was created, so you can record again.'); recorder = null; }
-            else { setLabel(currentRecorder && currentRecorder.failed && currentRecorder.failed.size ? 'Retry Uploads' : 'Retry Finalization'); if (browserDataSecured) { showFinalizationRecoveryPanel('Recording assembly failed. You can retry finalization after ending the room because the uploaded chunks remain on the server.'); } }
+            else { setLabel(currentRecorder && currentRecorder.failed && currentRecorder.failed.size ? 'Retry Uploads' : 'Retry Finalization'); if (browserDataSecured) { showFinalizationRecoveryPanel('Recording assembly failed. You can retry finalization after ending the ' + sessionLabel() + ' because the uploaded chunks remain on the server.'); } }
             setError(error && (error.message || error.code) || error); if (browserDataSecured || currentRecorder && currentRecorder.finalized) { return; } throw error;
         }).finally(function () { stopPromise = null; if (button) { button.disabled = false; } });
         return stopPromise;
@@ -402,7 +402,7 @@
         if (button) { button.disabled = true; } setLabel('Retrying Publishing…');
         return rest('/jobs/' + activeJobId + '/publishing/prepare', { method: 'POST', headers: { 'Content-Type': 'application/json' } }).then(function () {
             return rest('/jobs/' + activeJobId + '/publishing/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-        }).then(function () { recoveryAction = ''; setActiveRecordingState('processing'); setLabel('Processing…'); if (publishingPanel) { publishingPanel.remove(); publishingPanel = null; } }).catch(function (error) { setActiveRecordingState('failed'); setLabel('Retry Publishing'); showPublishingRecoveryPanel('Replay publishing failed. You can retry publishing after ending the room.'); throw error; }).finally(function () { if (button) { button.disabled = false; } });
+        }).then(function () { recoveryAction = ''; setActiveRecordingState('processing'); setLabel('Processing…'); if (publishingPanel) { publishingPanel.remove(); publishingPanel = null; } }).catch(function (error) { setActiveRecordingState('failed'); setLabel('Retry Publishing'); showPublishingRecoveryPanel('Replay publishing failed. You can retry publishing after ending the ' + sessionLabel() + '.'); throw error; }).finally(function () { if (button) { button.disabled = false; } });
     }
 
     function retryPublishing() {
@@ -415,7 +415,7 @@
             setActiveRecordingState('failed');
             if (recorder && (recorder.failureStage === 'publishing_prepare_failed' || recorder.failureStage === 'publishing_start_failed')) {
                 setLabel('Retry Publishing');
-                showPublishingRecoveryPanel('Replay publishing failed to start. You can retry publishing after ending the room.');
+                showPublishingRecoveryPanel('Replay publishing failed to start. You can retry publishing after ending the ' + sessionLabel() + '.');
             } else {
                 recoveryAction = '';
                 setLabel('Record Again');
@@ -469,6 +469,10 @@
         function restoreState(state) {
             showIndicator(!!(state.recording_active || state.active && state.state === 'recording'));
             if (Object.prototype.hasOwnProperty.call(state, 'job_id')) { activeJobId = Number(state.job_id || 0); }
+            if (state.stop_requested && activeState === 'recording' && ownsLocalRecordingState()) {
+                stop().catch(function (error) { setError(error && (error.message || error.code) || error); });
+                return;
+            }
 
             // Preserve recoverable private data that still exists in this tab.
             if (hasLocalAppointmentRecovery()) {
@@ -486,7 +490,7 @@
             }
 
             if (state.failure_stage === 'finalization_failed' && state.job_id) { activeJobId = Number(state.job_id); setActiveRecordingState('failed'); setLabel('Retry Finalization'); if (button) { button.disabled = false; } showFinalizationRecoveryPanel('Recording assembly failed. You can retry finalization after reloading because the uploaded chunks remain on the server.'); return; }
-            if ((state.failure_stage === 'publishing_prepare_failed' || state.failure_stage === 'publishing_start_failed') && state.job_id) { activeJobId = Number(state.job_id); setActiveRecordingState('failed'); setLabel('Retry Publishing'); if (button) { button.disabled = false; } showPublishingRecoveryPanel('Replay publishing failed. You can retry publishing after ending the room.'); return; }
+            if ((state.failure_stage === 'publishing_prepare_failed' || state.failure_stage === 'publishing_start_failed') && state.job_id) { activeJobId = Number(state.job_id); setActiveRecordingState('failed'); setLabel('Retry Publishing'); if (button) { button.disabled = false; } showPublishingRecoveryPanel('Replay publishing failed. You can retry publishing after ending the ' + sessionLabel() + '.'); return; }
 
             if (config.recordingPurpose === 'appointment_session' && state.state === 'preparing_download') {
                 if (state.heartbeat_fresh) {

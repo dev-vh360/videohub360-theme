@@ -114,8 +114,11 @@ class VH360_Studio_Database {
 
         dbDelta( $sql );
 
-        $wpdb->query( "UPDATE {$table_name} SET capture_scope = 'program' WHERE source_type IN ('studio_setup','livestream_video') AND (capture_scope = '' OR capture_scope = 'interactive_composite')" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-        $wpdb->query( "UPDATE {$table_name} SET capture_scope = 'interactive_composite' WHERE source_type IN ('live_room','appointment_session') AND (capture_scope = '' OR capture_scope IS NULL)" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        if ( ! get_option( 'vh360_studio_capture_scope_backfilled' ) ) {
+            $wpdb->query( "UPDATE {$table_name} SET capture_scope = 'program' WHERE source_type IN ('studio_setup','livestream_video') AND (capture_scope = '' OR capture_scope = 'interactive_composite')" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+            $wpdb->query( "UPDATE {$table_name} SET capture_scope = 'interactive_composite' WHERE source_type IN ('live_room','appointment_session') AND (capture_scope = '' OR capture_scope IS NULL)" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+            update_option( 'vh360_studio_capture_scope_backfilled', 'yes', false );
+        }
 
         $chunks_sql = "CREATE TABLE {$chunks_table_name} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,

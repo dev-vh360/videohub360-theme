@@ -281,15 +281,17 @@ class VH360_Studio_Recording_Jobs {
     public function get( $id, $user_id = 0 ) {
         global $wpdb;
 
-        $sql  = 'SELECT * FROM ' . VH360_Studio_Database::table_name() . ' WHERE id = %d';
-        $args = array( absint( $id ) );
-
-        if ( $user_id && ! VH360_Studio_Permissions::current_user_can_manage_all_jobs() ) {
-            $sql   .= ' AND user_id = %d';
-            $args[] = absint( $user_id );
+        $job = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . VH360_Studio_Database::table_name() . ' WHERE id = %d', absint( $id ) ), ARRAY_A );
+        if ( ! $job || ! $user_id || VH360_Studio_Permissions::current_user_can_manage_all_jobs() || absint( $job['user_id'] ) === absint( $user_id ) ) {
+            return $job;
         }
 
-        return $wpdb->get_row( $wpdb->prepare( $sql, $args ), ARRAY_A );
+        $live_video_id = ! empty( $job['live_video_id'] ) ? absint( $job['live_video_id'] ) : 0;
+        if ( 'livestream_video' === sanitize_key( $job['source_type'] ) && 'interactive_composite' === sanitize_key( $job['capture_scope'] ) && $live_video_id && VH360_Studio_Permissions::current_user_can_record_studio_interactive_livestream( $live_video_id ) && ( current_user_can( 'edit_post', $live_video_id ) || current_user_can( 'manage_options' ) ) ) {
+            return $job;
+        }
+
+        return null;
     }
 
     public function list( $user_id, $limit = 20 ) {
