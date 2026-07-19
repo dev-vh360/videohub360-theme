@@ -18,11 +18,11 @@
     Compositor.prototype.uidFor = function (p) { return p ? String(p.uid || p.agoraUid || '') : ''; };
     Compositor.prototype.findParticipantByUid = function (parts, uid) { var self = this; return uid ? parts.find(function (p) { return self.uidFor(p) === String(uid); }) : null; };
     Compositor.prototype.resolveSpeakerFeaturedParticipant = function (parts, layout) {
-        var self = this;
-        return parts.find(function (p) { return p.tileElement && p.tileElement.classList && p.tileElement.classList.contains('is-featured'); })
-            || this.findParticipantByUid(parts, layout.active)
-            || parts.find(function (p) { return p.isOriginalHost; })
+        var active = this.findParticipantByUid(parts, layout.active);
+        if (active) { return active; }
+        return parts.find(function (p) { return p.isOriginalHost; })
             || parts.find(function (p) { return p.isLocal; })
+            || parts.find(function (p) { return p.tileElement && p.tileElement.classList && p.tileElement.classList.contains('is-featured'); })
             || parts[0]
             || null;
     };
@@ -140,15 +140,16 @@
     };
     Compositor.prototype.drawParticipant = function (p, rect) {
         var ctx = this.ctx, x = rect.x, y = rect.y, w = rect.width, h = rect.height, style = this.styleForRole(rect.role, w, h), pad = style.pad, video = this.videoFor(p), hasCamera = p.cameraOn !== false && p.videoTrack !== null;
-        ctx.save(); ctx.beginPath(); ctx.rect(x + pad, y + pad, w - pad * 2, h - pad * 2); ctx.clip();
-        ctx.fillStyle = '#101827'; ctx.fillRect(x + pad, y + pad, w - pad * 2, h - pad * 2);
+        var viewport = this.fitAspectRect(x + pad, y + pad, Math.max(1, w - pad * 2), Math.max(1, h - pad * 2), 16 / 9);
+        ctx.save(); ctx.beginPath(); ctx.rect(viewport.x, viewport.y, viewport.width, viewport.height); ctx.clip();
+        ctx.fillStyle = '#101827'; ctx.fillRect(viewport.x, viewport.y, viewport.width, viewport.height);
         if (hasCamera && video && video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
-            var availableWidth = w - pad * 2, availableHeight = h - pad * 2, scale = Math.max(availableWidth / video.videoWidth, availableHeight / video.videoHeight), dw = video.videoWidth * scale, dh = video.videoHeight * scale;
-            try { ctx.drawImage(video, x + pad + (availableWidth - dw) / 2, y + pad + (availableHeight - dh) / 2, dw, dh); } catch (e) {}
+            var scale = Math.max(viewport.width / video.videoWidth, viewport.height / video.videoHeight), dw = video.videoWidth * scale, dh = video.videoHeight * scale;
+            try { ctx.drawImage(video, viewport.x + (viewport.width - dw) / 2, viewport.y + (viewport.height - dh) / 2, dw, dh); } catch (e) {}
         } else {
-            ctx.fillStyle = '#374151'; ctx.fillRect(x + pad, y + pad, w - pad * 2, h - pad * 2); ctx.fillStyle = '#6b7280'; ctx.beginPath(); ctx.arc(x + w / 2, y + h / 2 - style.avatar * 0.25, style.avatar, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#374151'; ctx.fillRect(viewport.x, viewport.y, viewport.width, viewport.height); ctx.fillStyle = '#6b7280'; ctx.beginPath(); ctx.arc(viewport.x + viewport.width / 2, viewport.y + viewport.height / 2 - style.avatar * 0.25, style.avatar, 0, Math.PI * 2); ctx.fill();
         }
-        var labelX = x + pad + style.textPad, labelW = Math.max(1, w - pad * 2 - style.textPad * 2), labelH = Math.min(style.label, h - pad * 2), labelY = y + h - pad - labelH;
+        var labelX = viewport.x + style.textPad, labelW = Math.max(1, viewport.width - style.textPad * 2), labelH = Math.min(style.label, viewport.height), labelY = viewport.y + viewport.height - labelH;
         ctx.fillStyle = 'rgba(0,0,0,.68)'; ctx.fillRect(labelX - style.textPad / 2, labelY, labelW + style.textPad, labelH);
         ctx.fillStyle = '#fff'; ctx.font = style.font + 'px sans-serif'; ctx.textBaseline = 'middle';
         var status = (p.isOriginalHost ? ' · Host' : '') + ((!p.audioTrack || p.audioOn === false) ? (rect.role === 'thumbnail' ? ' · Muted' : ' · Mic off') : '');
