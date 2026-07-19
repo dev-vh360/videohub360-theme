@@ -5323,10 +5323,14 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 
 
     async function sha256Blob(blob) {
+        if (window.VH360StudioRecordingClient && typeof window.VH360StudioRecordingClient.sha256Blob === 'function') {
+            return window.VH360StudioRecordingClient.sha256Blob(blob);
+        }
         if (!window.crypto || !window.crypto.subtle || !blob || typeof blob.arrayBuffer !== 'function') {
             return '';
         }
-        const digest = await window.crypto.subtle.digest('SHA-256', await blob.arrayBuffer());
+        const buffer = await blob.arrayBuffer();
+        const digest = await window.crypto.subtle.digest('SHA-256', buffer);
         return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
     }
 

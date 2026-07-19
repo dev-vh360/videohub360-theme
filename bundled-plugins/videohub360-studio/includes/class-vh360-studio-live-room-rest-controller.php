@@ -65,7 +65,7 @@ class VH360_Studio_Live_Room_REST_Controller {
             }
             return new WP_Error( 'vh360_recording_state_not_found', __( 'Recording state not found.', 'videohub360-studio' ), array( 'status' => 404 ) );
         }
-        if ( VH360_Studio_Permissions::current_user_can_record_live_room( $post_id ) || current_user_can( 'read_post', $post_id ) ) {
+        if ( VH360_Studio_Permissions::current_user_can_record_live_room( $post_id ) || current_user_can( 'read_post', $post_id ) || ( 'publish' === get_post_status( $post_id ) && ! post_password_required( $post_id ) ) ) {
             return true;
         }
         return new WP_Error( 'vh360_recording_state_forbidden', __( 'You are not allowed to view this recording state.', 'videohub360-studio' ), array( 'status' => 403 ) );
@@ -76,11 +76,15 @@ class VH360_Studio_Live_Room_REST_Controller {
         $purpose = $this->recording_purpose( $post_id );
         $job     = 'appointment_session' === $purpose ? $this->jobs->find_active_appointment_recording( $post_id ) : $this->jobs->find_active_live_room_job( $post_id );
 
+        $state = $job ? sanitize_key( $job['status'] ) : 'idle';
         $response = array(
             'post_id'             => $post_id,
             'recording_purpose'   => $purpose,
             'active'              => (bool) $job,
-            'state'               => $job ? sanitize_key( $job['status'] ) : 'idle',
+            'job_active'          => (bool) $job,
+            'recording_active'    => in_array( $state, array( 'created', 'recording', 'stopping' ), true ),
+            'replay_processing'   => in_array( $state, array( 'uploading', 'processing' ), true ),
+            'state'               => $state,
             'started_at'          => $job && ! empty( $job['started_at'] ) ? $job['started_at'] : get_post_meta( $post_id, 'appointment_session' === $purpose ? '_vh360_appointment_recording_started_at' : '_vh360_live_room_recording_started_at', true ),
         );
 

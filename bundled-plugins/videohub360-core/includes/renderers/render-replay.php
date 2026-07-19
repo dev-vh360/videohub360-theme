@@ -27,6 +27,25 @@ function videohub360_get_studio_replay_state( $post_id ) {
     );
 }
 
+
+function videohub360_kses_studio_replay_embed( $html ) {
+    $allowed = wp_kses_allowed_html( 'post' );
+    $allowed['iframe'] = array(
+        'src'             => true,
+        'title'           => true,
+        'loading'         => true,
+        'allow'           => true,
+        'allowfullscreen' => true,
+        'style'           => true,
+        'class'           => true,
+        'width'           => true,
+        'height'          => true,
+        'frameborder'     => true,
+        'referrerpolicy'  => true,
+    );
+    return wp_kses( $html, $allowed );
+}
+
 function videohub360_render_studio_replay( $post_id ) {
     $state = videohub360_get_studio_replay_state( $post_id );
     if ( ! $state['ready'] ) {
@@ -39,7 +58,7 @@ function videohub360_render_studio_replay( $post_id ) {
         return '';
     }
     if ( ! empty( $state['embed_html'] ) ) {
-        return '<div class="vh360-studio-replay-player vh360-studio-replay-provider-' . esc_attr( $state['provider'] ) . '">' . wp_kses_post( $state['embed_html'] ) . '</div>';
+        return '<div class="vh360-studio-replay-player vh360-studio-replay-provider-' . esc_attr( $state['provider'] ) . '">' . videohub360_kses_studio_replay_embed( $state['embed_html'] ) . '</div>';
     }
     if ( ! empty( $state['playback_url'] ) ) {
         return wp_video_shortcode( array( 'src' => esc_url( $state['playback_url'] ), 'poster' => esc_url( $state['poster_url'] ) ) );

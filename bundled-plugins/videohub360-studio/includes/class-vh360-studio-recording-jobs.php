@@ -153,7 +153,7 @@ class VH360_Studio_Recording_Jobs {
         }
 
         if ( $existing ) {
-            foreach ( array( 'source_type', 'source_id', 'live_video_id', 'room_id', 'recording_mode', 'quality_preset', 'storage_provider', 'user_id', 'replay_video_id' ) as $immutable_key ) {
+            foreach ( array( 'source_type', 'source_id', 'live_video_id', 'room_id', 'recording_mode', 'quality_preset', 'storage_provider', 'user_id' ) as $immutable_key ) {
                 if ( array_key_exists( $immutable_key, $out ) && array_key_exists( $immutable_key, $existing ) && (string) $out[ $immutable_key ] !== (string) $existing[ $immutable_key ] ) {
                     return new WP_Error( 'vh360_studio_immutable_recording_identity', __( 'Recording identity fields cannot be changed after creation.', 'videohub360-studio' ), array( 'status' => 400 ) );
                 }

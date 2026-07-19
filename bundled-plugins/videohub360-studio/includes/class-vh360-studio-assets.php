@@ -84,7 +84,7 @@ class VH360_Studio_Assets {
             wp_enqueue_style( 'vh360-studio-mobile-live', VH360_STUDIO_PLUGIN_URL . $css_path, array(), $this->asset_version( $css_path ) );
             wp_enqueue_script( 'agora-rtc-sdk', 'https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js', array(), '4.20.0', true );
             wp_enqueue_script( 'vh360-agora-broadcaster', VIDEOHUB360_ASSETS_URL . 'js/agora-broadcaster.js', array( 'agora-rtc-sdk' ), videohub360_asset_version( 'assets/js/agora-broadcaster.js' ), true );
-            wp_enqueue_script( 'vh360-studio-mobile-participants', VH360_STUDIO_PLUGIN_URL . $participants_path, array( 'vh360-agora-broadcaster' ), $this->asset_version( $participants_path ), true );
+            wp_enqueue_script( 'vh360-studio-mobile-participants', VH360_STUDIO_PLUGIN_URL . $participants_path, array( 'vh360-agora-broadcaster', 'vh360-studio-recording-client' ), $this->asset_version( $participants_path ), true );
             wp_enqueue_script( 'vh360-studio-mobile-live', VH360_STUDIO_PLUGIN_URL . $js_path, array( 'vh360-studio-mobile-participants' ), $this->asset_version( $js_path ), true );
             wp_localize_script( 'vh360-studio-mobile-live', 'vh360StudioMobileLive', $this->mobile_localized_data() );
             wp_dequeue_style( 'vh360-mobile-orientation-lock' );
@@ -159,9 +159,17 @@ class VH360_Studio_Assets {
         );
 
         wp_enqueue_script(
+            'vh360-studio-recording-client',
+            VH360_STUDIO_PLUGIN_URL . 'assets/js/studio-recording-client.js',
+            array(),
+            $this->asset_version( 'assets/js/studio-recording-client.js' ),
+            true
+        );
+
+        wp_enqueue_script(
             'vh360-studio-dashboard',
             VH360_STUDIO_PLUGIN_URL . $js_path,
-            array( 'vh360-agora-broadcaster' ),
+            array( 'vh360-agora-broadcaster', 'vh360-studio-recording-client' ),
             $this->asset_version( $js_path ),
             true
         );
