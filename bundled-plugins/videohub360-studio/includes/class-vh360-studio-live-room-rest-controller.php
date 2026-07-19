@@ -89,7 +89,8 @@ class VH360_Studio_Live_Room_REST_Controller {
         $state       = $job ? sanitize_key( $job['status'] ) : 'idle';
         $can_manage  = VH360_Studio_Permissions::current_user_can_record_live_room( $post_id ) || current_user_can( 'edit_post', $post_id ) || current_user_can( 'manage_options' );
         $heartbeat_stale_seconds = absint( apply_filters( 'vh360_live_room_recording_heartbeat_stale_seconds', 120 ) );
-        $heartbeat_fresh = $job && ! empty( $job['updated_at'] ) && strtotime( $job['updated_at'] . ' UTC' ) >= time() - $heartbeat_stale_seconds;
+        $heartbeat = $job ? absint( get_option( 'vh360_recording_heartbeat_' . absint( $job['id'] ), 0 ) ) : 0;
+        $heartbeat_fresh = $heartbeat && $heartbeat >= time() - $heartbeat_stale_seconds;
         $response = array(
             'post_id'             => $post_id,
             'recording_purpose'   => $purpose,
@@ -105,6 +106,8 @@ class VH360_Studio_Live_Room_REST_Controller {
             $response['job_id']             = $job ? absint( $job['id'] ) : 0;
             $response['recovery_available'] = (bool) $job && ! $heartbeat_fresh && absint( $job['user_id'] ) === get_current_user_id();
             $response['heartbeat_fresh']    = (bool) $heartbeat_fresh;
+            $response['failure_stage']      = get_post_meta( $post_id, '_vh360_studio_replay_status', true );
+            $response['error_message']      = $job && ! empty( $job['error_message'] ) ? $job['error_message'] : '';
         }
 
 
@@ -162,6 +165,7 @@ class VH360_Studio_Live_Room_REST_Controller {
         if ( ! $job || absint( $job['live_video_id'] ) !== $post_id || ! in_array( sanitize_key( $job['status'] ), array( 'created', 'recording', 'stopping', 'preparing_download' ), true ) ) {
             return new WP_Error( 'vh360_recording_heartbeat_not_found', __( 'Recording session not found.', 'videohub360-studio' ), array( 'status' => 404 ) );
         }
+        update_option( 'vh360_recording_heartbeat_' . absint( $job['id'] ), time(), false );
         $job = $this->jobs->touch( $job['id'], get_current_user_id() );
         if ( is_wp_error( $job ) ) { return $job; }
         return rest_ensure_response( array( 'job_id' => absint( $job['id'] ), 'updated_at' => $job['updated_at'] ) );

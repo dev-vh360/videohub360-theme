@@ -26,9 +26,10 @@
             return canvasStream;
         });
     }
-    function cleanupMedia() { stopHeartbeat(); if (compositor) { compositor.stop(); } if (mixer) { mixer.stop(); } compositor = null; mixer = null; }
+    function cleanupMedia() { if (compositor) { compositor.stop(); } if (mixer) { mixer.stop(); } compositor = null; mixer = null; }
     function startHeartbeat() { stopHeartbeat(); if (!activeJobId) { return; } var beat = function () { rest('/live-rooms/' + config.postId + '/recordings/' + activeJobId + '/heartbeat', { method: 'POST', headers: { 'Content-Type': 'application/json' } }).catch(function (error) { window.console && console.warn('Unable to update recording heartbeat.', error); }); }; beat(); heartbeatTimer = window.setInterval(beat, 30000); }
     function stopHeartbeat() { if (heartbeatTimer) { window.clearInterval(heartbeatTimer); heartbeatTimer = null; } }
+    function closeRecordingHeartbeat() { stopHeartbeat(); }
     function notifyRecordingState(kind) { if (window.sendDataStreamMessage) { window.sendDataStreamMessage({ type: kind, roomId: config.postId, recordingPurpose: config.recordingPurpose }); } }
     function setActiveRecordingState(state) { activeState = state; showIndicator(state === 'recording' || state === 'starting'); }
     function hasUnsavedRecordingData() { return starting || !!stopPromise || !!(recorder && recorder.hasUnsavedData && recorder.hasUnsavedData()) || !!(localRecorder && localRecorder.state === 'recording') || localChunks.length > 0 || appointmentDownloadPending || !!appointmentBlob; }
@@ -79,7 +80,7 @@
             ? rest('/live-rooms/' + config.postId + '/recordings/' + activeJobId + '/local-private', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: 'failed', error_message: message }) })
             : rest('/jobs/' + activeJobId + '/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
         return request.then(function () {
-            activeJobId = 0; activeState = 'idle'; setLabel(config.recordingPurpose === 'appointment_session' ? 'Record Privately' : 'Record'); setStatus('Interrupted recording cleared. You can start a new recording.');
+            closeRecordingHeartbeat(); activeJobId = 0; activeState = 'idle'; setLabel(config.recordingPurpose === 'appointment_session' ? 'Record Privately' : 'Record'); setStatus('Interrupted recording cleared. You can start a new recording.');
             if (button) { button.disabled = false; }
         }).catch(function (error) { if (button) { button.disabled = false; } setError(error && (error.message || error.code) || error); throw error; });
     }
@@ -107,23 +108,26 @@
         return stopProviderBacked();
     }
 
+    function isTerminalRecordingError(error) { var code = error && (error.code || error.error || error.error_code); return ['vh360_studio_recording_too_large','vh360_studio_invalid_chunk_type','vh360_studio_chunk_type_mismatch','vh360_studio_invalid_recording_size','vh360_studio_invalid_recording_type','vh360_studio_invalid_recording_file'].indexOf(code) !== -1; }
+
     function stopProviderBacked() {
         if (!recorder) { return Promise.resolve(); }
-        if (recorder.publishStarted || recorder.finalized && recorder.failureStage && recorder.failureStage.indexOf('publishing_') === 0) { cleanupMedia(); return Promise.resolve(); }
+        if (recorder.publishStarted || recorder.finalized && recorder.failureStage && recorder.failureStage.indexOf('publishing_') === 0) { cleanupMedia(); closeRecordingHeartbeat(); return Promise.resolve(); }
         if (stopPromise) { return stopPromise; }
         if (button) { button.disabled = true; } setLabel('Stopping…'); clearInterval(timer); setActiveRecordingState('stopping');
         notifyRecordingState('live_room_recording_stopped');
         stopPromise = recorder.secureLocalRecordingData().then(function (result) {
             var ready = recorder && recorder.publishIsReady && recorder.publishIsReady(result);
             setActiveRecordingState(ready ? 'ready' : 'processing'); setLabel(ready ? 'Replay Ready' : 'Processing…');
-            window.removeEventListener('beforeunload', beforeUnload); cleanupMedia();
+            window.removeEventListener('beforeunload', beforeUnload); cleanupMedia(); closeRecordingHeartbeat();
             monitorProviderProcessing(result);
             return result;
         }).catch(function (error) {
-            if (recorder && recorder.finalized) { cleanupMedia(); window.removeEventListener('beforeunload', beforeUnload); }
+            if (recorder && recorder.finalized) { cleanupMedia(); closeRecordingHeartbeat(); window.removeEventListener('beforeunload', beforeUnload); }
+            if (isTerminalRecordingError(error)) { cleanupMedia(); closeRecordingHeartbeat(); window.removeEventListener('beforeunload', beforeUnload); recorder = null; setActiveRecordingState('idle'); setLabel('Record Again'); setError(error && (error.message || error.code) || error); return; }
             setActiveRecordingState('failed');
             if (recorder && recorder.failureStage === 'publishing_prepare_failed') { setLabel('Retry Publishing'); showPublishingRecoveryPanel('Publishing preparation failed. You can retry publishing after ending the room.'); } else if (recorder && (recorder.failureStage === 'publishing_start_failed' || recorder.failureStage === 'provider_failed')) { setLabel('Record Again'); showPublishingRecoveryPanel('Replay publishing failed. You can record again because no ready replay was created.'); recorder = null; } else { setLabel(recorder && recorder.failed && recorder.failed.size ? 'Retry Uploads' : 'Retry Finalization'); }
-            setError(error && (error.message || error.code) || error); throw error;
+            setError(error && (error.message || error.code) || error); if (recorder && recorder.finalized) { return; } throw error;
         }).finally(function () { stopPromise = null; if (button) { button.disabled = false; } });
         return stopPromise;
     }
@@ -132,8 +136,8 @@
         if (!recorder) { return; }
         if (recorder.publishIsReady(initialResult)) { setLabel('Replay Ready'); activeState = 'ready'; recorder = null; return; }
         recorder.pollPublishingStatus(5000, 10 * 60 * 1000).then(function (result) {
-            if (recorder && recorder.publishIsReady(result)) { setActiveRecordingState('ready'); setLabel('Replay Ready'); recorder = null; }
-        }).catch(function (error) { setActiveRecordingState('failed'); setLabel('Replay Failed'); setError(error && (error.message || error.code) || error); });
+            if (recorder && recorder.publishIsReady(result)) { setActiveRecordingState('ready'); setLabel('Replay Ready'); closeRecordingHeartbeat(); recorder = null; }
+        }).catch(function (error) { if (recorder && recorder.publishIsFailed && recorder.publishIsFailed(error)) { setActiveRecordingState('idle'); setLabel('Record Again'); closeRecordingHeartbeat(); recorder = null; setError(error && (error.message || error.code) || error); } else { setActiveRecordingState('processing'); setLabel('Processing…'); window.console && console.warn('Temporary replay status polling failure.', error); } });
     }
 
     function stopLocalPrivate() {
@@ -186,6 +190,7 @@
     function finalizeAppointmentDownload(blob, duration, download) {
         rest('/live-rooms/' + config.postId + '/recordings/' + activeJobId + '/local-private', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: 'download_ready', duration_seconds: duration || 0, mime_type: blob.type }) }).then(function () {
             localChunks = [];
+            closeRecordingHeartbeat();
             appointmentBlob = null;
             appointmentDownloadPending = false;
             activeJobId = 0;
@@ -203,13 +208,21 @@
     function showPublishingRecoveryPanel(message) {
         var panel = ensurePublishingPanel();
         panel.innerHTML = '<strong>Replay publishing needs attention.</strong> ' + message;
-        if (recorder && recorder.failureStage === 'publishing_prepare_failed') {
+        if ((recorder && recorder.failureStage === 'publishing_prepare_failed') || (!recorder && activeJobId)) {
             var retry = document.createElement('button');
             retry.type = 'button';
             retry.textContent = 'Retry Publishing';
-            retry.addEventListener('click', function () { retryPublishing().catch(function (error) { setError(error && (error.message || error.code) || error); }); });
+            retry.addEventListener('click', function () { (recorder ? retryPublishing() : retryServerPublishing()).catch(function (error) { setError(error && (error.message || error.code) || error); }); });
             panel.appendChild(retry);
         }
+    }
+
+    function retryServerPublishing() {
+        if (!activeJobId) { return Promise.resolve(); }
+        if (button) { button.disabled = true; } setLabel('Retrying Publishing…');
+        return rest('/jobs/' + activeJobId + '/publishing/prepare', { method: 'POST', headers: { 'Content-Type': 'application/json' } }).then(function () {
+            return rest('/jobs/' + activeJobId + '/publishing/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+        }).then(function () { setActiveRecordingState('processing'); setLabel('Processing…'); if (publishingPanel) { publishingPanel.remove(); publishingPanel = null; } }).catch(function (error) { setActiveRecordingState('failed'); setLabel('Retry Publishing'); showPublishingRecoveryPanel('Publishing preparation failed. You can retry publishing after ending the room.'); throw error; }).finally(function () { if (button) { button.disabled = false; } });
     }
 
     function retryPublishing() {
@@ -235,6 +248,7 @@
             if (activeState === 'failed' && recorder) { return; }
             if (state.replay_ready) { setActiveRecordingState('ready'); setLabel('Replay Ready'); button.disabled = true; return; }
             if (state.replay_failed || state.state === 'failed') { setActiveRecordingState('idle'); setLabel('Record Again'); button.disabled = false; return; }
+            if ((state.failure_stage === 'publishing_prepare_failed' || state.failure_stage === 'publishing_start_failed') && state.job_id) { activeJobId = Number(state.job_id); setActiveRecordingState('failed'); setLabel(state.failure_stage === 'publishing_prepare_failed' ? 'Retry Publishing' : 'Record Again'); button.disabled = false; if (state.failure_stage === 'publishing_prepare_failed') { showPublishingRecoveryPanel('Publishing preparation failed. You can retry publishing after ending the room.'); } return; }
             if (state.replay_processing || state.state === 'processing' || state.state === 'uploading') { setActiveRecordingState('processing'); setLabel('Processing…'); button.disabled = true; return; }
             var hasLocalAppointmentRecovery = config.recordingPurpose === 'appointment_session' && (localChunks.length > 0 || !!appointmentBlob || appointmentDownloadPending || activeState === 'download_pending');
             if (state.active && !recorder && !localRecorder && state.recovery_available && !state.heartbeat_fresh && !hasLocalAppointmentRecovery) { setActiveRecordingState('interrupted'); setLabel('Clear Interrupted Recording'); button.disabled = false; setError(config.recordingPurpose === 'appointment_session' ? 'Recording was interrupted in this browser. Any undownloaded private recording data was lost.' : 'Recording was interrupted in this browser. The unsaved browser media cannot be recovered.'); return; }
@@ -245,7 +259,7 @@
         window.addEventListener('vh360:agora-data-message', function (event) { var data = event.detail || {}; if (data.type === 'live_room_recording_started' || data.type === 'live_room_recording_stopped') { rest('/live-rooms/' + config.postId + '/recording').then(restoreState).catch(function (error) { window.console && console.warn('Unable to refresh recording state.', error); }) } });
         if (!button) { return; }
         if (!hasDesktopSupport()) { setLabel(config.desktopOnlyMessage || 'Recording unavailable'); return; }
-        button.classList.remove('vh360-hidden'); button.addEventListener('click', function () { if (activeState === 'failed' && recorder && recorder.failureStage === 'publishing_prepare_failed') { retryPublishing().catch(function (error) { setError(error && (error.message || error.code) || error); }); } else if (activeState === 'recording' || activeState === 'failed' && recorder) { stop().catch(function (error) { setError(error && (error.message || error.code) || error); }); } else if (activeState === 'failed' && config.recordingPurpose === 'appointment_session' && (localChunks.length || appointmentBlob)) { retryPrivateFilePreparation().catch(function () {}); } else if (activeState === 'interrupted') { clearInterruptedRecording().catch(function () {}); } else if (activeState === 'ready') { button.disabled = true; } else if (activeState !== 'processing' && activeState !== 'download_pending') { start(); } });
+        button.classList.remove('vh360-hidden'); button.addEventListener('click', function () { if (activeState === 'failed' && ((recorder && recorder.failureStage === 'publishing_prepare_failed') || (!recorder && activeJobId))) { (recorder ? retryPublishing() : retryServerPublishing()).catch(function (error) { setError(error && (error.message || error.code) || error); }); } else if (activeState === 'recording' || activeState === 'failed' && recorder) { stop().catch(function (error) { setError(error && (error.message || error.code) || error); }); } else if (activeState === 'failed' && config.recordingPurpose === 'appointment_session' && (localChunks.length || appointmentBlob)) { retryPrivateFilePreparation().catch(function () {}); } else if (activeState === 'interrupted') { clearInterruptedRecording().catch(function () {}); } else if (activeState === 'ready') { button.disabled = true; } else if (activeState !== 'processing' && activeState !== 'download_pending') { start(); } });
         if (window.vh360AgoraLifecycle) { window.vh360AgoraLifecycle.registerBeforeLeave(stop); window.vh360AgoraLifecycle.registerBeforeEnd(stop); }
     }
     document.addEventListener('DOMContentLoaded', init);
