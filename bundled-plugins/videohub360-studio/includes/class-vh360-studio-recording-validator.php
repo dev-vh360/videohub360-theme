@@ -22,7 +22,7 @@ class VH360_Studio_Recording_Validator {
             return new WP_Error( 'vh360_studio_invalid_recording_path', __( 'Assembled recording path is not allowed.', 'videohub360-studio' ), array( 'status' => 500 ) );
         }
         $file_size = filesize( $path );
-        $max_size = (int) apply_filters( 'vh360_studio_max_total_recording_size', 512 * 1024 * 1024 );
+        $max_size = (int) apply_filters( 'vh360_studio_max_total_recording_size', 4 * 1024 * 1024 * 1024 );
         if ( false === $file_size || 0 >= $file_size || $file_size > $max_size ) {
             return new WP_Error( 'vh360_studio_invalid_recording_size', __( 'Assembled recording size is not allowed.', 'videohub360-studio' ), array( 'status' => 413 ) );
         }

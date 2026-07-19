@@ -37,7 +37,7 @@ class VH360_Studio_Recording_Cleanup {
         global $wpdb;
 
         $now  = current_time( 'timestamp' );
-        $rows = $wpdb->get_results( 'SELECT * FROM ' . VH360_Studio_Database::table_name() . " WHERE status IN ('created','recording','stopping','uploading','preparing_download','cancelled','failed','processing','ready') ORDER BY CASE WHEN status IN ('failed','cancelled','ready') THEN 1 ELSE 0 END ASC, updated_at ASC LIMIT 200", ARRAY_A );
+        $rows = $wpdb->get_results( 'SELECT * FROM ' . VH360_Studio_Database::table_name() . " WHERE status IN ('created','recording','stopping','uploading','preparing_download','processing') OR (status IN ('cancelled','failed','ready') AND local_temp_path IS NOT NULL AND local_temp_path != '') ORDER BY CASE WHEN status IN ('failed','cancelled','ready') THEN 1 ELSE 0 END ASC, updated_at ASC LIMIT 200", ARRAY_A );
 
         foreach ( $rows as $job ) {
             $created = $this->mysql_timestamp( $job['created_at'] );
@@ -107,6 +107,9 @@ class VH360_Studio_Recording_Cleanup {
 
     public function delete_temp_for_job( array $job ) {
         $this->chunks->delete_job_chunks( $job['id'] );
+        if ( ! empty( $job['local_temp_path'] ) ) {
+            $this->jobs->update( $job['id'], 0, array( 'local_temp_path' => '', 'temp_expires_at' => '' ) );
+        }
     }
 
     private function job_has_safe_handoff( array $job ) {

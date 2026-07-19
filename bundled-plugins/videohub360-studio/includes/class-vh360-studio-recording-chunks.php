@@ -21,7 +21,7 @@ class VH360_Studio_Recording_Chunks {
     public function upload_settings() {
         return array(
             'max_chunk_size'           => (int) apply_filters( 'vh360_studio_max_chunk_size', 8 * 1024 * 1024 ),
-            'max_total_recording_size' => (int) apply_filters( 'vh360_studio_max_total_recording_size', 512 * 1024 * 1024 ),
+            'max_total_recording_size' => (int) apply_filters( 'vh360_studio_max_total_recording_size', 4 * 1024 * 1024 * 1024 ),
             'preferred_chunk_duration' => (int) apply_filters( 'vh360_studio_chunk_time_slice', 5000 ),
             'allowed_mime_types'       => (array) apply_filters( 'vh360_studio_allowed_recording_mime_types', array( 'video/mp4', 'video/webm' ) ),
             'allowed_extensions'       => (array) apply_filters( 'vh360_studio_allowed_recording_extensions', array( 'mp4', 'webm' ) ),

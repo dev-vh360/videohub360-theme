@@ -1224,7 +1224,7 @@ class VH360_Studio_REST_Controller {
         if ( is_wp_error( $private_route_check ) ) { return $private_route_check; }
         $prepared = $this->publisher->prepare( $job );
         if ( is_wp_error( $prepared ) ) {
-            $retryable = $this->jobs->mark_finalize_retryable( $job['id'], get_current_user_id(), $prepared->get_error_message() );
+            $retryable = $this->jobs->mark_processing( $job['id'], get_current_user_id(), array( 'error_message' => $prepared->get_error_message() ) );
             $this->update_live_replay_lifecycle( is_wp_error( $retryable ) ? $job : $retryable, 'publishing_prepare_failed', 'yes', 'no', 'no' );
             return $prepared;
         }
@@ -1455,11 +1455,6 @@ class VH360_Studio_REST_Controller {
         $job          = $this->jobs->cancel( $job_id, get_current_user_id() );
 
         if ( ! is_wp_error( $job ) ) {
-            $recording_started = is_array( $existing_job ) && ! in_array(
-                ! empty( $existing_job['status'] ) ? $existing_job['status'] : '',
-                array( VH360_Studio_Recording_Jobs::STATUS_CREATED, VH360_Studio_Recording_Jobs::STATUS_CANCELLED ),
-                true
-            );
             $this->update_live_replay_lifecycle( $job, 'cancelled', 'no', 'no', 'no' );
         }
 
