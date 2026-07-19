@@ -15,6 +15,10 @@ class VH360_Studio_Replay_Posts {
     }
 
     public function create_or_update( array $job, array $publish_result, array $recording ) {
+        if ( isset( $job['source_type'] ) && 'appointment_session' === sanitize_key( $job['source_type'] ) ) {
+            return new WP_Error( 'vh360_studio_private_appointment_replay_forbidden', __( 'Private appointment recordings cannot be published through the Live Room replay workflow.', 'videohub360-studio' ), array( 'status' => 403 ) );
+        }
+
         if ( ! post_type_exists( 'videohub360' ) ) {
             return new WP_Error( 'vh360_studio_replay_post_type_missing', __( 'The VideoHub360 post type is not available.', 'videohub360-studio' ), array( 'status' => 500 ) );
         }
@@ -82,8 +86,10 @@ class VH360_Studio_Replay_Posts {
 
         update_post_meta( $post_id, 'video_url', $playback_url );
         update_post_meta( $post_id, '_vh360_is_live', $is_live_conversion ? 'yes' : 'no' );
-        update_post_meta( $post_id, '_vh360_agora_stream_live', 'no' );
-        update_post_meta( $post_id, '_vh360_stream_stopped', 'yes' );
+        if ( 'live_room' !== sanitize_key( $job['source_type'] ) ) {
+            update_post_meta( $post_id, '_vh360_agora_stream_live', 'no' );
+            update_post_meta( $post_id, '_vh360_stream_stopped', 'yes' );
+        }
         update_post_meta( $post_id, '_vh360_studio_job_id', absint( $job['id'] ) );
         update_post_meta( $post_id, '_vh360_studio_provider', $provider );
         update_post_meta( $post_id, '_vh360_studio_storage_provider', $provider );
@@ -112,6 +118,10 @@ class VH360_Studio_Replay_Posts {
         update_post_meta( $post_id, '_vh360_studio_replay_failed', 'no' );
         update_post_meta( $post_id, '_vh360_studio_replay_status', 'ready' );
         update_post_meta( $post_id, '_vh360_studio_converted_live_to_replay', $is_live_conversion ? 'yes' : 'no' );
+        if ( 'live_room' === sanitize_key( $job['source_type'] ) ) {
+            update_post_meta( $post_id, '_vh360_live_room_has_replay', 'yes' );
+            update_post_meta( $post_id, '_vh360_live_room_replay_recorded_at', ! empty( $job['started_at'] ) ? sanitize_text_field( $job['started_at'] ) : current_time( 'mysql' ) );
+        }
 
         if ( $poster_url ) {
             update_post_meta( $post_id, 'poster_url', $poster_url );
@@ -148,7 +158,10 @@ class VH360_Studio_Replay_Posts {
         }
 
         if ( $custom_html ) {
-            if ( 'bunny_stream' === $provider || ! $is_live_conversion ) {
+            // A same-post livestream conversion must retain its live engine type
+            // while the room is active. Replay playback is selected from the
+            // standardized Studio replay metadata after the room ends.
+            if ( ! $is_live_conversion ) {
                 update_post_meta( $post_id, '_vh360_type', 'embed' );
             }
             update_post_meta( $post_id, 'videohub360_custom_html', $custom_html );
@@ -185,6 +198,13 @@ class VH360_Studio_Replay_Posts {
     }
 
     private function validate_live_replay_target( $post_id, array $job ) {
+        if ( isset( $job['source_type'] ) && 'live_room' === sanitize_key( $job['source_type'] ) ) {
+            $expected_live_video_id = ! empty( $job['live_video_id'] ) ? absint( $job['live_video_id'] ) : 0;
+            if ( $expected_live_video_id !== absint( $post_id ) || get_post_meta( $post_id, '_vh360_appointment_event_id', true ) || 'live_room' !== get_post_meta( $post_id, '_vh360_context', true ) ) {
+                return new WP_Error( 'vh360_studio_invalid_live_room_replay_target', __( 'Live Room recordings can only update their original non-appointment Live Room post.', 'videohub360-studio' ), array( 'status' => 400 ) );
+            }
+        }
+
         $post = get_post( $post_id );
         if ( ! $post || 'videohub360' !== $post->post_type ) {
             return new WP_Error( 'vh360_studio_invalid_live_replay_target', __( 'The original livestream post is not available.', 'videohub360-studio' ), array( 'status' => 404 ) );

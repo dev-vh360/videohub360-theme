@@ -16,23 +16,38 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Ensure renderer functions are available
-if (!function_exists('videohub360_render_livestream') || !function_exists('videohub360_render_chat_container')) {
-    // Load renderer functions if not already loaded
-    $render_chat_path = WP_PLUGIN_DIR . '/videohub360-core/includes/renderers/render-chat.php';
-    $render_livestream_path = WP_PLUGIN_DIR . '/videohub360-core/includes/renderers/render-livestream.php';
-    
-    if (file_exists($render_chat_path)) {
-        require_once $render_chat_path;
+// Live Room state changes from active to processing to replay-ready. Prevent a
+// full-page cache from preserving an earlier offline state after those metadata
+// transitions.
+if ( ! defined( 'DONOTCACHEPAGE' ) ) {
+    define( 'DONOTCACHEPAGE', true );
+}
+if ( ! headers_sent() ) {
+    nocache_headers();
+}
+
+// Resolve the queried Live Room before loading the header. Header widgets and
+// secondary loops must never be allowed to change which post supplies the room
+// and replay metadata.
+$post_id = absint( get_queried_object_id() );
+$queried_live_room = $post_id ? get_post( $post_id ) : null;
+
+// Ensure each renderer is available independently. The replay renderer must not
+// depend on the livestream/chat renderers also being missing.
+$renderer_files = array(
+    'videohub360_render_chat_container'      => WP_PLUGIN_DIR . '/videohub360-core/includes/renderers/render-chat.php',
+    'videohub360_render_livestream'          => WP_PLUGIN_DIR . '/videohub360-core/includes/renderers/render-livestream.php',
+    'videohub360_get_studio_replay_state'    => WP_PLUGIN_DIR . '/videohub360-core/includes/renderers/render-replay.php',
+);
+
+foreach ( $renderer_files as $renderer_function => $renderer_path ) {
+    if ( ! function_exists( $renderer_function ) && file_exists( $renderer_path ) ) {
+        require_once $renderer_path;
     }
-    if (file_exists($render_livestream_path)) {
-        require_once $render_livestream_path;
-    }
-    
-    // If still not available, show error and exit
-    if (!function_exists('videohub360_render_livestream') || !function_exists('videohub360_render_chat_container')) {
-        wp_die('VideoHub360 Core plugin is required for Live Room functionality. Please activate the VideoHub360 plugin.');
-    }
+}
+
+if ( ! function_exists( 'videohub360_render_livestream' ) || ! function_exists( 'videohub360_render_chat_container' ) ) {
+    wp_die( esc_html__( 'VideoHub360 Core plugin is required for Live Room functionality. Please activate the VideoHub360 plugin.', 'videohub360-theme' ) );
 }
 
 // Ensure chat assets are enqueued for Live Room
@@ -49,16 +64,15 @@ $vh360_show_header  = (bool) get_theme_mod('vh360_show_live_room_header', 1);
 $vh360_header_title = get_theme_mod('vh360_live_room_header_title', __('Live Room', 'videohub360-theme'));
 $vh360_header_desc  = get_theme_mod('vh360_live_room_header_description', __('Join live sessions and broadcasts from the community.', 'videohub360-theme'));
 
-// Ensure global post is available
+// Keep the global post aligned with the queried Live Room after the header has
+// rendered, but continue using the immutable queried post ID resolved above.
 global $post;
-if (!$post) {
-    $post = get_queried_object();
+if ( $queried_live_room instanceof WP_Post ) {
+    $post = $queried_live_room;
 }
 
-$post_id = $post ? $post->ID : 0;
-
-// Basic safety: use default template if this isn't a videohub360 post
-if (!$post_id || get_post_type($post_id) !== 'videohub360') {
+// Basic safety: use default template if this isn't a videohub360 post.
+if ( ! $post_id || 'videohub360' !== get_post_type( $post_id ) ) {
     // Fallback to normal single template
     get_template_part('single');
     get_footer();
@@ -90,6 +104,24 @@ $livestream_fields = [
 
 // Check if this is an appointment Live Room
 $is_appointment_room = !empty(get_post_meta($post_id, '_vh360_appointment_event_id', true));
+
+if ( function_exists( 'videohub360_get_studio_replay_state' ) ) {
+    $studio_replay_state = videohub360_get_studio_replay_state( $post_id );
+} else {
+    // Fail safely from the standardized post metadata rather than treating a
+    // published replay as an ordinary offline room when the shared helper has
+    // not been loaded for any reason.
+    $studio_replay_state = array(
+        'ready'        => 'yes' === get_post_meta( $post_id, '_vh360_studio_replay_ready', true ) || 'yes' === get_post_meta( $post_id, '_vh360_live_room_has_replay', true ),
+        'pending'      => 'yes' === get_post_meta( $post_id, '_vh360_studio_replay_pending', true ),
+        'failed'       => 'yes' === get_post_meta( $post_id, '_vh360_studio_replay_failed', true ),
+        'status'       => sanitize_key( get_post_meta( $post_id, '_vh360_studio_replay_status', true ) ),
+        'provider'     => sanitize_key( get_post_meta( $post_id, '_vh360_studio_storage_provider', true ) ?: get_post_meta( $post_id, '_vh360_studio_provider', true ) ),
+        'playback_url' => get_post_meta( $post_id, 'video_url', true ),
+        'embed_html'   => get_post_meta( $post_id, 'videohub360_custom_html', true ),
+        'poster_url'   => get_post_meta( $post_id, '_vh360_studio_poster_url', true ) ?: get_post_meta( $post_id, 'poster_url', true ),
+    );
+}
 
 // Determine if livestream is effectively live
 // For appointment rooms, always render the livestream UI when livestream mode is enabled
@@ -163,6 +195,33 @@ $can_moderate = vh360_user_can_manage_live_room($post_id) || current_user_can('m
                         $hide_settings = !vh360_user_can_manage_live_room(get_the_ID());
                         echo videohub360_render_livestream($livestream_fields, $chat_enabled, $chat_placement, $is_user_logged_in, $user_avatar, $user_display_name, $user_logout_url, $hide_settings); 
                         ?>
+                    </div>
+                <?php elseif (!$is_appointment_room && !empty($studio_replay_state['ready'])) : ?>
+                    <div class="vh360-studio-replay-wrapper">
+                        <?php
+                        if ( function_exists( 'videohub360_render_studio_replay' ) ) {
+                            echo videohub360_render_studio_replay( $post_id );
+                        } elseif ( ! empty( $studio_replay_state['embed_html'] ) ) {
+                            echo wp_kses_post( $studio_replay_state['embed_html'] );
+                        } elseif ( ! empty( $studio_replay_state['playback_url'] ) ) {
+                            echo wp_video_shortcode(
+                                array(
+                                    'src'    => esc_url( $studio_replay_state['playback_url'] ),
+                                    'poster' => esc_url( $studio_replay_state['poster_url'] ),
+                                )
+                            );
+                        } else {
+                            echo '<div class="vh360-offline-message">' . esc_html__( 'The replay is ready, but its playback source could not be loaded.', 'videohub360-theme' ) . '</div>';
+                        }
+                        ?>
+                    </div>
+                <?php elseif (!$is_appointment_room && !empty($studio_replay_state['pending'])) : ?>
+                    <div class="vh360-offline-wrapper vh360-replay-processing-wrapper">
+                        <?php echo function_exists('videohub360_render_studio_replay') ? videohub360_render_studio_replay($post_id) : esc_html__('Replay is processing. Please check back soon.', 'videohub360-theme'); ?>
+                    </div>
+                <?php elseif (!$is_appointment_room && !empty($studio_replay_state['failed'])) : ?>
+                    <div class="vh360-offline-wrapper vh360-replay-failed-wrapper">
+                        <div class="vh360-offline-message"><?php esc_html_e('Replay processing failed.', 'videohub360-theme'); ?></div>
                     </div>
                 <?php else : ?>
                     <div class="vh360-offline-wrapper">

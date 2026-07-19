@@ -217,7 +217,7 @@ class VH360_Studio_REST_Controller {
                 'permission_callback' => array( $this, 'permissions_check' ),
                 'args'                => array(
                     'id'              => $this->get_id_arg(),
-                    'expected_chunks' => $this->get_positive_int_arg( true ),
+                    'expected_chunks' => $this->get_positive_int_arg( false ),
                 ),
             )
         );
@@ -764,7 +764,7 @@ class VH360_Studio_REST_Controller {
         $payload['status']           = VH360_Studio_Recording_Jobs::STATUS_CREATED;
         $payload['recording_mode']   = isset( $payload['recording_mode'] ) ? $payload['recording_mode'] : 'browser';
         $payload['source_type']      = isset( $payload['source_type'] ) ? $payload['source_type'] : 'studio_setup';
-        $payload['storage_provider'] = $this->default_replay_storage_provider();
+        $payload['storage_provider'] = VH360_Studio_Replay_Storage_Settings::resolve_default_provider();
 
         return $payload;
     }
@@ -796,41 +796,7 @@ class VH360_Studio_REST_Controller {
     }
 
     private function default_replay_storage_provider() {
-        $registry  = VH360_Studio_Plugin::instance()->registry();
-        $raw_saved = get_option( 'vh360_studio_default_replay_storage_provider', '' );
-        $saved     = $this->normalize_storage_provider_id( $raw_saved );
-
-        if ( $saved && $this->storage_provider_is_available( $registry, $saved ) ) {
-            return $saved;
-        }
-
-        if ( $this->storage_provider_is_available( $registry, 'videopress' ) ) {
-            return 'videopress';
-        }
-
-        if ( $this->storage_provider_is_available( $registry, 'publitio' ) ) {
-            return 'publitio';
-        }
-
-        if ( $this->storage_provider_is_available( $registry, 'bunny_stream' ) ) {
-            return 'bunny_stream';
-        }
-
-        if ( $this->storage_provider_is_available( $registry, 'local_media' ) ) {
-            return 'local_media';
-        }
-
-        return 'videopress';
-    }
-
-    private function storage_provider_is_available( VH360_Studio_Provider_Registry $registry, $provider_id ) {
-        $provider = $registry->get_storage_provider( sanitize_key( $provider_id ) );
-        return $provider && $provider->is_available();
-    }
-
-    private function normalize_storage_provider_id( $provider ) {
-        $provider = sanitize_key( $provider );
-        return 'local' === $provider ? 'local_media' : $provider;
+        return VH360_Studio_Replay_Storage_Settings::resolve_default_provider();
     }
 
     public function validate_optional_url( $value ) {
@@ -1022,7 +988,11 @@ class VH360_Studio_REST_Controller {
     }
 
     public function create_job( WP_REST_Request $request ) {
-        return rest_ensure_response( $this->prepare_job_response( $this->jobs->create( get_current_user_id(), $this->setup_payload_from_request( $request ) ) ) );
+        $payload = $this->setup_payload_from_request( $request );
+        if ( in_array( sanitize_key( $payload['source_type'] ), array( 'live_room', 'appointment_session' ), true ) ) {
+            return new WP_Error( 'vh360_studio_room_job_route_required', __( 'Live Room and appointment recording jobs must be created through the dedicated Live Room recording endpoint.', 'videohub360-studio' ), array( 'status' => 403 ) );
+        }
+        return rest_ensure_response( $this->prepare_job_response( $this->jobs->create( get_current_user_id(), $payload ) ) );
     }
 
     public function get_job( WP_REST_Request $request ) {
@@ -1031,6 +1001,10 @@ class VH360_Studio_REST_Controller {
     }
 
     public function update_job( WP_REST_Request $request ) {
+        $job = $this->jobs->get( absint( $request['id'] ), get_current_user_id() );
+        if ( $job && 'appointment_session' === sanitize_key( $job['source_type'] ) ) {
+            return new WP_Error( 'vh360_studio_private_appointment_job_locked', __( 'Private appointment recording jobs cannot be modified through generic Studio job routes.', 'videohub360-studio' ), array( 'status' => 403 ) );
+        }
         return rest_ensure_response( $this->prepare_job_response( $this->jobs->update( absint( $request['id'] ), get_current_user_id(), $this->update_payload_from_request( $request ) ) ) );
     }
 
@@ -1064,7 +1038,9 @@ class VH360_Studio_REST_Controller {
         }
 
         if ( $this->publish_response_is_failed( $response ) ) {
-            $this->update_live_replay_lifecycle( $job, 'failed', 'no', 'no', 'yes' );
+            $message = ! empty( $response['message'] ) ? sanitize_textarea_field( $response['message'] ) : __( 'Replay provider processing failed.', 'videohub360-studio' );
+            $failed_job = $this->jobs->mark_failed( $job['id'], get_current_user_id(), $message );
+            $this->update_live_replay_lifecycle( is_wp_error( $failed_job ) ? $job : $failed_job, 'failed', 'no', 'no', 'yes' );
             return;
         }
 
@@ -1072,6 +1048,9 @@ class VH360_Studio_REST_Controller {
     }
 
     private function update_live_replay_lifecycle( array $job, $status, $pending = 'yes', $ready = 'no', $failed = 'no' ) {
+        if ( in_array( sanitize_key( $status ), array( 'ready', 'failed', 'cancelled' ), true ) ) {
+            delete_option( 'vh360_recording_heartbeat_' . absint( $job['id'] ) );
+        }
         $live_video_id = ! empty( $job['live_video_id'] ) ? absint( $job['live_video_id'] ) : 0;
         if ( ! $live_video_id || 'videohub360' !== get_post_type( $live_video_id ) ) {
             return;
@@ -1083,12 +1062,27 @@ class VH360_Studio_REST_Controller {
         update_post_meta( $live_video_id, '_vh360_studio_replay_ready', $ready );
         update_post_meta( $live_video_id, '_vh360_studio_replay_failed', $failed );
         update_post_meta( $live_video_id, '_vh360_studio_replay_status', sanitize_key( $status ) );
+        update_post_meta( $live_video_id, '_vh360_live_room_recording_state', sanitize_key( $status ) );
+        if ( in_array( sanitize_key( $status ), array( 'stopping', 'uploading', 'processing', 'ready', 'failed' ), true ) ) {
+            update_post_meta( $live_video_id, '_vh360_live_room_recording_stopped_at', current_time( 'mysql' ) );
+        }
     }
 
+
+
+
+    private function reject_private_appointment_job_route( array $job ) {
+        if ( 'appointment_session' === sanitize_key( $job['source_type'] ) || 'local_private' === sanitize_key( $job['recording_mode'] ) ) {
+            return new WP_Error( 'vh360_studio_private_appointment_route_forbidden', __( 'Private appointment recordings cannot use provider-backed Studio recording routes.', 'videohub360-studio' ), array( 'status' => 403 ) );
+        }
+        return true;
+    }
 
     public function start_recording( WP_REST_Request $request ) {
         $job = $this->chunks->validate_job_ownership( absint( $request['id'] ), get_current_user_id() );
         if ( is_wp_error( $job ) ) { return $job; }
+        $private_route_check = $this->reject_private_appointment_job_route( $job );
+        if ( is_wp_error( $private_route_check ) ) { return $private_route_check; }
         if ( VH360_Studio_Recording_Jobs::STATUS_CREATED !== $job['status'] ) {
             return new WP_Error( 'vh360_studio_invalid_status_transition', __( 'Recording can only start from a created job.', 'videohub360-studio' ), array( 'status' => 409 ) );
         }
@@ -1107,6 +1101,8 @@ class VH360_Studio_REST_Controller {
     public function upload_chunk( WP_REST_Request $request ) {
         $job = $this->chunks->validate_job_ownership( absint( $request['id'] ), get_current_user_id() );
         if ( is_wp_error( $job ) ) { return $job; }
+        $private_route_check = $this->reject_private_appointment_job_route( $job );
+        if ( is_wp_error( $private_route_check ) ) { return $private_route_check; }
         if ( ! in_array( $job['status'], array( VH360_Studio_Recording_Jobs::STATUS_RECORDING, VH360_Studio_Recording_Jobs::STATUS_STOPPING ), true ) ) {
             return new WP_Error( 'vh360_studio_invalid_chunk_status', __( 'Chunks can only be uploaded while recording is active or stopping.', 'videohub360-studio' ), array( 'status' => 409 ) );
         }
@@ -1121,6 +1117,9 @@ class VH360_Studio_REST_Controller {
             if ( ! $this->is_retryable_chunk_error( $summary ) ) {
                 $failed_job = $this->jobs->mark_failed( $job['id'], get_current_user_id(), $summary->get_error_message() );
                 $this->update_live_replay_lifecycle( is_wp_error( $failed_job ) ? $job : $failed_job, 'failed', 'no', 'no', 'yes' );
+                $summary->add_data( array( 'status' => 409, 'retryable' => false, 'failure_stage' => 'terminal_upload_failed', 'job_status' => 'failed' ) );
+            } else {
+                $summary->add_data( array( 'status' => 409, 'retryable' => true, 'failure_stage' => 'upload_failed', 'job_status' => $job['status'] ) );
             }
             return $summary;
         }
@@ -1136,8 +1135,7 @@ class VH360_Studio_REST_Controller {
                 'vh360_studio_chunk_store_failed',
                 'vh360_studio_chunk_checksum_failed',
                 'vh360_studio_chunk_checksum_mismatch',
-                'vh360_studio_chunk_integrity_failed',
-            ),
+                ),
             true
         );
     }
@@ -1145,6 +1143,8 @@ class VH360_Studio_REST_Controller {
     public function list_chunks( WP_REST_Request $request ) {
         $job = $this->chunks->validate_job_ownership( absint( $request['id'] ), get_current_user_id() );
         if ( is_wp_error( $job ) ) { return $job; }
+        $private_route_check = $this->reject_private_appointment_job_route( $job );
+        if ( is_wp_error( $private_route_check ) ) { return $private_route_check; }
         $session = sanitize_text_field( $request->get_param( 'browser_session_id' ) ? $request->get_param( 'browser_session_id' ) : $job['browser_session_id'] );
         $summary = $this->chunks->received_summary( $job['id'], $session );
         $summary['job_status'] = $job['status'];
@@ -1154,6 +1154,8 @@ class VH360_Studio_REST_Controller {
     public function stop_recording( WP_REST_Request $request ) {
         $job = $this->chunks->validate_job_ownership( absint( $request['id'] ), get_current_user_id() );
         if ( is_wp_error( $job ) ) { return $job; }
+        $private_route_check = $this->reject_private_appointment_job_route( $job );
+        if ( is_wp_error( $private_route_check ) ) { return $private_route_check; }
         if ( VH360_Studio_Recording_Jobs::STATUS_STOPPING === $job['status'] ) {
             $this->update_live_replay_lifecycle( $job, 'stopping', 'yes', 'no', 'no' );
             return rest_ensure_response( $this->prepare_job_response( $job ) );
@@ -1169,6 +1171,8 @@ class VH360_Studio_REST_Controller {
     public function finalize_recording( WP_REST_Request $request ) {
         $job = $this->chunks->validate_job_ownership( absint( $request['id'] ), get_current_user_id() );
         if ( is_wp_error( $job ) ) { return $job; }
+        $private_route_check = $this->reject_private_appointment_job_route( $job );
+        if ( is_wp_error( $private_route_check ) ) { return $private_route_check; }
         if ( VH360_Studio_Recording_Jobs::STATUS_UPLOADING === $job['status'] ) {
             return rest_ensure_response( array_merge( array( 'message' => __( 'Finalize is already in progress.', 'videohub360-studio' ) ), $this->prepare_job_response( $job ) ) );
         }
@@ -1180,6 +1184,10 @@ class VH360_Studio_REST_Controller {
         if ( is_wp_error( $uploading ) ) { return $uploading; }
         $this->update_live_replay_lifecycle( $uploading, 'uploading', 'yes', 'no', 'no' );
         $expected_chunks = $request->get_param( 'expected_chunks' );
+        if ( null === $expected_chunks || '' === $expected_chunks ) {
+            $summary_for_retry = $this->chunks->received_summary( $job['id'], $job['browser_session_id'] );
+            $expected_chunks = ! empty( $summary_for_retry['chunk_count'] ) ? absint( $summary_for_retry['chunk_count'] ) : 0;
+        }
         $assembled = $this->chunks->assemble_chunks( $uploading, $job['browser_session_id'], $expected_chunks, $job['mime_type'] );
         if ( is_wp_error( $assembled ) ) {
             if ( $this->should_mark_finalize_failed( $assembled ) ) {
@@ -1187,6 +1195,8 @@ class VH360_Studio_REST_Controller {
                 $this->update_live_replay_lifecycle( is_wp_error( $failed_job ) ? $job : $failed_job, 'failed', 'no', 'no', 'yes' );
             } else {
                 $this->jobs->mark_finalize_retryable( $job['id'], get_current_user_id(), $assembled->get_error_message() );
+                $this->update_live_replay_lifecycle( $job, 'finalization_failed', 'yes', 'no', 'no' );
+                $assembled->add_data( array( 'status' => 409, 'retryable' => true, 'failure_stage' => 'finalization_failed', 'job_status' => 'stopping' ) );
             }
             return $assembled;
         }
@@ -1198,6 +1208,8 @@ class VH360_Studio_REST_Controller {
                 $this->update_live_replay_lifecycle( is_wp_error( $failed_job ) ? $job : $failed_job, 'failed', 'no', 'no', 'yes' );
             } else {
                 $this->jobs->mark_finalize_retryable( $job['id'], get_current_user_id(), $recording->get_error_message() );
+                $this->update_live_replay_lifecycle( $job, 'finalization_failed', 'yes', 'no', 'no' );
+                $recording->add_data( array( 'status' => 409, 'retryable' => true, 'failure_stage' => 'finalization_failed', 'job_status' => 'stopping' ) );
             }
             return $recording;
         }
@@ -1221,14 +1233,23 @@ class VH360_Studio_REST_Controller {
     public function prepare_publishing( WP_REST_Request $request ) {
         $job = $this->chunks->validate_job_ownership( absint( $request['id'] ), get_current_user_id() );
         if ( is_wp_error( $job ) ) { return $job; }
+        $private_route_check = $this->reject_private_appointment_job_route( $job );
+        if ( is_wp_error( $private_route_check ) ) { return $private_route_check; }
         $prepared = $this->publisher->prepare( $job );
-        if ( is_wp_error( $prepared ) ) { return $prepared; }
+        if ( is_wp_error( $prepared ) ) {
+            $retryable = $this->jobs->mark_processing( $job['id'], get_current_user_id(), array( 'error_message' => $prepared->get_error_message() ) );
+            $this->update_live_replay_lifecycle( is_wp_error( $retryable ) ? $job : $retryable, 'publishing_prepare_failed', 'yes', 'no', 'no' );
+            $prepared->add_data( array( 'status' => 500, 'retryable' => true, 'failure_stage' => 'publishing_prepare_failed', 'job_status' => 'processing' ) );
+            return $prepared;
+        }
         return rest_ensure_response( $prepared );
     }
 
     public function publish_recording( WP_REST_Request $request ) {
         $job = $this->chunks->validate_job_ownership( absint( $request['id'] ), get_current_user_id() );
         if ( is_wp_error( $job ) ) { return $job; }
+        $private_route_check = $this->reject_private_appointment_job_route( $job );
+        if ( is_wp_error( $private_route_check ) ) { return $private_route_check; }
         if ( VH360_Studio_Recording_Jobs::STATUS_READY === $job['status'] ) {
             $status = $this->publisher->status( $job );
             if ( is_wp_error( $status ) ) { return $status; }
@@ -1261,7 +1282,9 @@ class VH360_Studio_REST_Controller {
             delete_transient( $lock_key );
         }
         if ( is_wp_error( $published ) ) {
-            $this->update_live_replay_lifecycle( $job, 'failed', 'no', 'no', 'yes' );
+            $retryable = $this->jobs->mark_processing( $job['id'], get_current_user_id(), array( 'error_message' => $published->get_error_message() ) );
+            $this->update_live_replay_lifecycle( is_wp_error( $retryable ) ? $job : $retryable, 'publishing_start_failed', 'yes', 'no', 'no' );
+            $published->add_data( array( 'status' => 500, 'retryable' => true, 'failure_stage' => 'publishing_start_failed', 'job_status' => 'processing' ) );
             return $published;
         }
         if ( is_array( $published ) ) {
@@ -1273,6 +1296,8 @@ class VH360_Studio_REST_Controller {
     public function publishing_status( WP_REST_Request $request ) {
         $job = $this->chunks->validate_job_ownership( absint( $request['id'] ), get_current_user_id() );
         if ( is_wp_error( $job ) ) { return $job; }
+        $private_route_check = $this->reject_private_appointment_job_route( $job );
+        if ( is_wp_error( $private_route_check ) ) { return $private_route_check; }
         if ( ! in_array( $job['status'], array( VH360_Studio_Recording_Jobs::STATUS_PROCESSING, VH360_Studio_Recording_Jobs::STATUS_READY ), true ) ) {
             return new WP_Error( 'vh360_studio_invalid_publish_status', __( 'Publishing status is available for processing or ready jobs.', 'videohub360-studio' ), array( 'status' => 409 ) );
         }
@@ -1287,6 +1312,8 @@ class VH360_Studio_REST_Controller {
     public function authorize_publitio_direct_upload( WP_REST_Request $request ) {
         $job = $this->chunks->validate_job_ownership( absint( $request['id'] ), get_current_user_id() );
         if ( is_wp_error( $job ) ) { return $job; }
+        $private_route_check = $this->reject_private_appointment_job_route( $job );
+        if ( is_wp_error( $private_route_check ) ) { return $private_route_check; }
         if ( ! in_array( $job['status'], array( VH360_Studio_Recording_Jobs::STATUS_STOPPING, VH360_Studio_Recording_Jobs::STATUS_PROCESSING ), true ) ) {
             return new WP_Error( 'vh360_studio_invalid_direct_upload_status', __( 'Fast cloud upload requires a stopped recording job.', 'videohub360-studio' ), array( 'status' => 409 ) );
         }
@@ -1379,6 +1406,8 @@ class VH360_Studio_REST_Controller {
     public function complete_publitio_direct_upload( WP_REST_Request $request ) {
         $job = $this->chunks->validate_job_ownership( absint( $request['id'] ), get_current_user_id() );
         if ( is_wp_error( $job ) ) { return $job; }
+        $private_route_check = $this->reject_private_appointment_job_route( $job );
+        if ( is_wp_error( $private_route_check ) ) { return $private_route_check; }
         $token = sanitize_text_field( $request->get_param( 'direct_upload_token' ) );
         $key   = $this->publitio_direct_upload_transient_key( $job['id'], $token );
         $meta  = get_transient( $key );
@@ -1435,15 +1464,31 @@ class VH360_Studio_REST_Controller {
     public function cancel_job( WP_REST_Request $request ) {
         $job_id       = absint( $request['id'] );
         $existing_job = $this->jobs->get( $job_id, get_current_user_id() );
+        if ( is_array( $existing_job ) && ( 'appointment_session' === sanitize_key( $existing_job['source_type'] ) || 'local_private' === sanitize_key( $existing_job['recording_mode'] ) ) ) {
+            return new WP_Error( 'vh360_studio_private_appointment_job_locked', __( 'Private appointment recordings cannot be cancelled through generic Studio job routes.', 'videohub360-studio' ), array( 'status' => 403 ) );
+        }
+
+        // Cancellation is used as an idempotent browser cleanup operation. A
+        // terminal upload error may already have moved the job to failed before
+        // the browser asks to close it, so return that closed job instead of
+        // rejecting an impossible failed -> cancelled transition.
+        if ( is_array( $existing_job ) && in_array( sanitize_key( $existing_job['status'] ), array( 'failed', 'cancelled' ), true ) ) {
+            delete_option( 'vh360_recording_heartbeat_' . $job_id );
+            $status = sanitize_key( $existing_job['status'] );
+            $this->update_live_replay_lifecycle(
+                $existing_job,
+                $status,
+                'no',
+                'no',
+                'failed' === $status ? 'yes' : 'no'
+            );
+            return rest_ensure_response( $this->prepare_job_response( $existing_job ) );
+        }
+
         $job          = $this->jobs->cancel( $job_id, get_current_user_id() );
 
         if ( ! is_wp_error( $job ) ) {
-            $recording_started = is_array( $existing_job ) && ! in_array(
-                ! empty( $existing_job['status'] ) ? $existing_job['status'] : '',
-                array( VH360_Studio_Recording_Jobs::STATUS_CREATED, VH360_Studio_Recording_Jobs::STATUS_CANCELLED ),
-                true
-            );
-            $this->update_live_replay_lifecycle( $job, 'cancelled', 'no', 'no', $recording_started ? 'yes' : 'no' );
+            $this->update_live_replay_lifecycle( $job, 'cancelled', 'no', 'no', 'no' );
         }
 
         return rest_ensure_response( $this->prepare_job_response( $job ) );

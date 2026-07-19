@@ -1,0 +1,48 @@
+.vh360-studio-record-btn {
+    background: var(--vh360-danger-color, #b91c1c);
+    color: var(--vh360-danger-contrast, #fff);
+}
+
+.vh360-studio-recording-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-left: 0.5rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 999px;
+    background: var(--vh360-danger-color, #991b1b);
+    color: var(--vh360-danger-contrast, #fff);
+    font-weight: 700;
+}
+
+.vh360-live-room-recording-notice {
+    position: absolute;
+    z-index: 5;
+    top: 1rem;
+    right: 1rem;
+    margin-left: 0;
+}
+
+.vh360-studio-recording-indicator.vh360-hidden,
+.vh360-studio-record-btn.vh360-hidden {
+    display: none;
+}
+
+.vh360-studio-private-download-panel,
+.vh360-studio-publishing-recovery-panel {
+    margin: 1rem 0;
+    padding: 1rem;
+    border: 1px solid var(--vh360-border-color, currentColor);
+    border-radius: 0.5rem;
+    background: var(--vh360-surface-color, transparent);
+}
+
+.vh360-studio-private-download-panel .vh360-studio-private-download-btn,
+.vh360-studio-publishing-recovery-panel button {
+    margin-left: 0.75rem;
+}
+
+.vh360-studio-recorder-status {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+}

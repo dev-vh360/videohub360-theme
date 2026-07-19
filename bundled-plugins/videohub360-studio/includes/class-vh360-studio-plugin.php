@@ -56,6 +56,7 @@ class VH360_Studio_Plugin {
 
     public function register_rest_routes() {
         ( new VH360_Studio_REST_Controller( $this->jobs ) )->register_routes();
+        ( new VH360_Studio_Live_Room_REST_Controller( $this->jobs ) )->register_routes();
         ( new VH360_Studio_Overlays_REST_Controller( new VH360_Studio_Overlay_Repository() ) )->register_routes();
         ( new VH360_Studio_Bible_REST_Controller() )->register_routes();
     }

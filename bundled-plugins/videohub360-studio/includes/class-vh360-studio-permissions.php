@@ -81,6 +81,69 @@ class VH360_Studio_Permissions {
         return self::license_is_valid() ? true : self::license_required_error();
     }
 
+
+    /**
+     * Determine whether the current user may record an interactive Agora Live Room.
+     *
+     * @param int $post_id Live Room post ID.
+     * @return bool
+     */
+    public static function current_user_can_record_live_room( $post_id ) {
+        $post_id = absint( $post_id );
+        $user_id = get_current_user_id();
+
+        if ( ! $user_id || ! self::license_is_valid() || ! $post_id ) {
+            return false;
+        }
+
+        $post = get_post( $post_id );
+        if ( ! $post || 'videohub360' !== $post->post_type ) {
+            return false;
+        }
+
+        if ( 'live_room' !== get_post_meta( $post_id, '_vh360_context', true ) ) {
+            return false;
+        }
+
+        if ( 'agora' !== get_post_meta( $post_id, '_vh360_type', true ) ) {
+            return false;
+        }
+
+        if ( 'interactive' !== get_post_meta( $post_id, '_vh360_agora_mode', true ) ) {
+            return false;
+        }
+
+        if ( absint( $post->post_author ) === $user_id || current_user_can( 'edit_post', $post_id ) || current_user_can( 'manage_options' ) ) {
+            return self::current_user_can_record_appointment_room( $post_id, $user_id );
+        }
+
+        return false;
+    }
+
+    /**
+     * Confirm appointment-backed rooms are managed by the professional/manager, not a client joiner.
+     *
+     * @param int $post_id Post ID.
+     * @param int $user_id User ID.
+     * @return bool
+     */
+    private static function current_user_can_record_appointment_room( $post_id, $user_id ) {
+        $appointment_event_id = get_post_meta( $post_id, '_vh360_appointment_event_id', true );
+        if ( '' === (string) $appointment_event_id ) {
+            return true;
+        }
+
+        $professional_keys = array( '_vh360_appointment_professional_id', '_vh360_appointment_professional_user_id', '_vh360_professional_user_id', '_vh360_provider_user_id' );
+        foreach ( $professional_keys as $key ) {
+            $professional_id = absint( get_post_meta( $post_id, $key, true ) );
+            if ( $professional_id && $professional_id === absint( $user_id ) ) {
+                return true;
+            }
+        }
+
+        return current_user_can( 'edit_post', $post_id ) || current_user_can( 'manage_options' );
+    }
+
     /**
      * Determine whether current user may manage all Studio jobs.
      *

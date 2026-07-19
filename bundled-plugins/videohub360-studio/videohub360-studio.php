@@ -128,6 +128,7 @@ function vh360_studio_load_files() {
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-database.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-permissions.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-quality-presets.php';
+    require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-replay-storage-settings.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-recording-jobs.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-recording-chunks.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-recording-validator.php';
@@ -149,6 +150,7 @@ function vh360_studio_load_files() {
     require_once VH360_STUDIO_INCLUDES_DIR . 'providers/class-vh360-studio-local-media-provider.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-provider-registry.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-rest-controller.php';
+    require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-live-room-rest-controller.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-bible-books.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-bible-reference-parser.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-bible-repository.php';
