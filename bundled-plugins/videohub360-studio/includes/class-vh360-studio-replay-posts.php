@@ -158,7 +158,10 @@ class VH360_Studio_Replay_Posts {
         }
 
         if ( $custom_html ) {
-            if ( 'bunny_stream' === $provider || ! $is_live_conversion ) {
+            // A same-post livestream conversion must retain its live engine type
+            // while the room is active. Replay playback is selected from the
+            // standardized Studio replay metadata after the room ends.
+            if ( ! $is_live_conversion ) {
                 update_post_meta( $post_id, '_vh360_type', 'embed' );
             }
             update_post_meta( $post_id, 'videohub360_custom_html', $custom_html );

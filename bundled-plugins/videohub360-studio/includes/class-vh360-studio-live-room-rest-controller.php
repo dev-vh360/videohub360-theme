@@ -54,6 +54,15 @@ class VH360_Studio_Live_Room_REST_Controller {
                 'permission_callback' => array( $this, 'can_record' ),
             )
         );
+        register_rest_route(
+            $this->namespace,
+            '/live-rooms/(?P<post_id>\d+)/recordings/(?P<id>\d+)/recover',
+            array(
+                'methods'             => 'POST',
+                'callback'            => array( $this, 'recover_interrupted_recording' ),
+                'permission_callback' => array( $this, 'can_record' ),
+            )
+        );
     }
 
     public function can_record( WP_REST_Request $request ) {
@@ -88,15 +97,16 @@ class VH360_Studio_Live_Room_REST_Controller {
 
         $state       = $job ? sanitize_key( $job['status'] ) : 'idle';
         $can_manage  = VH360_Studio_Permissions::current_user_can_record_live_room( $post_id ) || current_user_can( 'edit_post', $post_id ) || current_user_can( 'manage_options' );
-        $heartbeat_stale_seconds = absint( apply_filters( 'vh360_live_room_recording_heartbeat_stale_seconds', 120 ) );
-        $heartbeat = $job ? absint( get_option( 'vh360_recording_heartbeat_' . absint( $job['id'] ), 0 ) ) : 0;
-        $heartbeat_fresh = $heartbeat && $heartbeat >= time() - $heartbeat_stale_seconds;
+        $heartbeat_fresh = $job ? $this->heartbeat_is_fresh( absint( $job['id'] ) ) : false;
         $response = array(
             'post_id'             => $post_id,
             'recording_purpose'   => $purpose,
             'active'              => (bool) $job,
             'job_active'          => (bool) $job,
-            'recording_active'    => in_array( $state, array( 'created', 'recording' ), true ),
+            // REC represents active browser capture, not merely a database
+            // status. A stale recorder heartbeat means the browser session is no
+            // longer known to be capturing and must not leave REC visible forever.
+            'recording_active'    => 'recording' === $state && $heartbeat_fresh,
             'replay_processing'   => in_array( $state, array( 'stopping', 'uploading', 'processing' ), true ),
             'state'               => $state,
             'started_at'          => $job && ! empty( $job['started_at'] ) ? $job['started_at'] : get_post_meta( $post_id, 'appointment_session' === $purpose ? '_vh360_appointment_recording_started_at' : '_vh360_live_room_recording_started_at', true ),
@@ -104,7 +114,12 @@ class VH360_Studio_Live_Room_REST_Controller {
 
         if ( $can_manage ) {
             $response['job_id']             = $job ? absint( $job['id'] ) : 0;
-            $response['recovery_available'] = (bool) $job && ! $heartbeat_fresh && absint( $job['user_id'] ) === get_current_user_id();
+            $owns_job = $job && absint( $job['user_id'] ) === get_current_user_id();
+            $response['owned_by_current_user'] = (bool) $owns_job;
+            // Any authorized manager of this specific room may recover a
+            // stale browser-owned session. The recovery endpoint independently
+            // rechecks the heartbeat, room identity, and recoverable job phase.
+            $response['recovery_available'] = (bool) $job && ! $heartbeat_fresh;
             $response['heartbeat_fresh']    = (bool) $heartbeat_fresh;
             $failure_stage = get_post_meta( $post_id, '_vh360_studio_replay_status', true );
             if ( $job && 'stopping' === $state && ! empty( $job['error_message'] ) ) {
@@ -176,6 +191,65 @@ class VH360_Studio_Live_Room_REST_Controller {
         return rest_ensure_response( array( 'job_id' => absint( $job['id'] ), 'updated_at' => $job['updated_at'] ) );
     }
 
+    public function recover_interrupted_recording( WP_REST_Request $request ) {
+        $post_id = absint( $request['post_id'] );
+        $job_id  = absint( $request['id'] );
+        $job     = $this->jobs->get( $job_id, 0 );
+        $purpose = $this->recording_purpose( $post_id );
+
+        if ( ! $job || absint( $job['live_video_id'] ) !== $post_id ) {
+            return new WP_Error( 'vh360_interrupted_recording_not_found', __( 'Interrupted recording session not found.', 'videohub360-studio' ), array( 'status' => 404 ) );
+        }
+
+        $expected_source = 'appointment_session' === $purpose ? 'appointment_session' : 'live_room';
+        if ( $expected_source !== sanitize_key( $job['source_type'] ) ) {
+            return new WP_Error( 'vh360_interrupted_recording_mismatch', __( 'Recording session does not belong to this Live Room.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
+
+        if ( $this->heartbeat_is_fresh( $job_id ) ) {
+            return new WP_Error( 'vh360_recording_still_active', __( 'This recording is still active in another browser tab.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
+
+        $recoverable = 'appointment_session' === $purpose
+            ? array( 'created', 'recording', 'stopping', 'preparing_download' )
+            : array( 'created', 'recording', 'stopping' );
+        if ( ! in_array( sanitize_key( $job['status'] ), $recoverable, true ) ) {
+            return new WP_Error( 'vh360_recording_not_recoverable', __( 'This recording is no longer in a browser-recoverable state.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
+
+        if ( 'appointment_session' === $purpose ) {
+            if ( VH360_Studio_Recording_Jobs::STATUS_CREATED === $job['status'] ) {
+                $closed = $this->jobs->cancel( $job_id, 0 );
+            } else {
+                $closed = $this->jobs->mark_failed( $job_id, 0, __( 'Private appointment recording was interrupted before the local file was saved.', 'videohub360-studio' ) );
+            }
+            if ( is_wp_error( $closed ) ) {
+                return $closed;
+            }
+            $this->clear_appointment_recording_state( $post_id );
+        } else {
+            $closed = $this->jobs->cancel( $job_id, 0 );
+            if ( is_wp_error( $closed ) ) {
+                return $closed;
+            }
+            update_post_meta( $post_id, '_vh360_live_room_recording_state', 'cancelled' );
+            update_post_meta( $post_id, '_vh360_live_room_recording_job_id', $job_id );
+            update_post_meta( $post_id, '_vh360_studio_replay_pending', 'no' );
+            update_post_meta( $post_id, '_vh360_studio_replay_ready', 'no' );
+            update_post_meta( $post_id, '_vh360_studio_replay_failed', 'no' );
+            update_post_meta( $post_id, '_vh360_studio_replay_status', 'cancelled' );
+        }
+
+        delete_option( 'vh360_recording_heartbeat_' . $job_id );
+
+        return rest_ensure_response(
+            array(
+                'job_id' => $job_id,
+                'state'  => sanitize_key( $closed['status'] ),
+            )
+        );
+    }
+
     public function update_local_private_recording( WP_REST_Request $request ) {
         $post_id = absint( $request['post_id'] );
         $job     = $this->jobs->get( absint( $request['id'] ), get_current_user_id() );
@@ -214,6 +288,13 @@ class VH360_Studio_Live_Room_REST_Controller {
         return rest_ensure_response( array( 'job_id' => absint( $job['id'] ), 'state' => sanitize_key( $job['status'] ) ) );
     }
 
+
+    private function heartbeat_is_fresh( $job_id ) {
+        $stale_seconds = max( 30, absint( apply_filters( 'vh360_live_room_recording_heartbeat_stale_seconds', 120 ) ) );
+        $heartbeat     = absint( get_option( 'vh360_recording_heartbeat_' . absint( $job_id ), 0 ) );
+
+        return $heartbeat && $heartbeat >= time() - $stale_seconds;
+    }
 
     private function current_user_can_view_room_state( $post_id ) {
         $user_id = get_current_user_id();

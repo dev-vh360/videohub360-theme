@@ -326,7 +326,13 @@ class VH360_Studio_Recording_Jobs {
 
         $limit = min( 25, max( 1, absint( $limit ) ) );
         $hours = min( 72, max( 1, absint( $hours ) ) );
-        $since = gmdate( 'Y-m-d H:i:s', time() - ( $hours * HOUR_IN_SECONDS ) );
+        // Recording rows are stored with current_time( 'mysql' ), so compare
+        // them against a timestamp formatted in the WordPress site timezone.
+        $since = wp_date(
+            'Y-m-d H:i:s',
+            time() - ( $hours * HOUR_IN_SECONDS ),
+            wp_timezone()
+        );
         $table = VH360_Studio_Database::table_name();
         $postmeta = $wpdb->postmeta;
 

@@ -19,9 +19,20 @@ class VH360_Studio_Recording_Chunks {
     }
 
     public function upload_settings() {
+        $configured_chunk_size = max( 256 * 1024, (int) apply_filters( 'vh360_studio_max_chunk_size', 8 * 1024 * 1024 ) );
+        $wordpress_upload_size = function_exists( 'wp_max_upload_size' ) ? (int) wp_max_upload_size() : 0;
+
+        // Leave room for multipart/form-data overhead so an advertised chunk
+        // never exceeds the effective PHP/WordPress request upload limit.
+        $safe_upload_size = $wordpress_upload_size > 0
+            ? max( 256 * 1024, (int) floor( $wordpress_upload_size * 0.9 ) )
+            : $configured_chunk_size;
+
+        $default_total_size = PHP_INT_SIZE >= 8 ? 4 * 1024 * 1024 * 1024 : PHP_INT_MAX;
+
         return array(
-            'max_chunk_size'           => (int) apply_filters( 'vh360_studio_max_chunk_size', 8 * 1024 * 1024 ),
-            'max_total_recording_size' => (int) apply_filters( 'vh360_studio_max_total_recording_size', 4 * 1024 * 1024 * 1024 ),
+            'max_chunk_size'           => min( $configured_chunk_size, $safe_upload_size ),
+            'max_total_recording_size' => max( 1, (int) apply_filters( 'vh360_studio_max_total_recording_size', $default_total_size ) ),
             'preferred_chunk_duration' => (int) apply_filters( 'vh360_studio_chunk_time_slice', 5000 ),
             'allowed_mime_types'       => (array) apply_filters( 'vh360_studio_allowed_recording_mime_types', array( 'video/mp4', 'video/webm' ) ),
             'allowed_extensions'       => (array) apply_filters( 'vh360_studio_allowed_recording_extensions', array( 'mp4', 'webm' ) ),

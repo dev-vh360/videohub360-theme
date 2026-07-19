@@ -1467,6 +1467,24 @@ class VH360_Studio_REST_Controller {
         if ( is_array( $existing_job ) && ( 'appointment_session' === sanitize_key( $existing_job['source_type'] ) || 'local_private' === sanitize_key( $existing_job['recording_mode'] ) ) ) {
             return new WP_Error( 'vh360_studio_private_appointment_job_locked', __( 'Private appointment recordings cannot be cancelled through generic Studio job routes.', 'videohub360-studio' ), array( 'status' => 403 ) );
         }
+
+        // Cancellation is used as an idempotent browser cleanup operation. A
+        // terminal upload error may already have moved the job to failed before
+        // the browser asks to close it, so return that closed job instead of
+        // rejecting an impossible failed -> cancelled transition.
+        if ( is_array( $existing_job ) && in_array( sanitize_key( $existing_job['status'] ), array( 'failed', 'cancelled' ), true ) ) {
+            delete_option( 'vh360_recording_heartbeat_' . $job_id );
+            $status = sanitize_key( $existing_job['status'] );
+            $this->update_live_replay_lifecycle(
+                $existing_job,
+                $status,
+                'no',
+                'no',
+                'failed' === $status ? 'yes' : 'no'
+            );
+            return rest_ensure_response( $this->prepare_job_response( $existing_job ) );
+        }
+
         $job          = $this->jobs->cancel( $job_id, get_current_user_id() );
 
         if ( ! is_wp_error( $job ) ) {

@@ -36,7 +36,10 @@ class VH360_Studio_Recording_Cleanup {
     public function run() {
         global $wpdb;
 
-        $now  = current_time( 'timestamp' );
+        // Use a real Unix timestamp. The row timestamps are parsed with their
+        // explicit site or UTC timezone below, so an offset-adjusted WordPress
+        // "timestamp" would compare different time bases.
+        $now  = time();
         $rows = $wpdb->get_results( 'SELECT j.* FROM ' . VH360_Studio_Database::table_name() . ' j WHERE j.status IN (\'created\',\'recording\',\'stopping\',\'uploading\',\'preparing_download\',\'processing\') OR (j.status IN (\'cancelled\',\'failed\',\'ready\') AND ((j.local_temp_path IS NOT NULL AND j.local_temp_path != \'\') OR EXISTS (SELECT 1 FROM ' . VH360_Studio_Database::chunks_table_name() . ' c WHERE c.job_id = j.id LIMIT 1))) ORDER BY CASE WHEN j.status IN (\'failed\',\'cancelled\',\'ready\') THEN 1 ELSE 0 END ASC, j.updated_at ASC LIMIT 200', ARRAY_A );
 
         foreach ( $rows as $job ) {
@@ -71,7 +74,7 @@ class VH360_Studio_Recording_Cleanup {
                     continue;
                 }
 
-                if ( 'processing' === $job['status'] && ! empty( $job['temp_expires_at'] ) && $this->mysql_timestamp( $job['temp_expires_at'] ) < $now ) {
+                if ( 'processing' === $job['status'] && ! empty( $job['temp_expires_at'] ) && $this->utc_mysql_timestamp( $job['temp_expires_at'] ) < $now ) {
                     $failed = $this->jobs->update(
                         $job['id'],
                         0,
@@ -119,6 +122,7 @@ class VH360_Studio_Recording_Cleanup {
         $wp_attachment_id = ! empty( $job['wp_attachment_id'] ) ? absint( $job['wp_attachment_id'] ) : 0;
         $videopress_guid  = ! empty( $job['videopress_guid'] ) ? sanitize_text_field( $job['videopress_guid'] ) : '';
         $publitio_file_id = ! empty( $job['publitio_file_id'] ) ? sanitize_text_field( $job['publitio_file_id'] ) : '';
+        $provider_file_id = ! empty( $job['provider_file_id'] ) ? sanitize_text_field( $job['provider_file_id'] ) : '';
         $replay_video_id  = ! empty( $job['replay_video_id'] ) ? absint( $job['replay_video_id'] ) : 0;
 
         if ( 'videopress' === $storage_provider ) {
@@ -133,13 +137,33 @@ class VH360_Studio_Recording_Cleanup {
             return $wp_attachment_id && in_array( $provider_status, array( 'local_media_ready', 'published', 'ready' ), true );
         }
 
+        if ( 'bunny_stream' === $storage_provider ) {
+            return $provider_file_id && in_array( $provider_status, array( 'bunny_stream_processing', 'bunny_stream_ready', 'published', 'ready' ), true );
+        }
+
         return ( $wp_attachment_id && in_array( $provider_status, array( 'media_attached_waiting_videopress', 'local_media_ready', 'published', 'ready' ), true ) )
             || ( $publitio_file_id && in_array( $provider_status, array( 'publitio_processing', 'publitio_ready', 'publitio_direct_processing', 'publitio_direct_ready', 'published', 'ready' ), true ) )
             || ( $replay_video_id && in_array( $provider_status, array( 'published', 'ready' ), true ) );
     }
 
     private function mysql_timestamp( $value ) {
-        $timestamp = strtotime( $value . ' UTC' );
-        return $timestamp ? $timestamp : 0;
+        if ( ! $value ) {
+            return 0;
+        }
+
+        $timezone = wp_timezone();
+        $date     = date_create_immutable_from_format( 'Y-m-d H:i:s', $value, $timezone );
+
+        return $date instanceof DateTimeImmutable ? $date->getTimestamp() : 0;
+    }
+
+    private function utc_mysql_timestamp( $value ) {
+        if ( ! $value ) {
+            return 0;
+        }
+
+        $date = date_create_immutable_from_format( 'Y-m-d H:i:s', $value, new DateTimeZone( 'UTC' ) );
+
+        return $date instanceof DateTimeImmutable ? $date->getTimestamp() : 0;
     }
 }
