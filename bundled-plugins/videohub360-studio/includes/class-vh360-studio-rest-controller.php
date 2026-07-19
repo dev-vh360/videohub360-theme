@@ -1223,7 +1223,11 @@ class VH360_Studio_REST_Controller {
         $private_route_check = $this->reject_private_appointment_job_route( $job );
         if ( is_wp_error( $private_route_check ) ) { return $private_route_check; }
         $prepared = $this->publisher->prepare( $job );
-        if ( is_wp_error( $prepared ) ) { return $prepared; }
+        if ( is_wp_error( $prepared ) ) {
+            $retryable = $this->jobs->mark_finalize_retryable( $job['id'], get_current_user_id(), $prepared->get_error_message() );
+            $this->update_live_replay_lifecycle( is_wp_error( $retryable ) ? $job : $retryable, 'publishing_prepare_failed', 'yes', 'no', 'no' );
+            return $prepared;
+        }
         return rest_ensure_response( $prepared );
     }
 
@@ -1264,7 +1268,8 @@ class VH360_Studio_REST_Controller {
             delete_transient( $lock_key );
         }
         if ( is_wp_error( $published ) ) {
-            $this->update_live_replay_lifecycle( $job, 'failed', 'no', 'no', 'yes' );
+            $failed_job = $this->jobs->mark_failed( $job['id'], get_current_user_id(), $published->get_error_message() );
+            $this->update_live_replay_lifecycle( is_wp_error( $failed_job ) ? $job : $failed_job, 'publishing_start_failed', 'no', 'no', 'yes' );
             return $published;
         }
         if ( is_array( $published ) ) {
@@ -1444,6 +1449,9 @@ class VH360_Studio_REST_Controller {
     public function cancel_job( WP_REST_Request $request ) {
         $job_id       = absint( $request['id'] );
         $existing_job = $this->jobs->get( $job_id, get_current_user_id() );
+        if ( is_array( $existing_job ) && ( 'appointment_session' === sanitize_key( $existing_job['source_type'] ) || 'local_private' === sanitize_key( $existing_job['recording_mode'] ) ) ) {
+            return new WP_Error( 'vh360_studio_private_appointment_job_locked', __( 'Private appointment recordings cannot be cancelled through generic Studio job routes.', 'videohub360-studio' ), array( 'status' => 403 ) );
+        }
         $job          = $this->jobs->cancel( $job_id, get_current_user_id() );
 
         if ( ! is_wp_error( $job ) ) {
@@ -1452,7 +1460,7 @@ class VH360_Studio_REST_Controller {
                 array( VH360_Studio_Recording_Jobs::STATUS_CREATED, VH360_Studio_Recording_Jobs::STATUS_CANCELLED ),
                 true
             );
-            $this->update_live_replay_lifecycle( $job, 'cancelled', 'no', 'no', $recording_started ? 'yes' : 'no' );
+            $this->update_live_replay_lifecycle( $job, 'cancelled', 'no', 'no', 'no' );
         }
 
         return rest_ensure_response( $this->prepare_job_response( $job ) );

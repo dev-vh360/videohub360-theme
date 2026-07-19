@@ -274,8 +274,8 @@
         }).then(function () {
             return api(self.restRoot, self.nonce, '/jobs/' + self.jobId + '/publishing/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' } }).catch(function (error) { self.failureStage = 'publishing_start_failed'; throw error; });
         }).then(function (published) {
+            if (self.publishIsFailed(published)) { self.failureStage = 'provider_failed'; throw published; }
             self.publishStarted = true;
-            if (self.publishIsFailed(published)) { throw published; }
             self.onStatus(self.publishIsReady(published) ? 'ready' : 'processing');
             return published;
         }).finally(function () { self.finalizePromise = null; });

@@ -164,16 +164,18 @@ class VH360_Studio_Live_Room_REST_Controller {
             $job = $this->jobs->mark_preparing_download( $job['id'], get_current_user_id(), $duration, $mime );
         } elseif ( 'download_ready' === $state ) {
             $job = $this->jobs->mark_local_private_ready( $job['id'], get_current_user_id(), $duration, $mime );
-            $this->clear_appointment_recording_state( $post_id );
         } elseif ( 'failed' === $state ) {
             $job = $this->jobs->mark_failed( $job['id'], get_current_user_id(), sanitize_textarea_field( $request->get_param( 'error_message' ) ) );
-            $this->clear_appointment_recording_state( $post_id );
         } else {
             return new WP_Error( 'vh360_private_recording_invalid_state', __( 'Invalid private appointment recording state.', 'videohub360-studio' ), array( 'status' => 400 ) );
         }
 
         if ( is_wp_error( $job ) ) {
             return $job;
+        }
+
+        if ( in_array( $state, array( 'download_ready', 'failed' ), true ) ) {
+            $this->clear_appointment_recording_state( $post_id );
         }
 
         return rest_ensure_response( array( 'job_id' => absint( $job['id'] ), 'state' => sanitize_key( $job['status'] ) ) );
