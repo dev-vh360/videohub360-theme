@@ -37,7 +37,7 @@ class VH360_Studio_Recording_Cleanup {
         global $wpdb;
 
         $now  = current_time( 'timestamp' );
-        $rows = $wpdb->get_results( 'SELECT * FROM ' . VH360_Studio_Database::table_name() . " WHERE status IN ('created','recording','stopping','uploading','preparing_download','processing') OR (status IN ('cancelled','failed','ready') AND local_temp_path IS NOT NULL AND local_temp_path != '') ORDER BY CASE WHEN status IN ('failed','cancelled','ready') THEN 1 ELSE 0 END ASC, updated_at ASC LIMIT 200", ARRAY_A );
+        $rows = $wpdb->get_results( 'SELECT j.* FROM ' . VH360_Studio_Database::table_name() . ' j WHERE j.status IN (\'created\',\'recording\',\'stopping\',\'uploading\',\'preparing_download\',\'processing\') OR (j.status IN (\'cancelled\',\'failed\',\'ready\') AND ((j.local_temp_path IS NOT NULL AND j.local_temp_path != \'\') OR EXISTS (SELECT 1 FROM ' . VH360_Studio_Database::chunks_table_name() . ' c WHERE c.job_id = j.id LIMIT 1))) ORDER BY CASE WHEN j.status IN (\'failed\',\'cancelled\',\'ready\') THEN 1 ELSE 0 END ASC, j.updated_at ASC LIMIT 200', ARRAY_A );
 
         foreach ( $rows as $job ) {
             $created = $this->mysql_timestamp( $job['created_at'] );
@@ -106,6 +106,7 @@ class VH360_Studio_Recording_Cleanup {
     }
 
     public function delete_temp_for_job( array $job ) {
+        delete_option( 'vh360_recording_heartbeat_' . absint( $job['id'] ) );
         $this->chunks->delete_job_chunks( $job['id'] );
         if ( ! empty( $job['local_temp_path'] ) ) {
             $this->jobs->update( $job['id'], 0, array( 'local_temp_path' => '', 'temp_expires_at' => '' ) );

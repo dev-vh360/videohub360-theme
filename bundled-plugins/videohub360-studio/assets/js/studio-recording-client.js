@@ -63,6 +63,9 @@
         this.activeUploads = 0;
         this.maxConcurrency = options.maxConcurrency || 2;
         this.maxChunkSize = options.maxChunkSize || 8 * 1024 * 1024;
+        this.maxTotalRecordingSize = options.maxTotalRecordingSize || 0;
+        this.queuedBytes = 0;
+        this.terminalError = null;
         this.browserSessionId = '';
         this.recorder = null;
         this.startedAt = 0;
@@ -70,6 +73,7 @@
         this.finalChunkCount = 0;
         this.onStatus = options.onStatus || function () {};
         this.onError = options.onError || function () {};
+        this.onServerStoppingConfirmed = options.onServerStoppingConfirmed || function () {};
         this.maxRetries = options.maxRetries || 3;
         this.retryDelayMs = options.retryDelayMs || 750;
         this.stopPromise = null;
@@ -91,8 +95,12 @@
         return api(this.restRoot, this.nonce, '/jobs/' + this.jobId + '/recording/start', {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mime_type: this.mimeType })
         }).then(function (start) {
+            var settings = start.upload_settings || {};
             self.browserSessionId = start.browser_session_id;
             self.mimeType = start.mime_type || self.mimeType;
+            self.maxChunkSize = Number(settings.max_chunk_size || start.max_chunk_size || self.maxChunkSize);
+            self.maxTotalRecordingSize = Number(settings.max_total_recording_size || start.max_total_recording_size || self.maxTotalRecordingSize || 0);
+            self.chunkMs = Number(settings.preferred_chunk_duration || start.preferred_chunk_duration || self.chunkMs);
             self.recorder.addEventListener('dataavailable', function (event) {
                 if (event.data && event.data.size) { self.queueBlob(event.data); }
             });
@@ -104,6 +112,12 @@
     };
 
     RecordingClient.prototype.queueBlob = function (blob) {
+        if (this.terminalError) { return; }
+        this.queuedBytes += blob.size || 0;
+        if (this.maxTotalRecordingSize && this.queuedBytes > this.maxTotalRecordingSize) {
+            this.handleTerminalUploadError({ code: 'vh360_studio_recording_too_large', message: 'Recording exceeds the allowed size.' });
+            return;
+        }
         var offset = 0;
         var type = blob.type || this.mimeType;
         do {
@@ -130,6 +144,21 @@
         }
     };
 
+    RecordingClient.prototype.isTerminalUploadError = function (error) {
+        var code = error && (error.code || error.error || error.error_code);
+        return ['vh360_studio_recording_too_large','vh360_studio_chunk_too_large','vh360_studio_invalid_chunk_type','vh360_studio_chunk_type_mismatch','vh360_studio_missing_chunks','vh360_studio_chunk_unreadable','vh360_studio_invalid_chunk_path','vh360_studio_chunk_integrity_failed','vh360_studio_invalid_recording_path','vh360_studio_recording_summary_mismatch','vh360_studio_invalid_recording_size','vh360_studio_invalid_recording_type','vh360_studio_invalid_recording_file'].indexOf(code) !== -1 || error && (error.retryable === false || error.data && error.data.retryable === false);
+    };
+
+    RecordingClient.prototype.handleTerminalUploadError = function (error) {
+        this.terminalError = error || { code: 'vh360_studio_terminal_upload_failed' };
+        this.failureStage = 'terminal_upload_failed';
+        try { if (this.recorder && this.recorder.state !== 'inactive') { this.recorder.stop(); } } catch (e) {}
+        this.uploadQueue = [];
+        this.pending.clear();
+        this.failed.clear();
+        this.onError(this.terminalError);
+    };
+
     RecordingClient.prototype.uploadChunk = function (blob, index) {
         var self = this;
         return sha256Blob(blob).then(function (checksum) {
@@ -145,6 +174,8 @@
             self.failed.delete(index);
         }).catch(function (error) {
             self.pending.delete(index);
+            if (self.terminalError) { throw self.terminalError; }
+            if (self.isTerminalUploadError(error)) { self.handleTerminalUploadError(error); throw error; }
             self.failed.set(index, blob);
             throw error;
         });
@@ -160,6 +191,7 @@
     RecordingClient.prototype.uploadChunkWithRetry = function (blob, index, attempt) {
         var self = this;
         return this.uploadChunk(blob, index).catch(function (error) {
+            if (self.isTerminalUploadError(error)) { throw error; }
             if (attempt < self.maxRetries) {
                 return self.retryDelay(attempt).then(function () { return self.uploadChunkWithRetry(blob, index, attempt + 1); });
             }
@@ -193,17 +225,18 @@
     };
 
     RecordingClient.prototype.hasUnsavedData = function () {
-        return !!(this.recorder && this.recorder.state === 'recording') || this.pending.size > 0 || this.uploadQueue.length > 0 || this.activeUploads > 0 || this.failed.size > 0 || !!this.stopPromise || !!this.finalizePromise && !this.publishStarted;
+        return !this.terminalError && (!!(this.recorder && this.recorder.state === 'recording') || this.pending.size > 0 || this.uploadQueue.length > 0 || this.activeUploads > 0 || this.failed.size > 0 || !!this.stopPromise || !!this.finalizePromise && !this.publishStarted);
     };
 
     RecordingClient.prototype.markServerStopping = function () {
         var self = this;
+        if (this.terminalError) { return Promise.reject(this.terminalError); }
         if (this.stopConfirmed) { return Promise.resolve({ status: 'stopping' }); }
         if (this.serverStopPromise) { return this.serverStopPromise; }
         var duration = Math.max(0, Math.round((this.stoppedAt - this.startedAt) / 1000));
         this.serverStopPromise = api(this.restRoot, this.nonce, '/jobs/' + this.jobId + '/recording/stop', {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ duration_seconds: duration })
-        }).then(function (stopped) { self.stopConfirmed = true; return stopped; }).catch(function (error) { self.failureStage = 'stop_failed'; throw error; }).finally(function () { self.serverStopPromise = null; });
+        }).then(function (stopped) { self.stopConfirmed = true; self.onServerStoppingConfirmed(stopped); return stopped; }).catch(function (error) { self.failureStage = 'stop_failed'; throw error; }).finally(function () { self.serverStopPromise = null; });
         return this.serverStopPromise;
     };
 
@@ -216,6 +249,7 @@
 
     RecordingClient.prototype.stop = function () {
         var self = this;
+        if (this.terminalError) { return Promise.reject(this.terminalError); }
         if (this.stopPromise) { return this.stopPromise; }
         if (!this.recorder || this.recorder.state === 'inactive') {
             this.stopPromise = this.stoppedAt ? this.finishStoppedRecording() : Promise.resolve();
@@ -292,6 +326,7 @@
 
     RecordingClient.prototype.retryPublishing = function () {
         var self = this;
+        if (this.terminalError) { return Promise.reject(this.terminalError); }
         if (!this.finalized) { return this.secureLocalRecordingData(); }
         this.failureStage = '';
         this.onStatus('processing');

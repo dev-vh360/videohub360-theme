@@ -97,7 +97,7 @@ class VH360_Studio_Live_Room_REST_Controller {
             'active'              => (bool) $job,
             'job_active'          => (bool) $job,
             'recording_active'    => in_array( $state, array( 'created', 'recording' ), true ),
-            'replay_processing'   => in_array( $state, array( 'uploading', 'processing' ), true ),
+            'replay_processing'   => in_array( $state, array( 'stopping', 'uploading', 'processing' ), true ),
             'state'               => $state,
             'started_at'          => $job && ! empty( $job['started_at'] ) ? $job['started_at'] : get_post_meta( $post_id, 'appointment_session' === $purpose ? '_vh360_appointment_recording_started_at' : '_vh360_live_room_recording_started_at', true ),
         );
@@ -106,7 +106,12 @@ class VH360_Studio_Live_Room_REST_Controller {
             $response['job_id']             = $job ? absint( $job['id'] ) : 0;
             $response['recovery_available'] = (bool) $job && ! $heartbeat_fresh && absint( $job['user_id'] ) === get_current_user_id();
             $response['heartbeat_fresh']    = (bool) $heartbeat_fresh;
-            $response['failure_stage']      = get_post_meta( $post_id, '_vh360_studio_replay_status', true );
+            $failure_stage = get_post_meta( $post_id, '_vh360_studio_replay_status', true );
+            if ( $job && 'stopping' === $state && ! empty( $job['error_message'] ) ) {
+                $failure_stage = 'finalization_failed';
+            }
+            $response['failure_stage']      = $failure_stage;
+            $response['retryable']          = in_array( $failure_stage, array( 'finalization_failed', 'publishing_prepare_failed', 'publishing_start_failed' ), true );
             $response['error_message']      = $job && ! empty( $job['error_message'] ) ? $job['error_message'] : '';
         }
 
@@ -202,6 +207,7 @@ class VH360_Studio_Live_Room_REST_Controller {
         }
 
         if ( in_array( $state, array( 'download_ready', 'failed' ), true ) ) {
+            delete_option( 'vh360_recording_heartbeat_' . absint( $job['id'] ) );
             $this->clear_appointment_recording_state( $post_id );
         }
 

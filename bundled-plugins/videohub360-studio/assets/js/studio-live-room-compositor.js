@@ -21,15 +21,22 @@
         if (video) { return video; }
         if (p.videoTrack && p.videoTrack.getMediaStreamTrack) {
             var id = p.uid || p.agoraUid;
-            if (!this.trackVideos.has(id)) {
-                var hidden = document.createElement('video'); hidden.muted = true; hidden.playsInline = true; hidden.autoplay = true; hidden.srcObject = new MediaStream([p.videoTrack.getMediaStreamTrack()]); hidden.play().catch(function (error) { window.console && console.warn('Unable to play recording fallback video.', error); }); this.trackVideos.set(id, hidden);
+            var track = p.videoTrack.getMediaStreamTrack();
+            var cached = this.trackVideos.get(id);
+            if (!cached || cached.track !== track) {
+                if (cached && cached.video) { try { cached.video.pause(); } catch (e) {} cached.video.srcObject = null; cached.video.remove && cached.video.remove(); }
+                var hidden = document.createElement('video'); hidden.muted = true; hidden.playsInline = true; hidden.autoplay = true; hidden.srcObject = new MediaStream([track]); hidden.play().catch(function (error) { window.console && console.warn('Unable to play recording fallback video.', error); }); this.trackVideos.set(id, { video: hidden, track: track });
             }
-            return this.trackVideos.get(id);
+            return this.trackVideos.get(id).video;
         }
         return null;
     };
     Compositor.prototype.drawParticipant = function (p, x, y, w, h, featured) {
         var ctx = this.ctx, pad = featured ? 0 : 8, video = this.videoFor(p), hasCamera = p.cameraOn !== false && p.videoTrack !== null;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x + pad, y + pad, w - pad * 2, h - pad * 2);
+        ctx.clip();
         ctx.fillStyle = '#101827'; ctx.fillRect(x + pad, y + pad, w - pad * 2, h - pad * 2);
         if (hasCamera && video && video.readyState >= 2) {
             var scale = Math.max((w - pad * 2) / video.videoWidth, (h - pad * 2) / video.videoHeight), dw = video.videoWidth * scale, dh = video.videoHeight * scale;
@@ -41,6 +48,7 @@
         ctx.fillStyle = '#fff'; ctx.font = featured ? '30px sans-serif' : '24px sans-serif';
         var name = (p.displayName || p.name || p.uid || 'Participant') + (p.isOriginalHost ? ' · Host' : '') + ((!p.audioTrack || p.audioOn === false) ? ' · Mic off' : '');
         ctx.fillText(name.slice(0, 60), x + 40, y + h - 40);
+        ctx.restore();
     };
     Compositor.prototype.drawGrid = function (parts, x, y, width, height) { var self = this, count = Math.max(parts.length, 1), cols = Math.ceil(Math.sqrt(count)), rows = Math.ceil(count / cols), w = width / cols, h = height / rows; parts.forEach(function (p, i) { self.drawParticipant(p, x + (i % cols) * w, y + Math.floor(i / cols) * h, w, h, false); }); };
     Compositor.prototype.featuredParticipant = function (parts, layout) {
@@ -50,7 +58,7 @@
         if (featured) { this.previousFeaturedUid = String(featured.uid || featured.agoraUid); }
         return featured;
     };
-    Compositor.prototype.pruneTrackVideos = function (parts) { var active = new Set(parts.map(function (p) { return String(p.uid || p.agoraUid || ''); })); this.trackVideos.forEach(function (video, id) { if (!active.has(String(id))) { try { video.pause(); } catch (e) {} video.srcObject = null; video.remove && video.remove(); this.trackVideos.delete(id); } }, this); };
+    Compositor.prototype.pruneTrackVideos = function (parts) { var active = new Set(parts.map(function (p) { return String(p.uid || p.agoraUid || ''); })); this.trackVideos.forEach(function (video, id) { if (!active.has(String(id))) { var entry = video.video ? video : { video: video }; try { entry.video.pause(); } catch (e) {} entry.video.srcObject = null; entry.video.remove && entry.video.remove(); this.trackVideos.delete(id); } }, this); };
     Compositor.prototype.draw = function () {
         var ctx = this.ctx, parts = this.participants(), layout = this.layout();
         this.pruneTrackVideos(parts);
@@ -63,6 +71,6 @@
         } else { this.drawGrid(parts, 0, 0, this.width, this.height); }
     };
     Compositor.prototype.start = function () { var self = this; this.draw(); this.timer = setInterval(function () { self.draw(); }, 1000 / this.fps); this.captureStream = this.canvas.captureStream(this.fps); return this.captureStream; };
-    Compositor.prototype.stop = function () { if (this.timer) { clearInterval(this.timer); } if (this.captureStream) { this.captureStream.getTracks().forEach(function (track) { track.stop(); }); } this.trackVideos.forEach(function (video) { try { video.pause(); } catch (e) {} video.srcObject = null; video.remove && video.remove(); }); this.trackVideos.clear(); this.captureStream = null; };
+    Compositor.prototype.stop = function () { if (this.timer) { clearInterval(this.timer); } if (this.captureStream) { this.captureStream.getTracks().forEach(function (track) { track.stop(); }); } this.trackVideos.forEach(function (entry) { var video = entry.video ? entry.video : entry; try { video.pause(); } catch (e) {} video.srcObject = null; video.remove && video.remove(); }); this.trackVideos.clear(); this.captureStream = null; };
     window.VH360LiveRoomCompositor = Compositor;
 })(window);

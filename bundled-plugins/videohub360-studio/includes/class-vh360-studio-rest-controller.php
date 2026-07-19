@@ -1048,6 +1048,9 @@ class VH360_Studio_REST_Controller {
     }
 
     private function update_live_replay_lifecycle( array $job, $status, $pending = 'yes', $ready = 'no', $failed = 'no' ) {
+        if ( in_array( sanitize_key( $status ), array( 'ready', 'failed', 'cancelled' ), true ) ) {
+            delete_option( 'vh360_recording_heartbeat_' . absint( $job['id'] ) );
+        }
         $live_video_id = ! empty( $job['live_video_id'] ) ? absint( $job['live_video_id'] ) : 0;
         if ( ! $live_video_id || 'videohub360' !== get_post_type( $live_video_id ) ) {
             return;
@@ -1114,6 +1117,9 @@ class VH360_Studio_REST_Controller {
             if ( ! $this->is_retryable_chunk_error( $summary ) ) {
                 $failed_job = $this->jobs->mark_failed( $job['id'], get_current_user_id(), $summary->get_error_message() );
                 $this->update_live_replay_lifecycle( is_wp_error( $failed_job ) ? $job : $failed_job, 'failed', 'no', 'no', 'yes' );
+                $summary->add_data( array( 'status' => 409, 'retryable' => false, 'failure_stage' => 'terminal_upload_failed', 'job_status' => 'failed' ) );
+            } else {
+                $summary->add_data( array( 'status' => 409, 'retryable' => true, 'failure_stage' => 'upload_failed', 'job_status' => $job['status'] ) );
             }
             return $summary;
         }
@@ -1129,8 +1135,7 @@ class VH360_Studio_REST_Controller {
                 'vh360_studio_chunk_store_failed',
                 'vh360_studio_chunk_checksum_failed',
                 'vh360_studio_chunk_checksum_mismatch',
-                'vh360_studio_chunk_integrity_failed',
-            ),
+                ),
             true
         );
     }
@@ -1179,6 +1184,10 @@ class VH360_Studio_REST_Controller {
         if ( is_wp_error( $uploading ) ) { return $uploading; }
         $this->update_live_replay_lifecycle( $uploading, 'uploading', 'yes', 'no', 'no' );
         $expected_chunks = $request->get_param( 'expected_chunks' );
+        if ( null === $expected_chunks || '' === $expected_chunks ) {
+            $summary_for_retry = $this->chunks->received_summary( $job['id'], $job['browser_session_id'] );
+            $expected_chunks = ! empty( $summary_for_retry['chunk_count'] ) ? absint( $summary_for_retry['chunk_count'] ) : 0;
+        }
         $assembled = $this->chunks->assemble_chunks( $uploading, $job['browser_session_id'], $expected_chunks, $job['mime_type'] );
         if ( is_wp_error( $assembled ) ) {
             if ( $this->should_mark_finalize_failed( $assembled ) ) {
@@ -1186,6 +1195,8 @@ class VH360_Studio_REST_Controller {
                 $this->update_live_replay_lifecycle( is_wp_error( $failed_job ) ? $job : $failed_job, 'failed', 'no', 'no', 'yes' );
             } else {
                 $this->jobs->mark_finalize_retryable( $job['id'], get_current_user_id(), $assembled->get_error_message() );
+                $this->update_live_replay_lifecycle( $job, 'finalization_failed', 'yes', 'no', 'no' );
+                $assembled->add_data( array( 'status' => 409, 'retryable' => true, 'failure_stage' => 'finalization_failed', 'job_status' => 'stopping' ) );
             }
             return $assembled;
         }
@@ -1197,6 +1208,8 @@ class VH360_Studio_REST_Controller {
                 $this->update_live_replay_lifecycle( is_wp_error( $failed_job ) ? $job : $failed_job, 'failed', 'no', 'no', 'yes' );
             } else {
                 $this->jobs->mark_finalize_retryable( $job['id'], get_current_user_id(), $recording->get_error_message() );
+                $this->update_live_replay_lifecycle( $job, 'finalization_failed', 'yes', 'no', 'no' );
+                $recording->add_data( array( 'status' => 409, 'retryable' => true, 'failure_stage' => 'finalization_failed', 'job_status' => 'stopping' ) );
             }
             return $recording;
         }
@@ -1226,6 +1239,7 @@ class VH360_Studio_REST_Controller {
         if ( is_wp_error( $prepared ) ) {
             $retryable = $this->jobs->mark_processing( $job['id'], get_current_user_id(), array( 'error_message' => $prepared->get_error_message() ) );
             $this->update_live_replay_lifecycle( is_wp_error( $retryable ) ? $job : $retryable, 'publishing_prepare_failed', 'yes', 'no', 'no' );
+            $prepared->add_data( array( 'status' => 500, 'retryable' => true, 'failure_stage' => 'publishing_prepare_failed', 'job_status' => 'processing' ) );
             return $prepared;
         }
         return rest_ensure_response( $prepared );
@@ -1268,8 +1282,9 @@ class VH360_Studio_REST_Controller {
             delete_transient( $lock_key );
         }
         if ( is_wp_error( $published ) ) {
-            $failed_job = $this->jobs->mark_failed( $job['id'], get_current_user_id(), $published->get_error_message() );
-            $this->update_live_replay_lifecycle( is_wp_error( $failed_job ) ? $job : $failed_job, 'publishing_start_failed', 'no', 'no', 'yes' );
+            $retryable = $this->jobs->mark_processing( $job['id'], get_current_user_id(), array( 'error_message' => $published->get_error_message() ) );
+            $this->update_live_replay_lifecycle( is_wp_error( $retryable ) ? $job : $retryable, 'publishing_start_failed', 'yes', 'no', 'no' );
+            $published->add_data( array( 'status' => 500, 'retryable' => true, 'failure_stage' => 'publishing_start_failed', 'job_status' => 'processing' ) );
             return $published;
         }
         if ( is_array( $published ) ) {
