@@ -48,6 +48,10 @@ class VH360_Studio_Recording_Jobs {
         return array( 'browser', 'local_private' );
     }
 
+    public function allowed_capture_scopes() {
+        return array( 'program', 'interactive_composite' );
+    }
+
     public function transition_map() {
         return array(
             self::STATUS_CREATED    => array( self::STATUS_RECORDING, self::STATUS_CANCELLED ),
@@ -74,7 +78,7 @@ class VH360_Studio_Recording_Jobs {
     public function validate_payload( $data, $partial = false, $existing = null, $allow_invalid_transition = false ) {
         $out = array();
 
-        foreach ( array( 'source_type', 'recording_mode', 'quality_preset', 'storage_provider', 'status', 'publish_provider_status' ) as $key ) {
+        foreach ( array( 'source_type', 'recording_mode', 'capture_scope', 'quality_preset', 'storage_provider', 'status', 'publish_provider_status' ) as $key ) {
             if ( isset( $data[ $key ] ) ) {
                 $out[ $key ] = sanitize_key( wp_unslash( $data[ $key ] ) );
             }
@@ -144,6 +148,10 @@ class VH360_Studio_Recording_Jobs {
             return new WP_Error( 'vh360_studio_invalid_recording_mode', __( 'Invalid Studio recording mode.', 'videohub360-studio' ), array( 'status' => 400 ) );
         }
 
+        if ( isset( $out['capture_scope'] ) && ! in_array( $out['capture_scope'], $this->allowed_capture_scopes(), true ) ) {
+            return new WP_Error( 'vh360_studio_invalid_capture_scope', __( 'Invalid Studio recording capture scope.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        }
+
         if ( ! $partial && isset( $out['status'] ) && self::STATUS_CREATED !== $out['status'] ) {
             return new WP_Error( 'vh360_studio_invalid_initial_status', __( 'New recording jobs must start in the created status.', 'videohub360-studio' ), array( 'status' => 400 ) );
         }
@@ -153,7 +161,7 @@ class VH360_Studio_Recording_Jobs {
         }
 
         if ( $existing ) {
-            foreach ( array( 'source_type', 'source_id', 'live_video_id', 'room_id', 'recording_mode', 'quality_preset', 'storage_provider', 'user_id' ) as $immutable_key ) {
+            foreach ( array( 'source_type', 'source_id', 'live_video_id', 'room_id', 'recording_mode', 'capture_scope', 'quality_preset', 'storage_provider', 'user_id' ) as $immutable_key ) {
                 if ( array_key_exists( $immutable_key, $out ) && array_key_exists( $immutable_key, $existing ) && (string) $out[ $immutable_key ] !== (string) $existing[ $immutable_key ] ) {
                     return new WP_Error( 'vh360_studio_immutable_recording_identity', __( 'Recording identity fields cannot be changed after creation.', 'videohub360-studio' ), array( 'status' => 400 ) );
                 }
@@ -176,6 +184,7 @@ class VH360_Studio_Recording_Jobs {
                     'source_id'       => '',
                     'room_id'         => '',
                     'recording_mode'  => 'browser',
+                    'capture_scope'   => 'interactive_composite',
                     'quality_preset'  => VH360_Studio_Quality_Presets::DEFAULT_PRESET,
                     'storage_provider' => 'videopress',
                     'status'          => self::STATUS_CREATED,
@@ -190,6 +199,14 @@ class VH360_Studio_Recording_Jobs {
 
     public function active_statuses() {
         return array( self::STATUS_CREATED, self::STATUS_RECORDING, self::STATUS_STOPPING, self::STATUS_UPLOADING, self::STATUS_PROCESSING );
+    }
+
+    public function find_active_livestream_job( $post_id ) {
+        global $wpdb;
+        $statuses = $this->active_statuses();
+        $placeholders = implode( ',', array_fill( 0, count( $statuses ), '%s' ) );
+        $args = array_merge( array( absint( $post_id ) ), array_map( 'sanitize_key', $statuses ) );
+        return $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . VH360_Studio_Database::table_name() . " WHERE source_type = 'livestream_video' AND live_video_id = %d AND status IN ($placeholders) ORDER BY created_at DESC LIMIT 1", $args ), ARRAY_A );
     }
 
     public function find_active_live_room_job( $post_id ) {

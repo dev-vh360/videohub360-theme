@@ -324,6 +324,7 @@ class VH360_Studio_Live_Room_REST_Controller {
                 'live_video_id'    => $post_id,
                 'room_id'          => $channel,
                 'recording_mode'   => 'local_private',
+                'capture_scope'    => 'interactive_composite',
                 'quality_preset'   => VH360_Studio_Quality_Presets::DEFAULT_PRESET,
                 'storage_provider' => VH360_Studio_Replay_Storage_Settings::resolve_default_provider(),
             )
@@ -363,6 +364,7 @@ class VH360_Studio_Live_Room_REST_Controller {
                 'live_video_id'    => $post_id,
                 'room_id'          => $channel,
                 'recording_mode'   => 'browser',
+                'capture_scope'    => 'interactive_composite',
                 'quality_preset'   => VH360_Studio_Quality_Presets::DEFAULT_PRESET,
                 'storage_provider' => VH360_Studio_Replay_Storage_Settings::resolve_default_provider(),
             )

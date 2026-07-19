@@ -144,6 +144,33 @@ class VH360_Studio_Permissions {
         return current_user_can( 'edit_post', $post_id ) || current_user_can( 'manage_options' );
     }
 
+
+    /**
+     * Determine whether the current user may record a Studio-controlled interactive livestream.
+     *
+     * @param int $post_id Livestream post ID.
+     * @return bool
+     */
+    public static function current_user_can_record_studio_interactive_livestream( $post_id ) {
+        $post_id = absint( $post_id );
+        $user_id = get_current_user_id();
+
+        if ( ! $user_id || ! self::license_is_valid() || ! $post_id ) {
+            return false;
+        }
+
+        $post = get_post( $post_id );
+        if ( ! $post || 'videohub360' !== $post->post_type ) {
+            return false;
+        }
+
+        if ( 'yes' !== get_post_meta( $post_id, '_vh360_studio_controlled_live', true ) || 'agora' !== get_post_meta( $post_id, '_vh360_type', true ) || 'interactive' !== get_post_meta( $post_id, '_vh360_agora_mode', true ) ) {
+            return false;
+        }
+
+        return absint( $post->post_author ) === $user_id || current_user_can( 'edit_post', $post_id ) || current_user_can( 'manage_options' );
+    }
+
     /**
      * Determine whether current user may manage all Studio jobs.
      *

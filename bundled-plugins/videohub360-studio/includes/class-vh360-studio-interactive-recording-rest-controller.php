@@ -1,0 +1,136 @@
+<?php
+/**
+ * Studio-controlled livestream recording REST endpoints.
+ *
+ * @package VH360_Studio
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+class VH360_Studio_Interactive_Recording_REST_Controller {
+    private $namespace = 'vh360-studio/v1';
+    private $jobs;
+
+    public function __construct( VH360_Studio_Recording_Jobs $jobs ) {
+        $this->jobs = $jobs;
+    }
+
+    public function register_routes() {
+        register_rest_route( $this->namespace, '/broadcasts/(?P<video_id>\d+)/recordings', array(
+            'methods' => 'POST', 'callback' => array( $this, 'create_recording' ), 'permission_callback' => array( $this, 'can_record' ),
+            'args' => array( 'capture_scope' => array( 'required' => true, 'sanitize_callback' => 'sanitize_key' ) ),
+        ) );
+        register_rest_route( $this->namespace, '/broadcasts/(?P<video_id>\d+)/recording', array( 'methods' => 'GET', 'callback' => array( $this, 'get_recording_state' ), 'permission_callback' => array( $this, 'can_view_state' ) ) );
+        register_rest_route( $this->namespace, '/broadcasts/(?P<video_id>\d+)/recordings/(?P<id>\d+)/heartbeat', array( 'methods' => 'POST', 'callback' => array( $this, 'heartbeat_recording' ), 'permission_callback' => array( $this, 'can_record' ) ) );
+        register_rest_route( $this->namespace, '/broadcasts/(?P<video_id>\d+)/recordings/(?P<id>\d+)/recover', array( 'methods' => 'POST', 'callback' => array( $this, 'recover_interrupted_recording' ), 'permission_callback' => array( $this, 'can_record' ) ) );
+        register_rest_route( $this->namespace, '/broadcasts/(?P<video_id>\d+)/recording/stop-request', array( 'methods' => 'POST', 'callback' => array( $this, 'request_stop' ), 'permission_callback' => array( $this, 'can_record' ) ) );
+    }
+
+    public function can_record( WP_REST_Request $request ) {
+        $video_id = absint( $request['video_id'] );
+        if ( 'program' === sanitize_key( $request->get_param( 'capture_scope' ) ) ) {
+            $post = get_post( $video_id );
+            $user_id = get_current_user_id();
+            return $user_id && VH360_Studio_Permissions::license_is_valid() && $post && 'videohub360' === $post->post_type && 'yes' === get_post_meta( $video_id, '_vh360_studio_controlled_live', true ) && ( absint( $post->post_author ) === $user_id || current_user_can( 'edit_post', $video_id ) || current_user_can( 'manage_options' ) );
+        }
+        return VH360_Studio_Permissions::current_user_can_record_studio_interactive_livestream( $video_id );
+    }
+
+    public function can_view_state( WP_REST_Request $request ) {
+        $video_id = absint( $request['video_id'] );
+        return $video_id && 'videohub360' === get_post_type( $video_id ) ? true : new WP_Error( 'vh360_studio_recording_state_not_found', __( 'Recording state not found.', 'videohub360-studio' ), array( 'status' => 404 ) );
+    }
+
+    public function create_recording( WP_REST_Request $request ) {
+        $video_id = absint( $request['video_id'] );
+        $scope = sanitize_key( $request->get_param( 'capture_scope' ) );
+        if ( ! in_array( $scope, $this->jobs->allowed_capture_scopes(), true ) ) {
+            return new WP_Error( 'vh360_studio_invalid_capture_scope', __( 'Invalid recording capture scope.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        }
+        $valid = $this->validate_stream_ready( $video_id, $scope );
+        if ( is_wp_error( $valid ) ) { return $valid; }
+
+        $lock = 'vh360_studio_livestream_recording_create_lock_' . $video_id;
+        $now = time();
+        $locked = add_option( $lock, $now, '', 'no' );
+        if ( ! $locked && $now - absint( get_option( $lock ) ) > 120 ) { delete_option( $lock ); $locked = add_option( $lock, $now, '', 'no' ); }
+        if ( ! $locked ) { return new WP_Error( 'vh360_studio_recording_creation_locked', __( 'A livestream recording is already being started.', 'videohub360-studio' ), array( 'status' => 409 ) ); }
+
+        try {
+            $active = $this->jobs->find_active_livestream_job( $video_id );
+            if ( $active ) { return $this->conflict_response( $active ); }
+            if ( 'yes' === get_post_meta( $video_id, '_vh360_studio_replay_ready', true ) ) {
+                return new WP_Error( 'vh360_studio_recording_replay_exists', __( 'This livestream already has a canonical replay.', 'videohub360-studio' ), array( 'status' => 409 ) );
+            }
+            $channel = get_post_meta( $video_id, '_vh360_agora_channel_name', true );
+            $preset = VH360_Studio_Quality_Presets::normalize( get_post_meta( $video_id, '_vh360_studio_quality_preset', true ) ?: VH360_Studio_Quality_Presets::DEFAULT_PRESET );
+            $provider = sanitize_key( get_post_meta( $video_id, '_vh360_studio_replay_storage_provider', true ) ?: VH360_Studio_Replay_Storage_Settings::resolve_default_provider() );
+            $job = $this->jobs->create( get_current_user_id(), array( 'source_type' => 'livestream_video', 'source_id' => 'videohub360-' . $video_id, 'live_video_id' => $video_id, 'room_id' => $channel, 'recording_mode' => 'browser', 'capture_scope' => $scope, 'quality_preset' => $preset, 'storage_provider' => $provider ) );
+            if ( is_wp_error( $job ) ) { return $job; }
+            update_post_meta( $video_id, '_vh360_studio_recording_state', 'created' );
+            update_post_meta( $video_id, '_vh360_studio_job_id', absint( $job['id'] ) );
+            update_post_meta( $video_id, '_vh360_studio_replay_pending', 'yes' );
+            update_post_meta( $video_id, '_vh360_studio_replay_ready', 'no' );
+            update_post_meta( $video_id, '_vh360_studio_replay_failed', 'no' );
+            update_post_meta( $video_id, '_vh360_studio_replay_status', 'created' );
+            delete_post_meta( $video_id, '_vh360_studio_recording_stop_requested' );
+            return rest_ensure_response( array( 'recording_purpose' => 'studio_interactive', 'capture_scope' => $scope, 'publishing_mode' => 'provider_replay', 'job' => $this->prepare_job( $job ) ) );
+        } finally { delete_option( $lock ); }
+    }
+
+    public function get_recording_state( WP_REST_Request $request ) {
+        $video_id = absint( $request['video_id'] );
+        $job = $this->jobs->find_active_livestream_job( $video_id );
+        $state = $job ? sanitize_key( $job['status'] ) : 'idle';
+        $fresh = $job ? $this->heartbeat_is_fresh( absint( $job['id'] ) ) : false;
+        $can_manage = VH360_Studio_Permissions::current_user_can_record_studio_interactive_livestream( $video_id );
+        $response = array( 'active' => (bool) $job, 'state' => $state, 'recording_active' => 'recording' === $state && $fresh, 'replay_processing' => in_array( $state, array( 'stopping', 'uploading', 'processing' ), true ), 'capture_scope' => $job && ! empty( $job['capture_scope'] ) ? sanitize_key( $job['capture_scope'] ) : '', 'replay_pending' => 'yes' === get_post_meta( $video_id, '_vh360_studio_replay_pending', true ), 'replay_ready' => 'yes' === get_post_meta( $video_id, '_vh360_studio_replay_ready', true ), 'replay_failed' => 'yes' === get_post_meta( $video_id, '_vh360_studio_replay_failed', true ) );
+        if ( $can_manage ) { $response += array( 'job_id' => $job ? absint( $job['id'] ) : 0, 'started_at' => $job && ! empty( $job['started_at'] ) ? $job['started_at'] : '', 'started_by' => $job ? absint( $job['user_id'] ) : 0, 'heartbeat_fresh' => $fresh, 'owned_by_current_user' => $job && absint( $job['user_id'] ) === get_current_user_id(), 'recovery_available' => (bool) $job && ! $fresh, 'stop_requested' => 'yes' === get_post_meta( $video_id, '_vh360_studio_recording_stop_requested', true ), 'failure_stage' => get_post_meta( $video_id, '_vh360_studio_replay_status', true ), 'retryable' => in_array( get_post_meta( $video_id, '_vh360_studio_replay_status', true ), array( 'finalization_failed', 'publishing_prepare_failed', 'publishing_start_failed' ), true ), 'error_message' => $job && ! empty( $job['error_message'] ) ? $job['error_message'] : '' ); }
+        return rest_ensure_response( $response );
+    }
+
+    public function heartbeat_recording( WP_REST_Request $request ) {
+        $job = $this->jobs->get( absint( $request['id'] ), get_current_user_id() );
+        if ( ! $job || absint( $job['live_video_id'] ) !== absint( $request['video_id'] ) || 'livestream_video' !== sanitize_key( $job['source_type'] ) ) { return new WP_Error( 'vh360_studio_recording_heartbeat_not_found', __( 'Recording session not found.', 'videohub360-studio' ), array( 'status' => 404 ) ); }
+        update_option( 'vh360_recording_heartbeat_' . absint( $job['id'] ), time(), false );
+        $job = $this->jobs->touch( $job['id'], get_current_user_id() );
+        return is_wp_error( $job ) ? $job : rest_ensure_response( array( 'job_id' => absint( $job['id'] ), 'updated_at' => $job['updated_at'], 'stop_requested' => 'yes' === get_post_meta( absint( $request['video_id'] ), '_vh360_studio_recording_stop_requested', true ) ) );
+    }
+
+    public function recover_interrupted_recording( WP_REST_Request $request ) {
+        $job = $this->jobs->get( absint( $request['id'] ), 0 );
+        $video_id = absint( $request['video_id'] );
+        if ( ! $job || absint( $job['live_video_id'] ) !== $video_id || 'livestream_video' !== sanitize_key( $job['source_type'] ) ) { return new WP_Error( 'vh360_studio_interrupted_recording_not_found', __( 'Interrupted recording session not found.', 'videohub360-studio' ), array( 'status' => 404 ) ); }
+        if ( $this->heartbeat_is_fresh( absint( $job['id'] ) ) ) { return new WP_Error( 'vh360_studio_recording_still_active', __( 'This recording is still active in another browser tab.', 'videohub360-studio' ), array( 'status' => 409 ) ); }
+        $closed = $this->jobs->cancel( absint( $job['id'] ), 0 );
+        if ( is_wp_error( $closed ) ) { return $closed; }
+        delete_option( 'vh360_recording_heartbeat_' . absint( $job['id'] ) );
+        update_post_meta( $video_id, '_vh360_studio_recording_state', 'cancelled' );
+        update_post_meta( $video_id, '_vh360_studio_replay_pending', 'no' );
+        update_post_meta( $video_id, '_vh360_studio_replay_status', 'cancelled' );
+        return rest_ensure_response( array( 'job_id' => absint( $job['id'] ), 'state' => 'cancelled' ) );
+    }
+
+    public function request_stop( WP_REST_Request $request ) {
+        update_post_meta( absint( $request['video_id'] ), '_vh360_studio_recording_stop_requested', 'yes' );
+        return rest_ensure_response( array( 'stop_requested' => true ) );
+    }
+
+    private function validate_stream_ready( $video_id, $scope ) {
+        if ( ! $video_id || 'videohub360' !== get_post_type( $video_id ) ) { return new WP_Error( 'vh360_studio_livestream_not_found', __( 'Livestream not found.', 'videohub360-studio' ), array( 'status' => 404 ) ); }
+        if ( 'program' === $scope ) { return true; }
+        foreach ( array( '_vh360_studio_controlled_live' => 'yes', '_vh360_type' => 'agora', '_vh360_agora_mode' => 'interactive', '_vh360_is_live' => 'yes', '_vh360_agora_stream_live' => 'yes' ) as $key => $expected ) { if ( $expected !== get_post_meta( $video_id, $key, true ) ) { return new WP_Error( 'vh360_studio_interactive_recording_not_allowed', __( 'Interactive session recording is only available for active Studio interactive livestreams.', 'videohub360-studio' ), array( 'status' => 409 ) ); } }
+        if ( 'yes' === get_post_meta( $video_id, '_vh360_stream_stopped', true ) || '' !== (string) get_post_meta( $video_id, '_vh360_appointment_event_id', true ) ) { return new WP_Error( 'vh360_studio_interactive_recording_not_allowed', __( 'Interactive session recording is not available for this stream.', 'videohub360-studio' ), array( 'status' => 409 ) ); }
+        if ( ! get_post_meta( $video_id, '_vh360_agora_channel_name', true ) ) { return new WP_Error( 'vh360_studio_livestream_missing_channel', __( 'The livestream does not have an Agora channel configured.', 'videohub360-studio' ), array( 'status' => 400 ) ); }
+        return true;
+    }
+
+    private function conflict_response( array $job ) {
+        return new WP_Error( 'vh360_studio_recording_already_active', __( 'This livestream already has an active recording.', 'videohub360-studio' ), array( 'status' => 409, 'capture_scope' => ! empty( $job['capture_scope'] ) ? sanitize_key( $job['capture_scope'] ) : '', 'state' => sanitize_key( $job['status'] ), 'job_id' => absint( $job['id'] ) ) );
+    }
+
+    private function heartbeat_is_fresh( $job_id ) { $beat = absint( get_option( 'vh360_recording_heartbeat_' . absint( $job_id ) ) ); return $beat && ( time() - $beat ) <= 90; }
+    private function prepare_job( array $job ) { unset( $job['local_temp_path'] ); return $job; }
+}

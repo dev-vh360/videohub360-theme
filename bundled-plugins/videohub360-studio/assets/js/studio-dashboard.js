@@ -88,6 +88,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
         recordingStoppedAt: null,
         recordingDurationSeconds: 0,
         recordingStopPromise: null,
+        recordingHeartbeatTimer: null,
         recordingStopRequested: false,
         durationTimer: null,
         finalChunkCount: 0,
@@ -5069,11 +5070,37 @@ var VH360StorageCompat = window.VH360Storage || (function(){
         return payload || {};
     }
 
+
+    function programRecordingHeartbeatPath() {
+        return state.broadcastVideoId && els.broadcastMode && els.broadcastMode.value === 'interactive' && state.activeJobId
+            ? '/broadcasts/' + state.broadcastVideoId + '/recordings/' + state.activeJobId + '/heartbeat'
+            : '';
+    }
+
+    function startProgramRecordingHeartbeat() {
+        stopProgramRecordingHeartbeat();
+        const path = programRecordingHeartbeatPath();
+        if (!path) { return; }
+        const beat = () => api(path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } }).catch((error) => studioDebugLog('[VH360 Studio] Unable to update program recording heartbeat', error));
+        beat();
+        state.recordingHeartbeatTimer = window.setInterval(beat, 30000);
+    }
+
+    function stopProgramRecordingHeartbeat() {
+        if (state.recordingHeartbeatTimer) {
+            window.clearInterval(state.recordingHeartbeatTimer);
+            state.recordingHeartbeatTimer = null;
+        }
+    }
+
     async function ensureSetupJob() {
         if (state.activeJobId) {
             return state.activeJobId;
         }
-        const job = await api('/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ recording_mode: 'browser', source_type: 'studio_setup', source_id: 'studio-recording-' + Date.now(), quality_preset: getSelectedPresetKey() }) });
+        const liveInteractive = state.broadcastVideoId && els.broadcastMode && els.broadcastMode.value === 'interactive';
+        const job = liveInteractive
+            ? (await api('/broadcasts/' + state.broadcastVideoId + '/recordings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ capture_scope: 'program' }) })).job
+            : await api('/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ recording_mode: 'browser', capture_scope: 'program', source_type: 'studio_setup', source_id: 'studio-recording-' + Date.now(), quality_preset: getSelectedPresetKey() }) });
         state.activeJobId = job.id;
         state.currentStorageProvider = job.storage_provider || '';
         return job.id;
@@ -5201,6 +5228,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
             state.selectedMimeType = state.recorder.mimeType || mimeType;
             const start = await api('/jobs/' + jobId + '/recording/start', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ mime_type: state.selectedMimeType }) });
             serverRecordingStarted = true;
+            startProgramRecordingHeartbeat();
             state.browserSessionId = start.browser_session_id;
             state.selectedMimeType = start.mime_type || state.selectedMimeType;
             state.recorder.addEventListener('dataavailable', (event) => {
@@ -5372,6 +5400,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
             const duration = Math.max(0, Math.round(state.recordingDurationSeconds || 0));
             const job = await api('/jobs/' + state.activeJobId + '/recording/stop', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ duration_seconds: duration }) });
             state.serverStopConfirmed = true;
+            stopProgramRecordingHeartbeat();
             state.stopFailed = false;
             state.currentJobStatus = job.status || 'stopping';
             return job;
@@ -5397,6 +5426,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
             state.currentJobStatus = 'stop_failed';
             setRecordingStatus((error && error.message) || 'Server stop confirmation failed. Retry stop before preparing the replay.', 'error');
         } finally {
+            stopProgramRecordingHeartbeat();
             setShellClass('is-recording', false);
             setRecorderButtons(false, false);
             renderRecordingState();
@@ -6246,7 +6276,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
             } else if (audioSummary.failed > 0) {
                 setBroadcastStatus(formatAudioInputSummary(audioSummary, 'live'), 'warning');
             }
-            const created = await api('/broadcasts', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify(Object.assign({}, broadcastPayload(), { recording_intent: 'browser' })) });
+            const created = await api('/broadcasts', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify(Object.assign({}, broadcastPayload(), { recording_intent: (els.broadcastMode && els.broadcastMode.value === 'interactive') ? 'none' : 'browser' })) });
             const broadcast = created.broadcast || {};
             state.broadcastVideoId = broadcast.videoId;
             state.activeJobId = created.job && created.job.id ? created.job.id : state.activeJobId;

@@ -23,7 +23,7 @@
     }
     function showIndicator(show) { attachNoticeToPlayer(); document.querySelectorAll('.vh360-studio-recording-indicator').forEach(function (el) { el.classList.toggle('vh360-hidden', !show); }); }
     function elapsed() { var s = Math.floor((Date.now() - startedAt) / 1000); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
-    function tick() { setLabel((config.recordingPurpose === 'appointment_session' ? '● Private Recording ' : '● Recording ') + elapsed()); }
+    function tick() { setLabel((config.recordingLabel || (config.recordingPurpose === 'appointment_session' ? '● Private Recording ' : '● Recording ')) + elapsed()); }
     function hasDesktopSupport() {
         var standalone = !!(
             (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
@@ -49,7 +49,13 @@
         });
     }
     function cleanupMedia() { if (compositor) { compositor.stop(); } if (mixer) { mixer.stop(); } compositor = null; mixer = null; }
-    function startHeartbeat() { stopHeartbeat(); if (!activeJobId) { return; } var beat = function () { rest('/live-rooms/' + config.postId + '/recordings/' + activeJobId + '/heartbeat', { method: 'POST', headers: { 'Content-Type': 'application/json' } }).catch(function (error) { window.console && console.warn('Unable to update recording heartbeat.', error); }); }; beat(); heartbeatTimer = window.setInterval(beat, 30000); }
+    function endpoint(template) { return String(template || '').replace('{job_id}', activeJobId); }
+    function stateEndpoint() { return config.stateEndpoint || ('/live-rooms/' + config.postId + '/recording'); }
+    function createEndpoint() { return config.createEndpoint || ('/live-rooms/' + config.postId + '/recordings'); }
+    function heartbeatEndpoint() { return endpoint(config.heartbeatEndpoint) || ('/live-rooms/' + config.postId + '/recordings/' + activeJobId + '/heartbeat'); }
+    function recoverEndpoint() { return endpoint(config.recoverEndpoint) || ('/live-rooms/' + config.postId + '/recordings/' + activeJobId + '/recover'); }
+    function defaultRecordLabel() { return config.recordButtonLabel || (config.recordingPurpose === 'appointment_session' ? 'Record Privately' : 'Record'); }
+    function startHeartbeat() { stopHeartbeat(); if (!activeJobId) { return; } var beat = function () { rest(heartbeatEndpoint(), { method: 'POST', headers: { 'Content-Type': 'application/json' } }).then(function(response){ if (response && response.stop_requested && activeState === 'recording') { stop().catch(function(error){ setError(error && (error.message || error.code) || error); }); } }).catch(function (error) { window.console && console.warn('Unable to update recording heartbeat.', error); }); }; beat(); heartbeatTimer = window.setInterval(beat, 30000); }
     function stopHeartbeat() { if (heartbeatTimer) { window.clearInterval(heartbeatTimer); heartbeatTimer = null; } }
     function closeRecordingHeartbeat() { stopHeartbeat(); }
     function notifyRecordingState(kind) { if (window.sendDataStreamMessage) { window.sendDataStreamMessage({ type: kind, roomId: config.postId, recordingPurpose: config.recordingPurpose }); } }
@@ -71,7 +77,7 @@
         var preparedStream;
         startPromise = buildStream().then(function (stream) {
             preparedStream = stream;
-            return rest('/live-rooms/' + config.postId + '/recordings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+            return rest(createEndpoint(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config.recordingPurpose === 'studio_interactive' ? { capture_scope: 'interactive_composite' } : {}) });
         }).then(function (response) {
             activeJobId = response.job && response.job.id ? Number(response.job.id) : 0;
             if (!activeJobId) { throw new Error('Recording job was not created.'); }
@@ -93,7 +99,7 @@
         if (!activeJobId) {
             recoveryAction = '';
             setActiveRecordingState('idle');
-            setLabel(config.recordingPurpose === 'appointment_session' ? 'Record Privately' : 'Record');
+            setLabel(defaultRecordLabel());
             return Promise.resolve();
         }
         var cleanup;
@@ -106,7 +112,7 @@
             activeJobId = 0;
             recoveryAction = '';
             setActiveRecordingState('idle');
-            setLabel(config.recordingPurpose === 'appointment_session' ? 'Record Privately' : 'Record');
+            setLabel(defaultRecordLabel());
         }).catch(function (cleanupError) {
             recoveryAction = 'clear_interrupted';
             setActiveRecordingState('interrupted');
@@ -119,13 +125,13 @@
     function clearInterruptedRecording() {
         if (!activeJobId) { return Promise.resolve(); }
         if (button) { button.disabled = true; } setLabel('Clearing…');
-        var request = rest('/live-rooms/' + config.postId + '/recordings/' + activeJobId + '/recover', {
+        var request = rest(recoverEndpoint(), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: '{}'
         });
         return request.then(function () {
-            closeRecordingHeartbeat(); activeJobId = 0; recoveryAction = ''; activeState = 'idle'; setLabel(config.recordingPurpose === 'appointment_session' ? 'Record Privately' : 'Record'); setStatus('Interrupted recording cleared. You can start a new recording.');
+            closeRecordingHeartbeat(); activeJobId = 0; recoveryAction = ''; activeState = 'idle'; setLabel(defaultRecordLabel()); setStatus('Interrupted recording cleared. You can start a new recording.');
             if (button) { button.disabled = false; }
         }).catch(function (error) { if (button) { button.disabled = false; } setError(error && (error.message || error.code) || error); throw error; });
     }
@@ -428,7 +434,7 @@
     }
 
     function stopBeforeEnd() {
-        return rest('/live-rooms/' + config.postId + '/recording').then(function (state) {
+        return rest(stateEndpoint()).then(function (state) {
             var serverRecoveryPending = ['finalization_failed', 'publishing_prepare_failed', 'publishing_start_failed'].indexOf(String(state.failure_stage || '')) !== -1;
             if (serverRecoveryPending && !ownsLocalRecordingState()) {
                 // The browser recording data is already server-side. Ending the
@@ -440,9 +446,9 @@
                 activeState = 'recording_elsewhere';
                 showIndicator(!!state.recording_active);
                 setLabel('Recording in another tab');
-                setStatus('Stop the recording in the original recording tab before ending this Live Room.');
+                setStatus('Stop the recording in the original recording tab before ending this session.');
                 if (button) { button.disabled = true; }
-                throw new Error('Recording is active in another tab. Stop it there before ending the Live Room.');
+                throw new Error('Recording is active in another tab. Stop it there before ending this session.');
             }
             if (stateNeedsInterruptedRecovery(state)) {
                 activeJobId = Number(state.job_id || activeJobId || 0);
@@ -511,15 +517,15 @@
                 recoveryAction = '';
                 if (['processing', 'recording_elsewhere', 'download_elsewhere', 'interrupted'].indexOf(activeState) !== -1) {
                     setActiveRecordingState('idle');
-                    setLabel(config.recordingPurpose === 'appointment_session' ? 'Record Privately' : 'Record');
+                    setLabel(defaultRecordLabel());
                     button.disabled = false;
                     setStatus('');
                 }
             }
         }
-        rest('/live-rooms/' + config.postId + '/recording').then(restoreState).catch(function (error) { window.console && console.warn('Unable to restore recording state.', error); });
-        window.setInterval(function () { rest('/live-rooms/' + config.postId + '/recording').then(restoreState).catch(function (error) { window.console && console.warn('Unable to refresh recording state.', error); }); }, activeState === 'processing' ? 30000 : 15000);
-        window.addEventListener('vh360:agora-data-message', function (event) { var data = event.detail || {}; if (data.type === 'live_room_recording_started' || data.type === 'live_room_recording_stopped') { rest('/live-rooms/' + config.postId + '/recording').then(restoreState).catch(function (error) { window.console && console.warn('Unable to refresh recording state.', error); }) } });
+        rest(stateEndpoint()).then(restoreState).catch(function (error) { window.console && console.warn('Unable to restore recording state.', error); });
+        window.setInterval(function () { rest(stateEndpoint()).then(restoreState).catch(function (error) { window.console && console.warn('Unable to refresh recording state.', error); }); }, activeState === 'processing' ? 30000 : 15000);
+        window.addEventListener('vh360:agora-data-message', function (event) { var data = event.detail || {}; if (data.type === 'live_room_recording_started' || data.type === 'live_room_recording_stopped') { rest(stateEndpoint()).then(restoreState).catch(function (error) { window.console && console.warn('Unable to refresh recording state.', error); }) } });
         if (!button) { return; }
         if (!hasDesktopSupport()) { setLabel(config.desktopOnlyMessage || 'Recording unavailable'); return; }
         button.classList.remove('vh360-hidden'); button.addEventListener('click', function () {
