@@ -77,7 +77,8 @@ class VH360_Studio_Live_Room_REST_Controller {
         $purpose = $this->recording_purpose( $post_id );
         $job     = 'appointment_session' === $purpose ? $this->jobs->find_active_appointment_recording( $post_id ) : $this->jobs->find_active_live_room_job( $post_id );
 
-        $state = $job ? sanitize_key( $job['status'] ) : 'idle';
+        $state       = $job ? sanitize_key( $job['status'] ) : 'idle';
+        $can_manage  = VH360_Studio_Permissions::current_user_can_record_live_room( $post_id ) || current_user_can( 'edit_post', $post_id ) || current_user_can( 'manage_options' );
         $response = array(
             'post_id'             => $post_id,
             'recording_purpose'   => $purpose,
@@ -86,9 +87,14 @@ class VH360_Studio_Live_Room_REST_Controller {
             'recording_active'    => in_array( $state, array( 'created', 'recording', 'stopping' ), true ),
             'replay_processing'   => in_array( $state, array( 'uploading', 'processing' ), true ),
             'state'               => $state,
-            'job_id'              => $job ? absint( $job['id'] ) : 0,
             'started_at'          => $job && ! empty( $job['started_at'] ) ? $job['started_at'] : get_post_meta( $post_id, 'appointment_session' === $purpose ? '_vh360_appointment_recording_started_at' : '_vh360_live_room_recording_started_at', true ),
         );
+
+        if ( $can_manage ) {
+            $response['job_id']             = $job ? absint( $job['id'] ) : 0;
+            $response['recovery_available'] = (bool) $job;
+        }
+
 
         if ( 'ordinary_live_room' === $purpose ) {
             $response['replay_pending'] = 'yes' === get_post_meta( $post_id, '_vh360_studio_replay_pending', true );

@@ -1038,7 +1038,9 @@ class VH360_Studio_REST_Controller {
         }
 
         if ( $this->publish_response_is_failed( $response ) ) {
-            $this->update_live_replay_lifecycle( $job, 'failed', 'no', 'no', 'yes' );
+            $message = ! empty( $response['message'] ) ? sanitize_textarea_field( $response['message'] ) : __( 'Replay provider processing failed.', 'videohub360-studio' );
+            $failed_job = $this->jobs->mark_failed( $job['id'], get_current_user_id(), $message );
+            $this->update_live_replay_lifecycle( is_wp_error( $failed_job ) ? $job : $failed_job, 'failed', 'no', 'no', 'yes' );
             return;
         }
 

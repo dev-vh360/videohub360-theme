@@ -18,6 +18,7 @@ class VH360_Studio_Assets {
         add_action( 'wp_enqueue_scripts', array( $this, 'dequeue_mobile_orientation_lock_for_mobile_live' ), 100 );
         add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_live_room_recording_assets' ) );
         add_filter( 'vh360_agora_host_controls_html', array( $this, 'render_live_room_record_control' ), 10, 4 );
+        add_action( 'wp_footer', array( $this, 'render_live_room_recording_notice' ) );
     }
 
 
@@ -41,13 +42,21 @@ class VH360_Studio_Assets {
 
     public function render_live_room_record_control( $html, $post_id, $fields, $context ) {
         $is_appointment = ! empty( $context['is_appointment'] ) || '' !== (string) get_post_meta( $post_id, '_vh360_appointment_event_id', true );
-        $indicator_label = $is_appointment ? __( 'This appointment is being recorded.', 'videohub360-studio' ) : __( 'This Live Room is being recorded.', 'videohub360-studio' );
-        $control = '<span class="vh360-studio-recording-indicator vh360-hidden" aria-live="polite" aria-label="' . esc_attr( $indicator_label ) . '">● REC</span>';
+        $control = '';
         if ( VH360_Studio_Permissions::current_user_can_record_live_room( $post_id ) ) {
             $label = $is_appointment ? __( 'Record Privately', 'videohub360-studio' ) : __( 'Record', 'videohub360-studio' );
             $control = '<button type="button" id="vh360-studio-live-room-record" class="vh360-agora-control-btn vh360-agora-control-btn-text vh360-studio-record-btn vh360-hidden" data-recording-purpose="' . esc_attr( $is_appointment ? 'appointment_session' : 'ordinary_live_room' ) . '">' . esc_html( $label ) . '</button>' . $control;
         }
         return $html . $control;
+    }
+
+    public function render_live_room_recording_notice() {
+        if ( ! is_singular( 'videohub360' ) ) { return; }
+        $post_id = get_queried_object_id();
+        if ( ! $post_id || 'live_room' !== get_post_meta( $post_id, '_vh360_context', true ) ) { return; }
+        $is_appointment = '' !== (string) get_post_meta( $post_id, '_vh360_appointment_event_id', true );
+        $label = $is_appointment ? __( 'This appointment is being recorded.', 'videohub360-studio' ) : __( 'This Live Room is being recorded.', 'videohub360-studio' );
+        echo '<div class="vh360-live-room-recording-notice vh360-studio-recording-indicator vh360-hidden" aria-live="polite" aria-label="' . esc_attr( $label ) . '"><span aria-hidden="true">●</span><span>REC</span></div>';
     }
 
     public function enqueue_dashboard_assets() {

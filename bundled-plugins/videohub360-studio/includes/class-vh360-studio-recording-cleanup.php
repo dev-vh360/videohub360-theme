@@ -37,20 +37,22 @@ class VH360_Studio_Recording_Cleanup {
         global $wpdb;
 
         $now  = current_time( 'timestamp' );
-        $rows = $wpdb->get_results( 'SELECT * FROM ' . VH360_Studio_Database::table_name() . " WHERE status IN ('created','recording','stopping','uploading','cancelled','failed','processing','ready') ORDER BY updated_at ASC LIMIT 200", ARRAY_A );
+        $rows = $wpdb->get_results( 'SELECT * FROM ' . VH360_Studio_Database::table_name() . " WHERE status IN ('created','recording','stopping','uploading','preparing_download','cancelled','failed','processing','ready') ORDER BY updated_at ASC LIMIT 200", ARRAY_A );
 
         foreach ( $rows as $job ) {
             $created = $this->mysql_timestamp( $job['created_at'] );
             $updated = $this->mysql_timestamp( $job['updated_at'] );
 
             if ( 'created' === $job['status'] && $created < $now - HOUR_IN_SECONDS * absint( apply_filters( 'vh360_studio_abandoned_job_retention_hours', 24 ) ) ) {
-                $this->jobs->update( $job['id'], 0, array( 'status' => 'cancelled' ) );
+                $cancelled = $this->jobs->update( $job['id'], 0, array( 'status' => 'cancelled' ) );
+                $this->sync_abandoned_room_metadata( is_wp_error( $cancelled ) ? $job : $cancelled, 'cancelled' );
                 $this->delete_temp_for_job( $job );
                 continue;
             }
 
-            if ( in_array( $job['status'], array( 'recording', 'stopping', 'uploading' ), true ) && $updated < $now - HOUR_IN_SECONDS * absint( apply_filters( 'vh360_studio_abandoned_job_retention_hours', 24 ) ) ) {
-                $this->jobs->mark_failed( $job['id'], 0, __( 'Recording abandoned before finalization.', 'videohub360-studio' ) );
+            if ( in_array( $job['status'], array( 'recording', 'stopping', 'uploading', 'preparing_download' ), true ) && $updated < $now - HOUR_IN_SECONDS * absint( apply_filters( 'vh360_studio_abandoned_job_retention_hours', 24 ) ) ) {
+                $failed = $this->jobs->mark_failed( $job['id'], 0, __( 'Recording abandoned before finalization.', 'videohub360-studio' ) );
+                $this->sync_abandoned_room_metadata( is_wp_error( $failed ) ? $job : $failed, 'failed' );
                 $this->delete_temp_for_job( $job );
                 continue;
             }
@@ -70,7 +72,7 @@ class VH360_Studio_Recording_Cleanup {
                 }
 
                 if ( 'processing' === $job['status'] && ! empty( $job['temp_expires_at'] ) && $this->mysql_timestamp( $job['temp_expires_at'] ) < $now ) {
-                    $this->jobs->update(
+                    $failed = $this->jobs->update(
                         $job['id'],
                         0,
                         array(
@@ -79,9 +81,27 @@ class VH360_Studio_Recording_Cleanup {
                             'error_message'           => __( 'Temporary recording expired before replay publishing completed.', 'videohub360-studio' ),
                         )
                     );
+                    $this->sync_abandoned_room_metadata( is_wp_error( $failed ) ? $job : $failed, 'failed' );
                     $this->delete_temp_for_job( $job );
                 }
             }
+        }
+    }
+
+    private function sync_abandoned_room_metadata( array $job, $status ) {
+        $post_id = ! empty( $job['live_video_id'] ) ? absint( $job['live_video_id'] ) : 0;
+        if ( ! $post_id ) { return; }
+        if ( 'appointment_session' === sanitize_key( $job['source_type'] ) ) {
+            delete_post_meta( $post_id, '_vh360_appointment_recording_state' );
+            delete_post_meta( $post_id, '_vh360_appointment_recording_started_at' );
+            delete_post_meta( $post_id, '_vh360_appointment_recording_user_id' );
+            return;
+        }
+        if ( 'live_room' === sanitize_key( $job['source_type'] ) ) {
+            update_post_meta( $post_id, '_vh360_live_room_recording_state', sanitize_key( $status ) );
+            update_post_meta( $post_id, '_vh360_studio_replay_pending', 'no' );
+            update_post_meta( $post_id, '_vh360_studio_replay_failed', 'failed' === $status ? 'yes' : 'no' );
+            update_post_meta( $post_id, '_vh360_studio_replay_status', sanitize_key( $status ) );
         }
     }
 

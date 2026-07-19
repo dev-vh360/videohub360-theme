@@ -50,8 +50,10 @@
         if (featured) { this.previousFeaturedUid = String(featured.uid || featured.agoraUid); }
         return featured;
     };
+    Compositor.prototype.pruneTrackVideos = function (parts) { var active = new Set(parts.map(function (p) { return String(p.uid || p.agoraUid || ''); })); this.trackVideos.forEach(function (video, id) { if (!active.has(String(id))) { try { video.pause(); } catch (e) {} video.srcObject = null; video.remove && video.remove(); this.trackVideos.delete(id); } }, this); };
     Compositor.prototype.draw = function () {
         var ctx = this.ctx, parts = this.participants(), layout = this.layout();
+        this.pruneTrackVideos(parts);
         ctx.fillStyle = '#020617'; ctx.fillRect(0, 0, this.width, this.height);
         if ((layout.view === 'speaker' || layout.view === 'focus') && parts.length) {
             var featured = this.featuredParticipant(parts, layout);
