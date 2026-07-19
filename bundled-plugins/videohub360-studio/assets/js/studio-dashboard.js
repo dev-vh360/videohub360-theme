@@ -89,6 +89,8 @@ var VH360StorageCompat = window.VH360Storage || (function(){
         recordingDurationSeconds: 0,
         recordingStopPromise: null,
         recordingHeartbeatTimer: null,
+        broadcastRecordingStateTimer: null,
+        viewerRecordingState: null,
         recordingStopRequested: false,
         durationTimer: null,
         finalChunkCount: 0,
@@ -239,6 +241,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
         recordingProgressMeta: root.querySelector('[data-recording-progress-meta]'),
         recordingProgressLabel: root.querySelector('[data-recording-progress-label]'),
         recordingSummaryStatus: root.querySelector('[data-recording-summary-status]'),
+        programRecordingHelper: root.querySelector('[data-program-recording-helper]'),
         publishReplay: root.querySelector('[data-publish-replay]'),
         checkReplayStatus: root.querySelector('[data-check-replay-status]'),
         publishingStatus: root.querySelector('[data-publishing-status]'),
@@ -2131,7 +2134,8 @@ var VH360StorageCompat = window.VH360Storage || (function(){
         }
         if (state.liveAudioWarningActive) {
             state.liveAudioWarningActive = false;
-            setBroadcastStatus(strings.liveStarted, 'success');
+            startBroadcastRecordingStatePolling();
+                setBroadcastStatus(strings.liveStarted, 'success');
         }
     }
 
@@ -5071,6 +5075,72 @@ var VH360StorageCompat = window.VH360Storage || (function(){
     }
 
 
+
+    function isInteractiveBroadcastMode() {
+        return Boolean(els.broadcastMode && els.broadcastMode.value === 'interactive');
+    }
+
+    function viewerRecordingOwnsSession() {
+        const remote = state.viewerRecordingState || {};
+        return state.broadcastVideoId && isInteractiveBroadcastMode() && remote.active && remote.capture_scope === 'interactive_composite';
+    }
+
+    function updateViewerRecordingUi() {
+        if (viewerRecordingOwnsSession()) {
+            setRecordingStatus('Full session recording active in Viewer', 'info');
+        }
+        renderRecordingState();
+    }
+
+    async function refreshBroadcastRecordingState() {
+        if (!state.broadcastVideoId || !isInteractiveBroadcastMode()) {
+            state.viewerRecordingState = null;
+            return null;
+        }
+        const remote = await api('/broadcasts/' + state.broadcastVideoId + '/recording', { method: 'GET', headers: { 'X-WP-Nonce': config.nonce } });
+        state.viewerRecordingState = remote || null;
+        updateViewerRecordingUi();
+        return state.viewerRecordingState;
+    }
+
+    function startBroadcastRecordingStatePolling() {
+        stopBroadcastRecordingStatePolling();
+        if (!state.broadcastVideoId || !isInteractiveBroadcastMode()) { return; }
+        refreshBroadcastRecordingState().catch((error) => studioDebugLog('[VH360 Studio] Unable to refresh livestream recording state', error));
+        state.broadcastRecordingStateTimer = window.setInterval(() => {
+            refreshBroadcastRecordingState().catch((error) => studioDebugLog('[VH360 Studio] Unable to refresh livestream recording state', error));
+        }, 10000);
+    }
+
+    function stopBroadcastRecordingStatePolling() {
+        if (state.broadcastRecordingStateTimer) {
+            window.clearInterval(state.broadcastRecordingStateTimer);
+            state.broadcastRecordingStateTimer = null;
+        }
+        state.viewerRecordingState = null;
+    }
+
+    async function coordinateViewerRecordingBeforeEnd() {
+        if (!state.broadcastVideoId || !isInteractiveBroadcastMode()) { return true; }
+        const remote = await refreshBroadcastRecordingState().catch(() => null);
+        if (!remote || remote.capture_scope !== 'interactive_composite' || !remote.heartbeat_fresh || ['created', 'recording'].indexOf(String(remote.state || '')) === -1) {
+            return true;
+        }
+        setBroadcastStatus('Requesting Viewer recording to stop before ending live…', 'info');
+        await api('/broadcasts/' + state.broadcastVideoId + '/recording/stop-request', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: '{}' });
+        const deadline = Date.now() + 30000;
+        while (Date.now() < deadline) {
+            await new Promise((resolve) => window.setTimeout(resolve, 2000));
+            const latest = await refreshBroadcastRecordingState().catch(() => null);
+            const phase = String((latest && latest.state) || 'idle');
+            if (!latest || latest.capture_scope !== 'interactive_composite' || ['stopping', 'uploading', 'processing', 'ready', 'failed', 'idle'].indexOf(phase) !== -1) {
+                return true;
+            }
+        }
+        setBroadcastStatus('The interactive recording is still active in the Viewer. Stop it there before ending live.', 'error');
+        return false;
+    }
+
     function programRecordingHeartbeatPath() {
         return state.broadcastVideoId && els.broadcastMode && els.broadcastMode.value === 'interactive' && state.activeJobId
             ? '/broadcasts/' + state.broadcastVideoId + '/recordings/' + state.activeJobId + '/heartbeat'
@@ -5097,7 +5167,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
         if (state.activeJobId) {
             return state.activeJobId;
         }
-        const liveInteractive = state.broadcastVideoId && els.broadcastMode && els.broadcastMode.value === 'interactive';
+        const liveInteractive = state.broadcastVideoId && isInteractiveBroadcastMode();
         const job = liveInteractive
             ? (await api('/broadcasts/' + state.broadcastVideoId + '/recordings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ capture_scope: 'program' }) })).job
             : await api('/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ recording_mode: 'browser', capture_scope: 'program', source_type: 'studio_setup', source_id: 'studio-recording-' + Date.now(), quality_preset: getSelectedPresetKey() }) });
@@ -5256,7 +5326,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
             renderRecordingState();
         } catch (error) {
             if (serverRecordingStarted && jobId) {
-                await api('/jobs/' + jobId + '/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } }).catch(() => {});
+                await api('/jobs/' + jobId + '/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } }).then(stopProgramRecordingHeartbeat).catch(() => {});
                 state.activeJobId = null;
                 state.browserSessionId = '';
             }
@@ -5426,7 +5496,6 @@ var VH360StorageCompat = window.VH360Storage || (function(){
             state.currentJobStatus = 'stop_failed';
             setRecordingStatus((error && error.message) || 'Server stop confirmation failed. Retry stop before preparing the replay.', 'error');
         } finally {
-            stopProgramRecordingHeartbeat();
             setShellClass('is-recording', false);
             setRecorderButtons(false, false);
             renderRecordingState();
@@ -5960,6 +6029,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
     function renderRecordingState() {
         updateOperatorStatus();
         if (els.recordingSummaryStatus) { els.recordingSummaryStatus.textContent = recordingSummaryStatus(); }
+        if (els.programRecordingHelper) { els.programRecordingHelper.hidden = !isInteractiveBroadcastMode(); }
         if (els.recordingTimer) {
             let seconds = 0;
             if (state.recordingStoppedAt) {
@@ -5988,7 +6058,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
         const stopping = Boolean(state.recordingStopRequested && !state.recordingStoppedAt);
         const hasFailedUploads = Boolean(state.failedChunks.size);
         const canPrepareReplay = Boolean(!isPublitioDirectMode() && state.activeJobId && state.serverStopConfirmed && state.finalChunkCount && !state.pendingUploads.size && !hasFailedUploads && !state.finalizeInProgress && state.currentJobStatus !== 'processing' && state.currentJobStatus !== 'ready');
-        setButtonVisibility(els.startRecording, !recording && !stopping && !state.activeJobId, true);
+        setButtonVisibility(els.startRecording, !recording && !stopping && !state.activeJobId, !viewerRecordingOwnsSession());
         if (els.stopRecording) { els.stopRecording.textContent = state.stopFailed ? 'Retry stop' : 'Stop recording'; }
         setButtonVisibility(els.stopRecording, recording || stopping || state.stopFailed, !stopping);
         setButtonVisibility(els.retryChunks, hasFailedUploads, hasFailedUploads);
@@ -5999,7 +6069,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 
     function setRecorderButtons(recording, stopped) {
         const stopping = Boolean(state.recordingStopRequested && !state.recordingStoppedAt);
-        setButtonVisibility(els.startRecording, !recording && !stopping && !state.activeJobId, true);
+        setButtonVisibility(els.startRecording, !recording && !stopping && !state.activeJobId, !viewerRecordingOwnsSession());
         if (els.stopRecording) { els.stopRecording.textContent = state.stopFailed ? 'Retry stop' : 'Stop recording'; }
         setButtonVisibility(els.stopRecording, recording || stopping || state.stopFailed, !stopping);
         const canPrepareReplay = Boolean(!isPublitioDirectMode() && stopped && state.serverStopConfirmed && state.activeJobId && state.finalChunkCount && !state.pendingUploads.size && !state.failedChunks.size && !state.finalizeInProgress && state.currentJobStatus !== 'processing' && state.currentJobStatus !== 'ready');
@@ -6346,6 +6416,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
             renderProgramLiveControls();
             setShellClass('is-live', true);
             updateLiveAudioInputWarning();
+            startBroadcastRecordingStatePolling();
             if (!state.liveAudioWarningActive) {
                 setBroadcastStatus(strings.liveStarted, 'success');
             }
@@ -6408,6 +6479,14 @@ var VH360StorageCompat = window.VH360Storage || (function(){
             updateRecordingOperationStatus(isPublitioDirectMode() ? getStudioString('recordingStoppedFastCloudReady', 'Recording stopped. Ready for fast cloud upload.') : strings.uploadingChunk, 'info');
             finishRecordingUploadsAndConfirmStop().catch(() => {});
         }
+        const viewerReadyToEnd = await coordinateViewerRecordingBeforeEnd();
+        if (!viewerReadyToEnd) {
+            state.broadcastEnding = false;
+            state.broadcastReady = Boolean(state.broadcastSession);
+            renderTransitionButtons();
+            renderProgramLiveControls();
+            return;
+        }
         if (state.heartbeatTimer) {
             window.clearInterval(state.heartbeatTimer);
             state.heartbeatTimer = null;
@@ -6419,6 +6498,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
             state.liveAudioWarningActive = false;
         }
         state.viewerPermalink = '';
+        stopBroadcastRecordingStatePolling();
         updateViewerLinkControls();
         if (state.broadcastVideoId) {
             try {

@@ -161,7 +161,7 @@ class VH360_Studio_REST_Controller {
             array(
                 'methods'             => WP_REST_Server::CREATABLE,
                 'callback'            => array( $this, 'start_recording' ),
-                'permission_callback' => array( $this, 'licensed_permissions_check' ),
+                'permission_callback' => array( $this, 'recording_lifecycle_permissions_check' ),
                 'args'                => array(
                     'id'        => $this->get_id_arg(),
                     'mime_type' => $this->get_mime_type_arg( true ),
@@ -175,7 +175,7 @@ class VH360_Studio_REST_Controller {
                 array(
                     'methods'             => WP_REST_Server::CREATABLE,
                     'callback'            => array( $this, 'upload_chunk' ),
-                    'permission_callback' => array( $this, 'permissions_check' ),
+                    'permission_callback' => array( $this, 'recording_lifecycle_permissions_check' ),
                     'args'                => array(
                         'id'                 => $this->get_id_arg(),
                         'browser_session_id' => $this->get_browser_session_arg( true ),
@@ -187,7 +187,7 @@ class VH360_Studio_REST_Controller {
                 array(
                     'methods'             => WP_REST_Server::READABLE,
                     'callback'            => array( $this, 'list_chunks' ),
-                    'permission_callback' => array( $this, 'permissions_check' ),
+                    'permission_callback' => array( $this, 'recording_lifecycle_permissions_check' ),
                     'args'                => array(
                         'id'                 => $this->get_id_arg(),
                         'browser_session_id' => $this->get_browser_session_arg( false ),
@@ -201,7 +201,7 @@ class VH360_Studio_REST_Controller {
             array(
                 'methods'             => WP_REST_Server::CREATABLE,
                 'callback'            => array( $this, 'stop_recording' ),
-                'permission_callback' => array( $this, 'permissions_check' ),
+                'permission_callback' => array( $this, 'recording_lifecycle_permissions_check' ),
                 'args'                => array(
                     'id'               => $this->get_id_arg(),
                     'duration_seconds' => $this->get_non_negative_int_arg( false ),
@@ -214,7 +214,7 @@ class VH360_Studio_REST_Controller {
             array(
                 'methods'             => WP_REST_Server::CREATABLE,
                 'callback'            => array( $this, 'finalize_recording' ),
-                'permission_callback' => array( $this, 'permissions_check' ),
+                'permission_callback' => array( $this, 'recording_lifecycle_permissions_check' ),
                 'args'                => array(
                     'id'              => $this->get_id_arg(),
                     'expected_chunks' => $this->get_positive_int_arg( false ),
@@ -228,7 +228,7 @@ class VH360_Studio_REST_Controller {
             array(
                 'methods'             => WP_REST_Server::CREATABLE,
                 'callback'            => array( $this, 'prepare_publishing' ),
-                'permission_callback' => array( $this, 'permissions_check' ),
+                'permission_callback' => array( $this, 'recording_lifecycle_permissions_check' ),
                 'args'                => array( 'id' => $this->get_id_arg() ),
             )
         );
@@ -239,7 +239,7 @@ class VH360_Studio_REST_Controller {
             array(
                 'methods'             => WP_REST_Server::CREATABLE,
                 'callback'            => array( $this, 'publish_recording' ),
-                'permission_callback' => array( $this, 'permissions_check' ),
+                'permission_callback' => array( $this, 'recording_lifecycle_permissions_check' ),
                 'args'                => array( 'id' => $this->get_id_arg() ),
             )
         );
@@ -250,7 +250,7 @@ class VH360_Studio_REST_Controller {
             array(
                 'methods'             => WP_REST_Server::READABLE,
                 'callback'            => array( $this, 'publishing_status' ),
-                'permission_callback' => array( $this, 'permissions_check' ),
+                'permission_callback' => array( $this, 'recording_lifecycle_permissions_check' ),
                 'args'                => array( 'id' => $this->get_id_arg() ),
             )
         );
@@ -261,7 +261,7 @@ class VH360_Studio_REST_Controller {
             array(
                 'methods'             => WP_REST_Server::CREATABLE,
                 'callback'            => array( $this, 'authorize_publitio_direct_upload' ),
-                'permission_callback' => array( $this, 'permissions_check' ),
+                'permission_callback' => array( $this, 'recording_lifecycle_permissions_check' ),
                 'args'                => array(
                     'id'               => $this->get_id_arg(),
                     'mime_type'        => $this->get_mime_type_arg( true ),
@@ -277,7 +277,7 @@ class VH360_Studio_REST_Controller {
             array(
                 'methods'             => WP_REST_Server::CREATABLE,
                 'callback'            => array( $this, 'complete_publitio_direct_upload' ),
-                'permission_callback' => array( $this, 'permissions_check' ),
+                'permission_callback' => array( $this, 'recording_lifecycle_permissions_check' ),
                 'args'                => array(
                     'id'                  => $this->get_id_arg(),
                     'direct_upload_token' => $this->get_limited_text_arg( true, 128 ),
@@ -309,7 +309,7 @@ class VH360_Studio_REST_Controller {
             array(
                 'methods'             => WP_REST_Server::CREATABLE,
                 'callback'            => array( $this, 'cancel_job' ),
-                'permission_callback' => array( $this, 'permissions_check' ),
+                'permission_callback' => array( $this, 'recording_lifecycle_permissions_check' ),
                 'args'                => array( 'id' => $this->get_id_arg() ),
             )
         );
@@ -820,6 +820,36 @@ class VH360_Studio_REST_Controller {
         }
 
         return VH360_Studio_Permissions::user_can_access_studio( get_current_user_id() );
+    }
+
+
+    public function recording_lifecycle_permissions_check( WP_REST_Request $request ) {
+        $access = $this->permissions_check( $request );
+        if ( true === $access ) {
+            return true;
+        }
+
+        $nonce = $request->get_header( 'X-WP-Nonce' ) ?: $request->get_param( '_wpnonce' );
+        if ( ! $nonce || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+            return new WP_Error( 'rest_cookie_invalid_nonce', __( 'Invalid REST nonce.', 'videohub360-studio' ), array( 'status' => 403 ) );
+        }
+        if ( ! VH360_Studio_Permissions::license_is_valid() ) {
+            return VH360_Studio_Permissions::license_required_error();
+        }
+
+        $job = $this->jobs->get( absint( $request['id'] ), 0 );
+        if ( ! $job || 'livestream_video' !== sanitize_key( $job['source_type'] ) || 'interactive_composite' !== sanitize_key( $job['capture_scope'] ) || empty( $job['live_video_id'] ) ) {
+            return is_wp_error( $access ) ? $access : new WP_Error( 'vh360_studio_forbidden', __( 'You are not allowed to manage this recording job.', 'videohub360-studio' ), array( 'status' => 403 ) );
+        }
+
+        $video_id = absint( $job['live_video_id'] );
+        if ( ! VH360_Studio_Permissions::current_user_can_record_studio_interactive_livestream( $video_id ) ) {
+            return new WP_Error( 'vh360_studio_forbidden', __( 'You are not allowed to manage this interactive recording.', 'videohub360-studio' ), array( 'status' => 403 ) );
+        }
+
+        $owns_job = absint( $job['user_id'] ) === get_current_user_id();
+        $manages_post = current_user_can( 'edit_post', $video_id ) || current_user_can( 'manage_options' );
+        return ( $owns_job || $manages_post ) ? true : new WP_Error( 'vh360_studio_forbidden', __( 'You are not allowed to manage this recording job.', 'videohub360-studio' ), array( 'status' => 403 ) );
     }
 
     public function licensed_permissions_check( WP_REST_Request $request ) {

@@ -37,6 +37,7 @@
             (window.AudioContext || window.webkitAudioContext)
         );
     }
+    function sessionLabel() { return config.recordingPurpose === 'studio_interactive' ? 'interactive session' : 'Live Room'; }
     function joined() { return !!(window.vh360AgoraState && window.vh360AgoraState.isJoined && window.vh360AgoraState.isJoined()); }
     function qualityBits() { var preset = config.qualityPresetSettings || {}; return { videoBitsPerSecond: Number(preset.video_bitrate || preset.videoBitsPerSecond || 6000000), audioBitsPerSecond: Number(preset.audio_bitrate || preset.audioBitsPerSecond || 160000) }; }
     function buildStream() {
@@ -69,7 +70,7 @@
 
     function start() {
         if (starting || activeState === 'recording') { return; }
-        if (!joined()) { setError('Join the Live Room before recording.'); return; }
+        if (!joined()) { setError('Join the ' + sessionLabel() + ' before recording.'); return; }
         if (config.recordingPurpose === 'appointment_session' && !window.confirm('Record this appointment privately?\n\n' + (config.appointmentPrivateMessage || 'Everyone in the appointment will be shown a recording notice. The recording will be saved to this device and will not be published as a replay or uploaded by VideoHub360.'))) { return; }
         recoveryAction = '';
         if (publishingPanel) { publishingPanel.remove(); publishingPanel = null; }
@@ -458,8 +459,8 @@
         }).catch(function (error) {
             if (error && error.message && error.message.indexOf('another tab') !== -1) { throw error; }
             if (ownsLocalRecordingState()) { return stop(); }
-            setStatus('Unable to verify the active recording. Please try again before ending the Live Room.');
-            throw new Error('Unable to verify the active recording. Please try again before ending the Live Room.');
+            setStatus('Unable to verify the active recording. Please try again before ending this session.');
+            throw new Error('Unable to verify the active recording. Please try again before ending this session.');
         });
     }
 
@@ -506,8 +507,14 @@
                 }
             }
 
+            if (config.recordingPurpose === 'studio_interactive' && state.capture_scope === 'program' && state.active) {
+                activeState = 'program_recording_active';
+                showIndicator(!!state.recording_active);
+                if (button) { setLabel('Program recording active in Studio'); setStatus('Program recording active in Studio'); button.disabled = true; }
+                return;
+            }
             var activeElsewhere = isRecordingElsewhere(state);
-            if (activeElsewhere) { activeState = 'recording_elsewhere'; showIndicator(!!state.recording_active); setLabel('Recording in another tab'); setStatus('Recording is active in another browser tab. Stop it there before ending the Live Room.'); if (button) { button.disabled = true; } return; }
+            if (activeElsewhere) { activeState = 'recording_elsewhere'; showIndicator(!!state.recording_active); setLabel('Recording in another tab'); setStatus('Recording is active in another browser tab. Stop it there before ending this session.'); if (button) { button.disabled = true; } return; }
             if (!button) { return; }
             if (state.replay_ready) { recoveryAction = ''; recorder = null; setActiveRecordingState('ready'); setLabel('Replay Ready'); button.disabled = true; return; }
             if (state.replay_failed || state.state === 'failed') { recoveryAction = ''; recorder = null; setActiveRecordingState('idle'); setLabel('Record Again'); button.disabled = false; return; }
@@ -515,7 +522,7 @@
             if (state.active && !recorder && !localRecorder && state.recovery_available && !state.heartbeat_fresh) { recoveryAction = 'clear_interrupted'; setActiveRecordingState('interrupted'); setLabel('Clear Interrupted Recording'); button.disabled = false; setStatus(config.recordingPurpose === 'appointment_session' ? 'Recording was interrupted in this browser. Any undownloaded private recording data was lost.' : 'Recording was interrupted in this browser. The unsaved browser media cannot be recovered.'); return; }
             if (!state.active) {
                 recoveryAction = '';
-                if (['processing', 'recording_elsewhere', 'download_elsewhere', 'interrupted'].indexOf(activeState) !== -1) {
+                if (['processing', 'recording_elsewhere', 'download_elsewhere', 'interrupted', 'program_recording_active'].indexOf(activeState) !== -1) {
                     setActiveRecordingState('idle');
                     setLabel(defaultRecordLabel());
                     button.disabled = false;
@@ -541,7 +548,7 @@
                 stop().catch(function (error) { setError(error && (error.message || error.code) || error); });
             } else if (activeState === 'ready') {
                 button.disabled = true;
-            } else if (activeState !== 'processing' && activeState !== 'download_pending' && activeState !== 'recording_elsewhere' && activeState !== 'download_elsewhere') {
+            } else if (activeState !== 'processing' && activeState !== 'download_pending' && activeState !== 'recording_elsewhere' && activeState !== 'program_recording_active' && activeState !== 'download_elsewhere') {
                 start();
             }
         });

@@ -25,14 +25,30 @@ class VH360_Studio_Assets {
 
     private function recording_session_config( $post_id ) {
         if ( ! $post_id || 'videohub360' !== get_post_type( $post_id ) ) { return null; }
-        $is_studio_interactive = 'yes' === get_post_meta( $post_id, '_vh360_studio_controlled_live', true ) && 'agora' === get_post_meta( $post_id, '_vh360_type', true ) && 'interactive' === get_post_meta( $post_id, '_vh360_agora_mode', true ) && 'yes' === get_post_meta( $post_id, '_vh360_is_live', true ) && 'yes' === get_post_meta( $post_id, '_vh360_agora_stream_live', true ) && 'yes' !== get_post_meta( $post_id, '_vh360_stream_stopped', true ) && '' === (string) get_post_meta( $post_id, '_vh360_appointment_event_id', true );
-        if ( $is_studio_interactive ) {
+        $is_studio_interactive_post = 'yes' === get_post_meta( $post_id, '_vh360_studio_controlled_live', true ) && 'agora' === get_post_meta( $post_id, '_vh360_type', true ) && 'interactive' === get_post_meta( $post_id, '_vh360_agora_mode', true ) && '' === (string) get_post_meta( $post_id, '_vh360_appointment_event_id', true );
+        $is_studio_interactive_live = $is_studio_interactive_post && 'yes' === get_post_meta( $post_id, '_vh360_is_live', true ) && 'yes' === get_post_meta( $post_id, '_vh360_agora_stream_live', true ) && 'yes' !== get_post_meta( $post_id, '_vh360_stream_stopped', true );
+        $has_recoverable_studio_recording = $is_studio_interactive_post && $this->studio_interactive_recording_needs_assets( $post_id );
+        if ( $is_studio_interactive_live || $has_recoverable_studio_recording ) {
             $preset = VH360_Studio_Quality_Presets::normalize( get_post_meta( $post_id, '_vh360_studio_quality_preset', true ) ?: VH360_Studio_Quality_Presets::DEFAULT_PRESET );
             return array( 'sessionKind' => 'studio_interactive', 'recordingPurpose' => 'studio_interactive', 'canRecord' => VH360_Studio_Permissions::current_user_can_record_studio_interactive_livestream( $post_id ), 'stateEndpoint' => '/broadcasts/' . $post_id . '/recording', 'createEndpoint' => '/broadcasts/' . $post_id . '/recordings', 'heartbeatEndpoint' => '/broadcasts/' . $post_id . '/recordings/{job_id}/heartbeat', 'recoverEndpoint' => '/broadcasts/' . $post_id . '/recordings/{job_id}/recover', 'recordButtonLabel' => __( 'Record Session', 'videohub360-studio' ), 'recordingLabel' => __( '● Recording ', 'videohub360-studio' ), 'qualityPreset' => $preset, 'qualityPresetSettings' => VH360_Studio_Quality_Presets::get_preset( $preset ) );
         }
         if ( 'live_room' !== get_post_meta( $post_id, '_vh360_context', true ) ) { return null; }
         $purpose = '' !== (string) get_post_meta( $post_id, '_vh360_appointment_event_id', true ) ? 'appointment_session' : 'ordinary_live_room';
         return array( 'sessionKind' => 'appointment_session' === $purpose ? 'appointment_session' : 'live_room', 'recordingPurpose' => $purpose, 'canRecord' => VH360_Studio_Permissions::current_user_can_record_live_room( $post_id ), 'stateEndpoint' => '/live-rooms/' . $post_id . '/recording', 'createEndpoint' => '/live-rooms/' . $post_id . '/recordings', 'heartbeatEndpoint' => '/live-rooms/' . $post_id . '/recordings/{job_id}/heartbeat', 'recoverEndpoint' => '/live-rooms/' . $post_id . '/recordings/{job_id}/recover', 'recordButtonLabel' => 'appointment_session' === $purpose ? __( 'Record Privately', 'videohub360-studio' ) : __( 'Record', 'videohub360-studio' ), 'recordingLabel' => 'appointment_session' === $purpose ? __( '● Private Recording ', 'videohub360-studio' ) : __( '● Recording ', 'videohub360-studio' ), 'qualityPreset' => VH360_Studio_Quality_Presets::DEFAULT_PRESET, 'qualityPresetSettings' => VH360_Studio_Quality_Presets::get_preset( VH360_Studio_Quality_Presets::DEFAULT_PRESET ) );
+    }
+
+
+    private function studio_interactive_recording_needs_assets( $post_id ) {
+        if ( ! VH360_Studio_Permissions::current_user_can_record_studio_interactive_livestream( $post_id ) ) {
+            return false;
+        }
+        global $wpdb;
+        $table = VH360_Studio_Database::table_name();
+        $job = $wpdb->get_row( $wpdb->prepare( "SELECT id, status FROM {$table} WHERE source_type = 'livestream_video' AND capture_scope = 'interactive_composite' AND live_video_id = %d AND status IN ('created','recording','stopping','uploading','processing','failed') ORDER BY created_at DESC LIMIT 1", absint( $post_id ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        if ( $job ) {
+            return true;
+        }
+        return 'yes' === get_post_meta( $post_id, '_vh360_studio_replay_pending', true ) || in_array( get_post_meta( $post_id, '_vh360_studio_replay_status', true ), array( 'finalization_failed', 'publishing_prepare_failed', 'publishing_start_failed' ), true );
     }
 
     public function enqueue_live_room_recording_assets() {

@@ -539,7 +539,7 @@ $overlay_tool_descriptions = array(
                             <button type="button" class="vh360-studio-button" data-finalize-recording hidden disabled><?php esc_html_e( 'Prepare replay', 'videohub360-studio' ); ?></button>
                         </div>
                         <div class="vh360-studio-inline-status" aria-live="polite" data-recording-status hidden></div>
-                        <p class="vh360-studio-help-text"><?php esc_html_e( 'Records only the Program output. Open the Viewer to record the complete interactive session.', 'videohub360-studio' ); ?></p>
+                        <p class="vh360-studio-help-text" data-program-recording-helper hidden><?php esc_html_e( 'Records only the Program output. Open the Viewer to record the complete interactive session.', 'videohub360-studio' ); ?></p>
                         <div class="vh360-studio-actions">
                             <button type="button" class="vh360-studio-button vh360-studio-button--primary" data-publish-replay hidden disabled><?php esc_html_e( 'Publish replay', 'videohub360-studio' ); ?></button>
                             <button type="button" class="vh360-studio-button vh360-studio-button--secondary" data-check-replay-status hidden disabled><?php esc_html_e( 'Check replay status', 'videohub360-studio' ); ?></button>
