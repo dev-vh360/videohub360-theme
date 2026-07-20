@@ -260,20 +260,33 @@ function vh360_handle_post_creation() {
     $post_content = isset($_POST['vh360_post_content']) ? wp_kses_post(trim(wp_unslash($_POST['vh360_post_content']))) : '';
     $activity_video_asset_uuid = isset($_POST['vh360_activity_video_asset_uuid']) ? sanitize_text_field(wp_unslash($_POST['vh360_activity_video_asset_uuid'])) : '';
     $has_media = !empty($_FILES['vh360_post_media']['name']) || !empty($activity_video_asset_uuid);
-
-    // Do not allow posts without content or media
-    if (empty($post_content) && !$has_media) {
-        $redirect_url = wp_get_referer();
-
+    $redirect_url = wp_get_referer();
+    if (!$redirect_url) {
+        $redirect_url = get_permalink(get_option('page_on_front'));
         if (!$redirect_url) {
-            $redirect_url = get_permalink(get_option('page_on_front'));
-            if (!$redirect_url) {
-                $redirect_url = home_url('/');
-            }
+            $redirect_url = home_url('/');
         }
+    }
 
+    // Do not allow posts without content or media.
+    if (empty($post_content) && !$has_media) {
         wp_safe_redirect($redirect_url);
         exit;
+    }
+
+    $video_storage = class_exists('VH360_Studio_Plugin') ? VH360_Studio_Plugin::instance()->video_storage() : null;
+    if ($activity_video_asset_uuid) {
+        if (!$video_storage) {
+            set_transient('vh360_upload_error_' . $user_id, __('Video storage is temporarily unavailable. Please try again.', 'videohub360-theme'), 30);
+            wp_safe_redirect($redirect_url);
+            exit;
+        }
+        $asset_check = $video_storage->validate_asset_for_association($activity_video_asset_uuid, 'vh360_post', 0, 'activity_video');
+        if (is_wp_error($asset_check)) {
+            set_transient('vh360_upload_error_' . $user_id, $asset_check->get_error_message(), 30);
+            wp_safe_redirect($redirect_url);
+            exit;
+        }
     }
 
     // Insert the post
@@ -285,27 +298,37 @@ function vh360_handle_post_creation() {
         'post_author'    => $user_id,
         'comment_status' => 'open',
     );
-    $post_id = wp_insert_post($post_args);
-
-    // Handle media upload (photo or video)
-    if ($post_id && $activity_video_asset_uuid && class_exists('VH360_Studio_Plugin')) {
-        $asset = VH360_Studio_Plugin::instance()->video_storage()->associate_asset($activity_video_asset_uuid, $post_id, 'vh360_post');
-        if (!is_wp_error($asset) && !empty($asset['id'])) {
-            update_post_meta($post_id, '_vh360_studio_video_asset_id', absint($asset['id']));
-            update_post_meta($post_id, 'vh360_post_media_type', 'video');
-        }
+    $post_id = wp_insert_post($post_args, true);
+    if (is_wp_error($post_id)) {
+        set_transient('vh360_upload_error_' . $user_id, $post_id->get_error_message(), 30);
+        wp_safe_redirect($redirect_url);
+        exit;
     }
 
-    if ($post_id && empty($activity_video_asset_uuid) && !empty($_FILES['vh360_post_media']['name'])) {
+    // Handle a video uploaded through the shared Studio browser client.
+    if ($activity_video_asset_uuid) {
+        $asset = $video_storage->associate_asset($activity_video_asset_uuid, $post_id, 'vh360_post', 'activity_video');
+        if (is_wp_error($asset)) {
+            $video_storage->cancel_or_delete($activity_video_asset_uuid);
+            wp_delete_post($post_id, true);
+            set_transient('vh360_upload_error_' . $user_id, $asset->get_error_message(), 30);
+            wp_safe_redirect($redirect_url);
+            exit;
+        }
+        update_post_meta($post_id, '_vh360_studio_video_asset_id', absint($asset['id']));
+        update_post_meta($post_id, 'vh360_post_media_type', 'video');
+    }
+
+    // Non-JavaScript and image fallback path.
+    if (empty($activity_video_asset_uuid) && !empty($_FILES['vh360_post_media']['name'])) {
         require_once ABSPATH . 'wp-admin/includes/file.php';
         require_once ABSPATH . 'wp-admin/includes/image.php';
         require_once ABSPATH . 'wp-admin/includes/media.php';
-        
+
         $file_info = wp_check_filetype($_FILES['vh360_post_media']['name']);
         $file_type = '';
         $tmp_file = isset($_FILES['vh360_post_media']['tmp_name']) ? $_FILES['vh360_post_media']['tmp_name'] : '';
-        
-        // Verify the uploaded file is legitimate and get the actual MIME type
+
         if (!empty($tmp_file) && is_uploaded_file($tmp_file) && function_exists('finfo_file')) {
             $finfo = finfo_open(FILEINFO_MIME_TYPE);
             if ($finfo !== false) {
@@ -316,31 +339,30 @@ function vh360_handle_post_creation() {
                 }
             }
         }
-        
-        // Fallback to wp_check_filetype if finfo not available
         if (empty($file_type)) {
             $file_type = $file_info['type'];
         }
-        
+
         $file_size = isset($_FILES['vh360_post_media']['size']) ? absint($_FILES['vh360_post_media']['size']) : 0;
-        
-        // Validate the upload
         $validation = vh360_validate_post_upload($file_type, $file_size);
-        
-        if ($validation['allowed']) {
+        $upload_error = null;
+        $created_asset_uuid = '';
+
+        if (empty($validation['allowed'])) {
+            $upload_error = new WP_Error('vh360_activity_upload_invalid', !empty($validation['message']) ? $validation['message'] : __('The selected media file is not allowed.', 'videohub360-theme'));
+        } else {
             $is_video = strpos($file_type, 'video/') === 0;
-            if ($is_video && class_exists('VH360_Studio_Plugin')) {
-                $service = VH360_Studio_Plugin::instance()->video_storage();
-                $asset = $service->create_asset($user_id, array('context' => 'activity_video', 'filename' => $_FILES['vh360_post_media']['name'], 'mime_type' => $file_type, 'file_size' => $file_size));
-                $upload_error = null;
+            if ($is_video && $video_storage) {
+                $asset = $video_storage->create_asset($user_id, array('context' => 'activity_video', 'filename' => $_FILES['vh360_post_media']['name'], 'mime_type' => $file_type, 'file_size' => $file_size));
                 if (is_wp_error($asset)) {
                     $upload_error = $asset;
                 } else {
-                    $uploaded_asset = $service->upload_asset($asset['asset_uuid'], $_FILES['vh360_post_media']);
+                    $created_asset_uuid = $asset['asset_uuid'];
+                    $uploaded_asset = $video_storage->upload_asset($asset['asset_uuid'], $_FILES['vh360_post_media']);
                     if (is_wp_error($uploaded_asset)) {
                         $upload_error = $uploaded_asset;
                     } else {
-                        $associated = $service->associate_asset($uploaded_asset['asset_uuid'], $post_id, 'vh360_post');
+                        $associated = $video_storage->associate_asset($uploaded_asset['asset_uuid'], $post_id, 'vh360_post', 'activity_video');
                         if (is_wp_error($associated)) {
                             $upload_error = $associated;
                         } else {
@@ -349,31 +371,29 @@ function vh360_handle_post_creation() {
                         }
                     }
                 }
-                if ($upload_error) {
-                    wp_delete_post($post_id, true);
-                    set_transient('vh360_upload_error_' . $user_id, $upload_error->get_error_message(), 30);
-                }
             } else {
+                // Preserve the original local attachment behavior when Studio is unavailable.
                 $file_id = media_handle_upload('vh360_post_media', $post_id);
-                if (!is_wp_error($file_id)) {
+                if (is_wp_error($file_id)) {
+                    $upload_error = $file_id;
+                } elseif ($is_video) {
+                    update_post_meta($post_id, '_vh360_video_attachment', absint($file_id));
+                    update_post_meta($post_id, 'vh360_post_media_type', 'video');
+                    update_post_meta($post_id, 'vh360_post_media_id', absint($file_id));
+                } else {
                     set_post_thumbnail($post_id, $file_id);
                     update_post_meta($post_id, 'vh360_post_media_type', 'photo');
                     update_post_meta($post_id, 'vh360_post_media_id', $file_id);
                 }
             }
-        } elseif (!empty($validation['message'])) {
-            // Store validation error message in transient for user feedback
-            set_transient('vh360_upload_error_' . $user_id, $validation['message'], 30);
         }
-    }
 
-    // Redirect back to where the user came from
-    $redirect_url = wp_get_referer();
-
-    if (!$redirect_url) {
-        $redirect_url = get_permalink(get_option('page_on_front'));
-        if (!$redirect_url) {
-            $redirect_url = home_url('/');
+        if ($upload_error) {
+            if ($created_asset_uuid && $video_storage) {
+                $video_storage->cancel_or_delete($created_asset_uuid);
+            }
+            wp_delete_post($post_id, true);
+            set_transient('vh360_upload_error_' . $user_id, $upload_error->get_error_message(), 30);
         }
     }
 
@@ -1162,7 +1182,9 @@ function vh360_render_original_post_card($original_post, $sharing_post_id = 0) {
             if ($studio_playback && 'ready' === $studio_playback['status']) :
             ?>
                 <div class="vh360-original-card-video">
-                    <?php if ('embed' === $studio_playback['render_mode'] && !empty($studio_playback['embed_url'])) : ?>
+                    <?php if ('embed_html' === $studio_playback['render_mode'] && !empty($studio_playback['embed_html'])) : ?>
+                        <?php echo $studio_playback['embed_html']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Sanitized by VH360 Studio. ?>
+                    <?php elseif ('embed' === $studio_playback['render_mode'] && !empty($studio_playback['embed_url'])) : ?>
                         <iframe src="<?php echo esc_url($studio_playback['embed_url']); ?>" allowfullscreen loading="lazy"></iframe>
                     <?php else : ?>
                         <video controls class="vh360-video-player" preload="metadata" poster="<?php echo esc_url($studio_playback['poster_url']); ?>"><source src="<?php echo esc_url($studio_playback['src']); ?>" type="<?php echo esc_attr($studio_playback['mime_type']); ?>"></video>
@@ -1502,7 +1524,9 @@ function vh360_render_community_post($post, $show_full = true, $skip_comments = 
                 if ($studio_playback && 'ready' === $studio_playback['status']) :
                 ?>
                     <div class="vh360-community-video">
-                        <?php if ('embed' === $studio_playback['render_mode'] && !empty($studio_playback['embed_url'])) : ?>
+                        <?php if ('embed_html' === $studio_playback['render_mode'] && !empty($studio_playback['embed_html'])) : ?>
+                            <?php echo $studio_playback['embed_html']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Sanitized by VH360 Studio. ?>
+                        <?php elseif ('embed' === $studio_playback['render_mode'] && !empty($studio_playback['embed_url'])) : ?>
                             <iframe src="<?php echo esc_url($studio_playback['embed_url']); ?>" allowfullscreen loading="lazy"></iframe>
                         <?php else : ?>
                             <video controls class="vh360-video-player" preload="metadata" poster="<?php echo esc_url($studio_playback['poster_url']); ?>"><source src="<?php echo esc_url($studio_playback['src']); ?>" type="<?php echo esc_attr($studio_playback['mime_type']); ?>"></video>
