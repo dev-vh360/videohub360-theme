@@ -194,6 +194,10 @@ $vh360_header_desc       = get_theme_mod('vh360_activity_header_description', __
                                         <span class="vh360-file-name"></span>
                                     </div>
                                     <?php endif; ?>
+                                    <div class="vh360-activity-upload-progress" style="display: none;" aria-live="polite">
+                                        <div class="vh360-activity-progress-track"><span class="vh360-activity-progress-fill" style="width: 0%;"></span></div>
+                                        <span class="vh360-activity-progress-text">0%</span>
+                                    </div>
 
                                     <div class="vh360-post-actions vh360-composer-actions">
                                         <?php if ( $photos_enabled || $videos_enabled ) : ?>
@@ -301,6 +305,10 @@ $vh360_header_desc       = get_theme_mod('vh360_activity_header_description', __
                                 <span class="vh360-file-name"></span>
                             </div>
                             <?php endif; ?>
+                            <div class="vh360-activity-upload-progress" style="display: none;" aria-live="polite">
+                                <div class="vh360-activity-progress-track"><span class="vh360-activity-progress-fill" style="width: 0%;"></span></div>
+                                <span class="vh360-activity-progress-text">0%</span>
+                            </div>
 
                             <div class="vh360-post-actions vh360-composer-actions">
                                 <?php if ( $photos_enabled || $videos_enabled ) : ?>
