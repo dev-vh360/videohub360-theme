@@ -91,6 +91,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
         recordingHeartbeatTimer: null,
         broadcastRecordingStateTimer: null,
         viewerRecordingState: null,
+        viewerRecordingUiMessage: '',
         activeBroadcastMode: '',
         recordingStopRequested: false,
         durationTimer: null,
@@ -5095,13 +5096,61 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 
     function viewerRecordingOwnsSession() {
         const remote = state.viewerRecordingState || {};
-        return state.broadcastVideoId && isInteractiveBroadcastMode() && (remote.capture_scope === 'interactive_composite' && remote.active || remote.replay_pending || remote.replay_processing || remote.replay_ready);
+        return Boolean(
+            state.broadcastVideoId &&
+            isInteractiveBroadcastMode() &&
+            (
+                remote.active ||
+                remote.replay_pending ||
+                remote.replay_processing ||
+                remote.replay_ready
+            )
+        );
+    }
+
+    function viewerRecordingStatusMessage(remote) {
+        remote = remote || {};
+        const scope = String(remote.capture_scope || '');
+        const phase = String(remote.state || 'idle');
+
+        if (scope === 'interactive_composite') {
+            if (remote.retryable) { return 'Full session replay needs attention'; }
+            if (remote.replay_failed || phase === 'failed') { return 'Full session replay failed'; }
+            if (remote.active && (phase === 'created' || phase === 'recording')) { return 'Full session recording active in Viewer'; }
+            if (phase === 'stopping') { return 'Full session recording is stopping'; }
+            if (phase === 'uploading') { return 'Full session recording is uploading'; }
+            if (phase === 'processing' || remote.replay_processing || remote.replay_pending) { return 'Full session replay is processing'; }
+            if (phase === 'ready' || remote.replay_ready) { return 'Full session replay is ready'; }
+        }
+
+        if (scope === 'program') {
+            if (remote.retryable) { return 'Program replay needs attention'; }
+            if (remote.replay_failed || phase === 'failed') { return 'Program replay failed'; }
+            if (remote.active && (phase === 'created' || phase === 'recording')) { return 'Program recording active in Studio'; }
+            if (phase === 'stopping') { return 'Program recording is stopping'; }
+            if (phase === 'uploading') { return 'Program recording is uploading'; }
+            if (phase === 'processing' || remote.replay_processing || remote.replay_pending) { return 'Program replay is processing'; }
+            if (phase === 'ready' || remote.replay_ready) { return 'Program replay is ready'; }
+        }
+
+        return '';
     }
 
     function updateViewerRecordingUi() {
-        if (viewerRecordingOwnsSession()) {
-            setRecordingStatus('Full session recording active in Viewer', 'info');
+        const remote = state.viewerRecordingState || {};
+        const message = viewerRecordingStatusMessage(remote);
+        const localProgramJob = remote.capture_scope === 'program' && state.activeJobId && Number(remote.job_id || 0) === Number(state.activeJobId);
+
+        if (message && !localProgramJob) {
+            state.viewerRecordingUiMessage = message;
+            setRecordingStatus(message, remote.replay_failed || remote.state === 'failed' ? 'error' : (remote.replay_ready || remote.state === 'ready' ? 'success' : 'info'));
+        } else if (!message && state.viewerRecordingUiMessage && !state.activeJobId && !isRecordingActive()) {
+            state.viewerRecordingUiMessage = '';
+            setRecordingStatus('', 'info');
+        } else if (!message) {
+            state.viewerRecordingUiMessage = '';
         }
+
         renderRecordingState();
     }
 
@@ -5131,6 +5180,14 @@ var VH360StorageCompat = window.VH360Storage || (function(){
             state.broadcastRecordingStateTimer = null;
         }
         state.viewerRecordingState = null;
+        state.viewerRecordingUiMessage = '';
+    }
+
+    function viewerCaptureHasStopped(remote) {
+        if (!remote || remote.capture_scope !== 'interactive_composite' || !remote.active) {
+            return true;
+        }
+        return ['stopping', 'uploading', 'processing', 'ready', 'failed', 'idle'].indexOf(String(remote.state || 'idle')) !== -1;
     }
 
     async function coordinateViewerRecordingBeforeEnd() {
@@ -5142,11 +5199,31 @@ var VH360StorageCompat = window.VH360Storage || (function(){
             setBroadcastStatus('Unable to confirm Viewer recording state. Try again before ending live.', 'error');
             return false;
         }
-        if (!remote || remote.capture_scope !== 'interactive_composite' || !remote.heartbeat_fresh || ['created', 'recording'].indexOf(String(remote.state || '')) === -1) {
+        if (viewerCaptureHasStopped(remote) || !remote.heartbeat_fresh || ['created', 'recording'].indexOf(String(remote.state || '')) === -1) {
             return true;
         }
+
         setBroadcastStatus('Requesting Viewer recording to stop before ending live…', 'info');
-        await api('/broadcasts/' + state.broadcastVideoId + '/recording/stop-request', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: '{}' });
+        try {
+            await api('/broadcasts/' + state.broadcastVideoId + '/recording/stop-request', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: '{}' });
+        } catch (error) {
+            // The recording may have moved to stopping/uploading between the
+            // state check and the stop request. Re-read authoritative state
+            // before deciding whether the request failure is actionable.
+            let latestAfterFailure;
+            try {
+                latestAfterFailure = await refreshBroadcastRecordingState();
+            } catch (refreshError) {
+                setBroadcastStatus('Unable to stop or confirm the Viewer recording. Try again before ending live.', 'error');
+                return false;
+            }
+            if (viewerCaptureHasStopped(latestAfterFailure) || !latestAfterFailure.heartbeat_fresh) {
+                return true;
+            }
+            setBroadcastStatus('Unable to stop the Viewer recording. Try again before ending live.', 'error');
+            return false;
+        }
+
         const deadline = Date.now() + 60000;
         while (Date.now() < deadline) {
             await new Promise((resolve) => window.setTimeout(resolve, 2000));
@@ -5157,8 +5234,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
                 setBroadcastStatus('Unable to confirm Viewer recording state. Try again before ending live.', 'error');
                 return false;
             }
-            const phase = String((latest && latest.state) || 'idle');
-            if (!latest || latest.capture_scope !== 'interactive_composite' || ['stopping', 'uploading', 'processing', 'ready', 'failed', 'idle'].indexOf(phase) !== -1) {
+            if (viewerCaptureHasStopped(latest) || !latest.heartbeat_fresh) {
                 return true;
             }
         }
@@ -6510,7 +6586,12 @@ var VH360StorageCompat = window.VH360Storage || (function(){
             updateRecordingOperationStatus(isPublitioDirectMode() ? getStudioString('recordingStoppedFastCloudReady', 'Recording stopped. Ready for fast cloud upload.') : strings.uploadingChunk, 'info');
             finishRecordingUploadsAndConfirmStop().catch(() => {});
         }
-        const viewerReadyToEnd = await coordinateViewerRecordingBeforeEnd();
+        let viewerReadyToEnd = false;
+        try {
+            viewerReadyToEnd = await coordinateViewerRecordingBeforeEnd();
+        } catch (error) {
+            setBroadcastStatus('Unable to stop or confirm the Viewer recording. Try again before ending live.', 'error');
+        }
         if (!viewerReadyToEnd) {
             state.broadcastEnding = false;
             state.broadcastReady = Boolean(state.broadcastSession);
