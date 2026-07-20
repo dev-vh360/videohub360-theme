@@ -88,6 +88,11 @@ var VH360StorageCompat = window.VH360Storage || (function(){
         recordingStoppedAt: null,
         recordingDurationSeconds: 0,
         recordingStopPromise: null,
+        recordingHeartbeatTimer: null,
+        broadcastRecordingStateTimer: null,
+        viewerRecordingState: null,
+        viewerRecordingUiMessage: '',
+        activeBroadcastMode: '',
         recordingStopRequested: false,
         durationTimer: null,
         finalChunkCount: 0,
@@ -238,6 +243,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
         recordingProgressMeta: root.querySelector('[data-recording-progress-meta]'),
         recordingProgressLabel: root.querySelector('[data-recording-progress-label]'),
         recordingSummaryStatus: root.querySelector('[data-recording-summary-status]'),
+        programRecordingHelper: root.querySelector('[data-program-recording-helper]'),
         publishReplay: root.querySelector('[data-publish-replay]'),
         checkReplayStatus: root.querySelector('[data-check-replay-status]'),
         publishingStatus: root.querySelector('[data-publishing-status]'),
@@ -2130,7 +2136,8 @@ var VH360StorageCompat = window.VH360Storage || (function(){
         }
         if (state.liveAudioWarningActive) {
             state.liveAudioWarningActive = false;
-            setBroadcastStatus(strings.liveStarted, 'success');
+            startBroadcastRecordingStatePolling();
+                setBroadcastStatus(strings.liveStarted, 'success');
         }
     }
 
@@ -3076,6 +3083,10 @@ var VH360StorageCompat = window.VH360Storage || (function(){
     }
 
     function openStreamSettingsModal(trigger) {
+        if (state.broadcastSession || state.broadcastStarting || state.broadcastReady) {
+            setBroadcastStatus('Stream settings are locked while live.', 'warning');
+            return;
+        }
         if (!els.streamSettingsModal) {
             return;
         }
@@ -5069,11 +5080,198 @@ var VH360StorageCompat = window.VH360Storage || (function(){
         return payload || {};
     }
 
+
+
+    function currentConfiguredBroadcastMode() {
+        return els.broadcastMode ? els.broadcastMode.value : 'broadcast';
+    }
+
+    function activeBroadcastMode() {
+        return state.activeBroadcastMode || currentConfiguredBroadcastMode();
+    }
+
+    function isInteractiveBroadcastMode() {
+        return activeBroadcastMode() === 'interactive';
+    }
+
+    function viewerRecordingOwnsSession() {
+        const remote = state.viewerRecordingState || {};
+        return Boolean(
+            state.broadcastVideoId &&
+            isInteractiveBroadcastMode() &&
+            (
+                remote.active ||
+                remote.replay_pending ||
+                remote.replay_processing ||
+                remote.replay_ready
+            )
+        );
+    }
+
+    function viewerRecordingStatusMessage(remote) {
+        remote = remote || {};
+        const scope = String(remote.capture_scope || '');
+        const phase = String(remote.state || 'idle');
+
+        if (scope === 'interactive_composite') {
+            if (remote.retryable) { return 'Full session replay needs attention'; }
+            if (remote.replay_failed || phase === 'failed') { return 'Full session replay failed'; }
+            if (remote.active && (phase === 'created' || phase === 'recording')) { return 'Full session recording active in Viewer'; }
+            if (phase === 'stopping') { return 'Full session recording is stopping'; }
+            if (phase === 'uploading') { return 'Full session recording is uploading'; }
+            if (phase === 'processing' || remote.replay_processing || remote.replay_pending) { return 'Full session replay is processing'; }
+            if (phase === 'ready' || remote.replay_ready) { return 'Full session replay is ready'; }
+        }
+
+        if (scope === 'program') {
+            if (remote.retryable) { return 'Program replay needs attention'; }
+            if (remote.replay_failed || phase === 'failed') { return 'Program replay failed'; }
+            if (remote.active && (phase === 'created' || phase === 'recording')) { return 'Program recording active in Studio'; }
+            if (phase === 'stopping') { return 'Program recording is stopping'; }
+            if (phase === 'uploading') { return 'Program recording is uploading'; }
+            if (phase === 'processing' || remote.replay_processing || remote.replay_pending) { return 'Program replay is processing'; }
+            if (phase === 'ready' || remote.replay_ready) { return 'Program replay is ready'; }
+        }
+
+        return '';
+    }
+
+    function updateViewerRecordingUi() {
+        const remote = state.viewerRecordingState || {};
+        const message = viewerRecordingStatusMessage(remote);
+        const localProgramJob = remote.capture_scope === 'program' && state.activeJobId && Number(remote.job_id || 0) === Number(state.activeJobId);
+
+        if (message && !localProgramJob) {
+            state.viewerRecordingUiMessage = message;
+            setRecordingStatus(message, remote.replay_failed || remote.state === 'failed' ? 'error' : (remote.replay_ready || remote.state === 'ready' ? 'success' : 'info'));
+        } else if (!message && state.viewerRecordingUiMessage && !state.activeJobId && !isRecordingActive()) {
+            state.viewerRecordingUiMessage = '';
+            setRecordingStatus('', 'info');
+        } else if (!message) {
+            state.viewerRecordingUiMessage = '';
+        }
+
+        renderRecordingState();
+    }
+
+    async function refreshBroadcastRecordingState() {
+        if (!state.broadcastVideoId || !isInteractiveBroadcastMode()) {
+            state.viewerRecordingState = null;
+            return null;
+        }
+        const remote = await api('/broadcasts/' + state.broadcastVideoId + '/recording', { method: 'GET', headers: { 'X-WP-Nonce': config.nonce } });
+        state.viewerRecordingState = remote || null;
+        updateViewerRecordingUi();
+        return state.viewerRecordingState;
+    }
+
+    function startBroadcastRecordingStatePolling() {
+        stopBroadcastRecordingStatePolling();
+        if (!state.broadcastVideoId || !isInteractiveBroadcastMode()) { return; }
+        refreshBroadcastRecordingState().catch((error) => studioDebugLog('[VH360 Studio] Unable to refresh livestream recording state', error));
+        state.broadcastRecordingStateTimer = window.setInterval(() => {
+            refreshBroadcastRecordingState().catch((error) => studioDebugLog('[VH360 Studio] Unable to refresh livestream recording state', error));
+        }, 10000);
+    }
+
+    function stopBroadcastRecordingStatePolling() {
+        if (state.broadcastRecordingStateTimer) {
+            window.clearInterval(state.broadcastRecordingStateTimer);
+            state.broadcastRecordingStateTimer = null;
+        }
+        state.viewerRecordingState = null;
+        state.viewerRecordingUiMessage = '';
+    }
+
+    function viewerCaptureHasStopped(remote) {
+        if (!remote || remote.capture_scope !== 'interactive_composite' || !remote.active) {
+            return true;
+        }
+        return ['stopping', 'uploading', 'processing', 'ready', 'failed', 'idle'].indexOf(String(remote.state || 'idle')) !== -1;
+    }
+
+    async function coordinateViewerRecordingBeforeEnd() {
+        if (!state.broadcastVideoId || !isInteractiveBroadcastMode()) { return true; }
+        let remote;
+        try {
+            remote = await refreshBroadcastRecordingState();
+        } catch (error) {
+            setBroadcastStatus('Unable to confirm Viewer recording state. Try again before ending live.', 'error');
+            return false;
+        }
+        if (viewerCaptureHasStopped(remote) || !remote.heartbeat_fresh || ['created', 'recording'].indexOf(String(remote.state || '')) === -1) {
+            return true;
+        }
+
+        setBroadcastStatus('Requesting Viewer recording to stop before ending live…', 'info');
+        try {
+            await api('/broadcasts/' + state.broadcastVideoId + '/recording/stop-request', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: '{}' });
+        } catch (error) {
+            // The recording may have moved to stopping/uploading between the
+            // state check and the stop request. Re-read authoritative state
+            // before deciding whether the request failure is actionable.
+            let latestAfterFailure;
+            try {
+                latestAfterFailure = await refreshBroadcastRecordingState();
+            } catch (refreshError) {
+                setBroadcastStatus('Unable to stop or confirm the Viewer recording. Try again before ending live.', 'error');
+                return false;
+            }
+            if (viewerCaptureHasStopped(latestAfterFailure) || !latestAfterFailure.heartbeat_fresh) {
+                return true;
+            }
+            setBroadcastStatus('Unable to stop the Viewer recording. Try again before ending live.', 'error');
+            return false;
+        }
+
+        const deadline = Date.now() + 60000;
+        while (Date.now() < deadline) {
+            await new Promise((resolve) => window.setTimeout(resolve, 2000));
+            let latest;
+            try {
+                latest = await refreshBroadcastRecordingState();
+            } catch (error) {
+                setBroadcastStatus('Unable to confirm Viewer recording state. Try again before ending live.', 'error');
+                return false;
+            }
+            if (viewerCaptureHasStopped(latest) || !latest.heartbeat_fresh) {
+                return true;
+            }
+        }
+        setBroadcastStatus('The interactive recording is still active in the Viewer. Stop it there before ending live.', 'error');
+        return false;
+    }
+
+    function programRecordingHeartbeatPath() {
+        return state.broadcastVideoId && isInteractiveBroadcastMode() && state.activeJobId
+            ? '/broadcasts/' + state.broadcastVideoId + '/recordings/' + state.activeJobId + '/heartbeat'
+            : '';
+    }
+
+    function startProgramRecordingHeartbeat() {
+        stopProgramRecordingHeartbeat();
+        const path = programRecordingHeartbeatPath();
+        if (!path) { return; }
+        const beat = () => api(path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } }).catch((error) => studioDebugLog('[VH360 Studio] Unable to update program recording heartbeat', error));
+        beat();
+        state.recordingHeartbeatTimer = window.setInterval(beat, 30000);
+    }
+
+    function stopProgramRecordingHeartbeat() {
+        if (state.recordingHeartbeatTimer) {
+            window.clearInterval(state.recordingHeartbeatTimer);
+            state.recordingHeartbeatTimer = null;
+        }
+    }
+
     async function ensureSetupJob() {
         if (state.activeJobId) {
             return state.activeJobId;
         }
-        const job = await api('/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ recording_mode: 'browser', source_type: 'studio_setup', source_id: 'studio-recording-' + Date.now(), quality_preset: getSelectedPresetKey() }) });
+        const liveInteractive = state.broadcastVideoId && isInteractiveBroadcastMode();
+        const job = liveInteractive
+            ? (await api('/broadcasts/' + state.broadcastVideoId + '/recordings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ capture_scope: 'program' }) })).job
+            : await api('/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ recording_mode: 'browser', capture_scope: 'program', source_type: 'studio_setup', source_id: 'studio-recording-' + Date.now(), quality_preset: getSelectedPresetKey() }) });
         state.activeJobId = job.id;
         state.currentStorageProvider = job.storage_provider || '';
         return job.id;
@@ -5201,6 +5399,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
             state.selectedMimeType = state.recorder.mimeType || mimeType;
             const start = await api('/jobs/' + jobId + '/recording/start', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ mime_type: state.selectedMimeType }) });
             serverRecordingStarted = true;
+            startProgramRecordingHeartbeat();
             state.browserSessionId = start.browser_session_id;
             state.selectedMimeType = start.mime_type || state.selectedMimeType;
             state.recorder.addEventListener('dataavailable', (event) => {
@@ -5228,7 +5427,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
             renderRecordingState();
         } catch (error) {
             if (serverRecordingStarted && jobId) {
-                await api('/jobs/' + jobId + '/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } }).catch(() => {});
+                await api('/jobs/' + jobId + '/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce } }).then(stopProgramRecordingHeartbeat).catch(() => {});
                 state.activeJobId = null;
                 state.browserSessionId = '';
             }
@@ -5372,6 +5571,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
             const duration = Math.max(0, Math.round(state.recordingDurationSeconds || 0));
             const job = await api('/jobs/' + state.activeJobId + '/recording/stop', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify({ duration_seconds: duration }) });
             state.serverStopConfirmed = true;
+            stopProgramRecordingHeartbeat();
             state.stopFailed = false;
             state.currentJobStatus = job.status || 'stopping';
             return job;
@@ -5930,6 +6130,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
     function renderRecordingState() {
         updateOperatorStatus();
         if (els.recordingSummaryStatus) { els.recordingSummaryStatus.textContent = recordingSummaryStatus(); }
+        if (els.programRecordingHelper) { els.programRecordingHelper.hidden = !isInteractiveBroadcastMode(); }
         if (els.recordingTimer) {
             let seconds = 0;
             if (state.recordingStoppedAt) {
@@ -5958,7 +6159,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
         const stopping = Boolean(state.recordingStopRequested && !state.recordingStoppedAt);
         const hasFailedUploads = Boolean(state.failedChunks.size);
         const canPrepareReplay = Boolean(!isPublitioDirectMode() && state.activeJobId && state.serverStopConfirmed && state.finalChunkCount && !state.pendingUploads.size && !hasFailedUploads && !state.finalizeInProgress && state.currentJobStatus !== 'processing' && state.currentJobStatus !== 'ready');
-        setButtonVisibility(els.startRecording, !recording && !stopping && !state.activeJobId, true);
+        setButtonVisibility(els.startRecording, !recording && !stopping && !state.activeJobId, !viewerRecordingOwnsSession());
         if (els.stopRecording) { els.stopRecording.textContent = state.stopFailed ? 'Retry stop' : 'Stop recording'; }
         setButtonVisibility(els.stopRecording, recording || stopping || state.stopFailed, !stopping);
         setButtonVisibility(els.retryChunks, hasFailedUploads, hasFailedUploads);
@@ -5969,7 +6170,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 
     function setRecorderButtons(recording, stopped) {
         const stopping = Boolean(state.recordingStopRequested && !state.recordingStoppedAt);
-        setButtonVisibility(els.startRecording, !recording && !stopping && !state.activeJobId, true);
+        setButtonVisibility(els.startRecording, !recording && !stopping && !state.activeJobId, !viewerRecordingOwnsSession());
         if (els.stopRecording) { els.stopRecording.textContent = state.stopFailed ? 'Retry stop' : 'Stop recording'; }
         setButtonVisibility(els.stopRecording, recording || stopping || state.stopFailed, !stopping);
         const canPrepareReplay = Boolean(!isPublitioDirectMode() && stopped && state.serverStopConfirmed && state.activeJobId && state.finalChunkCount && !state.pendingUploads.size && !state.failedChunks.size && !state.finalizeInProgress && state.currentJobStatus !== 'processing' && state.currentJobStatus !== 'ready');
@@ -6246,7 +6447,10 @@ var VH360StorageCompat = window.VH360Storage || (function(){
             } else if (audioSummary.failed > 0) {
                 setBroadcastStatus(formatAudioInputSummary(audioSummary, 'live'), 'warning');
             }
-            const created = await api('/broadcasts', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify(Object.assign({}, broadcastPayload(), { recording_intent: 'browser' })) });
+            state.activeBroadcastMode = currentConfiguredBroadcastMode();
+            if (els.broadcastMode) { els.broadcastMode.disabled = true; }
+            if (els.openStreamSettings) { els.openStreamSettings.disabled = true; }
+            const created = await api('/broadcasts', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce }, body: JSON.stringify(Object.assign({}, broadcastPayload(), { recording_intent: state.activeBroadcastMode === 'interactive' ? 'none' : 'browser' })) });
             const broadcast = created.broadcast || {};
             state.broadcastVideoId = broadcast.videoId;
             state.activeJobId = created.job && created.job.id ? created.job.id : state.activeJobId;
@@ -6316,6 +6520,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
             renderProgramLiveControls();
             setShellClass('is-live', true);
             updateLiveAudioInputWarning();
+            startBroadcastRecordingStatePolling();
             if (!state.liveAudioWarningActive) {
                 setBroadcastStatus(strings.liveStarted, 'success');
             }
@@ -6337,6 +6542,9 @@ var VH360StorageCompat = window.VH360Storage || (function(){
                 window.clearInterval(state.heartbeatTimer);
                 state.heartbeatTimer = null;
             }
+            state.activeBroadcastMode = '';
+            if (els.broadcastMode) { els.broadcastMode.disabled = false; }
+            if (els.openStreamSettings) { els.openStreamSettings.disabled = false; }
             state.broadcastStarting = false;
             state.broadcastReady = false;
             if (els.endLive) els.endLive.disabled = true;
@@ -6378,6 +6586,19 @@ var VH360StorageCompat = window.VH360Storage || (function(){
             updateRecordingOperationStatus(isPublitioDirectMode() ? getStudioString('recordingStoppedFastCloudReady', 'Recording stopped. Ready for fast cloud upload.') : strings.uploadingChunk, 'info');
             finishRecordingUploadsAndConfirmStop().catch(() => {});
         }
+        let viewerReadyToEnd = false;
+        try {
+            viewerReadyToEnd = await coordinateViewerRecordingBeforeEnd();
+        } catch (error) {
+            setBroadcastStatus('Unable to stop or confirm the Viewer recording. Try again before ending live.', 'error');
+        }
+        if (!viewerReadyToEnd) {
+            state.broadcastEnding = false;
+            state.broadcastReady = Boolean(state.broadcastSession);
+            renderTransitionButtons();
+            renderProgramLiveControls();
+            return;
+        }
         if (state.heartbeatTimer) {
             window.clearInterval(state.heartbeatTimer);
             state.heartbeatTimer = null;
@@ -6389,6 +6610,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
             state.liveAudioWarningActive = false;
         }
         state.viewerPermalink = '';
+        stopBroadcastRecordingStatePolling();
         updateViewerLinkControls();
         if (state.broadcastVideoId) {
             try {
@@ -6401,6 +6623,9 @@ var VH360StorageCompat = window.VH360Storage || (function(){
                 return;
             }
         }
+        state.activeBroadcastMode = '';
+        if (els.broadcastMode) { els.broadcastMode.disabled = false; }
+        if (els.openStreamSettings) { els.openStreamSettings.disabled = false; }
         state.broadcastEnding = false;
         state.broadcastReady = false;
         if (els.goLive) els.goLive.disabled = false;

@@ -45,6 +45,11 @@ class VH360_Studio_Database {
         global $wpdb;
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
+        // Capture the installed version before dbDelta() or the final option
+        // update. This lets one-time data migrations distinguish legacy rows
+        // from valid rows created by the capture-scope implementation.
+        $installed_version = (string) get_option( 'vh360_studio_db_version', '0' );
+
         $table_name       = self::table_name();
         $chunks_table_name = self::chunks_table_name();
         $bible_translations_table = self::bible_translations_table_name();
@@ -67,6 +72,7 @@ class VH360_Studio_Database {
             live_video_id bigint(20) unsigned DEFAULT NULL,
             room_id varchar(191) NOT NULL DEFAULT '',
             recording_mode varchar(40) NOT NULL DEFAULT 'browser',
+            capture_scope varchar(40) NOT NULL DEFAULT 'interactive_composite',
             quality_preset varchar(40) NOT NULL DEFAULT 'high_1080p',
             storage_provider varchar(80) NOT NULL DEFAULT 'videopress',
             status varchar(40) NOT NULL DEFAULT 'created',
@@ -112,6 +118,16 @@ class VH360_Studio_Database {
         ) {$charset_collate};";
 
         dbDelta( $sql );
+
+        // Rows created before schema 1.7.0 did not have capture_scope. When
+        // dbDelta() adds the column, its default temporarily makes every legacy
+        // row look like an interactive composite. Classify those legacy rows
+        // exactly once, and never rewrite valid 1.7.0+ recording scopes.
+        if ( version_compare( $installed_version, '1.7.0', '<' ) ) {
+            $wpdb->query( "UPDATE {$table_name} SET capture_scope = 'program' WHERE source_type IN ('studio_setup','livestream_video') AND (capture_scope = '' OR capture_scope = 'interactive_composite')" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+            $wpdb->query( "UPDATE {$table_name} SET capture_scope = 'interactive_composite' WHERE source_type IN ('live_room','appointment_session') AND (capture_scope = '' OR capture_scope IS NULL)" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        }
+        update_option( 'vh360_studio_capture_scope_backfilled', 'yes', false );
 
         $chunks_sql = "CREATE TABLE {$chunks_table_name} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
