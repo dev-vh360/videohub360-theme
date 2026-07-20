@@ -29,7 +29,7 @@ define( 'VH360_STUDIO_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'VH360_STUDIO_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'VH360_STUDIO_INCLUDES_DIR', VH360_STUDIO_PLUGIN_DIR . 'includes/' );
 define( 'VH360_STUDIO_TEMPLATES_DIR', VH360_STUDIO_PLUGIN_DIR . 'templates/' );
-define( 'VH360_STUDIO_DB_VERSION', '1.7.0' );
+define( 'VH360_STUDIO_DB_VERSION', '1.7.1' );
 
 /**
  * Load translations.
