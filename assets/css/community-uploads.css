@@ -159,18 +159,53 @@
    Video Container and Player
    ========================================================================== */
 
-.vh360-community-video {
-    margin-top: 12px;
-    border-radius: var(--vh360-upload-border-radius);
+.vh360-community-video,
+.vh360-original-card-video {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
     overflow: hidden;
     background-color: #000;
 }
 
+.vh360-community-video {
+    margin-top: 12px;
+    border-radius: var(--vh360-upload-border-radius);
+}
+
+.vh360-original-card-video {
+    margin-top: 0.75rem;
+    border-radius: 6px;
+}
+
+/*
+ * Managed provider playback may be a native video, a direct iframe, or
+ * provider-generated embed markup. Keep every form of activity playback in
+ * the same responsive 16:9 frame used by legacy activity videos.
+ */
+.vh360-community-video > div,
+.vh360-community-video > figure,
+.vh360-original-card-video > div,
+.vh360-original-card-video > figure {
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+}
+
+.vh360-community-video iframe,
+.vh360-community-video video,
+.vh360-original-card-video iframe,
+.vh360-original-card-video video,
 .vh360-video-player {
     display: block;
-    width: 100%;
-    max-height: 500px;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    border: 0;
     background-color: #000;
+    object-fit: contain;
 }
 
 /* ==========================================================================
@@ -410,4 +445,35 @@ body.vh360-lightbox-open {
         font-size: 24px;
         line-height: 32px;
     }
+}
+
+
+.vh360-activity-upload-progress {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin: 0.75rem 0;
+}
+
+.vh360-activity-progress-track {
+    flex: 1;
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--border-1, rgba(127, 127, 127, 0.25));
+}
+
+.vh360-activity-progress-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--primary-color, currentColor);
+    transition: width 0.2s ease;
+}
+
+.vh360-activity-progress-text {
+    min-width: 3rem;
+    text-align: right;
+    font-size: 0.875rem;
+    color: var(--text-2, currentColor);
 }
