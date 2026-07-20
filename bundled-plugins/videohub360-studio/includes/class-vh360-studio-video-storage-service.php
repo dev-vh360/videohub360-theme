@@ -57,7 +57,7 @@ class VH360_Studio_Video_Storage_Service {
 
         global $wpdb;
         $now      = current_time( 'mysql' );
-        $provider = $this->resolve_provider_id();
+        $provider = $this->resolve_provider_id( $context );
         $uuid     = wp_generate_uuid4();
         $wpdb->insert(
             $this->table_name(),
@@ -165,8 +165,9 @@ class VH360_Studio_Video_Storage_Service {
         if ( ! $asset || ! $this->current_user_can_access( $asset ) ) {
             return new WP_Error( 'vh360_studio_video_asset_forbidden', __( 'Video asset unavailable.', 'videohub360-studio' ), array( 'status' => 403 ) );
         }
-        $this->update_asset( $asset['id'], array( 'status' => 'pending', 'error_code' => '', 'error_message' => '' ) );
-        return $this->get_asset( $asset['id'] );
+        $next_status = ! empty( $asset['provider_asset_id'] ) || ! empty( $asset['wp_attachment_id'] ) ? 'processing' : 'pending';
+        $this->update_asset( $asset['id'], array( 'status' => $next_status, 'error_code' => '', 'error_message' => '' ) );
+        return 'processing' === $next_status ? $this->refresh_status( $this->get_asset( $asset['id'] ) ) : $this->get_asset( $asset['id'] );
     }
 
     public function cancel_or_delete( $uuid ) {
@@ -202,14 +203,30 @@ class VH360_Studio_Video_Storage_Service {
     }
 
 
-    public function delete_asset_for_post( $post_id ) {
-        global $wpdb;
-        $asset = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$this->table_name()} WHERE associated_post_id = %d LIMIT 1", absint( $post_id ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    public function delete_asset_by_id( $asset_id ) {
+        $asset = $this->get_asset( absint( $asset_id ) );
         if ( ! $asset ) { return true; }
         $deleted = $this->delete_provider_asset( $asset );
         if ( is_wp_error( $deleted ) ) { return $deleted; }
         $this->update_asset( $asset['id'], array( 'status' => 'deleted', 'associated_post_id' => 0 ) );
         return true;
+    }
+
+    public function delete_asset_for_post( $post_id ) {
+        global $wpdb;
+        $assets = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$this->table_name()} WHERE associated_post_id = %d", absint( $post_id ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        if ( ! $assets ) { return true; }
+        $first_error = null;
+        foreach ( $assets as $asset ) {
+            $deleted = $this->delete_provider_asset( $asset );
+            if ( is_wp_error( $deleted ) ) {
+                $first_error = $first_error ? $first_error : $deleted;
+                $this->update_asset( $asset['id'], array( 'associated_post_id' => 0, 'expires_at' => current_time( 'mysql' ) ) );
+                continue;
+            }
+            $this->update_asset( $asset['id'], array( 'status' => 'deleted', 'associated_post_id' => 0 ) );
+        }
+        return $first_error ? $first_error : true;
     }
 
     public function get_playback( $asset_id ) {
@@ -226,7 +243,7 @@ class VH360_Studio_Video_Storage_Service {
     public function run_cron() {
         global $wpdb;
         $table = $this->table_name();
-        $assets = $wpdb->get_results( "SELECT * FROM {$table} WHERE status = 'processing' ORDER BY updated_at ASC LIMIT 20", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $assets = $wpdb->get_results( "SELECT * FROM {$table} WHERE (status = 'processing' OR (status = 'pending' AND (provider_asset_id IS NOT NULL AND provider_asset_id != ''))) ORDER BY updated_at ASC LIMIT 20", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         foreach ( $assets as $asset ) {
             $this->refresh_status( $asset );
         }
@@ -240,18 +257,25 @@ class VH360_Studio_Video_Storage_Service {
     }
 
     public function prepare_response( $asset ) {
-        $upload = $this->authorize_direct_upload( $asset['asset_uuid'] );
-        if ( is_wp_error( $upload ) ) {
-            $upload = array( 'method' => 'server', 'field' => 'file' );
+        $upload = array( 'method' => 'none' );
+        if ( 'pending' === $asset['status'] && empty( $asset['associated_post_id'] ) ) {
+            $upload = $this->authorize_direct_upload( $asset['asset_uuid'] );
+            if ( is_wp_error( $upload ) ) {
+                $upload = array( 'method' => 'server', 'field' => 'file' );
+            }
         }
         return array( 'id' => absint( $asset['id'] ), 'asset_uuid' => $asset['asset_uuid'], 'context' => $asset['context'], 'provider' => $asset['provider'], 'status' => $asset['status'], 'original_filename' => $asset['original_filename'], 'mime_type' => $asset['mime_type'], 'file_size' => absint( $asset['file_size'] ), 'playback_url' => esc_url_raw( $asset['playback_url'] ), 'embed_url' => esc_url_raw( $asset['embed_url'] ), 'poster_url' => esc_url_raw( $asset['poster_url'] ), 'error_code' => $asset['error_code'], 'error_message' => $asset['error_message'], 'associated_post_id' => absint( $asset['associated_post_id'] ), 'upload' => $upload, 'playback' => $this->get_playback( $asset ) );
     }
 
-    private function resolve_provider_id() {
+    private function resolve_provider_id( $context = 'video' ) {
+        $saved = sanitize_key( get_option( 'vh360_studio_default_replay_storage_provider', 'videopress' ) );
+        if ( 'activity_video' === $context && 'local_media' === $saved ) {
+            return 'local_media';
+        }
         if ( class_exists( 'VH360_Studio_Replay_Storage_Settings' ) ) {
             return VH360_Studio_Replay_Storage_Settings::resolve_default_provider();
         }
-        return sanitize_key( get_option( 'vh360_studio_default_replay_storage_provider', 'videopress' ) );
+        return $saved;
     }
 
 

@@ -946,6 +946,13 @@ class VH360_Ajax_Handlers {
                 'message' => $create_context_is_lesson ? esc_html__('Please provide a lesson title.', 'videohub360-theme') : esc_html__('Please provide a video title.', 'videohub360-theme'),
             ));
         }
+
+        $existing_managed_asset_id = ($edit_mode && !empty($video_id)) ? absint(get_post_meta($video_id, '_vh360_studio_video_asset_id', true)) : 0;
+        if ('upload' === $video_source_type && empty($video_asset_uuid) && !$existing_managed_asset_id) {
+            wp_send_json_error(array(
+                'message' => $create_context_is_lesson ? esc_html__('Please wait for the lesson video upload to finish before submitting.', 'videohub360-theme') : esc_html__('Please wait for the video upload to finish before submitting.', 'videohub360-theme'),
+            ));
+        }
         
         // No validation for video source - matching backend behavior
         // Backend save_meta_boxes() method does not validate video_url or custom_html
@@ -1003,12 +1010,15 @@ class VH360_Ajax_Handlers {
             update_post_meta($post_id, '_vh360_video_source_type', 'managed_asset');
             update_post_meta($post_id, '_vh360_studio_video_asset_id', absint($asset['id']));
             if ($existing_asset_id && $existing_asset_id !== absint($asset['id'])) {
-                update_post_meta($post_id, '_vh360_studio_previous_video_asset_id', $existing_asset_id);
+                VH360_Studio_Plugin::instance()->video_storage()->delete_asset_by_id($existing_asset_id);
             }
         } elseif ('upload' === $video_source_type && $existing_asset_id) {
             update_post_meta($post_id, '_vh360_video_source_type', 'managed_asset');
         } else {
             update_post_meta($post_id, '_vh360_video_source_type', $video_source_type);
+            if ($existing_asset_id && class_exists('VH360_Studio_Plugin')) {
+                VH360_Studio_Plugin::instance()->video_storage()->delete_asset_by_id($existing_asset_id);
+            }
             delete_post_meta($post_id, '_vh360_studio_video_asset_id');
         }
 

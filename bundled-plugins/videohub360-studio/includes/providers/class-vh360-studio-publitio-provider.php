@@ -358,11 +358,17 @@ class VH360_Studio_Publitio_Provider implements VH360_Studio_Replay_Storage_Prov
     private function validate_direct_asset_metadata( array $verified, array $expected ) {
         $expected_public_id = ! empty( $expected['public_id'] ) ? sanitize_title( $expected['public_id'] ) : '';
         $actual_public_id = ! empty( $verified['public_id'] ) ? sanitize_title( $verified['public_id'] ) : '';
-        if ( $expected_public_id && $actual_public_id && $expected_public_id !== $actual_public_id ) {
+        if ( ! $expected_public_id || ! $actual_public_id ) {
+            return new WP_Error( 'vh360_studio_direct_upload_public_id_missing', __( 'Cloud upload verification did not return the expected public ID.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
+        if ( $expected_public_id !== $actual_public_id ) {
             return new WP_Error( 'vh360_studio_direct_upload_public_id_mismatch', __( 'Cloud upload verification found an unexpected public ID.', 'videohub360-studio' ), array( 'status' => 409 ) );
         }
         $expected_size = ! empty( $expected['file_size'] ) ? absint( $expected['file_size'] ) : 0;
         $actual_size = ! empty( $verified['file_size'] ) ? absint( $verified['file_size'] ) : 0;
+        if ( ! $expected_size || ! $actual_size ) {
+            return new WP_Error( 'vh360_studio_direct_upload_size_missing', __( 'Cloud upload verification did not return the expected file size.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
         if ( $expected_size && $actual_size ) {
             $allowed_delta = max( 1048576, (int) ceil( $expected_size * 0.05 ) );
             if ( abs( $actual_size - $expected_size ) > $allowed_delta ) {
@@ -370,7 +376,10 @@ class VH360_Studio_Publitio_Provider implements VH360_Studio_Replay_Storage_Prov
             }
         }
         $mime = ! empty( $verified['mime_type'] ) ? $this->base_mime_type( $verified['mime_type'] ) : '';
-        if ( $mime && 0 !== strpos( $mime, 'video/' ) ) {
+        if ( ! $mime ) {
+            return new WP_Error( 'vh360_studio_direct_upload_mime_missing', __( 'Cloud upload verification did not return the uploaded MIME type.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
+        if ( 0 !== strpos( $mime, 'video/' ) ) {
             return new WP_Error( 'vh360_studio_direct_upload_invalid_verified_type', __( 'Cloud upload verification found a non-video file.', 'videohub360-studio' ), array( 'status' => 415 ) );
         }
         return true;
