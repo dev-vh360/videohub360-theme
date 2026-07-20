@@ -26,16 +26,9 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
     $views = $views ? $views : 0;
     $views_display = number_format( $views );
     $custom_html = get_post_meta( get_the_ID(), 'videohub360_custom_html', true );
-    $studio_storage_provider = get_post_meta( get_the_ID(), '_vh360_studio_storage_provider', true );
-    if ( ! $studio_storage_provider ) {
-        $studio_storage_provider = get_post_meta( get_the_ID(), '_vh360_studio_provider', true );
-    }
-    $is_local_media_studio_replay = (
-        'local_media' === $studio_storage_provider
-        && get_post_meta( get_the_ID(), '_vh360_studio_replay_ready', true ) === 'yes'
-        && ! empty( $video_url )
-    );
-    if ( $is_local_media_studio_replay ) {
+    $studio_asset_id = get_post_meta( get_the_ID(), '_vh360_studio_video_asset_id', true );
+    $studio_playback = ( $studio_asset_id && function_exists( 'vh360_studio_get_video_playback' ) ) ? vh360_studio_get_video_playback( $studio_asset_id ) : null;
+    if ( $studio_playback && 'ready' === $studio_playback['status'] ) {
         $custom_html = '';
     }
     $poster = get_the_post_thumbnail_url( get_the_ID(), 'large' );
@@ -319,7 +312,19 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                     </div>
                     <?php endif; ?>
                     <div id="videohub360-main-container" class="videohub360-hide">
-                        <?php if ($custom_html): ?>
+                        <?php if ( $studio_playback && 'ready' === $studio_playback['status'] ) : ?>
+                            <?php if ( 'embed_html' === $studio_playback['render_mode'] && ! empty( $studio_playback['embed_html'] ) ) : ?>
+                                <div class="videohub360-custom-embed-container"><?php echo $studio_playback['embed_html']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Sanitized by VH360 Studio. ?></div>
+                            <?php elseif ( 'embed' === $studio_playback['render_mode'] && ! empty( $studio_playback['embed_url'] ) ) : ?>
+                                <div class="videohub360-custom-embed-container"><iframe src="<?php echo esc_url( $studio_playback['embed_url'] ); ?>" allowfullscreen loading="lazy"></iframe></div>
+                            <?php else : ?>
+                                <video id="videohub360-main-video" width="100%" height="auto" controls playsinline poster="<?php echo esc_url( $studio_playback['poster_url'] ?: $poster ); ?>"><source src="<?php echo esc_url( $studio_playback['src'] ); ?>" type="<?php echo esc_attr( $studio_playback['mime_type'] ); ?>"><?php esc_html_e('Your browser does not support the video tag.', 'videohub360'); ?></video>
+                            <?php endif; ?>
+                        <?php elseif ( $studio_playback && in_array( $studio_playback['status'], array( 'pending', 'uploading', 'processing' ), true ) ) : ?>
+                            <p class="videohub360-video-processing"><?php esc_html_e( 'Video is processing. Please check back soon.', 'videohub360' ); ?></p>
+                        <?php elseif ( $studio_playback && 'failed' === $studio_playback['status'] ) : ?>
+                            <p class="videohub360-video-processing-failed"><?php esc_html_e( 'Video processing could not be completed.', 'videohub360' ); ?></p>
+                        <?php elseif ($custom_html): ?>
                             <div class="videohub360-custom-embed-container">
                                 <?php 
                                 // Output custom HTML with proper sanitization

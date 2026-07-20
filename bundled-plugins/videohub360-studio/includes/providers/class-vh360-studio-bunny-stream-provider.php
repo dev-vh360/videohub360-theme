@@ -182,4 +182,45 @@ class VH360_Studio_Bunny_Stream_Provider implements VH360_Studio_Replay_Storage_
     private function client() { return new VH360_Studio_Bunny_Stream_Client(); }
     private function title( array $job ) { return ! empty( $job['live_video_id'] ) && get_the_title( absint( $job['live_video_id'] ) ) ? wp_strip_all_tags( get_the_title( absint( $job['live_video_id'] ) ) ) : sprintf( __( 'Studio Replay #%d', 'videohub360-studio' ), absint( $job['id'] ) ); }
     private function base_mime_type( $mime_type ) { $parts = explode( ';', (string) $mime_type ); return strtolower( sanitize_mime_type( trim( $parts[0] ) ) ); }
+
+    public function upload_file( array $file, array $asset = array() ) {
+        if ( ! $this->is_available() ) { return new WP_Error( 'vh360_studio_bunny_stream_unavailable', __( 'Bunny Stream storage is not configured or unavailable.', 'videohub360-studio' ), array( 'status' => 400 ) ); }
+        $client = $this->client();
+        $title = ! empty( $asset['original_filename'] ) ? sanitize_text_field( $asset['original_filename'] ) : sanitize_file_name( $file['name'] );
+        $created = $client->create_video( $title );
+        if ( is_wp_error( $created ) ) { return $created; }
+        $video_id = ! empty( $created['guid'] ) ? sanitize_text_field( $created['guid'] ) : '';
+        if ( ! $video_id ) { return new WP_Error( 'vh360_studio_bunny_stream_create_failed', __( 'Bunny Stream returned an invalid video response.', 'videohub360-studio' ), array( 'status' => 502 ) ); }
+        if ( ! empty( $asset['_persist_provider_asset_id'] ) && is_callable( $asset['_persist_provider_asset_id'] ) ) {
+            call_user_func( $asset['_persist_provider_asset_id'], $video_id );
+        }
+        $uploaded = $client->upload_video( $video_id, $file['tmp_name'], $file['type'] );
+        if ( is_wp_error( $uploaded ) ) { return new WP_Error( $uploaded->get_error_code(), $uploaded->get_error_message(), array_merge( (array) $uploaded->get_error_data(), array( 'provider_asset_id' => $video_id ) ) ); }
+        $video = $client->get_video( $video_id );
+        if ( is_wp_error( $video ) ) { $video = $created; }
+        return $this->asset_result( $this->result_from_video( is_array( $video ) ? $video : $created, array( 'file_size' => absint( $file['size'] ), 'mime_type' => $file['type'] ), __( 'Video uploaded to Bunny Stream.', 'videohub360-studio' ), $video_id ) );
+    }
+
+    public function authorize_direct_upload( array $asset ) { return array( 'method' => 'server', 'field' => 'file' ); }
+
+    public function complete_direct_upload( array $asset, array $payload = array() ) { return $this->check_asset_status( $asset ); }
+
+    public function check_asset_status( array $asset ) {
+        $video_id = ! empty( $asset['provider_asset_id'] ) ? sanitize_text_field( $asset['provider_asset_id'] ) : '';
+        if ( ! $video_id ) { return $this->asset_result( array( 'provider_file_id' => '', 'status' => 'pending' ) ); }
+        $video = $this->client()->get_video( $video_id );
+        if ( is_wp_error( $video ) ) { return array( 'provider' => $this->get_id(), 'status' => 'failed', 'provider_asset_id' => $video_id, 'metadata' => array(), 'error_code' => $video->get_error_code(), 'error_message' => $video->get_error_message() ); }
+        return $this->asset_result( $this->result_from_video( $video, $asset, __( 'Bunny Stream video status checked.', 'videohub360-studio' ), $video_id ) );
+    }
+
+    public function resolve_playback( array $asset ) { return $this->check_asset_status( $asset ); }
+
+    public function delete_asset( array $asset ) { $video_id = ! empty( $asset['provider_asset_id'] ) ? sanitize_text_field( $asset['provider_asset_id'] ) : ''; return $video_id ? $this->client()->delete_video( $video_id ) : true; }
+
+    private function asset_result( array $result ) {
+        $raw = ! empty( $result['status'] ) ? sanitize_key( $result['status'] ) : '';
+        $status = self::STATUS_READY === $raw || 'ready' === $raw || 'published' === $raw ? 'ready' : ( self::STATUS_FAILED === $raw || false !== strpos( $raw, 'fail' ) ? 'failed' : 'processing' );
+        return array( 'provider' => $this->get_id(), 'status' => $status, 'provider_asset_id' => ! empty( $result['provider_file_id'] ) ? sanitize_text_field( $result['provider_file_id'] ) : ( ! empty( $result['bunny_video_id'] ) ? sanitize_text_field( $result['bunny_video_id'] ) : '' ), 'wp_attachment_id' => 0, 'videopress_guid' => '', 'playback_url' => '', 'embed_url' => ! empty( $result['embed_url'] ) ? esc_url_raw( $result['embed_url'] ) : '', 'poster_url' => ! empty( $result['poster_url'] ) ? esc_url_raw( $result['poster_url'] ) : '', 'mime_type' => ! empty( $result['mime_type'] ) ? sanitize_mime_type( $result['mime_type'] ) : 'video/mp4', 'file_size' => ! empty( $result['file_size'] ) ? absint( $result['file_size'] ) : 0, 'metadata' => $result, 'error_code' => '', 'error_message' => '' );
+    }
+
 }

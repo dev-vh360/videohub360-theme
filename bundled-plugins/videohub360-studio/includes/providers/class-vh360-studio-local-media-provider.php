@@ -17,12 +17,26 @@ class VH360_Studio_Local_Media_Replay_Storage_Provider implements VH360_Studio_R
     }
 
     public function get_label() {
-        return __( 'Local Replay Fallback', 'videohub360-studio' );
+        return __( 'Local Media', 'videohub360-studio' );
     }
 
     public function is_available() {
         $enabled = '1' === (string) get_option( 'vh360_studio_local_media_fallback_enabled', '1' );
         return (bool) apply_filters( 'vh360_studio_local_media_available', $enabled && current_user_can( 'upload_files' ) && $this->media_functions_available() && $this->uploads_directory_is_writable(), $this );
+    }
+
+    /**
+     * Determine whether Local Media can accept a normal video upload.
+     *
+     * Community video uploads intentionally preserve the theme's existing
+     * permission model, which did not require the upload_files capability.
+     */
+    public function is_available_for_video_upload( $context = 'video' ) {
+        $enabled   = '1' === (string) get_option( 'vh360_studio_local_media_fallback_enabled', '1' );
+        $technical = $enabled && $this->media_functions_available() && $this->uploads_directory_is_writable();
+        $allowed   = 'activity_video' === sanitize_key( $context ) ? $technical : ( $technical && current_user_can( 'upload_files' ) );
+
+        return (bool) apply_filters( 'vh360_studio_local_media_video_upload_available', $allowed, sanitize_key( $context ), $this );
     }
 
     public function supports_publish() {
@@ -232,4 +246,44 @@ class VH360_Studio_Local_Media_Replay_Storage_Provider implements VH360_Studio_R
         $base = $this->attachment_title( $job );
         return sanitize_file_name( $base . '.' . sanitize_key( $extension ) );
     }
+
+    public function upload_file( array $file, array $asset = array() ) {
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        require_once ABSPATH . 'wp-admin/includes/media.php';
+        require_once ABSPATH . 'wp-admin/includes/image.php';
+        $attachment_id = media_handle_sideload( $file, 0 );
+        if ( is_wp_error( $attachment_id ) ) { return $attachment_id; }
+        return array( 'provider' => $this->get_id(), 'status' => 'ready', 'provider_asset_id' => (string) $attachment_id, 'wp_attachment_id' => absint( $attachment_id ), 'videopress_guid' => '', 'playback_url' => wp_get_attachment_url( $attachment_id ), 'embed_url' => '', 'poster_url' => wp_get_attachment_image_url( $attachment_id, 'large' ), 'mime_type' => get_post_mime_type( $attachment_id ), 'file_size' => absint( $file['size'] ?? 0 ), 'metadata' => array( 'server_relay_attachment_id' => absint( $attachment_id ) ), 'error_code' => '', 'error_message' => '' );
+    }
+
+    public function authorize_direct_upload( array $asset ) {
+        return array( 'method' => 'server', 'field' => 'file' );
+    }
+
+    public function complete_direct_upload( array $asset, array $payload = array() ) {
+        return $this->check_asset_status( $asset );
+    }
+
+    public function check_asset_status( array $asset ) {
+        $ready = ! empty( $asset['playback_url'] ) || ! empty( $asset['embed_url'] ) || ! empty( $asset['wp_attachment_id'] );
+        return array( 'provider' => $this->get_id(), 'status' => $ready ? 'ready' : ( ! empty( $asset['status'] ) ? sanitize_key( $asset['status'] ) : 'processing' ), 'provider_asset_id' => ! empty( $asset['provider_asset_id'] ) ? $asset['provider_asset_id'] : '', 'wp_attachment_id' => ! empty( $asset['wp_attachment_id'] ) ? absint( $asset['wp_attachment_id'] ) : 0, 'videopress_guid' => ! empty( $asset['videopress_guid'] ) ? $asset['videopress_guid'] : '', 'playback_url' => ! empty( $asset['playback_url'] ) ? $asset['playback_url'] : '', 'embed_url' => ! empty( $asset['embed_url'] ) ? $asset['embed_url'] : '', 'poster_url' => ! empty( $asset['poster_url'] ) ? $asset['poster_url'] : '', 'mime_type' => ! empty( $asset['mime_type'] ) ? $asset['mime_type'] : 'video/mp4', 'file_size' => ! empty( $asset['file_size'] ) ? absint( $asset['file_size'] ) : 0, 'metadata' => array(), 'error_code' => '', 'error_message' => '' );
+    }
+
+    public function resolve_playback( array $asset ) {
+        return $this->check_asset_status( $asset );
+    }
+
+    public function delete_asset( array $asset ) {
+        if ( empty( $asset['wp_attachment_id'] ) ) {
+            return true;
+        }
+
+        $deleted = wp_delete_attachment( absint( $asset['wp_attachment_id'] ), true );
+        if ( false === $deleted || null === $deleted ) {
+            return new WP_Error( 'vh360_studio_local_media_delete_failed', __( 'The local video attachment could not be deleted.', 'videohub360-studio' ), array( 'status' => 500 ) );
+        }
+
+        return true;
+    }
+
 }

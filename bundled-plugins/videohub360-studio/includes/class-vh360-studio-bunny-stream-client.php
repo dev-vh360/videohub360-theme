@@ -82,6 +82,10 @@ class VH360_Studio_Bunny_Stream_Client {
         return $this->parse_response_body( $body, $code );
     }
 
+    public function delete_video( $video_id ) {
+        return $this->request( 'DELETE', '/library/' . rawurlencode( $this->library_id ) . '/videos/' . rawurlencode( sanitize_text_field( $video_id ) ) );
+    }
+
     public function get_video( $video_id ) {
         return $this->request( 'GET', '/library/' . rawurlencode( $this->library_id ) . '/videos/' . rawurlencode( sanitize_text_field( $video_id ) ) );
     }

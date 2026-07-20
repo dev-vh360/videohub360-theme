@@ -251,4 +251,202 @@ class VH360_Studio_Publitio_Provider implements VH360_Studio_Replay_Storage_Prov
         $parts = explode( ';', (string) $mime_type );
         return strtolower( sanitize_mime_type( trim( $parts[0] ) ) );
     }
+
+    public function upload_file( array $file, array $asset = array() ) {
+        if ( ! $this->is_available() ) {
+            return new WP_Error( 'vh360_studio_publitio_unavailable', __( 'Publitio storage is not configured or unavailable.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        }
+        $params = array(
+            'title'           => ! empty( $asset['original_filename'] ) ? sanitize_text_field( $asset['original_filename'] ) : sanitize_file_name( $file['name'] ),
+            'description'     => '',
+            'tags'            => 'videohub360,studio,video_asset',
+            'public_id'       => sanitize_title( 'vh360-video-asset-' . ( ! empty( $asset['asset_uuid'] ) ? $asset['asset_uuid'] : wp_generate_uuid4() ) ),
+            'privacy'         => 'private' === $this->privacy() ? '0' : '1',
+            'option_download' => get_option( 'vh360_studio_publitio_option_download', '0' ) ? '1' : '0',
+            'option_hls'      => get_option( 'vh360_studio_publitio_option_hls', '0' ) ? '1' : '0',
+            'option_ad'       => '0',
+        );
+        $folder = sanitize_text_field( get_option( 'vh360_studio_publitio_folder', '' ) );
+        if ( $folder ) { $params['folder'] = $folder; }
+        $result = $this->client()->create_file( $file['tmp_name'], $params, $file['type'], $file['name'] );
+        if ( is_wp_error( $result ) ) { return $result; }
+        $normalized = $this->result_from_response( $result, __( 'Video uploaded to Publitio.', 'videohub360-studio' ) );
+        if ( is_wp_error( $normalized ) ) { return $normalized; }
+        return $this->asset_result( $normalized );
+    }
+
+    public function authorize_direct_upload( array $asset ) {
+        if ( ! $this->supports_direct_browser_publish() ) {
+            return array( 'method' => 'server', 'field' => 'file' );
+        }
+        $direct_max = absint( get_option( 'vh360_studio_publitio_direct_max_size', 314572800 ) );
+        if ( $direct_max && ! empty( $asset['file_size'] ) && absint( $asset['file_size'] ) > $direct_max ) {
+            return array( 'method' => 'server', 'field' => 'file' );
+        }
+        $preset = sanitize_text_field( get_option( 'vh360_studio_publitio_upload_preset_id', '' ) );
+        $public_id = sanitize_title( 'vh360-video-asset-' . ( ! empty( $asset['asset_uuid'] ) ? $asset['asset_uuid'] : wp_generate_uuid4() ) );
+        $token = wp_generate_password( 40, false, false );
+        set_transient( $this->asset_direct_upload_transient_key( $asset['asset_uuid'], $token ), array( 'asset_uuid' => $asset['asset_uuid'], 'user_id' => absint( $asset['user_id'] ), 'public_id' => $public_id, 'mime_type' => sanitize_mime_type( $asset['mime_type'] ), 'file_size' => absint( $asset['file_size'] ), 'expires' => time() + 30 * MINUTE_IN_SECONDS ), 30 * MINUTE_IN_SECONDS );
+        return array(
+            'method'    => 'direct',
+            'httpMethod'=> 'POST',
+            'url'       => 'https://api.publit.io/v1/files/create/' . rawurlencode( $preset ),
+            'fields'    => array(
+                'api_key'       => sanitize_text_field( get_option( 'vh360_studio_publitio_api_key', '' ) ),
+                'upload_preset' => $preset,
+                'public_id'     => $public_id,
+                'privacy'       => 'private' === $this->privacy() ? '0' : '1',
+            ),
+            'fileField' => 'file',
+            'direct_upload_token' => $token,
+            'max_size' => $direct_max,
+            '_asset_metadata' => array(
+                'direct_public_id'        => $public_id,
+                'direct_upload_expires_at'=> time() + ( 30 * MINUTE_IN_SECONDS ),
+            ),
+        );
+    }
+
+    public function complete_direct_upload( array $asset, array $payload = array() ) {
+        $token = ! empty( $payload['direct_upload_token'] ) ? sanitize_text_field( $payload['direct_upload_token'] ) : '';
+        $key = $this->asset_direct_upload_transient_key( $asset['asset_uuid'], $token );
+        $expected = get_transient( $key );
+        if ( ! is_array( $expected ) || empty( $expected['asset_uuid'] ) || $expected['asset_uuid'] !== $asset['asset_uuid'] || absint( $expected['user_id'] ) !== absint( $asset['user_id'] ) || time() > absint( $expected['expires'] ) ) {
+            return new WP_Error( 'vh360_studio_direct_upload_token_invalid', __( 'Direct upload token is invalid or expired.', 'videohub360-studio' ), array( 'status' => 403 ) );
+        }
+        $file_id = '';
+        $payloads = array( $payload );
+        foreach ( array( 'file', 'data' ) as $container ) {
+            if ( ! empty( $payload[ $container ] ) && is_array( $payload[ $container ] ) ) { $payloads[] = $payload[ $container ]; }
+        }
+        foreach ( $payloads as $candidate ) {
+            foreach ( array( 'id', 'file_id', 'provider_asset_id', 'publitio_file_id' ) as $key ) {
+                if ( ! empty( $candidate[ $key ] ) && is_scalar( $candidate[ $key ] ) ) { $file_id = sanitize_text_field( $candidate[ $key ] ); break 2; }
+            }
+        }
+        $verified = $this->verify_direct_upload_file( $file_id );
+        if ( is_wp_error( $verified ) ) { return $verified; }
+        $valid = $this->validate_direct_asset_metadata( $verified, $expected );
+        if ( is_wp_error( $valid ) ) {
+            // The provider file ID has already been verified server-side. Preserve
+            // it on every subsequent validation failure so cancellation and cron
+            // cleanup can remove the exact remote resource immediately.
+            $data = (array) $valid->get_error_data();
+            $data['provider_asset_id'] = $file_id;
+            return new WP_Error( $valid->get_error_code(), $valid->get_error_message(), $data );
+        }
+
+        $expected_public_id = ! empty( $expected['public_id'] ) ? sanitize_text_field( $expected['public_id'] ) : '';
+        $actual_public_id   = ! empty( $verified['public_id'] ) ? sanitize_text_field( $verified['public_id'] ) : '';
+        $public_id_matches  = $expected_public_id && $actual_public_id
+            ? sanitize_title( $expected_public_id ) === sanitize_title( $actual_public_id )
+            : false;
+
+        // Publitio upload presets may normalize or replace a requested public ID.
+        // The public ID is therefore diagnostic, not the ownership boundary. The
+        // upload is bound to this session by the expiring token and is verified
+        // server-side by its exact provider file ID, file size, and MIME type.
+        $verified['expected_public_id'] = $expected_public_id;
+        $verified['actual_public_id']   = $actual_public_id;
+        $verified['public_id_matches']  = $public_id_matches ? 1 : 0;
+        if ( $expected_public_id && $actual_public_id && ! $public_id_matches ) {
+            $verified['message'] = __( 'Cloud upload verified. The provider normalized the requested public ID.', 'videohub360-studio' );
+        }
+
+        delete_transient( $key );
+        return $this->asset_result( $verified );
+    }
+
+    public function check_asset_status( array $asset ) {
+        $file_id = ! empty( $asset['provider_asset_id'] ) ? sanitize_text_field( $asset['provider_asset_id'] ) : '';
+        if ( ! $file_id ) { return $this->asset_result( array( 'status' => 'pending' ) ); }
+        $result = $this->client()->show_file( $file_id );
+        if ( is_wp_error( $result ) ) { return array( 'provider' => $this->get_id(), 'status' => 'failed', 'provider_asset_id' => $file_id, 'error_code' => $result->get_error_code(), 'error_message' => $result->get_error_message(), 'metadata' => array() ); }
+        $normalized = $this->result_from_response( $result, __( 'Publitio video status checked.', 'videohub360-studio' ) );
+        if ( is_wp_error( $normalized ) ) { return array( 'provider' => $this->get_id(), 'status' => 'failed', 'provider_asset_id' => $file_id, 'error_code' => $normalized->get_error_code(), 'error_message' => $normalized->get_error_message(), 'metadata' => array() ); }
+        return $this->asset_result( $normalized );
+    }
+
+    public function resolve_playback( array $asset ) { return $this->check_asset_status( $asset ); }
+
+    public function delete_asset( array $asset ) {
+        $file_id = ! empty( $asset['provider_asset_id'] ) ? sanitize_text_field( $asset['provider_asset_id'] ) : '';
+
+        if ( ! $file_id ) {
+            $metadata  = ! empty( $asset['provider_metadata'] ) ? json_decode( (string) $asset['provider_metadata'], true ) : array();
+            $public_id = is_array( $metadata ) && ! empty( $metadata['direct_public_id'] ) ? sanitize_text_field( $metadata['direct_public_id'] ) : '';
+            if ( $public_id ) {
+                $found = $this->client()->find_file_by_public_id( $public_id );
+                if ( is_wp_error( $found ) ) {
+                    return $found;
+                }
+                if ( is_array( $found ) ) {
+                    $file_id = sanitize_text_field( $this->first_scalar( $found, array( 'id', 'file_id' ) ) );
+                } elseif ( ! empty( $metadata['direct_upload_expires_at'] ) && time() <= absint( $metadata['direct_upload_expires_at'] ) ) {
+                    // A cancelled browser upload may still be in flight. Keep the
+                    // cleanup record alive until the authorization window closes.
+                    return new WP_Error( 'vh360_studio_publitio_direct_cleanup_pending', __( 'Waiting for the direct upload window to close before final cleanup.', 'videohub360-studio' ), array( 'status' => 409 ) );
+                }
+            }
+        }
+
+        return $file_id ? $this->client()->delete_file( $file_id ) : true;
+    }
+
+    private function asset_result( array $result ) {
+        $status = ! empty( $result['status'] ) && in_array( sanitize_key( $result['status'] ), array( self::STATUS_READY, 'publitio_direct_ready', 'ready', 'published' ), true ) ? 'ready' : ( ! empty( $result['status'] ) && false !== strpos( sanitize_key( $result['status'] ), 'fail' ) ? 'failed' : 'processing' );
+        return array( 'provider' => $this->get_id(), 'status' => $status, 'provider_asset_id' => ! empty( $result['publitio_file_id'] ) ? sanitize_text_field( $result['publitio_file_id'] ) : ( ! empty( $result['provider_file_id'] ) ? sanitize_text_field( $result['provider_file_id'] ) : '' ), 'wp_attachment_id' => 0, 'videopress_guid' => '', 'playback_url' => ! empty( $result['playback_url'] ) ? esc_url_raw( $result['playback_url'] ) : '', 'embed_url' => ! empty( $result['embed_url'] ) ? esc_url_raw( $result['embed_url'] ) : '', 'poster_url' => ! empty( $result['poster_url'] ) ? esc_url_raw( $result['poster_url'] ) : '', 'mime_type' => ! empty( $result['mime_type'] ) ? sanitize_mime_type( $result['mime_type'] ) : 'video/mp4', 'file_size' => ! empty( $result['file_size'] ) ? absint( $result['file_size'] ) : 0, 'metadata' => $result, 'error_code' => '', 'error_message' => '' );
+    }
+
+
+    private function asset_direct_upload_transient_key( $asset_uuid, $token ) {
+        return 'vh360_studio_asset_publitio_' . md5( sanitize_text_field( $asset_uuid ) . '|' . (string) $token );
+    }
+
+    private function validate_direct_asset_metadata( array $verified, array $expected ) {
+        // Do not reject a verified upload because Publitio normalized or
+        // replaced its requested public ID. Direct-upload ownership is enforced
+        // by the expiring session token and exact server-side provider file lookup.
+        $expected_size = ! empty( $expected['file_size'] ) ? absint( $expected['file_size'] ) : 0;
+        $actual_size = ! empty( $verified['file_size'] ) ? absint( $verified['file_size'] ) : 0;
+        if ( ! $expected_size || ! $actual_size ) {
+            return new WP_Error( 'vh360_studio_direct_upload_size_missing', __( 'Cloud upload verification did not return the expected file size.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
+        if ( $expected_size !== $actual_size ) {
+            return new WP_Error( 'vh360_studio_direct_upload_size_mismatch', __( 'Cloud upload verification found a file size mismatch.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
+        $mime          = $this->verified_mime_type( $verified );
+        $expected_mime = ! empty( $expected['mime_type'] ) ? $this->base_mime_type( $expected['mime_type'] ) : '';
+        if ( ! $mime ) {
+            return new WP_Error( 'vh360_studio_direct_upload_mime_missing', __( 'Cloud upload verification did not return the uploaded MIME type.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
+        if ( 0 !== strpos( $mime, 'video/' ) ) {
+            return new WP_Error( 'vh360_studio_direct_upload_invalid_verified_type', __( 'Cloud upload verification found a non-video file.', 'videohub360-studio' ), array( 'status' => 415 ) );
+        }
+        if ( $expected_mime && $expected_mime !== $mime ) {
+            return new WP_Error( 'vh360_studio_direct_upload_mime_mismatch', __( 'Cloud upload verification found a file type mismatch.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
+        return true;
+    }
+
+    private function verified_mime_type( array $verified ) {
+        $mime = ! empty( $verified['mime_type'] ) ? $this->base_mime_type( $verified['mime_type'] ) : '';
+        if ( $mime && false !== strpos( $mime, '/' ) ) {
+            return $mime;
+        }
+
+        $extension = ! empty( $verified['extension'] ) ? sanitize_key( $verified['extension'] ) : '';
+        $types = array(
+            'mp4'  => 'video/mp4',
+            'm4v'  => 'video/mp4',
+            'webm' => 'video/webm',
+            'mov'  => 'video/quicktime',
+            'qt'   => 'video/quicktime',
+            'ogv'  => 'video/ogg',
+            'ogg'  => 'video/ogg',
+        );
+
+        return isset( $types[ $extension ] ) ? $types[ $extension ] : '';
+    }
+
 }

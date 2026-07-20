@@ -29,7 +29,7 @@ define( 'VH360_STUDIO_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'VH360_STUDIO_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'VH360_STUDIO_INCLUDES_DIR', VH360_STUDIO_PLUGIN_DIR . 'includes/' );
 define( 'VH360_STUDIO_TEMPLATES_DIR', VH360_STUDIO_PLUGIN_DIR . 'templates/' );
-define( 'VH360_STUDIO_DB_VERSION', '1.7.1' );
+define( 'VH360_STUDIO_DB_VERSION', '1.7.2' );
 
 /**
  * Load translations.
@@ -139,6 +139,8 @@ function vh360_studio_load_files() {
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-publitio-client.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-bunny-stream-client.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-assets.php';
+    require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-video-storage-service.php';
+    require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-video-upload-rest-controller.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'class-vh360-studio-media-admin.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'providers/interface-vh360-studio-live-engine-provider.php';
     require_once VH360_STUDIO_INCLUDES_DIR . 'providers/interface-vh360-studio-recording-provider.php';
@@ -194,6 +196,9 @@ register_activation_hook( __FILE__, 'vh360_studio_activate' );
 function vh360_studio_deactivate() {
     vh360_studio_load_files();
     VH360_Studio_Recording_Cleanup::unschedule();
+    if ( class_exists( 'VH360_Studio_Video_Storage_Service' ) ) {
+        VH360_Studio_Video_Storage_Service::unschedule();
+    }
     if ( class_exists( 'VH360_Studio_Replay_Status_Reconciler' ) ) {
         VH360_Studio_Replay_Status_Reconciler::unschedule();
     }

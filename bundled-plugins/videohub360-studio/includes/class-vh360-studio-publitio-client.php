@@ -24,8 +24,26 @@ class VH360_Studio_Publitio_Client {
         return '' !== $this->api_key && '' !== $this->api_secret;
     }
 
-    public function list_files( $limit = 1 ) {
-        return $this->request( 'GET', '/files/list', array( 'limit' => max( 1, min( 100, absint( $limit ) ) ) ) );
+    public function list_files( $limit = 1, array $params = array() ) {
+        $params['limit'] = max( 1, min( 100, absint( $limit ) ) );
+        return $this->request( 'GET', '/files/list', $params );
+    }
+
+    /**
+     * Locate one Publitio file by its exact public ID.
+     */
+    public function find_file_by_public_id( $public_id ) {
+        $public_id = sanitize_text_field( $public_id );
+        if ( '' === $public_id ) {
+            return null;
+        }
+
+        $response = $this->list_files( 100, array( 'search' => $public_id ) );
+        if ( is_wp_error( $response ) ) {
+            return $response;
+        }
+
+        return $this->find_public_id_payload( $response, $public_id );
     }
 
     public function show_file( $file_id ) {
@@ -34,6 +52,14 @@ class VH360_Studio_Publitio_Client {
             return new WP_Error( 'vh360_studio_publitio_missing_file_id', __( 'Cloud upload file ID is missing.', 'videohub360-studio' ), array( 'status' => 400 ) );
         }
         return $this->request( 'GET', '/files/show/' . rawurlencode( $file_id ) );
+    }
+
+    public function delete_file( $file_id ) {
+        $file_id = sanitize_text_field( $file_id );
+        if ( '' === $file_id ) {
+            return new WP_Error( 'vh360_studio_publitio_missing_file_id', __( 'Cloud upload file ID is missing.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        }
+        return $this->request( 'DELETE', '/files/delete/' . rawurlencode( $file_id ) );
     }
 
     public function player_file( $file_id, array $params = array() ) {
@@ -135,6 +161,28 @@ class VH360_Studio_Publitio_Client {
         }
 
         return $clean;
+    }
+
+    private function find_public_id_payload( $value, $public_id ) {
+        if ( ! is_array( $value ) ) {
+            return null;
+        }
+
+        if ( isset( $value['public_id'] ) && is_scalar( $value['public_id'] ) && sanitize_text_field( (string) $value['public_id'] ) === $public_id ) {
+            return $value;
+        }
+
+        foreach ( $value as $child ) {
+            if ( ! is_array( $child ) ) {
+                continue;
+            }
+            $found = $this->find_public_id_payload( $child, $public_id );
+            if ( $found ) {
+                return $found;
+            }
+        }
+
+        return null;
     }
 
     private function request( $method, $path, array $params = array(), $multipart = false ) {

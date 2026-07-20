@@ -20,6 +20,11 @@ class VH360_Studio_Database {
         return $wpdb->prefix . 'vh360_studio_recording_chunks';
     }
 
+    public static function video_assets_table_name() {
+        global $wpdb;
+        return $wpdb->prefix . 'vh360_studio_video_assets';
+    }
+
     public static function bible_translations_table_name() {
         global $wpdb;
         return $wpdb->prefix . 'vh360_studio_bible_translations';
@@ -52,6 +57,7 @@ class VH360_Studio_Database {
 
         $table_name       = self::table_name();
         $chunks_table_name = self::chunks_table_name();
+        $video_assets_table = self::video_assets_table_name();
         $bible_translations_table = self::bible_translations_table_name();
         $bible_verses_table       = self::bible_verses_table_name();
         $bible_jobs_table         = self::bible_import_jobs_table_name();
@@ -152,6 +158,41 @@ class VH360_Studio_Database {
         ) {$charset_collate};";
 
         dbDelta( $chunks_sql );
+
+
+        $video_assets_sql = "CREATE TABLE {$video_assets_table} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            asset_uuid varchar(36) NOT NULL,
+            user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            context varchar(40) NOT NULL DEFAULT 'video',
+            provider varchar(80) NOT NULL DEFAULT '',
+            status varchar(40) NOT NULL DEFAULT 'pending',
+            provider_asset_id varchar(191) DEFAULT NULL,
+            wp_attachment_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            videopress_guid varchar(191) DEFAULT NULL,
+            original_filename text DEFAULT NULL,
+            mime_type varchar(100) DEFAULT NULL,
+            file_size bigint(20) unsigned NOT NULL DEFAULT 0,
+            playback_url text DEFAULT NULL,
+            embed_url text DEFAULT NULL,
+            poster_url text DEFAULT NULL,
+            provider_metadata longtext DEFAULT NULL,
+            error_code varchar(80) DEFAULT NULL,
+            error_message text DEFAULT NULL,
+            associated_post_id bigint(20) unsigned NOT NULL DEFAULT 0,
+            associated_post_type varchar(80) DEFAULT NULL,
+            expires_at datetime DEFAULT NULL,
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+            PRIMARY KEY  (id),
+            UNIQUE KEY asset_uuid (asset_uuid),
+            KEY user_id (user_id),
+            KEY provider (provider),
+            KEY status (status),
+            KEY associated_post_id (associated_post_id),
+            KEY expires_at (expires_at)
+        ) {$charset_collate};";
+        dbDelta( $video_assets_sql );
 
         $bible_translations_sql = "CREATE TABLE {$bible_translations_table} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,

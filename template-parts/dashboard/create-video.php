@@ -68,6 +68,8 @@ if (isset($_GET['edit']) && !empty($_GET['edit'])) {
             'poster_url' => get_post_meta($edit_video_id, '_vh360_poster_url', true),
             'featured_image_id' => get_post_thumbnail_id($edit_video_id),
             'featured_image_url' => get_the_post_thumbnail_url($edit_video_id, 'medium') ?: '',
+            'studio_video_asset_id' => get_post_meta($edit_video_id, '_vh360_studio_video_asset_id', true),
+            'video_source_type' => get_post_meta($edit_video_id, '_vh360_video_source_type', true),
         );
         
         // Get taxonomies
@@ -318,7 +320,7 @@ if ( $vh360_show_studio_notice ) {
                 <label for="vh360_featured_image" class="vh360-form-label">
                     <?php echo esc_html($vh360_create_labels['thumbnail_label']); ?>
                 </label>
-                <input 
+                                <input 
                     type="file" 
                     id="vh360_featured_image" 
                     name="vh360_featured_image" 
@@ -361,7 +363,9 @@ if ( $vh360_show_studio_notice ) {
             // Determine current source type
             $current_source = 'url'; // default
             if ($edit_mode) {
-                if (!empty($video_data['custom_html'])) {
+                if (!empty($video_data['studio_video_asset_id']) || (!empty($video_data['video_source_type']) && 'managed_asset' === $video_data['video_source_type'])) {
+                    $current_source = 'upload';
+                } elseif (!empty($video_data['custom_html'])) {
                     $current_source = 'embed';
                 } elseif (!empty($video_data['video_url'])) {
                     $current_source = 'url';
@@ -392,6 +396,7 @@ if ( $vh360_show_studio_notice ) {
                             type="radio" 
                             name="vh360_video_source_type" 
                             value="upload" 
+                            <?php checked($current_source, 'upload'); ?>
                             class="vh360-source-type-radio"
                         >
                         <span><?php echo esc_html($vh360_create_labels['upload_option']); ?></span>
@@ -431,10 +436,11 @@ if ( $vh360_show_studio_notice ) {
             
             <!-- Upload Video Field -->
             <?php if ($upload_enabled): ?>
-            <div class="vh360-form-field vh360-source-field" data-source="upload" style="display: none;">
+            <div class="vh360-form-field vh360-source-field" data-source="upload" style="<?php echo $current_source === 'upload' ? '' : 'display: none;'; ?>">
                 <label for="vh360_video_file" class="vh360-form-label">
                     <?php echo esc_html($vh360_create_labels['file_label']); ?>
                 </label>
+                <input type="hidden" id="vh360_video_asset_uuid" name="vh360_video_asset_uuid" value="">
                 <input 
                     type="file" 
                     id="vh360_video_file" 

@@ -2238,8 +2238,7 @@ html {
     margin-bottom: 0.75rem;
 }
 
-.vh360-original-card-image img,
-.vh360-original-card-video video {
+.vh360-original-card-image img {
     width: 100%;
     height: auto;
     border-radius: 6px;

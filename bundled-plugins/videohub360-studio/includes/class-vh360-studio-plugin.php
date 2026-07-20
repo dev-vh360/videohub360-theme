@@ -13,6 +13,7 @@ class VH360_Studio_Plugin {
     private static $instance;
     private $registry;
     private $jobs;
+    private $video_storage;
 
     public static function instance() {
         if ( ! self::$instance ) {
@@ -25,6 +26,7 @@ class VH360_Studio_Plugin {
         VH360_Studio_Database::maybe_install();
         $this->registry = new VH360_Studio_Provider_Registry();
         $this->jobs     = new VH360_Studio_Recording_Jobs( $this->registry );
+        $this->video_storage = new VH360_Studio_Video_Storage_Service( $this->registry );
         new VH360_Studio_Assets( $this->registry );
         new VH360_Studio_Media_Admin();
         new VH360_Studio_Admin( $this->registry, $this->jobs );
@@ -33,17 +35,20 @@ class VH360_Studio_Plugin {
 
         add_filter( 'vh360_dashboard_tabs_registry', array( $this, 'register_dashboard_tab' ), 20, 2 );
         add_filter( 'body_class', array( $this, 'body_classes' ) );
+        add_filter( 'cron_schedules', array( 'VH360_Studio_Replay_Status_Reconciler', 'add_interval' ) );
         VH360_Studio_Recording_Cleanup::schedule();
         add_action( VH360_Studio_Recording_Cleanup::HOOK, array( new VH360_Studio_Recording_Cleanup( $this->jobs ), 'run' ) );
+        VH360_Studio_Video_Storage_Service::schedule();
+        add_action( VH360_Studio_Video_Storage_Service::CRON_HOOK, array( $this->video_storage, 'run_cron' ) );
 
         $replay_status_reconciler = new VH360_Studio_Replay_Status_Reconciler(
             $this->jobs,
             new VH360_Studio_Replay_Publisher( $this->registry, $this->jobs, new VH360_Studio_Recording_Validator( new VH360_Studio_Recording_Chunks( $this->jobs ) ), new VH360_Studio_Recording_Chunks( $this->jobs ) )
         );
-        add_filter( 'cron_schedules', array( 'VH360_Studio_Replay_Status_Reconciler', 'add_interval' ) );
         VH360_Studio_Replay_Status_Reconciler::schedule();
         add_action( VH360_Studio_Replay_Status_Reconciler::HOOK, array( $replay_status_reconciler, 'run' ) );
         add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
+        add_action( 'before_delete_post', array( $this, 'delete_post_video_asset' ) );
     }
 
     public function jobs() {
@@ -54,12 +59,23 @@ class VH360_Studio_Plugin {
         return $this->registry;
     }
 
+    public function video_storage() {
+        return $this->video_storage;
+    }
+
+    public function delete_post_video_asset( $post_id ) {
+        if ( $this->video_storage ) {
+            $this->video_storage->delete_asset_for_post( $post_id );
+        }
+    }
+
     public function register_rest_routes() {
         ( new VH360_Studio_REST_Controller( $this->jobs ) )->register_routes();
         ( new VH360_Studio_Live_Room_REST_Controller( $this->jobs ) )->register_routes();
         ( new VH360_Studio_Interactive_Recording_REST_Controller( $this->jobs ) )->register_routes();
         ( new VH360_Studio_Overlays_REST_Controller( new VH360_Studio_Overlay_Repository() ) )->register_routes();
         ( new VH360_Studio_Bible_REST_Controller() )->register_routes();
+        ( new VH360_Studio_Video_Upload_REST_Controller( $this->video_storage ) )->register_routes();
     }
 
     public function register_dashboard_tab( $tabs, $user_id ) {
