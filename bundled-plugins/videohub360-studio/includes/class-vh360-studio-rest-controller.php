@@ -847,9 +847,12 @@ class VH360_Studio_REST_Controller {
             return new WP_Error( 'vh360_studio_forbidden', __( 'You are not allowed to manage this interactive recording.', 'videohub360-studio' ), array( 'status' => 403 ) );
         }
 
-        $owns_job = absint( $job['user_id'] ) === get_current_user_id();
-        $manages_post = current_user_can( 'edit_post', $video_id ) || current_user_can( 'manage_options' );
-        return ( $owns_job || $manages_post ) ? true : new WP_Error( 'vh360_studio_forbidden', __( 'You are not allowed to manage this recording job.', 'videohub360-studio' ), array( 'status' => 403 ) );
+        // The associated-post permission helper already enforces signed-in
+        // access, licensing, Studio-controlled interactive context, and the
+        // post-author/editor/administrator rule. Do not narrow it again here,
+        // because the explicit post-author fallback must remain valid even when
+        // a custom capability map does not grant edit_post.
+        return true;
     }
 
     public function licensed_permissions_check( WP_REST_Request $request ) {
@@ -1025,7 +1028,18 @@ class VH360_Studio_REST_Controller {
         $video_id = absint( $request['video_id'] );
         $force = rest_sanitize_boolean( $request->get_param( 'force' ) );
         $active_job = $this->jobs->find_active_livestream_job( $video_id );
-        if ( $active_job && 'interactive_composite' === sanitize_key( $active_job['capture_scope'] ) ) {
+        if (
+            $active_job
+            && 'interactive_composite' === sanitize_key( $active_job['capture_scope'] )
+            && in_array(
+                sanitize_key( $active_job['status'] ),
+                array(
+                    VH360_Studio_Recording_Jobs::STATUS_CREATED,
+                    VH360_Studio_Recording_Jobs::STATUS_RECORDING,
+                ),
+                true
+            )
+        ) {
             $heartbeat = absint( get_option( 'vh360_recording_heartbeat_' . absint( $active_job['id'] ) ) );
             if ( $heartbeat && ( time() - $heartbeat ) <= 90 && ! $force ) {
                 return new WP_Error( 'vh360_studio_interactive_recording_active', __( 'The interactive recording is still active in the Viewer. Stop it there before ending live.', 'videohub360-studio' ), array( 'status' => 409, 'capture_scope' => 'interactive_composite', 'job_id' => absint( $active_job['id'] ) ) );
@@ -1121,7 +1135,10 @@ class VH360_Studio_REST_Controller {
             update_post_meta( $live_video_id, '_vh360_studio_recording_state', sanitize_key( $status ) );
         }
         if ( in_array( sanitize_key( $status ), array( 'stopping', 'uploading', 'processing', 'ready', 'failed' ), true ) ) {
-            update_post_meta( $live_video_id, '_vh360_live_room_recording_stopped_at', current_time( 'mysql' ) );
+            $stopped_at_key = 'live_room' === sanitize_key( $job['source_type'] )
+                ? '_vh360_live_room_recording_stopped_at'
+                : '_vh360_studio_recording_stopped_at';
+            update_post_meta( $live_video_id, $stopped_at_key, current_time( 'mysql' ) );
         }
     }
 

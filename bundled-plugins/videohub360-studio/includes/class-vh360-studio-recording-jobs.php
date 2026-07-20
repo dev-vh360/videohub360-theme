@@ -209,6 +209,28 @@ class VH360_Studio_Recording_Jobs {
         return $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . VH360_Studio_Database::table_name() . " WHERE source_type = 'livestream_video' AND live_video_id = %d AND status IN ($placeholders) ORDER BY created_at DESC LIMIT 1", $args ), ARRAY_A );
     }
 
+    /**
+     * Get the newest recording job associated with a Studio livestream.
+     *
+     * This is intentionally broader than find_active_livestream_job() so the
+     * viewer can recover failed finalization/publishing jobs and report the
+     * capture scope after browser capture has ended.
+     *
+     * @param int $post_id Livestream post ID.
+     * @return array|null
+     */
+    public function find_latest_livestream_job( $post_id ) {
+        global $wpdb;
+
+        return $wpdb->get_row(
+            $wpdb->prepare(
+                'SELECT * FROM ' . VH360_Studio_Database::table_name() . " WHERE source_type = 'livestream_video' AND live_video_id = %d ORDER BY created_at DESC, id DESC LIMIT 1",
+                absint( $post_id )
+            ),
+            ARRAY_A
+        );
+    }
+
     public function find_active_live_room_job( $post_id ) {
         return $this->find_active_room_recording( $post_id, 'live_room', $this->active_statuses() );
     }
@@ -287,7 +309,7 @@ class VH360_Studio_Recording_Jobs {
         }
 
         $live_video_id = ! empty( $job['live_video_id'] ) ? absint( $job['live_video_id'] ) : 0;
-        if ( 'livestream_video' === sanitize_key( $job['source_type'] ) && 'interactive_composite' === sanitize_key( $job['capture_scope'] ) && $live_video_id && VH360_Studio_Permissions::current_user_can_record_studio_interactive_livestream( $live_video_id ) && ( current_user_can( 'edit_post', $live_video_id ) || current_user_can( 'manage_options' ) ) ) {
+        if ( 'livestream_video' === sanitize_key( $job['source_type'] ) && 'interactive_composite' === sanitize_key( $job['capture_scope'] ) && $live_video_id && VH360_Studio_Permissions::current_user_can_record_studio_interactive_livestream( $live_video_id ) ) {
             return $job;
         }
 
