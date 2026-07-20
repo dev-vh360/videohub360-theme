@@ -1,6 +1,7 @@
 (function (window, document) {
     'use strict';
     var config = window.vh360StudioLiveRoomRecorder || {};
+    var startNewRecordingAllowed = config.canStartNewRecording !== false;
     var button, recorder, localRecorder, localChunks = [], appointmentBlob = null, appointmentDownloadPending = false, stopPromise = null, appointmentStopPromise = null, startPromise = null, terminalCleanupPromise = null, startupCancelRequested = false, downloadPanel = null, publishingPanel = null, heartbeatTimer = null, compositor, mixer, startedAt = 0, timer, activeJobId = 0, starting = false, activeState = 'idle', recoveryAction = '';
 
     function rest(path, options) { return window.VH360StudioRecordingClient.api(config.restRoot, config.nonce, path, options); }
@@ -56,6 +57,7 @@
     function heartbeatEndpoint() { return endpoint(config.heartbeatEndpoint) || ('/live-rooms/' + config.postId + '/recordings/' + activeJobId + '/heartbeat'); }
     function recoverEndpoint() { return endpoint(config.recoverEndpoint) || ('/live-rooms/' + config.postId + '/recordings/' + activeJobId + '/recover'); }
     function defaultRecordLabel() { return config.recordButtonLabel || (config.recordingPurpose === 'appointment_session' ? 'Record Privately' : 'Record'); }
+    function canStartNewRecording() { return startNewRecordingAllowed; }
     function startHeartbeat() { stopHeartbeat(); if (!activeJobId) { return; } var beat = function () { rest(heartbeatEndpoint(), { method: 'POST', headers: { 'Content-Type': 'application/json' } }).then(function(response){ if (response && response.stop_requested && activeState === 'recording') { stop().catch(function(error){ setError(error && (error.message || error.code) || error); }); } }).catch(function (error) { window.console && console.warn('Unable to update recording heartbeat.', error); }); }; beat(); heartbeatTimer = window.setInterval(beat, 30000); }
     function stopHeartbeat() { if (heartbeatTimer) { window.clearInterval(heartbeatTimer); heartbeatTimer = null; } }
     function closeRecordingHeartbeat() { stopHeartbeat(); }
@@ -70,6 +72,7 @@
 
     function start() {
         if (starting || activeState === 'recording') { return; }
+        if (!canStartNewRecording()) { setError('This interactive session has ended. Only recording recovery actions are available.'); return; }
         if (!joined()) { setError('Join the ' + sessionLabel() + ' before recording.'); return; }
         if (config.recordingPurpose === 'appointment_session' && !window.confirm('Record this appointment privately?\n\n' + (config.appointmentPrivateMessage || 'Everyone in the appointment will be shown a recording notice. The recording will be saved to this device and will not be published as a replay or uploaded by VideoHub360.'))) { return; }
         recoveryAction = '';
@@ -132,8 +135,8 @@
             body: '{}'
         });
         return request.then(function () {
-            closeRecordingHeartbeat(); activeJobId = 0; recoveryAction = ''; activeState = 'idle'; setLabel(defaultRecordLabel()); setStatus('Interrupted recording cleared. You can start a new recording.');
-            if (button) { button.disabled = false; }
+            closeRecordingHeartbeat(); activeJobId = 0; recoveryAction = ''; activeState = 'idle'; setLabel(canStartNewRecording() ? defaultRecordLabel() : 'Session Ended'); setStatus(canStartNewRecording() ? 'Interrupted recording cleared. You can start a new recording.' : 'Interrupted recording cleared. This interactive session has ended.');
+            if (button) { button.disabled = !canStartNewRecording(); }
         }).catch(function (error) { if (button) { button.disabled = false; } setError(error && (error.message || error.code) || error); throw error; });
     }
 
@@ -467,6 +470,9 @@
     function init() {
         button = document.getElementById('vh360-studio-live-room-record');
         function restoreState(state) {
+            if (config.recordingPurpose === 'studio_interactive' && Object.prototype.hasOwnProperty.call(state, 'can_start_new_recording')) {
+                startNewRecordingAllowed = !!state.can_start_new_recording;
+            }
             showIndicator(!!(state.recording_active || state.active && state.state === 'recording'));
             if (Object.prototype.hasOwnProperty.call(state, 'job_id')) { activeJobId = Number(state.job_id || 0); }
             if (state.stop_requested && activeState === 'recording' && ownsLocalRecordingState()) {
@@ -521,11 +527,18 @@
             if (activeElsewhere) { activeState = 'recording_elsewhere'; showIndicator(!!state.recording_active); setLabel('Recording in another tab'); setStatus('Recording is active in another browser tab. Stop it there before ending this session.'); if (button) { button.disabled = true; } return; }
             if (!button) { return; }
             if (state.replay_ready) { recoveryAction = ''; recorder = null; setActiveRecordingState('ready'); setLabel('Replay Ready'); button.disabled = true; return; }
-            if (state.replay_failed || state.state === 'failed') { recoveryAction = ''; recorder = null; setActiveRecordingState('idle'); setLabel('Record Again'); button.disabled = false; return; }
+            if (state.replay_failed || state.state === 'failed') { recoveryAction = ''; recorder = null; setActiveRecordingState('idle'); setLabel(canStartNewRecording() ? 'Record Again' : 'Replay Failed'); button.disabled = !canStartNewRecording(); return; }
             if (state.replay_processing || state.state === 'processing' || state.state === 'uploading') { recoveryAction = ''; setActiveRecordingState('processing'); setLabel('Processing…'); button.disabled = true; return; }
             if (state.active && !recorder && !localRecorder && state.recovery_available && !state.heartbeat_fresh) { recoveryAction = 'clear_interrupted'; setActiveRecordingState('interrupted'); setLabel('Clear Interrupted Recording'); button.disabled = false; setStatus(config.recordingPurpose === 'appointment_session' ? 'Recording was interrupted in this browser. Any undownloaded private recording data was lost.' : 'Recording was interrupted in this browser. The unsaved browser media cannot be recovered.'); return; }
             if (!state.active) {
                 recoveryAction = '';
+                if (!canStartNewRecording()) {
+                    setActiveRecordingState('idle');
+                    setLabel('Session Ended');
+                    button.disabled = true;
+                    setStatus('This interactive session has ended.');
+                    return;
+                }
                 if (['processing', 'recording_elsewhere', 'download_elsewhere', 'interrupted', 'program_recording_active'].indexOf(activeState) !== -1) {
                     setActiveRecordingState('idle');
                     setLabel(defaultRecordLabel());
@@ -552,7 +565,7 @@
                 stop().catch(function (error) { setError(error && (error.message || error.code) || error); });
             } else if (activeState === 'ready') {
                 button.disabled = true;
-            } else if (activeState !== 'processing' && activeState !== 'download_pending' && activeState !== 'recording_elsewhere' && activeState !== 'program_recording_active' && activeState !== 'download_elsewhere') {
+            } else if (canStartNewRecording() && activeState !== 'processing' && activeState !== 'download_pending' && activeState !== 'recording_elsewhere' && activeState !== 'program_recording_active' && activeState !== 'download_elsewhere') {
                 start();
             }
         });
