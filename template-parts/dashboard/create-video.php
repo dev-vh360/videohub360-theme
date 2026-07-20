@@ -436,7 +436,7 @@ if ( $vh360_show_studio_notice ) {
             
             <!-- Upload Video Field -->
             <?php if ($upload_enabled): ?>
-            <div class="vh360-form-field vh360-source-field" data-source="upload" style="display: none;">
+            <div class="vh360-form-field vh360-source-field" data-source="upload" style="<?php echo $current_source === 'upload' ? '' : 'display: none;'; ?>">
                 <label for="vh360_video_file" class="vh360-form-label">
                     <?php echo esc_html($vh360_create_labels['file_label']); ?>
                 </label>
