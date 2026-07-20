@@ -17,5 +17,21 @@ class VH360_Studio_Video_Upload_REST_Controller {
     public function upload( WP_REST_Request $request ) { $files = $request->get_file_params(); $asset = $this->service->upload_asset( $request['uuid'], isset( $files['file'] ) ? $files['file'] : array() ); return is_wp_error( $asset ) ? $asset : rest_ensure_response( $this->service->prepare_response( $asset ) ); }
     public function complete( WP_REST_Request $request ) { $asset = $this->service->complete_direct_upload( $request['uuid'], $request->get_json_params() ?: array() ); return is_wp_error( $asset ) ? $asset : rest_ensure_response( $this->service->prepare_response( $asset ) ); }
     public function retry( WP_REST_Request $request ) { $asset = $this->service->retry( $request['uuid'] ); return is_wp_error( $asset ) ? $asset : rest_ensure_response( $this->service->prepare_response( $asset ) ); }
-    public function delete( WP_REST_Request $request ) { $deleted = $this->service->cancel_or_delete( $request['uuid'] ); return is_wp_error( $deleted ) ? $deleted : rest_ensure_response( array( 'deleted' => true ) ); }
+    public function delete( WP_REST_Request $request ) {
+        $deleted = $this->service->cancel_or_delete( $request['uuid'] );
+        if ( is_wp_error( $deleted ) ) {
+            if ( 'vh360_studio_publitio_direct_cleanup_pending' === $deleted->get_error_code() ) {
+                $response = rest_ensure_response(
+                    array(
+                        'deleted'           => false,
+                        'cleanup_scheduled' => true,
+                    )
+                );
+                $response->set_status( 202 );
+                return $response;
+            }
+            return $deleted;
+        }
+        return rest_ensure_response( array( 'deleted' => true ) );
+    }
 }
