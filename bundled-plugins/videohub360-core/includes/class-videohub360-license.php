@@ -163,7 +163,7 @@ class VideoHub360_License {
         if ( empty( $activation['success'] ) ) {
             $data = array(
                 'license_key' => $license_key,
-                'status'      => 'invalid',
+                'status'      => isset( $activation['status'] ) ? $activation['status'] : 'invalid',
                 'message'     => $activation['message'] ?? __( 'Activation failed.', 'videohub360' ),
                 'active_sites'=> $activation['active_sites'] ?? array(),
             );
@@ -237,7 +237,7 @@ class VideoHub360_License {
                 </table>
 
                 <?php submit_button( __( 'Save & Activate License', 'videohub360' ), 'primary', 'videohub360_license_submit' );
-                if ( 'valid' === ( $license_data['status'] ?? '' ) ) {
+                if ( 'valid' === $status ) {
                     submit_button( __( 'Deactivate License On This Site', 'videohub360' ), 'secondary', 'videohub360_license_deactivate', false );
                 }
  ?>
@@ -341,21 +341,45 @@ class VideoHub360_License {
 
         $response = wp_remote_post( $endpoint, $args );
         if ( is_wp_error( $response ) ) {
-            return array( 'success' => false, 'message' => $response->get_error_message() );
+            return array(
+                'success' => false,
+                'status'  => 'error',
+                'message' => sprintf( __( 'Could not contact license server: %s', 'videohub360' ), $response->get_error_message() ),
+            );
         }
 
         $code = wp_remote_retrieve_response_code( $response );
         $body = wp_remote_retrieve_body( $response );
-        $data = json_decode( $body, true );
 
-        if ( 200 !== $code || empty( $data ) || ! is_array( $data ) ) {
-            return array( 'success' => false, 'message' => __( 'Unexpected response from license server.', 'videohub360' ) );
+        if ( 200 !== $code ) {
+            return array(
+                'success' => false,
+                'status'  => 'error',
+                'message' => sprintf( __( 'License server returned HTTP %d.', 'videohub360' ), (int) $code ),
+            );
+        }
+
+        if ( '' === trim( (string) $body ) ) {
+            return array(
+                'success' => false,
+                'status'  => 'error',
+                'message' => __( 'License server returned an empty response.', 'videohub360' ),
+            );
+        }
+
+        $data = json_decode( $body, true );
+        if ( ! is_array( $data ) ) {
+            return array(
+                'success' => false,
+                'status'  => 'error',
+                'message' => __( 'License server returned an unexpected non-JSON response.', 'videohub360' ),
+            );
         }
 
         // Server uses {success:boolean, message:string, ...}
         if ( empty( $data['success'] ) ) {
             $message = isset( $data['message'] ) ? (string) $data['message'] : __( 'Activation failed.', 'videohub360' );
-            return array( 'success' => false, 'message' => $message, 'active_sites' => $data['active_sites'] ?? array() );
+            return array( 'success' => false, 'status' => 'invalid', 'message' => $message, 'active_sites' => $data['active_sites'] ?? array() );
         }
 
         return array(

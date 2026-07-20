@@ -16,7 +16,7 @@ class VH360_Studio_Replay_Publisher {
     private $chunks;
     private $replay_posts;
 
-    public function __construct( VH360_Studio_Provider_Registry $registry, VH360_Studio_Recording_Jobs $jobs, VH360_Studio_Recording_Validator $validator, VH360_Studio_Recording_Chunks $chunks, VH360_Studio_Replay_Posts $replay_posts = null ) {
+    public function __construct( VH360_Studio_Provider_Registry $registry, VH360_Studio_Recording_Jobs $jobs, VH360_Studio_Recording_Validator $validator, VH360_Studio_Recording_Chunks $chunks, ?VH360_Studio_Replay_Posts $replay_posts = null ) {
         $this->registry     = $registry;
         $this->jobs         = $jobs;
         $this->validator    = $validator;
