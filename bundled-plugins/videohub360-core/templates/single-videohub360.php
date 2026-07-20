@@ -313,7 +313,9 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                     <?php endif; ?>
                     <div id="videohub360-main-container" class="videohub360-hide">
                         <?php if ( $studio_playback && 'ready' === $studio_playback['status'] ) : ?>
-                            <?php if ( 'embed' === $studio_playback['render_mode'] && ! empty( $studio_playback['embed_url'] ) ) : ?>
+                            <?php if ( 'embed_html' === $studio_playback['render_mode'] && ! empty( $studio_playback['embed_html'] ) ) : ?>
+                                <div class="videohub360-custom-embed-container"><?php echo $studio_playback['embed_html']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Sanitized by VH360 Studio. ?></div>
+                            <?php elseif ( 'embed' === $studio_playback['render_mode'] && ! empty( $studio_playback['embed_url'] ) ) : ?>
                                 <div class="videohub360-custom-embed-container"><iframe src="<?php echo esc_url( $studio_playback['embed_url'] ); ?>" allowfullscreen loading="lazy"></iframe></div>
                             <?php else : ?>
                                 <video id="videohub360-main-video" width="100%" height="auto" controls playsinline poster="<?php echo esc_url( $studio_playback['poster_url'] ?: $poster ); ?>"><source src="<?php echo esc_url( $studio_playback['src'] ); ?>" type="<?php echo esc_attr( $studio_playback['mime_type'] ); ?>"><?php esc_html_e('Your browser does not support the video tag.', 'videohub360'); ?></video>
