@@ -93,6 +93,9 @@ class VH360_Studio_Assets {
     }
 
     public function enqueue_shared_video_uploader() {
+        $should_enqueue = is_page_template( 'template-dashboard.php' ) || is_page_template( 'templates/dashboard.php' ) || is_page_template( 'template-activity-feed.php' );
+        $should_enqueue = (bool) apply_filters( 'vh360_studio_enqueue_video_uploader', $should_enqueue );
+        if ( ! $should_enqueue ) { return; }
         $path = 'assets/js/studio-video-upload.js';
         wp_enqueue_script( 'vh360-studio-video-upload', VH360_STUDIO_PLUGIN_URL . $path, array(), $this->asset_version( $path ), true );
         wp_localize_script( 'vh360-studio-video-upload', 'vh360StudioVideoUpload', array( 'restRoot' => esc_url_raw( rest_url( 'vh360-studio/v1' ) ), 'nonce' => wp_create_nonce( 'wp_rest' ) ) );

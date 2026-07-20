@@ -318,8 +318,7 @@ if ( $vh360_show_studio_notice ) {
                 <label for="vh360_featured_image" class="vh360-form-label">
                     <?php echo esc_html($vh360_create_labels['thumbnail_label']); ?>
                 </label>
-                <input type="hidden" id="vh360_video_asset_uuid" name="vh360_video_asset_uuid" value="">
-                <input 
+                                <input 
                     type="file" 
                     id="vh360_featured_image" 
                     name="vh360_featured_image" 

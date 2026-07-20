@@ -79,12 +79,17 @@ class VH360_Studio_Video_Storage_Service {
         if ( empty( $file['tmp_name'] ) || ! is_uploaded_file( $file['tmp_name'] ) ) {
             return new WP_Error( 'vh360_studio_video_asset_no_file', __( 'No video file was uploaded.', 'videohub360-studio' ), array( 'status' => 400 ) );
         }
+        $detected = $this->detect_uploaded_mime_type( $file );
+        $file['type'] = $detected ? $detected : $file['type'];
         $valid = $this->validate_file( $file['name'], $file['type'], absint( $file['size'] ), $asset['context'] );
         if ( is_wp_error( $valid ) ) {
             return $valid;
         }
         $provider = $this->registry->get_storage_provider( $asset['provider'] );
-        if ( $provider && method_exists( $provider, 'upload_file' ) ) {
+        if ( ! $provider || ( method_exists( $provider, 'is_available' ) && ! $provider->is_available() ) ) {
+            return new WP_Error( 'vh360_studio_video_provider_unavailable', __( 'The configured video storage provider is unavailable.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        }
+        if ( method_exists( $provider, 'upload_file' ) ) {
             $result = $provider->upload_file( $file, $asset );
         } else {
             $result = $this->upload_to_local_media( $file, $asset );
@@ -158,7 +163,8 @@ class VH360_Studio_Video_Storage_Service {
         if ( ! $asset || ! $this->current_user_can_access( $asset ) ) {
             return new WP_Error( 'vh360_studio_video_asset_forbidden', __( 'Video asset unavailable.', 'videohub360-studio' ), array( 'status' => 403 ) );
         }
-        $this->delete_provider_asset( $asset );
+        $deleted = $this->delete_provider_asset( $asset );
+        if ( is_wp_error( $deleted ) ) { return $deleted; }
         $this->update_asset( $asset['id'], array( 'status' => 'deleted' ) );
         return true;
     }
@@ -167,6 +173,12 @@ class VH360_Studio_Video_Storage_Service {
         $asset = $this->get_asset_by_uuid( $uuid );
         if ( ! $asset ) {
             return new WP_Error( 'vh360_studio_video_asset_missing', __( 'Video asset not found.', 'videohub360-studio' ) );
+        }
+        if ( ! $this->current_user_can_access( $asset ) || ! current_user_can( 'edit_post', absint( $post_id ) ) ) {
+            return new WP_Error( 'vh360_studio_video_asset_association_forbidden', __( 'You cannot associate this video asset with that post.', 'videohub360-studio' ), array( 'status' => 403 ) );
+        }
+        if ( in_array( $asset['status'], array( 'failed', 'cancelled', 'deleted' ), true ) ) {
+            return new WP_Error( 'vh360_studio_video_asset_not_associable', __( 'This video asset cannot be associated.', 'videohub360-studio' ), array( 'status' => 409 ) );
         }
         $this->update_asset( $asset['id'], array( 'associated_post_id' => absint( $post_id ), 'associated_post_type' => $post_type ? sanitize_key( $post_type ) : get_post_type( $post_id ), 'expires_at' => null ) );
         update_post_meta( $post_id, '_vh360_studio_video_asset_id', absint( $asset['id'] ) );
@@ -178,7 +190,6 @@ class VH360_Studio_Video_Storage_Service {
         if ( ! $asset ) {
             return array( 'status' => 'failed', 'render_mode' => 'native', 'src' => '', 'embed_url' => '', 'poster_url' => '', 'mime_type' => '' );
         }
-        $asset = $this->refresh_status( $asset );
         if ( 'ready' !== $asset['status'] ) {
             return array( 'status' => $asset['status'], 'render_mode' => 'native', 'src' => '', 'embed_url' => '', 'poster_url' => '', 'mime_type' => $asset['mime_type'] );
         }
@@ -194,8 +205,10 @@ class VH360_Studio_Video_Storage_Service {
         }
         $expired = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE associated_post_id = 0 AND expires_at IS NOT NULL AND expires_at < %s AND status IN ('pending','uploading','processing','failed','cancelled') LIMIT 20", current_time( 'mysql' ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         foreach ( $expired as $asset ) {
-            $this->delete_provider_asset( $asset );
-            $this->update_asset( $asset['id'], array( 'status' => 'deleted' ) );
+            $deleted = $this->delete_provider_asset( $asset );
+            if ( ! is_wp_error( $deleted ) ) {
+                $this->update_asset( $asset['id'], array( 'status' => 'deleted' ) );
+            }
         }
     }
 
@@ -204,12 +217,34 @@ class VH360_Studio_Video_Storage_Service {
         if ( is_wp_error( $upload ) ) {
             $upload = array( 'method' => 'server', 'field' => 'file' );
         }
-        return array_merge( $asset, array( 'upload' => $upload, 'playback' => $this->get_playback( $asset ) ) );
+        return array( 'id' => absint( $asset['id'] ), 'asset_uuid' => $asset['asset_uuid'], 'context' => $asset['context'], 'provider' => $asset['provider'], 'status' => $asset['status'], 'original_filename' => $asset['original_filename'], 'mime_type' => $asset['mime_type'], 'file_size' => absint( $asset['file_size'] ), 'playback_url' => esc_url_raw( $asset['playback_url'] ), 'embed_url' => esc_url_raw( $asset['embed_url'] ), 'poster_url' => esc_url_raw( $asset['poster_url'] ), 'error_code' => $asset['error_code'], 'error_message' => $asset['error_message'], 'associated_post_id' => absint( $asset['associated_post_id'] ), 'upload' => $upload, 'playback' => $this->get_playback( $asset ) );
     }
 
     private function resolve_provider_id() {
         $provider = sanitize_key( get_option( 'vh360_studio_default_replay_storage_provider', 'videopress' ) );
-        return $this->registry->get_storage_provider( $provider ) ? $provider : 'local_media';
+        $instance = $this->registry->get_storage_provider( $provider );
+        if ( $instance && ( ! method_exists( $instance, 'is_available' ) || $instance->is_available() ) ) {
+            return $provider;
+        }
+        return 'local_media';
+    }
+
+
+    private function detect_uploaded_mime_type( array $file ) {
+        $detected = '';
+        if ( ! empty( $file['tmp_name'] ) && function_exists( 'finfo_open' ) ) {
+            $finfo = finfo_open( FILEINFO_MIME_TYPE );
+            if ( $finfo ) {
+                $value = finfo_file( $finfo, $file['tmp_name'] );
+                finfo_close( $finfo );
+                if ( $value ) { $detected = sanitize_mime_type( $value ); }
+            }
+        }
+        if ( ! $detected && function_exists( 'wp_check_filetype_and_ext' ) && ! empty( $file['tmp_name'] ) && ! empty( $file['name'] ) ) {
+            $check = wp_check_filetype_and_ext( $file['tmp_name'], $file['name'] );
+            if ( ! empty( $check['type'] ) ) { $detected = sanitize_mime_type( $check['type'] ); }
+        }
+        return $detected;
     }
 
     private function validate_file( $filename, $mime, $size, $context ) {
@@ -287,8 +322,9 @@ class VH360_Studio_Video_Storage_Service {
     private function delete_provider_asset( $asset ) {
         $provider = $this->registry->get_storage_provider( $asset['provider'] );
         if ( $provider && method_exists( $provider, 'delete_asset' ) ) {
-            $provider->delete_asset( $asset );
+            return $provider->delete_asset( $asset );
         }
+        return true;
     }
 }
 

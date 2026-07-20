@@ -1102,9 +1102,6 @@
                         throw new Error(asset.error_message || 'Video processing could not be completed.');
                     }
                     $('#vh360_video_asset_uuid').val(asset.asset_uuid);
-                    if (asset.playback && asset.playback.src) {
-                        $('#vh360_video_url').val(asset.playback.src);
-                    }
                     self.showNotification(asset.status === 'ready' ? (createFormLabels.uploadSuccess || 'Video uploaded successfully!') : 'Video uploaded and is processing.', 'success');
                     setTimeout(function() { $('#vh360-video-upload-progress').fadeOut(); }, 1000);
                 }).catch(function(error) {
@@ -1165,6 +1162,10 @@
          * Clear video upload
          */
         clearVideoUpload: function() {
+            var assetUuid = $('#vh360_video_asset_uuid').val();
+            if (assetUuid && window.VH360StudioVideoUpload) {
+                (new window.VH360StudioVideoUpload()).cancel(assetUuid).catch(function(){});
+            }
             $('#vh360_video_file').val('');
             $('#vh360-video-preview').hide();
             $('#vh360-video-upload-progress').hide();

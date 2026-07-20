@@ -36,6 +36,14 @@ class VH360_Studio_Publitio_Client {
         return $this->request( 'GET', '/files/show/' . rawurlencode( $file_id ) );
     }
 
+    public function delete_file( $file_id ) {
+        $file_id = sanitize_text_field( $file_id );
+        if ( '' === $file_id ) {
+            return new WP_Error( 'vh360_studio_publitio_missing_file_id', __( 'Cloud upload file ID is missing.', 'videohub360-studio' ), array( 'status' => 400 ) );
+        }
+        return $this->request( 'DELETE', '/files/delete/' . rawurlencode( $file_id ) );
+    }
+
     public function player_file( $file_id, array $params = array() ) {
         $file_id = sanitize_text_field( $file_id );
         if ( '' === $file_id ) {
