@@ -318,7 +318,7 @@ class VH360_Studio_VideoPress_Provider implements VH360_Studio_Replay_Storage_Pr
 
     private function asset_result( array $result ) {
         $guid = ! empty( $result['videopress_guid'] ) ? sanitize_text_field( $result['videopress_guid'] ) : '';
-        return array( 'provider' => $this->get_id(), 'status' => $guid ? 'ready' : 'processing', 'provider_asset_id' => $guid, 'wp_attachment_id' => ! empty( $result['attachment_id'] ) ? absint( $result['attachment_id'] ) : 0, 'videopress_guid' => $guid, 'playback_url' => $guid ? esc_url_raw( $result['playback_url'] ) : '', 'embed_url' => '', 'poster_url' => ! empty( $result['poster_url'] ) ? esc_url_raw( $result['poster_url'] ) : '', 'mime_type' => 'video/mp4', 'file_size' => 0, 'metadata' => $result, 'error_code' => '', 'error_message' => '' );
+        return array( 'provider' => $this->get_id(), 'status' => $guid ? 'ready' : 'processing', 'provider_asset_id' => $guid, 'wp_attachment_id' => ! empty( $result['attachment_id'] ) ? absint( $result['attachment_id'] ) : 0, 'videopress_guid' => $guid, 'playback_url' => '', 'embed_url' => $guid ? esc_url_raw( 'https://videopress.com/v/' . rawurlencode( $guid ) ) : '', 'poster_url' => ! empty( $result['poster_url'] ) ? esc_url_raw( $result['poster_url'] ) : '', 'mime_type' => 'video/mp4', 'file_size' => 0, 'metadata' => $result, 'error_code' => '', 'error_message' => '' );
     }
 
 }

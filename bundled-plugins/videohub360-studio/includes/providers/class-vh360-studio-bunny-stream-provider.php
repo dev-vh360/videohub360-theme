@@ -192,7 +192,7 @@ class VH360_Studio_Bunny_Stream_Provider implements VH360_Studio_Replay_Storage_
         $video_id = ! empty( $created['guid'] ) ? sanitize_text_field( $created['guid'] ) : '';
         if ( ! $video_id ) { return new WP_Error( 'vh360_studio_bunny_stream_create_failed', __( 'Bunny Stream returned an invalid video response.', 'videohub360-studio' ), array( 'status' => 502 ) ); }
         $uploaded = $client->upload_video( $video_id, $file['tmp_name'], $file['type'] );
-        if ( is_wp_error( $uploaded ) ) { return $uploaded; }
+        if ( is_wp_error( $uploaded ) ) { return new WP_Error( $uploaded->get_error_code(), $uploaded->get_error_message(), array_merge( (array) $uploaded->get_error_data(), array( 'provider_asset_id' => $video_id ) ) ); }
         $video = $client->get_video( $video_id );
         if ( is_wp_error( $video ) ) { $video = $created; }
         return $this->asset_result( $this->result_from_video( is_array( $video ) ? $video : $created, array( 'file_size' => absint( $file['size'] ), 'mime_type' => $file['type'] ), __( 'Video uploaded to Bunny Stream.', 'videohub360-studio' ), $video_id ) );

@@ -992,15 +992,24 @@ class VH360_Ajax_Handlers {
         }
         
         // Save meta fields
-        update_post_meta($post_id, 'video_url', 'upload' === $video_source_type && $video_asset_uuid ? '' : $video_url);
+        $existing_asset_id = absint(get_post_meta($post_id, '_vh360_studio_video_asset_id', true));
+        update_post_meta($post_id, 'video_url', 'upload' === $video_source_type ? '' : $video_url);
         update_post_meta($post_id, 'videohub360_custom_html', $custom_html);
-        update_post_meta($post_id, '_vh360_video_source_type', $video_asset_uuid ? 'managed_asset' : $video_source_type);
         if ($video_asset_uuid && class_exists('VH360_Studio_Plugin')) {
             $asset = VH360_Studio_Plugin::instance()->video_storage()->associate_asset($video_asset_uuid, $post_id, 'videohub360');
             if (is_wp_error($asset)) {
                 wp_send_json_error(array('message' => $asset->get_error_message(), 'post_id' => $post_id));
             }
+            update_post_meta($post_id, '_vh360_video_source_type', 'managed_asset');
             update_post_meta($post_id, '_vh360_studio_video_asset_id', absint($asset['id']));
+            if ($existing_asset_id && $existing_asset_id !== absint($asset['id'])) {
+                update_post_meta($post_id, '_vh360_studio_previous_video_asset_id', $existing_asset_id);
+            }
+        } elseif ('upload' === $video_source_type && $existing_asset_id) {
+            update_post_meta($post_id, '_vh360_video_source_type', 'managed_asset');
+        } else {
+            update_post_meta($post_id, '_vh360_video_source_type', $video_source_type);
+            delete_post_meta($post_id, '_vh360_studio_video_asset_id');
         }
 
         $ad_settings_submitted = isset($_POST['vh360_ad_video_url']) || isset($_POST['vh360_midroll_ad_video_url']) || isset($_POST['vh360_midroll_ad_timing']) || isset($_POST['vh360_postroll_ad_video_url']) || isset($_POST['vh360_postroll_ad_enabled']);

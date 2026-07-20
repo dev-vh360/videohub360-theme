@@ -31,7 +31,7 @@
       var upload = asset.upload || {method:'server'};
       if (upload.method && upload.method !== 'server' && upload.url) {
         return request(upload.httpMethod || upload.method.toUpperCase(), upload.url, directFormData(file, upload), options.onProgress, upload.headers || {}).then(function(response){
-          return request('POST', root + '/video-assets/' + asset.asset_uuid + '/complete', response || {});
+          var completePayload = response || {}; if (upload.direct_upload_token) completePayload.direct_upload_token = upload.direct_upload_token; return request('POST', root + '/video-assets/' + asset.asset_uuid + '/complete', completePayload);
         });
       }
       var fd = new FormData(); fd.append('file', file);

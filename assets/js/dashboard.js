@@ -1137,8 +1137,11 @@
                 },
                 success: function(response) {
                     if (response.success) {
-                        // Auto-populate video URL field
-                        $('#vh360_video_url').val(response.data.video_url);
+                        if (response.data.asset_uuid) {
+                            $('#vh360_video_asset_uuid').val(response.data.asset_uuid);
+                        } else if (response.data.video_url) {
+                            $('#vh360_video_url').val(response.data.video_url);
+                        }
                         
                         self.showNotification(response.data.message || createFormLabels.uploadSuccess || 'Video uploaded successfully!', 'success');
                         

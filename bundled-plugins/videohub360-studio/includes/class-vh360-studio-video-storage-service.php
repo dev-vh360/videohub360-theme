@@ -45,6 +45,16 @@ class VH360_Studio_Video_Storage_Service {
             return $valid;
         }
 
+        if ( in_array( $context, array( 'video', 'lesson' ), true ) ) {
+            $can_create = function_exists( 'vh360_user_can_create_videos' ) ? vh360_user_can_create_videos( $user_id ) : ( user_can( $user_id, 'manage_options' ) || user_can( $user_id, 'vh360_create_videos' ) );
+            if ( ! $can_create ) {
+                return new WP_Error( 'vh360_studio_video_create_forbidden', __( 'You do not have permission to create videos.', 'videohub360-studio' ), array( 'status' => 403 ) );
+            }
+            if ( class_exists( 'VH360_Studio_Permissions' ) && ! VH360_Studio_Permissions::license_is_valid() ) {
+                return new WP_Error( 'vh360_studio_license_invalid', __( 'Studio video uploads are unavailable because the Studio license is inactive.', 'videohub360-studio' ), array( 'status' => 403 ) );
+            }
+        }
+
         global $wpdb;
         $now      = current_time( 'mysql' );
         $provider = $this->resolve_provider_id();
@@ -86,7 +96,8 @@ class VH360_Studio_Video_Storage_Service {
             return $valid;
         }
         $provider = $this->registry->get_storage_provider( $asset['provider'] );
-        if ( ! $provider || ( method_exists( $provider, 'is_available' ) && ! $provider->is_available() ) ) {
+        $skip_availability = 'local_media' === $asset['provider'] && 'activity_video' === $asset['context'];
+        if ( ! $provider || ( ! $skip_availability && method_exists( $provider, 'is_available' ) && ! $provider->is_available() ) ) {
             return new WP_Error( 'vh360_studio_video_provider_unavailable', __( 'The configured video storage provider is unavailable.', 'videohub360-studio' ), array( 'status' => 400 ) );
         }
         if ( method_exists( $provider, 'upload_file' ) ) {
@@ -163,6 +174,9 @@ class VH360_Studio_Video_Storage_Service {
         if ( ! $asset || ! $this->current_user_can_access( $asset ) ) {
             return new WP_Error( 'vh360_studio_video_asset_forbidden', __( 'Video asset unavailable.', 'videohub360-studio' ), array( 'status' => 403 ) );
         }
+        if ( ! empty( $asset['associated_post_id'] ) ) {
+            return new WP_Error( 'vh360_studio_video_asset_associated', __( 'Associated video assets cannot be deleted through the upload cancellation endpoint.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
         $deleted = $this->delete_provider_asset( $asset );
         if ( is_wp_error( $deleted ) ) { return $deleted; }
         $this->update_asset( $asset['id'], array( 'status' => 'deleted' ) );
@@ -174,7 +188,9 @@ class VH360_Studio_Video_Storage_Service {
         if ( ! $asset ) {
             return new WP_Error( 'vh360_studio_video_asset_missing', __( 'Video asset not found.', 'videohub360-studio' ) );
         }
-        if ( ! $this->current_user_can_access( $asset ) || ! current_user_can( 'edit_post', absint( $post_id ) ) ) {
+        $post = get_post( absint( $post_id ) );
+        $owns_post = $post && absint( $post->post_author ) === get_current_user_id();
+        if ( ! $this->current_user_can_access( $asset ) || ( ! $owns_post && ! current_user_can( 'edit_post', absint( $post_id ) ) ) ) {
             return new WP_Error( 'vh360_studio_video_asset_association_forbidden', __( 'You cannot associate this video asset with that post.', 'videohub360-studio' ), array( 'status' => 403 ) );
         }
         if ( in_array( $asset['status'], array( 'failed', 'cancelled', 'deleted' ), true ) ) {
@@ -183,6 +199,17 @@ class VH360_Studio_Video_Storage_Service {
         $this->update_asset( $asset['id'], array( 'associated_post_id' => absint( $post_id ), 'associated_post_type' => $post_type ? sanitize_key( $post_type ) : get_post_type( $post_id ), 'expires_at' => null ) );
         update_post_meta( $post_id, '_vh360_studio_video_asset_id', absint( $asset['id'] ) );
         return $this->get_asset( $asset['id'] );
+    }
+
+
+    public function delete_asset_for_post( $post_id ) {
+        global $wpdb;
+        $asset = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$this->table_name()} WHERE associated_post_id = %d LIMIT 1", absint( $post_id ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        if ( ! $asset ) { return true; }
+        $deleted = $this->delete_provider_asset( $asset );
+        if ( is_wp_error( $deleted ) ) { return $deleted; }
+        $this->update_asset( $asset['id'], array( 'status' => 'deleted', 'associated_post_id' => 0 ) );
+        return true;
     }
 
     public function get_playback( $asset_id ) {
@@ -221,12 +248,10 @@ class VH360_Studio_Video_Storage_Service {
     }
 
     private function resolve_provider_id() {
-        $provider = sanitize_key( get_option( 'vh360_studio_default_replay_storage_provider', 'videopress' ) );
-        $instance = $this->registry->get_storage_provider( $provider );
-        if ( $instance && ( ! method_exists( $instance, 'is_available' ) || $instance->is_available() ) ) {
-            return $provider;
+        if ( class_exists( 'VH360_Studio_Replay_Storage_Settings' ) ) {
+            return VH360_Studio_Replay_Storage_Settings::resolve_default_provider();
         }
-        return 'local_media';
+        return sanitize_key( get_option( 'vh360_studio_default_replay_storage_provider', 'videopress' ) );
     }
 
 
@@ -296,7 +321,10 @@ class VH360_Studio_Video_Storage_Service {
     }
 
     private function mark_failed( $id, WP_Error $error ) {
-        $this->update_asset( $id, array( 'status' => 'failed', 'error_code' => $error->get_error_code(), 'error_message' => $error->get_error_message() ) );
+        $data = $error->get_error_data();
+        $update = array( 'status' => 'failed', 'error_code' => $error->get_error_code(), 'error_message' => $error->get_error_message() );
+        if ( is_array( $data ) && ! empty( $data['provider_asset_id'] ) ) { $update['provider_asset_id'] = sanitize_text_field( $data['provider_asset_id'] ); }
+        $this->update_asset( $id, $update );
     }
 
     private function update_asset( $id, array $data ) {

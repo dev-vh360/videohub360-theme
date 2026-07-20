@@ -1157,6 +1157,10 @@ function vh360_render_original_post_card($original_post, $sharing_post_id = 0) {
                         <video controls class="vh360-video-player" preload="metadata" poster="<?php echo esc_url($studio_playback['poster_url']); ?>"><source src="<?php echo esc_url($studio_playback['src']); ?>" type="<?php echo esc_attr($studio_playback['mime_type']); ?>"></video>
                     <?php endif; ?>
                 </div>
+            <?php elseif ($studio_playback && in_array($studio_playback['status'], array('pending','uploading','processing'), true)) : ?>
+                <p class="vh360-video-processing"><?php esc_html_e('Video is processing. Please check back soon.', 'videohub360-theme'); ?></p>
+            <?php elseif ($studio_playback && 'failed' === $studio_playback['status']) : ?>
+                <p class="vh360-video-processing-failed"><?php esc_html_e('Video processing could not be completed.', 'videohub360-theme'); ?></p>
             <?php elseif (!$studio_playback) :
                 $video_attachment_id = get_post_meta($original_post->ID, '_vh360_video_attachment', true);
                 if ($video_attachment_id) :

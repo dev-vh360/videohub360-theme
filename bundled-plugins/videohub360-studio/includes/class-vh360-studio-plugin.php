@@ -48,6 +48,7 @@ class VH360_Studio_Plugin {
         VH360_Studio_Replay_Status_Reconciler::schedule();
         add_action( VH360_Studio_Replay_Status_Reconciler::HOOK, array( $replay_status_reconciler, 'run' ) );
         add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
+        add_action( 'before_delete_post', array( $this, 'delete_post_video_asset' ) );
     }
 
     public function jobs() {
@@ -60,6 +61,12 @@ class VH360_Studio_Plugin {
 
     public function video_storage() {
         return $this->video_storage;
+    }
+
+    public function delete_post_video_asset( $post_id ) {
+        if ( $this->video_storage ) {
+            $this->video_storage->delete_asset_for_post( $post_id );
+        }
     }
 
     public function register_rest_routes() {
