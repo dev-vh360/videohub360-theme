@@ -318,6 +318,7 @@ if ( $vh360_show_studio_notice ) {
                 <label for="vh360_featured_image" class="vh360-form-label">
                     <?php echo esc_html($vh360_create_labels['thumbnail_label']); ?>
                 </label>
+                <input type="hidden" id="vh360_video_asset_uuid" name="vh360_video_asset_uuid" value="">
                 <input 
                     type="file" 
                     id="vh360_featured_image" 
@@ -435,6 +436,7 @@ if ( $vh360_show_studio_notice ) {
                 <label for="vh360_video_file" class="vh360-form-label">
                     <?php echo esc_html($vh360_create_labels['file_label']); ?>
                 </label>
+                <input type="hidden" id="vh360_video_asset_uuid" name="vh360_video_asset_uuid" value="">
                 <input 
                     type="file" 
                     id="vh360_video_file" 

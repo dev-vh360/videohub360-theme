@@ -258,7 +258,8 @@ function vh360_handle_post_creation() {
 
     $user_id = get_current_user_id();
     $post_content = isset($_POST['vh360_post_content']) ? wp_kses_post(trim(wp_unslash($_POST['vh360_post_content']))) : '';
-    $has_media = !empty($_FILES['vh360_post_media']['name']);
+    $activity_video_asset_uuid = isset($_POST['vh360_activity_video_asset_uuid']) ? sanitize_text_field(wp_unslash($_POST['vh360_activity_video_asset_uuid'])) : '';
+    $has_media = !empty($_FILES['vh360_post_media']['name']) || !empty($activity_video_asset_uuid);
 
     // Do not allow posts without content or media
     if (empty($post_content) && !$has_media) {
@@ -287,7 +288,15 @@ function vh360_handle_post_creation() {
     $post_id = wp_insert_post($post_args);
 
     // Handle media upload (photo or video)
-    if ($post_id && !empty($_FILES['vh360_post_media']['name'])) {
+    if ($post_id && $activity_video_asset_uuid && class_exists('VH360_Studio_Plugin')) {
+        $asset = VH360_Studio_Plugin::instance()->video_storage()->associate_asset($activity_video_asset_uuid, $post_id, 'vh360_post');
+        if (!is_wp_error($asset) && !empty($asset['id'])) {
+            update_post_meta($post_id, '_vh360_studio_video_asset_id', absint($asset['id']));
+            update_post_meta($post_id, 'vh360_post_media_type', 'video');
+        }
+    }
+
+    if ($post_id && empty($activity_video_asset_uuid) && !empty($_FILES['vh360_post_media']['name'])) {
         require_once ABSPATH . 'wp-admin/includes/file.php';
         require_once ABSPATH . 'wp-admin/includes/image.php';
         require_once ABSPATH . 'wp-admin/includes/media.php';
@@ -1466,23 +1475,31 @@ function vh360_render_community_post($post, $show_full = true, $skip_comments = 
                     </div>
                 <?php endif; ?>
                 <?php
-                // Check for video attachment
-                $video_attachment_id = get_post_meta($post->ID, '_vh360_video_attachment', true);
-                if ($video_attachment_id) :
-                    $video_url = wp_get_attachment_url($video_attachment_id);
-                    $video_type = get_post_mime_type($video_attachment_id);
-                    if ($video_url && $video_type) :
+                // Check for managed Studio asset first, then legacy video attachment.
+                $studio_asset_id = get_post_meta($post->ID, '_vh360_studio_video_asset_id', true);
+                $studio_playback = ($studio_asset_id && function_exists('vh360_studio_get_video_playback')) ? vh360_studio_get_video_playback($studio_asset_id) : null;
+                if ($studio_playback && 'ready' === $studio_playback['status']) :
                 ?>
                     <div class="vh360-community-video">
-                        <video controls class="vh360-video-player" preload="metadata">
-                            <source src="<?php echo esc_url($video_url); ?>" type="<?php echo esc_attr($video_type); ?>">
-                            <?php esc_html_e('Your browser does not support the video tag.', 'videohub360-theme'); ?>
-                        </video>
+                        <?php if ('embed' === $studio_playback['render_mode'] && !empty($studio_playback['embed_url'])) : ?>
+                            <iframe src="<?php echo esc_url($studio_playback['embed_url']); ?>" allowfullscreen loading="lazy"></iframe>
+                        <?php else : ?>
+                            <video controls class="vh360-video-player" preload="metadata" poster="<?php echo esc_url($studio_playback['poster_url']); ?>"><source src="<?php echo esc_url($studio_playback['src']); ?>" type="<?php echo esc_attr($studio_playback['mime_type']); ?>"></video>
+                        <?php endif; ?>
                     </div>
-                <?php
-                    endif;
-                endif;
+                <?php elseif ($studio_playback && in_array($studio_playback['status'], array('pending','uploading','processing'), true)) : ?>
+                    <p class="vh360-video-processing"><?php esc_html_e('Video is processing. Please check back soon.', 'videohub360-theme'); ?></p>
+                <?php elseif ($studio_playback && 'failed' === $studio_playback['status']) : ?>
+                    <p class="vh360-video-processing-failed"><?php esc_html_e('Video processing could not be completed.', 'videohub360-theme'); ?></p>
+                <?php else :
+                    $video_attachment_id = get_post_meta($post->ID, '_vh360_video_attachment', true);
+                    if ($video_attachment_id) :
+                        $video_url = wp_get_attachment_url($video_attachment_id);
+                        $video_type = get_post_mime_type($video_attachment_id);
+                        if ($video_url && $video_type) :
                 ?>
+                    <div class="vh360-community-video"><video controls class="vh360-video-player" preload="metadata"><source src="<?php echo esc_url($video_url); ?>" type="<?php echo esc_attr($video_type); ?>"><?php esc_html_e('Your browser does not support the video tag.', 'videohub360-theme'); ?></video></div>
+                <?php endif; endif; endif; ?>
             </div>
             
             <?php

@@ -17,6 +17,7 @@ class VH360_Studio_Assets {
         add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_dashboard_assets' ) );
         add_action( 'wp_enqueue_scripts', array( $this, 'dequeue_mobile_orientation_lock_for_mobile_live' ), 100 );
         add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_live_room_recording_assets' ) );
+        add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_shared_video_uploader' ) );
         add_filter( 'vh360_agora_host_controls_html', array( $this, 'render_live_room_record_control' ), 10, 4 );
         add_action( 'wp_footer', array( $this, 'render_live_room_recording_notice' ) );
     }
@@ -89,6 +90,12 @@ class VH360_Studio_Assets {
         if ( ! $session ) { return; }
         $label = 'studio_interactive' === $session['recordingPurpose'] ? __( 'This interactive session is being recorded.', 'videohub360-studio' ) : ( 'appointment_session' === $session['recordingPurpose'] ? __( 'This appointment is being recorded.', 'videohub360-studio' ) : __( 'This Live Room is being recorded.', 'videohub360-studio' ) );
         echo '<div class="vh360-live-room-recording-notice vh360-studio-recording-indicator vh360-hidden" aria-live="polite" aria-label="' . esc_attr( $label ) . '"><span aria-hidden="true">●</span><span>REC</span></div>';
+    }
+
+    public function enqueue_shared_video_uploader() {
+        $path = 'assets/js/studio-video-upload.js';
+        wp_enqueue_script( 'vh360-studio-video-upload', VH360_STUDIO_PLUGIN_URL . $path, array(), $this->asset_version( $path ), true );
+        wp_localize_script( 'vh360-studio-video-upload', 'vh360StudioVideoUpload', array( 'restRoot' => esc_url_raw( rest_url( 'vh360-studio/v1' ) ), 'nonce' => wp_create_nonce( 'wp_rest' ) ) );
     }
 
     public function enqueue_dashboard_assets() {

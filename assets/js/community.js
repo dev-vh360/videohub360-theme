@@ -546,6 +546,7 @@
                     : fileType + ' exceeds maximum size of ' + maxSizeMB + ' MB.';
                 alert(errorMsg);
                 $input.val('');
+            $form.find('.vh360-activity-video-asset-uuid').val('');
                 return;
             }
 
@@ -627,6 +628,26 @@
                     alert(errorMsg);
                     return false;
                 }
+            }
+
+            if ($input.length && $input[0].files && $input[0].files[0] && $input[0].files[0].type.indexOf('video/') === 0 && window.VH360StudioVideoUpload && !$form.find('.vh360-activity-video-asset-uuid').val()) {
+                e.preventDefault();
+                const uploader = new window.VH360StudioVideoUpload();
+                $form.addClass('vh360-form-submitting');
+                $submit.prop('disabled', true).addClass('vh360-btn-loading');
+                uploader.upload($input[0].files[0], { context: 'activity_video' }).then(function(asset) {
+                    if (asset.status === 'failed') {
+                        throw new Error(asset.error_message || 'Video processing could not be completed.');
+                    }
+                    $form.find('.vh360-activity-video-asset-uuid').val(asset.asset_uuid);
+                    $input.val('');
+                    $form[0].submit();
+                }).catch(function(error) {
+                    alert(error.message || (vh360Community.strings && vh360Community.strings.error) || 'Upload failed');
+                    $form.removeClass('vh360-form-submitting');
+                    $submit.prop('disabled', false).removeClass('vh360-btn-loading');
+                });
+                return false;
             }
 
             // Show loading state

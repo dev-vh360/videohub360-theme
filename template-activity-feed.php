@@ -198,6 +198,7 @@ $vh360_header_desc       = get_theme_mod('vh360_activity_header_description', __
                                     <div class="vh360-post-actions vh360-composer-actions">
                                         <?php if ( $photos_enabled || $videos_enabled ) : ?>
                                         <label class="vh360-post-media-label">
+                                            <input type="hidden" name="vh360_activity_video_asset_uuid" class="vh360-activity-video-asset-uuid" value="">
                                             <input type="file"
                                                    name="vh360_post_media"
                                                    id="vh360-post-media"
@@ -304,6 +305,7 @@ $vh360_header_desc       = get_theme_mod('vh360_activity_header_description', __
                             <div class="vh360-post-actions vh360-composer-actions">
                                 <?php if ( $photos_enabled || $videos_enabled ) : ?>
                                 <label class="vh360-post-media-label">
+                                    <input type="hidden" name="vh360_activity_video_asset_uuid" class="vh360-activity-video-asset-uuid" value="">
                                     <input type="file"
                                            name="vh360_post_media"
                                            id="vh360-mobile-post-media"

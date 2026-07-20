@@ -1084,17 +1084,40 @@
                 return;
             }
             
-            var formData = new FormData();
-            
             var createFormLabels = (window.vh360Dashboard && vh360Dashboard.createForm) || {};
+            $('#vh360-video-upload-progress').show();
+            if (window.VH360StudioVideoUpload) {
+                var uploader = new window.VH360StudioVideoUpload();
+                uploader.upload(file, {
+                    context: createFormLabels.isLessonContext ? 'lesson' : 'video',
+                    onProgress: function(e) {
+                        if (e.lengthComputable) {
+                            var percentComplete = Math.round((e.loaded / e.total) * 100);
+                            $('#vh360-video-progress-fill').css('width', percentComplete + '%');
+                            $('#vh360-video-progress-text').text(percentComplete + '%');
+                        }
+                    }
+                }).then(function(asset) {
+                    if (asset.status === 'failed') {
+                        throw new Error(asset.error_message || 'Video processing could not be completed.');
+                    }
+                    $('#vh360_video_asset_uuid').val(asset.asset_uuid);
+                    if (asset.playback && asset.playback.src) {
+                        $('#vh360_video_url').val(asset.playback.src);
+                    }
+                    self.showNotification(asset.status === 'ready' ? (createFormLabels.uploadSuccess || 'Video uploaded successfully!') : 'Video uploaded and is processing.', 'success');
+                    setTimeout(function() { $('#vh360-video-upload-progress').fadeOut(); }, 1000);
+                }).catch(function(error) {
+                    self.showNotification(error.message || 'Upload failed', 'error');
+                    self.clearVideoUpload();
+                });
+                return;
+            }
+            var formData = new FormData();
             formData.append('action', 'vh360_upload_video_file');
             formData.append('nonce', vh360Dashboard.videoUploadNonce);
             formData.append('vh360_create_context', createFormLabels.isLessonContext ? 'lesson' : 'video');
             formData.append('vh360_video_file', file);
-            
-            // Show progress bar
-            $('#vh360-video-upload-progress').show();
-            
             $.ajax({
                 url: vh360Dashboard.ajaxurl,
                 type: 'POST',
@@ -1148,6 +1171,7 @@
             $('#vh360-video-upload-trigger').show();
             $('#vh360-video-progress-fill').css('width', '0%');
             $('#vh360-video-progress-text').text('0%');
+            $('#vh360_video_asset_uuid').val('');
         },
 
         /**

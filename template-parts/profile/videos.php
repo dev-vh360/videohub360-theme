@@ -33,14 +33,22 @@ $args = array(
     'posts_per_page' => 12,
     'paged' => $paged,
     'meta_query' => array(
-        array(
-            'key' => 'vh360_post_media_id',
-            'compare' => 'EXISTS', // Must have media attachment
-        ),
+        'relation' => 'AND',
         array(
             'key' => 'vh360_post_media_type',
             'value' => 'video', // Must be a video
             'compare' => '=',
+        ),
+        array(
+            'relation' => 'OR',
+            array(
+                'key' => 'vh360_post_media_id',
+                'compare' => 'EXISTS', // Legacy media attachment.
+            ),
+            array(
+                'key' => '_vh360_studio_video_asset_id',
+                'compare' => 'EXISTS', // Managed Studio asset.
+            ),
         ),
     ),
 );

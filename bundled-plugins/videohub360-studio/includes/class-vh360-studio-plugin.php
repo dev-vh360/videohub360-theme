@@ -13,6 +13,7 @@ class VH360_Studio_Plugin {
     private static $instance;
     private $registry;
     private $jobs;
+    private $video_storage;
 
     public static function instance() {
         if ( ! self::$instance ) {
@@ -25,6 +26,7 @@ class VH360_Studio_Plugin {
         VH360_Studio_Database::maybe_install();
         $this->registry = new VH360_Studio_Provider_Registry();
         $this->jobs     = new VH360_Studio_Recording_Jobs( $this->registry );
+        $this->video_storage = new VH360_Studio_Video_Storage_Service( $this->registry );
         new VH360_Studio_Assets( $this->registry );
         new VH360_Studio_Media_Admin();
         new VH360_Studio_Admin( $this->registry, $this->jobs );
@@ -35,6 +37,8 @@ class VH360_Studio_Plugin {
         add_filter( 'body_class', array( $this, 'body_classes' ) );
         VH360_Studio_Recording_Cleanup::schedule();
         add_action( VH360_Studio_Recording_Cleanup::HOOK, array( new VH360_Studio_Recording_Cleanup( $this->jobs ), 'run' ) );
+        VH360_Studio_Video_Storage_Service::schedule();
+        add_action( VH360_Studio_Video_Storage_Service::CRON_HOOK, array( $this->video_storage, 'run_cron' ) );
 
         $replay_status_reconciler = new VH360_Studio_Replay_Status_Reconciler(
             $this->jobs,
@@ -54,12 +58,17 @@ class VH360_Studio_Plugin {
         return $this->registry;
     }
 
+    public function video_storage() {
+        return $this->video_storage;
+    }
+
     public function register_rest_routes() {
         ( new VH360_Studio_REST_Controller( $this->jobs ) )->register_routes();
         ( new VH360_Studio_Live_Room_REST_Controller( $this->jobs ) )->register_routes();
         ( new VH360_Studio_Interactive_Recording_REST_Controller( $this->jobs ) )->register_routes();
         ( new VH360_Studio_Overlays_REST_Controller( new VH360_Studio_Overlay_Repository() ) )->register_routes();
         ( new VH360_Studio_Bible_REST_Controller() )->register_routes();
+        ( new VH360_Studio_Video_Upload_REST_Controller( $this->video_storage ) )->register_routes();
     }
 
     public function register_dashboard_tab( $tabs, $user_id ) {
