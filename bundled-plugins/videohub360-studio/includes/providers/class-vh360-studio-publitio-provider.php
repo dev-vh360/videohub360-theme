@@ -300,6 +300,10 @@ class VH360_Studio_Publitio_Provider implements VH360_Studio_Replay_Storage_Prov
             'fileField' => 'file',
             'direct_upload_token' => $token,
             'max_size' => $direct_max,
+            '_asset_metadata' => array(
+                'direct_public_id'        => $public_id,
+                'direct_upload_expires_at'=> time() + ( 30 * MINUTE_IN_SECONDS ),
+            ),
         );
     }
 
@@ -323,7 +327,32 @@ class VH360_Studio_Publitio_Provider implements VH360_Studio_Replay_Storage_Prov
         $verified = $this->verify_direct_upload_file( $file_id );
         if ( is_wp_error( $verified ) ) { return $verified; }
         $valid = $this->validate_direct_asset_metadata( $verified, $expected );
-        if ( is_wp_error( $valid ) ) { return $valid; }
+        if ( is_wp_error( $valid ) ) {
+            // The provider file ID has already been verified server-side. Preserve
+            // it on every subsequent validation failure so cancellation and cron
+            // cleanup can remove the exact remote resource immediately.
+            $data = (array) $valid->get_error_data();
+            $data['provider_asset_id'] = $file_id;
+            return new WP_Error( $valid->get_error_code(), $valid->get_error_message(), $data );
+        }
+
+        $expected_public_id = ! empty( $expected['public_id'] ) ? sanitize_text_field( $expected['public_id'] ) : '';
+        $actual_public_id   = ! empty( $verified['public_id'] ) ? sanitize_text_field( $verified['public_id'] ) : '';
+        $public_id_matches  = $expected_public_id && $actual_public_id
+            ? sanitize_title( $expected_public_id ) === sanitize_title( $actual_public_id )
+            : false;
+
+        // Publitio upload presets may normalize or replace a requested public ID.
+        // The public ID is therefore diagnostic, not the ownership boundary. The
+        // upload is bound to this session by the expiring token and is verified
+        // server-side by its exact provider file ID, file size, and MIME type.
+        $verified['expected_public_id'] = $expected_public_id;
+        $verified['actual_public_id']   = $actual_public_id;
+        $verified['public_id_matches']  = $public_id_matches ? 1 : 0;
+        if ( $expected_public_id && $actual_public_id && ! $public_id_matches ) {
+            $verified['message'] = __( 'Cloud upload verified. The provider normalized the requested public ID.', 'videohub360-studio' );
+        }
+
         delete_transient( $key );
         return $this->asset_result( $verified );
     }
@@ -342,6 +371,25 @@ class VH360_Studio_Publitio_Provider implements VH360_Studio_Replay_Storage_Prov
 
     public function delete_asset( array $asset ) {
         $file_id = ! empty( $asset['provider_asset_id'] ) ? sanitize_text_field( $asset['provider_asset_id'] ) : '';
+
+        if ( ! $file_id ) {
+            $metadata  = ! empty( $asset['provider_metadata'] ) ? json_decode( (string) $asset['provider_metadata'], true ) : array();
+            $public_id = is_array( $metadata ) && ! empty( $metadata['direct_public_id'] ) ? sanitize_text_field( $metadata['direct_public_id'] ) : '';
+            if ( $public_id ) {
+                $found = $this->client()->find_file_by_public_id( $public_id );
+                if ( is_wp_error( $found ) ) {
+                    return $found;
+                }
+                if ( is_array( $found ) ) {
+                    $file_id = sanitize_text_field( $this->first_scalar( $found, array( 'id', 'file_id' ) ) );
+                } elseif ( ! empty( $metadata['direct_upload_expires_at'] ) && time() <= absint( $metadata['direct_upload_expires_at'] ) ) {
+                    // A cancelled browser upload may still be in flight. Keep the
+                    // cleanup record alive until the authorization window closes.
+                    return new WP_Error( 'vh360_studio_publitio_direct_cleanup_pending', __( 'Waiting for the direct upload window to close before final cleanup.', 'videohub360-studio' ), array( 'status' => 409 ) );
+                }
+            }
+        }
+
         return $file_id ? $this->client()->delete_file( $file_id ) : true;
     }
 
@@ -356,33 +404,49 @@ class VH360_Studio_Publitio_Provider implements VH360_Studio_Replay_Storage_Prov
     }
 
     private function validate_direct_asset_metadata( array $verified, array $expected ) {
-        $expected_public_id = ! empty( $expected['public_id'] ) ? sanitize_title( $expected['public_id'] ) : '';
-        $actual_public_id = ! empty( $verified['public_id'] ) ? sanitize_title( $verified['public_id'] ) : '';
-        if ( ! $expected_public_id || ! $actual_public_id ) {
-            return new WP_Error( 'vh360_studio_direct_upload_public_id_missing', __( 'Cloud upload verification did not return the expected public ID.', 'videohub360-studio' ), array( 'status' => 409 ) );
-        }
-        if ( $expected_public_id !== $actual_public_id ) {
-            return new WP_Error( 'vh360_studio_direct_upload_public_id_mismatch', __( 'Cloud upload verification found an unexpected public ID.', 'videohub360-studio' ), array( 'status' => 409 ) );
-        }
+        // Do not reject a verified upload because Publitio normalized or
+        // replaced its requested public ID. Direct-upload ownership is enforced
+        // by the expiring session token and exact server-side provider file lookup.
         $expected_size = ! empty( $expected['file_size'] ) ? absint( $expected['file_size'] ) : 0;
         $actual_size = ! empty( $verified['file_size'] ) ? absint( $verified['file_size'] ) : 0;
         if ( ! $expected_size || ! $actual_size ) {
             return new WP_Error( 'vh360_studio_direct_upload_size_missing', __( 'Cloud upload verification did not return the expected file size.', 'videohub360-studio' ), array( 'status' => 409 ) );
         }
-        if ( $expected_size && $actual_size ) {
-            $allowed_delta = max( 1048576, (int) ceil( $expected_size * 0.05 ) );
-            if ( abs( $actual_size - $expected_size ) > $allowed_delta ) {
-                return new WP_Error( 'vh360_studio_direct_upload_size_mismatch', __( 'Cloud upload verification found a file size mismatch.', 'videohub360-studio' ), array( 'status' => 409 ) );
-            }
+        if ( $expected_size !== $actual_size ) {
+            return new WP_Error( 'vh360_studio_direct_upload_size_mismatch', __( 'Cloud upload verification found a file size mismatch.', 'videohub360-studio' ), array( 'status' => 409 ) );
         }
-        $mime = ! empty( $verified['mime_type'] ) ? $this->base_mime_type( $verified['mime_type'] ) : '';
+        $mime          = $this->verified_mime_type( $verified );
+        $expected_mime = ! empty( $expected['mime_type'] ) ? $this->base_mime_type( $expected['mime_type'] ) : '';
         if ( ! $mime ) {
             return new WP_Error( 'vh360_studio_direct_upload_mime_missing', __( 'Cloud upload verification did not return the uploaded MIME type.', 'videohub360-studio' ), array( 'status' => 409 ) );
         }
         if ( 0 !== strpos( $mime, 'video/' ) ) {
             return new WP_Error( 'vh360_studio_direct_upload_invalid_verified_type', __( 'Cloud upload verification found a non-video file.', 'videohub360-studio' ), array( 'status' => 415 ) );
         }
+        if ( $expected_mime && $expected_mime !== $mime ) {
+            return new WP_Error( 'vh360_studio_direct_upload_mime_mismatch', __( 'Cloud upload verification found a file type mismatch.', 'videohub360-studio' ), array( 'status' => 409 ) );
+        }
         return true;
+    }
+
+    private function verified_mime_type( array $verified ) {
+        $mime = ! empty( $verified['mime_type'] ) ? $this->base_mime_type( $verified['mime_type'] ) : '';
+        if ( $mime && false !== strpos( $mime, '/' ) ) {
+            return $mime;
+        }
+
+        $extension = ! empty( $verified['extension'] ) ? sanitize_key( $verified['extension'] ) : '';
+        $types = array(
+            'mp4'  => 'video/mp4',
+            'm4v'  => 'video/mp4',
+            'webm' => 'video/webm',
+            'mov'  => 'video/quicktime',
+            'qt'   => 'video/quicktime',
+            'ogv'  => 'video/ogg',
+            'ogg'  => 'video/ogg',
+        );
+
+        return isset( $types[ $extension ] ) ? $types[ $extension ] : '';
     }
 
 }

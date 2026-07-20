@@ -314,11 +314,42 @@ class VH360_Studio_VideoPress_Provider implements VH360_Studio_Replay_Storage_Pr
 
     public function resolve_playback( array $asset ) { return $this->check_asset_status( $asset ); }
 
-    public function delete_asset( array $asset ) { if ( ! empty( $asset['wp_attachment_id'] ) ) { return (bool) wp_delete_attachment( absint( $asset['wp_attachment_id'] ), true ); } return true; }
+    public function delete_asset( array $asset ) {
+        if ( empty( $asset['wp_attachment_id'] ) ) {
+            return true;
+        }
+
+        $deleted = wp_delete_attachment( absint( $asset['wp_attachment_id'] ), true );
+        if ( false === $deleted || null === $deleted ) {
+            return new WP_Error( 'vh360_studio_videopress_delete_failed', __( 'The VideoPress attachment could not be deleted.', 'videohub360-studio' ), array( 'status' => 500 ) );
+        }
+
+        return true;
+    }
 
     private function asset_result( array $result ) {
-        $guid = ! empty( $result['videopress_guid'] ) ? sanitize_text_field( $result['videopress_guid'] ) : '';
-        return array( 'provider' => $this->get_id(), 'status' => $guid ? 'ready' : 'processing', 'provider_asset_id' => $guid, 'wp_attachment_id' => ! empty( $result['attachment_id'] ) ? absint( $result['attachment_id'] ) : 0, 'videopress_guid' => $guid, 'playback_url' => '', 'embed_url' => $guid ? esc_url_raw( 'https://videopress.com/v/' . rawurlencode( $guid ) ) : '', 'poster_url' => ! empty( $result['poster_url'] ) ? esc_url_raw( $result['poster_url'] ) : '', 'mime_type' => 'video/mp4', 'file_size' => 0, 'metadata' => $result, 'error_code' => '', 'error_message' => '' );
+        $guid          = ! empty( $result['videopress_guid'] ) ? sanitize_text_field( $result['videopress_guid'] ) : '';
+        $attachment_id = ! empty( $result['attachment_id'] ) ? absint( $result['attachment_id'] ) : 0;
+        $file_path     = $attachment_id ? get_attached_file( $attachment_id ) : '';
+        $file_size     = $file_path && is_file( $file_path ) ? (int) filesize( $file_path ) : 0;
+        $mime_type     = $attachment_id ? get_post_mime_type( $attachment_id ) : '';
+        $fallback_url  = $attachment_id ? wp_get_attachment_url( $attachment_id ) : '';
+
+        return array(
+            'provider'          => $this->get_id(),
+            'status'            => $guid ? 'ready' : 'processing',
+            'provider_asset_id' => $guid,
+            'wp_attachment_id'  => $attachment_id,
+            'videopress_guid'   => $guid,
+            'playback_url'      => $fallback_url ? esc_url_raw( $fallback_url ) : '',
+            'embed_url'         => '',
+            'poster_url'        => ! empty( $result['poster_url'] ) ? esc_url_raw( $result['poster_url'] ) : '',
+            'mime_type'         => $mime_type ? sanitize_mime_type( $mime_type ) : 'video/mp4',
+            'file_size'         => max( 0, $file_size ),
+            'metadata'          => $result,
+            'error_code'        => '',
+            'error_message'     => '',
+        );
     }
 
 }

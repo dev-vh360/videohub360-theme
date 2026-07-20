@@ -17,12 +17,26 @@ class VH360_Studio_Local_Media_Replay_Storage_Provider implements VH360_Studio_R
     }
 
     public function get_label() {
-        return __( 'Local Replay Fallback', 'videohub360-studio' );
+        return __( 'Local Media', 'videohub360-studio' );
     }
 
     public function is_available() {
         $enabled = '1' === (string) get_option( 'vh360_studio_local_media_fallback_enabled', '1' );
         return (bool) apply_filters( 'vh360_studio_local_media_available', $enabled && current_user_can( 'upload_files' ) && $this->media_functions_available() && $this->uploads_directory_is_writable(), $this );
+    }
+
+    /**
+     * Determine whether Local Media can accept a normal video upload.
+     *
+     * Community video uploads intentionally preserve the theme's existing
+     * permission model, which did not require the upload_files capability.
+     */
+    public function is_available_for_video_upload( $context = 'video' ) {
+        $enabled   = '1' === (string) get_option( 'vh360_studio_local_media_fallback_enabled', '1' );
+        $technical = $enabled && $this->media_functions_available() && $this->uploads_directory_is_writable();
+        $allowed   = 'activity_video' === sanitize_key( $context ) ? $technical : ( $technical && current_user_can( 'upload_files' ) );
+
+        return (bool) apply_filters( 'vh360_studio_local_media_video_upload_available', $allowed, sanitize_key( $context ), $this );
     }
 
     public function supports_publish() {
@@ -260,7 +274,15 @@ class VH360_Studio_Local_Media_Replay_Storage_Provider implements VH360_Studio_R
     }
 
     public function delete_asset( array $asset ) {
-        if ( ! empty( $asset['wp_attachment_id'] ) ) { wp_delete_attachment( absint( $asset['wp_attachment_id'] ), true ); }
+        if ( empty( $asset['wp_attachment_id'] ) ) {
+            return true;
+        }
+
+        $deleted = wp_delete_attachment( absint( $asset['wp_attachment_id'] ), true );
+        if ( false === $deleted || null === $deleted ) {
+            return new WP_Error( 'vh360_studio_local_media_delete_failed', __( 'The local video attachment could not be deleted.', 'videohub360-studio' ), array( 'status' => 500 ) );
+        }
+
         return true;
     }
 
