@@ -516,6 +516,15 @@
             const $preview = $form.find('.vh360-upload-preview');
             const $previewImage = $preview.find('.vh360-preview-image');
             const $fileName = $preview.find('.vh360-file-name');
+            const $progress = $form.find('.vh360-activity-upload-progress');
+            const previousAssetUuid = $form.find('.vh360-activity-video-asset-uuid').val();
+            if (previousAssetUuid && window.VH360StudioVideoUpload) {
+                (new window.VH360StudioVideoUpload()).cancel(previousAssetUuid).catch(function(){});
+            }
+            $form.data('vh360-upload-generation', ($form.data('vh360-upload-generation') || 0) + 1);
+            $form.find('.vh360-activity-video-asset-uuid').val('');
+            $progress.hide().find('.vh360-activity-progress-fill').css('width', '0%');
+            $progress.find('.vh360-activity-progress-text').text('0%');
 
             // Clear any previous preview
             $previewImage.empty();
@@ -546,7 +555,7 @@
                     : fileType + ' exceeds maximum size of ' + maxSizeMB + ' MB.';
                 alert(errorMsg);
                 $input.val('');
-            $form.find('.vh360-activity-video-asset-uuid').val('');
+                $form.find('.vh360-activity-video-asset-uuid').val('');
                 return;
             }
 
@@ -583,6 +592,15 @@
             const $form = $btn.closest('.vh360-post-form');
             const $preview = $form.find('.vh360-upload-preview');
             const $input = $form.find('.vh360-media-upload');
+            const assetUuid = $form.find('.vh360-activity-video-asset-uuid').val();
+            if (assetUuid && window.VH360StudioVideoUpload) {
+                (new window.VH360StudioVideoUpload()).cancel(assetUuid).catch(function(){});
+            }
+            $form.data('vh360-upload-generation', ($form.data('vh360-upload-generation') || 0) + 1);
+            $form.find('.vh360-activity-video-asset-uuid').val('');
+            $form.find('.vh360-activity-upload-progress').hide();
+            $form.find('.vh360-activity-progress-fill').css('width', '0%');
+            $form.find('.vh360-activity-progress-text').text('0%');
 
             // Clear the file input
             $input.val('');
@@ -633,19 +651,41 @@
             if ($input.length && $input[0].files && $input[0].files[0] && $input[0].files[0].type.indexOf('video/') === 0 && window.VH360StudioVideoUpload && !$form.find('.vh360-activity-video-asset-uuid').val()) {
                 e.preventDefault();
                 const uploader = new window.VH360StudioVideoUpload();
+                const generation = ($form.data('vh360-upload-generation') || 0) + 1;
+                const $progress = $form.find('.vh360-activity-upload-progress');
+                $form.data('vh360-upload-generation', generation);
                 $form.addClass('vh360-form-submitting');
                 $submit.prop('disabled', true).addClass('vh360-btn-loading');
-                uploader.upload($input[0].files[0], { context: 'activity_video' }).then(function(asset) {
+                $progress.show();
+                uploader.upload($input[0].files[0], {
+                    context: 'activity_video',
+                    onProgress: function(event) {
+                        if (!event.lengthComputable) return;
+                        const percent = Math.max(0, Math.min(100, Math.round((event.loaded / event.total) * 100)));
+                        $progress.find('.vh360-activity-progress-fill').css('width', percent + '%');
+                        $progress.find('.vh360-activity-progress-text').text(percent + '%');
+                    }
+                }).then(function(asset) {
+                    if (generation !== $form.data('vh360-upload-generation')) {
+                        if (asset && asset.asset_uuid) uploader.cancel(asset.asset_uuid).catch(function(){});
+                        return;
+                    }
                     if (asset.status === 'failed') {
                         throw new Error(asset.error_message || 'Video processing could not be completed.');
                     }
                     $form.find('.vh360-activity-video-asset-uuid').val(asset.asset_uuid);
                     $input.val('');
+                    $progress.find('.vh360-activity-progress-fill').css('width', '100%');
+                    $progress.find('.vh360-activity-progress-text').text('100%');
                     $form[0].submit();
                 }).catch(function(error) {
+                    if (generation !== $form.data('vh360-upload-generation')) return;
                     alert(error.message || (vh360Community.strings && vh360Community.strings.error) || 'Upload failed');
                     $form.removeClass('vh360-form-submitting');
                     $submit.prop('disabled', false).removeClass('vh360-btn-loading');
+                    $progress.hide();
+                    $progress.find('.vh360-activity-progress-fill').css('width', '0%');
+                    $progress.find('.vh360-activity-progress-text').text('0%');
                 });
                 return false;
             }

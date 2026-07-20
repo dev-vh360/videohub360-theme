@@ -53,6 +53,7 @@
      * Dashboard object
      */
     var VH360Dashboard = {
+        videoUploadGeneration: 0,
 
         /**
          * Initialize dashboard functionality
@@ -1016,6 +1017,12 @@
                 
                 // Show selected source field
                 $('.vh360-source-field[data-source="' + sourceType + '"]').show();
+
+                // A newly uploaded, unassociated asset belongs only to the Upload
+                // source. Cancel it when the user makes a different final choice.
+                if (sourceType !== 'upload') {
+                    self.clearVideoUpload();
+                }
             });
             
             // Upload button trigger
@@ -1049,7 +1056,10 @@
          */
         handleVideoFileSelection: function(file) {
             var self = this;
-            
+
+            // Cancel any previous unassociated upload before starting a replacement.
+            self.clearVideoUpload();
+
             // Validate file size on client side
             var maxSize = 500; // Default, will be checked server-side too
             var helpText = $('.vh360-source-field[data-source="upload"] .vh360-form-help').text();
@@ -1062,7 +1072,7 @@
             if (fileSizeMB > maxSize) {
                 self.showNotification('File size exceeds maximum allowed (' + maxSize + ' MB)', 'error');
                 $('#vh360-create-video-form').data('vh360-video-uploading', false);
-            $('#vh360_video_file').val('');
+                $('#vh360_video_file').val('');
                 return;
             }
             
@@ -1081,7 +1091,8 @@
          */
         uploadVideoFile: function(file) {
             var self = this;
-            
+            var generation = ++self.videoUploadGeneration;
+
             // Validate nonce is available
             if (typeof vh360Dashboard === 'undefined' || !vh360Dashboard.videoUploadNonce) {
                 self.showNotification('Security token not available. Please refresh the page.', 'error');
@@ -1111,6 +1122,12 @@
                         }
                     }
                 }).then(function(asset) {
+                    if (generation !== self.videoUploadGeneration || $('input[name="vh360_video_source_type"]:checked').val() !== 'upload') {
+                        if (asset && asset.asset_uuid) {
+                            uploader.cancel(asset.asset_uuid).catch(function(){});
+                        }
+                        return;
+                    }
                     if (asset.status === 'failed') {
                         throw new Error(asset.error_message || 'Video processing could not be completed.');
                     }
@@ -1119,6 +1136,9 @@
                     self.showNotification(asset.status === 'ready' ? (createFormLabels.uploadSuccess || 'Video uploaded successfully!') : 'Video uploaded and is processing.', 'success');
                     setTimeout(function() { $('#vh360-video-upload-progress').fadeOut(); }, 1000);
                 }).catch(function(error) {
+                    if (generation !== self.videoUploadGeneration) {
+                        return;
+                    }
                     $('#vh360-create-video-form').data('vh360-video-uploading', false);
                     self.showNotification(error.message || 'Upload failed', 'error');
                     self.clearVideoUpload();
@@ -1152,6 +1172,12 @@
                     return xhr;
                 },
                 success: function(response) {
+                    if (generation !== self.videoUploadGeneration || $('input[name="vh360_video_source_type"]:checked').val() !== 'upload') {
+                        if (response.success && response.data && response.data.asset_uuid && window.VH360StudioVideoUpload) {
+                            (new window.VH360StudioVideoUpload()).cancel(response.data.asset_uuid).catch(function(){});
+                        }
+                        return;
+                    }
                     if (response.success) {
                         if (response.data.asset_uuid) {
                             $('#vh360_video_asset_uuid').val(response.data.asset_uuid);
@@ -1184,6 +1210,7 @@
          * Clear video upload
          */
         clearVideoUpload: function() {
+            this.videoUploadGeneration++;
             var assetUuid = $('#vh360_video_asset_uuid').val();
             if (assetUuid && window.VH360StudioVideoUpload) {
                 (new window.VH360StudioVideoUpload()).cancel(assetUuid).catch(function(){});
@@ -1195,6 +1222,7 @@
             $('#vh360-video-progress-fill').css('width', '0%');
             $('#vh360-video-progress-text').text('0%');
             $('#vh360_video_asset_uuid').val('');
+            $('#vh360-create-video-form').data('vh360-video-uploading', false);
         },
 
         /**
