@@ -2598,6 +2598,44 @@ var VH360StorageCompat = window.VH360Storage || (function(){
         root.querySelectorAll('[data-mixer-mute]').forEach((button) => { syncMixerMuteButton(button, null, false); });
     }
 
+    function buildStudioMicrophoneConstraints(deviceId) {
+        const constraints = {};
+        if (deviceId) {
+            constraints.deviceId = { exact: deviceId };
+        }
+        const supported = navigator.mediaDevices && typeof navigator.mediaDevices.getSupportedConstraints === 'function'
+            ? navigator.mediaDevices.getSupportedConstraints()
+            : {};
+        if (supported.echoCancellation !== false) {
+            constraints.echoCancellation = true;
+        }
+        if (supported.noiseSuppression !== false) {
+            constraints.noiseSuppression = true;
+        }
+        if (supported.autoGainControl !== false) {
+            constraints.autoGainControl = true;
+        }
+        if (supported.channelCount !== false) {
+            constraints.channelCount = 1;
+        }
+        return constraints;
+    }
+
+    function logStudioMicrophoneProcessingSettings(track, context) {
+        if (!track || typeof track.getSettings !== 'function') {
+            studioDebugLog('[VH360 Studio] Microphone processing settings unavailable', { context });
+            return;
+        }
+        const settings = track.getSettings() || {};
+        studioDebugLog('[VH360 Studio] Microphone processing settings', {
+            context,
+            echoCancellation: settings.echoCancellation,
+            noiseSuppression: settings.noiseSuppression,
+            autoGainControl: settings.autoGainControl,
+            channelCount: settings.channelCount
+        });
+    }
+
     function stopAudioInput(inputId) {
         const input = state.audioInputs.get(inputId);
         if (!input) { return; }
@@ -2651,7 +2689,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
         updateMixerUi();
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
-                audio: input.deviceId ? { deviceId: { exact: input.deviceId } } : true,
+                audio: buildStudioMicrophoneConstraints(input.deviceId),
                 video: false,
             });
             const latest = state.audioInputs.get(inputId);
@@ -2673,6 +2711,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
             const track = stream.getAudioTracks()[0];
             if (track) {
                 const settings = typeof track.getSettings === 'function' ? track.getSettings() : {};
+                logStudioMicrophoneProcessingSettings(track, 'audio-input');
                 if (!latest.deviceId && settings.deviceId) {
                     latest.deviceId = sanitizeAudioDeviceId(settings.deviceId);
                     if (latest.isPrimary) { storageSet(MIC_STORAGE_KEY, latest.deviceId); }
@@ -6799,13 +6838,14 @@ var VH360StorageCompat = window.VH360Storage || (function(){
         const requestId = ++state.audioInputTestRequestId;
         setDeviceStatus(getStudioString('testingSelectedMicrophone', 'Testing selected microphone. Watch the Mic/Aux meter…'), 'info');
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: primary.deviceId ? { deviceId: { exact: primary.deviceId } } : true, video: false });
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: buildStudioMicrophoneConstraints(primary.deviceId), video: false });
             if (state.studioTearingDown || requestId !== state.audioInputTestRequestId || primary.removed || !state.audioInputs.has(primary.id)) {
                 stopStream(stream);
                 return;
             }
             state.audioInputTestStream = stream;
             const testTrack = stream.getAudioTracks()[0];
+            logStudioMicrophoneProcessingSettings(testTrack, 'microphone-test');
             const testDeviceLabel = testTrack && testTrack.label ? testTrack.label : selectedOptionLabel(els.micSelect, getStudioString('defaultMicrophone', 'default microphone'));
             setMixerChannelStream(primary.mixerChannelId, stream, { sourceId: 'microphone-test' });
             focusOrHighlightMixerChannel(primary.id, { focus: !(els.deviceToolsModal && !els.deviceToolsModal.hidden) });

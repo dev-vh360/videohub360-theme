@@ -641,6 +641,7 @@ window.initializeAgoraPlayer = function(config) {
         config.agoraMode === 'interactive' &&
         !isStudioHostViewer
     );
+    let participantAudioMonitoringEnabled = true;
 
     if (allowEveryoneHostForThisViewer) {
         isHost = true;
@@ -1068,6 +1069,50 @@ window.initializeAgoraPlayer = function(config) {
 
     function isStudioHostUid(uid) {
         return !!(config.studioControlled && config.studioHostUid && String(uid) === String(config.studioHostUid));
+    }
+
+    function shouldShowParticipantAudioMonitorControl() {
+        return !!(isStudioHostViewer && config.studioControlled && config.agoraMode === 'interactive');
+    }
+
+    function shouldPlayRemoteAudio(uid) {
+        if (isStudioHostViewer && isStudioHostUid(uid)) {
+            return false;
+        }
+
+        if (shouldShowParticipantAudioMonitorControl() && !participantAudioMonitoringEnabled) {
+            return false;
+        }
+
+        return true;
+    }
+
+    async function resumeAgoraAudioContextForPlayback() {
+        if (window.AgoraRTC && typeof window.AgoraRTC.resumeAudioContext === 'function') {
+            await window.AgoraRTC.resumeAudioContext();
+        }
+    }
+
+    function stopLocallyPlayingParticipantAudio() {
+        participantRegistry.forEach((participant) => {
+            if (!participant || !participant.audioTrack || isStudioHostUid(participant.uid)) return;
+            if (typeof participant.audioTrack.stop === 'function') {
+                try { participant.audioTrack.stop(); } catch (error) { window.vh360Warn('Agora: Failed to stop local participant audio playback:', { uid: participant.uid, error }); }
+            }
+        });
+    }
+
+    async function applyParticipantAudioMonitoringState() {
+        if (!participantAudioMonitoringEnabled) {
+            stopLocallyPlayingParticipantAudio();
+            return;
+        }
+        try { await resumeAgoraAudioContextForPlayback(); } catch (error) { window.vh360Warn('Agora: Failed to resume audio context for participant monitoring:', error); }
+        participantRegistry.forEach((participant) => {
+            if (!participant || !participant.audioTrack || typeof participant.audioTrack.play !== 'function') return;
+            if (!shouldPlayRemoteAudio(participant.uid)) return;
+            try { participant.audioTrack.play(); } catch (error) { window.vh360Warn('Agora: Failed to resume participant audio playback:', { uid: participant.uid, error }); }
+        });
     }
 
     function resolveWordPressUserId(uid, options = {}) {
@@ -1804,6 +1849,7 @@ window.initializeAgoraPlayer = function(config) {
 
     // Get control elements
     const muteAudioBtn = document.getElementById('vh360-agora-mute-audio');
+    const participantAudioBtn = document.getElementById('vh360-agora-participant-audio');
     const muteVideoBtn = document.getElementById('vh360-agora-mute-video');
     const joinAsPresenterBtn = document.getElementById('vh360-agora-join-presenter');
     const leaveBtn = document.getElementById('vh360-agora-leave');
@@ -1836,7 +1882,7 @@ window.initializeAgoraPlayer = function(config) {
 
     function getAllButtonElements() {
         // Return array of all button elements that might need transformation
-        return [muteAudioBtn, muteVideoBtn, joinAsPresenterBtn, leaveBtn, endStreamBtn, moderationBtn].filter(btn => btn);
+        return [muteAudioBtn, participantAudioBtn, muteVideoBtn, joinAsPresenterBtn, leaveBtn, endStreamBtn, moderationBtn].filter(btn => btn);
     }
 
     // == Agora Client Setup ==
@@ -2145,6 +2191,17 @@ window.initializeAgoraPlayer = function(config) {
             label: 'Mute'
         });
 
+        if (participantAudioBtn) {
+            participantAudioBtn.classList.add('vh360-agora-control-btn', 'vh360-agora-media-control-btn', 'vh360-agora-participant-audio-btn');
+            participantAudioBtn.classList.toggle('is-participant-audio-on', participantAudioMonitoringEnabled);
+            participantAudioBtn.classList.toggle('is-participant-audio-muted', !participantAudioMonitoringEnabled);
+            participantAudioBtn.setAttribute('aria-pressed', participantAudioMonitoringEnabled ? 'true' : 'false');
+            const participantAudioLabel = participantAudioMonitoringEnabled ? 'Participant Audio: On' : 'Participant Audio: Muted';
+            participantAudioBtn.setAttribute('aria-label', participantAudioLabel);
+            participantAudioBtn.setAttribute('title', participantAudioLabel);
+            participantAudioBtn.innerHTML = `<span class="vh360-agora-control-icon" aria-hidden="true">${participantAudioMonitoringEnabled ? '🔊' : '🔈'}</span><span class="vh360-agora-control-label">${participantAudioLabel}</span>`;
+        }
+
         setAgoraControlButtonContent(muteVideoBtn, isVideoMuted ? {
             type: 'video',
             isMuted: true,
@@ -2172,6 +2229,7 @@ window.initializeAgoraPlayer = function(config) {
 
         controlsContainer.style.display = 'flex';
         if (muteAudioBtn) muteAudioBtn.style.display = 'none';
+        if (participantAudioBtn) participantAudioBtn.style.display = 'none';
         if (muteVideoBtn) muteVideoBtn.style.display = 'none';
         if (joinAsPresenterBtn) joinAsPresenterBtn.style.display = 'none';
 
@@ -2195,6 +2253,10 @@ window.initializeAgoraPlayer = function(config) {
             }
         }
 
+        if (participantAudioBtn) {
+            participantAudioBtn.style.display = shouldShowParticipantAudioMonitorControl() ? 'inline-flex' : 'none';
+        }
+
         if (leaveBtn) leaveBtn.style.display = 'inline-block';
         if (endStreamBtn) endStreamBtn.style.display = shouldShowEndStreamButton() ? 'inline-block' : 'none';
         updateAgoraControlButtonStates();
@@ -2204,6 +2266,15 @@ window.initializeAgoraPlayer = function(config) {
         if (moderationBtn) {
             moderationBtn.style.display = shouldShowModerationButton() ? 'inline-block' : 'none';
         }
+    }
+
+    if (participantAudioBtn) {
+        participantAudioBtn.addEventListener('click', () => {
+            if (!shouldShowParticipantAudioMonitorControl()) return;
+            participantAudioMonitoringEnabled = !participantAudioMonitoringEnabled;
+            updateAgoraControlButtonStates();
+            applyParticipantAudioMonitoringState();
+        });
     }
 
     // -- Data Stream Messaging --
@@ -2934,11 +3005,30 @@ window.initializeAgoraPlayer = function(config) {
                 window.vh360Warn("Agora: Invalid audio track for user:", user.uid);
                 return false;
             }
-            try {
-                user.audioTrack.play();
-            } catch (error) {
-                window.vh360Warn("Agora: Failed to play remote audio track:", { uid: user.uid, error });
-                return false;
+            const isStudioHostAudio = isStudioHostUid(user.uid);
+            let displayName = resolveParticipantDisplayName(user.uid);
+            let wordpressUserId = resolveWordPressUserId(user.uid);
+            remoteUsers[user.uid] = { ...(remoteUsers[user.uid] || {}), ...user, displayName, wordpressUserId };
+            const participant = getOrCreateParticipant(user.uid, { displayName, wordpressUserId });
+            participant.audioTrack = user.audioTrack || participant.audioTrack;
+            participant.audioOn = !!participant.audioTrack;
+            const shouldPlayAudioLocally = shouldPlayRemoteAudio(user.uid);
+            if (shouldPlayAudioLocally) {
+                try {
+                    user.audioTrack.play();
+                } catch (error) {
+                    window.vh360Warn("Agora: Failed to play remote audio track:", { uid: user.uid, error });
+                    return false;
+                }
+            } else {
+                if (typeof user.audioTrack.stop === 'function') {
+                    try { user.audioTrack.stop(); } catch (error) { window.vh360Warn('Agora: Failed to stop suppressed remote audio playback:', { uid: user.uid, error }); }
+                }
+                if (isStudioHostViewer && isStudioHostAudio) {
+                    window.vh360Log('Agora: Suppressed Studio Program audio playback on Studio host viewer', { uid: user.uid });
+                } else {
+                    window.vh360Log('Agora: Suppressed participant audio playback locally', { uid: user.uid });
+                }
             }
 
             // Initialize volume tracking for this user in interactive mode
@@ -2947,13 +3037,6 @@ window.initializeAgoraPlayer = function(config) {
                 window.vh360Log("Agora: Audio track subscribed for UID:", user.uid, "- Volume tracking enabled");
             }
 
-            const isStudioHostAudio = isStudioHostUid(user.uid);
-            let displayName = resolveParticipantDisplayName(user.uid);
-            let wordpressUserId = resolveWordPressUserId(user.uid);
-            remoteUsers[user.uid] = { ...(remoteUsers[user.uid] || {}), ...user, displayName, wordpressUserId };
-            const participant = getOrCreateParticipant(user.uid, { displayName, wordpressUserId });
-            participant.audioTrack = user.audioTrack || participant.audioTrack;
-            participant.audioOn = !!participant.audioTrack;
             updateParticipantTile(participant);
             if (displayName === 'Participant' || displayName.startsWith('User ')) {
                 resolveAndUpdateDisplayName(user.uid);
@@ -3301,9 +3384,12 @@ window.initializeAgoraPlayer = function(config) {
      */
     function getAgoraAudioConfig() {
         return {
+            AEC: true,
+            ANS: true,
+            AGC: true,
             encoderConfig: {
                 sampleRate: 48000,
-                stereo: true,
+                stereo: false,
                 bitrate: 128
             }
         };

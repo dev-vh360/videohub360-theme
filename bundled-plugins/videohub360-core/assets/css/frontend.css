@@ -4932,3 +4932,12 @@ body.vh360-ios-immersive-active
     margin: 0 !important;
     transform: translateX(-50%) !important;
 }
+
+/* Studio host local participant monitor control. */
+.vh360-agora-participant-audio-btn {
+    border-color: currentColor;
+}
+
+.vh360-agora-participant-audio-btn[aria-pressed="false"] {
+    opacity: 0.85;
+}

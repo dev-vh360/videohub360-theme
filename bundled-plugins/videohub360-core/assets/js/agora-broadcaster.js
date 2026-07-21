@@ -363,6 +363,24 @@
                 }
             }
 
+
+            function buildMicrophoneAudioConfig(audioConfig) {
+                const defaults = {
+                    AEC: true,
+                    ANS: true,
+                    AGC: true,
+                    encoderConfig: {
+                        sampleRate: 48000,
+                        stereo: false,
+                        bitrate: 128
+                    }
+                };
+                const provided = audioConfig || {};
+                return Object.assign({}, defaults, provided, {
+                    encoderConfig: Object.assign({}, defaults.encoderConfig, provided.encoderConfig || {})
+                });
+            }
+
             function stopAndMaybeClose(track, ownsSource) {
                 if (!track) {
                     return;
@@ -390,7 +408,7 @@
                             state.audioTrack = window.AgoraRTC.createCustomAudioTrack({ mediaStreamTrack: config.initialAudioMediaStreamTrack });
                             state.audioTrackOwnsSource = false;
                         } else {
-                            const audioTrack = await window.AgoraRTC.createMicrophoneAudioTrack(config.audioConfig || {});
+                            const audioTrack = await window.AgoraRTC.createMicrophoneAudioTrack(buildMicrophoneAudioConfig(config.audioConfig));
                             if (!isOperationCurrent(generation)) {
                                 stopAndMaybeClose(audioTrack, true);
                                 throw makeCancellationError();

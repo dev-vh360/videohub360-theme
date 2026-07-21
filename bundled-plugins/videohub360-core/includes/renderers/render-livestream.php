@@ -246,6 +246,7 @@ $player_html .= '</div>';
 
             // All buttons in single container for simplified mobile controls
             $player_html .= '<button id="vh360-agora-mute-audio" class="vh360-agora-control-btn vh360-agora-control-btn-text vh360-hidden">🎤 Mute</button>';
+            $player_html .= '<button id="vh360-agora-participant-audio" class="vh360-agora-control-btn vh360-agora-control-btn-text vh360-hidden" type="button" aria-pressed="true" aria-label="Participant Audio: On" title="Participant Audio: On">🔊 Participant Audio: On</button>';
             $player_html .= '<button id="vh360-agora-mute-video" class="vh360-agora-control-btn vh360-agora-control-btn-text vh360-hidden">📹 Camera</button>';
 
             // Show join presenter button for non-moderators in interactive mode when either:
