@@ -729,6 +729,19 @@ window.initializeAgoraPlayer = function(config) {
         });
     }
 
+    function clearRemoteStreamSelectionState(uid = null) {
+        if (uid == null) {
+            requestedRemoteStreamTypes.clear();
+            actualRemoteStreamTypes.clear();
+            remoteFallbackStates.clear();
+            return;
+        }
+        const key = normalizeParticipantUid(uid);
+        requestedRemoteStreamTypes.delete(key);
+        actualRemoteStreamTypes.delete(key);
+        remoteFallbackStates.delete(key);
+    }
+
     function requestFeaturedStreamTypes() {
         if (config.agoraMode !== 'interactive') return;
         const pinned = getPinnedParticipantUidFromLayout();
@@ -759,18 +772,28 @@ window.initializeAgoraPlayer = function(config) {
         autoplayWrapper = null;
     }
 
-    function showAutoplayRecoveryPrompt() {
-        const prompt = document.getElementById('vh360-agora-autoplay-recovery');
-        if (prompt) { prompt.hidden = false; return; }
-        const player = document.getElementById('vh360-agora-player');
-        if (!player) return;
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.id = 'vh360-agora-autoplay-recovery';
-        button.className = 'vh360-agora-autoplay-recovery';
+    function getOrCreateAutoplayRecoveryPrompt() {
+        let button = document.getElementById('vh360-agora-autoplay-recovery');
+        if (!button) {
+            const player = document.getElementById('vh360-agora-player');
+            if (!player) return null;
+            button = document.createElement('button');
+            button.type = 'button';
+            button.id = 'vh360-agora-autoplay-recovery';
+            button.className = 'vh360-agora-autoplay-recovery';
+            player.appendChild(button);
+        }
         button.textContent = window.innerWidth <= 768 ? 'Tap to resume audio' : 'Resume livestream audio';
-        button.addEventListener('click', handleAutoplayRecoveryGesture);
-        player.appendChild(button);
+        if (!button.dataset.vh360AutoplayBound) {
+            button.addEventListener('click', handleAutoplayRecoveryGesture);
+            button.dataset.vh360AutoplayBound = 'true';
+        }
+        return button;
+    }
+
+    function showAutoplayRecoveryPrompt() {
+        const prompt = getOrCreateAutoplayRecoveryPrompt();
+        if (prompt) prompt.hidden = false;
     }
 
     async function handleAutoplayRecoveryGesture() {
@@ -779,12 +802,14 @@ window.initializeAgoraPlayer = function(config) {
             if (participant.audioTrack && shouldPlayRemoteAudio(participant.uid)) {
                 try { participant.audioTrack.play(); } catch (error) { recordParticipantDiagnostic(participant.uid, { autoplayRetryFailed: true }); }
             }
-            if (participant.videoTrack && typeof participant.videoTrack.play === 'function' && participant.videoContainerElement) {
+            const playbackProblem = !participant.videoTrack || ['failed', 'waiting-for-frame', 'attaching'].includes(participant.videoPlaybackState || '') || participant.videoAutoplayBlocked;
+            const isPlaying = participant.videoTrack && (participant.videoTrack.isPlaying || participant.videoTrack._isPlaying);
+            if (participant.videoTrack && typeof participant.videoTrack.play === 'function' && participant.videoContainerElement && (!isPlaying || playbackProblem)) {
                 try { participant.videoTrack.play(participant.videoContainerElement, participant.isLocal ? { mirror: false } : undefined); } catch (error) {}
             }
         });
         const prompt = document.getElementById('vh360-agora-autoplay-recovery');
-        if (prompt) prompt.remove();
+        if (prompt) prompt.hidden = true;
         recordClientDiagnostic({ autoplayRecovered: true });
     }
 
@@ -1743,7 +1768,7 @@ window.initializeAgoraPlayer = function(config) {
 
         const previousTrack = participant.videoTrack;
         participant.videoTrack = videoTrack;
-        if (isLocalTrack || participant.cameraOn !== false) participant.cameraOn = true;
+        participant.cameraOn = true;
         setParticipantVideoPlaybackState(participant, 'attaching');
 
         const tile = ensureParticipantTile(participant);
@@ -1758,17 +1783,29 @@ window.initializeAgoraPlayer = function(config) {
         updateParticipantTile(participant);
 
         try {
+            const oldVideoElements = Array.from(container.querySelectorAll('video'));
             if (previousTrack && previousTrack !== videoTrack) {
                 setParticipantVideoPlaybackState(participant, 'waiting-for-frame');
             }
             videoTrack.play(container, isLocalTrack ? { mirror: false } : undefined);
             setActiveAgoraVideoClasses(participant, true);
-            videoElementManager.registerTrackBinding(container.id, !!isLocalTrack, isLocalTrack ? null : videoTrack);
+            if (isLocalTrack || !previousTrack || previousTrack === videoTrack) {
+                videoElementManager.registerTrackBinding(container.id, !!isLocalTrack, isLocalTrack ? null : videoTrack);
+            }
             if (isLocalTrack) {
                 setParticipantVideoPlaybackState(participant, 'playing');
             } else {
                 waitForFirstRemoteVideoFrame(videoTrack).then((ready) => {
                     if (participant.videoTrack !== videoTrack) return;
+                    if (ready) {
+                        const currentVideos = Array.from(container.querySelectorAll('video'));
+                        oldVideoElements.forEach((element) => {
+                            if (currentVideos.includes(element) && currentVideos.length > 1) element.remove();
+                        });
+                        const remaining = Array.from(container.querySelectorAll('video'));
+                        remaining.slice(0, Math.max(0, remaining.length - 1)).forEach((element) => element.remove());
+                        if (window.videoElementManager) videoElementManager.registerTrackBinding(container.id, false, videoTrack);
+                    }
                     setParticipantVideoPlaybackState(participant, ready ? 'playing' : 'waiting-for-frame', { firstFrameDecoded: ready });
                     updateParticipantTile(participant);
                     cleanupParticipantVideoStyles(participant);
@@ -2284,11 +2321,18 @@ window.initializeAgoraPlayer = function(config) {
 
     function handleVolumeIndication(volumes) {
         if (!isVolumenIndicationEnabled || config.agoraMode !== 'interactive' || !Array.isArray(volumes)) return;
+        let fallbackSpeaker = null;
         volumes.forEach((volumeInfo) => {
             const normalized = normalizeVolumeLevel(Number(volumeInfo.level) / 100);
             updateVolumeIndicator(volumeInfo.uid, normalized);
             recordParticipantDiagnostic(volumeInfo.uid, { volumeIndicator: normalized });
+            if (!activeSpeakerSampleTimer && normalized >= ACTIVE_SPEAKER_ENTER_THRESHOLD && (!fallbackSpeaker || normalized > fallbackSpeaker.level)) {
+                fallbackSpeaker = { uid: volumeInfo.uid, level: normalized };
+            }
         });
+        if (fallbackSpeaker && fallbackSpeaker.uid && shouldSwitchToSpeaker(fallbackSpeaker.uid)) {
+            setActiveSpeaker(fallbackSpeaker.uid);
+        }
     }
 
     function setActiveSpeaker(uid) {
@@ -2352,6 +2396,8 @@ window.initializeAgoraPlayer = function(config) {
                 }
             }
         }
+
+        requestFeaturedStreamTypes();
     }
 
     function shouldSwitchToSpeaker(uid) {
@@ -3021,6 +3067,7 @@ window.initializeAgoraPlayer = function(config) {
         const key = remoteSubscriptionKey(uid, mediaType);
         const generation = currentRemotePublicationGeneration(uid, mediaType) + 1;
         remotePublicationGenerations.set(key, generation);
+        if (mediaType === 'video') clearRemoteStreamSelectionState(uid);
         return generation;
     }
 
@@ -3031,6 +3078,7 @@ window.initializeAgoraPlayer = function(config) {
         });
         remoteSubscriptionStates.clear();
         remotePublicationGenerations.clear();
+        clearRemoteStreamSelectionState();
         if (remoteReconciliationTimer) clearTimeout(remoteReconciliationTimer);
         remoteReconciliationTimer = null;
         window.vh360Log('Agora: Remote subscription session reset', { reason, session: remoteSubscriptionSession });
@@ -3160,6 +3208,7 @@ window.initializeAgoraPlayer = function(config) {
         const participant = participantRegistry.get(normalizeParticipantUid(uid));
         if (!participant) return;
         if (mediaType === 'video') {
+            clearRemoteStreamSelectionState(uid);
             if (participant.videoContainerElement) {
                 if (window.videoElementManager) window.videoElementManager.unregisterTrackBinding(participant.videoContainerElement.id);
                 participant.videoContainerElement.replaceChildren();
@@ -3345,6 +3394,7 @@ window.initializeAgoraPlayer = function(config) {
         clearRemoteSubscription(user.uid, mediaType);
         advanceRemotePublicationGeneration(user.uid, mediaType);
         if (mediaType === "video") {
+            clearRemoteStreamSelectionState(user.uid);
             const participant = getOrCreateParticipant(user.uid);
             if (participant) {
                 if (participant.videoContainerElement) {
@@ -3630,7 +3680,7 @@ window.initializeAgoraPlayer = function(config) {
     function markParticipantVideoState(uid, state, details = {}) {
         const participant = participantRegistry.get(normalizeParticipantUid(uid));
         if (!participant) return;
-        if (state === 'reconnecting' || state === 'fallback') participant.cameraOn = participant.cameraOn !== false;
+        if ((state === 'reconnecting' || state === 'fallback') && participant.videoTrack) participant.cameraOn = true;
         setParticipantVideoPlaybackState(participant, state, details);
         updateParticipantTile(participant);
     }
@@ -3656,7 +3706,12 @@ window.initializeAgoraPlayer = function(config) {
             } else if (eventName === 'stream-fallback') {
                 const fallback = args[1] != null ? args[1] : (args[0] && (args[0].fallbackType || args[0].state));
                 remoteFallbackStates.set(normalizeParticipantUid(uid), fallback);
-                markParticipantVideoState(uid, 'fallback', { fallback });
+                const participant = participantRegistry.get(normalizeParticipantUid(uid));
+                if (String(fallback).toLowerCase() === 'fallback') {
+                    markParticipantVideoState(uid, 'fallback', { fallback });
+                } else {
+                    markParticipantVideoState(uid, participant && participant.videoTrack ? 'playing' : 'subscribed', { fallback });
+                }
             }
         });
     });
@@ -3748,20 +3803,15 @@ window.initializeAgoraPlayer = function(config) {
         }
 
         let newVideoTrack = null;
+        let newVideoPublished = false;
         const oldVideoTrack = localTracks.videoTrack;
         try {
             newVideoTrack = await AgoraRTC.createCameraVideoTrack(newVideoConfig);
-            if (typeof oldVideoTrack.replaceTrack === 'function' && typeof newVideoTrack.getMediaStreamTrack === 'function') {
-                await oldVideoTrack.replaceTrack(newVideoTrack.getMediaStreamTrack(), true);
-                localTracks.videoTrack = oldVideoTrack;
-                if (typeof newVideoTrack.close === 'function') newVideoTrack.close();
-            } else {
-                await client.unpublish([oldVideoTrack]);
-                localTracks.videoTrack = newVideoTrack;
-                await client.publish([localTracks.videoTrack]);
-                oldVideoTrack.stop();
-                oldVideoTrack.close();
-            }
+            await client.unpublish([oldVideoTrack]);
+            localTracks.videoTrack = newVideoTrack;
+            await client.publish([localTracks.videoTrack]);
+            newVideoPublished = true;
+            try { oldVideoTrack.stop(); oldVideoTrack.close(); } catch (cleanupError) {}
             const localParticipant = getOrCreateParticipant(currentUserUID || security.user_id || config.uid, {
                 isLocal: true,
                 isOriginalHost: isOriginalHost,
@@ -3772,10 +3822,16 @@ window.initializeAgoraPlayer = function(config) {
             window.vh360Log('Successfully updated live stream quality to:', quality);
             if (typeof showAgoraSuccess === 'function') showAgoraSuccess(`Stream quality updated to ${String(quality).toUpperCase()}`);
         } catch (error) {
-            if (newVideoTrack && newVideoTrack !== localTracks.videoTrack) {
+            if (newVideoPublished && newVideoTrack && client && client.connectionState === 'CONNECTED') {
+                try { await client.unpublish([newVideoTrack]); } catch (rollbackUnpublishError) {}
+            }
+            if (newVideoTrack) {
                 try { newVideoTrack.stop(); newVideoTrack.close(); } catch (cleanupError) {}
             }
             localTracks.videoTrack = oldVideoTrack;
+            if (oldVideoTrack && client && client.connectionState === 'CONNECTED') {
+                try { await client.publish([oldVideoTrack]); } catch (rollbackError) { window.vh360Warn('Agora: Failed to republish previous video track after quality fallback failure', rollbackError); }
+            }
             window.vh360Error('Error during quality update:', error);
             throw error;
         }
@@ -4454,6 +4510,8 @@ window.initializeAgoraPlayer = function(config) {
             unbindAutoplayFailureRecovery();
             const autoplayPrompt = document.getElementById('vh360-agora-autoplay-recovery');
             if (autoplayPrompt) autoplayPrompt.remove();
+            document.removeEventListener('vh360:agora-focus-changed', handleAgoraLayoutStreamSelectionChange);
+            document.removeEventListener('vh360:agora-layout-changed', handleAgoraLayoutStreamSelectionChange);
 
             // Set moderation flag
             isBeingModerated = true;
@@ -5386,6 +5444,8 @@ window.initializeAgoraPlayer = function(config) {
             unbindAutoplayFailureRecovery();
             const autoplayPrompt = document.getElementById('vh360-agora-autoplay-recovery');
             if (autoplayPrompt) autoplayPrompt.remove();
+            document.removeEventListener('vh360:agora-focus-changed', handleAgoraLayoutStreamSelectionChange);
+            document.removeEventListener('vh360:agora-layout-changed', handleAgoraLayoutStreamSelectionChange);
 
             // Tear down layout controls/listeners before leaving or clearing player UI.
             destroyViewLayoutManager();
@@ -5512,8 +5572,14 @@ window.initializeAgoraPlayer = function(config) {
         }
     }
 
-    // Listen for visibility changes
+    function handleAgoraLayoutStreamSelectionChange() {
+        setTimeout(requestFeaturedStreamTypes, 0);
+    }
+
+    // Listen for visibility and layout/focus changes that alter the featured participant.
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('vh360:agora-focus-changed', handleAgoraLayoutStreamSelectionChange);
+    document.addEventListener('vh360:agora-layout-changed', handleAgoraLayoutStreamSelectionChange);
 
     function checkStreamStatus() {
         if (!vh360Data || !vh360Data.postId) return;
