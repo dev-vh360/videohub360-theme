@@ -4943,32 +4943,17 @@ body.vh360-ios-immersive-active
 }
 
 
-/* Agora public autoplay and stream-recovery states */
-#vh360-agora-player .vh360-agora-autoplay-recovery {
-    position: absolute;
-    left: 50%;
-    bottom: calc(var(--vh360-agora-controls-height, 64px) + 1rem);
-    z-index: 40;
-    transform: translateX(-50%);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem;
-    border: 1px solid var(--vh360-border-color, currentColor);
-    border-radius: var(--vh360-border-radius, 999px);
-    background: var(--vh360-surface-color, Canvas);
-    color: var(--vh360-text-color, CanvasText);
-    font: inherit;
-    cursor: pointer;
-    box-shadow: var(--vh360-elevation-shadow, none);
+/* Agora public audio-recovery and stream-recovery states */
+#vh360-agora-controls .vh360-agora-audio-recovery-btn {
+    border-color: var(--vh360-warning-border-color, currentColor);
 }
 
-#vh360-agora-player .vh360-agora-autoplay-recovery[hidden] {
+#vh360-agora-controls .vh360-agora-audio-recovery-btn[hidden],
+#vh360-agora-controls .vh360-agora-audio-recovery-btn.vh360-hidden {
     display: none;
 }
 
-#vh360-agora-player .vh360-agora-autoplay-recovery:focus-visible {
+#vh360-agora-controls .vh360-agora-audio-recovery-btn:focus-visible {
     outline: 2px solid var(--vh360-focus-color, currentColor);
     outline-offset: 3px;
 }
