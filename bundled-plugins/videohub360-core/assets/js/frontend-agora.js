@@ -620,6 +620,7 @@ window.initializeAgoraPlayer = function(config) {
     let audioRecoveryRetryTimer = null;
     let audioRecoveryRetryInProgress = false;
     let audioRecoveryControl = null;
+    let audioContextStateChangeHandler = null;
     let diagnosticsTimer = null;
     const diagnosticsHistory = [];
     const participantDiagnostics = new Map();
@@ -763,6 +764,21 @@ window.initializeAgoraPlayer = function(config) {
             handleAgoraAutoplayFailed(Array.from(arguments));
         };
         window.AgoraRTC.onAutoplayFailed = autoplayWrapper;
+        if (!audioContextStateChangeHandler && typeof window.AgoraRTC.on === 'function') {
+            audioContextStateChangeHandler = function (state) {
+                recordClientDiagnostic({ audioContextStateChanged: state });
+                if (state === 'running') {
+                    getPermittedRemoteAudioParticipants().forEach((participant) => { participant.remoteAudioPlaybackBlocked = false; });
+                    updateAudioRecoveryControlVisibility();
+                    return;
+                }
+                if (state === 'interrupted' || state === 'suspended') {
+                    getPermittedRemoteAudioParticipants().forEach((participant) => { participant.remoteAudioPlaybackAttempted = true; });
+                    scheduleAudioAutoplayVerification('audio-context-state-changed');
+                }
+            };
+            try { window.AgoraRTC.on('audio-context-state-changed', audioContextStateChangeHandler); } catch (error) {}
+        }
         autoplayFailureBound = true;
     }
 
@@ -772,6 +788,10 @@ window.initializeAgoraPlayer = function(config) {
         autoplayFailureBound = false;
         autoplayPreviousCallback = null;
         autoplayWrapper = null;
+        if (audioContextStateChangeHandler && typeof window.AgoraRTC.off === 'function') {
+            try { window.AgoraRTC.off('audio-context-state-changed', audioContextStateChangeHandler); } catch (error) {}
+        }
+        audioContextStateChangeHandler = null;
         if (audioRecoveryRetryTimer) clearTimeout(audioRecoveryRetryTimer);
         audioRecoveryRetryTimer = null;
         audioRecoveryRetryInProgress = false;
@@ -792,6 +812,12 @@ window.initializeAgoraPlayer = function(config) {
         return getRemoteAudioParticipants().filter((participant) => shouldPlayRemoteAudio(participant.uid));
     }
 
+    function getRemoteAudioRecoveryCandidates() {
+        return getPermittedRemoteAudioParticipants().filter((participant) => (
+            participant.remoteAudioPlaybackBlocked || !isAudioTrackPlaying(participant.audioTrack)
+        ));
+    }
+
     function isAudioTrackPlaying(track) {
         if (!track) return false;
         return !!(track.isPlaying || track._isPlaying || track._isPlaying === true);
@@ -808,11 +834,10 @@ window.initializeAgoraPlayer = function(config) {
         const button = document.createElement('button');
         button.type = 'button';
         button.id = 'vh360-agora-audio-recovery';
-        button.className = 'vh360-agora-control-btn vh360-agora-media-control-btn vh360-agora-audio-recovery-btn vh360-hidden';
+        button.className = 'vh360-agora-control-btn vh360-agora-control-btn-icon vh360-agora-media-control-btn vh360-agora-audio-recovery-btn vh360-hidden';
         button.setAttribute('aria-label', 'Restore livestream audio');
         button.setAttribute('title', 'Restore livestream audio');
-        button.setAttribute('aria-pressed', 'false');
-        button.innerHTML = '<span class="vh360-agora-control-icon" aria-hidden="true">🔇</span><span class="vh360-screen-reader-text">Restore livestream audio</span>';
+        button.innerHTML = '<span class="vh360-agora-control-icon" aria-hidden="true">🔇</span><span class="screen-reader-text">Restore livestream audio</span>';
         button.addEventListener('click', handleAudioRecoveryControlClick);
         controls.appendChild(button);
         audioRecoveryControl = button;
@@ -824,7 +849,6 @@ window.initializeAgoraPlayer = function(config) {
         if (!control) return;
         control.classList.toggle('vh360-hidden', !visible);
         control.hidden = !visible;
-        control.setAttribute('aria-pressed', visible ? 'true' : 'false');
         recordClientDiagnostic({ audioRecoveryIconVisible: !!visible });
     }
 
@@ -857,11 +881,12 @@ window.initializeAgoraPlayer = function(config) {
         });
     }
 
-    async function retryPermittedRemoteAudioSilently(reason = 'silent-retry') {
+    async function retryPermittedRemoteAudioSilently(reason = 'silent-retry', candidates = null) {
         let attempted = 0;
         let failed = 0;
         try { await resumeAgoraAudioContextForPlayback(); } catch (error) { recordClientDiagnostic({ audioRecoveryResumeContextFailed: true, reason }); }
-        getPermittedRemoteAudioParticipants().forEach((participant) => {
+        const retryParticipants = Array.isArray(candidates) ? candidates : getRemoteAudioRecoveryCandidates();
+        retryParticipants.forEach((participant) => {
             attempted += 1;
             try {
                 participant.remoteAudioPlaybackAttempted = true;
@@ -878,12 +903,18 @@ window.initializeAgoraPlayer = function(config) {
     }
 
     function scheduleAudioAutoplayVerification(reason = 'autoplay-callback') {
+        const candidates = getRemoteAudioRecoveryCandidates();
+        if (!candidates.length) {
+            updateAudioRecoveryControlVisibility();
+            recordClientDiagnostic({ audioRecoveryVerificationSkipped: true, reason, candidates: 0 });
+            return;
+        }
         if (audioRecoveryRetryInProgress) return;
         audioRecoveryRetryInProgress = true;
         if (audioRecoveryRetryTimer) clearTimeout(audioRecoveryRetryTimer);
         audioRecoveryRetryTimer = setTimeout(async () => {
             audioRecoveryRetryTimer = null;
-            await retryPermittedRemoteAudioSilently(reason);
+            await retryPermittedRemoteAudioSilently(reason, candidates);
             setTimeout(() => {
                 audioRecoveryRetryInProgress = false;
                 verifyPermittedRemoteAudioAfterRetry();
@@ -903,9 +934,10 @@ window.initializeAgoraPlayer = function(config) {
     function handleAgoraAutoplayFailed(args) {
         const permitted = getPermittedRemoteAudioParticipants().length;
         const subscribed = getRemoteAudioParticipants().length;
-        const audioRelated = autoplayFailureLooksAudioRelated(args);
-        recordClientDiagnostic({ autoplayFailure: true, audioRelated, subscribedRemoteAudioTracks: subscribed, permittedRemoteAudioTracks: permitted });
-        if (!audioRelated || permitted === 0) {
+        const candidates = getRemoteAudioRecoveryCandidates();
+        const audioRelated = autoplayFailureLooksAudioRelated(args) && candidates.length > 0;
+        recordClientDiagnostic({ autoplayFailure: true, audioRelated, subscribedRemoteAudioTracks: subscribed, permittedRemoteAudioTracks: permitted, recoveryCandidates: candidates.length });
+        if (!audioRelated || permitted === 0 || !candidates.length) {
             updateAudioRecoveryControlVisibility();
             return;
         }
@@ -5747,6 +5779,7 @@ window.initializeAgoraPlayer = function(config) {
                 scheduleRemoteReconciliation('visibility-resume', 500);
                 startActiveSpeakerDetection();
                 requestFeaturedStreamTypes();
+                scheduleAudioAutoplayVerification('visibility-resume');
             }
             if (isStreamStatusPollingActive && !streamStatusPollInterval) {
                 streamStatusPollInterval = setInterval(checkStreamStatus, 3000);
