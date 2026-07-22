@@ -771,8 +771,10 @@ window.initializeAgoraPlayer = function(config) {
                 recordClientDiagnostic({ audioContextStateChanged: currentState, previousAudioContextState: previousState });
                 if (currentState === 'interrupted' || currentState === 'suspended') {
                     getPermittedRemoteAudioParticipants().forEach((participant) => {
-                        participant.remoteAudioPlaybackAttempted = true;
-                        participant.remoteAudioPlaybackBlocked = true;
+                        if (currentState === 'interrupted' || participant.remoteAudioHasPlayedSuccessfully) {
+                            participant.remoteAudioPlaybackAttempted = true;
+                            participant.remoteAudioPlaybackBlocked = true;
+                        }
                     });
                     updateAudioRecoveryControlVisibility();
                     scheduleAudioAutoplayVerification('audio-context-state-changed');
@@ -780,7 +782,8 @@ window.initializeAgoraPlayer = function(config) {
                 }
                 if (currentState === 'running') {
                     getPermittedRemoteAudioParticipants().forEach((participant) => {
-                        participant.remoteAudioPlaybackBlocked = isAgoraAudioContextBlocked() || !isAudioTrackPlaying(participant.audioTrack);
+                        participant.remoteAudioPlaybackBlocked = !isAudioTrackPlaying(participant.audioTrack);
+                        if (!participant.remoteAudioPlaybackBlocked) participant.remoteAudioHasPlayedSuccessfully = true;
                     });
                     updateAudioRecoveryControlVisibility();
                 }
@@ -886,7 +889,15 @@ window.initializeAgoraPlayer = function(config) {
     function verifyPermittedRemoteAudioAfterRetry() {
         getPermittedRemoteAudioParticipants().forEach((participant) => {
             if (!participant.remoteAudioPlaybackAttempted) return;
-            participant.remoteAudioPlaybackBlocked = isAgoraAudioContextBlocked() || !isAudioTrackPlaying(participant.audioTrack);
+            const trackPlaying = isAudioTrackPlaying(participant.audioTrack);
+            if (!isAgoraAudioContextBlocked() && trackPlaying) {
+                participant.remoteAudioHasPlayedSuccessfully = true;
+                participant.remoteAudioPlaybackBlocked = false;
+            } else if (participant.remoteAudioHasPlayedSuccessfully || !trackPlaying) {
+                participant.remoteAudioPlaybackBlocked = isAgoraAudioContextBlocked() || !trackPlaying;
+            } else {
+                participant.remoteAudioPlaybackBlocked = false;
+            }
             recordParticipantDiagnostic(participant.uid, {
                 remoteAudioVerification: true,
                 remoteAudioPlaybackBlocked: participant.remoteAudioPlaybackBlocked
@@ -1880,11 +1891,14 @@ window.initializeAgoraPlayer = function(config) {
         if (!participant) return;
         participant.videoPlaybackState = state || 'off';
         participant.videoPlaybackDetails = { ...(participant.videoPlaybackDetails || {}), ...details, updatedAt: Date.now() };
+        if (state === 'playing' || state === 'off') participant.videoAttachmentContext = null;
         if (participant.tileElement) {
             participant.tileElement.dataset.videoPlaybackState = participant.videoPlaybackState;
+            const isRecoveryAttachment = !!participant.videoAttachmentContext && participant.videoAttachmentContext !== 'initial';
+            participant.tileElement.dataset.videoAttachmentContext = participant.videoAttachmentContext || '';
             participant.tileElement.classList.toggle('vh360-video-reconnecting', participant.videoPlaybackState === 'reconnecting');
             participant.tileElement.classList.toggle('vh360-video-fallback', participant.videoPlaybackState === 'fallback');
-            participant.tileElement.classList.toggle('vh360-video-attaching', ['subscribed', 'attaching', 'waiting-for-frame'].includes(participant.videoPlaybackState));
+            participant.tileElement.classList.toggle('vh360-video-attaching', isRecoveryAttachment && ['subscribed', 'attaching', 'waiting-for-frame'].includes(participant.videoPlaybackState));
             participant.tileElement.classList.toggle('vh360-video-failed', participant.videoPlaybackState === 'failed');
         }
         recordParticipantDiagnostic(participant.uid, { playbackState: participant.videoPlaybackState, playbackDetails: participant.videoPlaybackDetails });
@@ -1967,6 +1981,7 @@ window.initializeAgoraPlayer = function(config) {
         }
 
         const previousTrack = participant.videoTrack;
+        participant.videoAttachmentContext = previousTrack && previousTrack !== videoTrack ? 'replacement' : 'initial';
         participant.videoTrack = videoTrack;
         participant.cameraOn = true;
         setParticipantVideoPlaybackState(participant, 'attaching');
@@ -3529,6 +3544,7 @@ window.initializeAgoraPlayer = function(config) {
                 participant.displayName = config.studioHostDisplayName || participant.displayName;
                 participant.wordpressUserId = config.studioHostUserId || participant.wordpressUserId;
             }
+            participant.videoAttachmentContext = participant.videoTrack && participant.videoTrack !== remoteVideoTrack ? 'replacement' : 'initial';
             setParticipantVideoPlaybackState(participant, participant.videoTrack && participant.videoTrack !== remoteVideoTrack ? 'attaching' : 'subscribed');
             window.vh360Log('Agora: public page attaching subscribed video', {
                 uid: user && user.uid,
@@ -3567,6 +3583,7 @@ window.initializeAgoraPlayer = function(config) {
                     participant.remoteAudioPlaybackAttempted = true;
                     user.audioTrack.play();
                     markRemoteAudioPlaybackAttempt(user.uid, false);
+                    setTimeout(() => { verifyPermittedRemoteAudioAfterRetry(); updateAudioRecoveryControlVisibility(); }, 700);
                 } catch (error) {
                     markRemoteAudioPlaybackAttempt(user.uid, true, error, { deferVisibility: true });
                     window.vh360Warn("Agora: Failed to play remote audio track; silent recovery will verify before showing UI:", { uid: user.uid, error });
@@ -3910,6 +3927,8 @@ window.initializeAgoraPlayer = function(config) {
         const participant = participantRegistry.get(normalizeParticipantUid(uid));
         if (!participant) return;
         if ((state === 'reconnecting' || state === 'fallback') && participant.videoTrack) participant.cameraOn = true;
+        if (state === 'reconnecting') participant.videoAttachmentContext = 'reconnect';
+        if (state === 'fallback') participant.videoAttachmentContext = 'reconcile';
         setParticipantVideoPlaybackState(participant, state, details);
         updateParticipantTile(participant);
     }
