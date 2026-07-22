@@ -1732,28 +1732,70 @@ window.initializeAgoraPlayer = function(config) {
         recordParticipantDiagnostic(participant.uid, { playbackState: participant.videoPlaybackState, playbackDetails: participant.videoPlaybackDetails });
     }
 
-    function waitForFirstRemoteVideoFrame(videoTrack, timeoutMs = 2500) {
+    function getRemoteTrackVisibleStatus(videoTrack) {
+        if (!videoTrack || typeof videoTrack.getVideoElementVisibleStatus !== 'function') return null;
+        try { return videoTrack.getVideoElementVisibleStatus(); }
+        catch (error) { return null; }
+    }
+
+    function hasUsableVideoElement(container, oldVideoElements) {
+        if (!container) return false;
+        const oldSet = new Set(oldVideoElements || []);
+        return Array.from(container.querySelectorAll('video')).some((element) => {
+            if (oldSet.has(element)) return false;
+            return Number(element.readyState) >= 2 || element.dataset.vh360LoadedData === 'true' || element.dataset.vh360Playing === 'true';
+        });
+    }
+
+    function waitForFirstRemoteVideoFrame(videoTrack, container = null, oldVideoElements = [], timeoutMs = 2500) {
         return new Promise((resolve) => {
             let settled = false;
             let timeout = null;
-            const finish = (ok) => {
-                if (settled) return;
-                settled = true;
+            let pollTimer = null;
+            const oldSet = new Set(oldVideoElements || []);
+            const boundElements = new WeakSet();
+
+            const cleanup = () => {
                 if (timeout) clearTimeout(timeout);
+                if (pollTimer) clearInterval(pollTimer);
                 try {
                     if (videoTrack && typeof videoTrack.off === 'function') videoTrack.off('first-frame-decoded', onFrame);
                 } catch (error) {}
+            };
+            const finish = (ok) => {
+                if (settled) return;
+                settled = true;
+                cleanup();
                 resolve(!!ok);
             };
             const onFrame = () => finish(true);
+            const bindVideoElementReadiness = () => {
+                if (!container) return;
+                Array.from(container.querySelectorAll('video')).forEach((element) => {
+                    if (oldSet.has(element) || boundElements.has(element)) return;
+                    boundElements.add(element);
+                    element.addEventListener('loadeddata', () => { element.dataset.vh360LoadedData = 'true'; finish(true); }, { once: true });
+                    element.addEventListener('playing', () => { element.dataset.vh360Playing = 'true'; finish(true); }, { once: true });
+                });
+            };
+            const checkReadiness = () => {
+                bindVideoElementReadiness();
+                const visibleStatus = getRemoteTrackVisibleStatus(videoTrack);
+                if (visibleStatus && visibleStatus.visible === true) {
+                    finish(true);
+                    return;
+                }
+                if (hasUsableVideoElement(container, oldVideoElements)) {
+                    finish(true);
+                }
+            };
             try {
                 if (videoTrack && typeof videoTrack.once === 'function') videoTrack.once('first-frame-decoded', onFrame);
                 else if (videoTrack && typeof videoTrack.on === 'function') videoTrack.on('first-frame-decoded', onFrame);
             } catch (error) {}
-            timeout = setTimeout(() => {
-                const hasPlayingState = videoTrack && (videoTrack.isPlaying || videoTrack._isPlaying);
-                finish(!!hasPlayingState);
-            }, timeoutMs);
+            pollTimer = setInterval(checkReadiness, 100);
+            timeout = setTimeout(() => finish(false), timeoutMs);
+            checkReadiness();
         });
     }
 
@@ -1784,6 +1826,7 @@ window.initializeAgoraPlayer = function(config) {
 
         try {
             const oldVideoElements = Array.from(container.querySelectorAll('video'));
+            const readinessPromise = isLocalTrack ? Promise.resolve(true) : waitForFirstRemoteVideoFrame(videoTrack, container, oldVideoElements);
             if (previousTrack && previousTrack !== videoTrack) {
                 setParticipantVideoPlaybackState(participant, 'waiting-for-frame');
             }
@@ -1795,7 +1838,7 @@ window.initializeAgoraPlayer = function(config) {
             if (isLocalTrack) {
                 setParticipantVideoPlaybackState(participant, 'playing');
             } else {
-                waitForFirstRemoteVideoFrame(videoTrack).then((ready) => {
+                readinessPromise.then((ready) => {
                     if (participant.videoTrack !== videoTrack) return;
                     if (ready) {
                         const currentVideos = Array.from(container.querySelectorAll('video'));
@@ -1804,11 +1847,27 @@ window.initializeAgoraPlayer = function(config) {
                         });
                         const remaining = Array.from(container.querySelectorAll('video'));
                         remaining.slice(0, Math.max(0, remaining.length - 1)).forEach((element) => element.remove());
+                        if (previousTrack && previousTrack !== videoTrack && typeof previousTrack.stop === 'function') {
+                            try { previousTrack.stop(); } catch (error) {}
+                        }
                         if (window.videoElementManager) videoElementManager.registerTrackBinding(container.id, false, videoTrack);
+                    } else {
+                        Array.from(container.querySelectorAll('video')).forEach((element) => {
+                            if (!oldVideoElements.includes(element)) element.remove();
+                        });
+                        if (typeof videoTrack.stop === 'function') {
+                            try { videoTrack.stop(); } catch (error) {}
+                        }
+                        if (previousTrack && previousTrack !== videoTrack) {
+                            participant.videoTrack = previousTrack;
+                            if (window.videoElementManager) videoElementManager.registerTrackBinding(container.id, false, previousTrack);
+                        }
+                        clearRemoteSubscription(participant.uid, 'video');
                     }
                     setParticipantVideoPlaybackState(participant, ready ? 'playing' : 'waiting-for-frame', { firstFrameDecoded: ready });
                     updateParticipantTile(participant);
                     cleanupParticipantVideoStyles(participant);
+                    if (!ready) scheduleRemoteReconciliation('remote-video-first-frame-timeout', 500);
                 });
             }
             setTimeout(() => cleanupParticipantVideoStyles(participant), 200);
@@ -4510,8 +4569,8 @@ window.initializeAgoraPlayer = function(config) {
             unbindAutoplayFailureRecovery();
             const autoplayPrompt = document.getElementById('vh360-agora-autoplay-recovery');
             if (autoplayPrompt) autoplayPrompt.remove();
-            document.removeEventListener('vh360:agora-focus-changed', handleAgoraLayoutStreamSelectionChange);
-            document.removeEventListener('vh360:agora-layout-changed', handleAgoraLayoutStreamSelectionChange);
+            window.removeEventListener('vh360:agora-focus-changed', handleAgoraLayoutStreamSelectionChange);
+            window.removeEventListener('vh360:agora-layout-changed', handleAgoraLayoutStreamSelectionChange);
 
             // Set moderation flag
             isBeingModerated = true;
@@ -5444,8 +5503,8 @@ window.initializeAgoraPlayer = function(config) {
             unbindAutoplayFailureRecovery();
             const autoplayPrompt = document.getElementById('vh360-agora-autoplay-recovery');
             if (autoplayPrompt) autoplayPrompt.remove();
-            document.removeEventListener('vh360:agora-focus-changed', handleAgoraLayoutStreamSelectionChange);
-            document.removeEventListener('vh360:agora-layout-changed', handleAgoraLayoutStreamSelectionChange);
+            window.removeEventListener('vh360:agora-focus-changed', handleAgoraLayoutStreamSelectionChange);
+            window.removeEventListener('vh360:agora-layout-changed', handleAgoraLayoutStreamSelectionChange);
 
             // Tear down layout controls/listeners before leaving or clearing player UI.
             destroyViewLayoutManager();
@@ -5578,8 +5637,8 @@ window.initializeAgoraPlayer = function(config) {
 
     // Listen for visibility and layout/focus changes that alter the featured participant.
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    document.addEventListener('vh360:agora-focus-changed', handleAgoraLayoutStreamSelectionChange);
-    document.addEventListener('vh360:agora-layout-changed', handleAgoraLayoutStreamSelectionChange);
+    window.addEventListener('vh360:agora-focus-changed', handleAgoraLayoutStreamSelectionChange);
+    window.addEventListener('vh360:agora-layout-changed', handleAgoraLayoutStreamSelectionChange);
 
     function checkStreamStatus() {
         if (!vh360Data || !vh360Data.postId) return;
