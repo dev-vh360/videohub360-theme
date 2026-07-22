@@ -1018,9 +1018,19 @@ window.initializeAgoraPlayer = function(config) {
         }
         try {
             broadcastProgramAudioTrack.play();
-            broadcastProgramAudioPlaybackFailed = false;
-            broadcastProgramAudioHasPlayed = true;
-            recordClientDiagnostic({ broadcastAudioRecoverySucceeded: true, uid: broadcastProgramAudioUid });
+            const recovered = isAudioTrackPlaying(broadcastProgramAudioTrack);
+            broadcastProgramAudioPlaybackFailed = !recovered;
+            broadcastProgramAudioHasPlayed = recovered;
+            recordClientDiagnostic({ broadcastAudioRecoverySucceeded: recovered, uid: broadcastProgramAudioUid });
+            if (!recovered) {
+                setTimeout(() => {
+                    const delayedRecovered = isAudioTrackPlaying(broadcastProgramAudioTrack);
+                    broadcastProgramAudioPlaybackFailed = !delayedRecovered;
+                    broadcastProgramAudioHasPlayed = delayedRecovered;
+                    updateAudioRecoveryControlVisibility();
+                    recordClientDiagnostic({ broadcastAudioRecoveryDelayedCheck: true, recovered: delayedRecovered, uid: broadcastProgramAudioUid });
+                }, 250);
+            }
         } catch (error) {
             broadcastProgramAudioPlaybackFailed = true;
             recordClientDiagnostic({ broadcastAudioRecoveryFailed: true, uid: broadcastProgramAudioUid, error: error && (error.code || error.message) });
@@ -1054,16 +1064,14 @@ window.initializeAgoraPlayer = function(config) {
     function handleBroadcastAutoplayFailed(args) {
         recordClientDiagnostic({ broadcastAutoplayFailureReported: true, hasProgramAudioTrack: !!broadcastProgramAudioTrack, programAudioAttempted: broadcastProgramAudioPlaybackAttempted, programAudioHasPlayed: broadcastProgramAudioHasPlayed, args: sanitizeStats(args || []) });
         if (!broadcastProgramAudioTrack || !broadcastProgramAudioPlaybackAttempted) return;
-        if (!broadcastProgramAudioPlaybackFailed && isAudioTrackPlaying(broadcastProgramAudioTrack)) return;
-        try {
-            broadcastProgramAudioTrack.play();
-            broadcastProgramAudioPlaybackFailed = false;
+        if (isAudioTrackPlaying(broadcastProgramAudioTrack)) {
             broadcastProgramAudioHasPlayed = true;
-            recordClientDiagnostic({ broadcastAutoplayFailureRetrySucceeded: true, uid: broadcastProgramAudioUid });
-        } catch (error) {
-            handleConfirmedBroadcastAudioPlaybackFailure(broadcastProgramAudioUid, broadcastProgramAudioTrack, error, 'autoplay-callback');
+            broadcastProgramAudioPlaybackFailed = false;
+            updateAudioRecoveryControlVisibility();
             return;
         }
+        broadcastProgramAudioHasPlayed = false;
+        broadcastProgramAudioPlaybackFailed = true;
         updateAudioRecoveryControlVisibility();
     }
 
@@ -3682,9 +3690,9 @@ window.initializeAgoraPlayer = function(config) {
                     try {
                         recordClientDiagnostic({ broadcastProgramAudioPlayAttempted: true, uid: user.uid });
                         user.audioTrack.play();
-                        broadcastProgramAudioHasPlayed = true;
+                        broadcastProgramAudioHasPlayed = isAudioTrackPlaying(user.audioTrack);
                         broadcastProgramAudioPlaybackFailed = false;
-                        recordClientDiagnostic({ broadcastProgramAudioPlaySucceeded: true, uid: user.uid });
+                        recordClientDiagnostic({ broadcastProgramAudioPlayReturned: true, broadcastProgramAudioIsPlaying: broadcastProgramAudioHasPlayed, uid: user.uid });
                         updateAudioRecoveryControlVisibility();
                     } catch (error) {
                         window.vh360Warn("Agora: Broadcast Program audio playback failed; compact recovery is available:", { uid: user.uid, error });
