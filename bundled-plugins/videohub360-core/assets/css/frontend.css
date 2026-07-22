@@ -4941,3 +4941,54 @@ body.vh360-ios-immersive-active
 .vh360-agora-participant-audio-btn[aria-pressed="false"] {
     opacity: 0.85;
 }
+
+
+/* Agora public autoplay and stream-recovery states */
+#vh360-agora-player .vh360-agora-autoplay-recovery {
+    position: absolute;
+    left: 50%;
+    bottom: calc(var(--vh360-agora-controls-height, 64px) + 1rem);
+    z-index: 40;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--vh360-border-color, currentColor);
+    border-radius: var(--vh360-border-radius, 999px);
+    background: var(--vh360-surface-color, Canvas);
+    color: var(--vh360-text-color, CanvasText);
+    font: inherit;
+    cursor: pointer;
+    box-shadow: var(--vh360-elevation-shadow, none);
+}
+
+#vh360-agora-player .vh360-agora-autoplay-recovery[hidden] {
+    display: none;
+}
+
+#vh360-agora-player .vh360-agora-autoplay-recovery:focus-visible {
+    outline: 2px solid var(--vh360-focus-color, currentColor);
+    outline-offset: 3px;
+}
+
+.vh360-participant-tile.vh360-video-reconnecting .vh360-participant-video::after,
+.vh360-participant-tile.vh360-video-fallback .vh360-participant-video::after,
+.vh360-participant-tile.vh360-video-attaching .vh360-participant-video::after {
+    content: attr(data-video-state-label);
+    position: absolute;
+    inset-inline: 0.75rem;
+    bottom: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--vh360-border-radius-sm, 0.375rem);
+    background: var(--vh360-overlay-bg, Canvas);
+    color: var(--vh360-overlay-text, CanvasText);
+    font-size: 0.75rem;
+    text-align: center;
+    pointer-events: none;
+}
+
+.vh360-participant-tile.vh360-video-reconnecting .vh360-participant-video::after { content: "Reconnecting video…"; }
+.vh360-participant-tile.vh360-video-fallback .vh360-participant-video::after { content: "Network fallback active"; }
+.vh360-participant-tile.vh360-video-attaching .vh360-participant-video::after { content: "Restoring video…"; }

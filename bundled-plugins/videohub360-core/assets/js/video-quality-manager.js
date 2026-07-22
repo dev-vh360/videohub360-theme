@@ -259,6 +259,7 @@ class VideoHub360_VideoQualityManager {
      */
     setDefaultConfiguration() {
         this.availableQualities = {
+            'auto': { label: 'Auto (Adaptive)', bitrate: 'adaptive', resolution: 'adaptive', fps: 30, description: 'Starts at 720p and lets Agora/WebRTC adapt bitrate and fallback' },
             'low': { label: '480p (Low)', bitrate: 1500000, resolution: '854x480', fps: 24 },
             'medium': { label: '720p (Medium)', bitrate: 3000000, resolution: '1280x720', fps: 30 },
             'high': { label: '1080p (High)', bitrate: 8000000, resolution: '1920x1080', fps: 30 },

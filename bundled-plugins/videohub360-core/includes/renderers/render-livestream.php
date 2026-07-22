@@ -241,6 +241,7 @@ $player_html .= '</div>';
 
             $player_html .= '<div id="vh360-agora-local-player"></div>';
             $player_html .= '<div id="vh360-agora-remote-players" class="vh360-remote-players-initial"></div>';
+            $player_html .= '<button id="vh360-agora-autoplay-recovery" class="vh360-agora-autoplay-recovery" type="button" hidden>Resume livestream audio</button>';
 
             $player_html .= '<div id="vh360-agora-controls" class="vh360-mobile-controls-simple">';
 
