@@ -817,8 +817,23 @@ window.initializeAgoraPlayer = function(config) {
         autoplayFailureBound = true;
     }
 
+    function resetBroadcastProgramAudioState(updateVisibility = true) {
+        broadcastProgramAudioTrack = null;
+        broadcastProgramAudioUid = null;
+        broadcastProgramAudioPlaybackAttempted = false;
+        broadcastProgramAudioHasPlayed = false;
+        broadcastProgramAudioPlaybackFailed = false;
+        if (updateVisibility && config.agoraMode === 'broadcast') {
+            updateAudioRecoveryControlVisibility();
+        }
+    }
+
     function unbindAutoplayFailureRecovery() {
-        if (!autoplayFailureBound || !window.AgoraRTC) return;
+        resetBroadcastProgramAudioState(false);
+        if (!autoplayFailureBound || !window.AgoraRTC) {
+            setAudioRecoveryControlVisible(false);
+            return;
+        }
         if (window.AgoraRTC.onAutoplayFailed === autoplayWrapper) window.AgoraRTC.onAutoplayFailed = autoplayPreviousCallback;
         autoplayFailureBound = false;
         autoplayPreviousCallback = null;
@@ -831,11 +846,6 @@ window.initializeAgoraPlayer = function(config) {
         if (audioRecoveryRetryTimer) clearTimeout(audioRecoveryRetryTimer);
         audioRecoveryRetryTimer = null;
         audioRecoveryRetryInProgress = false;
-        broadcastProgramAudioTrack = null;
-        broadcastProgramAudioUid = null;
-        broadcastProgramAudioPlaybackAttempted = false;
-        broadcastProgramAudioHasPlayed = false;
-        broadcastProgramAudioPlaybackFailed = false;
         setAudioRecoveryControlVisible(false);
     }
 
@@ -3413,6 +3423,7 @@ window.initializeAgoraPlayer = function(config) {
         remoteSubscriptionStates.clear();
         remotePublicationGenerations.clear();
         clearRemoteStreamSelectionState();
+        if (config.agoraMode === 'broadcast') resetBroadcastProgramAudioState();
         if (remoteReconciliationTimer) clearTimeout(remoteReconciliationTimer);
         remoteReconciliationTimer = null;
         window.vh360Log('Agora: Remote subscription session reset', { reason, session: remoteSubscriptionSession });
@@ -3783,11 +3794,7 @@ window.initializeAgoraPlayer = function(config) {
                 participant.remoteAudioPlaybackAttempted = false;
                 participant.remoteAudioPlaybackBlocked = false;
                 if (config.agoraMode === 'broadcast' && String(user.uid) === String(broadcastProgramAudioUid)) {
-                    broadcastProgramAudioTrack = null;
-                    broadcastProgramAudioUid = null;
-                    broadcastProgramAudioPlaybackAttempted = false;
-                    broadcastProgramAudioPlaybackFailed = false;
-                    broadcastProgramAudioHasPlayed = false;
+                    resetBroadcastProgramAudioState(false);
                 }
                 participant.isSpeaking = false;
                 activeSpeakerLevels.delete(normalizeParticipantUid(user.uid));
@@ -4032,7 +4039,11 @@ window.initializeAgoraPlayer = function(config) {
             startActiveSpeakerDetection();
             requestFeaturedStreamTypes();
             scheduleRemoteReconciliation('connection-restored', 500);
-            scheduleAudioAutoplayVerification('connection-restored');
+            if (config.agoraMode === 'interactive') {
+                scheduleAudioAutoplayVerification('connection-restored');
+            } else if (broadcastProgramAudioHasPlayed && broadcastProgramAudioTrack && !isAudioTrackPlaying(broadcastProgramAudioTrack)) {
+                handleBroadcastAutoplayFailed(['connection-restored']);
+            }
             clearRemoteVideosReconnectingState();
             isAgoraSessionJoined = true;
             scheduleRemoteReconciliation('connection-restored', 750);
