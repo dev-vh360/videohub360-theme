@@ -621,6 +621,7 @@ window.initializeAgoraPlayer = function(config) {
     let audioRecoveryRetryInProgress = false;
     let audioRecoveryControl = null;
     let audioContextStateChangeHandler = null;
+    let currentAgoraAudioContextState = null;
     let diagnosticsTimer = null;
     const diagnosticsHistory = [];
     const participantDiagnostics = new Map();
@@ -765,16 +766,23 @@ window.initializeAgoraPlayer = function(config) {
         };
         window.AgoraRTC.onAutoplayFailed = autoplayWrapper;
         if (!audioContextStateChangeHandler && typeof window.AgoraRTC.on === 'function') {
-            audioContextStateChangeHandler = function (state) {
-                recordClientDiagnostic({ audioContextStateChanged: state });
-                if (state === 'running') {
-                    getPermittedRemoteAudioParticipants().forEach((participant) => { participant.remoteAudioPlaybackBlocked = false; });
+            audioContextStateChangeHandler = function (currentState, previousState) {
+                currentAgoraAudioContextState = currentState;
+                recordClientDiagnostic({ audioContextStateChanged: currentState, previousAudioContextState: previousState });
+                if (currentState === 'interrupted' || currentState === 'suspended') {
+                    getPermittedRemoteAudioParticipants().forEach((participant) => {
+                        participant.remoteAudioPlaybackAttempted = true;
+                        participant.remoteAudioPlaybackBlocked = true;
+                    });
                     updateAudioRecoveryControlVisibility();
+                    scheduleAudioAutoplayVerification('audio-context-state-changed');
                     return;
                 }
-                if (state === 'interrupted' || state === 'suspended') {
-                    getPermittedRemoteAudioParticipants().forEach((participant) => { participant.remoteAudioPlaybackAttempted = true; });
-                    scheduleAudioAutoplayVerification('audio-context-state-changed');
+                if (currentState === 'running') {
+                    getPermittedRemoteAudioParticipants().forEach((participant) => {
+                        participant.remoteAudioPlaybackBlocked = isAgoraAudioContextBlocked() || !isAudioTrackPlaying(participant.audioTrack);
+                    });
+                    updateAudioRecoveryControlVisibility();
                 }
             };
             try { window.AgoraRTC.on('audio-context-state-changed', audioContextStateChangeHandler); } catch (error) {}
@@ -792,6 +800,7 @@ window.initializeAgoraPlayer = function(config) {
             try { window.AgoraRTC.off('audio-context-state-changed', audioContextStateChangeHandler); } catch (error) {}
         }
         audioContextStateChangeHandler = null;
+        currentAgoraAudioContextState = null;
         if (audioRecoveryRetryTimer) clearTimeout(audioRecoveryRetryTimer);
         audioRecoveryRetryTimer = null;
         audioRecoveryRetryInProgress = false;
@@ -821,6 +830,10 @@ window.initializeAgoraPlayer = function(config) {
     function isAudioTrackPlaying(track) {
         if (!track) return false;
         return !!(track.isPlaying || track._isPlaying || track._isPlaying === true);
+    }
+
+    function isAgoraAudioContextBlocked() {
+        return currentAgoraAudioContextState === 'interrupted' || currentAgoraAudioContextState === 'suspended';
     }
 
     function hasBlockedRemoteAudioPlayback() {
@@ -873,7 +886,7 @@ window.initializeAgoraPlayer = function(config) {
     function verifyPermittedRemoteAudioAfterRetry() {
         getPermittedRemoteAudioParticipants().forEach((participant) => {
             if (!participant.remoteAudioPlaybackAttempted) return;
-            participant.remoteAudioPlaybackBlocked = !isAudioTrackPlaying(participant.audioTrack);
+            participant.remoteAudioPlaybackBlocked = isAgoraAudioContextBlocked() || !isAudioTrackPlaying(participant.audioTrack);
             recordParticipantDiagnostic(participant.uid, {
                 remoteAudioVerification: true,
                 remoteAudioPlaybackBlocked: participant.remoteAudioPlaybackBlocked
@@ -5938,7 +5951,14 @@ window.initializeAgoraPlayer = function(config) {
     // Simple join livestream button functionality
     function handleJoinLivestream() {
         if (window.AgoraRTC && typeof window.AgoraRTC.resumeAudioContext === 'function') {
-            window.AgoraRTC.resumeAudioContext().catch(() => {});
+            try {
+                window.AgoraRTC.resumeAudioContext();
+            } catch (error) {
+                recordClientDiagnostic({
+                    viewerEntryAudioContextResumeFailed: true,
+                    error: error && (error.code || error.message)
+                });
+            }
         }
         window.vh360Log('VideoHub360: handleJoinLivestream() called');
         if (config.studioControlled && config.agoraMode !== 'interactive') {
