@@ -317,7 +317,16 @@ class VH360_Studio_Assets {
                 'encoderConfig'    => array( 'width' => 1280, 'height' => 720, 'frameRate' => 30, 'bitrateMin' => 800, 'bitrateMax' => 1800 ),
                 'optimizationMode' => 'balanced',
             ),
-            'mobileAudioConfig' => array(),
+            'mobileAudioConfig' => array(
+                'AEC'           => true,
+                'ANS'           => true,
+                'AGC'           => true,
+                'encoderConfig' => array(
+                    'sampleRate' => 48000,
+                    'stereo'     => false,
+                    'bitrate'    => 128,
+                ),
+            ),
             'strings'           => array(
                 'requestFailed'             => __( 'Request failed. Please try again.', 'videohub360-studio' ),
                 'requestingPermissions'     => __( 'Requesting camera and microphone permissions…', 'videohub360-studio' ),

@@ -272,3 +272,15 @@ body.vh360-ios-immersive-active
     padding-right: 10px !important;
     white-space: nowrap !important;
 }
+
+@media (max-width: 768px) {
+    #vh360-agora-controls.vh360-mobile-controls-simple #vh360-agora-participant-audio {
+        max-width: min(46vw, 210px);
+    }
+
+    #vh360-agora-controls.vh360-mobile-controls-simple #vh360-agora-participant-audio .vh360-agora-control-label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
