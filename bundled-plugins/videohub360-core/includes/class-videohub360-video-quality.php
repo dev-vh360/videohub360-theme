@@ -20,7 +20,7 @@ class VideoHub360_Video_Quality {
     private static $quality_presets = array(
         'auto' => array(
             'label' => 'Auto (Adaptive)',
-            'description' => 'Automatically selects the best quality based on connection',
+            'description' => 'Starts with a valid 720p baseline and lets Agora/WebRTC adapt bitrate and fallback based on connection',
             'bitrate' => 'adaptive',
             'resolution' => 'adaptive',
             'fps' => 30,

@@ -45,8 +45,59 @@
                 remoteParticipants: new Map(),
                 autoplayFailureBound: false,
                 autoplayPreviousCallback: null,
-                autoplayWrapper: null
+                autoplayWrapper: null,
+                diagnosticsHistory: [],
+                diagnosticsTimer: 0
             };
+
+
+
+            function isDebugModeEnabled() {
+                return !!(window.__VH360_DEBUG || config.debug || (window.vh360Debug && window.vh360Debug.enabled));
+            }
+
+            function sanitizeDiagnostic(value, depth) {
+                depth = depth || 0;
+                if (depth > 3 || value == null) return value == null ? null : '[depth-limit]';
+                if (typeof value !== 'object') return Number.isNaN(value) ? null : value;
+                var output = Array.isArray(value) ? [] : {};
+                Object.keys(value).forEach(function (key) {
+                    if (/token|deviceId|authorization|secret|key/i.test(key)) return;
+                    output[key] = sanitizeDiagnostic(value[key], depth + 1);
+                });
+                return output;
+            }
+
+            function recordDiagnostic(event) {
+                if (!isDebugModeEnabled()) return;
+                state.diagnosticsHistory.push(sanitizeDiagnostic(Object.assign({
+                    timestamp: Date.now(),
+                    connectionState: state.client ? state.client.connectionState || '' : '',
+                    published: state.published,
+                    joined: state.joined
+                }, event || {})));
+                while (state.diagnosticsHistory.length > 24) state.diagnosticsHistory.shift();
+            }
+
+            function collectDiagnostics() {
+                if (!state.client || !isDebugModeEnabled()) return;
+                var sample = {};
+                try { if (typeof state.client.getRTCStats === 'function') sample.rtcStats = state.client.getRTCStats(); } catch (error) {}
+                try { if (typeof state.client.getLocalAudioStats === 'function') sample.localAudioStats = state.client.getLocalAudioStats(); } catch (error) {}
+                try { if (typeof state.client.getLocalVideoStats === 'function') sample.localVideoStats = state.client.getLocalVideoStats(); } catch (error) {}
+                recordDiagnostic(sample);
+            }
+
+            function startDiagnostics() {
+                if (!isDebugModeEnabled() || state.diagnosticsTimer) return;
+                state.diagnosticsTimer = window.setInterval(collectDiagnostics, 5000);
+                collectDiagnostics();
+            }
+
+            function stopDiagnostics() {
+                if (state.diagnosticsTimer) window.clearInterval(state.diagnosticsTimer);
+                state.diagnosticsTimer = 0;
+            }
 
             function makeCancellationError() {
                 const error = new Error('Broadcaster operation cancelled.');
@@ -511,7 +562,12 @@
                     return;
                 }
                 state.client.on('connection-state-change', function (current, previous, reason) {
+                    recordDiagnostic({ event: 'connection-state-change', current: current, previous: previous, reason: reason || '' });
                     emit(root, 'connection-state-change', { current: current, previous: previous, reason: reason || '' });
+                });
+                state.client.on('network-quality', function (quality) {
+                    recordDiagnostic({ event: 'network-quality', networkQuality: quality });
+                    emit(root, 'network-quality', { quality: quality });
                 });
                 state.client.on('token-privilege-will-expire', function () {
                     renewTokenWithRetry().catch(function (error) {
@@ -722,6 +778,7 @@
                         throw makeCancellationError();
                     }
                     state.published = true;
+                    startDiagnostics();
                     await syncRemotePublishedUsers(generation);
                     scheduleRenewal(merged.expiresAt, generation);
                     emit(root, 'published', { uid: state.uid, channelName: state.channelName });
@@ -1021,6 +1078,7 @@
                 }
                 state.joined = false;
                 clearRemoteParticipants();
+                stopDiagnostics();
                 unbindAutoplayFailure();
                 stopAndMaybeClose(state.audioTrack, state.audioTrackOwnsSource);
                 stopAndMaybeClose(state.videoTrack, state.videoTrackOwnsSource);
@@ -1074,6 +1132,19 @@
                     return state.client && typeof state.client.getLocalVideoStats === 'function'
                         ? state.client.getLocalVideoStats()
                         : {};
+                },
+                getLocalAudioStats: function () {
+                    return state.client && typeof state.client.getLocalAudioStats === 'function'
+                        ? state.client.getLocalAudioStats()
+                        : {};
+                },
+                getRTCStats: function () {
+                    return state.client && typeof state.client.getRTCStats === 'function'
+                        ? state.client.getRTCStats()
+                        : {};
+                },
+                getDiagnosticsSnapshot: function () {
+                    return state.diagnosticsHistory.slice();
                 },
                 getLocalMediaStream: function () {
                     const tracks = [];
