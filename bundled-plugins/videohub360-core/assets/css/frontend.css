@@ -589,6 +589,21 @@
                 width: 100%;
             }
 
+            /* Make only Agora mobile players span viewport edge-to-edge. */
+            .vh360-livestream-iframe.vh360-agora-interactive-container,
+            .vh360-livestream-iframe.vh360-agora-broadcast-container {
+                width: 100vw;
+                max-width: 100vw;
+                margin-left: calc(50% - 50vw);
+                margin-right: calc(50% - 50vw);
+                border-radius: 0;
+            }
+
+            .vh360-livestream-iframe.vh360-agora-interactive-container #vh360-agora-player,
+            .vh360-livestream-iframe.vh360-agora-broadcast-container #vh360-agora-player {
+                border-radius: 0;
+            }
+
             /* MP4 video player mobile consistency */
             .videohub360-video-player #videohub360-main-video {
                 margin: 0 auto;
@@ -659,7 +674,6 @@
                 aspect-ratio: 16/9;
             }
 
-            .vh360-livestream-iframe:not(.vh360-agora-interactive-container) #vh360-agora-player.vh360-agora-broadcast #vh360-agora-local-player > div,
             .vh360-livestream-iframe:not(.vh360-agora-interactive-container) #vh360-agora-player.vh360-agora-broadcast #vh360-agora-local-player video {
                 width: 100%;
                 height: auto;
