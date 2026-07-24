@@ -41,7 +41,7 @@ function vh360_register_required_plugins() {
             'slug'     => 'vh360-pwa-app',
             'source'   => get_template_directory() . '/bundled-plugins/vh360-pwa-app.zip',
             'required' => true,
-            'version'  => '', // Optional.
+            'version'  => '1.0.0',
             'force_activation'   => false,
             'force_deactivation' => false,
         ),
@@ -59,7 +59,7 @@ function vh360_register_required_plugins() {
             'slug'               => 'videohub360-studio',
             'source'             => get_template_directory() . '/bundled-plugins/videohub360-studio.zip',
             'required'           => true,
-            'version'            => '0.1.0',
+            'version'            => '1.0.0',
             'force_activation'   => true,
             'force_deactivation' => false,
         ),
