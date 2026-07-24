@@ -41,7 +41,7 @@ function vh360_register_required_plugins() {
             'slug'     => 'vh360-pwa-app',
             'source'   => get_template_directory() . '/bundled-plugins/vh360-pwa-app.zip',
             'required' => true,
-            'version'  => '', // Optional.
+            'version'  => '1.0.0',
             'force_activation'   => false,
             'force_deactivation' => false,
         ),
