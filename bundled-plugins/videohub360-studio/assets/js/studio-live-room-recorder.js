@@ -551,7 +551,11 @@
         window.setInterval(function () { rest(stateEndpoint()).then(restoreState).catch(function (error) { window.console && console.warn('Unable to refresh recording state.', error); }); }, activeState === 'processing' ? 30000 : 15000);
         window.addEventListener('vh360:agora-data-message', function (event) { var data = event.detail || {}; if (data.type === 'live_room_recording_started' || data.type === 'live_room_recording_stopped') { rest(stateEndpoint()).then(restoreState).catch(function (error) { window.console && console.warn('Unable to refresh recording state.', error); }) } });
         if (!button) { return; }
-        if (!hasDesktopSupport()) { setLabel(config.desktopOnlyMessage || 'Recording unavailable'); return; }
+        if (!hasDesktopSupport()) {
+            button.remove();
+            button = null;
+            return;
+        }
         button.classList.remove('vh360-hidden'); button.addEventListener('click', function () {
             if (recoveryAction === 'private_file') {
                 retryPrivateFilePreparation().catch(function () {});
