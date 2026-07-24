@@ -259,6 +259,14 @@
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
+    .vh360-is-live-room .vh360-live-room-player {
+        width: 100vw;
+        max-width: 100vw;
+        margin-left: calc(50% - 50vw);
+        margin-right: calc(50% - 50vw);
+        border-radius: 0;
+    }
+
     .vh360-is-live-room .vh360-live-room-details-header {
         display: grid;
         grid-template-columns: 1fr;

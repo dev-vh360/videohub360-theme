@@ -16,10 +16,12 @@ if (!function_exists('videohub360_render_livestream')) {
     function videohub360_render_livestream($fields, $chat_enabled = false, $chat_placement = 'inline', $is_user_logged_in = false, $user_avatar = '', $user_display_name = '', $user_logout_url = '', $hide_settings = false) {
         $player_html = '<div class="vh360-livestream-player-wrap">';
 
-        // Add interactive class for Agora Interactive Mode
+        // Add mode-specific classes for Agora players.
         $iframe_class = 'vh360-livestream-iframe';
         if ($fields['type'] === 'agora' && $fields['agora_mode'] === 'interactive') {
             $iframe_class .= ' vh360-agora-interactive-container';
+        } elseif ($fields['type'] === 'agora' && $fields['agora_mode'] === 'broadcast') {
+            $iframe_class .= ' vh360-agora-broadcast-container';
         }
 
         $player_html .= '<div class="' . $iframe_class . '">';
