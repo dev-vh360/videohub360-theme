@@ -53,42 +53,6 @@
             $temp.remove();
         });
         
-        // AJAX clear cache
-        $('.vh360-clear-cache-ajax').on('click', function(e) {
-            e.preventDefault();
-            
-            if (!confirm(vh360Admin.confirmClearCache)) {
-                return;
-            }
-            
-            var $button = $(this);
-            $button.prop('disabled', true).text('Clearing...');
-            
-            $.ajax({
-                url: vh360Admin.ajaxUrl,
-                type: 'POST',
-                data: {
-                    action: 'vh360_clear_cache',
-                    nonce: vh360Admin.nonce
-                },
-                success: function(response) {
-                    if (response.success) {
-                        $button.text('Cleared!');
-                        setTimeout(function() {
-                            $button.text('Clear Cache').prop('disabled', false);
-                        }, 2000);
-                    } else {
-                        alert('Error clearing cache: ' + response.data);
-                        $button.text('Clear Cache').prop('disabled', false);
-                    }
-                },
-                error: function() {
-                    alert('Error clearing cache. Please try again.');
-                    $button.text('Clear Cache').prop('disabled', false);
-                }
-            });
-        });
-        
         // Form validation
         $('form').on('submit', function(e) {
             var $form = $(this);
@@ -176,23 +140,5 @@
         
     });
     
-    /**
-     * AJAX handler for clearing cache
-     */
-    function clearCacheAjax() {
-        $.ajax({
-            url: vh360Admin.ajaxUrl,
-            type: 'POST',
-            data: {
-                action: 'vh360_clear_cache',
-                nonce: vh360Admin.nonce
-            },
-            success: function(response) {
-                if (response.success) {
-                    vh360Log('Cache cleared successfully');
-                }
-            }
-        });
-    }
-    
+
 })(jQuery);

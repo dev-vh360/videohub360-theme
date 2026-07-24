@@ -39,7 +39,7 @@ function vh360_get_notifications($user_id, $args = array()) {
     $system = VH360_Notification_System::get_instance();
     
     // Check transient cache first
-    $cache_key = 'vh360_notifications_' . $user_id;
+    $cache_key = vh360_get_data_cache_key('vh360_notifications_' . $user_id);
     $cached = get_transient($cache_key);
     
     if (false !== $cached && empty($args)) {
@@ -348,7 +348,7 @@ function vh360_delete_read_notifications($user_id) {
     // Update cache
     if (false !== $result) {
         $system->update_unread_count_cache($user_id);
-        delete_transient('vh360_notifications_' . $user_id);
+        delete_transient(vh360_get_data_cache_key('vh360_notifications_' . $user_id));
     }
     
     return $result;
@@ -374,7 +374,7 @@ function vh360_clear_all_notifications($user_id) {
     // Update cache
     if (false !== $result) {
         $system->update_unread_count_cache($user_id);
-        delete_transient('vh360_notifications_' . $user_id);
+        delete_transient(vh360_get_data_cache_key('vh360_notifications_' . $user_id));
     }
     
     return $result;

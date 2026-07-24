@@ -132,7 +132,6 @@ class VH360_Theme_Admin {
         add_action('wp_ajax_vh360_import_settings', array($this, 'ajax_import_settings'));
         add_action('wp_ajax_vh360_export_customizer', array($this, 'ajax_export_customizer'));
         add_action('wp_ajax_vh360_import_customizer', array($this, 'ajax_import_customizer'));
-        add_action('wp_ajax_vh360_clear_cache', array($this, 'ajax_clear_cache'));
         
         // Notification admin AJAX handlers
         add_action('wp_ajax_vh360_manual_notification_cleanup', array($this, 'ajax_manual_notification_cleanup'));
@@ -371,7 +370,6 @@ class VH360_Theme_Admin {
             'importNonce' => wp_create_nonce('vh360_import_settings'),
             'customizerImportNonce' => wp_create_nonce('vh360_import_customizer'),
             'confirmReset' => __('Are you sure you want to reset all settings? This action cannot be undone.', 'videohub360-theme'),
-            'confirmClearCache' => __('Are you sure you want to clear all theme cache?', 'videohub360-theme'),
             'confirmClearActivities' => __('Are you sure you want to clear old activities? This action cannot be undone.', 'videohub360-theme'),
         ));
     }
@@ -533,7 +531,6 @@ class VH360_Theme_Admin {
                 'debug_mode' => false,
                 'enable_logging' => false,
                 'show_deprecated' => false,
-                'transient_expiration' => 3600,
             ),
         ));
         
@@ -638,7 +635,7 @@ class VH360_Theme_Admin {
         
         switch ($action) {
             case 'clear_cache':
-                $this->clear_theme_cache();
+                $this->clear_data_cache();
                 wp_redirect(add_query_arg('cache_cleared', '1', wp_get_referer()));
                 exit;
                 
@@ -665,24 +662,10 @@ class VH360_Theme_Admin {
     }
     
     /**
-     * Clear theme cache
+     * Clear VideoHub360 display data caches by advancing the scoped cache generation.
      */
-    private function clear_theme_cache() {
-        global $wpdb;
-        
-        // Delete all vh360 transients using prepared statement
-        $wpdb->query(
-            $wpdb->prepare(
-                "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
-                $wpdb->esc_like('_transient_vh360_') . '%',
-                $wpdb->esc_like('_transient_timeout_vh360_') . '%'
-            )
-        );
-        
-        // Clear object cache if available
-        if (function_exists('wp_cache_flush')) {
-            wp_cache_flush();
-        }
+    private function clear_data_cache() {
+        vh360_increment_data_cache_generation();
     }
     
     /**
@@ -1228,9 +1211,6 @@ class VH360_Theme_Admin {
         $sanitized['debug_mode'] = isset($input['debug_mode']) ? (bool) $input['debug_mode'] : false;
         $sanitized['enable_logging'] = isset($input['enable_logging']) ? (bool) $input['enable_logging'] : false;
         $sanitized['show_deprecated'] = isset($input['show_deprecated']) ? (bool) $input['show_deprecated'] : false;
-        
-        // Numeric field with default
-        $sanitized['transient_expiration'] = isset($input['transient_expiration']) ? absint($input['transient_expiration']) : 3600;
         
         return $sanitized;
     }
@@ -2419,26 +2399,6 @@ class VH360_Theme_Admin {
         }
         
         wp_send_json_success(__('Customizer settings imported successfully', 'videohub360-theme'));
-    }
-    
-    /**
-     * AJAX handler for clearing cache
-     */
-    public function ajax_clear_cache() {
-        // Check nonce
-        if (!check_ajax_referer('vh360_admin_nonce', 'nonce', false)) {
-            wp_send_json_error(__('Security check failed', 'videohub360-theme'));
-        }
-        
-        // Check permissions
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(__('Insufficient permissions', 'videohub360-theme'));
-        }
-        
-        // Clear cache
-        $this->clear_theme_cache();
-        
-        wp_send_json_success(__('Cache cleared successfully', 'videohub360-theme'));
     }
     
     /**

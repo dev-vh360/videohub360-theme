@@ -132,19 +132,9 @@ async function cacheFirst(request) {
 }
 
 async function networkFirstWithFallback(request) {
-  const cache = await caches.open(PAGE_CACHE);
   try {
-    const res = await fetch(request);
-    if (res && res.ok) {
-      // Only cache navigations if strategy is not 'safe'.
-      if (VH360_PWA.strategy !== 'safe') {
-        cache.put(request, res.clone());
-      }
-    }
-    return res;
+    return await fetch(request);
   } catch (e) {
-    const cached = await cache.match(request);
-    if (cached) return cached;
     return caches.match(VH360_PWA.offlineUrl);
   }
 }
@@ -170,17 +160,6 @@ async function cacheFirstWithBackgroundRefresh(request) {
   return caches.match(VH360_PWA.offlineUrl);
 }
 
-async function staleWhileRevalidate(request) {
-  const cache = await caches.open(PAGE_CACHE);
-  const cached = await cache.match(request);
-  const network = fetch(request).then((res) => {
-    if (res && res.ok && VH360_PWA.strategy !== 'safe') {
-      cache.put(request, res.clone());
-    }
-    return res;
-  }).catch(() => null);
-  return cached || await network || caches.match(VH360_PWA.offlineUrl);
-}
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
@@ -197,10 +176,6 @@ self.addEventListener('fetch', (event) => {
   if (isNavigationRequest(req)) {
     if (isFastLaunchRequest(req)) {
       event.respondWith(cacheFirstWithBackgroundRefresh(req));
-      return;
-    }
-    if (VH360_PWA.strategy === 'balanced' || VH360_PWA.strategy === 'aggressive') {
-      event.respondWith(staleWhileRevalidate(req));
       return;
     }
     event.respondWith(networkFirstWithFallback(req));

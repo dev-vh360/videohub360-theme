@@ -195,9 +195,9 @@ function vh360_send_message($sender_id, $recipient_id, $message) {
     $message_id = $wpdb->insert_id;
     
     // Clear conversation cache
-    delete_transient('vh360_dm_conversations_' . $sender_id);
-    delete_transient('vh360_dm_conversations_' . $recipient_id);
-    delete_transient('vh360_dm_unread_count_' . $recipient_id);
+    delete_transient(vh360_get_data_cache_key('vh360_dm_conversations_' . $sender_id));
+    delete_transient(vh360_get_data_cache_key('vh360_dm_conversations_' . $recipient_id));
+    delete_transient(vh360_get_data_cache_key('vh360_dm_unread_count_' . $recipient_id));
     
     // Trigger action for notifications
     do_action('vh360_message_sent', $message_id, $sender_id, $recipient_id, $message);
@@ -250,7 +250,7 @@ function vh360_get_user_conversations($user_id, $limit = 50) {
     global $wpdb;
     
     // Check cache
-    $cache_key = 'vh360_dm_conversations_' . $user_id;
+    $cache_key = vh360_get_data_cache_key('vh360_dm_conversations_' . $user_id);
     $cached = get_transient($cache_key);
     
     if ($cached !== false) {
@@ -333,8 +333,8 @@ function vh360_mark_messages_read($user_id, $other_user_id) {
     ));
     
     // Clear cache
-    delete_transient('vh360_dm_conversations_' . $user_id);
-    delete_transient('vh360_dm_unread_count_' . $user_id);
+    delete_transient(vh360_get_data_cache_key('vh360_dm_conversations_' . $user_id));
+    delete_transient(vh360_get_data_cache_key('vh360_dm_unread_count_' . $user_id));
     
     return $result !== false;
 }
@@ -349,7 +349,7 @@ function vh360_get_unread_messages_count($user_id) {
     global $wpdb;
     
     // Check cache
-    $cache_key = 'vh360_dm_unread_count_' . $user_id;
+    $cache_key = vh360_get_data_cache_key('vh360_dm_unread_count_' . $user_id);
     $cached = get_transient($cache_key);
     
     if ($cached !== false) {
@@ -408,8 +408,8 @@ function vh360_delete_conversation($user_id, $other_user_id) {
     ));
     
     // Clear cache
-    delete_transient('vh360_dm_conversations_' . $user_id);
-    delete_transient('vh360_dm_unread_count_' . $user_id);
+    delete_transient(vh360_get_data_cache_key('vh360_dm_conversations_' . $user_id));
+    delete_transient(vh360_get_data_cache_key('vh360_dm_unread_count_' . $user_id));
     
     return $result !== false;
 }
