@@ -31,7 +31,15 @@ remove_action( 'woocommerce_after_main_content',  'woocommerce_output_content_wr
  * @return bool True if cart contains a membership product, false otherwise.
  */
 function vh360_wc_cart_contains_membership() {
-    if (!function_exists('WC') || !WC()->cart) {
+    if (!did_action('wp_loaded')) {
+        return false;
+    }
+
+    if (!function_exists('WC')) {
+        return false;
+    }
+
+    if (!WC()->cart instanceof WC_Cart) {
         return false;
     }
 
@@ -97,18 +105,6 @@ add_filter('woocommerce_checkout_registration_required', function ($registration
     }
     
     return $registration_required;
-}, 999);
-
-/**
- * Disable guest checkout when cart contains membership products.
- */
-add_filter('pre_option_woocommerce_enable_guest_checkout', function ($value) {
-    // If cart contains a membership product, disable guest checkout
-    if (vh360_wc_cart_contains_membership()) {
-        return 'no';
-    }
-    
-    return $value;
 }, 999);
 
 /**
