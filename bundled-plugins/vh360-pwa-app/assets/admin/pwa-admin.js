@@ -68,7 +68,7 @@
         });
         html += '</ul></div>';
 
-        html += `<div><strong>Cache preset</strong> <code>${d.options.cache_strategy}</code> <span class="description">version <code>${d.options.cache_version}</code></span><div class="description">If users report stale behavior, use Tools → Clear PWA Caches / Unregister Service Worker on the affected device.</div></div>`;
+        html += `<div><strong>Cache version</strong> <code>${d.options.cache_version}</code><div class="description">If users report stale behavior, use Tools → Clear PWA Caches / Unregister Service Worker on the affected device.</div></div>`;
         html += '</div>';
 
         $out.html(html);

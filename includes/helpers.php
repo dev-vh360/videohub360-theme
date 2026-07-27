@@ -221,7 +221,7 @@ function vh360_get_user_stats($user_id = 0) {
 
     // Calculate total views from all dashboard content
     // Use a transient to cache the expensive query
-    $transient_key = 'vh360_user_views_' . $user_id;
+    $transient_key = vh360_get_data_cache_key('vh360_user_views_' . $user_id);
     $total_views = get_transient($transient_key);
 
     if (false === $total_views) {

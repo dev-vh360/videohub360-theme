@@ -213,7 +213,7 @@ $normalize_to_path = function( $value ) {
 $out['start_url'] = $normalize_to_path( $start_url );
 $out['scope']     = $normalize_to_path( $scope );
 
-		$out['cache_strategy'] = in_array( (string) ( $input['cache_strategy'] ?? '' ), array( 'safe','balanced','aggressive' ), true ) ? (string) $input['cache_strategy'] : $current['cache_strategy'];
+		unset( $out['cache_strategy'] );
 		$out['cache_version'] = sanitize_text_field( $input['cache_version'] ?? $current['cache_version'] );
 		$out['precache_offline'] = vh360_pwa_boolval( $input['precache_offline'] ?? $current['precache_offline'] );
 		$out['precache_home'] = vh360_pwa_boolval( $input['precache_home'] ?? $current['precache_home'] );
@@ -704,7 +704,7 @@ $manifest_url = esc_url( vh360_pwa_endpoint_url( VH360_PWA_MANIFEST_SLUG ) );
 		echo '<label>' . esc_html__( 'Splash title font size', 'vh360-pwa-app' ) . '<br><input type="number" min="18" max="96" name="vh360_pwa_options[splash_title_font_size]" value="' . esc_attr( (string) $opts['splash_title_font_size'] ) . '" style="width:90px"> px</label><br>';
 		echo '<label>' . esc_html__( 'Splash title color', 'vh360-pwa-app' ) . '<br><input type="text" class="vh360-color" name="vh360_pwa_options[splash_title_color]" value="' . esc_attr( (string) $opts['splash_title_color'] ) . '" data-default-color="#ffffff"></label><br>';
 		echo '<label>' . esc_html__( 'Splash title spacing below logo', 'vh360-pwa-app' ) . '<br><input type="number" min="20" max="200" name="vh360_pwa_options[splash_title_offset]" value="' . esc_attr( (string) $opts['splash_title_offset'] ) . '" style="width:90px"> px</label>';
-		echo '<p class="description" style="max-width:760px;">' . esc_html__( 'PWA launch screens are cached aggressively by iOS and Android. Regenerate PWA Assets refreshes server-side files and URLs for new installs, Android/Chrome, and normal PWA assets, but it cannot force existing iPhone/iPad Home Screen apps to replace installed launch metadata. Existing iOS users may need to remove the app from the Home Screen and add it again from Safari after splash, icon, or app-name changes.', 'vh360-pwa-app' ) . '</p>';
+		echo '<p class="description" style="max-width:760px;">' . esc_html__( 'PWA launch screens are cached persistently by iOS and Android. Regenerate PWA Assets refreshes server-side files and URLs for new installs, Android/Chrome, and normal PWA assets, but it cannot force existing iPhone/iPad Home Screen apps to replace installed launch metadata. Existing iOS users may need to remove the app from the Home Screen and add it again from Safari after splash, icon, or app-name changes.', 'vh360-pwa-app' ) . '</p>';
 		echo '</td></tr>';
 		$this->render_media_row( 'splash_logo', __( 'Splash Logo', 'vh360-pwa-app' ), (string) ( $opts['splash_logo'] ?? '' ) );
 
@@ -849,21 +849,9 @@ $manifest_url = esc_url( vh360_pwa_endpoint_url( VH360_PWA_MANIFEST_SLUG ) );
 	}
 
 	private function render_tab_caching( array $opts ) : void {
-		echo '<p class="description">Caching is the #1 cause of WordPress PWA bugs. Start with <strong>Safe</strong> and only increase if you really need it.</p>';
+		echo '<p class="description">PWA navigation uses network-first behavior with offline fallback. Static assets and the launch shell remain cached for app functionality.</p>';
 		echo '<table class="form-table" role="presentation">';
 
-		echo '<tr><th scope="row">' . esc_html__( 'Cache Strategy', 'vh360-pwa-app' ) . '</th><td>';
-		$strats = array(
-			'safe' => __( 'Safe (cache static assets only; network-first for pages)', 'vh360-pwa-app' ),
-			'balanced' => __( 'Balanced (cache static assets; opportunistic caching for same-origin pages)', 'vh360-pwa-app' ),
-			'aggressive' => __( 'Aggressive (not recommended for logged-in sites)', 'vh360-pwa-app' ),
-		);
-		echo '<select name="vh360_pwa_options[cache_strategy]">';
-		foreach ( $strats as $k => $label ) {
-			echo '<option value="' . esc_attr( $k ) . '" ' . selected( (string) $opts['cache_strategy'], $k, false ) . '>' . esc_html( $label ) . '</option>';
-		}
-		echo '</select>';
-		echo '</td></tr>';
 
 		echo '<tr><th scope="row">' . esc_html__( 'Fast App Launch', 'vh360-pwa-app' ) . '</th><td>';
 		echo '<label><input type="checkbox" name="vh360_pwa_options[fast_launch_enabled]" value="1" ' . checked( ! empty( $opts['fast_launch_enabled'] ), true, false ) . '> ' . esc_html__( 'Serve a cached launch page immediately for installed app startup', 'vh360-pwa-app' ) . '</label>';
@@ -958,7 +946,6 @@ $manifest_url = esc_url( vh360_pwa_endpoint_url( VH360_PWA_MANIFEST_SLUG ) );
 
 		$results['enabled'] = vh360_pwa_is_enabled();
 		$results['options'] = array(
-			'cache_strategy' => vh360_pwa_get_options()['cache_strategy'],
 			'cache_version'  => vh360_pwa_get_options()['cache_version'],
 		);
 

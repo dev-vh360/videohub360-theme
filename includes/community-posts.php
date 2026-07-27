@@ -772,7 +772,7 @@ function vh360_fetch_url_metadata( $url ) {
         );
     }
 
-    $cache_key = 'vh360_url_meta_' . md5( $url );
+    $cache_key = vh360_get_data_cache_key( 'vh360_url_meta_' . md5( $url ) );
     $cached    = get_transient( $cache_key );
     if ( false !== $cached && is_array( $cached ) ) {
         return $cached;
@@ -860,7 +860,7 @@ function vh360_get_oembed_data_cached( $url ) {
         return null;
     }
 
-    $cache_key = 'vh360_oembed_' . md5( $url );
+    $cache_key = vh360_get_data_cache_key( 'vh360_oembed_' . md5( $url ) );
     $cached    = get_transient( $cache_key );
     if ( false !== $cached ) {
         // We store either an object (serialized) or an explicit false marker.

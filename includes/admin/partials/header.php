@@ -33,7 +33,7 @@ $page_title = isset($page_title) ? $page_title : get_admin_page_title();
     if (isset($_GET['cache_cleared'])) {
         ?>
         <div class="notice notice-success is-dismissible">
-            <p><?php esc_html_e('Theme cache cleared successfully.', 'videohub360-theme'); ?></p>
+            <p><?php esc_html_e('VideoHub360 data cache refreshed successfully.', 'videohub360-theme'); ?></p>
         </div>
         <?php
     }

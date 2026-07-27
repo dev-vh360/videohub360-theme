@@ -18,6 +18,38 @@ var VH360StorageCompat = window.VH360Storage || (function(){
   var offlineUrl = CFG.offlineUrl || '/vh360-offline.html';
   var appName = CFG.appShortName || 'this app'; // Use PWA short_name with fallback
 
+
+  function isVH360CacheName(name) {
+    return typeof name === 'string' && name.indexOf('vh360-pwa-') === 0;
+  }
+
+  function expectedWorkerPathname() {
+    try {
+      return new URL(swUrl, window.location.href).pathname;
+    } catch (e) {
+      return '/vh360-sw.js';
+    }
+  }
+
+  function registrationUsesVH360Worker(registration) {
+    var expectedPath = expectedWorkerPathname();
+    var workers = [registration.active, registration.waiting, registration.installing];
+
+    for (var i = 0; i < workers.length; i++) {
+      if (!workers[i] || !workers[i].scriptURL) {
+        continue;
+      }
+
+      try {
+        if (new URL(workers[i].scriptURL).pathname === expectedPath) {
+          return true;
+        }
+      } catch (e) {}
+    }
+
+    return false;
+  }
+
   // Banner config
   var showBanner = !!CFG.showInstallBanner;
   var bannerText = CFG.installBannerText || 'Install this app';
@@ -384,7 +416,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
           if (window.caches && caches.keys) {
             tasks.push(
               caches.keys().then(function (keys) {
-                return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+                return Promise.all(keys.filter(isVH360CacheName).map(function (k) { return caches.delete(k); }));
               })
             );
           }
@@ -394,7 +426,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
           if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
             tasks.push(
               navigator.serviceWorker.getRegistrations().then(function (regs) {
-                return Promise.all(regs.map(function (r) { return r.unregister(); }));
+                return Promise.all(regs.filter(registrationUsesVH360Worker).map(function (r) { return r.unregister(); }));
               })
             );
           }

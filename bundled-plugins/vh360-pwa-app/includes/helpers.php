@@ -44,7 +44,6 @@ function vh360_pwa_get_options() : array {
 		'scope'                => '/',
 		'lang'                 => get_bloginfo( 'language' ),
 
-		'cache_strategy'       => 'safe', // safe | balanced | aggressive
 		'cache_version'        => 'v1',
 		'pwa_asset_version'    => 0,
 		'precache_offline'     => 1,
@@ -87,7 +86,7 @@ function vh360_pwa_get_options() : array {
 	}
 	$opts = wp_parse_args( $opts, $defaults );
 	// Remove legacy floating refresh button and iOS reinstall notice options.
-	unset( $opts['show_refresh_button'], $opts['refresh_label'], $opts['show_ios_reinstall_notice'], $opts['ios_reinstall_notice_text'] );
+	unset( $opts['show_refresh_button'], $opts['refresh_label'], $opts['show_ios_reinstall_notice'], $opts['ios_reinstall_notice_text'], $opts['cache_strategy'] );
 	if ( empty( $opts['pwa_asset_version'] ) ) {
 		$opts['pwa_asset_version'] = time();
 		$persisted = get_option( 'vh360_pwa_options', array() );
@@ -119,6 +118,7 @@ function vh360_pwa_get_options() : array {
 function vh360_pwa_update_options( array $new ) : array {
 	$current = vh360_pwa_get_options();
 	$merged  = array_merge( $current, $new );
+	unset( $merged['cache_strategy'] );
 	update_option( 'vh360_pwa_options', $merged );
 	return $merged;
 }
@@ -337,14 +337,9 @@ function vh360_pwa_build_sw_script( ?array $opts = null ) : string {
 	}
 	$asset_version = vh360_pwa_get_asset_version( $opts );
 	$effective_cache_version = $cache_version . '-' . $asset_version;
-	$strategy = (string) $opts['cache_strategy'];
-	if ( ! in_array( $strategy, array( 'safe', 'balanced', 'aggressive' ), true ) ) {
-		$strategy = 'safe';
-	}
 	$onesignal = array();
 	$payload = array(
 		'cacheVersion' => $effective_cache_version,
-		'strategy'     => $strategy,
 		'precache'     => array_map( function( $url ) use ( $opts ) { return vh360_pwa_version_url( (string) $url, $opts ); }, vh360_pwa_get_precache_urls( $opts ) ),
 		'offlineUrl'   => vh360_pwa_version_url( vh360_pwa_endpoint_url( VH360_PWA_OFFLINE_SLUG ), $opts ),
 		'startUrl'     => vh360_pwa_version_url( (string) $opts['start_url'], $opts ),

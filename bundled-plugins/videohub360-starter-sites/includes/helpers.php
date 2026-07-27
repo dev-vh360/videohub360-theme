@@ -521,7 +521,6 @@ function vh360_ss_get_allowed_theme_options() {
                 'debug_mode',
                 'enable_logging',
                 'show_deprecated',
-                'transient_expiration',
                 'enable_custom_css',
                 'custom_css',
                 'enable_custom_js',

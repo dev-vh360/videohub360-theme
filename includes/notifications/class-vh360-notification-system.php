@@ -398,7 +398,7 @@ class VH360_Notification_System {
         update_user_meta($user_id, 'vh360_unread_notification_count', $count);
         
         // Delete transient cache
-        delete_transient('vh360_notifications_' . $user_id);
+        delete_transient(vh360_get_data_cache_key('vh360_notifications_' . $user_id));
     }
     
     /**

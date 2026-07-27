@@ -762,8 +762,7 @@ class VH360_Ajax_Handlers {
             'type' => $type,
             'limit' => $limit,
             'offset' => $offset,
-            'use_cache' => false,
-        ));
+            ));
         
         if (empty($activities)) {
             wp_send_json_error(array(

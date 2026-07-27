@@ -18,7 +18,6 @@ $defaults = array(
     'debug_mode' => false,
     'enable_logging' => false,
     'show_deprecated' => false,
-    'transient_expiration' => 3600,
 );
 $options = wp_parse_args($options, $defaults);
 ?>
@@ -66,42 +65,21 @@ $options = wp_parse_args($options, $defaults);
             </table>
         </div>
         
-        <!-- Cache Settings -->
-        <div class="vh360-admin-card">
-            <h2><?php esc_html_e('Cache Settings', 'videohub360-theme'); ?></h2>
-            <p><?php esc_html_e('Configure caching behavior for theme data.', 'videohub360-theme'); ?></p>
-            
-            <table class="form-table">
-                <tbody>
-                    <tr>
-                        <th scope="row"><?php esc_html_e('Transient Expiration', 'videohub360-theme'); ?></th>
-                        <td>
-                            <input type="number" name="vh360_advanced_options[transient_expiration]" value="<?php echo esc_attr($options['transient_expiration']); ?>" min="300" max="86400" class="regular-text">
-                            <span><?php esc_html_e('seconds', 'videohub360-theme'); ?></span>
-                            <p class="description">
-                                <?php esc_html_e('How long to cache theme data (300-86400 seconds). Default: 3600 (1 hour)', 'videohub360-theme'); ?>
-                            </p>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        
         <?php submit_button(); ?>
         
     </form>
     
-    <!-- Clear Cache -->
+    <!-- Clear Data Cache -->
     <div class="vh360-admin-card">
-        <h2><?php esc_html_e('Clear Theme Cache', 'videohub360-theme'); ?></h2>
-        <p><?php esc_html_e('Clear all theme transients and cached data. Use this if you\'re experiencing issues with outdated data.', 'videohub360-theme'); ?></p>
+        <h2><?php esc_html_e('Clear VideoHub360 Data Cache', 'videohub360-theme'); ?></h2>
+        <p><?php esc_html_e('Refresh cached VideoHub360 data used for view totals, notification lists, message conversation summaries, unread totals, and link-preview metadata. This does not clear PWA caches on user devices, page-cache plugins, CDN caches, security rate limits, or active upload/processing state.', 'videohub360-theme'); ?></p>
         
         <form method="post" action="">
             <?php wp_nonce_field('vh360_admin_action', 'vh360_admin_nonce'); ?>
             <input type="hidden" name="vh360_admin_action" value="clear_cache">
-            <button type="submit" class="button button-secondary vh360-confirm-action" data-confirm="<?php esc_attr_e('Are you sure you want to clear all theme cache?', 'videohub360-theme'); ?>">
+            <button type="submit" class="button button-secondary vh360-confirm-action" data-confirm="<?php esc_attr_e('Refresh cached VideoHub360 data? This will not clear PWA, page-cache, CDN, security-rate-limit, upload, or processing state.', 'videohub360-theme'); ?>">
                 <span class="dashicons dashicons-update"></span>
-                <?php esc_html_e('Clear All Theme Cache', 'videohub360-theme'); ?>
+                <?php esc_html_e('Clear VideoHub360 Data Cache', 'videohub360-theme'); ?>
             </button>
         </form>
     </div>

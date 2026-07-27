@@ -12,6 +12,51 @@ if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly
 }
 
+
+/**
+ * Get the current VideoHub360 data-cache generation.
+ *
+ * @return int Positive cache generation number.
+ */
+if (!function_exists('vh360_get_data_cache_generation')) {
+    function vh360_get_data_cache_generation() {
+        $generation = absint(get_option('vh360_data_cache_generation', 1));
+
+        if ($generation < 1) {
+            $generation = 1;
+            update_option('vh360_data_cache_generation', $generation, false);
+        }
+
+        return $generation;
+    }
+}
+
+/**
+ * Build a scoped transient key for cached VideoHub360 display/read data.
+ *
+ * @param string $base_key Base transient key.
+ * @return string Generated transient key.
+ */
+if (!function_exists('vh360_get_data_cache_key')) {
+    function vh360_get_data_cache_key($base_key) {
+        return sanitize_key($base_key . '_g' . vh360_get_data_cache_generation());
+    }
+}
+
+/**
+ * Increment the VideoHub360 data-cache generation.
+ *
+ * @return int New positive cache generation number.
+ */
+if (!function_exists('vh360_increment_data_cache_generation')) {
+    function vh360_increment_data_cache_generation() {
+        $generation = vh360_get_data_cache_generation() + 1;
+        update_option('vh360_data_cache_generation', $generation, false);
+
+        return $generation;
+    }
+}
+
 /**
  * Remove emoji scripts for better performance
  */

@@ -78,9 +78,6 @@ function vh360_track_activity($user_id, $type, $content = array()) {
     // Update option
     $result = update_option('vh360_activity_feed', $activities);
     
-    // Clear activity cache
-    delete_transient('vh360_activities_cache');
-    
     return $result;
 }
 
@@ -100,19 +97,9 @@ function vh360_get_activities($args = array()) {
         'user_id' => 0,               // Filter by specific user
         'limit' => $default_per_page, // Number of activities to return
         'offset' => 0,                // Offset for pagination
-        'use_cache' => true,          // Use transient cache
     );
     
     $args = wp_parse_args($args, $defaults);
-    
-    // Try to get from cache
-    if ($args['use_cache']) {
-        $cache_key = 'vh360_activities_' . md5(serialize($args));
-        $cached = get_transient($cache_key);
-        if (false !== $cached) {
-            return $cached;
-        }
-    }
     
     // Get all activities
     $activities = get_option('vh360_activity_feed', array());
@@ -140,11 +127,6 @@ function vh360_get_activities($args = array()) {
     
     // Apply offset and limit
     $activities = array_slice($activities, $args['offset'], $args['limit']);
-    
-    // Cache the results for 5 minutes
-    if ($args['use_cache']) {
-        set_transient($cache_key, $activities, 5 * MINUTE_IN_SECONDS);
-    }
     
     return $activities;
 }
@@ -178,9 +160,6 @@ function vh360_delete_old_activities($days = 90) {
     
     // Update option
     update_option('vh360_activity_feed', $activities);
-    
-    // Clear cache
-    delete_transient('vh360_activities_cache');
     
     return $original_count - count($activities);
 }
