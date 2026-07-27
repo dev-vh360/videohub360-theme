@@ -246,6 +246,22 @@ body.vh360-mobile-live-active {
     grid-column: 1 / -1;
 }
 
+.vh360-mobile-live.has-large-participant-grid .vh360-mobile-live__remote-stage {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: minmax(clamp(9rem, 28vh, 13rem), auto);
+    align-content: start;
+    box-sizing: border-box;
+    min-height: 0;
+    height: 100%;
+    padding-top: calc(4.5rem + env(safe-area-inset-top));
+    padding-bottom: calc(7rem + env(safe-area-inset-bottom));
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-padding-block: calc(4.5rem + env(safe-area-inset-top)) calc(7rem + env(safe-area-inset-bottom));
+    -webkit-overflow-scrolling: touch;
+}
+
 .vh360-mobile-live__host-tile,
 .vh360-mobile-live__participant-tile {
     position: relative;
@@ -347,6 +363,13 @@ body.vh360-mobile-live-active {
 .vh360-mobile-live__participant-status {
     color: var(--vh360-mobile-muted);
     font-weight: 700;
+}
+
+.vh360-mobile-live.has-large-participant-grid .vh360-mobile-live__participant-meta {
+    gap: 0.2rem 0.35rem;
+    padding: 0.3rem 0.45rem;
+    font-size: 0.75rem;
+    line-height: 1.2;
 }
 
 .vh360-mobile-live__top-overlay,
@@ -486,6 +509,14 @@ body.vh360-mobile-live-active {
 
     .vh360-mobile-live__remote-stage {
         grid-auto-rows: minmax(0, 1fr);
+    }
+
+    .vh360-mobile-live.has-large-participant-grid .vh360-mobile-live__remote-stage {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-auto-rows: minmax(clamp(7.5rem, 38vh, 11rem), auto);
+        padding-top: calc(4rem + env(safe-area-inset-top));
+        padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+        scroll-padding-block: calc(4rem + env(safe-area-inset-top)) calc(5.5rem + env(safe-area-inset-bottom));
     }
 
 }

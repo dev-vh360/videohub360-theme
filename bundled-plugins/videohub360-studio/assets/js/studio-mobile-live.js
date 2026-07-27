@@ -213,7 +213,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
         state.participantCount = 0;
         state.participantAudioBlocked = false;
         root.setAttribute('data-mobile-remote-count', '0');
-        root.classList.remove('has-remote-participants', 'has-one-remote-participant', 'has-multiple-remote-participants');
+        root.classList.remove('has-remote-participants', 'has-one-remote-participant', 'has-multiple-remote-participants', 'has-large-participant-grid');
         setImmersive(false);
         all('[data-mobile-open-participants], [data-mobile-participant-count]').forEach(function (el) { el.hidden = true; });
     }

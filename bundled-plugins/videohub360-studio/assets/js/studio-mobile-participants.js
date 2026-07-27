@@ -1,7 +1,6 @@
 (function (window) {
     'use strict';
 
-    const MAX_RENDERED_REMOTE_VIDEOS = 4;
     const MAX_IDENTITY_ATTEMPTS = 3;
 
     function normalizeUid(uid) {
@@ -78,6 +77,7 @@
                 root.classList.toggle('has-remote-participants', count > 0);
                 root.classList.toggle('has-one-remote-participant', count === 1);
                 root.classList.toggle('has-multiple-remote-participants', count > 1);
+                root.classList.toggle('has-large-participant-grid', count >= 5);
                 root.dispatchEvent(new CustomEvent('vh360:mobile-participants:count', { detail: { count: count } }));
             }
 
@@ -163,7 +163,8 @@
                     videoTrack: null,
                     audioTrack: null,
                     needsVideoPlay: false,
-                    needsAudioPlay: false
+                    needsAudioPlay: false,
+                    requestedVideoQuality: ''
                 };
                 state.participants.set(key, record);
                 if (state.identityCache.has(key)) {
@@ -187,9 +188,10 @@
 
             function updateRecord(record) {
                 record.tile.classList.toggle('has-video', record.hasVideo && record.rendered);
+                record.tile.classList.toggle('is-video-loading', record.hasVideo && !record.rendered);
                 record.tile.classList.toggle('is-muted', !record.hasAudio);
                 record.tile.classList.toggle('is-selected', record.uid === state.selectedUid);
-                record.tile.hidden = record.hasVideo && !record.rendered;
+                record.tile.hidden = false;
                 record.status.textContent = mediaStateText(record);
                 record.drawerItem.classList.toggle('is-selected', record.uid === state.selectedUid);
                 record.drawerItem.setAttribute('aria-pressed', record.uid === state.selectedUid ? 'true' : 'false');
@@ -295,25 +297,6 @@
                 });
             }
 
-            function chooseVisibleVideoUids() {
-                const videoUids = Array.from(state.participants.values()).filter(function (record) {
-                    return record.hasVideo;
-                }).map(function (record) { return record.uid; });
-                if (!videoUids.length) {
-                    return new Set();
-                }
-                const chosen = [];
-                if (state.selectedUid && videoUids.indexOf(state.selectedUid) !== -1) {
-                    chosen.push(state.selectedUid);
-                }
-                videoUids.forEach(function (uid) {
-                    if (chosen.length < MAX_RENDERED_REMOTE_VIDEOS && chosen.indexOf(uid) === -1) {
-                        chosen.push(uid);
-                    }
-                });
-                return new Set(chosen);
-            }
-
             function showAudioFallback(show) {
                 state.audioBlocked = !!show;
                 if (audioButton) {
@@ -357,13 +340,10 @@
                 if (!state.renderingActive || !state.session) {
                     return;
                 }
-                const visible = chooseVisibleVideoUids();
                 const tasks = [];
                 state.participants.forEach(function (record) {
-                    const shouldRender = visible.has(record.uid);
-                    if (record.hasVideo && shouldRender) {
-                        const newlyVisible = !record.rendered;
-                        if (newlyVisible || record.needsVideoPlay) {
+                    if (record.hasVideo) {
+                        if (!record.rendered || record.needsVideoPlay) {
                             const ok = state.session.playRemoteVideo(record.uid, record.videoContainer);
                             record.rendered = !!ok;
                             record.needsVideoPlay = !ok;
@@ -381,7 +361,21 @@
                         }
                     }
                     if (record.hasVideo && record.rendered) {
-                        tasks.push(Promise.resolve(state.session.setRemoteVideoQuality(record.uid, record.uid === state.selectedUid ? 'high' : 'low')).catch(function () { return false; }));
+                        const quality = record.uid === state.selectedUid ? 'high' : 'low';
+                        if (record.requestedVideoQuality !== quality) {
+                            record.requestedVideoQuality = quality;
+                            tasks.push(Promise.resolve(state.session.setRemoteVideoQuality(record.uid, quality)).then(function (applied) {
+                                if (!applied && record.requestedVideoQuality === quality) {
+                                    record.requestedVideoQuality = '';
+                                }
+                                return applied;
+                            }).catch(function () {
+                                if (record.requestedVideoQuality === quality) {
+                                    record.requestedVideoQuality = '';
+                                }
+                                return false;
+                            }));
+                        }
                     }
                     updateRecord(record);
                 });
@@ -398,6 +392,7 @@
                     if (record.videoTrack !== detail.videoTrack) {
                         record.videoTrack = detail.videoTrack || {};
                         record.needsVideoPlay = true;
+                        record.requestedVideoQuality = '';
                     }
                     record.hasVideo = true;
                 }
@@ -437,6 +432,7 @@
                     record.rendered = false;
                     record.videoTrack = null;
                     record.needsVideoPlay = false;
+                    record.requestedVideoQuality = '';
                 }
                 if (detail.mediaType === 'audio') {
                     state.session && state.session.stopRemoteAudio(record.uid);
@@ -497,6 +493,14 @@
                     selected.needsVideoPlay = true;
                 }
                 state.participants.forEach(updateRecord);
+                if (selected && typeof selected.tile.scrollIntoView === 'function') {
+                    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    selected.tile.scrollIntoView({
+                        block: 'nearest',
+                        inline: 'nearest',
+                        behavior: reduceMotion ? 'auto' : 'smooth'
+                    });
+                }
             }
 
             function isAudioRetryCurrent(generation) {
