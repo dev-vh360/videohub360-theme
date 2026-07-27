@@ -74,7 +74,10 @@
                 countEls.forEach(function (el) {
                     el.textContent = count ? text : label(strings, 'noParticipantsYet', 'No participants yet');
                 });
+                root.setAttribute('data-mobile-remote-count', String(count));
                 root.classList.toggle('has-remote-participants', count > 0);
+                root.classList.toggle('has-one-remote-participant', count === 1);
+                root.classList.toggle('has-multiple-remote-participants', count > 1);
                 root.dispatchEvent(new CustomEvent('vh360:mobile-participants:count', { detail: { count: count } }));
             }
 

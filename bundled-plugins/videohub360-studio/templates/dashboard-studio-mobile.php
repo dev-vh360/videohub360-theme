@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 $desktop_url = add_query_arg( array( 'tab' => 'studio', 'studio_mode' => 'desktop' ), remove_query_arg( 'studio_mode' ) );
 ?>
-<section class="vh360-mobile-live" data-vh360-studio-mobile-live>
+<section class="vh360-mobile-live" data-vh360-studio-mobile-live data-mobile-remote-count="0">
     <header class="vh360-mobile-live__header">
         <div>
             <p class="vh360-mobile-live__eyebrow"><?php echo esc_html( function_exists( 'vh360_studio_get_display_name' ) ? vh360_studio_get_display_name() : sprintf( __( '%s Studio', 'videohub360-studio' ), get_bloginfo( 'name' ) ) ); ?></p>
@@ -78,10 +78,11 @@ $desktop_url = add_query_arg( array( 'tab' => 'studio', 'studio_mode' => 'deskto
 
     <div class="vh360-mobile-live__stage" data-mobile-stage="live" tabindex="-1">
         <div class="vh360-mobile-live__interactive-stage" data-mobile-interactive-stage>
-            <div class="vh360-mobile-live__remote-stage" data-mobile-remote-stage></div>
-            <div class="vh360-mobile-live__host-tile" data-mobile-host-tile>
-                <div class="vh360-mobile-live__host-video" data-mobile-live-preview></div>
-                <span class="vh360-mobile-live__tile-name"><?php esc_html_e( 'You', 'videohub360-studio' ); ?></span>
+            <div class="vh360-mobile-live__remote-stage" data-mobile-remote-stage>
+                <div class="vh360-mobile-live__host-tile" data-mobile-host-tile>
+                    <div class="vh360-mobile-live__host-video" data-mobile-live-preview></div>
+                    <span class="vh360-mobile-live__tile-name"><?php esc_html_e( 'You', 'videohub360-studio' ); ?></span>
+                </div>
             </div>
             <div class="vh360-mobile-live__top-overlay">
                 <strong><?php esc_html_e( 'LIVE', 'videohub360-studio' ); ?></strong>
