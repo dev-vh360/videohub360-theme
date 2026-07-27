@@ -47,8 +47,8 @@ The VideoHub360 Theme provides the presentation layer for the VideoHub360 platfo
 
 ## Requirements
 
-- WordPress 6.0 or higher
-- PHP 8.0 or higher
+- WordPress 5.8 or higher
+- PHP 7.4 or higher
 - HTTPS recommended
 - VideoHub360 plugin suite (installed automatically when prompted)
 
@@ -56,11 +56,11 @@ The VideoHub360 Theme provides the presentation layer for the VideoHub360 platfo
 
 ## Installation
 
-1. Upload the `videohub360-theme` folder to `/wp-content/themes/`
-2. Activate **VideoHub360** from **Appearance → Themes**
-3. When prompted, install and activate the required VideoHub360 plugins
-4. Configure global options via **Appearance → Customize**
-5. (Optional) Use Elementor to customize layouts and templates
+1. Go to **Appearance → Themes → Add New → Upload Theme**.
+2. Upload `videohub360-theme.zip`.
+3. Activate **VideoHub360**.
+4. Install and activate the required bundled plugins when prompted.
+5. Complete the theme and platform configuration.
 
 ---
 

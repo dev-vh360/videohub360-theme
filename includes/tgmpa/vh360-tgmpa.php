@@ -50,7 +50,7 @@ function vh360_register_required_plugins() {
             'slug'     => 'videohub360',
             'source'   => get_template_directory() . '/bundled-plugins/videohub360-core.zip',
             'required' => true,
-            'version'  => '', // Optional.
+            'version'  => '1.0.0',
             'force_activation'   => false,
             'force_deactivation' => false,
         ),
@@ -68,7 +68,7 @@ function vh360_register_required_plugins() {
             'slug'     => 'videohub360-community',
             'source'   => get_template_directory() . '/bundled-plugins/videohub360-community.zip',
             'required' => true,
-            'version'  => '', // Optional.
+            'version'  => '1.0.0',
             'force_activation'   => false,
             'force_deactivation' => false,
         ),

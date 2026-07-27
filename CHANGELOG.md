@@ -6,27 +6,6 @@ This project follows semantic versioning.
 
 ---
 
-## Unreleased
-
-### Added
-- Avatar cropping system with client-side interface using Cropper.js
-- Live preview and repositioning for profile picture uploads
-- Centralized avatar processing with EXIF orientation correction
-- Configurable avatar settings in admin (output size, quality, minimum dimensions)
-- MIME type validation using wp_check_filetype_and_ext() for enhanced security
-- Automatic cleanup of old avatar attachments after successful upload
-
-### Changed
-- Profile picture upload now uses centralized vh360_process_profile_avatar_upload() helper
-- Both profile editing templates (template-profile-edit.php and dashboard) now share identical avatar processing logic
-
-### Security
-- Enhanced MIME type validation with defense-in-depth approach
-- Crop coordinates sanitized before server processing
-- Dimension validation prevents low-quality uploads
-
----
-
 ## 1.0.0 – Initial Release
 
 ### Added
@@ -38,6 +17,19 @@ This project follows semantic versioning.
 - WordPress Customizer controls for branding, layout, and navigation
 - Progressive Web App (PWA) and app-ready integration via bundled plugins
 - Translation-ready and RTL language support
+- Avatar cropping with live preview, repositioning, EXIF orientation correction, configurable output settings, and automatic cleanup of replaced attachments
+
+### Changed
+- Profile picture editing uses centralized avatar processing across profile interfaces
+- Camera mirroring is disabled for local Agora playback and for Studio Preview and Program output
+- Publitio direct-browser uploads default to a maximum size of 4 GiB
+- Existing installations using the former 300 MiB upload default migrate to 4 GiB without overwriting administrator-configured limits
+- Public theme and bundled-plugin versions are standardized at `1.0.0`
+- The production Core plugin installs into the `videohub360/` folder
+- TGMPA metadata matches the bundled `1.0.0` plugin releases
+
+### Security
+- Avatar uploads use MIME type, crop-coordinate, and minimum-dimension validation
 
 ### Performance
 - Lightweight front-end architecture with minimal CSS and JavaScript
