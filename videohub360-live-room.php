@@ -35,9 +35,9 @@ $queried_live_room = $post_id ? get_post( $post_id ) : null;
 // Ensure each renderer is available independently. The replay renderer must not
 // depend on the livestream/chat renderers also being missing.
 $renderer_files = array(
-    'videohub360_render_chat_container'      => WP_PLUGIN_DIR . '/videohub360/includes/renderers/render-chat.php',
-    'videohub360_render_livestream'          => WP_PLUGIN_DIR . '/videohub360/includes/renderers/render-livestream.php',
-    'videohub360_get_studio_replay_state'    => WP_PLUGIN_DIR . '/videohub360/includes/renderers/render-replay.php',
+    'videohub360_render_chat_container'      => WP_PLUGIN_DIR . '/videohub360-core/includes/renderers/render-chat.php',
+    'videohub360_render_livestream'          => WP_PLUGIN_DIR . '/videohub360-core/includes/renderers/render-livestream.php',
+    'videohub360_get_studio_replay_state'    => WP_PLUGIN_DIR . '/videohub360-core/includes/renderers/render-replay.php',
 );
 
 foreach ( $renderer_files as $renderer_function => $renderer_path ) {

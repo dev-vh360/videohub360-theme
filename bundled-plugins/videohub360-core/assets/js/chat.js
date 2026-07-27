@@ -50,6 +50,17 @@ if (typeof window !== 'undefined') {
     if (!chatMessages) {
         return; // No chat elements found, exit early
     }
+
+    // Check configuration before claiming the page-level runtime guard. This
+    // lets a later valid execution initialize if localization was not ready.
+    if (typeof vh360Data === 'undefined') {
+        if (window.__VH360_DEBUG) console.warn('VideoHub360: vh360Data not found, chat functionality disabled');
+        return;
+    }
+    if (window.__VH360_CHAT_RUNTIME_ACTIVE__) {
+        return;
+    }
+    window.__VH360_CHAT_RUNTIME_ACTIVE__ = true;
     
     // Determine chat mode (popup or inline)
     var chatMode = chatPopup ? 'popup' : (chatInline ? 'inline' : null);
@@ -162,12 +173,6 @@ if (typeof window !== 'undefined') {
         });
     }
 
-    // Check if vh360Data is available
-    if (typeof vh360Data === 'undefined') {
-        if (window.__VH360_DEBUG) console.warn('VideoHub360: vh360Data not found, chat functionality disabled');
-        return;
-    }
-
     var isUserLoggedIn = vh360Data.isUserLoggedIn;
     var currentUserName = vh360Data.userDisplayName;
     var currentUserAvatar = vh360Data.userAvatar;
@@ -187,6 +192,8 @@ if (typeof window !== 'undefined') {
     var lastMessageId = 0;
     var isPolling = false;
     var pollInterval = null;
+    var fetchInFlight = null;
+    var rateLimitResumeTimer = null;
     var replyingTo = null;
     var privateMessagingAvailable = false; // Track if private messaging is available
 
@@ -514,23 +521,81 @@ if (typeof window !== 'undefined') {
         });
     }
     
-    function fetchMessagesFromServer() {
+    function createChatFetchError(message, status, code, retryAfter) {
+        var error = new Error(message);
+        error.status = status || 0;
+        error.code = code || 'fetch_failed';
+        error.retryAfter = retryAfter || 0;
+        return error;
+    }
+
+    function requestMessages(sinceId) {
+        if (fetchInFlight) {
+            return fetchInFlight;
+        }
         var formData = new FormData();
         formData.append('action', 'videohub360_chat_fetch');
         formData.append('post_id', postId);
-        formData.append('since_id', lastMessageId);
-        fetch(ajaxUrl, { method: 'POST', body: formData })
-        .then(function(response) { return response.json(); })
-        .then(function(data) {
-            if (data.success && data.data.messages && data.data.messages.length > 0) {
-                data.data.messages.forEach(function(messageData) {
-                    addChatMessage(messageData);
-                });
-            }
+        formData.append('since_id', sinceId);
+
+        fetchInFlight = fetch(ajaxUrl, { method: 'POST', body: formData })
+        .then(function(response) {
+            var status = response.status;
+            var headerRetryAfter = parseInt(response.headers.get('Retry-After'), 10) || 0;
+            return response.text().then(function(body) {
+                var data;
+                try {
+                    data = JSON.parse(body);
+                } catch (parseError) {
+                    throw createChatFetchError('Invalid chat server response.', status, 'invalid_json');
+                }
+                var details = data && data.data;
+                var code = details && typeof details === 'object' ? details.code : '';
+                var message = details && typeof details === 'object' ? details.message : details;
+                var retryAfter = details && typeof details === 'object' ? parseInt(details.retry_after, 10) || headerRetryAfter : headerRetryAfter;
+                if (status === 429 || code === 'rate_limited') {
+                    throw createChatFetchError(message || 'Chat is temporarily busy.', 429, 'rate_limited', retryAfter || 1);
+                }
+                if (!response.ok || !data || !data.success) {
+                    throw createChatFetchError(message || ('Chat request failed with HTTP ' + status + '.'), status, code || 'server_rejected');
+                }
+                return data.data || {};
+            });
         })
-        .catch(function(error) {
-            if (window.__VH360_DEBUG) console.error('VideoHub360: Error fetching messages:', error);
+        .then(function(data) {
+            if (data.messages && data.messages.length > 0) {
+                data.messages.forEach(function(messageData) { addChatMessage(messageData); });
+            }
+            return data;
+        })
+        .finally(function() {
+            fetchInFlight = null;
         });
+        return fetchInFlight;
+    }
+
+    function scheduleRateLimitResume(error) {
+        stopPolling();
+        if (rateLimitResumeTimer) return;
+        var delay = (Math.max(1, error.retryAfter || 1) * 1000) + Math.floor(Math.random() * 1001);
+        rateLimitResumeTimer = setTimeout(function() {
+            rateLimitResumeTimer = null;
+            requestMessages(lastMessageId).then(function() {
+                startPolling();
+            }).catch(handleFetchFailure);
+        }, delay);
+    }
+
+    function handleFetchFailure(error) {
+        if (error && (error.status === 429 || error.code === 'rate_limited')) {
+            scheduleRateLimitResume(error);
+            return;
+        }
+        if (window.__VH360_DEBUG) console.error('VideoHub360: Error fetching messages:', error);
+    }
+
+    function fetchMessagesFromServer() {
+        return requestMessages(lastMessageId).catch(handleFetchFailure);
     }
     
     /**
@@ -545,44 +610,23 @@ if (typeof window !== 'undefined') {
         // Show loading indicator
         showLoadingIndicator();
         
-        var formData = new FormData();
-        formData.append('action', 'videohub360_chat_fetch');
-        formData.append('post_id', postId);
-        formData.append('since_id', 0); // Fetch all messages
-        
-        fetch(ajaxUrl, { method: 'POST', body: formData })
-        .then(function(response) { 
-            if (!response.ok) {
-                throw new Error('HTTP error ' + response.status);
-            }
-            return response.json(); 
-        })
+        requestMessages(0)
         .then(function(data) {
             hideLoadingIndicator();
-            
-            if (data.success) {
-                if (data.data.messages && data.data.messages.length > 0) {
-                    if (window.__VH360_DEBUG) console.log('VideoHub360: Loaded ' + data.data.messages.length + ' initial messages');
-                    data.data.messages.forEach(function(messageData) {
-                        addChatMessage(messageData);
-                    });
-                } else {
-                    if (window.__VH360_DEBUG) console.log('VideoHub360: No messages to load');
-                }
-                
-                // Start polling after successful initial load
-                if (allowChatPolling) {
-                    startPolling();
-                }
-            } else {
-                throw new Error(data.data || 'Failed to fetch messages');
+            if (window.__VH360_DEBUG) console.log('VideoHub360: Loaded ' + ((data.messages && data.messages.length) || 0) + ' initial messages');
+            if (allowChatPolling) {
+                startPolling();
             }
         })
         .catch(function(error) {
+            if (error && (error.status === 429 || error.code === 'rate_limited')) {
+                hideLoadingIndicator();
+                scheduleRateLimitResume(error);
+                return;
+            }
             if (window.__VH360_DEBUG) console.error('VideoHub360: Error loading initial messages:', error);
-            
-            // Retry logic
-            if (retryCount < maxRetries) {
+            var retryable = !error.status || error.status >= 500 || error.code === 'invalid_json';
+            if (retryable && retryCount < maxRetries) {
                 var retryDelay = Math.min(1000 * Math.pow(2, retryCount), 5000); // Exponential backoff, max 5s
                 if (window.__VH360_DEBUG) console.log('VideoHub360: Retrying in ' + retryDelay + 'ms...');
                 
@@ -769,13 +813,16 @@ if (typeof window !== 'undefined') {
         if (!allowChatPolling) {
             return;
         }
-        if (isPolling) return;
+        if (rateLimitResumeTimer) return;
+        if (isPolling && pollInterval) return;
+        if (pollInterval) clearInterval(pollInterval);
         isPolling = true;
         pollInterval = setInterval(function() { fetchMessagesFromServer(); }, 2000);
     }
     function stopPolling() {
         isPolling = false;
         if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+        if (rateLimitResumeTimer) { clearTimeout(rateLimitResumeTimer); rateLimitResumeTimer = null; }
     }
     function cancelReply() {
         replyingTo = null;
@@ -2169,6 +2216,7 @@ if (typeof window !== 'undefined') {
     document.addEventListener('visibilitychange', function() {
         if (document.hidden) stopPolling();
         else {
+            if (rateLimitResumeTimer) return;
             // When page becomes visible again, refresh messages and resume polling only for active chat.
             if (allowChatPolling && !isPolling) {
                 fetchMessagesFromServer();

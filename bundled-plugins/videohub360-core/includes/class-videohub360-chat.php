@@ -289,16 +289,6 @@ class VideoHub360_Chat {
      * Handle chat fetch
      */
     public function handle_chat_fetch() {
-        // Rate limiting for this endpoint
-        $ip = sanitize_text_field($_SERVER['REMOTE_ADDR'] ?? '');
-        $rate_limit_key = 'vh360_chat_fetch_rate_' . md5($ip);
-        $requests = get_transient($rate_limit_key);
-        if ($requests && $requests > 60) {
-            wp_send_json_error(__('Rate limit exceeded. Please try again later.', 'videohub360'));
-            return;
-        }
-        set_transient($rate_limit_key, ($requests ? $requests + 1 : 1), 60);
-        
         // Enhanced input validation and sanitization
         $post_id = absint($_POST['post_id'] ?? 0);
         $since_id = absint($_POST['since_id'] ?? 0);
@@ -314,9 +304,49 @@ class VideoHub360_Chat {
             wp_send_json_error(__('Invalid video post.', 'videohub360'));
             return;
         }
+
+        // Apply a fixed-window fetch limit only after the room is validated. The
+        // room and viewer identity are part of the key so unrelated rooms,
+        // users, and shared networks do not consume one another's allowance.
+        $window_seconds = max(1, absint(apply_filters('videohub360_chat_fetch_window_seconds', 60)));
+        $window_id = intdiv(time(), $window_seconds);
+        $retry_after = max(1, (($window_id + 1) * $window_seconds) - time());
+        $current_user_id = get_current_user_id();
+
+        if ($current_user_id > 0) {
+            $viewer_identity = 'user_' . $current_user_id;
+            $request_limit = max(180, absint(apply_filters('videohub360_chat_fetch_authenticated_limit', 180, $post_id, $current_user_id)));
+        } else {
+            $ip = trim(sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'] ?? '')));
+            $packed_ip = filter_var($ip, FILTER_VALIDATE_IP) ? inet_pton($ip) : false;
+            $normalized_ip = false !== $packed_ip ? bin2hex($packed_ip) : strtolower($ip);
+            $viewer_identity = 'anon_' . hash('sha256', $normalized_ip);
+            $request_limit = max(300, absint(apply_filters('videohub360_chat_fetch_anonymous_limit', 300, $post_id, $normalized_ip)));
+        }
+
+        $rate_limit_key = 'vh360_chat_fetch_' . md5($post_id . '|' . $viewer_identity . '|' . $window_id);
+        $requests = absint(get_transient($rate_limit_key));
+
+        if ($requests >= $request_limit) {
+            if (!headers_sent()) {
+                header('Retry-After: ' . $retry_after);
+            }
+            wp_send_json_error(
+                array(
+                    'code'        => 'rate_limited',
+                    'message'     => __('Chat is temporarily busy. Please try again shortly.', 'videohub360'),
+                    'retry_after' => $retry_after,
+                ),
+                429
+            );
+            return;
+        }
+
+        // The timeout always points at the fixed boundary; accepted requests
+        // never move the window or extend its expiration.
+        set_transient($rate_limit_key, $requests + 1, $retry_after);
         
         // Get current user ID for permission checking
-        $current_user_id = get_current_user_id();
         
         // Fetch recent messages
         global $wpdb;
