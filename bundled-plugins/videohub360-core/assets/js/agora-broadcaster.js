@@ -376,17 +376,13 @@
                 }
             }
 
-            function mirrorForFacing(facingMode) {
-                return facingMode !== 'environment' && config.initialVideoSource !== 'screen';
-            }
-
             function playPreview(generation) {
                 if (typeof generation === 'number' && !isOperationCurrent(generation)) {
                     return;
                 }
                 if (currentLocalContainer && state.videoTrack && typeof state.videoTrack.play === 'function') {
                     try {
-                        state.videoTrack.play(currentLocalContainer, { mirror: mirrorForFacing(state.currentFacingMode) });
+                        state.videoTrack.play(currentLocalContainer, { mirror: false });
                     } catch (error) {
                         emit(root, 'local-preview-error', { error: error });
                         throw error;

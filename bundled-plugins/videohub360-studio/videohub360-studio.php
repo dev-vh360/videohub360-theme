@@ -29,7 +29,31 @@ define( 'VH360_STUDIO_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'VH360_STUDIO_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'VH360_STUDIO_INCLUDES_DIR', VH360_STUDIO_PLUGIN_DIR . 'includes/' );
 define( 'VH360_STUDIO_TEMPLATES_DIR', VH360_STUDIO_PLUGIN_DIR . 'templates/' );
-define( 'VH360_STUDIO_DB_VERSION', '1.7.2' );
+define( 'VH360_STUDIO_DB_VERSION', '1.7.3' );
+define( 'VH360_STUDIO_PUBLITIO_DIRECT_UPLOAD_DEFAULT_MAX_SIZE', 4 * GB_IN_BYTES );
+define( 'VH360_STUDIO_PUBLITIO_DIRECT_UPLOAD_LEGACY_MAX_SIZE', 300 * MB_IN_BYTES );
+
+/**
+ * Get the configured Publitio direct-browser upload size limit.
+ *
+ * Empty and zero values use the Studio-wide 4 GiB default.
+ *
+ * @return int
+ */
+function vh360_studio_publitio_direct_upload_max_size() {
+    $max_size = absint( get_option( 'vh360_studio_publitio_direct_max_size', VH360_STUDIO_PUBLITIO_DIRECT_UPLOAD_DEFAULT_MAX_SIZE ) );
+
+    return $max_size ? $max_size : VH360_STUDIO_PUBLITIO_DIRECT_UPLOAD_DEFAULT_MAX_SIZE;
+}
+
+/**
+ * Get the lifetime for Publitio direct-upload authorizations.
+ *
+ * @return int Lifetime in seconds.
+ */
+function vh360_studio_publitio_direct_upload_token_ttl() {
+    return max( 1, absint( apply_filters( 'vh360_studio_publitio_direct_upload_token_ttl', 12 * HOUR_IN_SECONDS ) ) );
+}
 
 /**
  * Load translations.

@@ -135,6 +135,16 @@ class VH360_Studio_Database {
         }
         update_option( 'vh360_studio_capture_scope_backfilled', 'yes', false );
 
+        // Schema 1.7.3 raised the Publitio direct-upload default from 300 MiB
+        // to 4 GiB. Migrate only the old default (or an absent option) so an
+        // administrator's custom limit is never overwritten.
+        if ( version_compare( $installed_version, '1.7.3', '<' ) ) {
+            $direct_upload_max_size = get_option( 'vh360_studio_publitio_direct_max_size', false );
+            if ( false === $direct_upload_max_size || VH360_STUDIO_PUBLITIO_DIRECT_UPLOAD_LEGACY_MAX_SIZE === absint( $direct_upload_max_size ) ) {
+                update_option( 'vh360_studio_publitio_direct_max_size', VH360_STUDIO_PUBLITIO_DIRECT_UPLOAD_DEFAULT_MAX_SIZE, false );
+            }
+        }
+
         $chunks_sql = "CREATE TABLE {$chunks_table_name} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             job_id bigint(20) unsigned NOT NULL,

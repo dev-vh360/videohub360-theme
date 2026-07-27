@@ -739,7 +739,7 @@ class VH360_Studio_Assets {
     private function publitio_direct_upload_config() {
         $mode     = sanitize_key( get_option( 'vh360_studio_publitio_upload_mode', 'server_relay' ) );
         $preset   = sanitize_text_field( get_option( 'vh360_studio_publitio_upload_preset_id', '' ) );
-        $max_size = absint( get_option( 'vh360_studio_publitio_direct_max_size', 314572800 ) );
+        $max_size = vh360_studio_publitio_direct_upload_max_size();
 
         return array(
             'enabled'            => 'direct_browser' === $mode && '' !== $preset,
@@ -747,7 +747,7 @@ class VH360_Studio_Assets {
             'upload_preset_id'   => $preset,
             'upload_url_base'    => 'https://api.publit.io/v1/files/create/',
             'allowed_mime_types' => array( 'video/mp4', 'video/webm' ),
-            'max_size'           => $max_size ? $max_size : 314572800,
+            'max_size'           => $max_size,
         );
     }
 

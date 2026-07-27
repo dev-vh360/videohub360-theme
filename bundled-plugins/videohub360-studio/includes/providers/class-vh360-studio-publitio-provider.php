@@ -279,14 +279,16 @@ class VH360_Studio_Publitio_Provider implements VH360_Studio_Replay_Storage_Prov
         if ( ! $this->supports_direct_browser_publish() ) {
             return array( 'method' => 'server', 'field' => 'file' );
         }
-        $direct_max = absint( get_option( 'vh360_studio_publitio_direct_max_size', 314572800 ) );
+        $direct_max = vh360_studio_publitio_direct_upload_max_size();
         if ( $direct_max && ! empty( $asset['file_size'] ) && absint( $asset['file_size'] ) > $direct_max ) {
             return array( 'method' => 'server', 'field' => 'file' );
         }
         $preset = sanitize_text_field( get_option( 'vh360_studio_publitio_upload_preset_id', '' ) );
         $public_id = sanitize_title( 'vh360-video-asset-' . ( ! empty( $asset['asset_uuid'] ) ? $asset['asset_uuid'] : wp_generate_uuid4() ) );
         $token = wp_generate_password( 40, false, false );
-        set_transient( $this->asset_direct_upload_transient_key( $asset['asset_uuid'], $token ), array( 'asset_uuid' => $asset['asset_uuid'], 'user_id' => absint( $asset['user_id'] ), 'public_id' => $public_id, 'mime_type' => sanitize_mime_type( $asset['mime_type'] ), 'file_size' => absint( $asset['file_size'] ), 'expires' => time() + 30 * MINUTE_IN_SECONDS ), 30 * MINUTE_IN_SECONDS );
+        $token_ttl = vh360_studio_publitio_direct_upload_token_ttl();
+        $expires = time() + $token_ttl;
+        set_transient( $this->asset_direct_upload_transient_key( $asset['asset_uuid'], $token ), array( 'asset_uuid' => $asset['asset_uuid'], 'user_id' => absint( $asset['user_id'] ), 'public_id' => $public_id, 'mime_type' => sanitize_mime_type( $asset['mime_type'] ), 'file_size' => absint( $asset['file_size'] ), 'expires' => $expires ), $token_ttl );
         return array(
             'method'    => 'direct',
             'httpMethod'=> 'POST',
@@ -302,7 +304,7 @@ class VH360_Studio_Publitio_Provider implements VH360_Studio_Replay_Storage_Prov
             'max_size' => $direct_max,
             '_asset_metadata' => array(
                 'direct_public_id'        => $public_id,
-                'direct_upload_expires_at'=> time() + ( 30 * MINUTE_IN_SECONDS ),
+                'direct_upload_expires_at'=> $expires,
             ),
         );
     }
