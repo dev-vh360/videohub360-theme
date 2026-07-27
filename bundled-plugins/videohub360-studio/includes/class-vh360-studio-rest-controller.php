@@ -1412,8 +1412,7 @@ class VH360_Studio_REST_Controller {
         $settings = $this->chunks->upload_settings();
         $file_size  = absint( $request->get_param( 'file_size' ) );
         $duration   = absint( $request->get_param( 'duration_seconds' ) );
-        $direct_max = absint( get_option( 'vh360_studio_publitio_direct_max_size', 314572800 ) );
-        $max_size   = $direct_max ? $direct_max : 314572800;
+        $max_size = vh360_studio_publitio_direct_upload_max_size();
         if ( ! empty( $settings['max_total_recording_size'] ) ) {
             $max_size = min( $max_size, absint( $settings['max_total_recording_size'] ) );
         }
@@ -1443,7 +1442,8 @@ class VH360_Studio_REST_Controller {
 
         $public_id = sanitize_title( 'vh360-studio-replay-' . absint( $job['id'] ) . '-' . wp_generate_password( 6, false, false ) );
         $token     = wp_generate_password( 40, false, false );
-        $expires   = time() + ( 30 * MINUTE_IN_SECONDS );
+        $token_ttl = vh360_studio_publitio_direct_upload_token_ttl();
+        $expires   = time() + $token_ttl;
         $meta      = array(
             'job_id'       => absint( $job['id'] ),
             'user_id'      => absint( $job['user_id'] ),
@@ -1456,7 +1456,7 @@ class VH360_Studio_REST_Controller {
             'preset_id'    => $preset,
             'expires'      => $expires,
         );
-        set_transient( $this->publitio_direct_upload_transient_key( $job['id'], $token ), $meta, 30 * MINUTE_IN_SECONDS );
+        set_transient( $this->publitio_direct_upload_transient_key( $job['id'], $token ), $meta, $token_ttl );
 
         return rest_ensure_response( array(
             'upload_url'           => esc_url_raw( 'https://api.publit.io/v1/files/create/' . rawurlencode( $preset ) ),
@@ -1471,6 +1471,7 @@ class VH360_Studio_REST_Controller {
             'option_hls'           => get_option( 'vh360_studio_publitio_option_hls', '0' ) ? '1' : '0',
             'option_ad'            => '0',
             'direct_upload_token'  => $token,
+            'direct_upload_expires_at' => $expires,
             'max_size'             => $max_size,
             'expected_file_size'   => $file_size,
             'allowed_mime_types'   => array( 'video/mp4', 'video/webm' ),
