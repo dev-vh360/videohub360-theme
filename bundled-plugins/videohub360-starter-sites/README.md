@@ -59,7 +59,7 @@ Each demo package is controlled by a `manifest.json` file:
       "path": "content.xml"
     },
     "widgets": {
-      "path": "widgets.json"
+      "path": "widgets.wie"
     },
     "customizer": {
       "path": "customizer.json"
@@ -257,6 +257,19 @@ Temporary files are stored in `wp-content/uploads/vh360-starter-sites-temp/`
 
 ## Development Notes
 
+### Widget Export Workflow
+
+Starter Sites supports the standard `.wie` sidebar-map format produced by **Widget Importer & Exporter by Steven Gliebe**:
+
+1. Configure widgets on the completed source demo.
+2. Install Widget Importer & Exporter on that source demo.
+3. Export the active widgets.
+4. Place the exported file in the demo package as `widgets.wie`.
+5. Reference `widgets.wie` from the `widgets` entry in `manifest.json`.
+6. Import the package with VideoHub360 Starter Sites. The exporter plugin is not required on the destination website.
+
+The top-level keys in `widgets.wie` are sidebar IDs. Each sidebar contains widget instance IDs and their settings. Existing destination widgets are preserved, missing sidebars are redirected to Inactive Widgets, and re-importing identical widgets does not create duplicates in the same sidebar.
+
 ### WordPress Importer
 
 The plugin requires the WordPress Importer for content import. Include the actual WordPress Importer files in `includes/wordpress-importer/` or ensure the WordPress Importer plugin is installed.
@@ -266,7 +279,7 @@ The plugin requires the WordPress Importer for content import. Include the actua
 To test with a single demo:
 
 1. Create a demo registry JSON file
-2. Create demo package files (content.xml, widgets.json, etc.)
+2. Create demo package files (`content.xml`, `widgets.wie`, etc.)
 3. Create a manifest.json
 4. Update the registry URL filter
 5. Test the import process

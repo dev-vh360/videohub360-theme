@@ -562,8 +562,6 @@ class VH360_Demo_Importer {
             return $import_result;
         }
         
-        $this->logger->success('Widgets imported successfully');
-        
         return true;
     }
     
@@ -579,20 +577,273 @@ class VH360_Demo_Importer {
         if (json_last_error() !== JSON_ERROR_NONE) {
             return new WP_Error('widgets_invalid_json', __('Invalid widgets JSON', 'videohub360-starter-sites'));
         }
-        
-        // Import widget settings
-        if (isset($widget_data['widgets'])) {
-            foreach ($widget_data['widgets'] as $widget_id => $widget_settings) {
-                update_option($widget_id, $widget_settings);
+
+        if (!$this->is_sidebar_map($widget_data)) {
+            return new WP_Error(
+                'widgets_unsupported_format',
+                __('Unsupported widgets format. Expected a non-empty Widget Importer & Exporter sidebar map.', 'videohub360-starter-sites')
+            );
+        }
+
+        global $wp_registered_sidebars;
+
+        $available_widgets = $this->get_available_widget_types();
+        $registered_sidebars = is_array($wp_registered_sidebars) ? $wp_registered_sidebars : array();
+        $sidebars_widgets = get_option('sidebars_widgets');
+        $sidebars_widgets = is_array($sidebars_widgets) ? $sidebars_widgets : array();
+        $counts = array(
+            'imported'    => 0,
+            'duplicates'  => 0,
+            'unsupported' => 0,
+            'inactive'    => 0,
+            'malformed'   => 0,
+        );
+
+        foreach ($widget_data as $source_sidebar => $source_widgets) {
+            if ('wp_inactive_widgets' === $source_sidebar) {
+                $counts['malformed']++;
+                $this->logger->warning('Skipped unexpected source sidebar "wp_inactive_widgets"; destination: none; widget: none; id_base: none.');
+                continue;
+            }
+
+            $destination_sidebar = isset($registered_sidebars[$source_sidebar]) ? $source_sidebar : 'wp_inactive_widgets';
+            if ('wp_inactive_widgets' === $destination_sidebar) {
+                $this->logger->warning(sprintf(
+                    'Source sidebar "%s" is unavailable; supported widgets will be moved to destination sidebar "wp_inactive_widgets".',
+                    $source_sidebar
+                ));
+            }
+
+            foreach ($source_widgets as $source_widget_id => $settings) {
+                $id_base = $this->parse_widget_id_base($source_widget_id);
+                if (false === $id_base || !is_array($settings)) {
+                    $counts['malformed']++;
+                    $this->logger->warning(sprintf(
+                        'Skipped malformed widget "%s" from source sidebar "%s"; destination sidebar "%s"; id_base: %s.',
+                        $source_widget_id,
+                        $source_sidebar,
+                        $destination_sidebar,
+                        false === $id_base ? 'unknown' : $id_base
+                    ));
+                    continue;
+                }
+
+                if (!isset($available_widgets[$id_base])) {
+                    $counts['unsupported']++;
+                    $this->logger->warning(sprintf(
+                        'Skipped unsupported widget "%s" from source sidebar "%s"; destination sidebar "%s"; id_base: "%s" is not registered.',
+                        $source_widget_id,
+                        $source_sidebar,
+                        $destination_sidebar,
+                        $id_base
+                    ));
+                    continue;
+                }
+
+                $settings = $this->normalize_widget_settings($settings);
+                if ($this->is_duplicate_widget($id_base, $settings, $destination_sidebar, $sidebars_widgets)) {
+                    $counts['duplicates']++;
+                    $this->logger->info(sprintf(
+                        'Skipped duplicate widget "%s" from source sidebar "%s"; destination sidebar "%s"; id_base: "%s".',
+                        $source_widget_id,
+                        $source_sidebar,
+                        $destination_sidebar,
+                        $id_base
+                    ));
+                    continue;
+                }
+
+                $new_widget_id = $this->create_widget_instance($id_base, $settings);
+                $this->add_widget_to_sidebar($new_widget_id, $destination_sidebar, $sidebars_widgets);
+
+                if ('wp_inactive_widgets' === $destination_sidebar) {
+                    $counts['inactive']++;
+                } else {
+                    $counts['imported']++;
+                }
+
+                $this->logger->info(sprintf(
+                    'Imported source widget "%s" from sidebar "%s" as "%s" in destination sidebar "%s" (id_base: "%s").',
+                    $source_widget_id,
+                    $source_sidebar,
+                    $new_widget_id,
+                    $destination_sidebar,
+                    $id_base
+                ));
             }
         }
-        
-        // Import sidebars widgets
-        if (isset($widget_data['sidebars'])) {
-            update_option('sidebars_widgets', $widget_data['sidebars']);
-        }
-        
+
+        update_option('sidebars_widgets', $sidebars_widgets);
+        $this->logger->success(sprintf(
+            'Widget import complete: %d imported, %d inactive, %d duplicates, %d unsupported, %d malformed.',
+            $counts['imported'],
+            $counts['inactive'],
+            $counts['duplicates'],
+            $counts['unsupported'],
+            $counts['malformed']
+        ));
+
         return true;
+    }
+
+    /**
+     * Determine whether decoded data is a standard non-empty .wie sidebar map.
+     *
+     * @param mixed $widget_data Decoded widget data.
+     * @return bool
+     */
+    private function is_sidebar_map($widget_data) {
+        if (!is_array($widget_data) || empty($widget_data) || array_key_exists('widgets', $widget_data) || array_key_exists('sidebars', $widget_data)) {
+            return false;
+        }
+
+        if (array_keys($widget_data) === range(0, count($widget_data) - 1)) {
+            return false;
+        }
+
+        foreach ($widget_data as $sidebar_id => $widgets) {
+            if (!is_string($sidebar_id) || '' === $sidebar_id || !is_array($widgets)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Collect widget types currently registered with WordPress.
+     *
+     * @return array Widget names keyed by id_base.
+     */
+    private function get_available_widget_types() {
+        global $wp_registered_widget_controls;
+
+        $available_widgets = array();
+        if (!is_array($wp_registered_widget_controls)) {
+            return $available_widgets;
+        }
+
+        foreach ($wp_registered_widget_controls as $control) {
+            if (!empty($control['id_base'])) {
+                $available_widgets[$control['id_base']] = isset($control['name']) ? $control['name'] : $control['id_base'];
+            }
+        }
+
+        return $available_widgets;
+    }
+
+    /**
+     * Extract an id_base by removing only the final numeric instance suffix.
+     *
+     * @param mixed $widget_id Widget instance ID.
+     * @return string|false
+     */
+    private function parse_widget_id_base($widget_id) {
+        if (!is_string($widget_id) || !preg_match('/^(.+)-(\d+)$/', $widget_id, $matches)) {
+            return false;
+        }
+
+        return $matches[1];
+    }
+
+    /**
+     * Recursively convert decoded objects to arrays without altering values.
+     *
+     * @param mixed $value Widget setting value.
+     * @return mixed
+     */
+    private function normalize_widget_settings($value) {
+        if (is_object($value)) {
+            $value = get_object_vars($value);
+        }
+
+        if (is_array($value)) {
+            foreach ($value as $key => $item) {
+                $value[$key] = $this->normalize_widget_settings($item);
+            }
+        }
+
+        return $value;
+    }
+
+    /**
+     * Check for identical settings assigned to the same destination sidebar.
+     *
+     * @param string $id_base Widget id_base.
+     * @param array  $settings Normalized settings.
+     * @param string $sidebar_id Destination sidebar ID.
+     * @param array  $sidebars_widgets Existing sidebar assignments.
+     * @return bool
+     */
+    private function is_duplicate_widget($id_base, $settings, $sidebar_id, $sidebars_widgets) {
+        if (empty($sidebars_widgets[$sidebar_id]) || !is_array($sidebars_widgets[$sidebar_id])) {
+            return false;
+        }
+
+        $instances = get_option('widget_' . $id_base);
+        if (!is_array($instances)) {
+            return false;
+        }
+
+        foreach ($sidebars_widgets[$sidebar_id] as $widget_id) {
+            if (!preg_match('/^' . preg_quote($id_base, '/') . '-(\d+)$/', $widget_id, $matches)) {
+                continue;
+            }
+
+            $instance_number = (int) $matches[1];
+            if (isset($instances[$instance_number]) && $this->normalize_widget_settings($instances[$instance_number]) === $settings) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Append settings to a widget option and return its newly allocated ID.
+     *
+     * @param string $id_base Widget id_base.
+     * @param array  $settings Normalized widget settings.
+     * @return string
+     */
+    private function create_widget_instance($id_base, $settings) {
+        $instances = get_option('widget_' . $id_base);
+        if (!is_array($instances)) {
+            $instances = array('_multiwidget' => 1);
+        }
+
+        $instances['_multiwidget'] = 1;
+        $instances[] = $settings;
+        end($instances);
+        $instance_number = key($instances);
+
+        if (0 === $instance_number) {
+            $instances[1] = $instances[0];
+            unset($instances[0]);
+            $instance_number = 1;
+        }
+
+        update_option('widget_' . $id_base, $instances);
+
+        return $id_base . '-' . $instance_number;
+    }
+
+    /**
+     * Append a widget ID while preserving all existing sidebar assignments.
+     *
+     * @param string $widget_id Widget instance ID.
+     * @param string $sidebar_id Destination sidebar ID.
+     * @param array  $sidebars_widgets Sidebar assignments, passed by reference.
+     * @return void
+     */
+    private function add_widget_to_sidebar($widget_id, $sidebar_id, &$sidebars_widgets) {
+        if (!isset($sidebars_widgets[$sidebar_id]) || !is_array($sidebars_widgets[$sidebar_id])) {
+            $sidebars_widgets[$sidebar_id] = array();
+        }
+
+        if (!in_array($widget_id, $sidebars_widgets[$sidebar_id], true)) {
+            $sidebars_widgets[$sidebar_id][] = $widget_id;
+        }
     }
     
     /**
