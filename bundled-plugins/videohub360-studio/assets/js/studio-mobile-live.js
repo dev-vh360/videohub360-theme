@@ -212,7 +212,8 @@ var VH360StorageCompat = window.VH360Storage || (function(){
         }
         state.participantCount = 0;
         state.participantAudioBlocked = false;
-        root.classList.remove('has-remote-participants');
+        root.setAttribute('data-mobile-remote-count', '0');
+        root.classList.remove('has-remote-participants', 'has-one-remote-participant', 'has-multiple-remote-participants', 'has-large-participant-grid');
         setImmersive(false);
         all('[data-mobile-open-participants], [data-mobile-participant-count]').forEach(function (el) { el.hidden = true; });
     }
@@ -279,6 +280,11 @@ var VH360StorageCompat = window.VH360Storage || (function(){
         all('[data-mobile-mute-video]').forEach(function (button) {
             button.textContent = state.mutedVideo ? text('cameraOn', 'Camera on') : text('cameraOff', 'Camera off');
             button.setAttribute('aria-pressed', state.mutedVideo ? 'true' : 'false');
+        });
+        all('[data-mobile-host-microphone]').forEach(function (microphone) {
+            microphone.classList.toggle('is-active', !state.mutedAudio);
+            microphone.classList.toggle('is-muted', state.mutedAudio);
+            microphone.setAttribute('aria-label', state.mutedAudio ? text('microphoneMuted', 'Microphone muted') : text('microphoneOn', 'Microphone on'));
         });
     }
 

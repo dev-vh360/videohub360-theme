@@ -204,7 +204,6 @@
                         videoContainer: null,
                         videoPlaybackTrack: null,
                         audioPlaybackTrack: null,
-                        dualStreamEnabled: false,
                         subscriptionState: {}
                     };
                     state.remoteParticipants.set(key, record);
@@ -261,6 +260,7 @@
                         }
                         record.videoTrack = user.videoTrack || null;
                         record.videoPublished = !!record.videoTrack;
+                        record.videoQuality = 'auto';
                     } else {
                         if (record.audioTrack && record.audioTrack !== user.audioTrack) {
                             stopRemoteAudioPlayback(record);
@@ -742,6 +742,32 @@
                 }
             }
 
+            async function configureRemoteVideoStreams(generation) {
+                if (!state.receiveRemoteParticipants || !state.client || !isOperationCurrent(generation)) {
+                    return;
+                }
+                const operations = [
+                    ['enableDualStream', []],
+                    ['setLowStreamParameter', [{ width: 480, height: 270, framerate: 15, bitrate: 400 }]],
+                    ['setRemoteDefaultVideoStreamType', [1]]
+                ];
+                for (const operation of operations) {
+                    const method = operation[0];
+                    if (typeof state.client[method] !== 'function') {
+                        continue;
+                    }
+                    try {
+                        await trackSdkPromise(Promise.resolve(state.client[method].apply(state.client, operation[1])));
+                        assertOperationCurrent(generation);
+                    } catch (error) {
+                        if (isOperationCancelled(error)) {
+                            throw error;
+                        }
+                        emit(root, 'remote-video-quality-error', { operation: method, error: error });
+                    }
+                }
+            }
+
             async function connect(connectionConfig) {
                 const generation = currentGeneration();
                 assertOperationCurrent(generation);
@@ -774,6 +800,7 @@
                         throw makeCancellationError();
                     }
                     state.published = true;
+                    await configureRemoteVideoStreams(generation);
                     startDiagnostics();
                     await syncRemotePublishedUsers(generation);
                     scheduleRenewal(merged.expiresAt, generation);
@@ -831,6 +858,7 @@
                     throw makeCancellationError();
                 }
                 state.published = true;
+                await configureRemoteVideoStreams(generation);
                 await syncRemotePublishedUsers(generation);
                 emit(root, 'published', { uid: state.uid, channelName: state.channelName, rejoined: true });
             }
@@ -1036,13 +1064,17 @@
 
             async function setRemoteVideoQuality(uid, quality) {
                 const record = state.remoteParticipants.get(normalizeRemoteUid(uid));
-                if (!record || !record.videoTrack || !record.dualStreamEnabled || !state.client || typeof state.client.setRemoteVideoStreamType !== 'function') {
+                if (!record || !record.videoTrack || !state.joined || !isOperationCurrent(currentGeneration()) || !state.client || typeof state.client.setRemoteVideoStreamType !== 'function') {
                     return false;
                 }
-                const streamType = quality === 'high' ? 0 : 1;
+                const normalizedQuality = quality === 'high' ? 'high' : 'low';
+                if (record.videoQuality === normalizedQuality) {
+                    return true;
+                }
+                const streamType = normalizedQuality === 'high' ? 0 : 1;
                 try {
                     await state.client.setRemoteVideoStreamType(record.uid, streamType);
-                    record.videoQuality = quality || 'low';
+                    record.videoQuality = normalizedQuality;
                     return true;
                 } catch (error) {
                     emit(root, 'remote-video-quality-error', { uid: record.uid, error: error });
