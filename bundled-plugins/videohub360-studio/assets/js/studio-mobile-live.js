@@ -281,6 +281,11 @@ var VH360StorageCompat = window.VH360Storage || (function(){
             button.textContent = state.mutedVideo ? text('cameraOn', 'Camera on') : text('cameraOff', 'Camera off');
             button.setAttribute('aria-pressed', state.mutedVideo ? 'true' : 'false');
         });
+        all('[data-mobile-host-microphone]').forEach(function (microphone) {
+            microphone.classList.toggle('is-active', !state.mutedAudio);
+            microphone.classList.toggle('is-muted', state.mutedAudio);
+            microphone.setAttribute('aria-label', state.mutedAudio ? text('microphoneMuted', 'Microphone muted') : text('microphoneOn', 'Microphone on'));
+        });
     }
 
     function resetMuteState() {

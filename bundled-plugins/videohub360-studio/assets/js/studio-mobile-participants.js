@@ -32,6 +32,27 @@
         });
     }
 
+    function microphoneIcon(modifier, pathData) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('class', 'vh360-mobile-live__microphone-icon vh360-mobile-live__microphone-icon--' + modifier);
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('focusable', 'false');
+        svg.setAttribute('aria-hidden', 'true');
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', pathData);
+        svg.appendChild(path);
+        return svg;
+    }
+
+    function microphoneStateElement() {
+        const state = document.createElement('span');
+        state.className = 'vh360-mobile-live__microphone-state is-muted';
+        state.setAttribute('data-mobile-participant-microphone', '');
+        state.appendChild(microphoneIcon('on', 'M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21H8v2h8v-2h-3v-3.08A7 7 0 0 0 19 11h-2Z'));
+        state.appendChild(microphoneIcon('off', 'm4.27 3 16.73 16.73-1.27 1.27-4.12-4.12A6.9 6.9 0 0 1 13 17.92V21h3v2H8v-2h3v-3.08A7 7 0 0 1 5 11h2a5 5 0 0 0 6.96 4.59l-1.52-1.52A3 3 0 0 1 9 11v-.37L3 4.27 4.27 3ZM12 2a3 3 0 0 1 3 3v6c0 .28-.04.55-.11.8L9 5.91V5a3 3 0 0 1 3-3Zm7 9a6.96 6.96 0 0 1-.84 3.32l-1.5-1.5c.22-.57.34-1.18.34-1.82h2Z'));
+        return state;
+    }
+
     window.VH360StudioMobileParticipants = {
         create: function createParticipantController(options) {
             const root = options.root;
@@ -63,15 +84,21 @@
             const drawer = root.querySelector('[data-mobile-participant-drawer]');
             const drawerList = root.querySelector('[data-mobile-participant-list]');
             const countEls = Array.prototype.slice.call(root.querySelectorAll('[data-mobile-participant-count]'));
+            const countValueEls = Array.prototype.slice.call(root.querySelectorAll('[data-mobile-participant-count-value]'));
             const audioButton = root.querySelector('[data-mobile-enable-participant-audio]');
             const notice = root.querySelector('[data-mobile-participant-notice]');
             const openButton = root.querySelector('[data-mobile-open-participants]');
 
             function emitCount() {
                 const count = state.participants.size;
-                const text = count === 1 ? label(strings, 'oneParticipant', 'One participant') : label(strings, 'participantCount', '%d participants').replace('%d', count);
+                const accessibleText = count === 0
+                    ? label(strings, 'zeroParticipantsLabel', '0 participants')
+                    : (count === 1 ? label(strings, 'oneParticipantLabel', '1 participant') : label(strings, 'participantCount', '%d participants').replace('%d', count));
+                countValueEls.forEach(function (el) {
+                    el.textContent = String(count);
+                });
                 countEls.forEach(function (el) {
-                    el.textContent = count ? text : label(strings, 'noParticipantsYet', 'No participants yet');
+                    el.setAttribute('aria-label', accessibleText);
                 });
                 root.setAttribute('data-mobile-remote-count', String(count));
                 root.classList.toggle('has-remote-participants', count > 0);
@@ -114,10 +141,9 @@
                 name.className = 'vh360-mobile-live__participant-name';
                 name.setAttribute('data-mobile-participant-name', '');
                 name.textContent = label(strings, 'participant', 'Participant');
-                const status = document.createElement('span');
-                status.className = 'vh360-mobile-live__participant-status';
+                const microphone = microphoneStateElement();
                 meta.appendChild(name);
-                meta.appendChild(status);
+                meta.appendChild(microphone);
 
                 tile.appendChild(video);
                 tile.appendChild(placeholder);
@@ -137,11 +163,10 @@
                 rowAvatar.className = 'vh360-mobile-live__participant-row-avatar';
                 const rowName = document.createElement('span');
                 rowName.className = 'vh360-mobile-live__participant-row-name';
-                const rowState = document.createElement('span');
-                rowState.className = 'vh360-mobile-live__participant-row-state';
+                const rowMicrophone = microphoneStateElement();
                 row.appendChild(rowAvatar);
                 row.appendChild(rowName);
-                row.appendChild(rowState);
+                row.appendChild(rowMicrophone);
                 drawerList.appendChild(row);
 
                 record = {
@@ -152,11 +177,11 @@
                     avatar: avatar,
                     initials: initial,
                     name: name,
-                    status: status,
+                    microphone: microphone,
                     drawerItem: row,
                     drawerAvatar: rowAvatar,
                     drawerName: rowName,
-                    drawerState: rowState,
+                    drawerMicrophone: rowMicrophone,
                     hasAudio: false,
                     hasVideo: false,
                     rendered: false,
@@ -180,23 +205,22 @@
                 return record;
             }
 
-            function mediaStateText(record) {
-                const camera = record.hasVideo ? label(strings, 'connected', 'Connected') : label(strings, 'cameraOff', 'Camera off');
-                const mic = record.hasAudio ? label(strings, 'connected', 'Connected') : label(strings, 'microphoneMuted', 'Microphone muted');
-                return camera + ' / ' + mic;
-            }
-
             function updateRecord(record) {
+                const microphoneActive = record.hasAudio === true;
+                const microphoneLabel = microphoneActive ? label(strings, 'microphoneOn', 'Microphone on') : label(strings, 'microphoneMuted', 'Microphone muted');
                 record.tile.classList.toggle('has-video', record.hasVideo && record.rendered);
                 record.tile.classList.toggle('is-video-loading', record.hasVideo && !record.rendered);
                 record.tile.classList.toggle('is-muted', !record.hasAudio);
                 record.tile.classList.toggle('is-selected', record.uid === state.selectedUid);
                 record.tile.hidden = false;
-                record.status.textContent = mediaStateText(record);
+                [record.microphone, record.drawerMicrophone].forEach(function (microphone) {
+                    microphone.classList.toggle('is-active', microphoneActive);
+                    microphone.classList.toggle('is-muted', !microphoneActive);
+                    microphone.setAttribute('aria-label', microphoneLabel);
+                });
                 record.drawerItem.classList.toggle('is-selected', record.uid === state.selectedUid);
                 record.drawerItem.setAttribute('aria-pressed', record.uid === state.selectedUid ? 'true' : 'false');
                 record.drawerName.textContent = record.name.textContent;
-                record.drawerState.textContent = mediaStateText(record);
                 record.drawerAvatar.textContent = record.initials.textContent;
             }
 

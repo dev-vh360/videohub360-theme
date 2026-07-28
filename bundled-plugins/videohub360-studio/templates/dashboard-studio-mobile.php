@@ -81,14 +81,23 @@ $desktop_url = add_query_arg( array( 'tab' => 'studio', 'studio_mode' => 'deskto
             <div class="vh360-mobile-live__remote-stage" data-mobile-remote-stage>
                 <div class="vh360-mobile-live__host-tile" data-mobile-host-tile>
                     <div class="vh360-mobile-live__host-video" data-mobile-live-preview></div>
-                    <span class="vh360-mobile-live__tile-name"><?php esc_html_e( 'You', 'videohub360-studio' ); ?></span>
+                    <div class="vh360-mobile-live__participant-meta">
+                        <span class="vh360-mobile-live__participant-name"><?php esc_html_e( 'You', 'videohub360-studio' ); ?></span>
+                        <span class="vh360-mobile-live__microphone-state is-active" data-mobile-host-microphone aria-label="<?php esc_attr_e( 'Microphone on', 'videohub360-studio' ); ?>">
+                            <svg class="vh360-mobile-live__microphone-icon vh360-mobile-live__microphone-icon--on" viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21H8v2h8v-2h-3v-3.08A7 7 0 0 0 19 11h-2Z"/></svg>
+                            <svg class="vh360-mobile-live__microphone-icon vh360-mobile-live__microphone-icon--off" viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="m4.27 3 16.73 16.73-1.27 1.27-4.12-4.12A6.9 6.9 0 0 1 13 17.92V21h3v2H8v-2h3v-3.08A7 7 0 0 1 5 11h2a5 5 0 0 0 6.96 4.59l-1.52-1.52A3 3 0 0 1 9 11V10.63L3 4.27 4.27 3ZM12 2a3 3 0 0 1 3 3v6c0 .28-.04.55-.11.8L9 5.91V5a3 3 0 0 1 3-3Zm7 9a6.96 6.96 0 0 1-.84 3.32l-1.5-1.5c.22-.57.34-1.18.34-1.82h2Z"/></svg>
+                        </span>
+                    </div>
                 </div>
             </div>
             <div class="vh360-mobile-live__top-overlay">
                 <strong><?php esc_html_e( 'LIVE', 'videohub360-studio' ); ?></strong>
                 <span data-mobile-duration>00:00</span>
                 <span data-mobile-connection><?php esc_html_e( 'Connected', 'videohub360-studio' ); ?></span>
-                <span data-mobile-participant-count hidden><?php esc_html_e( 'No participants yet', 'videohub360-studio' ); ?></span>
+                <span class="vh360-mobile-live__participant-count" data-mobile-participant-count aria-label="<?php esc_attr_e( '0 participants', 'videohub360-studio' ); ?>" hidden>
+                    <span class="vh360-mobile-live__participant-count-value" data-mobile-participant-count-value aria-hidden="true">0</span>
+                    <span class="vh360-mobile-live__participant-count-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm6-1a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM9 13c-4.42 0-7 2.17-7 5v2h14v-2c0-2.83-2.58-5-7-5Zm6.55-.93c1.5 1.08 2.45 2.58 2.45 4.43V20h4v-2c0-2.71-2.36-4.82-6.45-5.93Z"/></svg></span>
+                </span>
             </div>
             <div class="vh360-mobile-live__connection-banner" data-mobile-reconnect-banner hidden></div>
             <p class="vh360-mobile-live__participant-notice" data-mobile-participant-notice hidden></p>

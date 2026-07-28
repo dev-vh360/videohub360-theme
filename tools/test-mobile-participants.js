@@ -36,18 +36,25 @@ class FakeElement extends EventTarget {
             this.parentNode = null;
         }
     }
-    querySelector() { return null; }
-    querySelectorAll() { return []; }
+    matches(selector) {
+        if (selector.startsWith('[')) return this.attributes.has(selector.slice(1, -1));
+        if (selector.startsWith('.')) return this.classList.contains(selector.slice(1));
+        return false;
+    }
+    querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
+    querySelectorAll(selector) {
+        return this.children.reduce((matches, child) => matches.concat(child.matches(selector) ? [child] : [], child.querySelectorAll(selector)), []);
+    }
     scrollIntoView(options) { this.scrollCalls.push(options); }
     focus() {}
 }
 
 class FakeRoot extends FakeElement {
     constructor(elements) { super('section'); this.elements = elements; }
-    querySelector(selector) { return this.elements[selector] || null; }
+    querySelector(selector) { return this.elements[selector] || super.querySelector(selector); }
     querySelectorAll(selector) {
         const element = this.elements[selector];
-        return element ? (Array.isArray(element) ? element : [element]) : [];
+        return element ? (Array.isArray(element) ? element : [element]) : super.querySelectorAll(selector);
     }
 }
 
@@ -56,7 +63,8 @@ global.CustomEvent = class CustomEvent extends Event {
 };
 global.document = {
     activeElement: null,
-    createElement: (tagName) => new FakeElement(tagName)
+    createElement: (tagName) => new FakeElement(tagName),
+    createElementNS: (namespace, tagName) => new FakeElement(tagName)
 };
 global.window = global;
 global.location = { href: 'https://example.test/studio' };
@@ -66,11 +74,18 @@ const remoteStage = new FakeElement('div');
 const drawer = new FakeElement('aside');
 const drawerList = new FakeElement('div');
 const count = new FakeElement('span');
+const countValue = new FakeElement('span');
+const countIcon = new FakeElement('span');
+countValue.setAttribute('data-mobile-participant-count-value', '');
+countIcon.className = 'vh360-mobile-live__participant-count-icon';
+count.appendChild(countValue);
+count.appendChild(countIcon);
 const root = new FakeRoot({
     '[data-mobile-remote-stage]': remoteStage,
     '[data-mobile-participant-drawer]': drawer,
     '[data-mobile-participant-list]': drawerList,
-    '[data-mobile-participant-count]': count
+    '[data-mobile-participant-count]': count,
+    '[data-mobile-participant-count-value]': countValue
 });
 
 require('../bundled-plugins/videohub360-studio/assets/js/studio-mobile-participants.js');
@@ -92,6 +107,9 @@ async function flush() {
 (async function run() {
     const controller = window.VH360StudioMobileParticipants.create({ root, session, enabled: true });
     await controller.activateRendering();
+    assert.equal(countValue.textContent, '0', 'count starts at zero');
+    assert.equal(count.getAttribute('aria-label'), '0 participants', 'zero count is accessible');
+    const participantIcon = countIcon;
     for (let uid = 1; uid <= 8; uid += 1) {
         root.dispatchEvent(new CustomEvent('vh360:agora-broadcaster:remote-participant-published', {
             detail: { uid: String(uid), videoAvailable: true, videoTrack: { id: uid } }
@@ -100,6 +118,8 @@ async function flush() {
             assert.equal(remoteStage.children.length, uid, `${uid} remote tiles are present`);
             assert.equal(new Set(calls.play).size, uid, `${uid} remote videos receive playback calls`);
             assert.equal(root.getAttribute('data-mobile-remote-count'), String(uid), `count reaches ${uid}`);
+            assert.equal(countValue.textContent, String(uid), `visible count reaches ${uid}`);
+            assert.equal(count.children.includes(participantIcon), true, 'participant icon is preserved');
         }
     }
     await flush();
@@ -110,8 +130,32 @@ async function flush() {
     assert.equal(remoteStage.children.some((tile) => tile.hidden), false, 'no participant tile is hidden');
     assert.equal(root.getAttribute('data-mobile-remote-count'), '8');
     assert.equal(root.classList.contains('has-large-participant-grid'), true);
+    assert.equal(count.getAttribute('aria-label'), '8 participants');
     assert.equal(calls.quality.filter((entry) => entry[1] === 'high').length, 1, 'one participant starts high');
     assert.equal(calls.quality.filter((entry) => entry[1] === 'low').length, 7, 'the other participants start low');
+
+    const secondTile = remoteStage.children[1];
+    const secondMicrophone = secondTile.querySelector('[data-mobile-participant-microphone]');
+    const secondDrawerMicrophone = drawerList.children[1].querySelector('[data-mobile-participant-microphone]');
+    assert.equal(secondMicrophone.classList.contains('is-muted'), true, 'participant starts with muted microphone');
+    assert.equal(secondDrawerMicrophone.classList.contains('is-muted'), true, 'drawer starts with muted microphone');
+    root.dispatchEvent(new CustomEvent('vh360:agora-broadcaster:remote-participant-published', {
+        detail: { uid: '2', audioAvailable: true, audioTrack: { id: 'audio-2' } }
+    }));
+    await flush();
+    assert.equal(remoteStage.children[1], secondTile, 'audio publish reuses the participant tile');
+    assert.equal(secondMicrophone.classList.contains('is-active'), true, 'audio publish activates tile microphone');
+    assert.equal(secondMicrophone.getAttribute('aria-label'), 'Microphone on');
+    assert.equal(secondDrawerMicrophone.classList.contains('is-active'), true, 'audio publish activates drawer microphone');
+    root.dispatchEvent(new CustomEvent('vh360:agora-broadcaster:remote-track-unpublished', {
+        detail: { uid: '2', mediaType: 'audio' }
+    }));
+    await flush();
+    assert.equal(remoteStage.children[1], secondTile, 'audio unpublish reuses the participant tile');
+    assert.equal(secondMicrophone.classList.contains('is-muted'), true, 'audio unpublish mutes tile microphone');
+    assert.equal(secondMicrophone.getAttribute('aria-label'), 'Microphone muted');
+    assert.equal(secondTile.querySelector('.vh360-mobile-live__participant-status'), null, 'long tile status element is absent');
+    assert.equal(drawerList.children[1].querySelector('.vh360-mobile-live__participant-row-state'), null, 'long drawer status element is absent');
 
     drawerList.children[7].dispatchEvent(new Event('click'));
     await flush();
@@ -125,6 +169,9 @@ async function flush() {
     assert.equal(drawerList.children.length, 0, 'reset removes all eight drawer rows');
     assert.equal(controller.getParticipantCount(), 0, 'reset clears all participant records');
     assert.equal(root.classList.contains('has-large-participant-grid'), false, 'reset clears large-grid state');
+    assert.equal(countValue.textContent, '0', 'reset returns visible count to zero');
+    assert.equal(count.getAttribute('aria-label'), '0 participants', 'reset restores accessible zero count');
+    assert.equal(count.children.includes(participantIcon), true, 'reset preserves participant icon');
     console.log('Mobile participant 8-remote harness passed.');
 })().catch((error) => {
     console.error(error);
