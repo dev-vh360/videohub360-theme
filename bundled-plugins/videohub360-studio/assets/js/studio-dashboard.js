@@ -13,11 +13,6 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 })();
 
     const root = document.querySelector('[data-vh360-studio-dashboard]');
-    document.querySelectorAll('[data-studio-mode-choice]').forEach(function (link) {
-        link.addEventListener('click', function () {
-            try { VH360StorageCompat.setPreference('vh360StudioMode', link.getAttribute('data-studio-mode-choice')); } catch (error) {}
-        });
-    });
     if (!root || !window.vh360StudioDashboard) {
         return;
     }

@@ -9,7 +9,6 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-$desktop_url = add_query_arg( array( 'tab' => 'studio', 'studio_mode' => 'desktop' ), remove_query_arg( 'studio_mode' ) );
 ?>
 <section class="vh360-mobile-live" data-vh360-studio-mobile-live data-mobile-remote-count="0">
     <header class="vh360-mobile-live__header">
@@ -17,7 +16,6 @@ $desktop_url = add_query_arg( array( 'tab' => 'studio', 'studio_mode' => 'deskto
             <p class="vh360-mobile-live__eyebrow"><?php echo esc_html( function_exists( 'vh360_studio_get_display_name' ) ? vh360_studio_get_display_name() : sprintf( __( '%s Studio', 'videohub360-studio' ), get_bloginfo( 'name' ) ) ); ?></p>
             <h2><?php esc_html_e( 'Mobile Live', 'videohub360-studio' ); ?></h2>
         </div>
-        <a href="<?php echo esc_url( $desktop_url ); ?>" data-studio-mode-choice="desktop"><?php esc_html_e( 'Open Production Studio', 'videohub360-studio' ); ?></a>
     </header>
 
     <div class="vh360-mobile-live__status" data-mobile-status role="status" aria-live="polite" tabindex="-1">

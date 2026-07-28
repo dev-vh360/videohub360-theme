@@ -50,7 +50,7 @@
   }
 
   var knownKeys = [
-    'vh360_members_view', 'vh360_recent_emojis', 'vh360_quality_prefs', 'vh360-layout-view-preference', 'vh360StudioMode',
+    'vh360_members_view', 'vh360_recent_emojis', 'vh360_quality_prefs', 'vh360-layout-view-preference',
     'vh360_community_menu_expanded', 'vh360_pwa_install_banner_dismissed_until',
     'vh360_studio_camera_device_id', 'vh360_studio_camera_sources', 'vh360_studio_microphone_device_id', 'vh360_studio_audio_inputs',
     'vh360_studio_lower_dock_layout_v1', 'vh360_studio_overlays_width', 'vh360_studio_overlays_collapsed',
