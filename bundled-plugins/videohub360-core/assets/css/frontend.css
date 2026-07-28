@@ -669,9 +669,15 @@
                 min-height: auto; /* Override the 400px min-height to allow proper 16:9 scaling */
             }
 
-            .vh360-livestream-iframe:not(.vh360-agora-interactive-container) #vh360-agora-player.vh360-agora-broadcast #vh360-agora-local-player {
+            /*
+             * Mobile Agora broadcasts use a fixed 16:9 player. Reset the shared
+             * interactive speaker-stage minimum height so the stage cannot extend
+             * below and be clipped by the broadcast container.
+             */
+            .vh360-livestream-iframe.vh360-agora-broadcast-container #vh360-agora-player.vh360-agora-broadcast #vh360-agora-local-player {
                 height: auto;
-                aspect-ratio: 16/9;
+                min-height: 0;
+                aspect-ratio: 16 / 9;
             }
 
             .vh360-livestream-iframe:not(.vh360-agora-interactive-container) #vh360-agora-player.vh360-agora-broadcast #vh360-agora-local-player video {
