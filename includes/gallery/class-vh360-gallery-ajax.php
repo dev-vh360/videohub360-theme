@@ -387,28 +387,19 @@ class VH360_Gallery_Ajax {
 		}
 
 		// Check max images limit.
-		$current_images = get_post_meta( $gallery_id, '_vh360_gallery_images', true );
-		if ( ! is_array( $current_images ) ) {
-			$current_images = array();
-		}
+		$current_images = vh360_normalize_gallery_image_ids( get_post_meta( $gallery_id, '_vh360_gallery_images', true ) );
 
 		$max_images = vh360_get_gallery_max_images();
-		$files_count = is_array( $_FILES['images']['name'] ) ? count( $_FILES['images']['name'] ) : 1;
-
-		if ( count( $current_images ) + $files_count > $max_images ) {
-			$this->send_error( sprintf(
-				/* translators: %d: maximum number of images allowed */
-				__( 'Maximum %d images allowed per gallery.', 'videohub360-theme' ),
-				$max_images
-			) );
-		}
 
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 		require_once ABSPATH . 'wp-admin/includes/image.php';
 		require_once ABSPATH . 'wp-admin/includes/media.php';
 
-		$uploaded_images = array();
-		$errors = array();
+		$results      = array();
+		$success_count = 0;
+		$client_uuids = isset( $_POST['client_uuids'] ) && is_array( $_POST['client_uuids'] )
+			? array_map( 'sanitize_text_field', wp_unslash( $_POST['client_uuids'] ) )
+			: array();
 
 		// Handle multiple files.
 		if ( is_array( $_FILES['images']['name'] ) ) {
@@ -422,13 +413,29 @@ class VH360_Gallery_Ajax {
 					'size'     => $_FILES['images']['size'][ $i ],
 				);
 
-				$result = $this->process_image_upload( $file, $gallery_id );
+				$result = count( $current_images ) >= $max_images
+					? new WP_Error(
+						'max_images',
+						sprintf(
+							/* translators: %d: maximum number of images allowed */
+							__( 'Maximum %d images allowed per gallery.', 'videohub360-theme' ),
+							$max_images
+						)
+					)
+					: $this->process_image_upload( $file, $gallery_id );
+				$file_result = array(
+					'client_uuid' => isset( $client_uuids[ $i ] ) ? $client_uuids[ $i ] : '',
+					'file_name'   => $file['name'],
+					'success'     => ! is_wp_error( $result ),
+				);
 				if ( is_wp_error( $result ) ) {
-					$errors[] = $file['name'] . ': ' . $result->get_error_message();
+					$file_result['message'] = $result->get_error_message();
 				} else {
-					$uploaded_images[] = $result;
-					$current_images[] = $result['id'];
+					$file_result['image'] = $result;
+					$current_images[]      = $result['id'];
+					++$success_count;
 				}
+				$results[] = $file_result;
 			}
 		} else {
 			$file = array(
@@ -439,16 +446,33 @@ class VH360_Gallery_Ajax {
 				'size'     => $_FILES['images']['size'],
 			);
 
-			$result = $this->process_image_upload( $file, $gallery_id );
+			$result = count( $current_images ) >= $max_images
+				? new WP_Error(
+					'max_images',
+					sprintf(
+						/* translators: %d: maximum number of images allowed */
+						__( 'Maximum %d images allowed per gallery.', 'videohub360-theme' ),
+						$max_images
+					)
+				)
+				: $this->process_image_upload( $file, $gallery_id );
+			$file_result = array(
+				'client_uuid' => isset( $client_uuids[0] ) ? $client_uuids[0] : '',
+				'file_name'   => $file['name'],
+				'success'     => ! is_wp_error( $result ),
+			);
 			if ( is_wp_error( $result ) ) {
-				$errors[] = $file['name'] . ': ' . $result->get_error_message();
+				$file_result['message'] = $result->get_error_message();
 			} else {
-				$uploaded_images[] = $result;
-				$current_images[] = $result['id'];
+				$file_result['image'] = $result;
+				$current_images[]      = $result['id'];
+				++$success_count;
 			}
+			$results[] = $file_result;
 		}
 
 		// Update gallery images.
+		$current_images = vh360_normalize_gallery_image_ids( $current_images );
 		update_post_meta( $gallery_id, '_vh360_gallery_images', $current_images );
 
 		// Set first image as cover if no cover exists.
@@ -457,13 +481,14 @@ class VH360_Gallery_Ajax {
 		}
 
 		$response = array(
-			'message'     => __( 'Images uploaded successfully.', 'videohub360-theme' ),
-			'images'      => $uploaded_images,
+			'message'     => $success_count === count( $results ) ? __( 'Images uploaded successfully.', 'videohub360-theme' ) : __( 'Some images could not be uploaded.', 'videohub360-theme' ),
+			'results'     => $results,
+			'partial'     => $success_count > 0 && $success_count < count( $results ),
 			'total_count' => count( $current_images ),
 		);
 
-		if ( ! empty( $errors ) ) {
-			$response['errors'] = $errors;
+		if ( 0 === $success_count ) {
+			wp_send_json_error( $response );
 		}
 
 		wp_send_json_success( $response );
@@ -485,7 +510,16 @@ class VH360_Gallery_Ajax {
 
 		// Upload the file.
 		$_FILES['vh360_gallery_image'] = $file;
+		// Avoid generating unrelated theme sizes only while this gallery image is processed.
+		$size_filter = static function ( $sizes ) {
+			return array_diff_key(
+				$sizes,
+				array_flip( array( 'videohub360-video-thumb', 'videohub360-video-large', 'vh360-profile-avatar', 'vh360-group-cover' ) )
+			);
+		};
+		add_filter( 'intermediate_image_sizes_advanced', $size_filter );
 		$attachment_id = media_handle_upload( 'vh360_gallery_image', $gallery_id );
+		remove_filter( 'intermediate_image_sizes_advanced', $size_filter );
 
 		if ( is_wp_error( $attachment_id ) ) {
 			return $attachment_id;
@@ -526,17 +560,11 @@ class VH360_Gallery_Ajax {
 
 		// Get current images.
 		$images = get_post_meta( $gallery_id, '_vh360_gallery_images', true );
-		if ( ! is_array( $images ) ) {
-			$images = array();
-		}
-
-		// Remove the image from the array.
-		$key = array_search( $attachment_id, $images );
-		if ( false !== $key ) {
-			unset( $images[ $key ] );
-			$images = array_values( $images ); // Re-index.
-			update_post_meta( $gallery_id, '_vh360_gallery_images', $images );
-		}
+		$images = is_array( $images ) ? array_filter( $images, static function ( $id ) use ( $attachment_id ) {
+			return absint( $id ) !== $attachment_id;
+		} ) : array();
+		$images = vh360_normalize_gallery_image_ids( $images );
+		update_post_meta( $gallery_id, '_vh360_gallery_images', $images );
 
 		// Optionally delete the attachment (if checkbox is checked).
 		$delete_file = isset( $_POST['delete_file'] ) && filter_var( $_POST['delete_file'], FILTER_VALIDATE_BOOLEAN );
@@ -587,25 +615,29 @@ class VH360_Gallery_Ajax {
 		}
 
 		// Sanitize and validate the order.
-		$new_order = array_map( 'absint', $order );
-		$new_order = array_filter( $new_order );
-
-		// Verify all IDs are valid attachments.
-		$current_images = get_post_meta( $gallery_id, '_vh360_gallery_images', true );
-		if ( ! is_array( $current_images ) ) {
-			$current_images = array();
+		$submitted_order = array_values( array_filter( array_map( 'absint', $order ) ) );
+		$new_order       = vh360_normalize_gallery_image_ids( $order );
+		if ( count( $submitted_order ) !== count( $order ) || count( $new_order ) !== count( $submitted_order ) ) {
+			$this->send_error( __( 'Image order contains invalid or duplicate IDs.', 'videohub360-theme' ) );
 		}
 
-		// Only include IDs that are in the current images.
-		$valid_order = array();
+		// Verify all IDs are valid attachments.
+		$current_images = vh360_normalize_gallery_image_ids( get_post_meta( $gallery_id, '_vh360_gallery_images', true ) );
 		foreach ( $new_order as $id ) {
-			if ( in_array( $id, $current_images ) ) {
-				$valid_order[] = $id;
+			if ( ! in_array( $id, $current_images, true ) ) {
+				$this->send_error( __( 'Image order contains an image not assigned to this gallery.', 'videohub360-theme' ) );
 			}
+		}
+		$sorted_order   = $new_order;
+		$sorted_current = $current_images;
+		sort( $sorted_order, SORT_NUMERIC );
+		sort( $sorted_current, SORT_NUMERIC );
+		if ( $sorted_order !== $sorted_current ) {
+			$this->send_error( __( 'Image order must contain every gallery image exactly once.', 'videohub360-theme' ) );
 		}
 
 		// Update the order.
-		update_post_meta( $gallery_id, '_vh360_gallery_images', $valid_order );
+		update_post_meta( $gallery_id, '_vh360_gallery_images', $new_order );
 
 		wp_send_json_success( array(
 			'message' => __( 'Image order updated.', 'videohub360-theme' ),
@@ -636,6 +668,11 @@ class VH360_Gallery_Ajax {
 		$attachment = get_post( $attachment_id );
 		if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
 			$this->send_error( __( 'Invalid image.', 'videohub360-theme' ) );
+		}
+
+		$gallery_images = vh360_normalize_gallery_image_ids( get_post_meta( $gallery_id, '_vh360_gallery_images', true ) );
+		if ( ! in_array( $attachment_id, $gallery_images, true ) ) {
+			$this->send_error( __( 'This image is not assigned to the gallery.', 'videohub360-theme' ) );
 		}
 
 		// Set as featured image.

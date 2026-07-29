@@ -44,6 +44,8 @@
         sortable: null,
         currentGalleryId: 0,
         uploadedImages: [],
+        uploadFailures: [],
+        isSaving: false,
         initialized: false,
         eventsbound: false,
 
@@ -264,36 +266,90 @@
                     });
 
                     this.on('error', function(file, message) {
-                        console.error('Upload error:', message);
-                        self.showNotification(message, 'error');
-                        dz.removeFile(file);
+                        if (typeof message === 'string') {
+                            self.markUploadFailed(file.upload.uuid, file.name, message);
+                        }
                     });
 
                     this.on('queuecomplete', function() {
                         // Queue processing complete
                     });
+
+                    this.on('completemultiple', function() {
+                        if (self.isSaving && dz.getQueuedFiles().length > 0) {
+                            dz.processQueue();
+                        }
+                    });
                 },
 
-                sending: function(file, xhr, formData) {
+                sendingmultiple: function(files, xhr, formData) {
                     formData.append('action', 'vh360_upload_gallery_images');
                     formData.append('nonce', vh360Gallery.nonce);
                     formData.append('gallery_id', self.currentGalleryId);
+                    files.forEach(function(file) {
+                        formData.append('client_uuids[]', file.upload.uuid);
+                    });
                 },
 
-                success: function(file, response) {
-                    if (response.success && response.data.images) {
-                        response.data.images.forEach(function(img) {
-                            self.uploadedImages.push(img);
-                            // Update preview with actual ID
-                            var $preview = $('#vh360-gallery-images-preview').find('[data-uuid="' + file.upload.uuid + '"]');
-                            if ($preview.length) {
-                                $preview.attr('data-id', img.id);
-                                $preview.removeClass('uploading');
-                            }
+                successmultiple: function(files, response) {
+                    self.handleUploadResults(files, response && response.data ? response.data.results : []);
+                },
+
+                errormultiple: function(files, response) {
+                    var data = response && response.data ? response.data : response;
+                    if (data && data.results) {
+                        self.handleUploadResults(files, data.results);
+                    } else {
+                        files.forEach(function(file) {
+                            self.markUploadFailed(file.upload.uuid, file.name, (data && data.message) || 'Upload failed');
                         });
+                    }
+                },
+
+                totaluploadprogress: function(progress) {
+                    $('#vh360-gallery-submit').text('Uploading ' + Math.round(progress) + '%');
+                },
+
+                sending: function() {
+                    $('#vh360-gallery-submit').text('Uploading 0%');
+                },
+
+                uploadprogress: function(file, progress) {
+                    if (progress >= 100) {
+                        $('#vh360-gallery-submit').text('Processing images...');
                     }
                 }
             });
+        },
+
+        handleUploadResults: function(files, results) {
+            var self = this;
+            var filesByUuid = {};
+            files.forEach(function(file) { filesByUuid[file.upload.uuid] = file; });
+            results.forEach(function(result) {
+                var file = filesByUuid[result.client_uuid];
+                if (result.success && result.image) {
+                    var exists = self.uploadedImages.some(function(image) { return image.id === result.image.id; });
+                    if (!exists) {
+                        self.uploadedImages.push(result.image);
+                    }
+                    $('#vh360-gallery-images-preview').find('[data-uuid="' + result.client_uuid + '"]')
+                        .attr('data-id', result.image.id).removeClass('uploading upload-failed').addClass('uploaded')
+                        .removeAttr('data-upload-error');
+                } else {
+                    self.markUploadFailed(result.client_uuid, result.file_name, result.message || 'Upload failed');
+                    if (file && typeof Dropzone !== 'undefined') {
+                        file.status = Dropzone.QUEUED;
+                    }
+                }
+            });
+        },
+
+        markUploadFailed: function(uuid, fileName, message) {
+            this.uploadFailures.push({ fileName: fileName, message: message });
+            $('#vh360-gallery-images-preview').find('[data-uuid="' + uuid + '"]')
+                .removeAttr('data-id').removeClass('uploading uploaded').addClass('upload-failed')
+                .attr('data-upload-error', message).attr('title', fileName + ': ' + message);
         },
 
         /**
@@ -506,21 +562,22 @@
          */
         saveGallery: function() {
             var self = this;
-            var $form = $('#vh360-gallery-form');
             var $submit = $('#vh360-gallery-submit');
             var isEdit = this.currentGalleryId > 0;
-
-            // Validate
             var title = $('#vh360-gallery-title').val().trim();
+
+            if (this.isSaving) {
+                return;
+            }
             if (!title) {
                 self.showNotification('Gallery title is required', 'error');
                 return;
             }
 
-            // Disable submit button
+            this.isSaving = true;
+            this.uploadFailures = [];
             $submit.prop('disabled', true).text(vh360Gallery.i18n.saving || 'Saving...');
 
-            // Build form data
             var formData = {
                 action: isEdit ? 'vh360_update_gallery' : 'vh360_create_gallery',
                 nonce: vh360Gallery.nonce,
@@ -532,83 +589,75 @@
                 lightbox: $('#vh360-gallery-lightbox').is(':checked'),
                 tags: $('#vh360-gallery-tags').val()
             };
-
-            // Add gallery ID for edit
             if (isEdit) {
                 formData.gallery_id = this.currentGalleryId;
             }
-
-            // Add category
             var category = $('#vh360-gallery-category').val();
             if (category) {
                 formData.categories = [category];
             }
-            
-            // Add cover image ID if one is selected
-            var $coverItem = $('#vh360-gallery-images-preview .vh360-preview-item.is-cover');
-            if ($coverItem.length && $coverItem.data('id')) {
-                formData.cover_image_id = $coverItem.data('id');
-            }
 
-            // Create gallery first if new
-            $.ajax({
-                url: vh360Gallery.ajaxUrl,
-                type: 'POST',
-                data: formData,
-                success: function(response) {
-                    if (response.success) {
-                        var galleryId = response.data.gallery_id || response.data.gallery.id;
-                        self.currentGalleryId = galleryId;
-
-                        // Now upload any queued images
-                        if (self.dropzone && self.dropzone.getQueuedFiles().length > 0) {
-                            self.dropzone.processQueue();
-                            
-                            // Wait for uploads to complete
-                            self.dropzone.on('queuecomplete', function() {
-                                self.saveImageOrder();
-                                // Set cover image after upload if one was selected
-                                var $newCoverItem = $('#vh360-gallery-images-preview .vh360-preview-item.is-cover');
-                                if ($newCoverItem.length && $newCoverItem.data('id')) {
-                                    self.saveCoverImageToServer($newCoverItem.data('id'));
-                                }
-                                self.showNotification(response.data.message, 'success');
-                                self.closeModals();
-                                self.refreshGalleryGrid();
-                            });
-                        } else if (isEdit) {
-                            // Save image order for existing gallery
-                            self.saveImageOrder();
-                            self.showNotification(response.data.message, 'success');
-                            self.closeModals();
-                            self.refreshGalleryGrid();
-                        } else {
-                            self.showNotification(response.data.message, 'success');
-                            self.closeModals();
-                            self.refreshGalleryGrid();
-                        }
-                    } else {
-                        self.showNotification(response.data.message || 'Failed to save gallery', 'error');
+            // Keep the lifecycle locked until uploads and both metadata writes settle.
+            this.ajaxRequest({ url: vh360Gallery.ajaxUrl, type: 'POST', data: formData })
+                .then(function(response) {
+                    self.currentGalleryId = response.data.gallery_id || response.data.gallery.id;
+                    return self.processUploadQueue();
+                }).then(function() {
+                    var coverId = $('#vh360-gallery-images-preview .vh360-preview-item.is-cover[data-id]').data('id');
+                    return $.when(self.saveImageOrder(), self.saveCoverImageToServer(coverId));
+                }).then(function() {
+                    if (self.uploadFailures.length) {
+                        var failures = self.uploadFailures.map(function(failure) {
+                            return failure.fileName + ': ' + failure.message;
+                        }).join('; ');
+                        return $.Deferred().reject({ message: 'Some images failed: ' + failures }).promise();
                     }
-                },
-                error: function() {
-                    self.showNotification('An error occurred', 'error');
-                },
-                complete: function() {
+                    self.showNotification(isEdit ? 'Gallery updated successfully.' : 'Gallery created successfully.', 'success');
+                    self.closeModals(true);
+                    self.refreshGalleryGrid();
+                }).fail(function(error) {
+                    self.showNotification(error.message || 'Failed to save gallery', 'error');
+                }).always(function() {
+                    self.isSaving = false;
                     $submit.prop('disabled', false).text(isEdit ? (vh360Gallery.i18n.saveChanges || 'Save Changes') : (vh360Gallery.i18n.createGallery || 'Create Gallery'));
-                }
-            });
+                });
         },
 
-        /**
-         * Save cover image to server
-         */
+        ajaxRequest: function(options) {
+            var deferred = $.Deferred();
+            $.ajax(options).done(function(response) {
+                if (response && response.success) {
+                    deferred.resolve(response);
+                } else {
+                    deferred.reject({ message: response && response.data && response.data.message ? response.data.message : 'Request failed' });
+                }
+            }).fail(function(xhr) {
+                var response = xhr.responseJSON;
+                deferred.reject({ message: response && response.data && response.data.message ? response.data.message : 'An error occurred' });
+            });
+            return deferred.promise();
+        },
+
+        processUploadQueue: function() {
+            var deferred = $.Deferred();
+            if (!this.dropzone || !this.dropzone.getQueuedFiles().length) {
+                return deferred.resolve().promise();
+            }
+            var dropzone = this.dropzone;
+            var complete = function() {
+                dropzone.off('queuecomplete', complete);
+                deferred.resolve();
+            };
+            dropzone.on('queuecomplete', complete);
+            this.dropzone.processQueue();
+            return deferred.promise();
+        },
+
         saveCoverImageToServer: function(imageId) {
             if (!imageId || !this.currentGalleryId) {
-                return;
+                return $.Deferred().resolve().promise();
             }
-
-            $.ajax({
+            return this.ajaxRequest({
                 url: vh360Gallery.ajaxUrl,
                 type: 'POST',
                 data: {
@@ -620,25 +669,19 @@
             });
         },
 
-        /**
-         * Save image order
-         */
         saveImageOrder: function() {
-            var self = this;
-            var order = [];
-
-            $('#vh360-gallery-images-preview .vh360-preview-item').each(function() {
+            var order = [], seen = {};
+            $('#vh360-gallery-images-preview .vh360-preview-item[data-id]').each(function() {
                 var id = $(this).data('id');
-                if (id) {
+                if (id && !seen[id]) {
                     order.push(id);
+                    seen[id] = true;
                 }
             });
-
-            if (order.length === 0 || !this.currentGalleryId) {
-                return;
+            if (!this.currentGalleryId) {
+                return $.Deferred().resolve().promise();
             }
-
-            $.ajax({
+            return this.ajaxRequest({
                 url: vh360Gallery.ajaxUrl,
                 type: 'POST',
                 data: {
@@ -789,7 +832,10 @@
         /**
          * Close all gallery modals
          */
-        closeModals: function() {
+        closeModals: function(force) {
+            if (this.isSaving && !force) {
+                return;
+            }
             // Only close gallery-specific modals
             $('.vh360-gallery-modal').removeClass('show');
             

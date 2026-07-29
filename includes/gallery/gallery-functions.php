@@ -13,6 +13,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Normalize gallery attachment IDs.
+ *
+ * @param mixed $image_ids Potential attachment IDs.
+ * @return array Unique, non-zero attachment IDs.
+ */
+function vh360_normalize_gallery_image_ids( $image_ids ) {
+	if ( ! is_array( $image_ids ) ) {
+		return array();
+	}
+
+	$image_ids = array_map( 'absint', $image_ids );
+	$image_ids = array_filter( $image_ids );
+
+	return array_values( array_unique( $image_ids ) );
+}
+
+/**
  * Get gallery images.
  *
  * @param int    $gallery_id Gallery post ID.
@@ -20,7 +37,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return array Array of image data.
  */
 function vh360_get_gallery_images( $gallery_id, $size = 'medium' ) {
-	$image_ids = get_post_meta( $gallery_id, '_vh360_gallery_images', true );
+	$image_ids = vh360_normalize_gallery_image_ids( get_post_meta( $gallery_id, '_vh360_gallery_images', true ) );
 
 	if ( ! is_array( $image_ids ) || empty( $image_ids ) ) {
 		return array();
@@ -69,8 +86,8 @@ function vh360_get_gallery_images( $gallery_id, $size = 'medium' ) {
  * @return int Number of images.
  */
 function vh360_get_gallery_image_count( $gallery_id ) {
-	$image_ids = get_post_meta( $gallery_id, '_vh360_gallery_images', true );
-	return is_array( $image_ids ) ? count( $image_ids ) : 0;
+	$image_ids = vh360_normalize_gallery_image_ids( get_post_meta( $gallery_id, '_vh360_gallery_images', true ) );
+	return count( $image_ids );
 }
 
 /**
