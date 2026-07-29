@@ -15,10 +15,19 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Guest comments are never considered owned by a logged-in user.
  *
  * @param WP_Comment $comment Comment to authorize.
+ * @param WP_Post|null $post Optional preloaded parent post.
  * @return bool
  */
-function vh360_current_user_can_manage_native_comment( $comment ) {
+function vh360_current_user_can_manage_native_comment( $comment, $post = null ) {
 	if ( ! is_user_logged_in() || ! ( $comment instanceof WP_Comment ) ) {
+		return false;
+	}
+
+	if ( ! ( $post instanceof WP_Post ) ) {
+		$post = get_post( (int) $comment->comment_post_ID );
+	}
+
+	if ( ! $post || 'videohub360' !== $post->post_type ) {
 		return false;
 	}
 
@@ -54,11 +63,12 @@ function vh360_validate_native_comment_action( $operation ) {
 		wp_send_json_error( array( 'message' => __( 'Invalid comment.', 'videohub360-theme' ) ), 404 );
 	}
 
-	if ( ! get_post( (int) $comment->comment_post_ID ) ) {
+	$post = get_post( (int) $comment->comment_post_ID );
+	if ( ! $post || 'videohub360' !== $post->post_type ) {
 		wp_send_json_error( array( 'message' => __( 'Invalid comment context.', 'videohub360-theme' ) ), 404 );
 	}
 
-	if ( ! vh360_current_user_can_manage_native_comment( $comment ) ) {
+	if ( ! vh360_current_user_can_manage_native_comment( $comment, $post ) ) {
 		wp_send_json_error( array( 'message' => sprintf( __( 'You are not allowed to %s this comment.', 'videohub360-theme' ), $operation ) ), 403 );
 	}
 
@@ -79,26 +89,13 @@ add_action( 'wp_ajax_vh360_delete_native_comment', 'vh360_ajax_delete_native_com
 
 /** Update a native comment from the frontend. */
 function vh360_ajax_update_native_comment() {
-	if ( ! is_user_logged_in() ) {
-		wp_send_json_error( array( 'message' => __( 'You must be logged in to edit comments.', 'videohub360-theme' ) ), 401 );
-	}
-
-	$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
-	if ( ! wp_verify_nonce( $nonce, 'vh360_comment_actions' ) ) {
-		wp_send_json_error( array( 'message' => __( 'Security check failed.', 'videohub360-theme' ) ), 403 );
-	}
-
-	$comment_id = isset( $_POST['comment_id'] ) ? absint( $_POST['comment_id'] ) : 0;
-	if ( ! $comment_id ) {
-		wp_send_json_error( array( 'message' => __( 'Invalid comment.', 'videohub360-theme' ) ), 400 );
-	}
-
 	$content = isset( $_POST['content'] ) ? wp_kses_post( trim( wp_unslash( $_POST['content'] ) ) ) : '';
+	$comment = vh360_validate_native_comment_action( 'edit' );
+
 	if ( '' === $content ) {
 		wp_send_json_error( array( 'message' => __( 'Comment content cannot be empty.', 'videohub360-theme' ) ), 400 );
 	}
 
-	$comment = vh360_validate_native_comment_action( 'edit' );
 	$updated = wp_update_comment(
 		array(
 			'comment_ID'      => (int) $comment->comment_ID,

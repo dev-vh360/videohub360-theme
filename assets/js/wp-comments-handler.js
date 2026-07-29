@@ -118,9 +118,9 @@
         handleEdit: function($button) {
             var commentId = $button.data('comment-id');
             var $comment = $button.closest('.vh360-comment-item');
-            var $commentText = $comment.find('.vh360-comment-text').first();
+            var $commentContent = $comment.find('.vh360-comment-content').first();
             var promptMessage = vh360CommentsData.i18n.editPrompt;
-            var editedContent = window.prompt(promptMessage, $commentText.text().trim());
+            var editedContent = window.prompt(promptMessage, $commentContent.text().trim());
 
             if (editedContent === null) {
                 return;
@@ -145,7 +145,7 @@
                 },
                 success: function(response) {
                     if (response.success && response.data && response.data.html) {
-                        $commentText.html(response.data.html);
+                        $commentContent.html(response.data.html);
                         $button.closest('.vh360-actions-menu')
                             .removeClass('vh360-actions-menu--open')
                             .addClass('vh360-actions-menu--hidden');
@@ -158,13 +158,14 @@
                         ? response.data.message
                         : vh360CommentsData.i18n.editError;
                     WPCommentHandler.showError($button, message);
-                    $button.prop('disabled', false);
                 },
                 error: function(xhr) {
                     var message = xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message
                         ? xhr.responseJSON.data.message
                         : vh360CommentsData.i18n.editError;
                     WPCommentHandler.showError($button, message);
+                },
+                complete: function() {
                     $button.prop('disabled', false);
                 }
             });

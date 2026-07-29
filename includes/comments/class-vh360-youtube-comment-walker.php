@@ -244,11 +244,12 @@ class VH360_YouTube_Comment_Walker extends Walker_Comment {
                 <!-- Comment Bubble (text ONLY) -->
                 <div class="vh360-comment-bubble<?php echo esc_attr($comment_approved_class); ?>">
                     <div class="vh360-comment-text">
-                        <?php if ('0' == $comment->comment_approved) : ?>
+                        <?php if ('0' === (string) $comment->comment_approved) : ?>
                             <em class="comment-awaiting-moderation"><?php esc_html_e('Your comment is awaiting moderation.', 'videohub360-theme'); ?></em>
-                            <br>
                         <?php endif; ?>
-                        <?php comment_text($comment); ?>
+                        <div class="vh360-comment-content">
+                            <?php comment_text($comment); ?>
+                        </div>
                     </div>
                 </div>
                 

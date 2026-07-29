@@ -94,7 +94,9 @@ Comments use the same classes as the activity feed for consistency:
             <!-- Comment Bubble -->
             <div class="vh360-comment-bubble">
                 <div class="vh360-comment-text">
-                    Comment text here...
+                    <div class="vh360-comment-content">
+                        Comment text here...
+                    </div>
                 </div>
             </div>
             
@@ -129,7 +131,8 @@ Comments use the same classes as the activity feed for consistency:
 - `.vh360-comment-main` - Content column
 - `.vh360-comment-header` - Name + kebab menu row
 - `.vh360-comment-bubble` - Rounded comment box
-- `.vh360-comment-text` - Comment content
+- `.vh360-comment-text` - Comment moderation notice and content wrapper
+- `.vh360-comment-content` - Editable comment content
 - `.vh360-comment-actions` - Action buttons row
 
 ### Action Classes
@@ -226,7 +229,8 @@ than the raw submitted value.
 }
 ```
 
-Both actions require a logged-in user and authorize either the registered
+Both actions apply only to comments on `videohub360` posts, require a logged-in
+user, and authorize either the registered
 comment author (`user_id` must be non-zero) or a user with the
 `moderate_comments` capability. They return JSON and keep users on the
 frontend; successful deletion reloads the current page so WordPress can
