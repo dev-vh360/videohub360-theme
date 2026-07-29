@@ -21,13 +21,15 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function vh360_delete_comment_branch( $comment_id ) {
 	$comment_id = absint( $comment_id );
-	if ( ! $comment_id || ! get_comment( $comment_id ) ) {
+	$root_comment = $comment_id ? get_comment( $comment_id ) : null;
+	if ( ! $root_comment ) {
 		return new WP_Error(
 			'vh360_invalid_comment_branch',
 			__( 'The comment thread could not be deleted.', 'videohub360-theme' )
 		);
 	}
 
+	$root_post_id  = (int) $root_comment->comment_post_ID;
 	$visited       = array();
 	$deletion_order = array();
 
@@ -36,7 +38,7 @@ function vh360_delete_comment_branch( $comment_id ) {
 	 *
 	 * @param int $current_id Current comment ID.
 	 */
-	$collect_branch = function ( $current_id ) use ( &$collect_branch, &$visited, &$deletion_order ) {
+	$collect_branch = function ( $current_id ) use ( &$collect_branch, &$visited, &$deletion_order, $root_post_id ) {
 		$current_id = absint( $current_id );
 		if ( ! $current_id || isset( $visited[ $current_id ] ) ) {
 			return;
@@ -45,10 +47,11 @@ function vh360_delete_comment_branch( $comment_id ) {
 		$visited[ $current_id ] = true;
 		$child_ids = get_comments(
 			array(
-				'parent' => $current_id,
-				'status' => 'all',
-				'number' => 0,
-				'fields' => 'ids',
+				'parent'  => $current_id,
+				'post_id' => $root_post_id,
+				'status'  => 'any',
+				'number'  => 0,
+				'fields'  => 'ids',
 			)
 		);
 
