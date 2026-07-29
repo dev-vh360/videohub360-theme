@@ -160,8 +160,6 @@ class VH360_YouTube_Comment_Walker extends Walker_Comment {
      * @return string Comment HTML markup.
      */
     private function render_comment_content($comment, $depth, $args) {
-        $current_user_id = get_current_user_id();
-        
         // Determine avatar size based on depth
         $avatar_size = ($depth > 1) ? 32 : 40;
         
@@ -171,10 +169,7 @@ class VH360_YouTube_Comment_Walker extends Walker_Comment {
         $comment_author_email = get_comment_author_email($comment);
         
         // Permissions
-        $is_comment_author = is_user_logged_in() && ((int) $current_user_id === (int) $comment->user_id);
-        $can_moderate = current_user_can('moderate_comments');
-        $can_edit_comment = is_user_logged_in() && ($is_comment_author || $can_moderate);
-        $can_delete_comment = $can_edit_comment;
+        $can_manage_comment = vh360_current_user_can_manage_native_comment($comment);
         
         // Get like data from bulk-loaded arrays
         $like_count = isset(self::$like_counts[$comment->comment_ID]) ? self::$like_counts[$comment->comment_ID] : 0;
@@ -212,7 +207,7 @@ class VH360_YouTube_Comment_Walker extends Walker_Comment {
                         </strong>
                     <?php endif; ?>
                     
-                    <?php if ($can_edit_comment || $can_delete_comment) : ?>
+                    <?php if ($can_manage_comment) : ?>
                         <div class="vh360-comment-actions-menu-wrapper">
                             <button type="button"
                                     class="vh360-kebab-toggle"
@@ -225,7 +220,7 @@ class VH360_YouTube_Comment_Walker extends Walker_Comment {
                             </button>
                             <!-- Menu dropdown (handled by JS) -->
                             <div class="vh360-actions-menu vh360-actions-menu--hidden" role="menu">
-                                <?php if ($can_edit_comment && current_user_can('edit_comment', $comment->comment_ID)) : ?>
+                                <?php if ($can_manage_comment) : ?>
                                     <button type="button"
                                             class="vh360-actions-menu-item vh360-wp-comment-edit-btn"
                                             data-comment-id="<?php echo esc_attr($comment->comment_ID); ?>"
@@ -233,7 +228,7 @@ class VH360_YouTube_Comment_Walker extends Walker_Comment {
                                         <?php esc_html_e('Edit', 'videohub360-theme'); ?>
                                     </button>
                                 <?php endif; ?>
-                                <?php if ($can_delete_comment) : ?>
+                                <?php if ($can_manage_comment) : ?>
                                     <button type="button"
                                             class="vh360-actions-menu-item vh360-wp-comment-delete-btn"
                                             data-comment-id="<?php echo esc_attr($comment->comment_ID); ?>"

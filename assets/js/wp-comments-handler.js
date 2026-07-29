@@ -82,12 +82,10 @@
                 }
             });
             
-            // Edit button (placeholder - would need full implementation)
+            // Edit button
             $(document).on('click', '.vh360-wp-comment-edit-btn', function(e) {
                 e.preventDefault();
-                vh360Log('Edit comment:', $(this).data('comment-id'));
-                // TODO: Implement inline editing if needed
-                alert('Edit functionality would be implemented here. For now, please use the site admin area.');
+                self.handleEdit($(this));
             });
             
             // Delete button
@@ -110,6 +108,64 @@
             $('.vh360-comment-textarea').on('blur', function() {
                 if ($(this).val().trim() === '') {
                     $(this).attr('rows', 3);
+                }
+            });
+        },
+
+        /**
+         * Handle comment editing
+         */
+        handleEdit: function($button) {
+            var commentId = $button.data('comment-id');
+            var $comment = $button.closest('.vh360-comment-item');
+            var $commentText = $comment.find('.vh360-comment-text').first();
+            var promptMessage = vh360CommentsData.i18n.editPrompt;
+            var editedContent = window.prompt(promptMessage, $commentText.text().trim());
+
+            if (editedContent === null) {
+                return;
+            }
+
+            editedContent = editedContent.trim();
+            if (!editedContent) {
+                this.showError($button, vh360CommentsData.i18n.editEmpty);
+                return;
+            }
+
+            $button.prop('disabled', true);
+
+            $.ajax({
+                url: vh360CommentsData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'vh360_update_native_comment',
+                    nonce: vh360CommentsData.commentActionsNonce,
+                    comment_id: commentId,
+                    content: editedContent
+                },
+                success: function(response) {
+                    if (response.success && response.data && response.data.html) {
+                        $commentText.html(response.data.html);
+                        $button.closest('.vh360-actions-menu')
+                            .removeClass('vh360-actions-menu--open')
+                            .addClass('vh360-actions-menu--hidden');
+                        $comment.find('.vh360-kebab-toggle').first().attr('aria-expanded', 'false');
+                        vh360Log('Comment updated:', commentId);
+                        return;
+                    }
+
+                    var message = response.data && response.data.message
+                        ? response.data.message
+                        : vh360CommentsData.i18n.editError;
+                    WPCommentHandler.showError($button, message);
+                    $button.prop('disabled', false);
+                },
+                error: function(xhr) {
+                    var message = xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message
+                        ? xhr.responseJSON.data.message
+                        : vh360CommentsData.i18n.editError;
+                    WPCommentHandler.showError($button, message);
+                    $button.prop('disabled', false);
                 }
             });
         },
@@ -277,14 +333,37 @@
             }
             
             vh360Log('Delete comment:', commentId);
-            
-            // For now, redirect to admin delete (secure method)
-            // In a production implementation, you'd want AJAX with proper nonce verification
-            if (typeof vh360CommentsData !== 'undefined' && vh360CommentsData.adminUrl) {
-                window.location.href = vh360CommentsData.adminUrl + 'comment.php?action=deletecomment&c=' + commentId;
-            } else {
-                alert('Delete functionality requires admin access. Please use the admin panel.');
-            }
+
+            $button.prop('disabled', true);
+
+            $.ajax({
+                url: vh360CommentsData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'vh360_delete_native_comment',
+                    nonce: vh360CommentsData.commentActionsNonce,
+                    comment_id: commentId
+                },
+                success: function(response) {
+                    if (response.success) {
+                        window.location.reload();
+                        return;
+                    }
+
+                    var message = response.data && response.data.message
+                        ? response.data.message
+                        : vh360CommentsData.i18n.deleteError;
+                    WPCommentHandler.showError($button, message);
+                    $button.prop('disabled', false);
+                },
+                error: function(xhr) {
+                    var message = xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message
+                        ? xhr.responseJSON.data.message
+                        : vh360CommentsData.i18n.deleteError;
+                    WPCommentHandler.showError($button, message);
+                    $button.prop('disabled', false);
+                }
+            });
         },
         
         /**
