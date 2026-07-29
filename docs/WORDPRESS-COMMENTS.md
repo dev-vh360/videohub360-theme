@@ -27,6 +27,7 @@ The VideoHub360 Theme includes a custom YouTube-style comment system for native 
 
 4. **JavaScript Handler** (`assets/js/wp-comments-handler.js`)
    - AJAX like/unlike functionality
+   - Frontend AJAX editing and deletion
    - Reply toggle interactions
    - Kebab menu actions
    - Form handling with loading states
@@ -56,7 +57,7 @@ The VideoHub360 Theme includes a custom YouTube-style comment system for native 
 - **Proper escaping** - All user content safely sanitized
 - **ARIA labels** - Full screen reader support
 - **Keyboard navigation** - All interactive elements accessible
-- **Nonce verification** - Security via `vh360_activity_nonce`
+- **Nonce verification** - Likes use `vh360_activity_nonce`; edit/delete use `vh360_comment_actions`
 - **Error handling** - Graceful fallbacks for failed requests
 
 ### WordPress Compatibility
@@ -64,8 +65,8 @@ The VideoHub360 Theme includes a custom YouTube-style comment system for native 
 - ✅ Comment pagination
 - ✅ Comment moderation
 - ✅ Awaiting moderation notices
-- ✅ Comment editing (via admin)
-- ✅ Comment deletion
+- ✅ Frontend comment editing
+- ✅ Frontend comment deletion with a thread-refreshing page reload
 - ✅ Anti-spam plugin support
 - ✅ Gravatar support
 - ✅ Logged-in and guest commenting
@@ -93,7 +94,9 @@ Comments use the same classes as the activity feed for consistency:
             <!-- Comment Bubble -->
             <div class="vh360-comment-bubble">
                 <div class="vh360-comment-text">
-                    Comment text here...
+                    <div class="vh360-comment-content">
+                        Comment text here...
+                    </div>
                 </div>
             </div>
             
@@ -128,7 +131,8 @@ Comments use the same classes as the activity feed for consistency:
 - `.vh360-comment-main` - Content column
 - `.vh360-comment-header` - Name + kebab menu row
 - `.vh360-comment-bubble` - Rounded comment box
-- `.vh360-comment-text` - Comment content
+- `.vh360-comment-text` - Comment moderation notice and content wrapper
+- `.vh360-comment-content` - Editable comment content
 - `.vh360-comment-actions` - Action buttons row
 
 ### Action Classes
@@ -202,6 +206,44 @@ $('.vh360-wp-comment-delete-btn').click()
 }
 ```
 
+**Update Native Comment (`wp_ajax_vh360_update_native_comment`):**
+```javascript
+{
+    action: 'vh360_update_native_comment',
+    comment_id: 123,
+    content: 'Updated comment',
+    nonce: vh360CommentsData.commentActionsNonce
+}
+```
+
+The response contains the updated content rendered through WordPress's normal
+`comment_text()` filters. The client inserts this server-rendered HTML rather
+than the raw submitted value.
+
+**Delete Native Comment (`wp_ajax_vh360_delete_native_comment`):**
+```javascript
+{
+    action: 'vh360_delete_native_comment',
+    comment_id: 123,
+    nonce: vh360CommentsData.commentActionsNonce
+}
+```
+
+Both actions apply only to comments on `videohub360` posts, require a logged-in
+user, and authorize either the registered
+comment author (`user_id` must be non-zero) or a user with the
+`moderate_comments` capability. They return JSON and keep users on the
+frontend; successful deletion reloads the current page so WordPress can
+recalculate the complete comment thread.
+
+Native single-video comments and Activity Feed comments share
+`vh360_delete_comment_branch()` for permanent deletion. The helper collects all
+descendants across approved, pending, spam, and trashed statuses before making
+changes, then deletes the branch deepest-first so WordPress cannot reparent
+surviving replies. Authorization is checked only against the comment selected
+for deletion; once that root is authorized, descendant replies are dependent
+records and are deleted regardless of their authors.
+
 **Response:**
 ```javascript
 {
@@ -221,11 +263,15 @@ JavaScript receives the following data via `vh360CommentsData`:
 {
     ajaxUrl: '/wp-admin/admin-ajax.php',
     activityNonce: 'abc123...',
-    adminUrl: '/wp-admin/',
+    commentActionsNonce: 'def456...',
     isUserLoggedIn: true,
     i18n: {
         likeError: 'Unable to like comment. Please try again.',
-        deleteConfirm: 'Are you sure you want to delete this comment?'
+        editPrompt: 'Edit your comment:',
+        editEmpty: 'Comment content cannot be empty.',
+        editError: 'Unable to edit comment. Please try again.',
+        deleteConfirm: 'Are you sure you want to delete this comment?',
+        deleteError: 'Unable to delete comment. Please try again.'
     }
 }
 ```
@@ -433,7 +479,7 @@ class My_Custom_Comment_Walker extends VH360_YouTube_Comment_Walker {
 
 Potential additions (not yet implemented):
 
-- [ ] Inline comment editing (currently redirects to admin)
+- [x] Prompt-based frontend comment editing
 - [ ] Real-time comment updates (WebSocket/polling)
 - [ ] Comment reactions (beyond like/dislike)
 - [ ] Markdown support in comments

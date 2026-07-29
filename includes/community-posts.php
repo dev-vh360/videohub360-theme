@@ -1648,6 +1648,29 @@ function vh360_render_community_post($post, $show_full = true, $skip_comments = 
 }
 
 /**
+ * Get a timezone-safe relative timestamp for an Activity Feed comment.
+ *
+ * @param WP_Comment $comment Comment object.
+ * @return string Localized relative time, or an empty string for invalid input.
+ */
+function vh360_get_comment_relative_time( $comment ) {
+    if ( ! ( $comment instanceof WP_Comment ) || empty( $comment->comment_date_gmt ) ) {
+        return '';
+    }
+
+    $comment_timestamp = strtotime( $comment->comment_date_gmt . ' UTC' );
+    if ( false === $comment_timestamp ) {
+        return '';
+    }
+
+    return sprintf(
+        /* translators: %s: human-readable time difference, such as "5 minutes". */
+        __( '%s ago', 'videohub360-theme' ),
+        human_time_diff( $comment_timestamp, current_time( 'timestamp', true ) )
+    );
+}
+
+/**
  * Build a simple parent/replies tree of activity comments for a vh360_post.
  * Facebook-style: All replies (regardless of depth) are flattened into the 'children' array.
  *
@@ -1835,7 +1858,7 @@ function vh360_render_activity_comments($post_id) {
                         <!-- Actions Row (UNDER bubble) -->
                         <div class="vh360-comment-actions">
                             <span class="vh360-comment-time">
-                                <?php echo esc_html(human_time_diff(strtotime($comment->comment_date_gmt), current_time('timestamp')) . ' ago'); ?>
+                                <?php echo esc_html( vh360_get_comment_relative_time( $comment ) ); ?>
                             </span>
                             
                             <?php if (is_user_logged_in()) : ?>
@@ -1953,7 +1976,7 @@ function vh360_render_activity_comments($post_id) {
                                         <!-- Actions Row (UNDER bubble) -->
                                         <div class="vh360-comment-actions">
                                             <span class="vh360-comment-time">
-                                                <?php echo esc_html(human_time_diff(strtotime($reply->comment_date_gmt), current_time('timestamp')) . ' ago'); ?>
+                                                <?php echo esc_html( vh360_get_comment_relative_time( $reply ) ); ?>
                                             </span>
                                             
                                             <?php if (is_user_logged_in()) : ?>
@@ -2319,8 +2342,9 @@ function vh360_ajax_delete_activity_comment() {
         wp_send_json_error( array( 'message' => __( 'You are not allowed to delete this comment.', 'videohub360-theme' ) ) );
     }
 
-    if ( ! wp_delete_comment( $comment_id, true ) ) {
-        wp_send_json_error( array( 'message' => __( 'Could not delete comment. Please try again.', 'videohub360-theme' ) ) );
+    $result = vh360_delete_comment_branch( $comment_id );
+    if ( is_wp_error( $result ) ) {
+        wp_send_json_error( array( 'message' => __( 'The comment thread could not be deleted.', 'videohub360-theme' ) ) );
     }
 
     ob_start();
@@ -2329,7 +2353,7 @@ function vh360_ajax_delete_activity_comment() {
 
     wp_send_json_success(
         array(
-            'message' => __( 'Comment deleted.', 'videohub360-theme' ),
+            'message' => __( 'Comment and replies deleted successfully.', 'videohub360-theme' ),
             'html'    => $html,
         )
     );
@@ -2464,5 +2488,4 @@ function vh360_render_share_modal() {
     <?php
 }
 add_action('wp_footer', 'vh360_render_share_modal');
-
 

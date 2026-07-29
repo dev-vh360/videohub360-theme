@@ -995,11 +995,15 @@ function vh360_enqueue_wp_comments_assets() {
         array(
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'activityNonce' => wp_create_nonce('vh360_activity_nonce'),
-            'adminUrl' => admin_url(),
+            'commentActionsNonce' => wp_create_nonce('vh360_comment_actions'),
             'isUserLoggedIn' => is_user_logged_in(),
             'i18n' => array(
                 'likeError' => __('Unable to like comment. Please try again.', 'videohub360-theme'),
+                'editPrompt' => __('Edit your comment:', 'videohub360-theme'),
+                'editEmpty' => __('Comment content cannot be empty.', 'videohub360-theme'),
+                'editError' => __('Unable to edit comment. Please try again.', 'videohub360-theme'),
                 'deleteConfirm' => __('Are you sure you want to delete this comment? This action cannot be undone.', 'videohub360-theme'),
+                'deleteError' => __('Unable to delete comment. Please try again.', 'videohub360-theme'),
             ),
         )
     );

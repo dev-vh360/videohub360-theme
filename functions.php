@@ -1088,7 +1088,9 @@ require_once VH360_THEME_DIR . '/includes/activity-tracker.php';
 /**
  * Community posts system
  */
+require_once VH360_THEME_DIR . '/includes/comments/comment-tree-actions.php';
 require_once VH360_THEME_DIR . '/includes/community-posts.php';
+require_once VH360_THEME_DIR . '/includes/comments/comment-actions.php';
 require_once VH360_THEME_DIR . '/includes/live-room-frontend-settings.php';
 
 /**
@@ -2582,5 +2584,4 @@ function vh360_render_menu_admin_notice( $location_slug, $location_name ) {
     </div>
     <?php
 }
-
 

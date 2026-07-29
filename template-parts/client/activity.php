@@ -32,7 +32,7 @@ $recent_comments = get_comments(array(
                 <div class="vh360-activity-item">
                     <div class="vh360-activity-meta">
                         <time datetime="<?php echo esc_attr(get_comment_date('c', $comment)); ?>">
-                            <?php echo esc_html(human_time_diff(strtotime($comment->comment_date_gmt), current_time('timestamp')) . ' ago'); ?>
+                            <?php echo esc_html( vh360_get_comment_relative_time( $comment ) ); ?>
                         </time>
                     </div>
                     <div class="vh360-activity-content">
