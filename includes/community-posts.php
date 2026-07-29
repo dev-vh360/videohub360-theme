@@ -2319,8 +2319,9 @@ function vh360_ajax_delete_activity_comment() {
         wp_send_json_error( array( 'message' => __( 'You are not allowed to delete this comment.', 'videohub360-theme' ) ) );
     }
 
-    if ( ! wp_delete_comment( $comment_id, true ) ) {
-        wp_send_json_error( array( 'message' => __( 'Could not delete comment. Please try again.', 'videohub360-theme' ) ) );
+    $result = vh360_delete_comment_branch( $comment_id );
+    if ( is_wp_error( $result ) ) {
+        wp_send_json_error( array( 'message' => __( 'The comment thread could not be deleted.', 'videohub360-theme' ) ) );
     }
 
     ob_start();
@@ -2329,7 +2330,7 @@ function vh360_ajax_delete_activity_comment() {
 
     wp_send_json_success(
         array(
-            'message' => __( 'Comment deleted.', 'videohub360-theme' ),
+            'message' => __( 'Comment and replies deleted successfully.', 'videohub360-theme' ),
             'html'    => $html,
         )
     );

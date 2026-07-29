@@ -236,6 +236,14 @@ comment author (`user_id` must be non-zero) or a user with the
 frontend; successful deletion reloads the current page so WordPress can
 recalculate the complete comment thread.
 
+Native single-video comments and Activity Feed comments share
+`vh360_delete_comment_branch()` for permanent deletion. The helper collects all
+descendants across approved, pending, spam, and trashed statuses before making
+changes, then deletes the branch deepest-first so WordPress cannot reparent
+surviving replies. Authorization is checked only against the comment selected
+for deletion; once that root is authorized, descendant replies are dependent
+records and are deleted regardless of their authors.
+
 **Response:**
 ```javascript
 {

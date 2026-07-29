@@ -78,12 +78,13 @@ function vh360_validate_native_comment_action( $operation ) {
 /** Delete a native comment from the frontend. */
 function vh360_ajax_delete_native_comment() {
 	$comment = vh360_validate_native_comment_action( 'delete' );
+	$result  = vh360_delete_comment_branch( (int) $comment->comment_ID );
 
-	if ( ! wp_delete_comment( (int) $comment->comment_ID, true ) ) {
-		wp_send_json_error( array( 'message' => __( 'Could not delete comment. Please try again.', 'videohub360-theme' ) ), 500 );
+	if ( is_wp_error( $result ) ) {
+		wp_send_json_error( array( 'message' => __( 'The comment thread could not be deleted.', 'videohub360-theme' ) ), 500 );
 	}
 
-	wp_send_json_success( array( 'message' => __( 'Comment deleted.', 'videohub360-theme' ) ) );
+	wp_send_json_success( array( 'message' => __( 'Comment and replies deleted successfully.', 'videohub360-theme' ) ) );
 }
 add_action( 'wp_ajax_vh360_delete_native_comment', 'vh360_ajax_delete_native_comment' );
 
