@@ -813,6 +813,7 @@
         confirmDelete: function(galleryId) {
             this.currentGalleryId = galleryId;
             $('#vh360-gallery-delete-modal').addClass('show');
+            $('body').addClass('vh360-modal-open');
         },
 
         /**
