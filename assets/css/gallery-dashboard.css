@@ -416,6 +416,25 @@
     display: none;
 }
 
+.vh360-preview-item.upload-failed {
+    box-shadow: 0 0 0 3px var(--error-color, #ef4444);
+}
+
+.vh360-preview-item.upload-failed::after {
+    content: 'Failed';
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    z-index: 2;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: var(--error-color, #ef4444);
+    color: #fff;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
 @keyframes vh360-spin {
     to { transform: translate(-50%, -50%) rotate(360deg); }
 }

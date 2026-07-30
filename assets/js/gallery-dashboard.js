@@ -266,9 +266,8 @@
                     });
 
                     this.on('error', function(file, message) {
-                        if (typeof message === 'string') {
-                            self.markUploadFailed(file.upload.uuid, file.name, message);
-                        }
+                        var errorMessage = typeof message === 'string' ? message : (message && message.message) || 'Upload failed';
+                        self.markUploadFailed(file.upload.uuid, file.name, errorMessage);
                     });
 
                     this.on('queuecomplete', function() {
@@ -292,7 +291,18 @@
                 },
 
                 successmultiple: function(files, response) {
-                    self.handleUploadResults(files, response && response.data ? response.data.results : []);
+                    var data = response && response.data ? response.data : {};
+                    if (response && response.success === false && Array.isArray(data.results)) {
+                        self.handleUploadResults(files, data.results);
+                        return;
+                    }
+                    if (!response || response.success === false || !Array.isArray(data.results)) {
+                        files.forEach(function(file) {
+                            self.markUploadFailed(file.upload.uuid, file.name, data.message || 'Upload failed');
+                        });
+                        return;
+                    }
+                    self.handleUploadResults(files, data.results);
                 },
 
                 errormultiple: function(files, response) {
@@ -324,10 +334,9 @@
 
         handleUploadResults: function(files, results) {
             var self = this;
-            var filesByUuid = {};
-            files.forEach(function(file) { filesByUuid[file.upload.uuid] = file; });
+            var handledUuids = {};
             results.forEach(function(result) {
-                var file = filesByUuid[result.client_uuid];
+                handledUuids[result.client_uuid] = true;
                 if (result.success && result.image) {
                     var exists = self.uploadedImages.some(function(image) { return image.id === result.image.id; });
                     if (!exists) {
@@ -338,18 +347,26 @@
                         .removeAttr('data-upload-error');
                 } else {
                     self.markUploadFailed(result.client_uuid, result.file_name, result.message || 'Upload failed');
-                    if (file && typeof Dropzone !== 'undefined') {
-                        file.status = Dropzone.QUEUED;
-                    }
+                }
+            });
+            files.forEach(function(file) {
+                if (!handledUuids[file.upload.uuid]) {
+                    self.markUploadFailed(file.upload.uuid, file.name, 'The server did not return an upload result.');
                 }
             });
         },
 
         markUploadFailed: function(uuid, fileName, message) {
-            this.uploadFailures.push({ fileName: fileName, message: message });
+            var exists = this.uploadFailures.some(function(failure) {
+                return failure.uuid === uuid;
+            });
+            if (!exists) {
+                this.uploadFailures.push({ uuid: uuid, fileName: fileName, message: message });
+            }
             $('#vh360-gallery-images-preview').find('[data-uuid="' + uuid + '"]')
-                .removeAttr('data-id').removeClass('uploading uploaded').addClass('upload-failed')
-                .attr('data-upload-error', message).attr('title', fileName + ': ' + message);
+                .removeAttr('data-id').removeClass('uploading uploaded is-cover').addClass('upload-failed')
+                .attr('data-file-name', fileName).attr('data-upload-error', message)
+                .attr('title', fileName + ': ' + message);
         },
 
         /**
@@ -576,6 +593,13 @@
 
             this.isSaving = true;
             this.uploadFailures = [];
+            $('#vh360-gallery-images-preview .upload-failed').each(function() {
+                self.uploadFailures.push({
+                    uuid: $(this).data('uuid'),
+                    fileName: $(this).attr('data-file-name') || 'Image',
+                    message: $(this).attr('data-upload-error') || 'Upload failed'
+                });
+            });
             $submit.prop('disabled', true).text(vh360Gallery.i18n.saving || 'Saving...');
 
             var formData = {

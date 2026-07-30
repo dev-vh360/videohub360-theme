@@ -294,10 +294,7 @@ class VH360_Gallery_Post_Type {
 	public function render_images_meta_box( $post ) {
 		wp_nonce_field( 'vh360_save_gallery_meta', 'vh360_gallery_meta_nonce' );
 
-		$images = get_post_meta( $post->ID, '_vh360_gallery_images', true );
-		if ( ! is_array( $images ) ) {
-			$images = array();
-		}
+		$images = vh360_normalize_gallery_image_ids( get_post_meta( $post->ID, '_vh360_gallery_images', true ) );
 		?>
 		<div class="vh360-gallery-images-admin">
 			<p class="description"><?php esc_html_e( 'Add, remove, and reorder images in your gallery.', 'videohub360-theme' ); ?></p>
@@ -455,8 +452,7 @@ class VH360_Gallery_Post_Type {
 
 		// Save images.
 		if ( isset( $_POST['vh360_gallery_images'] ) && is_array( $_POST['vh360_gallery_images'] ) ) {
-			$images = array_map( 'absint', $_POST['vh360_gallery_images'] );
-			$images = array_filter( $images );
+			$images = vh360_normalize_gallery_image_ids( $_POST['vh360_gallery_images'] );
 			update_post_meta( $post_id, '_vh360_gallery_images', $images );
 		} else {
 			delete_post_meta( $post_id, '_vh360_gallery_images' );
@@ -527,8 +523,8 @@ class VH360_Gallery_Post_Type {
 				break;
 
 			case 'gallery_images':
-				$images = get_post_meta( $post_id, '_vh360_gallery_images', true );
-				$count  = is_array( $images ) ? count( $images ) : 0;
+				$images = vh360_normalize_gallery_image_ids( get_post_meta( $post_id, '_vh360_gallery_images', true ) );
+				$count  = count( $images );
 				/* translators: %d: Number of images in gallery */
 				echo esc_html( sprintf( _n( '%d image', '%d images', $count, 'videohub360-theme' ), $count ) );
 				break;
