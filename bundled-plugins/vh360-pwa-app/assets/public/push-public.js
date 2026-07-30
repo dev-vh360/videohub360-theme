@@ -177,6 +177,17 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 		return warnings;
 	}
 
+	function requiresIOSHomeScreen() {
+		var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+		var match = isIOS && navigator.userAgent.match(/OS (\d+)_(\d+)/);
+		if (!match) return false;
+		var major = parseInt(match[1], 10);
+		var minor = parseInt(match[2], 10);
+		if (major < 16 || (major === 16 && minor < 4)) return false;
+		var standalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+		return !standalone;
+	}
+
 	/**
 	 * Display context warnings in subscription widgets
 	 */
@@ -320,14 +331,16 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 			if (state.subscribed || state.permissionDenied) return state;
 			await new Promise(function(resolve) { setTimeout(resolve, 400); });
 		}
-		return state || getCurrentPushState(OneSignal);
+		return getCurrentPushState(OneSignal);
 	}
 
 	function reconcileCurrentDeviceSubscription(OneSignal) {
 		if (vh360OneSignalReconcilePromise) return vh360OneSignalReconcilePromise;
 		vh360OneSignalReconcilePromise = (async function() {
 			var state = await getCurrentPushState(OneSignal);
-			if (hasPreferenceConsent() && state.supported && state.permissionGranted && !state.subscribed &&
+			// A token with optedIn=false is an intentional provider opt-out. Only
+			// silently repair an interrupted subscription which has lost its token.
+			if (hasPreferenceConsent() && state.supported && state.permissionGranted && !state.token &&
 				OneSignal.User && OneSignal.User.PushSubscription && typeof OneSignal.User.PushSubscription.optIn === 'function') {
 				await OneSignal.User.PushSubscription.optIn();
 				state = await waitForValidSubscription(OneSignal);
@@ -461,6 +474,11 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 	function updateSubscriptionUI() {
 		var containers = document.querySelectorAll('[data-vh360-push-subscribe]');
 		if (!containers.length) {
+			return Promise.resolve();
+		}
+
+		if (requiresIOSHomeScreen()) {
+			containers.forEach(function(container) { hideAllStates(container); showState(container, 'ios-home'); });
 			return Promise.resolve();
 		}
 

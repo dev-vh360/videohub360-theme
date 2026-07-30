@@ -51,11 +51,17 @@ var VH360StorageCompat = window.VH360Storage || (function(){
   }
 
   function registrationUsesVH360OneSignalWorker(registration) {
+    var expectedPath;
+    try {
+      expectedPath = new URL(CFG.oneSignalSwUrl || '/push/onesignal/OneSignalSDKWorker.js', window.location.href).pathname;
+    } catch (e) {
+      expectedPath = '/push/onesignal/OneSignalSDKWorker.js';
+    }
     var workers = [registration.active, registration.waiting, registration.installing];
     return workers.some(function (worker) {
       if (!worker || !worker.scriptURL) return false;
       try {
-        return new URL(worker.scriptURL).pathname === '/push/onesignal/OneSignalSDKWorker.js';
+        return new URL(worker.scriptURL).pathname === expectedPath;
       } catch (e) { return false; }
     });
   }

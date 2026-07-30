@@ -99,6 +99,7 @@ class VH360_PWA_Frontend {
 				// Use root-level, static files for maximum compatibility across hosts/CDNs.
 				'swUrl'              => function_exists( 'vh360_pwa_version_url' ) ? vh360_pwa_version_url( home_url( '/' . VH360_PWA_SW_SLUG ), $opts ) : home_url( '/' . VH360_PWA_SW_SLUG ),
 				'offlineUrl'         => function_exists( 'vh360_pwa_version_url' ) ? vh360_pwa_version_url( home_url( '/' . VH360_PWA_OFFLINE_SLUG ), $opts ) : home_url( '/' . VH360_PWA_OFFLINE_SLUG ),
+				'oneSignalSwUrl'     => home_url( '/push/onesignal/OneSignalSDKWorker.js' ),
 				'showInstallPrompt'  => ! empty( $opts['show_install_prompt'] ) ? 1 : 0,
 				'installPromptText'  => (string) $opts['install_prompt_text'],
 				'showInstallBanner'  => ! empty( $opts['show_install_banner'] ) ? 1 : 0,
@@ -261,6 +262,9 @@ class VH360_PWA_Frontend {
 		<div class="vh360-push-subscribe" data-vh360-push-subscribe="1">
 			<div class="vh360-push-state vh360-push-unsupported" style="display:none;">
 				<p><?php echo esc_html( $atts['unsupported_text'] ); ?></p>
+			</div>
+			<div class="vh360-push-state vh360-push-ios-home" style="display:none;">
+				<p><?php esc_html_e( 'Open the installed app from your Home Screen to enable notifications.', 'vh360-pwa-app' ); ?></p>
 			</div>
 			<div class="vh360-push-state vh360-push-unsubscribed" style="display:none;">
 				<button type="button" class="vh360-push-subscribe-btn" data-vh360-push-action="subscribe">
