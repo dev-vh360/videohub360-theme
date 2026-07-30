@@ -286,6 +286,10 @@
                     formData.append('nonce', vh360Gallery.nonce);
                     formData.append('gallery_id', self.currentGalleryId);
                     files.forEach(function(file) {
+                        $('#vh360-gallery-images-preview').find('[data-uuid="' + file.upload.uuid + '"]')
+                            .removeClass('queued uploaded upload-failed').addClass('uploading')
+                            .removeAttr('data-file-name data-upload-error title')
+                            .attr('aria-label', 'Uploading');
                         formData.append('client_uuids[]', file.upload.uuid);
                     });
                 },
@@ -343,8 +347,8 @@
                         self.uploadedImages.push(result.image);
                     }
                     $('#vh360-gallery-images-preview').find('[data-uuid="' + result.client_uuid + '"]')
-                        .attr('data-id', result.image.id).removeClass('uploading upload-failed').addClass('uploaded')
-                        .removeAttr('data-upload-error');
+                        .attr('data-id', result.image.id).removeClass('queued uploading upload-failed').addClass('uploaded')
+                        .removeAttr('data-file-name data-upload-error title').attr('aria-label', 'Uploaded');
                 } else {
                     self.markUploadFailed(result.client_uuid, result.file_name, result.message || 'Upload failed');
                 }
@@ -364,16 +368,16 @@
                 this.uploadFailures.push({ uuid: uuid, fileName: fileName, message: message });
             }
             $('#vh360-gallery-images-preview').find('[data-uuid="' + uuid + '"]')
-                .removeAttr('data-id').removeClass('uploading uploaded is-cover').addClass('upload-failed')
+                .removeAttr('data-id').removeClass('queued uploading uploaded is-cover').addClass('upload-failed')
                 .attr('data-file-name', fileName).attr('data-upload-error', message)
-                .attr('title', fileName + ': ' + message);
+                .attr('title', fileName + ': ' + message).attr('aria-label', 'Upload failed: ' + fileName);
         },
 
         /**
          * Add file preview
          */
         addFilePreview: function(file) {
-            var previewHtml = '<div class="vh360-preview-item uploading" data-uuid="' + file.upload.uuid + '">' +
+            var previewHtml = '<div class="vh360-preview-item queued" role="status" aria-label="Ready to upload" data-uuid="' + file.upload.uuid + '">' +
                 '<div class="vh360-preview-image">' +
                 '<img src="" alt="">' +
                 '<div class="vh360-preview-overlay">' +
