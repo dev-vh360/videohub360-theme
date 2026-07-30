@@ -27,6 +27,8 @@ define('VH360_THEME_VERSION', wp_get_theme()->get('Version'));
 define('VH360_THEME_DIR', get_template_directory());
 define('VH360_THEME_URI', get_template_directory_uri());
 
+require_once VH360_THEME_DIR . '/includes/image-quality.php';
+
 
 /**
  * Get a cache-busting version for a theme-owned asset.
@@ -2584,4 +2586,3 @@ function vh360_render_menu_admin_notice( $location_slug, $location_name ) {
     </div>
     <?php
 }
-

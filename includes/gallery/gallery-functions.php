@@ -336,13 +336,19 @@ function vh360_render_gallery( $gallery_id, $args = array() ) {
 					   data-caption="<?php echo esc_attr( $image['caption'] ); ?>"
 					   itemprop="contentUrl">
 						<div class="vh360-gallery-image-wrapper">
-							<img src="<?php echo esc_url( $image['src'] ); ?>" 
-								 alt="<?php echo esc_attr( $image['alt'] ); ?>"
-								 width="<?php echo esc_attr( $image['width'] ); ?>"
-								 height="<?php echo esc_attr( $image['height'] ); ?>"
-								 loading="lazy"
-								 class="vh360-gallery-image"
-								 itemprop="thumbnail">
+							<?php
+							echo wp_get_attachment_image(
+								$image['id'],
+								$args['size'],
+								false,
+								array(
+									'class'    => 'vh360-gallery-image',
+									'loading'  => 'lazy',
+									'alt'      => $image['alt'],
+									'itemprop' => 'thumbnail',
+								)
+							);
+							?>
 						</div>
 						<div class="vh360-gallery-overlay">
 							<span class="vh360-gallery-zoom-icon" aria-hidden="true">

@@ -23,6 +23,7 @@ $defaults = array(
     'custom_css' => '',
     'enable_minification' => false,
     'enable_lazy_loading' => true,
+    'enable_high_quality_images' => true,
 );
 $options = wp_parse_args($options, $defaults);
 
@@ -164,6 +165,16 @@ if (isset($_GET['preset_applied']) && $_GET['preset_applied'] === 'success') {
                                 <input type="checkbox" name="vh360_appearance_options[enable_lazy_loading]" value="1" <?php checked($options['enable_lazy_loading'], true); ?>>
                                 <?php esc_html_e('Enable lazy loading for images (improves page load time)', 'videohub360-theme'); ?>
                             </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php esc_html_e('High-Quality Images', 'videohub360-theme'); ?></th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="vh360_appearance_options[enable_high_quality_images]" value="1" <?php checked($options['enable_high_quality_images'], true); ?>>
+                                <?php esc_html_e('Use higher quality for newly generated JPEG and WebP images.', 'videohub360-theme'); ?>
+                            </label>
+                            <p class="description"><?php esc_html_e('Improves generated image clarity while retaining responsive image sizes and normal WordPress performance optimizations.', 'videohub360-theme'); ?></p>
                         </td>
                     </tr>
                 </tbody>
