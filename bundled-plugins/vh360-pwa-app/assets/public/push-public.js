@@ -105,6 +105,12 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 	/**
 	 * Detect unsupported contexts (incognito, iOS, etc.)
 	 */
+	function isIOSDevice() {
+		var platform = navigator.platform || '';
+		return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+			(platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+	}
+
 	function detectUnsupportedContext() {
 		var warnings = [];
 
@@ -134,7 +140,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 		}
 
 		// Detect iOS Safari limitations
-		var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+		var isIOS = isIOSDevice();
 		if (isIOS) {
 			var standalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 			// iOS 16.4+ supports web push, but with limitations
@@ -155,6 +161,13 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 						message: 'Open the installed app from your Home Screen to enable notifications.'
 					});
 				}
+			} else if (!standalone) {
+				// Desktop-style iPadOS user agents do not expose a usable iOS
+				// version, but modern iPads still require Home Screen installation.
+				warnings.push({
+					type: 'ios_home',
+					message: 'Open the installed app from your Home Screen to enable notifications.'
+				});
 			}
 		}
 
@@ -178,12 +191,13 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 	}
 
 	function requiresIOSHomeScreen() {
-		var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-		var match = isIOS && navigator.userAgent.match(/OS (\d+)_(\d+)/);
-		if (!match) return false;
-		var major = parseInt(match[1], 10);
-		var minor = parseInt(match[2], 10);
-		if (major < 16 || (major === 16 && minor < 4)) return false;
+		if (!isIOSDevice()) return false;
+		var match = navigator.userAgent.match(/OS (\d+)_(\d+)/);
+		if (match) {
+			var major = parseInt(match[1], 10);
+			var minor = parseInt(match[2], 10);
+			if (major < 16 || (major === 16 && minor < 4)) return false;
+		}
 		var standalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 		return !standalone;
 	}
