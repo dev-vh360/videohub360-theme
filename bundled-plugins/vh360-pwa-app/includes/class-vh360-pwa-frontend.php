@@ -99,6 +99,7 @@ class VH360_PWA_Frontend {
 				// Use root-level, static files for maximum compatibility across hosts/CDNs.
 				'swUrl'              => function_exists( 'vh360_pwa_version_url' ) ? vh360_pwa_version_url( home_url( '/' . VH360_PWA_SW_SLUG ), $opts ) : home_url( '/' . VH360_PWA_SW_SLUG ),
 				'offlineUrl'         => function_exists( 'vh360_pwa_version_url' ) ? vh360_pwa_version_url( home_url( '/' . VH360_PWA_OFFLINE_SLUG ), $opts ) : home_url( '/' . VH360_PWA_OFFLINE_SLUG ),
+				'oneSignalSwUrl'     => home_url( '/push/onesignal/OneSignalSDKWorker.js' ),
 				'showInstallPrompt'  => ! empty( $opts['show_install_prompt'] ) ? 1 : 0,
 				'installPromptText'  => (string) $opts['install_prompt_text'],
 				'showInstallBanner'  => ! empty( $opts['show_install_banner'] ) ? 1 : 0,
@@ -247,9 +248,10 @@ class VH360_PWA_Frontend {
 		$atts = shortcode_atts(
 			array(
 				'button_text' => __( 'Enable Notifications', 'vh360-pwa-app' ),
+				'reconnect_text' => __( 'Reconnect Notifications', 'vh360-pwa-app' ),
 				'enabled_text' => __( 'Notifications Enabled', 'vh360-pwa-app' ),
 				'unsupported_text' => __( 'Push notifications not supported in this browser', 'vh360-pwa-app' ),
-				'blocked_text' => __( 'Notifications blocked. Please reset permissions in your browser settings.', 'vh360-pwa-app' ),
+				'blocked_text' => __( 'Notifications are blocked. Enable them in your browser or device settings, then return here.', 'vh360-pwa-app' ),
 			),
 			(array) $atts,
 			'vh360_push_subscribe'
@@ -261,9 +263,17 @@ class VH360_PWA_Frontend {
 			<div class="vh360-push-state vh360-push-unsupported" style="display:none;">
 				<p><?php echo esc_html( $atts['unsupported_text'] ); ?></p>
 			</div>
+			<div class="vh360-push-state vh360-push-ios-home" style="display:none;">
+				<p><?php esc_html_e( 'Open the installed app from your Home Screen to enable notifications.', 'vh360-pwa-app' ); ?></p>
+			</div>
 			<div class="vh360-push-state vh360-push-unsubscribed" style="display:none;">
 				<button type="button" class="vh360-push-subscribe-btn" data-vh360-push-action="subscribe">
 					<?php echo esc_html( $atts['button_text'] ); ?>
+				</button>
+			</div>
+			<div class="vh360-push-state vh360-push-reconnect" style="display:none;">
+				<button type="button" class="vh360-push-subscribe-btn" data-vh360-push-action="subscribe">
+					<?php echo esc_html( $atts['reconnect_text'] ); ?>
 				</button>
 			</div>
 			<div class="vh360-push-state vh360-push-subscribed" style="display:none;">
@@ -273,7 +283,7 @@ class VH360_PWA_Frontend {
 				<p class="vh360-push-error"><?php echo esc_html( $atts['blocked_text'] ); ?></p>
 			</div>
 			<div class="vh360-push-state vh360-push-loading" style="display:none;">
-				<p><?php esc_html_e( 'Loading...', 'vh360-pwa-app' ); ?></p>
+				<p><?php esc_html_e( 'Connecting notifications…', 'vh360-pwa-app' ); ?></p>
 			</div>
 		</div>
 		<?php
