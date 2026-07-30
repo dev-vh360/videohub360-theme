@@ -430,6 +430,7 @@ function vh360_ss_get_allowed_theme_options() {
                 'custom_css',
                 'enable_minification',
                 'enable_lazy_loading',
+                'enable_high_quality_images',
                 'site_layout',
                 'content_width',
                 'sidebar_position',

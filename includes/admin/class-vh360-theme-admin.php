@@ -391,6 +391,7 @@ class VH360_Theme_Admin {
                 'custom_css' => '',
                 'enable_minification' => false,
                 'enable_lazy_loading' => true,
+                'enable_high_quality_images' => true,
             ),
         ));
         
@@ -802,6 +803,7 @@ class VH360_Theme_Admin {
         $sanitized['enable_user_menu'] = isset($input['enable_user_menu']) ? (bool) $input['enable_user_menu'] : false;
         $sanitized['enable_minification'] = isset($input['enable_minification']) ? (bool) $input['enable_minification'] : false;
         $sanitized['enable_lazy_loading'] = isset($input['enable_lazy_loading']) ? (bool) $input['enable_lazy_loading'] : false;
+        $sanitized['enable_high_quality_images'] = isset($input['enable_high_quality_images']) ? (bool) $input['enable_high_quality_images'] : false;
         
         // Text field
         $sanitized['custom_css'] = isset($input['custom_css']) ? wp_strip_all_tags($input['custom_css']) : '';
