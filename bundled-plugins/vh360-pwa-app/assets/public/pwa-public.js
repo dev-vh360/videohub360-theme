@@ -50,6 +50,16 @@ var VH360StorageCompat = window.VH360Storage || (function(){
     return false;
   }
 
+  function registrationUsesVH360OneSignalWorker(registration) {
+    var workers = [registration.active, registration.waiting, registration.installing];
+    return workers.some(function (worker) {
+      if (!worker || !worker.scriptURL) return false;
+      try {
+        return new URL(worker.scriptURL).pathname === '/push/onesignal/OneSignalSDKWorker.js';
+      } catch (e) { return false; }
+    });
+  }
+
   // Banner config
   var showBanner = !!CFG.showInstallBanner;
   var bannerText = CFG.installBannerText || 'Install this app';
@@ -426,7 +436,10 @@ var VH360StorageCompat = window.VH360Storage || (function(){
           if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
             tasks.push(
               navigator.serviceWorker.getRegistrations().then(function (regs) {
-                return Promise.all(regs.filter(registrationUsesVH360Worker).map(function (r) { return r.unregister(); }));
+                return Promise.all(regs.filter(function (registration) {
+                  return registrationUsesVH360Worker(registration) ||
+                    (tool === 'reset_device' && registrationUsesVH360OneSignalWorker(registration));
+                }).map(function (r) { return r.unregister(); }));
               })
             );
           }
@@ -445,7 +458,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
           } else if (tool === 'unregister_sw') {
             msg = '<p><strong>Done.</strong> The service worker was unregistered on this device.</p><p>You can close this tab now.</p>';
           } else {
-            msg = '<p><strong>Done.</strong> This device was reset (service worker + caches + install banner).</p><p>You can close this tab now.</p>';
+            msg = '<p><strong>Done.</strong> This device was reset (PWA and push-notification service workers, caches, and install banner).</p><p>You can close this tab now.</p>';
           }
           openModal(msg);
           // After clearing the banner dismissal, allow the banner to reappear.

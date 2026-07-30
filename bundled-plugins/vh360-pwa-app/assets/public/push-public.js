@@ -35,6 +35,8 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 	var vh360OneSignalLifecyclePromise = Promise.resolve();
 	var vh360OneSignalLastReconciledConsent = null;
 	var vh360OneSignalLastLoggedInUserId = null;
+	var vh360OneSignalLastLoggedInIdentity = '';
+	var vh360OneSignalReconcilePromise = null;
 
 	function hasPreferenceConsent() {
 		if (window.VH360ConsentExpected && !window.VH360Consent) {
@@ -134,6 +136,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 		// Detect iOS Safari limitations
 		var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 		if (isIOS) {
+			var standalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 			// iOS 16.4+ supports web push, but with limitations
 			var match = navigator.userAgent.match(/OS (\d+)_(\d+)/);
 			if (match) {
@@ -146,10 +149,10 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 						type: 'ios',
 						message: 'Your iOS version does not support push notifications. Please update to iOS 16.4 or later.'
 					});
-				} else {
+				} else if (!standalone) {
 					warnings.push({
-						type: 'ios_info',
-						message: 'Note: On iOS, you must add this site to your Home Screen to enable push notifications.'
+						type: 'ios_home',
+						message: 'Open the installed app from your Home Screen to enable notifications.'
 					});
 				}
 			}
@@ -241,21 +244,11 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 	}
 
 	async function applyOneSignalConsentState(OneSignal, consentActive) {
-		var userId = VH360Push.currentUserId && VH360Push.currentUserId > 0 ? String(VH360Push.currentUserId) : null;
-
 		if (consentActive) {
 			if (OneSignal && typeof OneSignal.setConsentGiven === 'function' && vh360OneSignalLastReconciledConsent !== true) {
 				await Promise.resolve(OneSignal.setConsentGiven(true));
 			}
-			if (userId && OneSignal && typeof OneSignal.login === 'function' && vh360OneSignalLastLoggedInUserId !== userId) {
-				try {
-					await OneSignal.login(userId);
-					vh360Log('[VH360 Push] OneSignal external user ID set:', userId);
-					vh360OneSignalLastLoggedInUserId = userId;
-				} catch (err) {
-					vh360Log('[VH360 Push] Failed to set OneSignal external user ID:', err);
-				}
-			}
+			await loginCurrentOneSignalUser(OneSignal, false);
 			vh360OneSignalLastReconciledConsent = true;
 			return;
 		}
@@ -266,6 +259,88 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 		vh360OneSignalLastReconciledConsent = false;
 	}
 
+	async function readSdkValue(owner, name) {
+		if (!owner) return undefined;
+		var value = owner[name];
+		if (typeof value === 'function') value = value.call(owner);
+		return Promise.resolve(value);
+	}
+
+	function normalizePermission(nativePermission, providerPermission) {
+		if (nativePermission === 'granted' || nativePermission === 'denied' || nativePermission === 'default') return nativePermission;
+		if (providerPermission === 'granted' || providerPermission === true) return 'granted';
+		if (providerPermission === 'denied') return 'denied';
+		return 'default';
+	}
+
+	async function getCurrentPushState(OneSignal) {
+		var notifications = OneSignal && OneSignal.Notifications;
+		var subscription = OneSignal && OneSignal.User && OneSignal.User.PushSubscription;
+		var supported = false;
+		var providerPermission;
+		var optedIn = false;
+		var id = '';
+		var token = '';
+		try { supported = !!(await readSdkValue(notifications, 'isPushSupported')); } catch (e) {}
+		try { providerPermission = await readSdkValue(notifications, 'permission'); } catch (e2) {}
+		try { optedIn = !!(await readSdkValue(subscription, 'optedIn')); } catch (e3) {}
+		try { id = (await readSdkValue(subscription, 'id')) || ''; } catch (e4) {}
+		try { token = (await readSdkValue(subscription, 'token')) || ''; } catch (e5) {}
+		var nativePermission = window.Notification && window.Notification.permission;
+		var permission = normalizePermission(nativePermission, providerPermission);
+		return {
+			supported: supported,
+			permission: permission,
+			permissionGranted: permission === 'granted',
+			permissionDenied: permission === 'denied',
+			optedIn: optedIn,
+			id: String(id),
+			token: String(token),
+			subscribed: supported && permission === 'granted' && optedIn && String(token) !== ''
+		};
+	}
+
+	async function loginCurrentOneSignalUser(OneSignal, force, state) {
+		var userId = VH360Push.currentUserId && VH360Push.currentUserId > 0 ? String(VH360Push.currentUserId) : null;
+		if (!userId || !hasPreferenceConsent() || !OneSignal || typeof OneSignal.login !== 'function') return;
+		state = state || await getCurrentPushState(OneSignal);
+		var identity = state.id + '|' + state.token;
+		if (!force && vh360OneSignalLastLoggedInUserId === userId && vh360OneSignalLastLoggedInIdentity === identity) return;
+		try {
+			await OneSignal.login(userId);
+			vh360OneSignalLastLoggedInUserId = userId;
+			vh360OneSignalLastLoggedInIdentity = identity;
+		} catch (error) { vh360Log('[VH360 Push] Failed to link OneSignal user:', error); }
+	}
+
+	async function waitForValidSubscription(OneSignal) {
+		var state;
+		for (var attempt = 0; attempt < 10; attempt++) {
+			state = await getCurrentPushState(OneSignal);
+			if (state.subscribed || state.permissionDenied) return state;
+			await new Promise(function(resolve) { setTimeout(resolve, 400); });
+		}
+		return state || getCurrentPushState(OneSignal);
+	}
+
+	function reconcileCurrentDeviceSubscription(OneSignal) {
+		if (vh360OneSignalReconcilePromise) return vh360OneSignalReconcilePromise;
+		vh360OneSignalReconcilePromise = (async function() {
+			var state = await getCurrentPushState(OneSignal);
+			if (hasPreferenceConsent() && state.supported && state.permissionGranted && !state.subscribed &&
+				OneSignal.User && OneSignal.User.PushSubscription && typeof OneSignal.User.PushSubscription.optIn === 'function') {
+				await OneSignal.User.PushSubscription.optIn();
+				state = await waitForValidSubscription(OneSignal);
+			}
+			if (state.subscribed) await loginCurrentOneSignalUser(OneSignal, false, state);
+			return state;
+		})().catch(function(error) {
+			vh360Log('[VH360 Push] Device reconciliation failed:', error);
+			return getCurrentPushState(OneSignal);
+		}).finally(function() { vh360OneSignalReconcilePromise = null; });
+		return vh360OneSignalReconcilePromise;
+	}
+
 	function registerOneSignalListeners(OneSignal) {
 		if (vh360OneSignalListenersRegistered) {
 			return;
@@ -273,12 +348,21 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 		vh360OneSignalListenersRegistered = true;
 		if (OneSignal && OneSignal.Notifications && typeof OneSignal.Notifications.addEventListener === 'function') {
 			try {
-				OneSignal.Notifications.addEventListener('permissionChange', updateSubscriptionUI);
+				OneSignal.Notifications.addEventListener('permissionChange', function() {
+					reconcileCurrentDeviceSubscription(OneSignal).then(updateSubscriptionUI);
+				});
 			} catch (e) {}
 		}
 		if (OneSignal && OneSignal.User && OneSignal.User.PushSubscription && typeof OneSignal.User.PushSubscription.addEventListener === 'function') {
 			try {
-				OneSignal.User.PushSubscription.addEventListener('change', updateSubscriptionUI);
+				OneSignal.User.PushSubscription.addEventListener('change', function(event) {
+					var previous = event && event.previous;
+					var current = event && event.current;
+					var changed = !!(previous && current && (previous.id !== current.id || previous.token !== current.token));
+					reconcileCurrentDeviceSubscription(OneSignal).then(function(state) {
+						return loginCurrentOneSignalUser(OneSignal, changed, state);
+					}).then(updateSubscriptionUI);
+				});
 			} catch (e2) {}
 		}
 	}
@@ -352,6 +436,7 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 		if (requestedTransition !== vh360OneSignalTransitionId) {
 			return reconcilePushConsent(vh360OneSignalTransitionId);
 		}
+		if (consentActive) await reconcileCurrentDeviceSubscription(OneSignal);
 		updateSubscriptionUI().catch(function() {});
 		return OneSignal;
 	}
@@ -372,24 +457,6 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 		});
 	}
 
-	function getNativePermission(OneSignal) {
-		try {
-			if (!OneSignal || !OneSignal.Notifications) {
-				return Promise.resolve('default');
-			}
-
-			var p = OneSignal.Notifications.permission;
-			if (typeof p === 'string') return Promise.resolve(p);
-			if (p && typeof p.then === 'function') return p;
-
-			var pn = OneSignal.Notifications.permissionNative;
-			if (typeof pn === 'string') return Promise.resolve(pn);
-			if (pn && typeof pn.then === 'function') return pn;
-			if (typeof pn === 'function') return Promise.resolve(pn.call(OneSignal.Notifications));
-		} catch (e) {}
-		return Promise.resolve('default');
-	}
-
 	// Update subscription UI
 	function updateSubscriptionUI() {
 		var containers = document.querySelectorAll('[data-vh360-push-subscribe]');
@@ -405,9 +472,8 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 		return initOneSignal().then(async function(OneSignal) {
 			try {
 				if (!OneSignal || !OneSignal.Notifications) throw new Error('Push provider is unavailable.');
-				var isPushSupported = await Promise.resolve(OneSignal.Notifications.isPushSupported());
-				
-				if (!isPushSupported) {
+				var state = await getCurrentPushState(OneSignal);
+				if (!state.supported) {
 					containers.forEach(function(container) {
 						hideAllStates(container);
 						showState(container, 'unsupported');
@@ -415,19 +481,13 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 					return;
 				}
 
-				var permission = await getNativePermission(OneSignal);
-				var sub = await getSubscriptionState(OneSignal);
-				
 				containers.forEach(function(container) {
 					hideAllStates(container);
-					
-					// If we're actually opted-in (or have a subscription id), show subscribed.
-					if (sub && (sub.optedIn || sub.id)) {
+					if (state.subscribed) {
 						showState(container, 'subscribed');
-					} else if (permission === 'granted') {
-						// Permission granted but no subscription yet.
-						showState(container, 'unsubscribed');
-					} else if (permission === 'denied') {
+					} else if (state.permissionGranted) {
+						showState(container, 'reconnect');
+					} else if (state.permissionDenied) {
 						showState(container, 'blocked');
 					} else {
 						showState(container, 'unsubscribed');
@@ -482,28 +542,6 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 		handleSubscribe(btn);
 	});
 
-	async function getSubscriptionState(OneSignal) {
-		// We prefer real subscription state over permission-only checks.
-		try {
-			if (OneSignal && OneSignal.User && OneSignal.User.PushSubscription) {
-				var ps = OneSignal.User.PushSubscription;
-				var optedIn = ps.optedIn;
-				if (typeof optedIn === 'function') {
-					optedIn = await optedIn.call(ps);
-				}
-				var id = ps.id;
-				if (typeof id === 'function') {
-					id = await id.call(ps);
-				}
-				return {
-					optedIn: !!optedIn,
-					id: id || ''
-				};
-			}
-		} catch (e) {}
-		return { optedIn: false, id: '' };
-	}
-
 	function handleSubscribe(button) {
 		if (!hasPreferenceConsent()) {
 			openConsentPreferences();
@@ -527,31 +565,36 @@ var VH360StorageCompat = window.VH360Storage || (function(){
 					openConsentPreferences();
 					return;
 				}
-				// Prefer direct permission + opt-in when available (more reliable than slidedown alone)
-				if (OneSignal.Notifications && typeof OneSignal.Notifications.requestPermission === 'function') {
-					await OneSignal.Notifications.requestPermission();
-				} else if (OneSignal.Slidedown && typeof OneSignal.Slidedown.promptPush === 'function') {
-					await OneSignal.Slidedown.promptPush();
-				}
-
-				// Ensure we actually opt-in if permission is granted.
-				try {
-					var perm = await getNativePermission(OneSignal);
-					if (perm === 'granted' && hasPreferenceConsent() && OneSignal.User && OneSignal.User.PushSubscription && typeof OneSignal.User.PushSubscription.optIn === 'function') {
-						await OneSignal.User.PushSubscription.optIn();
+				var state = await getCurrentPushState(OneSignal);
+				if (!state.supported) throw new Error('Push is unsupported.');
+				if (!state.permissionGranted && !state.permissionDenied) {
+					if (OneSignal.Notifications && typeof OneSignal.Notifications.requestPermission === 'function') {
+						await OneSignal.Notifications.requestPermission();
+					} else if (OneSignal.Slidedown && typeof OneSignal.Slidedown.promptPush === 'function') {
+						await OneSignal.Slidedown.promptPush();
 					}
-				} catch (e) {}
-
-				// Refresh UI using subscription state (and retry a couple times for async registration)
-				updateSubscriptionUI().catch(function() {});
-				setTimeout(function() { updateSubscriptionUI().catch(function() {}); }, 600);
-				setTimeout(function() { updateSubscriptionUI().catch(function() {}); }, 1600);
+					state = await getCurrentPushState(OneSignal);
+				}
+				if (state.permissionDenied) {
+					await updateSubscriptionUI();
+					return;
+				}
+				if (state.permissionGranted && OneSignal.User && OneSignal.User.PushSubscription && typeof OneSignal.User.PushSubscription.optIn === 'function') {
+					await OneSignal.User.PushSubscription.optIn();
+					state = await waitForValidSubscription(OneSignal);
+				}
+				if (state.subscribed) await loginCurrentOneSignalUser(OneSignal, true, state);
+				await updateSubscriptionUI();
 			} catch (error) {
 				vh360Log('[VH360 Push] Error requesting permission:', error);
-				if (container) {
-					hideAllStates(container);
-					showState(container, 'unsupported');
-				}
+				try {
+					var recoverableState = typeof OneSignal !== 'undefined' ? await getCurrentPushState(OneSignal) : null;
+					if (recoverableState && recoverableState.supported && recoverableState.permissionGranted) {
+						await updateSubscriptionUI();
+						return;
+					}
+				} catch (stateError) {}
+				if (container) { hideAllStates(container); showState(container, 'unsupported'); }
 			}
 		}).catch(function(error) {
 			vh360Log('[VH360 Push] Error loading push provider SDK:', error);
