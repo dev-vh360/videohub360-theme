@@ -396,6 +396,7 @@
     bottom: 0;
     background: rgba(255, 255, 255, 0.7);
     z-index: 1;
+    pointer-events: none;
 }
 
 .vh360-preview-loading {
@@ -410,10 +411,46 @@
     border-radius: 50%;
     animation: vh360-spin 1s linear infinite;
     z-index: 2;
+    pointer-events: none;
 }
 
 .vh360-preview-item:not(.uploading) .vh360-preview-loading {
     display: none;
+}
+
+.vh360-preview-item.queued::after,
+.vh360-preview-item.uploaded::after,
+.vh360-preview-item.upload-failed::after {
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    z-index: 2;
+    padding: 2px 6px;
+    border-radius: 3px;
+    color: #fff;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    pointer-events: none;
+}
+
+.vh360-preview-item.queued::after {
+    content: 'Ready';
+    background: var(--text-muted, #64748b);
+}
+
+.vh360-preview-item.uploaded::after {
+    content: '\2713 Uploaded';
+    background: var(--success-color, #16a34a);
+}
+
+.vh360-preview-item.upload-failed::after {
+    content: 'Failed';
+    background: var(--error-color, #ef4444);
+}
+
+.vh360-preview-item.upload-failed {
+    box-shadow: 0 0 0 3px var(--error-color, #ef4444);
 }
 
 @keyframes vh360-spin {
@@ -444,6 +481,7 @@
     gap: 0.5rem;
     opacity: 0;
     transition: var(--transition);
+    z-index: 3;
 }
 
 .vh360-preview-item:hover .vh360-preview-overlay {

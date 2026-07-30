@@ -316,7 +316,7 @@ $settings        = vh360_get_gallery_settings();
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div class="vh360-modal-overlay vh360-gallery-delete-modal" id="vh360-gallery-delete-modal">
+<div class="vh360-modal-overlay vh360-gallery-modal vh360-gallery-delete-modal" id="vh360-gallery-delete-modal">
 	<div class="vh360-modal">
 		<div class="vh360-modal-content">
 			<p><?php esc_html_e( 'Are you sure you want to delete this gallery? This action cannot be undone.', 'videohub360-theme' ); ?></p>
