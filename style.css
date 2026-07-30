@@ -294,6 +294,14 @@ a:focus {
     color: var(--text-light);
 }
 
+/*
+ * WordPress outputs a separate modified date when a post has been updated.
+ * Keep that metadata in the markup while displaying only the publish date.
+ */
+.entry-meta .posted-on time.updated:not(.published) {
+    display: none;
+}
+
 .post-thumbnail {
     margin-bottom: 2rem;
 }
