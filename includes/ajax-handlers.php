@@ -754,15 +754,24 @@ class VH360_Ajax_Handlers {
         
         // Get parameters
         $type = isset($_POST['type']) ? sanitize_text_field($_POST['type']) : 'all';
+        $type_map = array(
+            'videos' => 'video_upload',
+            'comments' => 'comment',
+            'likes' => 'like',
+        );
+        if (isset($type_map[$type])) {
+            $type = $type_map[$type];
+        }
         $offset = isset($_POST['offset']) ? absint($_POST['offset']) : 0;
         $limit = 20;
         
         // Get activities
         $activities = vh360_get_activities(array(
             'type' => $type,
+            'user_id' => get_current_user_id(),
             'limit' => $limit,
             'offset' => $offset,
-            ));
+        ));
         
         if (empty($activities)) {
             wp_send_json_error(array(
@@ -773,62 +782,7 @@ class VH360_Ajax_Handlers {
         ob_start();
         
         foreach ($activities as $activity) {
-            $user = get_userdata($activity['user_id']);
-            if (!$user) {
-                continue;
-            }
-            
-            $profile_url = vh360_get_profile_url($activity['user_id']);
-            $time_ago = vh360_format_activity_time($activity['timestamp']);
-            $icon = vh360_get_safe_activity_icon($activity['type']);
-            
-            ?>
-            <div class="vh360-activity-item" data-activity-id="<?php echo esc_attr($activity['id']); ?>">
-                <div class="vh360-activity-avatar">
-                    <?php echo get_avatar($activity['user_id'], 40); ?>
-                </div>
-                <div class="vh360-activity-content">
-                    <div class="vh360-activity-header">
-                        <?php echo $icon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Sanitized by vh360_get_safe_activity_icon(). ?>
-                        <a href="<?php echo esc_url($profile_url); ?>" class="vh360-activity-user">
-                            <?php echo esc_html($user->display_name); ?>
-                        </a>
-                        <span class="vh360-activity-time"><?php echo esc_html($time_ago); ?></span>
-                    </div>
-                    <div class="vh360-activity-body">
-                        <?php
-                        $content = $activity['content'];
-                        switch ($activity['type']) {
-                            case 'video_upload':
-                                echo '<p>' . wp_kses_post(vh360_format_activity_content_link($content, __('uploaded a new video:', 'videohub360-theme'))) . '</p>';
-                                break;
-                            case 'post_publish':
-                                echo '<p>' . wp_kses_post(vh360_format_activity_content_link($content, __('published a post:', 'videohub360-theme'))) . '</p>';
-                                break;
-                            case 'new_member':
-                                echo '<p>' . esc_html__('joined the community', 'videohub360-theme') . '</p>';
-                                break;
-                            case 'profile_update':
-                                echo '<p>' . esc_html__('updated their profile', 'videohub360-theme') . '</p>';
-                                break;
-                            case 'milestone':
-                                echo '<p>';
-                                if (!empty($content['link'])) {
-                                    echo '<a href="' . esc_url($content['link']) . '">' . esc_html($content['title']) . '</a> ';
-                                } else {
-                                    echo esc_html($content['title']) . ' ';
-                                }
-                                if (!empty($content['meta'])) {
-                                    echo esc_html($content['meta']);
-                                }
-                                echo '</p>';
-                                break;
-                        }
-                        ?>
-                    </div>
-                </div>
-            </div>
-            <?php
+            echo vh360_get_dashboard_activity_item_html($activity); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped by the renderer.
         }
         
         $html = ob_get_clean();

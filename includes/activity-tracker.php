@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
  * Track a new activity
  *
  * @param int    $user_id The user ID performing the activity.
- * @param string $type    Activity type (video_upload, new_member, profile_update, milestone).
+ * @param string $type    Activity type (video_upload, post_publish, new_member, profile_update, milestone).
  * @param array  $content Activity content data.
  * @return bool True on success, false on failure.
  */
@@ -26,6 +26,9 @@ function vh360_track_activity($user_id, $type, $content = array()) {
         return false;
     }
     
+    // Normalize settings saved before post publishing had its own activity type.
+    vh360_migrate_post_publish_tracking_option();
+
     // Get activity options
     $activity_options = get_option('vh360_activity_options', array());
     $activity_defaults = array(
@@ -80,6 +83,33 @@ function vh360_track_activity($user_id, $type, $content = array()) {
     
     return $result;
 }
+
+/**
+ * Preserve publication tracking when upgrading activity settings.
+ *
+ * Standard posts used the video_upload setting before post_publish was added.
+ * Migrate that preference once, without enabling publication tracking for sites
+ * which had video uploads disabled.
+ *
+ * @return void
+ */
+function vh360_migrate_post_publish_tracking_option() {
+    if (get_option('vh360_post_publish_tracking_migrated', false)) {
+        return;
+    }
+
+    $activity_options = get_option('vh360_activity_options', false);
+    if (is_array($activity_options) && isset($activity_options['track_types']) && is_array($activity_options['track_types'])) {
+        $track_types = $activity_options['track_types'];
+        if (in_array('video_upload', $track_types, true) && !in_array('post_publish', $track_types, true)) {
+            $activity_options['track_types'][] = 'post_publish';
+            update_option('vh360_activity_options', $activity_options);
+        }
+    }
+
+    update_option('vh360_post_publish_tracking_migrated', true);
+}
+add_action('after_setup_theme', 'vh360_migrate_post_publish_tracking_option');
 
 /**
  * Get activities with optional filtering

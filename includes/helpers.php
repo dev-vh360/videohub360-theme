@@ -1425,6 +1425,85 @@ function vh360_get_safe_activity_icon($type) {
 }
 
 /**
+ * Render one personalized dashboard activity row.
+ *
+ * Shared by the initial Activity tab and its AJAX pagination response so both
+ * paths retain identical markup and content handling.
+ *
+ * @param array $activity Activity data.
+ * @return string Activity row HTML.
+ */
+function vh360_get_dashboard_activity_item_html($activity) {
+    if (empty($activity['id']) || empty($activity['type'])) {
+        return '';
+    }
+
+    $content = isset($activity['content']) ? $activity['content'] : array();
+    $content = is_array($content) ? $content : array('title' => $content);
+    $title = isset($content['title']) ? $content['title'] : '';
+    $link = isset($content['link']) ? $content['link'] : '';
+
+    ob_start();
+    ?>
+    <div class="vh360-activity-feed-item" data-activity-id="<?php echo esc_attr($activity['id']); ?>">
+        <div class="vh360-activity-feed-icon">
+            <?php echo vh360_get_safe_activity_icon($activity['type']); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Sanitized by the helper. ?>
+        </div>
+        <div class="vh360-activity-feed-content">
+            <div class="vh360-activity-feed-header">
+                <strong><?php esc_html_e('You', 'videohub360-theme'); ?></strong>
+                <span class="vh360-activity-feed-time"><?php echo esc_html(vh360_format_activity_time($activity['timestamp'])); ?></span>
+            </div>
+            <div class="vh360-activity-feed-body">
+                <?php
+                switch ($activity['type']) {
+                    case 'video_upload':
+                        echo '<p>' . wp_kses_post(vh360_format_activity_content_link($content, __('uploaded a new video:', 'videohub360-theme'))) . '</p>';
+                        break;
+                    case 'post_publish':
+                        echo '<p>' . wp_kses_post(vh360_format_activity_content_link($content, __('published a post:', 'videohub360-theme'))) . '</p>';
+                        break;
+                    case 'new_member':
+                        echo '<p>' . esc_html__('joined the community', 'videohub360-theme') . '</p>';
+                        break;
+                    case 'comment':
+                        echo '<p>' . wp_kses_post(vh360_format_activity_content_link($content, __('commented on', 'videohub360-theme'))) . '</p>';
+                        if (!empty($content['text'])) {
+                            echo '<blockquote>' . wp_kses_post(wp_trim_words($content['text'], 20)) . '</blockquote>';
+                        }
+                        break;
+                    case 'like':
+                        echo '<p>' . wp_kses_post(vh360_format_activity_content_link($content, __('liked', 'videohub360-theme'))) . '</p>';
+                        break;
+                    case 'profile_update':
+                        echo '<p>' . esc_html__('updated their profile', 'videohub360-theme') . '</p>';
+                        break;
+                    case 'milestone':
+                        echo '<p>';
+                        if ($link) {
+                            echo '<a href="' . esc_url($link) . '">' . esc_html($title) . '</a>';
+                        } else {
+                            echo esc_html($title);
+                        }
+                        if (!empty($content['meta'])) {
+                            echo ' - ' . esc_html($content['meta']);
+                        }
+                        echo '</p>';
+                        break;
+                    default:
+                        if ($title) {
+                            echo '<p>' . esc_html($title) . '</p>';
+                        }
+                }
+                ?>
+            </div>
+        </div>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+
+/**
  * Check if user is active (posted in last 30 days)
  *
  * @param int $user_id The user ID.
