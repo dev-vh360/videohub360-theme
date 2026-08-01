@@ -5002,6 +5002,6 @@ body.vh360-ios-immersive-active
 .vh360-participant-badge-screen-share { background: #0f766e; color: #fff; border-color: #5eead4; }
 #vh360-agora-player:fullscreen #vh360-agora-screen-share,
 #vh360-agora-player:-webkit-full-screen #vh360-agora-screen-share { visibility: visible; }
-@media (max-width: 767px), (pointer: coarse) {
+@media (max-width: 767px) {
     #vh360-agora-screen-share { display: none !important; }
 }

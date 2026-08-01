@@ -146,7 +146,7 @@
         ctx.save(); ctx.beginPath(); ctx.rect(viewport.x, viewport.y, viewport.width, viewport.height); ctx.clip();
         ctx.fillStyle = '#101827'; ctx.fillRect(viewport.x, viewport.y, viewport.width, viewport.height);
         if (hasCamera && video && video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
-            var scale = Math.max(viewport.width / video.videoWidth, viewport.height / video.videoHeight), dw = video.videoWidth * scale, dh = video.videoHeight * scale;
+            var scale = p.isScreenSharing ? Math.min(viewport.width / video.videoWidth, viewport.height / video.videoHeight) : Math.max(viewport.width / video.videoWidth, viewport.height / video.videoHeight), dw = video.videoWidth * scale, dh = video.videoHeight * scale;
             try { ctx.drawImage(video, viewport.x + (viewport.width - dw) / 2, viewport.y + (viewport.height - dh) / 2, dw, dh); } catch (e) {}
         } else {
             ctx.fillStyle = '#374151'; ctx.fillRect(viewport.x, viewport.y, viewport.width, viewport.height); ctx.fillStyle = '#6b7280'; ctx.beginPath(); ctx.arc(viewport.x + viewport.width / 2, viewport.y + viewport.height / 2 - style.avatar * 0.25, style.avatar, 0, Math.PI * 2); ctx.fill();

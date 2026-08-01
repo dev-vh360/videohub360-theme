@@ -525,6 +525,9 @@ window.initializeAgoraPlayer = function(config) {
     let savedCameraMediaTrack = null;
     let cameraMutedBeforeScreenShare = false;
     let screenShareEndedHandler = null;
+    let screenShareStartedAt = 0;
+    let savedCameraEncoderConfig = null;
+    let screenShareTransitionId = 0;
     const activeScreenShareUids = new Map();
     let isPresenter = false;
     // Tracks whether a server-approved host token has been applied to the active Agora client.
@@ -1889,6 +1892,8 @@ window.initializeAgoraPlayer = function(config) {
         tile.classList.toggle('is-local-user', !!participant.isLocal);
         tile.classList.toggle('is-original-host', !!participant.isOriginalHost);
         tile.classList.toggle('is-active-speaker', !!participant.isActiveSpeaker);
+        tile.classList.toggle('is-screen-sharing', !!participant.isScreenSharing);
+        tile.dataset.screenSharing = participant.isScreenSharing ? 'true' : 'false';
         tile.classList.toggle('has-video', !!participant.videoTrack && participant.cameraOn !== false);
         setActiveAgoraVideoClasses(participant, !!participant.videoTrack && participant.cameraOn !== false);
         tile.classList.toggle('has-audio', !!participant.audioTrack && participant.audioOn !== false);
@@ -2920,6 +2925,7 @@ window.initializeAgoraPlayer = function(config) {
             if (label) label.textContent = sharing ? 'Stop Sharing' : 'Share Screen';
             screenShareBtn.disabled = transitioning;
         }
+        if (muteVideoBtn) muteVideoBtn.disabled = !localTracks.videoTrack || screenShareState === 'starting' || screenShareState === 'stopping';
     }
 
     function isScreenShareEligible() {
@@ -2936,13 +2942,13 @@ window.initializeAgoraPlayer = function(config) {
         const participant = uid ? participantRegistry.get(uid) : null;
         if (participant) {
             participant.isScreenSharing = sharing;
-            participant.screenShareStartedAt = sharing ? Date.now() : 0;
+            participant.screenShareStartedAt = sharing ? screenShareStartedAt : 0;
             participant.cameraOn = sharing || !isVideoMuted;
-            if (sharing) activeScreenShareUids.set(uid, Date.now()); else activeScreenShareUids.delete(uid);
+            if (sharing) activeScreenShareUids.set(uid, screenShareStartedAt); else activeScreenShareUids.delete(uid);
             updateParticipantTile(participant);
             refreshFeaturedParticipantTiles();
         }
-        if (announce) sendDataStreamMessage({ type: 'screen_share_state', sharing: sharing });
+        if (announce) sendDataStreamMessage({ type: 'screen_share_state', sharing: sharing, startedAt: sharing ? screenShareStartedAt : 0 });
     }
 
     function releaseDisplayCapture() {
@@ -2954,23 +2960,59 @@ window.initializeAgoraPlayer = function(config) {
     async function startScreenSharing() {
         if (screenShareState !== 'idle' || !isScreenShareEligible()) return;
         screenShareState = 'starting'; updateAgoraControlButtonStates(); muteVideoBtn.disabled = true;
+        const transitionId = ++screenShareTransitionId;
+        let displayTrackReplaced = false;
         try {
             const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+            if (transitionId !== screenShareTransitionId || screenShareState !== 'starting') {
+                stream.getTracks().forEach((track) => track.stop());
+                return;
+            }
             const displayTrack = stream.getVideoTracks()[0];
             if (!displayTrack) { stream.getTracks().forEach((track) => track.stop()); throw new Error('No display video track was selected.'); }
             screenMediaStream = stream; screenMediaTrack = displayTrack;
             savedCameraMediaTrack = localTracks.videoTrack.getMediaStreamTrack();
             cameraMutedBeforeScreenShare = isVideoMuted;
-            if (cameraMutedBeforeScreenShare) await localTracks.videoTrack.setMuted(false);
+            savedCameraEncoderConfig = { ...getAgoraVideoConfig().encoderConfig };
             await localTracks.videoTrack.replaceTrack(displayTrack, false);
+            displayTrackReplaced = true;
+            const screenEncoderConfig = {
+                width: Math.min(1920, savedCameraEncoderConfig.width || 1920),
+                height: Math.min(1080, savedCameraEncoderConfig.height || 1080),
+                frameRate: Math.min(15, savedCameraEncoderConfig.frameRate || 15),
+                bitrateMin: savedCameraEncoderConfig.bitrateMin,
+                bitrateMax: savedCameraEncoderConfig.bitrateMax
+            };
+            if (typeof localTracks.videoTrack.setEncoderConfiguration === 'function') {
+                try { await localTracks.videoTrack.setEncoderConfiguration(screenEncoderConfig); }
+                catch (encoderError) { window.vh360Warn('Agora: Unable to apply screen encoder configuration', encoderError); }
+            }
+            if (typeof localTracks.videoTrack.setOptimizationMode === 'function') {
+                try { await localTracks.videoTrack.setOptimizationMode('detail'); }
+                catch (optimizationError) { window.vh360Warn('Agora: Unable to enable screen detail optimization', optimizationError); }
+            }
+            if (cameraMutedBeforeScreenShare) await localTracks.videoTrack.setMuted(false);
             screenShareState = 'sharing';
+            screenShareStartedAt = Date.now();
             const localParticipant = getOrCreateParticipant(currentUserUID, { isLocal: true });
             attachParticipantVideo(localParticipant, localTracks.videoTrack, true);
             screenShareEndedHandler = () => { stopScreenSharing(false); };
             displayTrack.addEventListener('ended', screenShareEndedHandler, { once: true });
             setLocalScreenShareState(true);
         } catch (error) {
+            if (displayTrackReplaced && localTracks.videoTrack && savedCameraMediaTrack && savedCameraMediaTrack.readyState === 'live') {
+                try {
+                    if (cameraMutedBeforeScreenShare) await localTracks.videoTrack.setMuted(true);
+                    await localTracks.videoTrack.replaceTrack(savedCameraMediaTrack, false);
+                    if (savedCameraEncoderConfig && typeof localTracks.videoTrack.setEncoderConfiguration === 'function') {
+                        await localTracks.videoTrack.setEncoderConfiguration(savedCameraEncoderConfig);
+                    }
+                } catch (rollbackError) {
+                    window.vh360Warn('Agora: Failed to roll back cancelled screen-share transition', rollbackError);
+                }
+            }
             releaseDisplayCapture(); savedCameraMediaTrack = null; screenShareState = 'idle';
+            savedCameraEncoderConfig = null;
             if (error && !['NotAllowedError', 'AbortError'].includes(error.name)) showAgoraError('Unable to share your screen. Your camera remains connected.');
         } finally {
             muteVideoBtn.disabled = screenShareState !== 'idle' && screenShareState !== 'sharing';
@@ -2980,14 +3022,27 @@ window.initializeAgoraPlayer = function(config) {
 
     async function stopScreenSharing(finalCleanup = false) {
         if (screenShareState === 'idle' || screenShareState === 'stopping') return;
+        screenShareTransitionId += 1;
         screenShareState = 'stopping'; updateAgoraControlButtonStates(); if (muteVideoBtn) muteVideoBtn.disabled = true;
         const wrapper = localTracks.videoTrack;
+        let freshCameraTrack = null;
         try {
             if (!finalCleanup && wrapper) {
+                // Keep a previously disabled camera private while the display track is still active.
+                if (cameraMutedBeforeScreenShare) await wrapper.setMuted(true);
+                if (savedCameraEncoderConfig && typeof wrapper.setEncoderConfiguration === 'function') {
+                    try { await wrapper.setEncoderConfiguration(savedCameraEncoderConfig); }
+                    catch (encoderError) { window.vh360Warn('Agora: Unable to restore camera encoder configuration', encoderError); }
+                }
+                if (typeof wrapper.setOptimizationMode === 'function') {
+                    try { await wrapper.setOptimizationMode('motion'); }
+                    catch (optimizationError) { window.vh360Warn('Agora: Unable to restore camera optimization mode', optimizationError); }
+                }
                 if (savedCameraMediaTrack && savedCameraMediaTrack.readyState === 'live') {
                     await wrapper.replaceTrack(savedCameraMediaTrack, false);
                 } else {
-                    const freshCameraTrack = await AgoraRTC.createCameraVideoTrack(getAgoraVideoConfig());
+                    freshCameraTrack = await AgoraRTC.createCameraVideoTrack({ encoderConfig: savedCameraEncoderConfig || getAgoraVideoConfig().encoderConfig });
+                    if (cameraMutedBeforeScreenShare) await freshCameraTrack.setMuted(true);
                     await client.unpublish([wrapper]); localTracks.videoTrack = freshCameraTrack; await client.publish([freshCameraTrack]);
                     try { wrapper.stop(); wrapper.close(); } catch (error) {}
                 }
@@ -3001,10 +3056,29 @@ window.initializeAgoraPlayer = function(config) {
         } catch (error) {
             window.vh360Warn('Agora: Camera could not be restored after screen sharing', error);
             isVideoMuted = true;
-            showAgoraError('Screen sharing stopped, but the camera could not be restored. Microphone audio remains connected.');
+            for (const unusableTrack of [freshCameraTrack, wrapper]) {
+                if (!unusableTrack) continue;
+                if (client && client.connectionState === 'CONNECTED') {
+                    try { await client.unpublish([unusableTrack]); } catch (unpublishError) {}
+                }
+                try { unusableTrack.stop(); unusableTrack.close(); } catch (cleanupError) {}
+            }
+            localTracks.videoTrack = null;
+            const participant = currentUserUID ? participantRegistry.get(normalizeParticipantUid(currentUserUID)) : null;
+            if (participant) {
+                participant.videoTrack = null;
+                participant.cameraOn = false;
+                participant.isScreenSharing = false;
+                participant.screenShareStartedAt = 0;
+                setParticipantVideoPlaybackState(participant, 'off', { reason: 'screen-share-camera-restore-failed' });
+                updateParticipantTile(participant);
+            }
+            showAgoraError('Screen sharing stopped, but the camera could not be restored. Your microphone remains connected; leave and rejoin to restore the camera.');
         } finally {
             releaseDisplayCapture(); savedCameraMediaTrack = null;
             setLocalScreenShareState(false, !finalCleanup);
+            screenShareStartedAt = 0;
+            savedCameraEncoderConfig = null;
             screenShareState = 'idle'; if (muteVideoBtn) muteVideoBtn.disabled = false;
             updateAgoraControlButtonStates(); updateControlsVisibility();
         }
@@ -3393,9 +3467,10 @@ window.initializeAgoraPlayer = function(config) {
             const participant = getOrCreateParticipant(uid);
             if (participant) {
                 participant.isScreenSharing = !!data.sharing;
-                participant.screenShareStartedAt = data.sharing ? Date.now() : 0;
+                const startedAt = Number(data.startedAt);
+                participant.screenShareStartedAt = data.sharing && Number.isFinite(startedAt) && startedAt > 0 ? startedAt : 0;
                 participant.cameraOn = data.sharing ? true : participant.cameraOn;
-                if (data.sharing) activeScreenShareUids.set(uid, Date.now()); else activeScreenShareUids.delete(uid);
+                if (data.sharing) activeScreenShareUids.set(uid, participant.screenShareStartedAt); else activeScreenShareUids.delete(uid);
                 updateParticipantTile(participant); refreshFeaturedParticipantTiles();
             }
             return;
@@ -3520,7 +3595,7 @@ window.initializeAgoraPlayer = function(config) {
 
         resolveAndUpdateDisplayName(user.uid);
         playParticipantJoinedSound(user.uid);
-        if (screenShareState === 'sharing') setTimeout(() => sendDataStreamMessage({ type: 'screen_share_state', sharing: true }), 750);
+        if (screenShareState === 'sharing') setTimeout(() => sendDataStreamMessage({ type: 'screen_share_state', sharing: true, startedAt: screenShareStartedAt }), 750);
     });
 
     let remoteSubscriptionSession = 0;
@@ -3745,7 +3820,6 @@ window.initializeAgoraPlayer = function(config) {
 
     async function attachSubscribedRemotePublication(user, mediaType) {
         if (mediaType === "video") {
-            activeScreenShareUids.delete(normalizeParticipantUid(user.uid));
             window.vh360Log('[VH360 Public Live] Remote video received', {
                 remoteUid: user && user.uid,
                 mediaType: mediaType
@@ -3904,6 +3978,7 @@ window.initializeAgoraPlayer = function(config) {
         clearRemoteSubscription(user.uid, mediaType);
         advanceRemotePublicationGeneration(user.uid, mediaType);
         if (mediaType === "video") {
+            activeScreenShareUids.delete(normalizeParticipantUid(user.uid));
             clearRemoteStreamSelectionState(user.uid);
             const participant = getOrCreateParticipant(user.uid);
             if (participant) {
@@ -3921,6 +3996,7 @@ window.initializeAgoraPlayer = function(config) {
                 updateParticipantTile(participant);
                 window.vh360Log("Agora: User camera off, updating persistent tile for UID:", user.uid);
             }
+            refreshFeaturedParticipantTiles();
         }
 
         // Handle audio unpublished - check for cleaning up active speaker
@@ -4326,6 +4402,13 @@ window.initializeAgoraPlayer = function(config) {
 
         window.vh360Log('Updating live stream quality to:', quality);
         const newVideoConfig = { encoderConfig: buildAgoraEncoderConfig(qualityData) };
+
+        if (screenShareState === 'sharing' || screenShareState === 'starting') {
+            savedCameraEncoderConfig = { ...newVideoConfig.encoderConfig };
+            window.vh360Log('Agora: Camera quality change deferred until screen sharing stops:', quality);
+            if (typeof showAgoraSuccess === 'function') showAgoraSuccess(`Camera quality will update after screen sharing stops`);
+            return;
+        }
 
         if (typeof localTracks.videoTrack.setEncoderConfiguration === 'function') {
             try {
@@ -5037,7 +5120,7 @@ window.initializeAgoraPlayer = function(config) {
     /**
      * Safely disconnects from the stream with cleanup
      */
-    function disconnectFromStream(reason) {
+    async function disconnectFromStream(reason) {
         try {
             window.vh360Log('Agora: Disconnecting from stream -', reason);
 
@@ -5095,7 +5178,6 @@ window.initializeAgoraPlayer = function(config) {
             }
 
             clearAgoraTokenRenewalTimer();
-            isAgoraSessionJoined = false;
             resetRemoteSubscriptionSession('channel-leave');
             latestAgoraTokenResponse = null;
             agoraTokenRecoveryInProgress = false;
@@ -5115,24 +5197,12 @@ window.initializeAgoraPlayer = function(config) {
                 `;
             }
 
-            // Leave the channel
-            if (window.agoraClient) {
-                window.agoraClient.leave().catch(error => {
-                    window.vh360Warn('Agora: Error leaving channel:', error);
-                });
+            await stopScreenSharing(true);
+            await stopPublishing();
+            if (client) {
+                try { await client.leave(); } catch (leaveError) { window.vh360Warn('Agora: Error leaving channel:', leaveError); }
             }
-
-            // Clean up local tracks
-            if (localVideoTrack) {
-                localVideoTrack.stop();
-                localVideoTrack.close();
-                localVideoTrack = null;
-            }
-            if (localAudioTrack) {
-                localAudioTrack.stop();
-                localAudioTrack.close();
-                localAudioTrack = null;
-            }
+            isAgoraSessionJoined = false;
 
             // Reset UI state
             isJoined = false;
