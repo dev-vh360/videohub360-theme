@@ -31,8 +31,7 @@
 }
 
 /* Notifications */
-.vh360-notification,
-.vh360-share-notification {
+.vh360-notification {
     position: fixed;
     top: 20px;
     right: 20px;
@@ -46,8 +45,7 @@
     color: #fff;
 }
 
-.vh360-notification.success,
-.vh360-share-notification {
+.vh360-notification.success {
     background: var(--success-color);
 }
 

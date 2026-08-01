@@ -708,14 +708,7 @@ function vh360_enqueue_activity_feed_assets() {
             'ajaxurl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('vh360_activity_nonce'),
             'commentNonce' => wp_create_nonce('vh360_comment_post'),
-            'currentUserId' => get_current_user_id(),
             'currentUserAvatar' => get_avatar_url(get_current_user_id(), array('size' => 32)),
-            'strings' => array(
-                'shareSuccess' => esc_html__('Link copied to clipboard!', 'videohub360-theme'),
-                'shareError' => esc_html__('Could not copy link', 'videohub360-theme'),
-                'share' => esc_html__('share', 'videohub360-theme'),
-                'shares' => esc_html__('shares', 'videohub360-theme'),
-            ),
         ));
     }
 

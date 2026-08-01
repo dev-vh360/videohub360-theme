@@ -72,198 +72,13 @@
     }
     
     /**
-     * Handle share button click
-     */
-    function handleShareClick(event) {
-        const $btn = $(event.currentTarget);
-        const postId = $btn.data('post-id');
-        const nonce = $btn.data('nonce');
-        
-        if (!postId) {
-            console.error('Share: Missing post ID');
-            return;
-        }
-        
-        // Show share UI (copy link, modal, etc.)
-        showShareModal(postId);
-        
-        // Track share via AJAX
-        trackShare(postId, nonce);
-    }
-    
-    /**
-     * Track share via AJAX
-     */
-    function trackShare(postId, nonce) {
-        $.ajax({
-            url: vh360Activity.ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'vh360_increment_share',
-                post_id: postId,
-                nonce: nonce
-            },
-            dataType: 'json',
-            success: function(response) {
-                if (response.success && response.data.count) {
-                    updateShareCount(postId, response.data.count);
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('Share tracking failed:', error);
-            }
-        });
-    }
-    
-    /**
-     * Update share count in DOM
-     */
-    function updateShareCount(postId, newCount) {
-        const $statsRow = $('.vh360-post-stats[data-post-id="' + postId + '"]');
-        const $shareCount = $statsRow.find('.vh360-stat-count[data-stat="shares"]');
-        
-        if ($shareCount.length) {
-            // Update existing count
-            $shareCount.text(vh360FormatNumber(newCount));
-        } else {
-            // Add share stat if it didn't exist before
-            addShareStatToRow($statsRow, newCount);
-        }
-    }
-    
-    /**
-     * Add share stat to stats row (if it didn't exist)
-     */
-    function addShareStatToRow($statsRow, count) {
-        // Check if stats row is empty (no likes/comments)
-        const hasOtherStats = $statsRow.find('.vh360-post-stat').length > 0;
-        
-        let shareHtml = '';
-        
-        if (hasOtherStats) {
-            shareHtml += '<span class="vh360-stat-separator">•</span>';
-        }
-        
-        shareHtml += '<span class="vh360-post-stat vh360-post-stat-shares">';
-        shareHtml += '<span class="vh360-stat-count" data-stat="shares">' + vh360FormatNumber(count) + '</span>';
-        
-        // Use localized strings for singular/plural
-        const label = count === 1 ? vh360Activity.strings.share : vh360Activity.strings.shares;
-        shareHtml += '<span class="vh360-stat-label">' + label + '</span>';
-        shareHtml += '</span>';
-        
-        $statsRow.append(shareHtml);
-        
-        // Show stats row if it was hidden
-        $statsRow.show();
-    }
-    
-    /**
-     * Scroll to comments section
-     */
-    function scrollToComments(event) {
-        event.preventDefault();
-        
-        const $link = $(event.currentTarget);
-        const postId = $link.data('post-id');
-        const targetId = '#vh360-comments-section-' + postId;
-        const $target = $(targetId);
-        
-        if ($target.length) {
-            const offset = $target.offset().top - 100; // 100px from top for header
-            
-            $('html, body').animate({
-                scrollTop: offset
-            }, 400, function() {
-                // Focus first comment or comment input for accessibility
-                const $firstComment = $target.find('.vh360-comment').first();
-                if ($firstComment.length) {
-                    $firstComment.attr('tabindex', '-1').focus();
-                }
-            });
-        }
-    }
-    
-    /**
-     * Format number for display (e.g., 1000 -> 1K)
-     * Matches PHP vh360_format_number() implementation
-     */
-    function vh360FormatNumber(num) {
-        num = Math.abs(parseInt(num));
-        
-        if (num < 1000) {
-            return num.toString();
-        }
-        
-        if (num < 1000000) {
-            var formatted = Math.round(num / 100) / 10; // Same as PHP round($num / 1000, 1)
-            return formatted + 'K';
-        }
-        
-        if (num < 1000000000) {
-            var formatted = Math.round(num / 100000) / 10; // Same as PHP round($num / 1000000, 1)
-            return formatted + 'M';
-        }
-        
-        var formatted = Math.round(num / 100000000) / 10; // Same as PHP round($num / 1000000000, 1)
-        return formatted + 'B';
-    }
-    
-    /**
-     * Show share modal/UI (implement based on existing theme pattern)
-     */
-    function showShareModal(postId) {
-        // Try to get post URL from the current page if available
-        const $post = $('.vh360-community-post[data-post-id="' + postId + '"]');
-        let postUrl;
-        
-        // Check if we're on a single post page
-        if ($('body').hasClass('single-vh360_post')) {
-            postUrl = window.location.href;
-        } else {
-            // For activity feed, construct URL using WordPress pretty permalinks
-            // This will work with most permalink structures
-            postUrl = window.location.origin + '/?post_type=vh360_post&p=' + postId;
-        }
-        
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(postUrl).then(function() {
-                showShareNotification(vh360Activity.strings.shareSuccess || 'Link copied to clipboard!');
-            }).catch(function(err) {
-                console.error('Could not copy link:', err);
-                showShareNotification(vh360Activity.strings.shareError || 'Could not copy link');
-            });
-        } else {
-            // Fallback for older browsers
-            showShareNotification('Share link: ' + postUrl);
-        }
-    }
-    
-    /**
-     * Show share notification
-     */
-    function showShareNotification(message) {
-        // Create simple notification element - CSS is now in utilities.css
-        const $notification = $('<div class="vh360-share-notification">' + message + '</div>');
-        
-        $('body').append($notification);
-        
-        setTimeout(function() {
-            $notification.fadeOut(300, function() {
-                $notification.remove();
-            });
-        }, 3000);
-    }
-    
-    /**
      * Collapsible Comments functionality
      */
     function initCollapsibleComments() {
-        // Handle toggle replies button click (new class name)
+        // Handle toggle replies button click
         $(document).on('click', '.vh360-toggle-replies', function(e) {
             e.preventDefault();
             const $btn = $(this);
-            const commentId = $btn.data('comment-id');
             const $repliesList = $btn.siblings('.vh360-replies-list');
             
             if ($repliesList.hasClass('vh360-replies-list--hidden')) {
@@ -276,33 +91,12 @@
                 $btn.text($btn.text().replace('Hide', 'View'));
             }
         });
-        
-        // Legacy support for old class name
-        $(document).on('click', '.vh360-view-replies-btn', function(e) {
-            e.preventDefault();
-            const $btn = $(this);
-            const commentId = $btn.data('comment-id');
-            const $replies = $('.vh360-comment-replies[data-parent-id="' + commentId + '"]');
-            
-            if ($replies.hasClass('collapsed')) {
-                // Expand replies
-                $replies.removeClass('collapsed');
-                $btn.addClass('expanded');
-                $btn.find('.vh360-reply-count-text').text($btn.find('.vh360-reply-count-text').text().replace('View', 'Hide'));
-            } else {
-                // Collapse replies
-                $replies.addClass('collapsed');
-                $btn.removeClass('expanded');
-                $btn.find('.vh360-reply-count-text').text($btn.find('.vh360-reply-count-text').text().replace('Hide', 'View'));
-            }
-        });
     }
-    
+
     /**
      * Handle Reply button click - toggle reply form for specific comment
-     * Support both new (.vh360-action-reply) and old (.vh360-comment-reply-btn) class names
      */
-    $(document).on('click', '.vh360-action-reply, .vh360-comment-reply-btn', function(e) {
+    $(document).on('click', '.vh360-action-reply', function(e) {
         e.preventDefault();
         
         const $btn = $(this);
@@ -323,16 +117,12 @@
                 }
             });
         }
-        
-        // Optional: Close other open reply forms
-        // $('.vh360-comment-reply-form').not($replyForm).slideUp(200);
     });
     
     /**
      * Create reply form for a comment
      */
     function createReplyForm(commentId, $comment, commentAuthor) {
-        const currentUserId = vh360Activity.currentUserId || '';
         const currentUserAvatar = vh360Activity.currentUserAvatar || '';
         
         // Prepare @mention if author name is provided
@@ -573,30 +363,6 @@
     }
     
     /**
-     * Update comment count in post stats row (incremental)
-     */
-    function updateCommentCount(postId, increment) {
-        const $post = $(`.vh360-community-post[data-post-id="${postId}"]`);
-        const $commentStat = $post.find('.vh360-post-stat-comments, .vh360-stat-comments');
-        
-        if ($commentStat.length) {
-            const $countElem = $commentStat.find('.vh360-stat-count[data-stat="comments"]');
-            const currentCount = parseInt($countElem.text()) || 0;
-            const newCount = currentCount + increment;
-            
-            // Update count
-            $countElem.text(vh360FormatNumber(newCount));
-            
-            // Update label (singular/plural)
-            const $labelElem = $commentStat.find('.vh360-stat-label');
-            if ($labelElem.length) {
-                const commentText = newCount === 1 ? 'COMMENT' : 'COMMENTS';
-                $labelElem.text(commentText);
-            }
-        }
-    }
-    
-    /**
      * Update comment count in post stats row (absolute value from server)
      * Use this when you have the exact count from server response
      */
@@ -618,14 +384,13 @@
     
     /**
      * Handle comment like button click
-     * Support both new (.vh360-action-like) and old (.vh360-comment-like-btn) class names
      */
-    $(document).on('click', '.vh360-action-like, .vh360-comment-like-btn', function(e) {
+    $(document).on('click', '.vh360-action-like', function(e) {
         e.preventDefault();
         
         const $btn = $(this);
         const commentId = $btn.data('comment-id');
-        const $countEl = $btn.siblings('.vh360-like-count, .vh360-comment-like-count');
+        const $countEl = $btn.siblings('.vh360-like-count');
         
         // Check if button is disabled (not logged in)
         if ($btn.prop('disabled')) {
@@ -826,12 +591,7 @@
         initMobileCompose();
         initCollapsibleComments();
         VH360CommentForm.init(); // Initialize main comment form
-        
-        // Share button click
-        $(document).on('click', '.vh360-share-btn', handleShareClick);
-        
-        // Scroll to comments
-        $(document).on('click', '.vh360-scroll-to-comments', scrollToComments);
+
     });
     
     

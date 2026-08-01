@@ -592,12 +592,6 @@
     color: var(--text-2);
 }
 
-.vh360-post-stat {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-
 .vh360-stat-icon { /* Updated for SVG icons */
     font-size: 16px;
     line-height: 1;
@@ -615,25 +609,6 @@
 .vh360-stat-separator {
     color: var(--text-2);
     margin: 0 4px;
-}
-
-/* Clickable comment stat */
-.vh360-stat-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    text-decoration: none;
-    color: inherit;
-    transition: color 0.2s ease;
-}
-
-.vh360-stat-link:hover {
-    color: var(--primary-color);
-}
-
-.vh360-stat-link:hover .vh360-stat-count,
-.vh360-stat-link:hover .vh360-stat-label {
-    color: var(--primary-color);
 }
 
 /* Mobile adjustments */
@@ -708,26 +683,6 @@
     color: var(--text-2);
     font-size: 0.9375rem;
     padding: 2rem 0;
-}
-
-/* Share button */
-.vh360-share-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    color: var(--text-2);
-    font-size: 0.875rem;
-    padding: 0;
-}
-.vh360-share-icon {
-    font-size: 1rem;
-    line-height: 1;
-}
-.vh360-share-btn:hover {
-    text-decoration: underline;
 }
 
 /* Animations */
