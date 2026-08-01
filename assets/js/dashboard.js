@@ -588,7 +588,7 @@
                     url: vh360Dashboard.ajaxurl,
                     type: 'POST',
                     data: {
-                        action: 'vh360_load_activities',
+                        action: 'vh360_dashboard_load_activities',
                         offset: offset,
                         type: filter,
                         nonce: nonce

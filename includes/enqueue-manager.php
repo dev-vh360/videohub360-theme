@@ -694,7 +694,7 @@ function vh360_enqueue_activity_feed_assets() {
             true
         );
 
-        // Always enqueue JavaScript on pages with community posts.
+        // Enqueue interactions for community posts, comments, composition, and sharing.
         wp_enqueue_script(
             'vh360-activity-feed-js',
             VH360_THEME_URI . '/assets/js/activity-feed.js',
@@ -710,12 +710,7 @@ function vh360_enqueue_activity_feed_assets() {
             'commentNonce' => wp_create_nonce('vh360_comment_post'),
             'currentUserId' => get_current_user_id(),
             'currentUserAvatar' => get_avatar_url(get_current_user_id(), array('size' => 32)),
-            'currentUserName' => wp_get_current_user()->display_name,
             'strings' => array(
-                'loading' => esc_html__('Loading...', 'videohub360-theme'),
-                'loadMore' => esc_html__('Load More', 'videohub360-theme'),
-                'error' => esc_html__('An error occurred. Please try again.', 'videohub360-theme'),
-                'noMore' => esc_html__('No more activities to show.', 'videohub360-theme'),
                 'shareSuccess' => esc_html__('Link copied to clipboard!', 'videohub360-theme'),
                 'shareError' => esc_html__('Could not copy link', 'videohub360-theme'),
                 'share' => esc_html__('share', 'videohub360-theme'),

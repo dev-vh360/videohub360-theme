@@ -66,7 +66,7 @@ $activities = $activity_result['items'];
             <button class="vh360-dashboard-btn vh360-dashboard-btn-secondary vh360-load-more-activity" 
                     data-offset="<?php echo esc_attr($activity_result['next_offset']); ?>"
                     data-filter="<?php echo esc_attr($filter); ?>"
-                    data-nonce="<?php echo esc_attr(wp_create_nonce('vh360_activity_nonce')); ?>">
+                    data-nonce="<?php echo esc_attr(wp_create_nonce('vh360_dashboard_activity_nonce')); ?>">
                 <?php esc_html_e('Load More', 'videohub360-theme'); ?>
             </button>
         </div>

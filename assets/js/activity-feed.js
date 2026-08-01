@@ -1,7 +1,8 @@
 /**
- * Activity Feed JavaScript
+ * Community Feed JavaScript
  *
- * Handles filtering, infinite scroll, and load more for activity feed.
+ * Handles community feed tabs, mobile composition, comments,
+ * replies, comment likes, and sharing.
  *
  * @package Videohub360_Theme
  * @since 1.0.0
@@ -9,44 +10,7 @@
 
 (function($) {
     'use strict';
-    
-    // State management
-    const state = {
-        currentType: 'all',
-        offset: 20, // Initial activities already loaded
-        isLoading: false,
-        hasMore: true,
-        infiniteScrollEnabled: true
-    };
-    
-    // DOM elements
-    const $filterTabs = $('.vh360-filter-tab');
-    const $activityStream = $('#vh360-activity-stream');
-    const $loading = $('#vh360-activity-loading');
-    const $emptyState = $('#vh360-activity-empty');
-    const $loadMoreWrapper = $('#vh360-load-more-wrapper');
-    const $loadMoreBtn = $('#vh360-load-more-btn');
-    
-    /**
-     * Initialize activity feed
-     */
-    function init() {
-        // Event listeners
-        $filterTabs.on('click', handleFilterClick);
-        $loadMoreBtn.on('click', handleLoadMore);
-        
-        // Infinite scroll
-        if (state.infiniteScrollEnabled) {
-            $(window).on('scroll', throttle(handleScroll, 200));
-        }
-        
-        // Parse URL parameters on load
-        parseUrlParams();
-        
-        // Initialize sticky tabs shadow effect
-        initStickyTabs();
-    }
-    
+
     /**
      * Initialize sticky feed tabs with shadow on scroll
      */
@@ -64,266 +28,6 @@
                 $tabs.removeClass('is-sticky');
             }
         });
-    }
-    
-    /**
-     * Throttle function
-     */
-    function throttle(func, wait) {
-        let timeout;
-        let lastRan;
-        
-        return function executedFunction(...args) {
-            if (!lastRan) {
-                func(...args);
-                lastRan = Date.now();
-            } else {
-                clearTimeout(timeout);
-                timeout = setTimeout(() => {
-                    if ((Date.now() - lastRan) >= wait) {
-                        func(...args);
-                        lastRan = Date.now();
-                    }
-                }, wait - (Date.now() - lastRan));
-            }
-        };
-    }
-    
-    /**
-     * Handle filter tab click
-     */
-    function handleFilterClick() {
-        const type = $(this).data('type');
-        
-        if (type === state.currentType) {
-            return; // Already selected
-        }
-        
-        state.currentType = type;
-        state.offset = 0;
-        state.hasMore = true;
-        
-        // Update UI
-        $filterTabs.removeClass('active');
-        $(this).addClass('active');
-        
-        // Clear stream and load new activities
-        $activityStream.empty();
-        loadActivities(true);
-        
-        // Update URL
-        updateUrl();
-    }
-    
-    /**
-     * Handle load more button click
-     */
-    function handleLoadMore() {
-        loadActivities(false);
-    }
-    
-    /**
-     * Handle infinite scroll
-     */
-    function handleScroll() {
-        if (!state.infiniteScrollEnabled || !state.hasMore || state.isLoading) {
-            return;
-        }
-        
-        // Check if load more button is in viewport
-        if ($loadMoreBtn.length) {
-            const btnOffset = $loadMoreBtn.offset().top;
-            const scrollTop = $(window).scrollTop();
-            const windowHeight = $(window).height();
-            
-            if (scrollTop + windowHeight >= btnOffset - 200) {
-                loadActivities(false);
-            }
-        }
-    }
-    
-    /**
-     * Load activities via AJAX
-     */
-    function loadActivities(replace = false) {
-        if (state.isLoading) {
-            return;
-        }
-        
-        state.isLoading = true;
-        
-        if (replace) {
-            $loading.show();
-            $activityStream.addClass('loading');
-        } else {
-            $loadMoreBtn.prop('disabled', true).addClass('loading');
-        }
-        
-        $emptyState.hide();
-        
-        const data = {
-            action: 'vh360_load_activities',
-            nonce: vh360Activity.nonce,
-            type: state.currentType,
-            offset: state.offset
-        };
-        
-        $.ajax({
-            url: vh360Activity.ajaxurl,
-            type: 'POST',
-            data: data,
-            success: function(response) {
-                if (response.success) {
-                    const html = response.data.html;
-                    
-                    if (replace) {
-                        $activityStream.html(html);
-                        // Scroll to top of stream
-                        scrollToStream();
-                    } else {
-                        // Append new activities with animation
-                        const $newItems = $(html);
-                        $newItems.hide();
-                        $activityStream.append($newItems);
-                        $newItems.fadeIn(400);
-                    }
-                    
-                    // Update state
-                    state.offset = response.data.offset;
-                    
-                    // Check if there are more activities
-                    if (response.data.count < 20) {
-                        state.hasMore = false;
-                        $loadMoreWrapper.fadeOut();
-                    } else {
-                        $loadMoreWrapper.fadeIn();
-                    }
-                    
-                    // Show empty state if no activities
-                    if (state.offset === 0) {
-                        $emptyState.show();
-                        $loadMoreWrapper.hide();
-                    }
-                } else {
-                    if (replace) {
-                        $activityStream.empty();
-                        $emptyState.show();
-                    } else {
-                        state.hasMore = false;
-                        $loadMoreWrapper.fadeOut();
-                    }
-                }
-            },
-            error: function() {
-                if (replace) {
-                    $activityStream.html('<p class="vh360-error">' + vh360Activity.strings.error + '</p>');
-                } else {
-                    showError();
-                }
-            },
-            complete: function() {
-                state.isLoading = false;
-                $loading.hide();
-                $activityStream.removeClass('loading');
-                $loadMoreBtn.prop('disabled', false).removeClass('loading');
-            }
-        });
-    }
-    
-    /**
-     * Show error message
-     */
-    function showError() {
-        const $error = $('<div class="vh360-activity-error">' + vh360Activity.strings.error + '</div>');
-        $activityStream.append($error);
-        setTimeout(() => {
-            $error.fadeOut(() => $error.remove());
-        }, 3000);
-    }
-    
-    /**
-     * Update URL with current filter
-     */
-    function updateUrl() {
-        const params = new URLSearchParams();
-        
-        if (state.currentType !== 'all') {
-            params.set('type', state.currentType);
-        }
-        
-        const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
-        window.history.replaceState({}, '', newUrl);
-    }
-    
-    /**
-     * Parse URL parameters on load
-     */
-    function parseUrlParams() {
-        const params = new URLSearchParams(window.location.search);
-        
-        if (params.has('type')) {
-            const type = params.get('type');
-            const $tab = $(`.vh360-filter-tab[data-type="${type}"]`);
-            
-            if ($tab.length) {
-                $tab.trigger('click');
-            }
-        }
-    }
-    
-    /**
-     * Scroll to activity stream
-     */
-    function scrollToStream() {
-        const streamOffset = $activityStream.offset().top - 100;
-        $('html, body').animate({
-            scrollTop: streamOffset
-        }, 400);
-    }
-    
-    /**
-     * Check if element is in viewport
-     */
-    function isInViewport($element) {
-        if (!$element.length) {
-            return false;
-        }
-        
-        const elementTop = $element.offset().top;
-        const elementBottom = elementTop + $element.outerHeight();
-        const viewportTop = $(window).scrollTop();
-        const viewportBottom = viewportTop + $(window).height();
-        
-        return elementBottom > viewportTop && elementTop < viewportBottom;
-    }
-    
-    /**
-     * Update activity timestamps periodically
-     */
-    function updateTimestamps() {
-        // This could be enhanced to update timestamps in real-time
-        // For now, we'll just refresh on filter change
-    }
-    
-    /**
-     * Enable/disable infinite scroll
-     */
-    function toggleInfiniteScroll(enable) {
-        state.infiniteScrollEnabled = enable;
-        
-        if (enable) {
-            $(window).on('scroll', throttle(handleScroll, 200));
-        } else {
-            $(window).off('scroll');
-        }
-    }
-    
-    /**
-     * Add activity in real-time (for future WebSocket integration)
-     */
-    function addActivityRealtime(activity) {
-        // Placeholder for future real-time activity updates
-        // Could use WebSockets or Server-Sent Events
     }
     
     /**
@@ -1118,7 +822,7 @@
     
     // Initialize on document ready
     $(document).ready(function() {
-        init();
+        initStickyTabs();
         initMobileCompose();
         initCollapsibleComments();
         VH360CommentForm.init(); // Initialize main comment form
@@ -1130,16 +834,6 @@
         $(document).on('click', '.vh360-scroll-to-comments', scrollToComments);
     });
     
-    // Expose some methods for external use
-    window.vh360ActivityFeed = {
-        reload: function() {
-            state.offset = 0;
-            state.hasMore = true;
-            $activityStream.empty();
-            loadActivities(true);
-        },
-        toggleInfiniteScroll: toggleInfiniteScroll
-    };
     
 })(jQuery);
 
@@ -1364,8 +1058,25 @@ const VH360ShareSystem = (function($) {
                     if (response.data.post_html) {
                         const $newPost = $(response.data.post_html);
                         $newPost.hide();
-                        $('#vh360-activity-stream').prepend($newPost);
-                        $newPost.fadeIn(400);
+                        const $feedMain = $('.vh360-feed-main').first();
+
+                        if ($feedMain.length) {
+                            const $composer = $feedMain
+                                .children('.vh360-community-post--composer')
+                                .first();
+
+                            $feedMain
+                                .children('.vh360-empty-community-feed')
+                                .remove();
+
+                            if ($composer.length) {
+                                $newPost.insertAfter($composer);
+                            } else {
+                                $feedMain.prepend($newPost);
+                            }
+
+                            $newPost.fadeIn(400);
+                        }
                     }
                     
                     // Close modal

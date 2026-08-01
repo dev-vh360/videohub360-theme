@@ -742,9 +742,9 @@ class VH360_Ajax_Handlers {
     }
     
     /**
-     * Load more activities (AJAX)
+     * Load the current user's dashboard activities.
      */
-    public function load_activities() {
+    public function load_dashboard_activities() {
         if (!is_user_logged_in()) {
             wp_send_json_error(array(
                 'message' => esc_html__('You must be logged in to view dashboard activity.', 'videohub360-theme'),
@@ -752,7 +752,7 @@ class VH360_Ajax_Handlers {
         }
 
         // Verify nonce
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'vh360_activity_nonce')) {
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'vh360_dashboard_activity_nonce')) {
             wp_send_json_error(array(
                 'message' => esc_html__('Security check failed.', 'videohub360-theme'),
             ));
@@ -1639,12 +1639,8 @@ $vh360_ajax_handlers = new VH360_Ajax_Handlers();
 add_action('wp_ajax_vh360_search_members', array($vh360_ajax_handlers, 'search_members'));
 add_action('wp_ajax_nopriv_vh360_search_members', array($vh360_ajax_handlers, 'search_members'));
 
-// Add AJAX actions for activity feed
-add_action('wp_ajax_vh360_load_activities', array($vh360_ajax_handlers, 'load_activities'));
-add_action('wp_ajax_nopriv_vh360_load_activities', array($vh360_ajax_handlers, 'load_activities'));
-
-add_action('wp_ajax_vh360_filter_activities', array($vh360_ajax_handlers, 'load_activities'));
-add_action('wp_ajax_nopriv_vh360_filter_activities', array($vh360_ajax_handlers, 'load_activities'));
+// Add the authenticated AJAX action for personalized dashboard activity.
+add_action('wp_ajax_vh360_dashboard_load_activities', array($vh360_ajax_handlers, 'load_dashboard_activities'));
 
 // Add AJAX action for deleting videos
 add_action('wp_ajax_vh360_delete_video', array($vh360_ajax_handlers, 'delete_video'));
