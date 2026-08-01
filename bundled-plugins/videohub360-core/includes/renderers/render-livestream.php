@@ -250,6 +250,9 @@ $player_html .= '</div>';
             $player_html .= '<button id="vh360-agora-mute-audio" class="vh360-agora-control-btn vh360-agora-control-btn-text vh360-hidden">🎤 Mute</button>';
             $player_html .= '<button id="vh360-agora-participant-audio" class="vh360-agora-control-btn vh360-agora-control-btn-text vh360-hidden" type="button" aria-pressed="true" aria-label="Participant Audio: On" title="Participant Audio: On">🔊 Participant Audio: On</button>';
             $player_html .= '<button id="vh360-agora-mute-video" class="vh360-agora-control-btn vh360-agora-control-btn-text vh360-hidden">📹 Camera</button>';
+            if ($fields['agora_mode'] === 'interactive') {
+                $player_html .= '<button id="vh360-agora-screen-share" class="vh360-agora-control-btn vh360-agora-control-btn-text vh360-hidden" type="button" aria-pressed="false" aria-label="Share screen" title="Share screen"><span class="vh360-agora-control-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M9 10l3-3 3 3M12 7v7"/></svg></span><span class="vh360-agora-control-label">Share Screen</span></button>';
+            }
 
             // Show join presenter button for non-moderators in interactive mode when either:
             // 1. Host passcode is set, OR

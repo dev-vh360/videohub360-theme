@@ -4994,3 +4994,14 @@ body.vh360-ios-immersive-active
 .vh360-participant-tile.vh360-video-reconnecting .vh360-participant-video::after { content: "Reconnecting video…"; }
 .vh360-participant-tile.vh360-video-fallback .vh360-participant-video::after { content: "Network fallback active"; }
 .vh360-participant-tile.vh360-video-attaching .vh360-participant-video::after { content: "Restoring video…"; }
+
+#vh360-agora-screen-share.is-active,
+#vh360-agora-screen-share[aria-pressed="true"] { background: #0f766e; border-color: #5eead4; color: #fff; }
+#vh360-agora-screen-share.is-transitioning,
+#vh360-agora-screen-share:disabled { cursor: progress; opacity: .6; }
+.vh360-participant-badge-screen-share { background: #0f766e; color: #fff; border-color: #5eead4; }
+#vh360-agora-player:fullscreen #vh360-agora-screen-share,
+#vh360-agora-player:-webkit-full-screen #vh360-agora-screen-share { visibility: visible; }
+@media (max-width: 767px), (pointer: coarse) {
+    #vh360-agora-screen-share { display: none !important; }
+}

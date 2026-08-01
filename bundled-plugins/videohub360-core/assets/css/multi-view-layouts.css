@@ -1677,3 +1677,12 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
     pointer-events: none;
     opacity: 0;
 }
+
+.vh360-participant-tile:not(.is-featured) .vh360-participant-badge-screen-share {
+    max-width: 9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: .68rem;
+    padding: .18rem .35rem;
+}
