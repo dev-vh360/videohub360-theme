@@ -594,16 +594,19 @@
                         nonce: nonce
                     },
                     success: function(response) {
-                        if (response.success && response.data.html) {
-                            $('.vh360-activity-feed').append(response.data.html);
-                            $button.data('offset', response.data.offset);
-                            $button.text('Load More').prop('disabled', false);
-                            
-                            if (response.data.count < 20) {
+                        if (response.success) {
+                            if (response.data.html) {
+                                $('.vh360-activity-feed').append(response.data.html);
+                            }
+                            $button.data('offset', response.data.next_offset);
+
+                            if (response.data.has_more === false) {
                                 $button.remove();
+                            } else {
+                                $button.text('Load More').prop('disabled', false);
                             }
                         } else {
-                            $button.remove();
+                            $button.text('Load More').prop('disabled', false);
                         }
                     },
                     error: function() {

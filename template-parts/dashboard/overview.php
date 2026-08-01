@@ -29,11 +29,14 @@ $recent_content_args = array(
 );
 $recent_content = new WP_Query($recent_content_args);
 
-// Get recent activities
-$activities = array();
-if (function_exists('vh360_get_user_activities')) {
-    $activities = vh360_get_user_activities($current_user_id, 5);
-}
+// Get recent activities from the same stored history used by the Activity tab.
+$activity_result = vh360_query_activities(array(
+    'user_id' => $current_user_id,
+    'type' => 'all',
+    'limit' => 5,
+    'offset' => 0,
+));
+$activities = $activity_result['items'];
 ?>
 
 <div class="vh360-dashboard-overview">

@@ -745,6 +745,12 @@ class VH360_Ajax_Handlers {
      * Load more activities (AJAX)
      */
     public function load_activities() {
+        if (!is_user_logged_in()) {
+            wp_send_json_error(array(
+                'message' => esc_html__('You must be logged in to view dashboard activity.', 'videohub360-theme'),
+            ));
+        }
+
         // Verify nonce
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'vh360_activity_nonce')) {
             wp_send_json_error(array(
@@ -753,35 +759,22 @@ class VH360_Ajax_Handlers {
         }
         
         // Get parameters
-        $type = isset($_POST['type']) ? sanitize_text_field($_POST['type']) : 'all';
-        $type_map = array(
-            'videos' => 'video_upload',
-            'comments' => 'comment',
-            'likes' => 'like',
-        );
-        if (isset($type_map[$type])) {
-            $type = $type_map[$type];
-        }
+        $filter = isset($_POST['type']) ? sanitize_key($_POST['type']) : 'all';
+        $type = vh360_normalize_dashboard_activity_filter($filter);
         $offset = isset($_POST['offset']) ? absint($_POST['offset']) : 0;
         $limit = 20;
         
         // Get activities
-        $activities = vh360_get_activities(array(
+        $result = vh360_query_activities(array(
             'type' => $type,
             'user_id' => get_current_user_id(),
             'limit' => $limit,
             'offset' => $offset,
         ));
         
-        if (empty($activities)) {
-            wp_send_json_error(array(
-                'message' => esc_html__('No more activities found.', 'videohub360-theme'),
-            ));
-        }
-        
         ob_start();
         
-        foreach ($activities as $activity) {
+        foreach ($result['items'] as $activity) {
             echo vh360_get_dashboard_activity_item_html($activity); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped by the renderer.
         }
         
@@ -789,8 +782,9 @@ class VH360_Ajax_Handlers {
         
         wp_send_json_success(array(
             'html' => $html,
-            'offset' => $offset + count($activities),
-            'count' => count($activities),
+            'count' => $result['count'],
+            'next_offset' => $result['next_offset'],
+            'has_more' => $result['has_more'],
         ));
     }
     

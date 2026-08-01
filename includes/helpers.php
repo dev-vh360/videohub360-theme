@@ -1538,60 +1538,23 @@ function vh360_is_user_active($user_id) {
  *
  * @param int    $user_id The user ID.
  * @param int    $limit   Number of activities to return.
- * @param string $type    Filter by activity type (all, videos, comments, likes).
+ * @param string $type    Dashboard filter (all, videos, posts).
+ * @param int    $offset  Number of matching activities to skip.
  * @return array Array of activity items.
  */
-function vh360_get_user_activities($user_id, $limit = 20, $type = 'all') {
+function vh360_get_user_activities($user_id, $limit = 20, $type = 'all', $offset = 0) {
     if (!$user_id) {
         return array();
     }
 
-    // Check if plugin function exists
-    if (function_exists('videohub360_get_user_activities')) {
-        return videohub360_get_user_activities($user_id, $limit, $type);
-    }
+    $result = vh360_query_activities(array(
+        'user_id' => $user_id,
+        'type' => vh360_normalize_dashboard_activity_filter($type),
+        'limit' => $limit,
+        'offset' => $offset,
+    ));
 
-    // Fallback: build activities from posts
-    $activities = array();
-
-    $args = array(
-        'author' => $user_id,
-        'post_type' => vh360_get_dashboard_content_types(),
-        'post_status' => 'publish',
-        'posts_per_page' => $limit,
-        'orderby' => 'date',
-        'order' => 'DESC',
-    );
-
-    $query = new WP_Query($args);
-
-    if ($query->have_posts()) {
-        while ($query->have_posts()) {
-            $query->the_post();
-            
-            // Set activity type based on actual post type
-            $post_type = get_post_type();
-            $activity_type = 'video_upload'; // default for videohub360
-            if ($post_type === 'post') {
-                $activity_type = 'post_publish';
-            }
-            
-            $activities[] = array(
-                'id' => get_the_ID(),
-                'type' => $activity_type,
-                'user_id' => $user_id,
-                'timestamp' => get_the_time('U'),
-                'content' => array(
-                    'title' => get_the_title(),
-                    'link' => get_permalink(),
-                    'post_type' => $post_type,
-                ),
-            );
-        }
-        wp_reset_postdata();
-    }
-
-    return $activities;
+    return $result['items'];
 }
 
 /**

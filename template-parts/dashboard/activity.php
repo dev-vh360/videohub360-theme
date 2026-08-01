@@ -15,50 +15,18 @@ if (!defined('ABSPATH')) {
 $current_user_id = get_current_user_id();
 
 // Get filter
-$filter = isset($_GET['activity_filter']) ? sanitize_text_field($_GET['activity_filter']) : 'all';
-
-// Get activities (implement based on available functions)
-$activities = array();
-if (function_exists('vh360_get_user_activities')) {
-    $activities = vh360_get_user_activities($current_user_id, 20, $filter);
-} else {
-    // Fallback: Get recent posts as activities
-    $args = array(
-        'author' => $current_user_id,
-        'post_type' => vh360_get_dashboard_content_types(),
-        'post_status' => 'publish',
-        'posts_per_page' => 20,
-        'orderby' => 'date',
-        'order' => 'DESC',
-    );
-    $query = new WP_Query($args);
-    
-    if ($query->have_posts()) {
-        while ($query->have_posts()) {
-            $query->the_post();
-            
-            // Set activity type based on actual post type
-            $post_type = get_post_type();
-            $activity_type = 'video_upload'; // default for videohub360
-            if ($post_type === 'post') {
-                $activity_type = 'post_publish';
-            }
-            
-            $activities[] = array(
-                'id' => get_the_ID(),
-                'type' => $activity_type,
-                'user_id' => $current_user_id,
-                'timestamp' => get_the_time('U'),
-                'content' => array(
-                    'title' => get_the_title(),
-                    'link' => get_permalink(),
-                    'post_type' => $post_type,
-                ),
-            );
-        }
-        wp_reset_postdata();
-    }
+$filter = isset($_GET['activity_filter']) ? sanitize_key($_GET['activity_filter']) : 'all';
+$normalized_filter = vh360_normalize_dashboard_activity_filter($filter);
+if ('all' === $normalized_filter && 'all' !== $filter) {
+    $filter = 'all';
 }
+$activity_result = vh360_query_activities(array(
+    'user_id' => $current_user_id,
+    'type' => $normalized_filter,
+    'limit' => 20,
+    'offset' => 0,
+));
+$activities = $activity_result['items'];
 ?>
 
 <div class="vh360-dashboard-activity">
@@ -78,13 +46,9 @@ if (function_exists('vh360_get_user_activities')) {
            class="vh360-activity-filter-btn <?php echo $filter === 'videos' ? 'active' : ''; ?>">
             <?php esc_html_e('Videos', 'videohub360-theme'); ?>
         </a>
-        <a href="<?php echo esc_url(add_query_arg('activity_filter', 'comments')); ?>" 
-           class="vh360-activity-filter-btn <?php echo $filter === 'comments' ? 'active' : ''; ?>">
-            <?php esc_html_e('Comments', 'videohub360-theme'); ?>
-        </a>
-        <a href="<?php echo esc_url(add_query_arg('activity_filter', 'likes')); ?>" 
-           class="vh360-activity-filter-btn <?php echo $filter === 'likes' ? 'active' : ''; ?>">
-            <?php esc_html_e('Likes', 'videohub360-theme'); ?>
+        <a href="<?php echo esc_url(add_query_arg('activity_filter', 'posts')); ?>"
+           class="vh360-activity-filter-btn <?php echo $filter === 'posts' ? 'active' : ''; ?>">
+            <?php esc_html_e('Posts', 'videohub360-theme'); ?>
         </a>
     </div>
     
@@ -97,14 +61,16 @@ if (function_exists('vh360_get_user_activities')) {
         </div>
         
         <!-- Load More Button -->
+        <?php if ($activity_result['has_more']) : ?>
         <div class="vh360-activity-load-more">
             <button class="vh360-dashboard-btn vh360-dashboard-btn-secondary vh360-load-more-activity" 
-                    data-offset="<?php echo esc_attr(count($activities)); ?>"
+                    data-offset="<?php echo esc_attr($activity_result['next_offset']); ?>"
                     data-filter="<?php echo esc_attr($filter); ?>"
                     data-nonce="<?php echo esc_attr(wp_create_nonce('vh360_activity_nonce')); ?>">
                 <?php esc_html_e('Load More', 'videohub360-theme'); ?>
             </button>
         </div>
+        <?php endif; ?>
         
     <?php else : ?>
         <div class="vh360-dashboard-empty">
