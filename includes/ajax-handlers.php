@@ -780,7 +780,7 @@ class VH360_Ajax_Handlers {
             
             $profile_url = vh360_get_profile_url($activity['user_id']);
             $time_ago = vh360_format_activity_time($activity['timestamp']);
-            $icon = vh360_get_activity_icon($activity['type']);
+            $icon = vh360_get_safe_activity_icon($activity['type']);
             
             ?>
             <div class="vh360-activity-item" data-activity-id="<?php echo esc_attr($activity['id']); ?>">
@@ -789,7 +789,7 @@ class VH360_Ajax_Handlers {
                 </div>
                 <div class="vh360-activity-content">
                     <div class="vh360-activity-header">
-                        <?php echo wp_kses_post($icon); ?>
+                        <?php echo $icon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Sanitized by vh360_get_safe_activity_icon(). ?>
                         <a href="<?php echo esc_url($profile_url); ?>" class="vh360-activity-user">
                             <?php echo esc_html($user->display_name); ?>
                         </a>

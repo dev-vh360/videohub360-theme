@@ -230,9 +230,12 @@
     flex-wrap: wrap;
 }
 
-.vh360-activity-icon {
+.vh360-activity-icon__svg {
     color: var(--accent-color);
-    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    display: block;
+    flex: 0 0 auto;
 }
 
 .vh360-activity-user {

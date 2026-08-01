@@ -94,7 +94,7 @@ if (function_exists('vh360_get_user_activities')) {
             <?php foreach ($activities as $activity) : ?>
                 <div class="vh360-activity-feed-item" data-activity-id="<?php echo esc_attr($activity['id']); ?>">
                     <div class="vh360-activity-feed-icon">
-                        <?php echo wp_kses_post(vh360_get_activity_icon($activity['type'])); ?>
+                        <?php echo vh360_get_safe_activity_icon($activity['type']); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Sanitized by the helper. ?>
                     </div>
                     
                     <div class="vh360-activity-feed-content">
@@ -255,6 +255,13 @@ if (function_exists('vh360_get_user_activities')) {
     align-items: center;
     justify-content: center;
     color: var(--primary-color);
+}
+
+.vh360-activity-feed-icon .vh360-activity-icon__svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+    flex: 0 0 auto;
 }
 
 .vh360-activity-feed-content {

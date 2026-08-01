@@ -1381,15 +1381,47 @@ function vh360_format_activity_content_link($content, $prefix = '') {
  * @return string SVG icon HTML.
  */
 function vh360_get_activity_icon($type) {
+    $svg_attributes = 'class="vh360-activity-icon__svg" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"';
     $icons = array(
-        'video_upload' => '<svg class="vh360-activity-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>',
-        'post_publish' => '<svg class="vh360-activity-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>',
-        'new_member' => '<svg class="vh360-activity-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>',
-        'profile_update' => '<svg class="vh360-activity-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>',
-        'milestone' => '<svg class="vh360-activity-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>',
+        'video_upload' => '<svg ' . $svg_attributes . '><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>',
+        'post_publish' => '<svg ' . $svg_attributes . '><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>',
+        'new_member' => '<svg ' . $svg_attributes . '><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>',
+        'profile_update' => '<svg ' . $svg_attributes . '><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>',
+        'milestone' => '<svg ' . $svg_attributes . '><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>',
     );
 
-    return isset($icons[$type]) ? $icons[$type] : '';
+    $fallback = '<svg ' . $svg_attributes . '><circle cx="12" cy="12" r="9"></circle><path d="M12 8v4l3 2"></path></svg>';
+
+    return isset($icons[$type]) ? $icons[$type] : $fallback;
+}
+
+/**
+ * Get an activity icon sanitized with a restrictive SVG allowlist.
+ *
+ * @param string $type Activity type.
+ * @return string Sanitized SVG icon HTML.
+ */
+function vh360_get_safe_activity_icon($type) {
+    $allowed_attributes = array(
+        'class' => true, 'xmlns' => true, 'width' => true, 'height' => true,
+        'viewbox' => true, 'fill' => true, 'stroke' => true, 'stroke-width' => true,
+        'stroke-linecap' => true, 'stroke-linejoin' => true, 'd' => true,
+        'x' => true, 'y' => true, 'x1' => true, 'x2' => true, 'y1' => true,
+        'y2' => true, 'cx' => true, 'cy' => true, 'r' => true, 'rx' => true,
+        'ry' => true, 'points' => true, 'aria-hidden' => true, 'focusable' => true,
+    );
+    $allowed_svg = array(
+        'svg' => $allowed_attributes,
+        'path' => $allowed_attributes,
+        'circle' => $allowed_attributes,
+        'rect' => $allowed_attributes,
+        'line' => $allowed_attributes,
+        'polyline' => $allowed_attributes,
+        'polygon' => $allowed_attributes,
+        'g' => $allowed_attributes,
+    );
+
+    return wp_kses(vh360_get_activity_icon($type), $allowed_svg);
 }
 
 /**

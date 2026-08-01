@@ -30,7 +30,7 @@ function vh360_track_activity($user_id, $type, $content = array()) {
     $activity_options = get_option('vh360_activity_options', array());
     $activity_defaults = array(
         'enable_tracking' => true,
-        'track_types' => array('video_upload', 'new_member', 'profile_update', 'milestone'),
+        'track_types' => array('video_upload', 'post_publish', 'new_member', 'profile_update', 'milestone'),
     );
     $activity_options = wp_parse_args($activity_options, $activity_defaults);
     
@@ -45,7 +45,7 @@ function vh360_track_activity($user_id, $type, $content = array()) {
     }
     
     // Validate activity type
-    $valid_types = array('video_upload', 'new_member', 'profile_update', 'milestone');
+    $valid_types = array('video_upload', 'post_publish', 'new_member', 'profile_update', 'milestone');
     if (!in_array($type, $valid_types)) {
         return false;
     }
@@ -209,7 +209,9 @@ function vh360_track_video_upload($post_id) {
         return;
     }
     
-    vh360_track_activity($post->post_author, 'video_upload', array(
+    $activity_type = 'post' === $post->post_type ? 'post_publish' : 'video_upload';
+
+    vh360_track_activity($post->post_author, $activity_type, array(
         'title' => $post->post_title,
         'link' => get_permalink($post_id),
         'meta' => '',
