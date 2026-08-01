@@ -1913,7 +1913,7 @@ window.initializeAgoraPlayer = function(config) {
         const stateParts = [participant.displayName || 'Participant'];
         if (participant.isLocal) stateParts.push('You');
         if (participant.isOriginalHost) stateParts.push('Host');
-        stateParts.push(tile.dataset.videoState === 'on' ? 'camera on' : 'camera off');
+        stateParts.push(participant.isScreenSharing ? 'sharing screen' : (tile.dataset.videoState === 'on' ? 'camera on' : 'camera off'));
         stateParts.push(tile.dataset.audioState === 'on' ? 'mic on' : 'mic muted');
         if (participant.isSpeaking) stateParts.push('speaking');
         if (isFocused) stateParts.push('focused');
@@ -2925,7 +2925,13 @@ window.initializeAgoraPlayer = function(config) {
             if (label) label.textContent = sharing ? 'Stop Sharing' : 'Share Screen';
             screenShareBtn.disabled = transitioning;
         }
-        if (muteVideoBtn) muteVideoBtn.disabled = !localTracks.videoTrack || screenShareState === 'starting' || screenShareState === 'stopping';
+        if (muteVideoBtn) {
+            muteVideoBtn.disabled = !localTracks.videoTrack || screenShareState !== 'idle';
+            if (screenShareState !== 'idle') {
+                muteVideoBtn.setAttribute('aria-label', 'Camera control unavailable while screen sharing');
+                muteVideoBtn.setAttribute('title', 'Camera control unavailable while screen sharing');
+            }
+        }
     }
 
     function isScreenShareEligible() {
@@ -2955,6 +2961,28 @@ window.initializeAgoraPlayer = function(config) {
         if (screenMediaTrack && screenShareEndedHandler) screenMediaTrack.removeEventListener('ended', screenShareEndedHandler);
         if (screenMediaStream) screenMediaStream.getTracks().forEach((track) => track.stop());
         screenMediaStream = null; screenMediaTrack = null; screenShareEndedHandler = null;
+    }
+
+    async function clearFailedScreenShareVideo(...tracks) {
+        const tracksToRelease = new Set(tracks.filter(Boolean));
+        if (localTracks.videoTrack) tracksToRelease.add(localTracks.videoTrack);
+        for (const track of tracksToRelease) {
+            if (client && client.connectionState === 'CONNECTED') {
+                try { await client.unpublish([track]); } catch (unpublishError) {}
+            }
+            try { track.stop(); track.close(); } catch (cleanupError) {}
+        }
+        if (savedCameraMediaTrack && savedCameraMediaTrack.readyState !== 'ended') savedCameraMediaTrack.stop();
+        localTracks.videoTrack = null;
+        const participant = currentUserUID ? participantRegistry.get(normalizeParticipantUid(currentUserUID)) : null;
+        if (participant) {
+            participant.videoTrack = null;
+            participant.cameraOn = false;
+            participant.isScreenSharing = false;
+            participant.screenShareStartedAt = 0;
+            setParticipantVideoPlaybackState(participant, 'off', { reason: 'screen-share-camera-restore-failed' });
+            updateParticipantTile(participant);
+        }
     }
 
     async function startScreenSharing() {
@@ -3000,20 +3028,33 @@ window.initializeAgoraPlayer = function(config) {
             displayTrack.addEventListener('ended', screenShareEndedHandler, { once: true });
             setLocalScreenShareState(true);
         } catch (error) {
-            if (displayTrackReplaced && localTracks.videoTrack && savedCameraMediaTrack && savedCameraMediaTrack.readyState === 'live') {
+            let rollbackFailed = false;
+            if (displayTrackReplaced) {
                 try {
+                    if (!localTracks.videoTrack || !savedCameraMediaTrack || savedCameraMediaTrack.readyState !== 'live') {
+                        throw new Error('Saved camera track is unavailable for screen-share rollback.');
+                    }
                     if (cameraMutedBeforeScreenShare) await localTracks.videoTrack.setMuted(true);
                     await localTracks.videoTrack.replaceTrack(savedCameraMediaTrack, false);
                     if (savedCameraEncoderConfig && typeof localTracks.videoTrack.setEncoderConfiguration === 'function') {
                         await localTracks.videoTrack.setEncoderConfiguration(savedCameraEncoderConfig);
                     }
+                    if (typeof localTracks.videoTrack.setOptimizationMode === 'function') {
+                        await localTracks.videoTrack.setOptimizationMode('balanced');
+                    }
                 } catch (rollbackError) {
+                    rollbackFailed = true;
                     window.vh360Warn('Agora: Failed to roll back cancelled screen-share transition', rollbackError);
+                    await clearFailedScreenShareVideo(localTracks.videoTrack);
                 }
             }
             releaseDisplayCapture(); savedCameraMediaTrack = null; screenShareState = 'idle';
             savedCameraEncoderConfig = null;
-            if (error && !['NotAllowedError', 'AbortError'].includes(error.name)) showAgoraError('Unable to share your screen. Your camera remains connected.');
+            if (rollbackFailed) {
+                showAgoraError('Screen sharing stopped, but the camera could not be restored. Your microphone remains connected; leave and rejoin to restore the camera.');
+            } else if (error && !['NotAllowedError', 'AbortError'].includes(error.name)) {
+                showAgoraError('Unable to share your screen. Your camera remains connected.');
+            }
         } finally {
             muteVideoBtn.disabled = screenShareState !== 'idle' && screenShareState !== 'sharing';
             updateAgoraControlButtonStates(); updateControlsVisibility();
@@ -3035,7 +3076,7 @@ window.initializeAgoraPlayer = function(config) {
                     catch (encoderError) { window.vh360Warn('Agora: Unable to restore camera encoder configuration', encoderError); }
                 }
                 if (typeof wrapper.setOptimizationMode === 'function') {
-                    try { await wrapper.setOptimizationMode('motion'); }
+                    try { await wrapper.setOptimizationMode('balanced'); }
                     catch (optimizationError) { window.vh360Warn('Agora: Unable to restore camera optimization mode', optimizationError); }
                 }
                 if (savedCameraMediaTrack && savedCameraMediaTrack.readyState === 'live') {
@@ -3056,23 +3097,7 @@ window.initializeAgoraPlayer = function(config) {
         } catch (error) {
             window.vh360Warn('Agora: Camera could not be restored after screen sharing', error);
             isVideoMuted = true;
-            for (const unusableTrack of [freshCameraTrack, wrapper]) {
-                if (!unusableTrack) continue;
-                if (client && client.connectionState === 'CONNECTED') {
-                    try { await client.unpublish([unusableTrack]); } catch (unpublishError) {}
-                }
-                try { unusableTrack.stop(); unusableTrack.close(); } catch (cleanupError) {}
-            }
-            localTracks.videoTrack = null;
-            const participant = currentUserUID ? participantRegistry.get(normalizeParticipantUid(currentUserUID)) : null;
-            if (participant) {
-                participant.videoTrack = null;
-                participant.cameraOn = false;
-                participant.isScreenSharing = false;
-                participant.screenShareStartedAt = 0;
-                setParticipantVideoPlaybackState(participant, 'off', { reason: 'screen-share-camera-restore-failed' });
-                updateParticipantTile(participant);
-            }
+            await clearFailedScreenShareVideo(freshCameraTrack, wrapper);
             showAgoraError('Screen sharing stopped, but the camera could not be restored. Your microphone remains connected; leave and rejoin to restore the camera.');
         } finally {
             releaseDisplayCapture(); savedCameraMediaTrack = null;
@@ -4223,19 +4248,20 @@ window.initializeAgoraPlayer = function(config) {
     });
 
     // -- Enhanced Network and Connection Event Handlers --
-    client.on("connection-state-change", (curState, prevState, reason) => {
+    client.on("connection-state-change", async (curState, prevState, reason) => {
         window.vh360Log("Agora: Connection state changed", { prevState, curState, reason });
 
         if (curState === "DISCONNECTED") {
-            stopScreenSharing(true);
             stopActiveSpeakerDetection();
             // Clean up frozen video frames immediately on disconnect
             cleanupFrozenVideoFrames();
 
-            if (agoraTokenRecoveryInProgress) {
+            if (agoraTokenRecoveryInProgress || isAgoraSessionReplacementInProgress) {
                 window.vh360Log("Agora: Disconnect occurred during token recovery; suppressing refresh prompt.");
                 return;
             }
+
+            if (reason !== "LEAVE") await stopPublishing();
 
             let errorMessage = "Connection lost. ";
             if (reason === "NETWORK_ERROR") {
@@ -4403,7 +4429,7 @@ window.initializeAgoraPlayer = function(config) {
         window.vh360Log('Updating live stream quality to:', quality);
         const newVideoConfig = { encoderConfig: buildAgoraEncoderConfig(qualityData) };
 
-        if (screenShareState === 'sharing' || screenShareState === 'starting') {
+        if (screenShareState !== 'idle') {
             savedCameraEncoderConfig = { ...newVideoConfig.encoderConfig };
             window.vh360Log('Agora: Camera quality change deferred until screen sharing stops:', quality);
             if (typeof showAgoraSuccess === 'function') showAgoraSuccess(`Camera quality will update after screen sharing stops`);
