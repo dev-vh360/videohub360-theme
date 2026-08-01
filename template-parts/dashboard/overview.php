@@ -29,11 +29,14 @@ $recent_content_args = array(
 );
 $recent_content = new WP_Query($recent_content_args);
 
-// Get recent activities
-$activities = array();
-if (function_exists('vh360_get_user_activities')) {
-    $activities = vh360_get_user_activities($current_user_id, 5);
-}
+// Get recent activities from the same stored history used by the Activity tab.
+$activity_result = vh360_query_activities(array(
+    'user_id' => $current_user_id,
+    'type' => 'all',
+    'limit' => 5,
+    'offset' => 0,
+));
+$activities = $activity_result['items'];
 ?>
 
 <div class="vh360-dashboard-overview">
@@ -169,7 +172,7 @@ if (function_exists('vh360_get_user_activities')) {
                         <?php foreach ($activities as $activity) : ?>
                             <div class="vh360-activity-item">
                                 <div class="vh360-activity-icon">
-                                    <?php echo wp_kses_post(vh360_get_activity_icon($activity['type'])); ?>
+                                    <?php echo vh360_get_safe_activity_icon($activity['type']); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Sanitized by the helper. ?>
                                 </div>
                                 <div class="vh360-activity-content">
                                     <p class="vh360-activity-text">
@@ -299,6 +302,7 @@ if (function_exists('vh360_get_user_activities')) {
 }
 
 .vh360-activity-icon {
+    width: 40px;
     flex: 0 0 40px;
     height: 40px;
     border-radius: 50%;
@@ -307,6 +311,13 @@ if (function_exists('vh360_get_user_activities')) {
     align-items: center;
     justify-content: center;
     color: var(--primary-color);
+}
+
+.vh360-activity-icon__svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+    flex: 0 0 auto;
 }
 
 .vh360-activity-content {

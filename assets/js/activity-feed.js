@@ -1,7 +1,8 @@
 /**
- * Activity Feed JavaScript
+ * Community Feed JavaScript
  *
- * Handles filtering, infinite scroll, and load more for activity feed.
+ * Handles community feed tabs, mobile composition, comments,
+ * replies, comment likes, and sharing.
  *
  * @package Videohub360_Theme
  * @since 1.0.0
@@ -9,44 +10,7 @@
 
 (function($) {
     'use strict';
-    
-    // State management
-    const state = {
-        currentType: 'all',
-        offset: 20, // Initial activities already loaded
-        isLoading: false,
-        hasMore: true,
-        infiniteScrollEnabled: true
-    };
-    
-    // DOM elements
-    const $filterTabs = $('.vh360-filter-tab');
-    const $activityStream = $('#vh360-activity-stream');
-    const $loading = $('#vh360-activity-loading');
-    const $emptyState = $('#vh360-activity-empty');
-    const $loadMoreWrapper = $('#vh360-load-more-wrapper');
-    const $loadMoreBtn = $('#vh360-load-more-btn');
-    
-    /**
-     * Initialize activity feed
-     */
-    function init() {
-        // Event listeners
-        $filterTabs.on('click', handleFilterClick);
-        $loadMoreBtn.on('click', handleLoadMore);
-        
-        // Infinite scroll
-        if (state.infiniteScrollEnabled) {
-            $(window).on('scroll', throttle(handleScroll, 200));
-        }
-        
-        // Parse URL parameters on load
-        parseUrlParams();
-        
-        // Initialize sticky tabs shadow effect
-        initStickyTabs();
-    }
-    
+
     /**
      * Initialize sticky feed tabs with shadow on scroll
      */
@@ -64,266 +28,6 @@
                 $tabs.removeClass('is-sticky');
             }
         });
-    }
-    
-    /**
-     * Throttle function
-     */
-    function throttle(func, wait) {
-        let timeout;
-        let lastRan;
-        
-        return function executedFunction(...args) {
-            if (!lastRan) {
-                func(...args);
-                lastRan = Date.now();
-            } else {
-                clearTimeout(timeout);
-                timeout = setTimeout(() => {
-                    if ((Date.now() - lastRan) >= wait) {
-                        func(...args);
-                        lastRan = Date.now();
-                    }
-                }, wait - (Date.now() - lastRan));
-            }
-        };
-    }
-    
-    /**
-     * Handle filter tab click
-     */
-    function handleFilterClick() {
-        const type = $(this).data('type');
-        
-        if (type === state.currentType) {
-            return; // Already selected
-        }
-        
-        state.currentType = type;
-        state.offset = 0;
-        state.hasMore = true;
-        
-        // Update UI
-        $filterTabs.removeClass('active');
-        $(this).addClass('active');
-        
-        // Clear stream and load new activities
-        $activityStream.empty();
-        loadActivities(true);
-        
-        // Update URL
-        updateUrl();
-    }
-    
-    /**
-     * Handle load more button click
-     */
-    function handleLoadMore() {
-        loadActivities(false);
-    }
-    
-    /**
-     * Handle infinite scroll
-     */
-    function handleScroll() {
-        if (!state.infiniteScrollEnabled || !state.hasMore || state.isLoading) {
-            return;
-        }
-        
-        // Check if load more button is in viewport
-        if ($loadMoreBtn.length) {
-            const btnOffset = $loadMoreBtn.offset().top;
-            const scrollTop = $(window).scrollTop();
-            const windowHeight = $(window).height();
-            
-            if (scrollTop + windowHeight >= btnOffset - 200) {
-                loadActivities(false);
-            }
-        }
-    }
-    
-    /**
-     * Load activities via AJAX
-     */
-    function loadActivities(replace = false) {
-        if (state.isLoading) {
-            return;
-        }
-        
-        state.isLoading = true;
-        
-        if (replace) {
-            $loading.show();
-            $activityStream.addClass('loading');
-        } else {
-            $loadMoreBtn.prop('disabled', true).addClass('loading');
-        }
-        
-        $emptyState.hide();
-        
-        const data = {
-            action: 'vh360_load_activities',
-            nonce: vh360Activity.nonce,
-            type: state.currentType,
-            offset: state.offset
-        };
-        
-        $.ajax({
-            url: vh360Activity.ajaxurl,
-            type: 'POST',
-            data: data,
-            success: function(response) {
-                if (response.success) {
-                    const html = response.data.html;
-                    
-                    if (replace) {
-                        $activityStream.html(html);
-                        // Scroll to top of stream
-                        scrollToStream();
-                    } else {
-                        // Append new activities with animation
-                        const $newItems = $(html);
-                        $newItems.hide();
-                        $activityStream.append($newItems);
-                        $newItems.fadeIn(400);
-                    }
-                    
-                    // Update state
-                    state.offset = response.data.offset;
-                    
-                    // Check if there are more activities
-                    if (response.data.count < 20) {
-                        state.hasMore = false;
-                        $loadMoreWrapper.fadeOut();
-                    } else {
-                        $loadMoreWrapper.fadeIn();
-                    }
-                    
-                    // Show empty state if no activities
-                    if (state.offset === 0) {
-                        $emptyState.show();
-                        $loadMoreWrapper.hide();
-                    }
-                } else {
-                    if (replace) {
-                        $activityStream.empty();
-                        $emptyState.show();
-                    } else {
-                        state.hasMore = false;
-                        $loadMoreWrapper.fadeOut();
-                    }
-                }
-            },
-            error: function() {
-                if (replace) {
-                    $activityStream.html('<p class="vh360-error">' + vh360Activity.strings.error + '</p>');
-                } else {
-                    showError();
-                }
-            },
-            complete: function() {
-                state.isLoading = false;
-                $loading.hide();
-                $activityStream.removeClass('loading');
-                $loadMoreBtn.prop('disabled', false).removeClass('loading');
-            }
-        });
-    }
-    
-    /**
-     * Show error message
-     */
-    function showError() {
-        const $error = $('<div class="vh360-activity-error">' + vh360Activity.strings.error + '</div>');
-        $activityStream.append($error);
-        setTimeout(() => {
-            $error.fadeOut(() => $error.remove());
-        }, 3000);
-    }
-    
-    /**
-     * Update URL with current filter
-     */
-    function updateUrl() {
-        const params = new URLSearchParams();
-        
-        if (state.currentType !== 'all') {
-            params.set('type', state.currentType);
-        }
-        
-        const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
-        window.history.replaceState({}, '', newUrl);
-    }
-    
-    /**
-     * Parse URL parameters on load
-     */
-    function parseUrlParams() {
-        const params = new URLSearchParams(window.location.search);
-        
-        if (params.has('type')) {
-            const type = params.get('type');
-            const $tab = $(`.vh360-filter-tab[data-type="${type}"]`);
-            
-            if ($tab.length) {
-                $tab.trigger('click');
-            }
-        }
-    }
-    
-    /**
-     * Scroll to activity stream
-     */
-    function scrollToStream() {
-        const streamOffset = $activityStream.offset().top - 100;
-        $('html, body').animate({
-            scrollTop: streamOffset
-        }, 400);
-    }
-    
-    /**
-     * Check if element is in viewport
-     */
-    function isInViewport($element) {
-        if (!$element.length) {
-            return false;
-        }
-        
-        const elementTop = $element.offset().top;
-        const elementBottom = elementTop + $element.outerHeight();
-        const viewportTop = $(window).scrollTop();
-        const viewportBottom = viewportTop + $(window).height();
-        
-        return elementBottom > viewportTop && elementTop < viewportBottom;
-    }
-    
-    /**
-     * Update activity timestamps periodically
-     */
-    function updateTimestamps() {
-        // This could be enhanced to update timestamps in real-time
-        // For now, we'll just refresh on filter change
-    }
-    
-    /**
-     * Enable/disable infinite scroll
-     */
-    function toggleInfiniteScroll(enable) {
-        state.infiniteScrollEnabled = enable;
-        
-        if (enable) {
-            $(window).on('scroll', throttle(handleScroll, 200));
-        } else {
-            $(window).off('scroll');
-        }
-    }
-    
-    /**
-     * Add activity in real-time (for future WebSocket integration)
-     */
-    function addActivityRealtime(activity) {
-        // Placeholder for future real-time activity updates
-        // Could use WebSockets or Server-Sent Events
     }
     
     /**
@@ -368,198 +72,13 @@
     }
     
     /**
-     * Handle share button click
-     */
-    function handleShareClick(event) {
-        const $btn = $(event.currentTarget);
-        const postId = $btn.data('post-id');
-        const nonce = $btn.data('nonce');
-        
-        if (!postId) {
-            console.error('Share: Missing post ID');
-            return;
-        }
-        
-        // Show share UI (copy link, modal, etc.)
-        showShareModal(postId);
-        
-        // Track share via AJAX
-        trackShare(postId, nonce);
-    }
-    
-    /**
-     * Track share via AJAX
-     */
-    function trackShare(postId, nonce) {
-        $.ajax({
-            url: vh360Activity.ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'vh360_increment_share',
-                post_id: postId,
-                nonce: nonce
-            },
-            dataType: 'json',
-            success: function(response) {
-                if (response.success && response.data.count) {
-                    updateShareCount(postId, response.data.count);
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('Share tracking failed:', error);
-            }
-        });
-    }
-    
-    /**
-     * Update share count in DOM
-     */
-    function updateShareCount(postId, newCount) {
-        const $statsRow = $('.vh360-post-stats[data-post-id="' + postId + '"]');
-        const $shareCount = $statsRow.find('.vh360-stat-count[data-stat="shares"]');
-        
-        if ($shareCount.length) {
-            // Update existing count
-            $shareCount.text(vh360FormatNumber(newCount));
-        } else {
-            // Add share stat if it didn't exist before
-            addShareStatToRow($statsRow, newCount);
-        }
-    }
-    
-    /**
-     * Add share stat to stats row (if it didn't exist)
-     */
-    function addShareStatToRow($statsRow, count) {
-        // Check if stats row is empty (no likes/comments)
-        const hasOtherStats = $statsRow.find('.vh360-post-stat').length > 0;
-        
-        let shareHtml = '';
-        
-        if (hasOtherStats) {
-            shareHtml += '<span class="vh360-stat-separator">•</span>';
-        }
-        
-        shareHtml += '<span class="vh360-post-stat vh360-post-stat-shares">';
-        shareHtml += '<span class="vh360-stat-count" data-stat="shares">' + vh360FormatNumber(count) + '</span>';
-        
-        // Use localized strings for singular/plural
-        const label = count === 1 ? vh360Activity.strings.share : vh360Activity.strings.shares;
-        shareHtml += '<span class="vh360-stat-label">' + label + '</span>';
-        shareHtml += '</span>';
-        
-        $statsRow.append(shareHtml);
-        
-        // Show stats row if it was hidden
-        $statsRow.show();
-    }
-    
-    /**
-     * Scroll to comments section
-     */
-    function scrollToComments(event) {
-        event.preventDefault();
-        
-        const $link = $(event.currentTarget);
-        const postId = $link.data('post-id');
-        const targetId = '#vh360-comments-section-' + postId;
-        const $target = $(targetId);
-        
-        if ($target.length) {
-            const offset = $target.offset().top - 100; // 100px from top for header
-            
-            $('html, body').animate({
-                scrollTop: offset
-            }, 400, function() {
-                // Focus first comment or comment input for accessibility
-                const $firstComment = $target.find('.vh360-comment').first();
-                if ($firstComment.length) {
-                    $firstComment.attr('tabindex', '-1').focus();
-                }
-            });
-        }
-    }
-    
-    /**
-     * Format number for display (e.g., 1000 -> 1K)
-     * Matches PHP vh360_format_number() implementation
-     */
-    function vh360FormatNumber(num) {
-        num = Math.abs(parseInt(num));
-        
-        if (num < 1000) {
-            return num.toString();
-        }
-        
-        if (num < 1000000) {
-            var formatted = Math.round(num / 100) / 10; // Same as PHP round($num / 1000, 1)
-            return formatted + 'K';
-        }
-        
-        if (num < 1000000000) {
-            var formatted = Math.round(num / 100000) / 10; // Same as PHP round($num / 1000000, 1)
-            return formatted + 'M';
-        }
-        
-        var formatted = Math.round(num / 100000000) / 10; // Same as PHP round($num / 1000000000, 1)
-        return formatted + 'B';
-    }
-    
-    /**
-     * Show share modal/UI (implement based on existing theme pattern)
-     */
-    function showShareModal(postId) {
-        // Try to get post URL from the current page if available
-        const $post = $('.vh360-community-post[data-post-id="' + postId + '"]');
-        let postUrl;
-        
-        // Check if we're on a single post page
-        if ($('body').hasClass('single-vh360_post')) {
-            postUrl = window.location.href;
-        } else {
-            // For activity feed, construct URL using WordPress pretty permalinks
-            // This will work with most permalink structures
-            postUrl = window.location.origin + '/?post_type=vh360_post&p=' + postId;
-        }
-        
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(postUrl).then(function() {
-                showShareNotification(vh360Activity.strings.shareSuccess || 'Link copied to clipboard!');
-            }).catch(function(err) {
-                console.error('Could not copy link:', err);
-                showShareNotification(vh360Activity.strings.shareError || 'Could not copy link');
-            });
-        } else {
-            // Fallback for older browsers
-            showShareNotification('Share link: ' + postUrl);
-        }
-    }
-    
-    /**
-     * Show share notification
-     */
-    function showShareNotification(message) {
-        // Create simple notification element - CSS is now in utilities.css
-        const $notification = $('<div class="vh360-share-notification">' + message + '</div>');
-        
-        $('body').append($notification);
-        
-        setTimeout(function() {
-            $notification.fadeOut(300, function() {
-                $notification.remove();
-            });
-        }, 3000);
-    }
-    
-    /**
      * Collapsible Comments functionality
      */
     function initCollapsibleComments() {
-        // Handle toggle replies button click (new class name)
+        // Handle toggle replies button click
         $(document).on('click', '.vh360-toggle-replies', function(e) {
             e.preventDefault();
             const $btn = $(this);
-            const commentId = $btn.data('comment-id');
             const $repliesList = $btn.siblings('.vh360-replies-list');
             
             if ($repliesList.hasClass('vh360-replies-list--hidden')) {
@@ -572,33 +91,12 @@
                 $btn.text($btn.text().replace('Hide', 'View'));
             }
         });
-        
-        // Legacy support for old class name
-        $(document).on('click', '.vh360-view-replies-btn', function(e) {
-            e.preventDefault();
-            const $btn = $(this);
-            const commentId = $btn.data('comment-id');
-            const $replies = $('.vh360-comment-replies[data-parent-id="' + commentId + '"]');
-            
-            if ($replies.hasClass('collapsed')) {
-                // Expand replies
-                $replies.removeClass('collapsed');
-                $btn.addClass('expanded');
-                $btn.find('.vh360-reply-count-text').text($btn.find('.vh360-reply-count-text').text().replace('View', 'Hide'));
-            } else {
-                // Collapse replies
-                $replies.addClass('collapsed');
-                $btn.removeClass('expanded');
-                $btn.find('.vh360-reply-count-text').text($btn.find('.vh360-reply-count-text').text().replace('Hide', 'View'));
-            }
-        });
     }
-    
+
     /**
      * Handle Reply button click - toggle reply form for specific comment
-     * Support both new (.vh360-action-reply) and old (.vh360-comment-reply-btn) class names
      */
-    $(document).on('click', '.vh360-action-reply, .vh360-comment-reply-btn', function(e) {
+    $(document).on('click', '.vh360-action-reply', function(e) {
         e.preventDefault();
         
         const $btn = $(this);
@@ -619,16 +117,12 @@
                 }
             });
         }
-        
-        // Optional: Close other open reply forms
-        // $('.vh360-comment-reply-form').not($replyForm).slideUp(200);
     });
     
     /**
      * Create reply form for a comment
      */
     function createReplyForm(commentId, $comment, commentAuthor) {
-        const currentUserId = vh360Activity.currentUserId || '';
         const currentUserAvatar = vh360Activity.currentUserAvatar || '';
         
         // Prepare @mention if author name is provided
@@ -869,30 +363,6 @@
     }
     
     /**
-     * Update comment count in post stats row (incremental)
-     */
-    function updateCommentCount(postId, increment) {
-        const $post = $(`.vh360-community-post[data-post-id="${postId}"]`);
-        const $commentStat = $post.find('.vh360-post-stat-comments, .vh360-stat-comments');
-        
-        if ($commentStat.length) {
-            const $countElem = $commentStat.find('.vh360-stat-count[data-stat="comments"]');
-            const currentCount = parseInt($countElem.text()) || 0;
-            const newCount = currentCount + increment;
-            
-            // Update count
-            $countElem.text(vh360FormatNumber(newCount));
-            
-            // Update label (singular/plural)
-            const $labelElem = $commentStat.find('.vh360-stat-label');
-            if ($labelElem.length) {
-                const commentText = newCount === 1 ? 'COMMENT' : 'COMMENTS';
-                $labelElem.text(commentText);
-            }
-        }
-    }
-    
-    /**
      * Update comment count in post stats row (absolute value from server)
      * Use this when you have the exact count from server response
      */
@@ -914,14 +384,13 @@
     
     /**
      * Handle comment like button click
-     * Support both new (.vh360-action-like) and old (.vh360-comment-like-btn) class names
      */
-    $(document).on('click', '.vh360-action-like, .vh360-comment-like-btn', function(e) {
+    $(document).on('click', '.vh360-action-like', function(e) {
         e.preventDefault();
         
         const $btn = $(this);
         const commentId = $btn.data('comment-id');
-        const $countEl = $btn.siblings('.vh360-like-count, .vh360-comment-like-count');
+        const $countEl = $btn.siblings('.vh360-like-count');
         
         // Check if button is disabled (not logged in)
         if ($btn.prop('disabled')) {
@@ -1118,28 +587,13 @@
     
     // Initialize on document ready
     $(document).ready(function() {
-        init();
+        initStickyTabs();
         initMobileCompose();
         initCollapsibleComments();
         VH360CommentForm.init(); // Initialize main comment form
-        
-        // Share button click
-        $(document).on('click', '.vh360-share-btn', handleShareClick);
-        
-        // Scroll to comments
-        $(document).on('click', '.vh360-scroll-to-comments', scrollToComments);
+
     });
     
-    // Expose some methods for external use
-    window.vh360ActivityFeed = {
-        reload: function() {
-            state.offset = 0;
-            state.hasMore = true;
-            $activityStream.empty();
-            loadActivities(true);
-        },
-        toggleInfiniteScroll: toggleInfiniteScroll
-    };
     
 })(jQuery);
 
@@ -1364,8 +818,25 @@ const VH360ShareSystem = (function($) {
                     if (response.data.post_html) {
                         const $newPost = $(response.data.post_html);
                         $newPost.hide();
-                        $('#vh360-activity-stream').prepend($newPost);
-                        $newPost.fadeIn(400);
+                        const $feedMain = $('.vh360-feed-main').first();
+
+                        if ($feedMain.length) {
+                            const $composer = $feedMain
+                                .children('.vh360-community-post--composer')
+                                .first();
+
+                            $feedMain
+                                .children('.vh360-empty-community-feed')
+                                .remove();
+
+                            if ($composer.length) {
+                                $newPost.insertAfter($composer);
+                            } else {
+                                $feedMain.prepend($newPost);
+                            }
+
+                            $newPost.fadeIn(400);
+                        }
                     }
                     
                     // Close modal

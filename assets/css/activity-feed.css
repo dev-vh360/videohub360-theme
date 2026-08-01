@@ -124,68 +124,9 @@
     border-bottom-color: var(--feed-tab-active-underline-color, var(--primary-color));
 }
 
-.vh360-filter-tabs {
-    display: flex;
-    gap: 0.5rem;
-    padding: 1rem 0;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-}
-
-.vh360-filter-tabs::-webkit-scrollbar {
-    height: 4px;
-}
-
-.vh360-filter-tabs::-webkit-scrollbar-track {
-    background: var(--surface-3);
-}
-
-.vh360-filter-tabs::-webkit-scrollbar-thumb {
-    background: var(--border-1);
-    border-radius: 2px;
-}
-
-.vh360-filter-tab {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    background: transparent;
-    border: 1px solid var(--border-1);
-    border-radius: 50px;
-    color: var(--text-2);
-    font-size: 0.875rem;
-    font-weight: 600;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.vh360-filter-tab:hover {
-    background: var(--surface-3);
-    border-color: var(--border-1);
-    color: var(--text-1);
-}
-
-.vh360-filter-tab.active {
-    background: linear-gradient(135deg, var(--accent-color) 0%, var(--error-color) 100%);
-    border-color: transparent;
-    color: #ffffff;
-}
-
-.vh360-filter-tab svg {
-    flex-shrink: 0;
-}
-
 /* Activity Content */
 .vh360-activity-content {
     padding: 2rem 0 3rem;
-}
-
-/* Activity Stream */
-.vh360-activity-stream {
-    max-width: 800px;
-    margin: 0 auto;
 }
 
 /* Activity Item */
@@ -206,17 +147,6 @@
     transform: translateY(-2px);
 }
 
-.vh360-activity-avatar {
-    flex-shrink: 0;
-}
-
-.vh360-activity-avatar img {
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    border: 2px solid var(--border-1);
-}
-
 .vh360-activity-content {
     flex: 1;
     min-width: 0;
@@ -230,9 +160,12 @@
     flex-wrap: wrap;
 }
 
-.vh360-activity-icon {
+.vh360-activity-icon__svg {
     color: var(--accent-color);
-    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    display: block;
+    flex: 0 0 auto;
 }
 
 .vh360-activity-user {
@@ -250,28 +183,6 @@
     font-size: 0.875rem;
     color: var(--text-2);
     margin-left: auto;
-}
-
-.vh360-activity-body {
-    font-size: 0.9375rem;
-    line-height: 1.6;
-    color: var(--text-1);
-}
-
-.vh360-activity-body p {
-    margin: 0;
-}
-
-.vh360-activity-body a {
-    color: var(--error-color);
-    text-decoration: none;
-    font-weight: 500;
-    transition: color 0.2s ease;
-}
-
-.vh360-activity-body a:hover {
-    color: var(--accent-color);
-    text-decoration: underline;
 }
 
 /* Loading State */
@@ -325,34 +236,6 @@
     font-size: 1rem;
     color: var(--text-2);
     margin: 0;
-}
-
-/* Load More Button */
-.vh360-load-more-wrapper {
-    text-align: center;
-    padding: 2rem 0;
-}
-
-.vh360-load-more-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 1rem 2rem;
-    background: linear-gradient(135deg, var(--accent-color) 0%, var(--error-color) 100%);
-    color: #ffffff;
-    border: none;
-    border-radius: 50px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(240, 147, 251, 0.3);
-}
-
-.vh360-load-more-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(240, 147, 251, 0.4);
 }
 
 /* Community Post Composer */
@@ -709,12 +592,6 @@
     color: var(--text-2);
 }
 
-.vh360-post-stat {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-
 .vh360-stat-icon { /* Updated for SVG icons */
     font-size: 16px;
     line-height: 1;
@@ -732,25 +609,6 @@
 .vh360-stat-separator {
     color: var(--text-2);
     margin: 0 4px;
-}
-
-/* Clickable comment stat */
-.vh360-stat-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    text-decoration: none;
-    color: inherit;
-    transition: color 0.2s ease;
-}
-
-.vh360-stat-link:hover {
-    color: var(--primary-color);
-}
-
-.vh360-stat-link:hover .vh360-stat-count,
-.vh360-stat-link:hover .vh360-stat-label {
-    color: var(--primary-color);
 }
 
 /* Mobile adjustments */
@@ -827,44 +685,6 @@
     padding: 2rem 0;
 }
 
-/* Share button */
-.vh360-share-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    color: var(--text-2);
-    font-size: 0.875rem;
-    padding: 0;
-}
-.vh360-share-icon {
-    font-size: 1rem;
-    line-height: 1;
-}
-.vh360-share-btn:hover {
-    text-decoration: underline;
-}
-
-.vh360-load-more-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-}
-
-.vh360-load-more-btn.loading::after {
-    content: '';
-    display: inline-block;
-    width: 1rem;
-    height: 1rem;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top-color: #ffffff;
-    border-radius: 50%;
-    animation: vh360-spin 0.8s linear infinite;
-    margin-left: 0.5rem;
-}
-
 /* Animations */
 @keyframes vh360-fadeInUp {
     from {
@@ -875,41 +695,6 @@
         opacity: 1;
         transform: translateY(0);
     }
-}
-
-/* Timeline Style (Optional Enhancement) */
-.vh360-activity-stream.timeline-style {
-    position: relative;
-    padding-left: 2rem;
-}
-
-.vh360-activity-stream.timeline-style::before {
-    content: '';
-    position: absolute;
-    left: 20px;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: linear-gradient(to bottom, var(--accent-color), var(--error-color));
-    opacity: 0.3;
-}
-
-.vh360-activity-stream.timeline-style .vh360-activity-avatar {
-    position: relative;
-}
-
-.vh360-activity-stream.timeline-style .vh360-activity-avatar::before {
-    content: '';
-    position: absolute;
-    left: -32px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 12px;
-    height: 12px;
-    background: var(--accent-color);
-    border: 2px solid var(--surface-1, #ffffff);
-    border-radius: 50%;
-    box-shadow: 0 0 0 4px rgba(240, 147, 251, 0.1);
 }
 
 /* Responsive Design */
@@ -934,16 +719,7 @@
     .vh360-stat-value {
         font-size: 1.5rem;
     }
-    
-    .vh360-filter-tabs {
-        padding: 0.75rem 0;
-    }
-    
-    .vh360-filter-tab {
-        padding: 0.625rem 1.25rem;
-        font-size: 0.8125rem;
-    }
-    
+
     .vh360-activity-item {
         padding: 1rem;
     }
@@ -977,32 +753,11 @@
         flex-direction: row;
         justify-content: space-between;
     }
-    
-    .vh360-filter-tab {
-        font-size: 0.75rem;
-        padding: 0.5rem 1rem;
-    }
-    
+
     .vh360-activity-item {
         flex-direction: column;
     }
-    
-    .vh360-activity-avatar {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-    
-    .vh360-load-more-btn {
-        width: 100%;
-        padding: 0.875rem 1.5rem;
-    }
-}
 
-/* Loading State for Stream */
-.vh360-activity-stream.loading {
-    opacity: 0.6;
-    pointer-events: none;
 }
 
 /* Smooth scroll */
@@ -1010,17 +765,9 @@ html {
     scroll-behavior: smooth;
 }
 
-/* Focus styles for accessibility */
-.vh360-filter-tab:focus,
-.vh360-load-more-btn:focus {
-    outline: 2px solid var(--accent-color);
-    outline-offset: 2px;
-}
-
 /* Print styles */
 @media print {
-    .vh360-activity-filters,
-    .vh360-load-more-wrapper {
+    .vh360-activity-filters {
         display: none;
     }
     
@@ -1028,7 +775,6 @@ html {
         page-break-inside: avoid;
     }
 }
-
 
 /* ========================================
    Community Post Comments Base Styles
@@ -1258,7 +1004,6 @@ html {
     white-space: nowrap;
     border-width: 0;
 }
-
 
 /* Modern inline reply composer enhancements */
 .vh360-reply-form .vh360-comment-input,
@@ -2013,7 +1758,6 @@ html {
     text-decoration: underline;
 }
 
-
 /* Ensure long URLs & text wrap nicely in posts & comments */
 .vh360-community-body,
 .vh360-community-text,
@@ -2023,7 +1767,6 @@ html {
     word-break: break-word;
     overflow-wrap: anywhere;
 }
-
 
 /* Prevent long usernames/emails from breaking the layout */
 .vh360-community-header,
@@ -2037,8 +1780,6 @@ html {
     word-break: break-word;
     overflow-wrap: anywhere;
 }
-
-
 
 /* ================================
  * Mobile comment/reply overflow fixes
@@ -2068,7 +1809,6 @@ html {
     flex: 0 0 auto;
     white-space: nowrap;
 }
-
 
 /* ======================================
    Interactive Stats Row (Facebook-Style)
@@ -2432,12 +2172,7 @@ html {
         border-left: none !important;
         border-right: none !important;
     }
-    
-    /* Activity stream container */
-    .vh360-activity-stream {
-        padding: 0;
-    }
-    
+
     /* Post content padding */
     .vh360-community-content,
     .vh360-post-content {

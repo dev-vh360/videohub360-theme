@@ -15,50 +15,18 @@ if (!defined('ABSPATH')) {
 $current_user_id = get_current_user_id();
 
 // Get filter
-$filter = isset($_GET['activity_filter']) ? sanitize_text_field($_GET['activity_filter']) : 'all';
-
-// Get activities (implement based on available functions)
-$activities = array();
-if (function_exists('vh360_get_user_activities')) {
-    $activities = vh360_get_user_activities($current_user_id, 20, $filter);
-} else {
-    // Fallback: Get recent posts as activities
-    $args = array(
-        'author' => $current_user_id,
-        'post_type' => vh360_get_dashboard_content_types(),
-        'post_status' => 'publish',
-        'posts_per_page' => 20,
-        'orderby' => 'date',
-        'order' => 'DESC',
-    );
-    $query = new WP_Query($args);
-    
-    if ($query->have_posts()) {
-        while ($query->have_posts()) {
-            $query->the_post();
-            
-            // Set activity type based on actual post type
-            $post_type = get_post_type();
-            $activity_type = 'video_upload'; // default for videohub360
-            if ($post_type === 'post') {
-                $activity_type = 'post_publish';
-            }
-            
-            $activities[] = array(
-                'id' => get_the_ID(),
-                'type' => $activity_type,
-                'user_id' => $current_user_id,
-                'timestamp' => get_the_time('U'),
-                'content' => array(
-                    'title' => get_the_title(),
-                    'link' => get_permalink(),
-                    'post_type' => $post_type,
-                ),
-            );
-        }
-        wp_reset_postdata();
-    }
+$filter = isset($_GET['activity_filter']) ? sanitize_key($_GET['activity_filter']) : 'all';
+$normalized_filter = vh360_normalize_dashboard_activity_filter($filter);
+if ('all' === $normalized_filter && 'all' !== $filter) {
+    $filter = 'all';
 }
+$activity_result = vh360_query_activities(array(
+    'user_id' => $current_user_id,
+    'type' => $normalized_filter,
+    'limit' => 20,
+    'offset' => 0,
+));
+$activities = $activity_result['items'];
 ?>
 
 <div class="vh360-dashboard-activity">
@@ -78,13 +46,9 @@ if (function_exists('vh360_get_user_activities')) {
            class="vh360-activity-filter-btn <?php echo $filter === 'videos' ? 'active' : ''; ?>">
             <?php esc_html_e('Videos', 'videohub360-theme'); ?>
         </a>
-        <a href="<?php echo esc_url(add_query_arg('activity_filter', 'comments')); ?>" 
-           class="vh360-activity-filter-btn <?php echo $filter === 'comments' ? 'active' : ''; ?>">
-            <?php esc_html_e('Comments', 'videohub360-theme'); ?>
-        </a>
-        <a href="<?php echo esc_url(add_query_arg('activity_filter', 'likes')); ?>" 
-           class="vh360-activity-filter-btn <?php echo $filter === 'likes' ? 'active' : ''; ?>">
-            <?php esc_html_e('Likes', 'videohub360-theme'); ?>
+        <a href="<?php echo esc_url(add_query_arg('activity_filter', 'posts')); ?>"
+           class="vh360-activity-filter-btn <?php echo $filter === 'posts' ? 'active' : ''; ?>">
+            <?php esc_html_e('Posts', 'videohub360-theme'); ?>
         </a>
     </div>
     
@@ -92,91 +56,21 @@ if (function_exists('vh360_get_user_activities')) {
     <?php if (!empty($activities)) : ?>
         <div class="vh360-activity-feed">
             <?php foreach ($activities as $activity) : ?>
-                <div class="vh360-activity-feed-item" data-activity-id="<?php echo esc_attr($activity['id']); ?>">
-                    <div class="vh360-activity-feed-icon">
-                        <?php echo wp_kses_post(vh360_get_activity_icon($activity['type'])); ?>
-                    </div>
-                    
-                    <div class="vh360-activity-feed-content">
-                        <div class="vh360-activity-feed-header">
-                            <strong><?php esc_html_e('You', 'videohub360-theme'); ?></strong>
-                            <span class="vh360-activity-feed-time">
-                                <?php echo esc_html(vh360_format_activity_time($activity['timestamp'])); ?>
-                            </span>
-                        </div>
-                        
-                        <div class="vh360-activity-feed-body">
-                            <?php
-                            $content = $activity['content'];
-                            switch ($activity['type']) {
-                                case 'video_upload':
-                                    echo '<p>';
-                                    echo esc_html__('uploaded a new video:', 'videohub360-theme') . ' ';
-                                    if (!empty($content['link'])) {
-                                        echo '<a href="' . esc_url($content['link']) . '">' . esc_html($content['title']) . '</a>';
-                                    } else {
-                                        echo esc_html($content['title']);
-                                    }
-                                    echo '</p>';
-                                    break;
-                                    
-                                case 'comment':
-                                    echo '<p>';
-                                    echo esc_html__('commented on', 'videohub360-theme') . ' ';
-                                    if (!empty($content['link'])) {
-                                        echo '<a href="' . esc_url($content['link']) . '">' . esc_html($content['title']) . '</a>';
-                                    }
-                                    echo '</p>';
-                                    if (!empty($content['text'])) {
-                                        echo '<blockquote>' . wp_kses_post(wp_trim_words($content['text'], 20)) . '</blockquote>';
-                                    }
-                                    break;
-                                    
-                                case 'like':
-                                    echo '<p>';
-                                    echo esc_html__('liked', 'videohub360-theme') . ' ';
-                                    if (!empty($content['link'])) {
-                                        echo '<a href="' . esc_url($content['link']) . '">' . esc_html($content['title']) . '</a>';
-                                    }
-                                    echo '</p>';
-                                    break;
-                                    
-                                case 'profile_update':
-                                    echo '<p>' . esc_html__('updated their profile', 'videohub360-theme') . '</p>';
-                                    break;
-                                    
-                                case 'milestone':
-                                    echo '<p>';
-                                    if (!empty($content['title'])) {
-                                        echo esc_html($content['title']);
-                                    }
-                                    if (!empty($content['meta'])) {
-                                        echo ' - ' . esc_html($content['meta']);
-                                    }
-                                    echo '</p>';
-                                    break;
-                                    
-                                default:
-                                    if (is_string($content)) {
-                                        echo '<p>' . esc_html($content) . '</p>';
-                                    }
-                            }
-                            ?>
-                        </div>
-                    </div>
-                </div>
+                <?php echo vh360_get_dashboard_activity_item_html($activity); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped by the renderer. ?>
             <?php endforeach; ?>
         </div>
         
         <!-- Load More Button -->
+        <?php if ($activity_result['has_more']) : ?>
         <div class="vh360-activity-load-more">
             <button class="vh360-dashboard-btn vh360-dashboard-btn-secondary vh360-load-more-activity" 
-                    data-offset="<?php echo esc_attr(count($activities)); ?>"
+                    data-offset="<?php echo esc_attr($activity_result['next_offset']); ?>"
                     data-filter="<?php echo esc_attr($filter); ?>"
-                    data-nonce="<?php echo esc_attr(wp_create_nonce('vh360_activity_nonce')); ?>">
+                    data-nonce="<?php echo esc_attr(wp_create_nonce('vh360_dashboard_activity_nonce')); ?>">
                 <?php esc_html_e('Load More', 'videohub360-theme'); ?>
             </button>
         </div>
+        <?php endif; ?>
         
     <?php else : ?>
         <div class="vh360-dashboard-empty">
@@ -255,6 +149,13 @@ if (function_exists('vh360_get_user_activities')) {
     align-items: center;
     justify-content: center;
     color: var(--primary-color);
+}
+
+.vh360-activity-feed-icon .vh360-activity-icon__svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+    flex: 0 0 auto;
 }
 
 .vh360-activity-feed-content {

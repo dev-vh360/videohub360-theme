@@ -446,7 +446,7 @@ class VH360_Theme_Admin {
             'sanitize_callback' => array($this, 'sanitize_activity_settings'),
             'default' => array(
                 'enable_tracking' => true,
-                'track_types' => array('video_upload', 'new_member', 'profile_update', 'milestone'),
+                'track_types' => array('video_upload', 'post_publish', 'new_member', 'profile_update', 'milestone'),
                 'retention_days' => 30,
                 'per_page' => 20,
             ),

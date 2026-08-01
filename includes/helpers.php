@@ -1381,15 +1381,126 @@ function vh360_format_activity_content_link($content, $prefix = '') {
  * @return string SVG icon HTML.
  */
 function vh360_get_activity_icon($type) {
+    $svg_attributes = 'class="vh360-activity-icon__svg" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"';
     $icons = array(
-        'video_upload' => '<svg class="vh360-activity-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>',
-        'post_publish' => '<svg class="vh360-activity-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>',
-        'new_member' => '<svg class="vh360-activity-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>',
-        'profile_update' => '<svg class="vh360-activity-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>',
-        'milestone' => '<svg class="vh360-activity-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>',
+        'video_upload' => '<svg ' . $svg_attributes . '><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>',
+        'post_publish' => '<svg ' . $svg_attributes . '><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>',
+        'new_member' => '<svg ' . $svg_attributes . '><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>',
+        'profile_update' => '<svg ' . $svg_attributes . '><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>',
+        'milestone' => '<svg ' . $svg_attributes . '><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>',
     );
 
-    return isset($icons[$type]) ? $icons[$type] : '';
+    $fallback = '<svg ' . $svg_attributes . '><circle cx="12" cy="12" r="9"></circle><path d="M12 8v4l3 2"></path></svg>';
+
+    return isset($icons[$type]) ? $icons[$type] : $fallback;
+}
+
+/**
+ * Get an activity icon sanitized with a restrictive SVG allowlist.
+ *
+ * @param string $type Activity type.
+ * @return string Sanitized SVG icon HTML.
+ */
+function vh360_get_safe_activity_icon($type) {
+    $allowed_attributes = array(
+        'class' => true, 'xmlns' => true, 'width' => true, 'height' => true,
+        'viewbox' => true, 'fill' => true, 'stroke' => true, 'stroke-width' => true,
+        'stroke-linecap' => true, 'stroke-linejoin' => true, 'd' => true,
+        'x' => true, 'y' => true, 'x1' => true, 'x2' => true, 'y1' => true,
+        'y2' => true, 'cx' => true, 'cy' => true, 'r' => true, 'rx' => true,
+        'ry' => true, 'points' => true, 'aria-hidden' => true, 'focusable' => true,
+    );
+    $allowed_svg = array(
+        'svg' => $allowed_attributes,
+        'path' => $allowed_attributes,
+        'circle' => $allowed_attributes,
+        'rect' => $allowed_attributes,
+        'line' => $allowed_attributes,
+        'polyline' => $allowed_attributes,
+        'polygon' => $allowed_attributes,
+        'g' => $allowed_attributes,
+    );
+
+    return wp_kses(vh360_get_activity_icon($type), $allowed_svg);
+}
+
+/**
+ * Render one personalized dashboard activity row.
+ *
+ * Shared by the initial Activity tab and its AJAX pagination response so both
+ * paths retain identical markup and content handling.
+ *
+ * @param array $activity Activity data.
+ * @return string Activity row HTML.
+ */
+function vh360_get_dashboard_activity_item_html($activity) {
+    if (empty($activity['id']) || empty($activity['type'])) {
+        return '';
+    }
+
+    $content = isset($activity['content']) ? $activity['content'] : array();
+    $content = is_array($content) ? $content : array('title' => $content);
+    $title = isset($content['title']) ? $content['title'] : '';
+    $link = isset($content['link']) ? $content['link'] : '';
+
+    ob_start();
+    ?>
+    <div class="vh360-activity-feed-item" data-activity-id="<?php echo esc_attr($activity['id']); ?>">
+        <div class="vh360-activity-feed-icon">
+            <?php echo vh360_get_safe_activity_icon($activity['type']); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Sanitized by the helper. ?>
+        </div>
+        <div class="vh360-activity-feed-content">
+            <div class="vh360-activity-feed-header">
+                <strong><?php esc_html_e('You', 'videohub360-theme'); ?></strong>
+                <span class="vh360-activity-feed-time"><?php echo esc_html(vh360_format_activity_time($activity['timestamp'])); ?></span>
+            </div>
+            <div class="vh360-activity-feed-body">
+                <?php
+                switch ($activity['type']) {
+                    case 'video_upload':
+                        echo '<p>' . wp_kses_post(vh360_format_activity_content_link($content, __('uploaded a new video:', 'videohub360-theme'))) . '</p>';
+                        break;
+                    case 'post_publish':
+                        echo '<p>' . wp_kses_post(vh360_format_activity_content_link($content, __('published a post:', 'videohub360-theme'))) . '</p>';
+                        break;
+                    case 'new_member':
+                        echo '<p>' . esc_html__('joined the community', 'videohub360-theme') . '</p>';
+                        break;
+                    case 'comment':
+                        echo '<p>' . wp_kses_post(vh360_format_activity_content_link($content, __('commented on', 'videohub360-theme'))) . '</p>';
+                        if (!empty($content['text'])) {
+                            echo '<blockquote>' . wp_kses_post(wp_trim_words($content['text'], 20)) . '</blockquote>';
+                        }
+                        break;
+                    case 'like':
+                        echo '<p>' . wp_kses_post(vh360_format_activity_content_link($content, __('liked', 'videohub360-theme'))) . '</p>';
+                        break;
+                    case 'profile_update':
+                        echo '<p>' . esc_html__('updated their profile', 'videohub360-theme') . '</p>';
+                        break;
+                    case 'milestone':
+                        echo '<p>';
+                        if ($link) {
+                            echo '<a href="' . esc_url($link) . '">' . esc_html($title) . '</a>';
+                        } else {
+                            echo esc_html($title);
+                        }
+                        if (!empty($content['meta'])) {
+                            echo ' - ' . esc_html($content['meta']);
+                        }
+                        echo '</p>';
+                        break;
+                    default:
+                        if ($title) {
+                            echo '<p>' . esc_html($title) . '</p>';
+                        }
+                }
+                ?>
+            </div>
+        </div>
+    </div>
+    <?php
+    return ob_get_clean();
 }
 
 /**
@@ -1427,60 +1538,23 @@ function vh360_is_user_active($user_id) {
  *
  * @param int    $user_id The user ID.
  * @param int    $limit   Number of activities to return.
- * @param string $type    Filter by activity type (all, videos, comments, likes).
+ * @param string $type    Dashboard filter (all, videos, posts).
+ * @param int    $offset  Number of matching activities to skip.
  * @return array Array of activity items.
  */
-function vh360_get_user_activities($user_id, $limit = 20, $type = 'all') {
+function vh360_get_user_activities($user_id, $limit = 20, $type = 'all', $offset = 0) {
     if (!$user_id) {
         return array();
     }
 
-    // Check if plugin function exists
-    if (function_exists('videohub360_get_user_activities')) {
-        return videohub360_get_user_activities($user_id, $limit, $type);
-    }
+    $result = vh360_query_activities(array(
+        'user_id' => $user_id,
+        'type' => vh360_normalize_dashboard_activity_filter($type),
+        'limit' => $limit,
+        'offset' => $offset,
+    ));
 
-    // Fallback: build activities from posts
-    $activities = array();
-
-    $args = array(
-        'author' => $user_id,
-        'post_type' => vh360_get_dashboard_content_types(),
-        'post_status' => 'publish',
-        'posts_per_page' => $limit,
-        'orderby' => 'date',
-        'order' => 'DESC',
-    );
-
-    $query = new WP_Query($args);
-
-    if ($query->have_posts()) {
-        while ($query->have_posts()) {
-            $query->the_post();
-            
-            // Set activity type based on actual post type
-            $post_type = get_post_type();
-            $activity_type = 'video_upload'; // default for videohub360
-            if ($post_type === 'post') {
-                $activity_type = 'post_publish';
-            }
-            
-            $activities[] = array(
-                'id' => get_the_ID(),
-                'type' => $activity_type,
-                'user_id' => $user_id,
-                'timestamp' => get_the_time('U'),
-                'content' => array(
-                    'title' => get_the_title(),
-                    'link' => get_permalink(),
-                    'post_type' => $post_type,
-                ),
-            );
-        }
-        wp_reset_postdata();
-    }
-
-    return $activities;
+    return $result['items'];
 }
 
 /**

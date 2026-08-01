@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
  * Track a new activity
  *
  * @param int    $user_id The user ID performing the activity.
- * @param string $type    Activity type (video_upload, new_member, profile_update, milestone).
+ * @param string $type    Activity type (video_upload, post_publish, new_member, profile_update, milestone).
  * @param array  $content Activity content data.
  * @return bool True on success, false on failure.
  */
@@ -26,11 +26,14 @@ function vh360_track_activity($user_id, $type, $content = array()) {
         return false;
     }
     
+    // Normalize settings saved before post publishing had its own activity type.
+    vh360_migrate_post_publish_tracking_option();
+
     // Get activity options
     $activity_options = get_option('vh360_activity_options', array());
     $activity_defaults = array(
         'enable_tracking' => true,
-        'track_types' => array('video_upload', 'new_member', 'profile_update', 'milestone'),
+        'track_types' => array('video_upload', 'post_publish', 'new_member', 'profile_update', 'milestone'),
     );
     $activity_options = wp_parse_args($activity_options, $activity_defaults);
     
@@ -45,7 +48,7 @@ function vh360_track_activity($user_id, $type, $content = array()) {
     }
     
     // Validate activity type
-    $valid_types = array('video_upload', 'new_member', 'profile_update', 'milestone');
+    $valid_types = array('video_upload', 'post_publish', 'new_member', 'profile_update', 'milestone');
     if (!in_array($type, $valid_types)) {
         return false;
     }
@@ -82,12 +85,60 @@ function vh360_track_activity($user_id, $type, $content = array()) {
 }
 
 /**
- * Get activities with optional filtering
+ * Preserve publication tracking when upgrading activity settings.
+ *
+ * Standard posts used the video_upload setting before post_publish was added.
+ * Migrate that preference once, without enabling publication tracking for sites
+ * which had video uploads disabled.
+ *
+ * @return void
+ */
+function vh360_migrate_post_publish_tracking_option() {
+    if (get_option('vh360_post_publish_tracking_migrated', false)) {
+        return;
+    }
+
+    $activity_options = get_option('vh360_activity_options', false);
+    if (is_array($activity_options) && isset($activity_options['track_types']) && is_array($activity_options['track_types'])) {
+        $track_types = $activity_options['track_types'];
+        if (in_array('video_upload', $track_types, true) && !in_array('post_publish', $track_types, true)) {
+            $activity_options['track_types'][] = 'post_publish';
+            update_option('vh360_activity_options', $activity_options);
+        }
+    }
+
+    update_option('vh360_post_publish_tracking_migrated', true);
+}
+add_action('after_setup_theme', 'vh360_migrate_post_publish_tracking_option');
+
+/**
+ * Normalize a public dashboard activity filter to a stored activity type.
+ *
+ * @param string $filter Dashboard filter value.
+ * @return string Stored activity type, or all.
+ */
+function vh360_normalize_dashboard_activity_filter($filter) {
+    $filters = array(
+        'all' => 'all',
+        'videos' => 'video_upload',
+        'posts' => 'post_publish',
+    );
+
+    $filter = sanitize_key($filter);
+
+    return isset($filters[$filter]) ? $filters[$filter] : 'all';
+}
+
+/**
+ * Query the canonical stored activity collection.
+ *
+ * Filtering is applied before pagination and the option's newest-first order
+ * is preserved.
  *
  * @param array $args Query arguments.
- * @return array Array of activities.
+ * @return array Structured activity items and pagination state.
  */
-function vh360_get_activities($args = array()) {
+function vh360_query_activities($args = array()) {
     // Get activity options for default limit
     $activity_options = get_option('vh360_activity_options', array());
     $default_per_page = isset($activity_options['per_page']) ? absint($activity_options['per_page']) : 20;
@@ -100,6 +151,12 @@ function vh360_get_activities($args = array()) {
     );
     
     $args = wp_parse_args($args, $defaults);
+    $valid_types = array('all', 'video_upload', 'post_publish', 'new_member', 'profile_update', 'milestone');
+    $type = sanitize_key($args['type']);
+    $type = in_array($type, $valid_types, true) ? $type : 'all';
+    $user_id = absint($args['user_id']);
+    $limit = max(1, absint($args['limit']));
+    $offset = absint($args['offset']);
     
     // Get all activities
     $activities = get_option('vh360_activity_feed', array());
@@ -108,27 +165,47 @@ function vh360_get_activities($args = array()) {
     }
     
     // Filter by type
-    if ($args['type'] !== 'all') {
-        $activities = array_filter($activities, function($activity) use ($args) {
-            return isset($activity['type']) && $activity['type'] === $args['type'];
+    if ('all' !== $type) {
+        $activities = array_filter($activities, function($activity) use ($type) {
+            return isset($activity['type']) && $activity['type'] === $type;
         });
-        // Re-index array
-        $activities = array_values($activities);
     }
     
     // Filter by user ID
-    if ($args['user_id'] > 0) {
-        $activities = array_filter($activities, function($activity) use ($args) {
-            return isset($activity['user_id']) && $activity['user_id'] === $args['user_id'];
+    if ($user_id > 0) {
+        $activities = array_filter($activities, function($activity) use ($user_id) {
+            return isset($activity['user_id']) && absint($activity['user_id']) === $user_id;
         });
-        // Re-index array
-        $activities = array_values($activities);
     }
-    
-    // Apply offset and limit
-    $activities = array_slice($activities, $args['offset'], $args['limit']);
-    
-    return $activities;
+
+    $activities = array_values($activities);
+    $total = count($activities);
+    $items = array_slice($activities, $offset, $limit);
+    $count = count($items);
+    $next_offset = $offset + $count;
+
+    return array(
+        'items' => $items,
+        'total' => $total,
+        'count' => $count,
+        'offset' => $offset,
+        'next_offset' => $next_offset,
+        'has_more' => $next_offset < $total,
+    );
+}
+
+/**
+ * Get activities with optional filtering.
+ *
+ * Compatibility wrapper for callers which expect an array of activity items.
+ *
+ * @param array $args Query arguments.
+ * @return array Array of activities.
+ */
+function vh360_get_activities($args = array()) {
+    $result = vh360_query_activities($args);
+
+    return $result['items'];
 }
 
 /**
@@ -209,7 +286,9 @@ function vh360_track_video_upload($post_id) {
         return;
     }
     
-    vh360_track_activity($post->post_author, 'video_upload', array(
+    $activity_type = 'post' === $post->post_type ? 'post_publish' : 'video_upload';
+
+    vh360_track_activity($post->post_author, $activity_type, array(
         'title' => $post->post_title,
         'link' => get_permalink($post_id),
         'meta' => '',

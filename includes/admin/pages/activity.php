@@ -16,7 +16,7 @@ include VH360_THEME_DIR . '/includes/admin/partials/header.php';
 $options = get_option('vh360_activity_options', array());
 $defaults = array(
     'enable_tracking' => true,
-    'track_types' => array('video_upload', 'new_member', 'profile_update', 'milestone'),
+    'track_types' => array('video_upload', 'post_publish', 'new_member', 'profile_update', 'milestone'),
     'retention_days' => 30,
     'per_page' => 20,
 );
@@ -39,6 +39,7 @@ $total_activities = is_array($activities) ? count($activities) : 0;
 
 $type_counts = array(
     'video_upload' => 0,
+    'post_publish' => 0,
     'new_member' => 0,
     'profile_update' => 0,
     'milestone' => 0,
@@ -91,6 +92,7 @@ if (is_array($activities)) {
                             <?php
                             $activity_types = array(
                                 'video_upload' => __('Video Uploads', 'videohub360-theme'),
+                                'post_publish' => __('Post Publications', 'videohub360-theme'),
                                 'new_member' => __('New Member Registrations', 'videohub360-theme'),
                                 'profile_update' => __('Profile Updates', 'videohub360-theme'),
                                 'milestone' => __('Milestones', 'videohub360-theme'),

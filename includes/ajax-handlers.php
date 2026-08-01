@@ -742,101 +742,49 @@ class VH360_Ajax_Handlers {
     }
     
     /**
-     * Load more activities (AJAX)
+     * Load the current user's dashboard activities.
      */
-    public function load_activities() {
+    public function load_dashboard_activities() {
+        if (!is_user_logged_in()) {
+            wp_send_json_error(array(
+                'message' => esc_html__('You must be logged in to view dashboard activity.', 'videohub360-theme'),
+            ));
+        }
+
         // Verify nonce
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'vh360_activity_nonce')) {
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'vh360_dashboard_activity_nonce')) {
             wp_send_json_error(array(
                 'message' => esc_html__('Security check failed.', 'videohub360-theme'),
             ));
         }
         
         // Get parameters
-        $type = isset($_POST['type']) ? sanitize_text_field($_POST['type']) : 'all';
+        $filter = isset($_POST['type']) ? sanitize_key($_POST['type']) : 'all';
+        $type = vh360_normalize_dashboard_activity_filter($filter);
         $offset = isset($_POST['offset']) ? absint($_POST['offset']) : 0;
         $limit = 20;
         
         // Get activities
-        $activities = vh360_get_activities(array(
+        $result = vh360_query_activities(array(
             'type' => $type,
+            'user_id' => get_current_user_id(),
             'limit' => $limit,
             'offset' => $offset,
-            ));
-        
-        if (empty($activities)) {
-            wp_send_json_error(array(
-                'message' => esc_html__('No more activities found.', 'videohub360-theme'),
-            ));
-        }
+        ));
         
         ob_start();
         
-        foreach ($activities as $activity) {
-            $user = get_userdata($activity['user_id']);
-            if (!$user) {
-                continue;
-            }
-            
-            $profile_url = vh360_get_profile_url($activity['user_id']);
-            $time_ago = vh360_format_activity_time($activity['timestamp']);
-            $icon = vh360_get_activity_icon($activity['type']);
-            
-            ?>
-            <div class="vh360-activity-item" data-activity-id="<?php echo esc_attr($activity['id']); ?>">
-                <div class="vh360-activity-avatar">
-                    <?php echo get_avatar($activity['user_id'], 40); ?>
-                </div>
-                <div class="vh360-activity-content">
-                    <div class="vh360-activity-header">
-                        <?php echo wp_kses_post($icon); ?>
-                        <a href="<?php echo esc_url($profile_url); ?>" class="vh360-activity-user">
-                            <?php echo esc_html($user->display_name); ?>
-                        </a>
-                        <span class="vh360-activity-time"><?php echo esc_html($time_ago); ?></span>
-                    </div>
-                    <div class="vh360-activity-body">
-                        <?php
-                        $content = $activity['content'];
-                        switch ($activity['type']) {
-                            case 'video_upload':
-                                echo '<p>' . wp_kses_post(vh360_format_activity_content_link($content, __('uploaded a new video:', 'videohub360-theme'))) . '</p>';
-                                break;
-                            case 'post_publish':
-                                echo '<p>' . wp_kses_post(vh360_format_activity_content_link($content, __('published a post:', 'videohub360-theme'))) . '</p>';
-                                break;
-                            case 'new_member':
-                                echo '<p>' . esc_html__('joined the community', 'videohub360-theme') . '</p>';
-                                break;
-                            case 'profile_update':
-                                echo '<p>' . esc_html__('updated their profile', 'videohub360-theme') . '</p>';
-                                break;
-                            case 'milestone':
-                                echo '<p>';
-                                if (!empty($content['link'])) {
-                                    echo '<a href="' . esc_url($content['link']) . '">' . esc_html($content['title']) . '</a> ';
-                                } else {
-                                    echo esc_html($content['title']) . ' ';
-                                }
-                                if (!empty($content['meta'])) {
-                                    echo esc_html($content['meta']);
-                                }
-                                echo '</p>';
-                                break;
-                        }
-                        ?>
-                    </div>
-                </div>
-            </div>
-            <?php
+        foreach ($result['items'] as $activity) {
+            echo vh360_get_dashboard_activity_item_html($activity); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped by the renderer.
         }
         
         $html = ob_get_clean();
         
         wp_send_json_success(array(
             'html' => $html,
-            'offset' => $offset + count($activities),
-            'count' => count($activities),
+            'count' => $result['count'],
+            'next_offset' => $result['next_offset'],
+            'has_more' => $result['has_more'],
         ));
     }
     
@@ -1691,12 +1639,8 @@ $vh360_ajax_handlers = new VH360_Ajax_Handlers();
 add_action('wp_ajax_vh360_search_members', array($vh360_ajax_handlers, 'search_members'));
 add_action('wp_ajax_nopriv_vh360_search_members', array($vh360_ajax_handlers, 'search_members'));
 
-// Add AJAX actions for activity feed
-add_action('wp_ajax_vh360_load_activities', array($vh360_ajax_handlers, 'load_activities'));
-add_action('wp_ajax_nopriv_vh360_load_activities', array($vh360_ajax_handlers, 'load_activities'));
-
-add_action('wp_ajax_vh360_filter_activities', array($vh360_ajax_handlers, 'load_activities'));
-add_action('wp_ajax_nopriv_vh360_filter_activities', array($vh360_ajax_handlers, 'load_activities'));
+// Add the authenticated AJAX action for personalized dashboard activity.
+add_action('wp_ajax_vh360_dashboard_load_activities', array($vh360_ajax_handlers, 'load_dashboard_activities'));
 
 // Add AJAX action for deleting videos
 add_action('wp_ajax_vh360_delete_video', array($vh360_ajax_handlers, 'delete_video'));

@@ -145,10 +145,10 @@ foreach ($auth_templates as $template) {
 }
 echo "\n";
 
-// Test 8: Check AJAX handlers support guest access
-echo "TEST 8: Guest AJAX Support\n";
-echo "--------------------------\n";
-$guest_ajax_actions = array('vh360_search_members', 'vh360_load_activities', 'vh360_filter_activities');
+// Test 8: Check intended AJAX access boundaries.
+echo "TEST 8: AJAX Access Boundaries\n";
+echo "------------------------------\n";
+$guest_ajax_actions = array('vh360_search_members');
 foreach ($guest_ajax_actions as $action) {
     if (has_action("wp_ajax_nopriv_$action")) {
         echo "✓ $action supports guest access\n";
@@ -156,6 +156,11 @@ foreach ($guest_ajax_actions as $action) {
         echo "✗ WARNING: $action may not support guest access\n";
     }
 }
+if (has_action('wp_ajax_nopriv_vh360_dashboard_load_activities')) {
+    echo "✗ FAILED: Dashboard activity endpoint is exposed to guests\n";
+    exit(1);
+}
+echo "✓ Dashboard activity endpoint is authenticated only\n";
 echo "\n";
 
 echo "=============================================\n";
@@ -170,7 +175,8 @@ echo "- Settings helper merges saved options with defaults\n";
 echo "- Template helper provides clean API for access checks\n";
 echo "- Access gate uses saved settings instead of hardcoded array\n";
 echo "- Auth pages remain always public\n";
-echo "- Guest AJAX handlers support public directory/activity access\n";
+echo "- Guest member search remains available\n";
+echo "- Dashboard activity loading is authenticated only\n";
 echo "\nNext steps:\n";
 echo "1. Navigate to VH360 Theme → Template Visibility in wp-admin\n";
 echo "2. Configure which templates require login\n";
