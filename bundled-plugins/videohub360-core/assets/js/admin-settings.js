@@ -55,6 +55,9 @@
         if (data.result === 'outside_schedule_window') {
             return 'No check needed: current time is outside the configured schedule window.';
         }
+        if (data.result === 'embedding_disabled') {
+            return 'YouTube live found, but embedding is disabled. Enable “Allow embedding” in YouTube Studio, save the livestream, and run this check again. Video ID: ' + (data.video_id || 'unknown') + '.';
+        }
         if (data.result === 'api_error' || data.error_message) {
             return 'API error: ' + data.error_message;
         }
@@ -108,7 +111,8 @@
                 nonce: $button.data('nonce')
             }).done(function(response) {
                 if (response && response.success) {
-                    $result.removeClass('is-loading is-error').addClass(response.data && response.data.active_live_found ? 'is-success' : '').text(formatCheckResult(response.data));
+                    var isEmbeddingDisabled = response.data && response.data.result === 'embedding_disabled';
+                    $result.removeClass('is-loading is-error is-success').addClass(isEmbeddingDisabled ? 'is-error' : (response.data && response.data.active_live_found ? 'is-success' : '')).text(formatCheckResult(response.data));
                 } else {
                     var message = response && response.data && response.data.message ? response.data.message : 'Check failed.';
                     $result.removeClass('is-loading is-success').addClass('is-error').text(message);

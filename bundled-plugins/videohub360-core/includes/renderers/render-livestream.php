@@ -25,7 +25,21 @@ if (!function_exists('videohub360_render_livestream')) {
         }
 
         $player_html .= '<div class="' . $iframe_class . '">';
-        if ($fields['type'] === 'embed' && !empty($fields['embed_code'])) {
+        $youtube_auto_embedding_disabled = ($fields['type'] === 'embed')
+            && (($fields['youtube_auto_managed'] ?? '') === 'yes')
+            && (($fields['youtube_status'] ?? '') === 'embedding_disabled')
+            && !empty($fields['youtube_video_id']);
+        if ($youtube_auto_embedding_disabled) {
+            $youtube_video_id = sanitize_text_field($fields['youtube_video_id']);
+            $watch_url = add_query_arg('v', $youtube_video_id, 'https://www.youtube.com/watch');
+            $player_html .= '<div class="vh360-youtube-embedding-disabled">';
+            $player_html .= '<p>' . esc_html__('This YouTube livestream cannot currently be played on this website.', 'videohub360') . '</p>';
+            $player_html .= '<p><a href="' . esc_url($watch_url) . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Watch on YouTube', 'videohub360') . '</a></p>';
+            if (!empty($fields['post_id']) && current_user_can('edit_post', absint($fields['post_id']))) {
+                $player_html .= '<p class="vh360-youtube-embedding-disabled__admin">' . esc_html__('Enable “Allow embedding” in YouTube Studio, save the livestream, and run Check YouTube Now again.', 'videohub360') . '</p>';
+            }
+            $player_html .= '</div>';
+        } elseif ($fields['type'] === 'embed' && !empty($fields['embed_code'])) {
             // Sanitize custom embed code to avoid XSS. Allow only safe iframe attributes.
             $embed_code_raw = $fields['embed_code'];
             if (strpos($embed_code_raw, 'facebook.com') !== false) {
