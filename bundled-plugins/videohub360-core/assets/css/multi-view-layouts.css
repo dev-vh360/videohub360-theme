@@ -1031,6 +1031,11 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
     object-fit: cover;
 }
 
+.vh360-participant-tile.is-screen-sharing .vh360-participant-video video,
+.vh360-participant-tile.is-screen-sharing .vh360-participant-video canvas {
+    object-fit: contain;
+}
+
 .vh360-participant-tile.has-video .vh360-participant-placeholder {
     display: none !important;
     pointer-events: none;
@@ -1676,4 +1681,13 @@ body.logged-in.admin-bar .vh360-multi-view-container.vh360-speaker-view #vh360-a
     width: var(--vh360-landscape-rail-width);
     pointer-events: none;
     opacity: 0;
+}
+
+.vh360-participant-tile:not(.is-featured) .vh360-participant-badge-screen-share {
+    max-width: 9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: .68rem;
+    padding: .18rem .35rem;
 }

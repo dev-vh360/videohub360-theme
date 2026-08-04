@@ -18,6 +18,8 @@
     Compositor.prototype.uidFor = function (p) { return p ? String(p.uid || p.agoraUid || '') : ''; };
     Compositor.prototype.findParticipantByUid = function (parts, uid) { var self = this; return uid ? parts.find(function (p) { return self.uidFor(p) === String(uid); }) : null; };
     Compositor.prototype.resolveSpeakerFeaturedParticipant = function (parts, layout) {
+        var sharers = parts.filter(function (p) { return p.isScreenSharing; }).sort(function (a, b) { return (b.screenShareStartedAt || 0) - (a.screenShareStartedAt || 0); });
+        if (sharers.length) { return sharers[0]; }
         var active = this.findParticipantByUid(parts, layout.active);
         if (active) { return active; }
         return parts.find(function (p) { return p.isOriginalHost; })
@@ -144,7 +146,7 @@
         ctx.save(); ctx.beginPath(); ctx.rect(viewport.x, viewport.y, viewport.width, viewport.height); ctx.clip();
         ctx.fillStyle = '#101827'; ctx.fillRect(viewport.x, viewport.y, viewport.width, viewport.height);
         if (hasCamera && video && video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
-            var scale = Math.max(viewport.width / video.videoWidth, viewport.height / video.videoHeight), dw = video.videoWidth * scale, dh = video.videoHeight * scale;
+            var scale = p.isScreenSharing ? Math.min(viewport.width / video.videoWidth, viewport.height / video.videoHeight) : Math.max(viewport.width / video.videoWidth, viewport.height / video.videoHeight), dw = video.videoWidth * scale, dh = video.videoHeight * scale;
             try { ctx.drawImage(video, viewport.x + (viewport.width - dw) / 2, viewport.y + (viewport.height - dh) / 2, dw, dh); } catch (e) {}
         } else {
             ctx.fillStyle = '#374151'; ctx.fillRect(viewport.x, viewport.y, viewport.width, viewport.height); ctx.fillStyle = '#6b7280'; ctx.beginPath(); ctx.arc(viewport.x + viewport.width / 2, viewport.y + viewport.height / 2 - style.avatar * 0.25, style.avatar, 0, Math.PI * 2); ctx.fill();
@@ -152,7 +154,7 @@
         var labelX = viewport.x + style.textPad, labelW = Math.max(1, viewport.width - style.textPad * 2), labelH = Math.min(style.label, viewport.height), labelY = viewport.y + viewport.height - labelH;
         ctx.fillStyle = 'rgba(0,0,0,.68)'; ctx.fillRect(labelX - style.textPad / 2, labelY, labelW + style.textPad, labelH);
         ctx.fillStyle = '#fff'; ctx.font = style.font + 'px sans-serif'; ctx.textBaseline = 'middle';
-        var status = (p.isOriginalHost ? ' · Host' : '') + ((!p.audioTrack || p.audioOn === false) ? (rect.role === 'thumbnail' ? ' · Muted' : ' · Mic off') : '');
+        var status = (p.isOriginalHost ? ' · Host' : '') + (p.isScreenSharing ? ' · Sharing screen' : '') + ((!p.audioTrack || p.audioOn === false) ? (rect.role === 'thumbnail' ? ' · Muted' : ' · Mic off') : '');
         var name = (p.displayName || p.name || p.uid || 'Participant') + status;
         ctx.fillText(this.fitTextWithEllipsis(ctx, name, labelW), labelX, labelY + labelH / 2);
         ctx.restore();
