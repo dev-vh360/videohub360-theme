@@ -41,11 +41,16 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
 
     // Livestream fields
     $is_youtube_auto_managed = get_post_meta(get_the_ID(), '_vh360_youtube_auto_managed', true) === 'yes';
+    $is_youtube_embedding_disabled = $is_youtube_auto_managed && get_post_meta(get_the_ID(), '_vh360_youtube_status', true) === 'embedding_disabled' && get_post_meta(get_the_ID(), '_vh360_youtube_video_id', true);
 
     $livestream_fields = [
         'is_live' => get_post_meta(get_the_ID(), '_vh360_is_live', true) ?: 'no',
         'type' => get_post_meta(get_the_ID(), '_vh360_type', true) ?: 'embed',
         'embed_code' => get_post_meta(get_the_ID(), '_vh360_embed_code', true),
+        'post_id' => get_the_ID(),
+        'youtube_auto_managed' => get_post_meta(get_the_ID(), '_vh360_youtube_auto_managed', true),
+        'youtube_status' => get_post_meta(get_the_ID(), '_vh360_youtube_status', true),
+        'youtube_video_id' => get_post_meta(get_the_ID(), '_vh360_youtube_video_id', true),
         'stream_url' => get_post_meta(get_the_ID(), '_vh360_stream_url', true),
         'api_url' => get_post_meta(get_the_ID(), '_vh360_api_url', true),
         'poster' => get_post_meta(get_the_ID(), '_vh360_poster', true),
@@ -245,7 +250,7 @@ if ( have_posts() ) : while ( have_posts() ) : the_post();
                 $vh360_video_player_classes .= ' vh360-has-agora-interactive';
             }
             ?>
-            <?php if ($livestream_fields['is_live'] === 'yes' && $livestream_fields['stream_stopped'] !== 'yes'): ?>
+            <?php if (($livestream_fields['is_live'] === 'yes' && $livestream_fields['stream_stopped'] !== 'yes') || $is_youtube_embedding_disabled): ?>
                 <div class="<?php echo esc_attr($vh360_video_player_classes); ?>" id="videohub360-livestream-player-root">
                     <?php echo videohub360_render_livestream($livestream_fields, $chat_enabled, $chat_placement, $is_user_logged_in, $user_avatar, $user_display_name, $user_logout_url); ?>
                 </div>

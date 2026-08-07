@@ -929,6 +929,7 @@ class VideoHub360_Admin {
                                 <div><strong>Last detected YouTube video</strong><span><?php echo esc_html(get_option('vh360_youtube_last_detected_video_id', 'none') ?: 'none'); ?></span></div>
                                 <div><strong>Last result</strong><span><?php echo esc_html(get_option('vh360_youtube_last_result', 'none')); ?> <?php if (get_option('vh360_youtube_last_error', '')) : ?>(<?php echo esc_html(get_option('vh360_youtube_last_error')); ?>)<?php endif; ?></span></div>
                             </div>
+                            <p class="description">Each YouTube livestream must have “Allow embedding” enabled in YouTube Studio so it can play on your website.</p>
                             <button type="button" class="button button-secondary" id="vh360-youtube-check-now" data-nonce="<?php echo esc_attr($youtube_nonce); ?>">Check YouTube Now</button>
                             <div id="vh360-youtube-check-result" class="vh360-youtube-check-result" aria-live="polite"></div>
                         </td>

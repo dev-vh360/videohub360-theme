@@ -93,6 +93,9 @@ class VideoHub360_YouTube_Live_Monitor {
             return $this->status('api_error', null, 0, '', $live->get_error_message());
         }
         if ($live) {
+            if (empty($live['embeddable'])) {
+                return $this->handle_embedding_disabled($live['video_id']);
+            }
             $post_id = $this->upsert_post($live, 'live', $window);
             return $this->status('success', $live['video_id'], $post_id, get_post_meta($post_id, '_vh360_youtube_featured_image_result', true), '');
         }
@@ -103,6 +106,9 @@ class VideoHub360_YouTube_Live_Monitor {
                 return $this->status('api_error', null, 0, '', $upcoming->get_error_message());
             }
             if ($upcoming) {
+                if (empty($upcoming['embeddable'])) {
+                    return $this->handle_embedding_disabled($upcoming['video_id']);
+                }
                 $post_id = $this->upsert_post($upcoming, 'upcoming', $window);
                 return $this->status('upcoming_prepared', $upcoming['video_id'], $post_id, get_post_meta($post_id, '_vh360_youtube_featured_image_result', true), '');
             }
@@ -127,15 +133,67 @@ class VideoHub360_YouTube_Live_Monitor {
         }
         if (empty($body['items'][0]['id']['videoId'])) return null;
         $item = $body['items'][0];
+        $video_id = sanitize_text_field($item['id']['videoId']);
+        $embeddable = $this->fetch_youtube_video_status($video_id, $api_key);
+        if (is_wp_error($embeddable)) return $embeddable;
         $thumbs = isset($item['snippet']['thumbnails']) ? $item['snippet']['thumbnails'] : array();
         $thumb = $thumbs['maxres']['url'] ?? $thumbs['high']['url'] ?? $thumbs['medium']['url'] ?? $thumbs['default']['url'] ?? '';
         return array(
-            'video_id' => sanitize_text_field($item['id']['videoId']),
+            'video_id' => $video_id,
+            'embeddable' => (bool) $embeddable,
             'title' => sanitize_text_field($item['snippet']['title'] ?? ''),
             'description' => wp_kses_post($item['snippet']['description'] ?? ''),
             'thumbnail_url' => esc_url_raw($thumb),
             'published_at' => sanitize_text_field($item['snippet']['publishedAt'] ?? ''),
         );
+    }
+
+    private function fetch_youtube_video_status($video_id, $api_key) {
+        $video_id = sanitize_text_field($video_id);
+        if (empty($video_id)) {
+            return new WP_Error('youtube_status_missing_video_id', __('Missing YouTube video ID for embeddability check.', 'videohub360'));
+        }
+
+        $url = add_query_arg(array(
+            'part' => 'status', 'id' => $video_id, 'key' => $api_key,
+        ), 'https://www.googleapis.com/youtube/v3/videos');
+        $response = wp_remote_get($url, array('timeout' => 15));
+        if (is_wp_error($response)) return $response;
+
+        $code = wp_remote_retrieve_response_code($response);
+        $body = json_decode(wp_remote_retrieve_body($response), true);
+        if ($code < 200 || $code >= 300) {
+            $message = isset($body['error']['message']) ? sanitize_text_field($body['error']['message']) : __('YouTube video status request failed.', 'videohub360');
+            return new WP_Error('youtube_status_api_error', $message);
+        }
+        if (!is_array($body) || !array_key_exists('items', $body) || empty($body['items'][0]['status']) || !array_key_exists('embeddable', $body['items'][0]['status'])) {
+            return new WP_Error('youtube_status_unverified', __('YouTube video embeddability could not be verified.', 'videohub360'));
+        }
+
+        return filter_var($body['items'][0]['status']['embeddable'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) === true;
+    }
+
+    private function handle_embedding_disabled($video_id) {
+        $video_id = sanitize_text_field($video_id);
+        $post_id = $this->get_existing_auto_managed_post_id($video_id);
+        if ($post_id) {
+            update_post_meta($post_id, '_vh360_youtube_status', 'embedding_disabled');
+            update_post_meta($post_id, '_vh360_is_live', 'no');
+            update_post_meta($post_id, '_vh360_live_badge', 'no');
+        }
+
+        return $this->status(
+            'embedding_disabled',
+            $video_id,
+            0,
+            '',
+            __('The YouTube livestream was detected, but playback on other websites is disabled. Enable “Allow embedding” in YouTube Studio, save the livestream, and run the check again.', 'videohub360')
+        );
+    }
+
+    private function get_existing_auto_managed_post_id($video_id) {
+        $posts = get_posts(array('post_type'=>'videohub360','posts_per_page'=>1,'fields'=>'ids','meta_query'=>array('relation'=>'AND',array('key'=>'_vh360_youtube_video_id','value'=>sanitize_text_field($video_id)),array('key'=>'_vh360_youtube_auto_managed','value'=>'yes'))));
+        return !empty($posts[0]) ? (int) $posts[0] : 0;
     }
 
     private function upsert_post($video, $status, $window) {
@@ -178,7 +236,7 @@ class VideoHub360_YouTube_Live_Monitor {
 
     private function build_iframe($video_id) {
         $embed_url = sprintf('https://www.youtube-nocookie.com/embed/%s?autoplay=0&enablejsapi=1&origin=%s', rawurlencode($video_id), rawurlencode(home_url()));
-        return '<iframe src="' . esc_url($embed_url) . '" width="1280" height="720" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>';
+        return '<iframe src="' . esc_url($embed_url) . '" width="1280" height="720" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>';
     }
 
     private function get_target_post_id($video_id) {
