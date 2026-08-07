@@ -7,28 +7,36 @@ $wp_query->is_404 = false;
 
 get_header();
 
+// Resolve archive feature and layout state once for this request.
+$show_category_filter = function_exists('videohub360_show_category_filter') ? (bool) videohub360_show_category_filter() : true;
+$show_series_filter   = function_exists('videohub360_show_series_filter') ? (bool) videohub360_show_series_filter() : true;
+$show_location_filter = function_exists('videohub360_show_location_filter') ? (bool) videohub360_show_location_filter() : true;
+$has_filters          = $show_category_filter || $show_series_filter || $show_location_filter;
+$show_header          = function_exists('videohub360_show_archive_header') ? (bool) videohub360_show_archive_header() : true;
+$show_search          = function_exists('videohub360_show_archive_search') ? (bool) videohub360_show_archive_search() : true;
+
 // Get filter selections
 $selected_cat    = isset($_GET['videohub360_cat']) ? intval($_GET['videohub360_cat']) : '';
 $selected_series = isset($_GET['videohub360_series']) ? intval($_GET['videohub360_series']) : '';
 $selected_location = isset($_GET['videohub360_location']) ? intval($_GET['videohub360_location']) : '';
-$search_term     = isset($_GET['videohub360_search']) ? sanitize_text_field($_GET['videohub360_search']) : '';
+$search_term     = $show_search && isset($_GET['videohub360_search']) ? sanitize_text_field(wp_unslash($_GET['videohub360_search'])) : '';
 
-// Get all categories, series, and locations (custom taxonomies)
-$videohub360_categories = get_terms([
+// Only retrieve terms needed for a visible control or an active filter label.
+$videohub360_categories = ($show_category_filter || $selected_cat) ? get_terms([
     'taxonomy' => 'videohub360_category',
     'orderby' => 'name',
     'hide_empty' => false,
-]);
-$videohub360_series = get_terms([
+]) : [];
+$videohub360_series = ($show_series_filter || $selected_series) ? get_terms([
     'taxonomy' => 'videohub360_series',
     'orderby' => 'name',
     'hide_empty' => false,
-]);
-$videohub360_locations = get_terms([
+]) : [];
+$videohub360_locations = ($show_location_filter || $selected_location) ? get_terms([
     'taxonomy' => 'videohub360_location',
     'orderby' => 'name',
     'hide_empty' => false,
-]);
+]) : [];
 
 // Build query
 $paged = max(1, get_query_var('paged') ? get_query_var('paged') : get_query_var('page'));
@@ -106,8 +114,6 @@ $query_args['meta_query'] = $meta_query;
 // Create a custom WP_Query
 $videohub360_query = new WP_Query($query_args);
 
-// Store header visibility state for conditional class
-$show_header = function_exists('videohub360_show_archive_header') ? videohub360_show_archive_header() : true;
 ?>
 <?php 
 // Check if Astra theme is active (header already output via hook)
@@ -120,17 +126,17 @@ $is_astra = function_exists('videohub360_is_astra_theme') && videohub360_is_astr
     </h1>
 </div>
 <?php endif; ?>
-<div class="videohub360-archive-mainwrap<?php echo !$show_header ? ' videohub360-no-header' : ''; ?>">
-    <?php if (videohub360_show_category_filter() || videohub360_show_series_filter() || videohub360_show_location_filter()): ?>
+<div class="videohub360-archive-mainwrap <?php echo $has_filters ? 'videohub360-has-filters' : 'videohub360-no-filters'; ?><?php echo !$show_header ? ' videohub360-no-header' : ''; ?>">
+    <?php if ($has_filters): ?>
     <!-- .videohub360-sidebar (desktop) -->
     <aside class="videohub360-sidebar" id="videohub360-sidebar" aria-label="<?php echo esc_attr__('Filter videos', 'videohub360'); ?>" tabindex="-1">
         <button class="videohub360-filter-close-btn" id="videohub360-filter-close-btn" aria-label="<?php echo esc_attr__('Close filter', 'videohub360'); ?>" type="button">&times;</button>
         <h2><?php echo esc_html__('Filter', 'videohub360'); ?></h2>
         <form method="get" action="<?php echo esc_url(get_post_type_archive_link('videohub360')); ?>" class="videohub360-filter-form" id="videohub360-filter-form">
-            <?php if ($search_term): ?>
+            <?php if ($show_search && $search_term): ?>
                 <input type="hidden" name="videohub360_search" value="<?php echo esc_attr($search_term); ?>">
             <?php endif; ?>
-            <?php if (videohub360_show_category_filter()): ?>
+            <?php if ($show_category_filter): ?>
             <div class="videohub360-filter-group">
                 <label for="videohub360_cat" class="videohub360-filter-label"><?php echo esc_html(videohub360_get_category_filter_label()); ?></label>
                 <select name="videohub360_cat" id="videohub360_cat" class="videohub360-filter-select">
@@ -154,7 +160,7 @@ $is_astra = function_exists('videohub360_is_astra_theme') && videohub360_is_astr
                 </select>
             </div>
             <?php endif; ?>
-            <?php if (videohub360_show_series_filter()): ?>
+            <?php if ($show_series_filter): ?>
             <div class="videohub360-filter-group">
                 <label for="videohub360_series" class="videohub360-filter-label"><?php echo esc_html(videohub360_get_series_filter_label()); ?></label>
                 <select name="videohub360_series" id="videohub360_series" class="videohub360-filter-select">
@@ -167,7 +173,7 @@ $is_astra = function_exists('videohub360_is_astra_theme') && videohub360_is_astr
                 </select>
             </div>
             <?php endif; ?>
-            <?php if (videohub360_show_location_filter()): ?>
+            <?php if ($show_location_filter): ?>
             <div class="videohub360-filter-group">
                 <label for="videohub360_location" class="videohub360-filter-label"><?php echo esc_html(videohub360_get_location_filter_label()); ?></label>
                 <select name="videohub360_location" id="videohub360_location" class="videohub360-filter-select">
@@ -187,6 +193,7 @@ $is_astra = function_exists('videohub360_is_astra_theme') && videohub360_is_astr
     </aside>
     <?php endif; ?>
     <div class="videohub360-videos-main-content">
+        <?php if ($show_search): ?>
         <!-- Unified search bar -->
         <div class="videohub360-search-bar-wrap">
             <form method="get" action="<?php echo esc_url(get_post_type_archive_link('videohub360')); ?>" class="videohub360-search-bar-form" role="search">
@@ -214,6 +221,7 @@ $is_astra = function_exists('videohub360_is_astra_theme') && videohub360_is_astr
                 ?>
             </form>
         </div>
+        <?php endif; ?>
         
         <!-- Filter status indicators (when filters are applied) -->
         <?php if ($selected_cat || $selected_series || $selected_location || $search_term): ?>
@@ -267,7 +275,7 @@ $is_astra = function_exists('videohub360_is_astra_theme') && videohub360_is_astr
         <?php endif; ?>
         
         <!-- Responsive Filter Toggle Button (mobile only, right above grid) -->
-        <?php if (videohub360_show_category_filter() || videohub360_show_series_filter() || videohub360_show_location_filter()): ?>
+        <?php if ($has_filters): ?>
         <button class="videohub360-filter-toggle-btn" id="videohub360-filter-toggle-btn" aria-controls="videohub360-sidebar" aria-expanded="false" type="button">
             <?php echo esc_html__('☰ Show Filters', 'videohub360'); ?>
         </button>

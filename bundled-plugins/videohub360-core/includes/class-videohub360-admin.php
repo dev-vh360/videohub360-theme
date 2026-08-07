@@ -351,6 +351,7 @@ class VideoHub360_Admin {
             update_option('videohub360_show_category_filter', isset($_POST['videohub360_show_category_filter']) ? 1 : 0);
             update_option('videohub360_show_series_filter', isset($_POST['videohub360_show_series_filter']) ? 1 : 0);
             update_option('videohub360_show_location_filter', isset($_POST['videohub360_show_location_filter']) ? 1 : 0);
+            update_option('videohub360_show_archive_search', isset($_POST['videohub360_show_archive_search']) ? 1 : 0);
             update_option('videohub360_category_label', sanitize_text_field($_POST['videohub360_category_label']));
             update_option('videohub360_series_label', sanitize_text_field($_POST['videohub360_series_label']));
             update_option('videohub360_location_label', sanitize_text_field($_POST['videohub360_location_label']));
@@ -481,6 +482,7 @@ class VideoHub360_Admin {
         $show_category_filter = get_option('videohub360_show_category_filter', 1);
         $show_series_filter = get_option('videohub360_show_series_filter', 1);
         $show_location_filter = get_option('videohub360_show_location_filter', 1);
+        $show_archive_search = get_option('videohub360_show_archive_search', 1);
         $category_label = get_option('videohub360_category_label', 'Category');
         $series_label = get_option('videohub360_series_label', 'Series');
         $location_label = get_option('videohub360_location_label', 'Location');
@@ -704,6 +706,15 @@ class VideoHub360_Admin {
                     </div>
                     <table class="form-table vh360-settings-card__table">
                         <tbody>
+                    <tr>
+                        <th scope="row">Search Bar</th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="videohub360_show_archive_search" value="1" <?php checked($show_archive_search, 1); ?> />
+                                Show archive search bar
+                            </label>
+                        </td>
+                    </tr>
                     <tr>
                         <th scope="row">Category Filter</th>
                         <td>
