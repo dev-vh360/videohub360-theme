@@ -50,6 +50,12 @@ class VideoHub360_Post_Types {
                 return get_option('videohub360_show_location_filter', 1);
             }
         }
+
+        if (!function_exists('videohub360_show_archive_search')) {
+            function videohub360_show_archive_search() {
+                return (int) get_option('videohub360_show_archive_search', 1);
+            }
+        }
         
         if (!function_exists('videohub360_get_category_filter_label')) {
             function videohub360_get_category_filter_label() {

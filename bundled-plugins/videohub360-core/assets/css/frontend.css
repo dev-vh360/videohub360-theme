@@ -2181,8 +2181,11 @@
 
 /* Main Layout */
 .videohub360-archive-mainwrap {
-    max-width: 1400px;
+    width: 100%;
+    max-width: var(--max-width, 1400px);
     margin: 0 auto 80px auto;
+    padding-inline: 24px;
+    box-sizing: border-box;
     min-height: 72vh;
     display: flex;
     gap: 44px;
@@ -2483,6 +2486,26 @@
     max-width: 1000px;
     flex: 1 1 0;
     min-width: 0;
+}
+
+/* Archive grids fill their content column; widget/shortcode sizing stays unchanged. */
+.videohub360-archive-mainwrap .videohub360-videos-main-content {
+    flex: 1 1 0;
+    width: 100%;
+    min-width: 0;
+}
+
+.videohub360-archive-mainwrap .videohub360-videos-grid {
+    width: 100%;
+    max-width: none;
+}
+
+.videohub360-archive-mainwrap.videohub360-no-filters .videohub360-videos-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.videohub360-archive-mainwrap.videohub360-has-filters .videohub360-videos-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 /* Elementor container overrides - allow widget to fill container */
@@ -2927,17 +2950,20 @@
     .videohub360-archive-mainwrap {
         gap: 24px;
     }
-    .videohub360-videos-grid {
+    .videohub360-archive-mainwrap .videohub360-videos-grid {
         gap: 18px;
+    }
+    .videohub360-archive-mainwrap.videohub360-no-filters .videohub360-videos-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }
 @media (max-width: 900px) {
     .videohub360-search-bar-wrap {
         justify-content: center;
     }
-    .videohub360-videos-grid {
-        display: flex;
-        flex-direction: column;
+    .videohub360-archive-mainwrap.videohub360-has-filters .videohub360-videos-grid,
+    .videohub360-archive-mainwrap.videohub360-no-filters .videohub360-videos-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 24px;
     }
     .videohub360-videos-item {
@@ -3001,7 +3027,12 @@
         min-width: 44px; /* Ensure proper touch target */
         margin: 0;
     }
-    .videohub360-videos-grid {
+    .videohub360-archive-mainwrap {
+        padding-inline: 16px;
+    }
+    .videohub360-archive-mainwrap.videohub360-has-filters .videohub360-videos-grid,
+    .videohub360-archive-mainwrap.videohub360-no-filters .videohub360-videos-grid {
+        grid-template-columns: minmax(0, 1fr);
         gap: 16px;
     }
     .videohub360-videos-thumb-wrap {
