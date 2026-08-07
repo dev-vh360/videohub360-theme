@@ -158,6 +158,13 @@ class VH360_PWA_Admin {
 		$input = is_array( $input ) ? $input : array();
 		$current = vh360_pwa_get_options();
 		$out = $current;
+		$raw_current = get_option( 'vh360_pwa_options', array() );
+		$raw_current = is_array( $raw_current ) ? $raw_current : array();
+		foreach ( array( 'start_url', 'scope' ) as $key ) {
+			if ( array_key_exists( $key, $raw_current ) ) {
+				$out[ $key ] = $raw_current[ $key ];
+			}
+		}
 		$tab = isset( $input['_tab'] ) ? sanitize_key( (string) $input['_tab'] ) : '';
 		$tab = in_array( $tab, array( 'general', 'caching' ), true ) ? $tab : '';
 		$is_programmatic = ! isset( $input['_tab'] );
@@ -272,7 +279,8 @@ $normalize_to_path = function( $value ) {
 		$out['pwa_asset_version'] = $is_programmatic && array_key_exists( 'pwa_asset_version', $input ) ? absint( $input['pwa_asset_version'] ) : ( ! empty( $current['pwa_asset_version'] ) ? absint( $current['pwa_asset_version'] ) : time() );
 		$asset_keys = array( 'splash_enabled', 'splash_logo', 'splash_background_color', 'splash_title', 'splash_title_enabled', 'splash_title_font_size', 'splash_title_color', 'splash_title_offset', 'icon_192', 'icon_512', 'icon_maskable_192', 'icon_maskable_512', 'app_name', 'short_name', 'theme_color', 'background_color', 'start_url', 'cache_version', 'fast_launch_enabled', 'launch_mode', 'launch_shell_max_ms' );
 		foreach ( $asset_keys as $asset_key ) {
-			if ( ( $current[ $asset_key ] ?? null ) !== ( $out[ $asset_key ] ?? null ) ) {
+			$current_value = 'start_url' === $asset_key && array_key_exists( $asset_key, $raw_current ) ? $raw_current[ $asset_key ] : ( $current[ $asset_key ] ?? null );
+			if ( $current_value !== ( $out[ $asset_key ] ?? null ) ) {
 				$out['pwa_asset_version'] = max( time(), absint( $out['pwa_asset_version'] ) + 1 );
 				break;
 			}
