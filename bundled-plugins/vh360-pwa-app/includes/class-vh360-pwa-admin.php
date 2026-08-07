@@ -158,33 +158,54 @@ class VH360_PWA_Admin {
 		$input = is_array( $input ) ? $input : array();
 		$current = vh360_pwa_get_options();
 		$out = $current;
+		$tab = isset( $input['_tab'] ) ? sanitize_key( (string) $input['_tab'] ) : '';
+		$tab = in_array( $tab, array( 'general', 'caching' ), true ) ? $tab : '';
+		$is_programmatic = ! isset( $input['_tab'] );
+		$should_update = static function( $key, $owner ) use ( $input, $tab, $is_programmatic ) {
+			return $owner === $tab || ( $is_programmatic && array_key_exists( $key, $input ) );
+		};
 
-		$out['enabled'] = vh360_pwa_boolval( $input['enabled'] ?? 0 );
-		if ( function_exists( 'vh360_pwa_is_licensed' ) && ! vh360_pwa_is_licensed() ) {
+		$general_booleans = array( 'enabled', 'enable_pull_to_refresh', 'splash_enabled', 'splash_title_enabled', 'show_install_prompt', 'show_install_banner', 'show_ios_onboarding' );
+		foreach ( $general_booleans as $key ) {
+			if ( $should_update( $key, 'general' ) ) {
+				$out[ $key ] = vh360_pwa_boolval( $input[ $key ] ?? 0 );
+			}
+		}
+		if ( $should_update( 'enabled', 'general' ) && function_exists( 'vh360_pwa_is_licensed' ) && ! vh360_pwa_is_licensed() ) {
 			$out['enabled'] = 0;
 		}
-$out['app_name'] = sanitize_text_field( $input['app_name'] ?? $current['app_name'] );
-		$out['short_name'] = sanitize_text_field( $input['short_name'] ?? $current['short_name'] );
-		$out['description'] = sanitize_text_field( $input['description'] ?? $current['description'] );
 
-		$out['theme_color'] = sanitize_hex_color( $input['theme_color'] ?? $current['theme_color'] ) ?: $current['theme_color'];
-		$out['background_color'] = sanitize_hex_color( $input['background_color'] ?? $current['background_color'] ) ?: $current['background_color'];
-		$out['enable_pull_to_refresh'] = vh360_pwa_boolval( $input['enable_pull_to_refresh'] ?? 0 );
+		$text_fields = array( 'app_name', 'short_name', 'description', 'splash_title', 'install_prompt_text', 'install_banner_text' );
+		foreach ( $text_fields as $key ) {
+			if ( $should_update( $key, 'general' ) ) {
+				$out[ $key ] = sanitize_text_field( $input[ $key ] ?? '' );
+			}
+		}
+		foreach ( array( 'theme_color', 'background_color', 'splash_background_color', 'splash_title_color' ) as $key ) {
+			if ( $should_update( $key, 'general' ) ) {
+				$fallback = 'splash_background_color' === $key ? $out['background_color'] : ( 'splash_title_color' === $key ? '#ffffff' : $current[ $key ] );
+				$out[ $key ] = sanitize_hex_color( $input[ $key ] ?? '' ) ?: $fallback;
+			}
+		}
+		if ( $should_update( 'splash_logo', 'general' ) ) {
+			$out['splash_logo'] = ! empty( $input['splash_logo'] ) ? esc_url_raw( (string) $input['splash_logo'] ) : '';
+		}
+		if ( $should_update( 'splash_title_font_size', 'general' ) ) {
+			$out['splash_title_font_size'] = max( 18, min( 96, absint( $input['splash_title_font_size'] ?? 0 ) ) );
+		}
+		if ( $should_update( 'splash_title_offset', 'general' ) ) {
+			$out['splash_title_offset'] = max( 20, min( 200, absint( $input['splash_title_offset'] ?? 0 ) ) );
+		}
+		if ( $should_update( 'install_banner_dismiss_days', 'general' ) ) {
+			$out['install_banner_dismiss_days'] = max( 1, min( 365, absint( $input['install_banner_dismiss_days'] ?? 0 ) ) );
+		}
+		if ( $should_update( 'display', 'general' ) && in_array( (string) ( $input['display'] ?? '' ), array( 'standalone', 'fullscreen', 'minimal-ui', 'browser' ), true ) ) {
+			$out['display'] = (string) $input['display'];
+		}
+		if ( $should_update( 'orientation', 'general' ) && in_array( (string) ( $input['orientation'] ?? '' ), array( 'any', 'portrait', 'portrait-primary', 'landscape' ), true ) ) {
+			$out['orientation'] = (string) $input['orientation'];
+		}
 		unset( $out['show_refresh_button'], $out['refresh_label'] );
-		$out['splash_enabled'] = vh360_pwa_boolval( $input['splash_enabled'] ?? 0 );
-		$out['splash_background_color'] = sanitize_hex_color( $input['splash_background_color'] ?? $current['splash_background_color'] ) ?: $out['background_color'];
-		$out['splash_logo'] = ! empty( $input['splash_logo'] ) ? esc_url_raw( (string) $input['splash_logo'] ) : '';
-		$out['splash_title'] = sanitize_text_field( $input['splash_title'] ?? $current['splash_title'] );
-		$out['splash_title_enabled'] = vh360_pwa_boolval( $input['splash_title_enabled'] ?? 0 );
-		$out['splash_title_font_size'] = max( 18, min( 96, absint( $input['splash_title_font_size'] ?? $current['splash_title_font_size'] ) ) );
-		$out['splash_title_color'] = sanitize_hex_color( $input['splash_title_color'] ?? $current['splash_title_color'] ) ?: '#ffffff';
-		$out['splash_title_offset'] = max( 20, min( 200, absint( $input['splash_title_offset'] ?? $current['splash_title_offset'] ) ) );
-		$out['display'] = in_array( (string) ( $input['display'] ?? '' ), array( 'standalone','fullscreen','minimal-ui','browser' ), true ) ? (string) $input['display'] : $current['display'];
-		$out['orientation'] = in_array( (string) ( $input['orientation'] ?? '' ), array( 'any','portrait','portrait-primary','landscape' ), true ) ? (string) $input['orientation'] : $current['orientation'];
-
-		
-$start_url = trim( (string) ( $input['start_url'] ?? $current['start_url'] ) );
-$scope     = trim( (string) ( $input['scope'] ?? $current['scope'] ) );
 
 // Normalize to RELATIVE paths to avoid iOS/Android scope mismatches (www vs non-www, http vs https).
 // Accept either a relative path ("/") or an absolute URL on this site, but store only the path+query+fragment.
@@ -210,36 +231,45 @@ $normalize_to_path = function( $value ) {
     return '/';
 };
 
-$out['start_url'] = $normalize_to_path( $start_url );
-$out['scope']     = $normalize_to_path( $scope );
+		foreach ( array( 'start_url', 'scope' ) as $key ) {
+			if ( $should_update( $key, 'general' ) ) {
+				$out[ $key ] = $normalize_to_path( $input[ $key ] ?? '' );
+			}
+		}
 
 		unset( $out['cache_strategy'] );
-		$out['cache_version'] = sanitize_text_field( $input['cache_version'] ?? $current['cache_version'] );
-		$out['precache_offline'] = vh360_pwa_boolval( $input['precache_offline'] ?? $current['precache_offline'] );
-		$out['precache_home'] = vh360_pwa_boolval( $input['precache_home'] ?? $current['precache_home'] );
-		$out['precache_urls'] = sanitize_textarea_field( $input['precache_urls'] ?? $current['precache_urls'] );
-		$out['fast_launch_enabled'] = vh360_pwa_boolval( $input['fast_launch_enabled'] ?? $current['fast_launch_enabled'] );
-		$out['launch_mode'] = in_array( (string) ( $input['launch_mode'] ?? '' ), array( 'shell','cached_start' ), true ) ? (string) $input['launch_mode'] : $current['launch_mode'];
-		$out['launch_shell_max_ms'] = max( 500, min( 1200, absint( $input['launch_shell_max_ms'] ?? $current['launch_shell_max_ms'] ) ) );
-
-		$out['show_install_prompt'] = vh360_pwa_boolval( $input['show_install_prompt'] ?? $current['show_install_prompt'] );
-		$out['install_prompt_text'] = sanitize_text_field( $input['install_prompt_text'] ?? $current['install_prompt_text'] );
-
-		$out['show_install_banner'] = vh360_pwa_boolval( $input['show_install_banner'] ?? $current['show_install_banner'] );
-		$out['install_banner_text'] = sanitize_text_field( $input['install_banner_text'] ?? $current['install_banner_text'] );
-		$out['install_banner_dismiss_days'] = max( 1, min( 365, absint( $input['install_banner_dismiss_days'] ?? $current['install_banner_dismiss_days'] ) ) );
-		$out['show_ios_onboarding'] = vh360_pwa_boolval( $input['show_ios_onboarding'] ?? $current['show_ios_onboarding'] );
+		foreach ( array( 'fast_launch_enabled', 'precache_offline', 'precache_home' ) as $key ) {
+			if ( $should_update( $key, 'caching' ) ) {
+				$out[ $key ] = vh360_pwa_boolval( $input[ $key ] ?? 0 );
+			}
+		}
+		if ( $should_update( 'cache_version', 'caching' ) ) {
+			$out['cache_version'] = sanitize_text_field( $input['cache_version'] ?? '' );
+		}
+		if ( $should_update( 'precache_urls', 'caching' ) ) {
+			$out['precache_urls'] = sanitize_textarea_field( $input['precache_urls'] ?? '' );
+		}
+		if ( $should_update( 'launch_mode', 'caching' ) && in_array( (string) ( $input['launch_mode'] ?? '' ), array( 'shell', 'cached_start' ), true ) ) {
+			$out['launch_mode'] = (string) $input['launch_mode'];
+		}
+		if ( $should_update( 'launch_shell_max_ms', 'caching' ) ) {
+			$out['launch_shell_max_ms'] = max( 500, min( 1200, absint( $input['launch_shell_max_ms'] ?? 0 ) ) );
+		}
 		unset( $out['show_ios_reinstall_notice'], $out['ios_reinstall_notice_text'] );
 
-		$out['debug_mode'] = vh360_pwa_boolval( $input['debug_mode'] ?? $current['debug_mode'] );
+		if ( $is_programmatic && array_key_exists( 'debug_mode', $input ) ) {
+			$out['debug_mode'] = vh360_pwa_boolval( $input['debug_mode'] );
+		}
 
 		// Icons: store as URLs.
 		foreach ( array('icon_192','icon_512','icon_maskable_192','icon_maskable_512') as $k ) {
-			$val = trim( (string) ( $input[ $k ] ?? $current[ $k ] ) );
-			$out[ $k ] = $val ? esc_url_raw( $val ) : '';
+			if ( $is_programmatic && array_key_exists( $k, $input ) ) {
+				$val = trim( (string) $input[ $k ] );
+				$out[ $k ] = $val ? esc_url_raw( $val ) : '';
+			}
 		}
 		
-		$out['pwa_asset_version'] = ! empty( $current['pwa_asset_version'] ) ? absint( $current['pwa_asset_version'] ) : time();
+		$out['pwa_asset_version'] = $is_programmatic && array_key_exists( 'pwa_asset_version', $input ) ? absint( $input['pwa_asset_version'] ) : ( ! empty( $current['pwa_asset_version'] ) ? absint( $current['pwa_asset_version'] ) : time() );
 		$asset_keys = array( 'splash_enabled', 'splash_logo', 'splash_background_color', 'splash_title', 'splash_title_enabled', 'splash_title_font_size', 'splash_title_color', 'splash_title_offset', 'icon_192', 'icon_512', 'icon_maskable_192', 'icon_maskable_512', 'app_name', 'short_name', 'theme_color', 'background_color', 'start_url', 'cache_version', 'fast_launch_enabled', 'launch_mode', 'launch_shell_max_ms' );
 		foreach ( $asset_keys as $asset_key ) {
 			if ( ( $current[ $asset_key ] ?? null ) !== ( $out[ $asset_key ] ?? null ) ) {
@@ -249,8 +279,9 @@ $out['scope']     = $normalize_to_path( $scope );
 		}
 
 		// Push Sender Roles: array of role keys that can send push notifications
-		$out['push_sender_roles'] = array();
-		if ( isset( $input['push_sender_roles'] ) && is_array( $input['push_sender_roles'] ) ) {
+		if ( 'general' === $tab || ( $is_programmatic && array_key_exists( 'push_sender_roles', $input ) ) ) {
+			$out['push_sender_roles'] = array();
+			if ( isset( $input['push_sender_roles'] ) && is_array( $input['push_sender_roles'] ) ) {
 			// Validate that each role exists
 			$all_roles = wp_roles()->roles;
 			foreach ( $input['push_sender_roles'] as $role_key ) {
@@ -259,10 +290,11 @@ $out['scope']     = $normalize_to_path( $scope );
 					$out['push_sender_roles'][] = $role_key;
 				}
 			}
-		}
-		// Ensure administrator is always included
-		if ( ! in_array( 'administrator', $out['push_sender_roles'], true ) ) {
-			$out['push_sender_roles'][] = 'administrator';
+			}
+			// Ensure administrator is always included.
+			if ( ! in_array( 'administrator', $out['push_sender_roles'], true ) ) {
+				$out['push_sender_roles'][] = 'administrator';
+			}
 		}
 
 		return $out;
@@ -622,9 +654,11 @@ $out['scope']     = $normalize_to_path( $scope );
 		}
 		echo '</nav>';
 
-		// Icons and Tools tabs don't use the main settings form
+		// Icons, Health Check, and Tools tabs don't use the main settings form.
 		if ( 'icons' === $tab ) {
 			$this->render_tab_icons( $opts );
+		} elseif ( 'health' === $tab ) {
+			$this->render_tab_health( $opts );
 		} elseif ( 'tools' === $tab ) {
 			$this->render_tab_tools( $opts );
 		} else {
@@ -637,9 +671,6 @@ $out['scope']     = $normalize_to_path( $scope );
 			switch ( $tab ) {
 				case 'caching':
 					$this->render_tab_caching( $opts );
-					break;
-				case 'health':
-					$this->render_tab_health( $opts );
 					break;
 				case 'general':
 				default:
