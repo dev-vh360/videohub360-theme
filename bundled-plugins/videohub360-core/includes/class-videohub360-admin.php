@@ -413,12 +413,6 @@ class VideoHub360_Admin {
             update_option('videohub360_login_modal_redirect_url', esc_url_raw($_POST['videohub360_login_modal_redirect_url'] ?? ''));
             update_option('videohub360_login_modal_js_function', sanitize_text_field($_POST['videohub360_login_modal_js_function'] ?? ''));
             
-            // Update email settings
-            update_option('videohub360_email_notifications', isset($_POST['videohub360_email_notifications']) ? 1 : 0);
-            update_option('videohub360_email_admin', sanitize_email($_POST['videohub360_email_admin'] ?? ''));
-            update_option('videohub360_email_from_name', sanitize_text_field($_POST['videohub360_email_from_name'] ?? ''));
-            update_option('videohub360_email_from_email', sanitize_email($_POST['videohub360_email_from_email'] ?? ''));
-            
             // Update video quality settings
             $default_quality = VideoHub360_Video_Quality::validate_quality($_POST['videohub360_default_quality'] ?? 'high');
             if ($default_quality) {

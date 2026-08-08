@@ -219,9 +219,7 @@ jQuery(document).ready(function($) {
             advanced: <?php echo wp_json_encode(get_option('vh360_advanced_options', array())); ?>,
             access: <?php echo wp_json_encode(get_option('vh360_access_options', array())); ?>,
             membership: <?php echo wp_json_encode(get_option('vh360_membership_options', array())); ?>,
-            videohub360_core: {
-                enable_course_features: <?php echo wp_json_encode( (int) get_option( 'videohub360_enable_course_features', 0 ) ); ?>
-            },
+            videohub360_core: <?php echo wp_json_encode( class_exists( 'VideoHub360_Portable_Settings' ) ? VideoHub360_Portable_Settings::export_settings() : array() ); ?>,
             custom_profile_fields: <?php echo wp_json_encode(get_option('vh360_custom_profile_fields', array())); ?>,
             builtin_field_settings: <?php echo wp_json_encode(get_option('vh360_builtin_field_settings', array())); ?>,
         };
