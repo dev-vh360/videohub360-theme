@@ -1,6 +1,6 @@
 <div class="vh360-ss-demo-card" data-demo-id="{{id}}">
     <div class="demo-thumbnail">
-        <img src="{{thumbnail}}" alt="{{name}}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'300\'%3E%3Crect fill=\'%23ddd\' width=\'400\' height=\'300\'/%3E%3Ctext fill=\'rgba(0,0,0,0.5)\' font-family=\'sans-serif\' font-size=\'24\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dominant-baseline=\'middle\'%3E{{name}}%3C/text%3E%3C/svg%3E'">
+        <img src="{{thumbnail}}" alt="{{name}}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'640\' height=\'360\'%3E%3Crect fill=\'%23ddd\' width=\'640\' height=\'360\'/%3E%3Ctext fill=\'rgba(0,0,0,0.5)\' font-family=\'sans-serif\' font-size=\'24\' x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dominant-baseline=\'middle\'%3E{{name}}%3C/text%3E%3C/svg%3E'">
         {{#if preview_url}}
         <a href="{{preview_url}}" target="_blank" class="demo-preview-btn" title="<?php esc_attr_e('Preview Demo', 'videohub360-starter-sites'); ?>">
             <span class="dashicons dashicons-visibility"></span>
