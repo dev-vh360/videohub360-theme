@@ -74,6 +74,13 @@ class VH360_Demo_Importer {
      * @var array
      */
     private $extracted_dirs = array();
+
+    /**
+     * Source attachment URL to destination URL mappings produced by WP_Import.
+     *
+     * @var array
+     */
+    private $content_url_remap = array();
     
     /**
      * Get singleton instance
@@ -107,6 +114,7 @@ class VH360_Demo_Importer {
     public function import_demo($demo_id, $progress_callback = null) {
         $start_time = microtime(true);
         $start_memory = memory_get_usage(true);
+        $this->content_url_remap = array();
         
         // Helper closure to log each step with diagnostic information
         // Logs: step name, elapsed time, current memory, peak memory
@@ -526,6 +534,10 @@ class VH360_Demo_Importer {
             $this->logger->error('Content import failed: ' . $import_result->get_error_message());
             return $import_result;
         }
+
+        $this->content_url_remap = isset( $importer->url_remap ) && is_array( $importer->url_remap )
+            ? $importer->url_remap
+            : array();
         
         $this->logger->success('Content imported successfully');
         
@@ -1474,6 +1486,38 @@ class VH360_Demo_Importer {
             } else {
                 $this->logger->warning( 'Skipped videohub360_core: VideoHub360 Core portable-settings API is unavailable' );
                 $skipped_groups[] = 'videohub360_core: Core portable-settings API unavailable';
+            }
+        }
+
+        // PWA owns its closed portable schema, asset handling, and license gate.
+        if ( isset( $options_data['vh360_pwa'] ) && is_array( $options_data['vh360_pwa'] ) ) {
+            if ( class_exists( 'VH360_PWA_Portable_Settings' ) ) {
+                $pwa_result = VH360_PWA_Portable_Settings::import_settings(
+                    $options_data['vh360_pwa'],
+                    array(
+                        'starter_sites' => true,
+                        'url_remap'     => $this->content_url_remap,
+                    )
+                );
+                if ( (int) $pwa_result['imported'] > 0 || (int) $pwa_result['assets_imported'] > 0 ) {
+                    $imported_count++;
+                }
+                $this->logger->info( sprintf(
+                    'Imported vh360_pwa portable configuration (%d settings imported, %d settings skipped, %d assets imported, %d assets skipped)',
+                    (int) $pwa_result['imported'],
+                    (int) $pwa_result['skipped'],
+                    (int) $pwa_result['assets_imported'],
+                    (int) $pwa_result['assets_skipped']
+                ) );
+                if ( ! empty( $pwa_result['license_disabled'] ) ) {
+                    $this->logger->warning( 'PWA enablement skipped: an active VideoHub360 license is required' );
+                }
+                foreach ( $pwa_result['warnings'] as $warning ) {
+                    $this->logger->warning( 'PWA import: ' . $warning );
+                }
+            } else {
+                $this->logger->warning( 'Skipped vh360_pwa: PWA portable-settings API is unavailable' );
+                $skipped_groups[] = 'vh360_pwa: PWA portable-settings API unavailable';
             }
         }
 

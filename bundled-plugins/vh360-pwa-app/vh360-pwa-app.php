@@ -169,6 +169,7 @@ if ( ! defined( 'VH360_PWA_ONESIGNAL_SDK_VERSION' ) ) {
 }
 
 require_once VH360_PWA_APP_DIR . 'includes/helpers.php';
+require_once VH360_PWA_APP_DIR . 'includes/class-vh360-pwa-portable-settings.php';
 require_once VH360_PWA_APP_DIR . 'includes/class-vh360-pwa-endpoints.php';
 require_once VH360_PWA_APP_DIR . 'includes/class-vh360-pwa-root-files.php';
 require_once VH360_PWA_APP_DIR . 'includes/class-vh360-pwa-rewrite-monitor.php';

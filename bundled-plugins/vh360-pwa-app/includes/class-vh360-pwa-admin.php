@@ -76,12 +76,7 @@ class VH360_PWA_Admin {
 	}
 
 	private function purge_common_caches() : array {
-		$results = array();
-		if ( has_action( 'litespeed_purge_all' ) ) { do_action( 'litespeed_purge_all' ); $results['litespeed'] = 'attempted'; }
-		if ( function_exists( 'rocket_clean_domain' ) ) { rocket_clean_domain(); $results['wp_rocket'] = 'attempted'; }
-		if ( function_exists( 'w3tc_flush_all' ) ) { w3tc_flush_all(); $results['w3_total_cache'] = 'attempted'; }
-		if ( function_exists( 'wp_cache_clear_cache' ) ) { wp_cache_clear_cache(); $results['wp_super_cache'] = 'attempted'; }
-		if ( function_exists( 'wp_cache_flush' ) ) { wp_cache_flush(); $results['object_cache'] = 'attempted'; }
+		$results = self::purge_common_caches_static();
 		if ( empty( $results ) ) { $results['none'] = 'no_supported_cache_plugin_detected'; }
 		return $results;
 	}
@@ -221,14 +216,14 @@ $normalize_to_path = function( $value ) {
     if ( $value === '' ) {
         return '/';
     }
-    // If it's a path already:
-    if ( 0 === strpos( $value, '/' ) ) {
-        return $value;
-    }
-    // If it's a full URL, extract path/query/fragment.
+    // Extract path/query/fragment from either a relative path or a full URL.
     $parts = wp_parse_url( $value );
     if ( is_array( $parts ) ) {
         $path = isset( $parts['path'] ) ? $parts['path'] : '/';
+		$home_path = rtrim( (string) wp_parse_url( home_url(), PHP_URL_PATH ), '/' );
+		if ( $home_path && ( $path === $home_path || 0 === strpos( $path, $home_path . '/' ) ) ) {
+			$path = substr( $path, strlen( $home_path ) );
+		}
         $q    = isset( $parts['query'] ) ? ('?' . $parts['query']) : '';
         $h    = isset( $parts['fragment'] ) ? ('#' . $parts['fragment']) : '';
         if ( $path === '' ) { $path = '/'; }
@@ -610,11 +605,27 @@ $normalize_to_path = function( $value ) {
 		if ( 'vh360_pwa_options' !== $option ) {
 			return;
 		}
+		if ( class_exists( 'VH360_PWA_Portable_Settings' ) && VH360_PWA_Portable_Settings::is_importing() ) {
+			return;
+		}
+		self::refresh_after_options_update( $old_value, $value, true );
+	}
+
+	/**
+	 * Refresh destination-owned PWA assets after a complete option update.
+	 *
+	 * @param mixed $old_value Previous option value.
+	 * @param mixed $value New option value.
+	 * @param bool  $flush_rewrites Whether to flush after registering endpoint rules.
+	 */
+	public static function refresh_after_options_update( $old_value, $value, bool $flush_rewrites = true ) : void {
 		$old_enabled = is_array( $old_value ) ? ! empty( $old_value['enabled'] ) : false;
 		$new_enabled = is_array( $value ) ? ! empty( $value['enabled'] ) : false;
 		if ( $old_enabled !== $new_enabled ) {
 			VH360_PWA_Endpoints::add_rewrite_rules();
-			flush_rewrite_rules();
+			if ( $flush_rewrites ) {
+				flush_rewrite_rules();
+			}
 		}
 		update_option( 'vh360_pwa_manifest_generated_at', time() );
 		$splash_keys = array( 'pwa_asset_version', 'splash_enabled', 'splash_logo', 'splash_title', 'splash_title_enabled', 'splash_title_font_size', 'splash_title_color', 'splash_title_offset', 'splash_background_color', 'background_color' );
@@ -630,7 +641,17 @@ $normalize_to_path = function( $value ) {
 		if ( $splash_changed && function_exists( 'vh360_pwa_clear_ios_startup_images' ) ) { vh360_pwa_clear_ios_startup_images(); }
 		if ( function_exists( 'vh360_pwa_generate_ios_startup_images' ) ) { vh360_pwa_generate_ios_startup_images(); }
 		if ( class_exists( 'VH360_PWA_Root_Files' ) ) { VH360_PWA_Root_Files::ensure_root_files(); }
-		if ( $splash_changed ) { $this->purge_common_caches(); }
+		if ( $splash_changed ) { self::purge_common_caches_static(); }
+	}
+
+	private static function purge_common_caches_static() : array {
+		$results = array();
+		if ( has_action( 'litespeed_purge_all' ) ) { do_action( 'litespeed_purge_all' ); $results['litespeed'] = 'attempted'; }
+		if ( function_exists( 'rocket_clean_domain' ) ) { rocket_clean_domain(); $results['wp_rocket'] = 'attempted'; }
+		if ( function_exists( 'w3tc_flush_all' ) ) { w3tc_flush_all(); $results['w3_total_cache'] = 'attempted'; }
+		if ( function_exists( 'wp_cache_clear_cache' ) ) { wp_cache_clear_cache(); $results['wp_super_cache'] = 'attempted'; }
+		if ( function_exists( 'wp_cache_flush' ) ) { wp_cache_flush(); $results['object_cache'] = 'attempted'; }
+		return $results;
 	}
 
 	public function render_page() : void {
