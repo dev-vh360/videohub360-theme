@@ -146,17 +146,13 @@ class VH360_Demo_Importer {
         $log_step('Import initialized');
         
         try {
-            // Step 1: Validate environment (BEFORE setting lock)
+            // Step 1: Validate environment. The AJAX coordinator owns the lock.
             $log_step('Validating environment');
             $validation = $this->validate_environment();
             if (is_wp_error($validation)) {
                 throw new Exception($validation->get_error_message());
             }
             $log_step('Environment validation complete');
-            
-            // Set import in progress flag AFTER validation passes
-            vh360_ss_set_import_running($demo_id);
-            $log_step('Import lock acquired');
             
             // Step 2: Get demo data from registry
             $log_step('Fetching demo from registry');
@@ -255,11 +251,6 @@ class VH360_Demo_Importer {
             $this->cleanup_safely();
             $log_step('Cleanup complete');
             
-            // Clear import in progress flag
-            $log_step('Clearing import lock');
-            vh360_ss_clear_import_running();
-            $log_step('Import lock released');
-            
             // Log completion BEFORE saving
             $elapsed_total = microtime(true) - $start_time;
             $this->logger->info(sprintf(
@@ -296,9 +287,6 @@ class VH360_Demo_Importer {
             // Cleanup on error - use safe cleanup
             $log_step('Cleaning up after error');
             $this->cleanup_safely();
-            
-            vh360_ss_clear_import_running();
-            $log_step('Import lock released after error');
             
             $this->logger->save();
             $log_step('Error log saved');
@@ -339,11 +327,6 @@ class VH360_Demo_Importer {
      */
     private function validate_environment() {
         $this->logger->info('Validating environment');
-        
-        // Check if another import is running
-        if (vh360_ss_is_import_running()) {
-            return new WP_Error('import_in_progress', __('Another import is already in progress', 'videohub360-starter-sites'));
-        }
         
         // Check server requirements
         $requirements = vh360_ss_check_server_requirements();

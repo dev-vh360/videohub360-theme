@@ -11,6 +11,8 @@
     var VH360StarterSitesAdmin = {
         demos: [],
         currentImport: null,
+        importRequestId: null,
+        progressInterval: null,
         
         init: function() {
             this.bindEvents();
@@ -21,36 +23,40 @@
             var self = this;
             
             // Refresh cache button
-            $('#vh360-ss-refresh-cache').on('click', function(e) {
+            $('#vh360-ss-refresh-cache').off('click.vh360StarterSites').on('click.vh360StarterSites', function(e) {
                 e.preventDefault();
                 self.fetchDemos(true);
             });
             
             // Import button (delegated)
-            $(document).on('click', '.vh360-ss-import-btn', function(e) {
+            $(document).off('click.vh360StarterSites', '.vh360-ss-import-btn')
+                .on('click.vh360StarterSites', '.vh360-ss-import-btn', function(e) {
                 e.preventDefault();
+                if (self.currentImport || $(this).prop('disabled')) {
+                    return;
+                }
                 var demoId = $(this).data('demo-id');
                 self.confirmImport(demoId);
             });
             
             // View log button
-            $('#vh360-ss-view-log').on('click', function(e) {
+            $('#vh360-ss-view-log').off('click.vh360StarterSites').on('click.vh360StarterSites', function(e) {
                 e.preventDefault();
                 $('#vh360-ss-log-details').slideToggle();
             });
             
             // Complete modal buttons
-            $('#vh360-ss-complete-close').on('click', function(e) {
+            $('#vh360-ss-complete-close').off('click.vh360StarterSites').on('click.vh360StarterSites', function(e) {
                 e.preventDefault();
                 self.closeCompleteModal();
             });
             
-            $('#vh360-ss-complete-view-site').on('click', function(e) {
+            $('#vh360-ss-complete-view-site').off('click.vh360StarterSites').on('click.vh360StarterSites', function(e) {
                 e.preventDefault();
                 window.open(vh360StarterSites.siteUrl || '/', '_blank');
             });
             
-            $('#vh360-ss-complete-view-log').on('click', function(e) {
+            $('#vh360-ss-complete-view-log').off('click.vh360StarterSites').on('click.vh360StarterSites', function(e) {
                 e.preventDefault();
                 $('#vh360-ss-complete-log').slideToggle();
             });
@@ -148,6 +154,10 @@
         confirmImport: function(demoId) {
             var self = this;
             var demo = this.getDemoById(demoId);
+
+            if (this.currentImport) {
+                return;
+            }
             
             if (!demo) {
                 alert('Demo not found');
@@ -167,8 +177,16 @@
         
         startImport: function(demoId, demoName) {
             var self = this;
-            
+
+            if (this.currentImport) {
+                return;
+            }
+
             this.currentImport = demoId;
+            this.importRequestId = this.createRequestId();
+            var requestId = this.importRequestId;
+            $('.vh360-ss-import-btn').prop('disabled', true).addClass('disabled');
+            $('.vh360-ss-demos-grid').addClass('import-running');
             
             // Show progress modal
             $('#vh360-ss-import-progress').fadeIn();
@@ -182,10 +200,20 @@
                 data: {
                     action: 'vh360_ss_import_demo',
                     nonce: vh360StarterSites.nonce,
-                    demo_id: demoId
+                    demo_id: demoId,
+                    import_request_id: requestId
                 },
                 timeout: 600000, // 10 minutes
                 success: function(response) {
+                    if (!response.success && response.data && response.data.error_code === 'already_running_same_request') {
+                        return;
+                    }
+
+                    if (self.importRequestId !== requestId) {
+                        return;
+                    }
+
+                    self.finishImport();
                     if (response.success) {
                         self.handleImportSuccess(response.data);
                     } else {
@@ -193,6 +221,10 @@
                     }
                 },
                 error: function(xhr, status, error) {
+                    if (self.importRequestId !== requestId) {
+                        return;
+                    }
+
                     // Handle different error scenarios
                     var errorData = {
                         message: 'Import failed: ' + error
@@ -219,12 +251,40 @@
                     errorData.http_status_text = xhr.statusText;
                     errorData.ajax_status = status;
                     
+                    if (errorData.error_code === 'already_running_same_request') {
+                        return;
+                    }
+
+                    self.finishImport();
                     self.handleImportError(errorData);
                 }
             });
             
             // Simulate progress (actual progress tracking would require more complex implementation)
             this.simulateProgress();
+        },
+
+        createRequestId: function() {
+            if (window.crypto && window.crypto.getRandomValues) {
+                var values = new Uint32Array(4);
+                window.crypto.getRandomValues(values);
+                return Array.prototype.map.call(values, function(value) {
+                    return value.toString(16);
+                }).join('-');
+            }
+
+            return Date.now().toString(36) + '-' + Math.random().toString(36).substring(2);
+        },
+
+        finishImport: function() {
+            this.currentImport = null;
+            this.importRequestId = null;
+            if (this.progressInterval) {
+                clearInterval(this.progressInterval);
+                this.progressInterval = null;
+            }
+            $('.vh360-ss-import-btn').prop('disabled', false).removeClass('disabled');
+            $('.vh360-ss-demos-grid').removeClass('import-running');
         },
         
         simulateProgress: function() {
@@ -244,9 +304,14 @@
             ];
             var currentPhase = 0;
             
-            var interval = setInterval(function() {
+            if (this.progressInterval) {
+                clearInterval(this.progressInterval);
+            }
+
+            this.progressInterval = setInterval(function() {
                 if (progress >= 90) {
-                    clearInterval(interval);
+                    clearInterval(self.progressInterval);
+                    self.progressInterval = null;
                     return;
                 }
                 
@@ -391,7 +456,6 @@
         
         closeCompleteModal: function() {
             $('#vh360-ss-import-complete').fadeOut();
-            this.currentImport = null;
             
             // Reload page to show updated status
             location.reload();
