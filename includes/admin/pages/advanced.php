@@ -105,7 +105,7 @@ $options = wp_parse_args($options, $defaults);
         <p><?php esc_html_e('Export or import theme admin option groups (Appearance, Profile, Activity, Members, Advanced, Access, Paid Memberships). This does not include WordPress Customizer settings.', 'videohub360-theme'); ?></p>
         
         <h3><?php esc_html_e('Export Theme Options', 'videohub360-theme'); ?></h3>
-        <p><?php esc_html_e('Click the button below to export theme admin option groups as a JSON file.', 'videohub360-theme'); ?></p>
+        <p><?php esc_html_e('Export theme admin option groups and portable VideoHub360 Core and PWA configuration (when those bundled plugins are available) as a JSON file.', 'videohub360-theme'); ?></p>
         <button type="button" class="button button-secondary" id="vh360-export-settings">
             <span class="dashicons dashicons-download"></span>
             <?php esc_html_e('Export Theme Options JSON', 'videohub360-theme'); ?>
@@ -220,6 +220,7 @@ jQuery(document).ready(function($) {
             access: <?php echo wp_json_encode(get_option('vh360_access_options', array())); ?>,
             membership: <?php echo wp_json_encode(get_option('vh360_membership_options', array())); ?>,
             videohub360_core: <?php echo wp_json_encode( class_exists( 'VideoHub360_Portable_Settings' ) ? VideoHub360_Portable_Settings::export_settings() : array() ); ?>,
+            vh360_pwa: <?php echo wp_json_encode( class_exists( 'VH360_PWA_Portable_Settings' ) ? VH360_PWA_Portable_Settings::export_settings() : array() ); ?>,
             custom_profile_fields: <?php echo wp_json_encode(get_option('vh360_custom_profile_fields', array())); ?>,
             builtin_field_settings: <?php echo wp_json_encode(get_option('vh360_builtin_field_settings', array())); ?>,
         };

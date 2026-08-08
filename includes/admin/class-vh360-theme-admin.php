@@ -2274,7 +2274,10 @@ class VH360_Theme_Admin {
         $core_settings = isset( $raw_settings['videohub360_core'] ) && is_array( $raw_settings['videohub360_core'] )
             ? $raw_settings['videohub360_core']
             : null;
-        unset( $raw_settings['videohub360_core'] );
+        $pwa_settings = isset( $raw_settings['vh360_pwa'] ) && is_array( $raw_settings['vh360_pwa'] )
+            ? $raw_settings['vh360_pwa']
+            : null;
+        unset( $raw_settings['videohub360_core'], $raw_settings['vh360_pwa'] );
 
         // Keep the existing generic sanitizer unchanged for all theme-owned groups.
         $settings = $this->sanitize_settings_array( $raw_settings );
@@ -2313,6 +2316,10 @@ class VH360_Theme_Admin {
             if ( ! empty( $core_result['slugs_changed'] ) ) {
                 flush_rewrite_rules( false );
             }
+        }
+
+        if ( null !== $pwa_settings && class_exists( 'VH360_PWA_Portable_Settings' ) ) {
+            VH360_PWA_Portable_Settings::import_settings( $pwa_settings, array( 'starter_sites' => false ) );
         }
         
         // Import custom profile field definitions (sanitized).
