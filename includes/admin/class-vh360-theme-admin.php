@@ -2269,8 +2269,15 @@ class VH360_Theme_Admin {
             wp_send_json_error(__('No settings data provided', 'videohub360-theme'));
         }
         
-        // Sanitize settings data recursively
-        $settings = $this->sanitize_settings_array($_POST['settings']);
+        // Core owns field-specific sanitation (including wp_kses_post() HTML fields).
+        $raw_settings = wp_unslash( $_POST['settings'] );
+        $core_settings = isset( $raw_settings['videohub360_core'] ) && is_array( $raw_settings['videohub360_core'] )
+            ? $raw_settings['videohub360_core']
+            : null;
+        unset( $raw_settings['videohub360_core'] );
+
+        // Keep the existing generic sanitizer unchanged for all theme-owned groups.
+        $settings = $this->sanitize_settings_array( $raw_settings );
         
         // Import each settings group
         if (isset($settings['appearance'])) {
@@ -2301,13 +2308,10 @@ class VH360_Theme_Admin {
             update_option('vh360_membership_options', $settings['membership']);
         }
 
-        // Import safe standalone VideoHub360 Core options.
-        if ( isset( $settings['videohub360_core'] ) && is_array( $settings['videohub360_core'] ) ) {
-            if ( array_key_exists( 'enable_course_features', $settings['videohub360_core'] ) ) {
-                update_option(
-                    'videohub360_enable_course_features',
-                    ! empty( $settings['videohub360_core']['enable_course_features'] ) ? 1 : 0
-                );
+        if ( null !== $core_settings && class_exists( 'VideoHub360_Portable_Settings' ) ) {
+            $core_result = VideoHub360_Portable_Settings::import_settings( $core_settings );
+            if ( ! empty( $core_result['slugs_changed'] ) ) {
+                flush_rewrite_rules( false );
             }
         }
         

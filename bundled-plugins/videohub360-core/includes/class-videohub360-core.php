@@ -89,6 +89,7 @@ class VideoHub360_Core {
         require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-chat.php';
         require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-widgets.php';
         require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-video-quality.php';
+        require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-portable-settings.php';
         require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-shortcode-builder.php';
         require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-import-export.php';
         require_once VIDEOHUB360_INCLUDES_DIR . 'class-videohub360-video-reactions.php';

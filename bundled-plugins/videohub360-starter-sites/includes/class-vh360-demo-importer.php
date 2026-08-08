@@ -1453,29 +1453,27 @@ class VH360_Demo_Importer {
             }
         }
         
-        // Import safe standalone VideoHub360 Core options.
+        // Core is the authority for its portable option allowlist and sanitation.
         if ( isset( $options_data['videohub360_core'] ) && is_array( $options_data['videohub360_core'] ) ) {
-            $core_options = $options_data['videohub360_core'];
-            $core_keys_imported = 0;
+            if ( class_exists( 'VideoHub360_Portable_Settings' ) ) {
+                $core_result = VideoHub360_Portable_Settings::import_settings( $options_data['videohub360_core'] );
+                $core_keys_imported = (int) $core_result['imported'];
+                $core_keys_skipped = (int) $core_result['skipped'];
 
-            if ( array_key_exists( 'enable_course_features', $core_options ) ) {
-                update_option(
-                    'videohub360_enable_course_features',
-                    ! empty( $core_options['enable_course_features'] ) ? 1 : 0
-                );
+                if ( $core_keys_imported > 0 ) {
+                    $imported_count++;
 
-                $core_keys_imported++;
-            }
-
-            if ( $core_keys_imported > 0 ) {
-                $imported_count++;
-
-                $this->logger->info( sprintf(
-                    'Imported videohub360_core standalone options (%d keys)',
-                    $core_keys_imported
-                ) );
+                    $this->logger->info( sprintf(
+                        'Imported videohub360_core portable options (%d imported, %d skipped)',
+                        $core_keys_imported,
+                        $core_keys_skipped
+                    ) );
+                } else {
+                    $skipped_groups[] = 'videohub360_core: no allowlisted keys matched';
+                }
             } else {
-                $skipped_groups[] = 'videohub360_core: no allowlisted keys matched';
+                $this->logger->warning( 'Skipped videohub360_core: VideoHub360 Core portable-settings API is unavailable' );
+                $skipped_groups[] = 'videohub360_core: Core portable-settings API unavailable';
             }
         }
 
