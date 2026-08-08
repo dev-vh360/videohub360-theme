@@ -38,7 +38,7 @@ class VideoHub360_Portable_Settings {
 			'videohub360_chat_cleanup_days'                 => array( 'option' => 'videohub360_chat_cleanup_days', 'default' => 30, 'type' => 'integer', 'minimum' => 1 ),
 			'videohub360_chat_rate_limit'                   => array( 'option' => 'videohub360_chat_rate_limit', 'default' => 5, 'type' => 'integer', 'minimum' => 1 ),
 			'videohub360_chat_message_limit'                => array( 'option' => 'videohub360_chat_message_limit', 'default' => 500, 'type' => 'integer', 'minimum' => 10 ),
-			'videohub360_force_login_everyone_host'         => array( 'option' => 'videohub360_force_login_everyone_host', 'default' => 0, 'type' => 'bool' ),
+			'videohub360_force_login_everyone_host'         => array( 'option' => 'videohub360_force_login_everyone_host', 'default' => 1, 'type' => 'bool' ),
 			'videohub360_login_modal_type'                  => array( 'option' => 'videohub360_login_modal_type', 'default' => 'default', 'type' => 'choice', 'allowed' => array( 'default', 'shortcode', 'redirect', 'javascript', 'builtin' ) ),
 			'videohub360_login_modal_shortcode'             => array( 'option' => 'videohub360_login_modal_shortcode', 'default' => '', 'type' => 'text' ),
 			'videohub360_login_modal_redirect_url'          => array( 'option' => 'videohub360_login_modal_redirect_url', 'default' => '', 'type' => 'redirect' ),
@@ -137,18 +137,35 @@ class VideoHub360_Portable_Settings {
 		return $field['default'];
 	}
 
-	/** Convert a same-site absolute URL to a host-free path/query/fragment. */
+	/** Convert a same-site URL to a path relative to this WordPress installation. */
 	private static function export_redirect( $url ) {
 		$url = esc_url_raw( $url );
 		if ( '' === $url ) {
 			return '';
 		}
+
+		// Root-relative values are already independent of the source hostname/home path.
+		if ( '/' === substr( $url, 0, 1 ) && 0 !== strpos( $url, '//' ) ) {
+			return $url;
+		}
+
 		$source = wp_parse_url( home_url( '/' ) );
 		$target = wp_parse_url( $url );
 		if ( empty( $target['host'] ) || empty( $source['host'] ) || strtolower( $target['host'] ) !== strtolower( $source['host'] ) ) {
 			return '';
 		}
-		$portable = isset( $target['path'] ) ? $target['path'] : '/';
+
+		$home_path   = isset( $source['path'] ) ? '/' . trim( $source['path'], '/' ) : '';
+		$home_path   = '/' === $home_path ? '' : $home_path;
+		$target_path = isset( $target['path'] ) ? '/' . ltrim( $target['path'], '/' ) : '/';
+
+		// Same hostname is not enough: the target must belong to this home_url() path.
+		if ( '' !== $home_path && $target_path !== $home_path && 0 !== strpos( $target_path, $home_path . '/' ) ) {
+			return '';
+		}
+
+		$portable = '' === $home_path ? $target_path : substr( $target_path, strlen( $home_path ) );
+		$portable = '' === $portable ? '/' : $portable;
 		if ( isset( $target['query'] ) ) {
 			$portable .= '?' . $target['query'];
 		}
@@ -161,7 +178,7 @@ class VideoHub360_Portable_Settings {
 	/** Rebuild only a host-free portable redirect against this installation. */
 	private static function import_redirect( $value ) {
 		$value = is_string( $value ) ? trim( $value ) : '';
-		if ( '' === $value || 0 === strpos( $value, '//' ) || wp_parse_url( $value, PHP_URL_HOST ) ) {
+		if ( '' === $value || '/' !== substr( $value, 0, 1 ) || 0 === strpos( $value, '//' ) || wp_parse_url( $value, PHP_URL_SCHEME ) || wp_parse_url( $value, PHP_URL_HOST ) ) {
 			return '';
 		}
 		return esc_url_raw( home_url( '/' . ltrim( $value, '/' ) ) );

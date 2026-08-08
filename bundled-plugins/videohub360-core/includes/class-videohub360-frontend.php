@@ -497,7 +497,7 @@ class VideoHub360_Frontend {
                 : wp_login_url(get_permalink()),
             'userLogoutUrl' => is_user_logged_in() ? wp_logout_url(get_permalink()) : '',
             'canModerate' => $this->user_can_moderate($post_id),
-            'loginModalType' => get_option('videohub360_login_modal_type', 'redirect'),
+            'loginModalType' => get_option('videohub360_login_modal_type', 'default'),
             'loginModalShortcode' => get_option('videohub360_login_modal_shortcode', ''),
             'loginModalRedirectUrl' => get_option('videohub360_login_modal_redirect_url', ''),
             'loginModalJsFunction' => get_option('videohub360_login_modal_js_function', ''),
