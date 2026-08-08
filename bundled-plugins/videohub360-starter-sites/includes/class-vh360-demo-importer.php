@@ -1422,14 +1422,21 @@ class VH360_Demo_Importer {
             
             // Track how many keys we actually import for this group
             $keys_imported = 0;
+            $import_values = array();
             
             // Only import allowed keys
             foreach ($allowed_keys as $key) {
                 if (isset($json_group_data[$key])) {
-                    $option_value[$key] = $json_group_data[$key];
+                    $import_values[$key] = $json_group_data[$key];
                     $keys_imported++;
                 }
             }
+
+            if ('membership' === $json_group_name) {
+                $import_values = $this->sanitize_membership_options_for_import($import_values);
+            }
+
+            $option_value = array_merge($option_value, $import_values);
             
             // Only update and count if we actually imported keys
             if ($keys_imported > 0) {
@@ -1482,6 +1489,66 @@ class VH360_Demo_Importer {
         $this->logger->success(sprintf('Imported %d theme option groups', $imported_count));
         
         return true;
+    }
+
+    /**
+     * Sanitize safe membership configuration supplied by a demo package.
+     *
+     * Only keys already selected by the theme-options allowlist are passed here.
+     * Keeping the returned array limited to supplied keys ensures an import does
+     * not overwrite unrelated membership settings at the destination.
+     *
+     * @param array $data Allowlisted membership values.
+     * @return array Sanitized membership values.
+     */
+    private function sanitize_membership_options_for_import($data) {
+        $sanitized = array();
+        $toggle_fields = array(
+            'enable_memberships',
+            'login_required',
+            'gate_live_rooms',
+            'gate_create_videos',
+            'gate_create_posts',
+            'gate_create_events',
+            'gate_create_bulletins',
+            'gate_create_galleries',
+            'gate_direct_messages',
+            'gate_activity_feed',
+            'gate_members_directory',
+            'gate_appointments',
+            'gate_push_notifications',
+        );
+
+        foreach ($toggle_fields as $field) {
+            if (array_key_exists($field, $data)) {
+                $sanitized[$field] = !empty($data[$field]) ? 1 : 0;
+            }
+        }
+
+        foreach (array('pricing_page_url', 'support_url', 'contact_url') as $field) {
+            if (array_key_exists($field, $data)) {
+                $sanitized[$field] = esc_url_raw($data[$field]);
+            }
+        }
+
+        if (array_key_exists('course_purchase_destination', $data)) {
+            $destination = sanitize_key($data['course_purchase_destination']);
+            $sanitized['course_purchase_destination'] = in_array($destination, array('product_page', 'add_to_cart'), true)
+                ? $destination
+                : 'product_page';
+        }
+
+        if (array_key_exists('locked_message', $data)) {
+            $sanitized['locked_message'] = wp_kses_post($data['locked_message']);
+        }
+
+        foreach (array('reminder_days', 'grace_period_days') as $field) {
+            if (array_key_exists($field, $data)) {
+                $sanitized[$field] = absint($data[$field]);
+            }
+        }
+
+        return $sanitized;
     }
     
     /**

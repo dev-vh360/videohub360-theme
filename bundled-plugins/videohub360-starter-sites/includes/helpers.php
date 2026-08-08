@@ -514,6 +514,33 @@ function vh360_ss_get_allowed_theme_options() {
                 'member_categories',
             ),
         ),
+
+        // Safe, portable membership configuration (excludes payment credentials and operational data)
+        'membership' => array(
+            'option_name' => 'vh360_membership_options',
+            'allowed_keys' => array(
+                'enable_memberships',
+                'pricing_page_url',
+                'support_url',
+                'contact_url',
+                'course_purchase_destination',
+                'login_required',
+                'locked_message',
+                'reminder_days',
+                'grace_period_days',
+                'gate_live_rooms',
+                'gate_create_videos',
+                'gate_create_posts',
+                'gate_create_events',
+                'gate_create_bulletins',
+                'gate_create_galleries',
+                'gate_direct_messages',
+                'gate_activity_feed',
+                'gate_members_directory',
+                'gate_appointments',
+                'gate_push_notifications',
+            ),
+        ),
         
         // Advanced options
         'advanced' => array(
