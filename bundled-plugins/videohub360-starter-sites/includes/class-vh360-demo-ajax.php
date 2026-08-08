@@ -86,14 +86,20 @@ class VH360_Demo_AJAX {
         // It's set to false after successful completion to prevent double-execution
         $shutdown_handler_registered = false;
         $last_import_step = 'AJAX handler entered';
+        $request_id = '';
+        $owns_import_lock = false;
         
-        register_shutdown_function(function() use (&$last_import_step, &$shutdown_handler_registered) {
+        register_shutdown_function(function() use (&$last_import_step, &$shutdown_handler_registered, &$request_id, &$owns_import_lock) {
             if (!$shutdown_handler_registered) {
                 return;
             }
             
             $error = error_get_last();
             if ($error && in_array($error['type'], array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR))) {
+                if ($owns_import_lock) {
+                    vh360_ss_release_import_lock($request_id);
+                    $owns_import_lock = false;
+                }
                 // Fatal error occurred - send structured error response
                 if (!headers_sent()) {
                     status_header(200); // Override 500
@@ -152,14 +158,37 @@ class VH360_Demo_AJAX {
             
             $demo_id = sanitize_key($_POST['demo_id']);
             $last_import_step = 'Sanitized demo_id: ' . $demo_id;
-            
-            // Check if import is already running
-            $last_import_step = 'Checking for concurrent imports';
-            if (vh360_ss_is_import_running()) {
+
+            if (empty($_POST['import_request_id'])) {
                 wp_send_json_error(array(
-                    'message' => __('Another import is already in progress.', 'videohub360-starter-sites'),
+                    'message' => __('Import request ID is required.', 'videohub360-starter-sites'),
                 ));
             }
+
+            $request_id = sanitize_text_field(wp_unslash($_POST['import_request_id']));
+            if (strlen($request_id) > 100) {
+                wp_send_json_error(array(
+                    'message' => __('Invalid import request ID.', 'videohub360-starter-sites'),
+                ));
+            }
+            
+            $last_import_step = 'Acquiring import lock';
+            $lock_result = vh360_ss_acquire_import_lock($demo_id, $request_id);
+            if ('already_running_same_request' === $lock_result) {
+                wp_send_json_error(array(
+                    'message' => __('This import request is already running.', 'videohub360-starter-sites'),
+                    'error_code' => 'already_running_same_request',
+                ));
+            }
+
+            if ('acquired' !== $lock_result) {
+                wp_send_json_error(array(
+                    'message' => __('Another import is already in progress.', 'videohub360-starter-sites'),
+                    'error_code' => 'import_in_progress',
+                ));
+            }
+
+            $owns_import_lock = true;
             
             // Increase time limit and memory limit
             $last_import_step = 'Setting time and memory limits';
@@ -190,24 +219,22 @@ class VH360_Demo_AJAX {
                     $error_data['last_step'] = $last_import_step;
                 }
                 
-                wp_send_json_error($error_data);
-            }
-            
-            $last_import_step = 'Preparing JSON success response';
-            
-            // Add diagnostics to success response only in debug mode
-            if (is_array($result)) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
+                $response = array('success' => false, 'data' => $error_data);
+            } else {
+                $last_import_step = 'Preparing JSON success response';
+
+                // Add diagnostics to success response only in debug mode
+                if (is_array($result) && defined('WP_DEBUG') && WP_DEBUG) {
                     $result['diagnostics'] = array(
                         'memory_peak' => memory_get_peak_usage(true),
                         'memory_current' => memory_get_usage(true),
                         'last_step' => $last_import_step,
                     );
                 }
+
+                $last_import_step = 'Sending JSON success response';
+                $response = array('success' => true, 'data' => $result);
             }
-            
-            $last_import_step = 'Sending JSON success response';
-            wp_send_json_success($result);
             
         } catch (Throwable $e) {
             // Catch all throwables (Exception + Error in PHP 7+)
@@ -233,10 +260,16 @@ class VH360_Demo_AJAX {
                 $error_data['memory_peak'] = memory_get_peak_usage(true);
             }
             
-            wp_send_json_error($error_data);
+            $response = array('success' => false, 'data' => $error_data);
+        } finally {
+            if ($owns_import_lock) {
+                vh360_ss_release_import_lock($request_id);
+                $owns_import_lock = false;
+            }
         }
         
         $shutdown_handler_registered = false;
+        wp_send_json($response);
     }
     
     /**
@@ -252,7 +285,8 @@ class VH360_Demo_AJAX {
         }
         
         $is_running = vh360_ss_is_import_running();
-        $demo_id = $is_running ? get_transient('vh360_ss_import_in_progress') : false;
+        $lock = $is_running ? vh360_ss_get_import_lock() : false;
+        $demo_id = is_array($lock) ? $lock['demo_id'] : false;
         
         wp_send_json_success(array(
             'is_running' => $is_running,

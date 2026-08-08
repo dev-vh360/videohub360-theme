@@ -576,26 +576,98 @@ function vh360_ss_sanitize_demo_id($demo_id) {
  * @return bool True if import is running
  */
 function vh360_ss_is_import_running() {
-    return get_transient('vh360_ss_import_in_progress') !== false;
+    return false !== vh360_ss_get_import_lock();
 }
 
 /**
- * Set import in progress flag
+ * Get the current import lock, removing it when it has expired.
  *
- * @param string $demo_id Demo ID being imported
- * @return bool True on success
+ * The option is used instead of a transient value so that add_option() can be
+ * used as the single atomic lock-acquisition operation. The expires_at value
+ * provides the same stale-lock fallback as the previous one-hour transient.
+ *
+ * @return array|false Lock data, or false when no import is running.
  */
-function vh360_ss_set_import_running($demo_id) {
-    return set_transient('vh360_ss_import_in_progress', $demo_id, 3600); // 1 hour max
+function vh360_ss_get_import_lock() {
+    $lock = get_option('vh360_ss_import_in_progress', false);
+
+    if (is_array($lock) && !empty($lock['expires_at'])) {
+        if ((int) $lock['expires_at'] > time()) {
+            return $lock;
+        }
+
+        delete_option('vh360_ss_import_in_progress');
+    }
+
+    // Respect locks created by an older plugin version during an upgrade.
+    $legacy_demo_id = get_transient('vh360_ss_import_in_progress');
+    if (false !== $legacy_demo_id) {
+        return array(
+            'demo_id'   => sanitize_key($legacy_demo_id),
+            'request_id' => '',
+            'started_at' => 0,
+            'expires_at' => time() + 3600,
+        );
+    }
+
+    return false;
 }
 
 /**
- * Clear import in progress flag
+ * Atomically attempt to acquire the import lock.
  *
- * @return bool True on success
+ * @param string $demo_id   Demo ID being imported.
+ * @param string $request_id Unique ID for this intentional import request.
+ * @return string One of acquired, already_running_same_request, or busy.
  */
-function vh360_ss_clear_import_running() {
-    return delete_transient('vh360_ss_import_in_progress');
+function vh360_ss_acquire_import_lock($demo_id, $request_id) {
+    $demo_id = sanitize_key($demo_id);
+    $request_id = sanitize_text_field($request_id);
+    $lock = vh360_ss_get_import_lock();
+
+    if (false !== $lock) {
+        if ($demo_id === $lock['demo_id'] && $request_id === $lock['request_id'] && '' !== $request_id) {
+            return 'already_running_same_request';
+        }
+
+        return 'busy';
+    }
+
+    $started_at = time();
+    $new_lock = array(
+        'demo_id'    => $demo_id,
+        'request_id' => $request_id,
+        'started_at' => $started_at,
+        'expires_at' => $started_at + 3600,
+    );
+
+    if (add_option('vh360_ss_import_in_progress', $new_lock, '', false)) {
+        return 'acquired';
+    }
+
+    // Another request won the add_option() race. Identify its ownership.
+    $lock = vh360_ss_get_import_lock();
+    if (is_array($lock) && $demo_id === $lock['demo_id'] && $request_id === $lock['request_id'] && '' !== $request_id) {
+        return 'already_running_same_request';
+    }
+
+    return 'busy';
+}
+
+/**
+ * Release the import lock only when the caller owns it.
+ *
+ * @param string $request_id Request ID that acquired the lock.
+ * @return bool True when the owned lock was released.
+ */
+function vh360_ss_release_import_lock($request_id) {
+    $lock = get_option('vh360_ss_import_in_progress', false);
+
+    if (!is_array($lock) || empty($lock['request_id']) || $lock['request_id'] !== $request_id) {
+        return false;
+    }
+
+    return delete_option('vh360_ss_import_in_progress');
 }
 
 /**
