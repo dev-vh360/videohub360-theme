@@ -166,7 +166,10 @@ class VH360_PWA_Portable_Settings {
 		if ( false === $parts || ! is_array( $parts ) ) return '/';
 		if ( isset( $parts['host'] ) && ( ! self::same_home_origin( $parts ) || ! self::path_is_within_home( (string) ( $parts['path'] ?? '/' ) ) ) ) return '/';
 		$path = isset( $parts['path'] ) ? (string) $parts['path'] : '/';
-		if ( isset( $parts['host'] ) ) $path = self::remove_home_path( $path );
+		// Older PWA settings saves can persist the WordPress home directory in an
+		// already-relative path (for example /sourcewp/app/). Remove it for both
+		// absolute and relative inputs so it cannot travel to the destination.
+		$path = self::remove_home_path( $path );
 		$path = '/' . ltrim( $path, '/' );
 		return $path . ( isset( $parts['query'] ) ? '?' . $parts['query'] : '' ) . ( isset( $parts['fragment'] ) ? '#' . $parts['fragment'] : '' );
 	}

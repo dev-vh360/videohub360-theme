@@ -216,14 +216,14 @@ $normalize_to_path = function( $value ) {
     if ( $value === '' ) {
         return '/';
     }
-    // If it's a path already:
-    if ( 0 === strpos( $value, '/' ) ) {
-        return $value;
-    }
-    // If it's a full URL, extract path/query/fragment.
+    // Extract path/query/fragment from either a relative path or a full URL.
     $parts = wp_parse_url( $value );
     if ( is_array( $parts ) ) {
         $path = isset( $parts['path'] ) ? $parts['path'] : '/';
+		$home_path = rtrim( (string) wp_parse_url( home_url(), PHP_URL_PATH ), '/' );
+		if ( $home_path && ( $path === $home_path || 0 === strpos( $path, $home_path . '/' ) ) ) {
+			$path = substr( $path, strlen( $home_path ) );
+		}
         $q    = isset( $parts['query'] ) ? ('?' . $parts['query']) : '';
         $h    = isset( $parts['fragment'] ) ? ('#' . $parts['fragment']) : '';
         if ( $path === '' ) { $path = '/'; }
