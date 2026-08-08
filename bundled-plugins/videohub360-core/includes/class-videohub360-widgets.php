@@ -701,7 +701,7 @@ class VideoHub360_Widgets {
         <div class="videohub360-videos-item">
             <a href="<?php the_permalink(); ?>" class="videohub360-videos-thumb-wrap">
                 <?php if (has_post_thumbnail()) {
-                    the_post_thumbnail('medium', array('class' => 'videohub360-videos-thumb', 'alt' => get_the_title()));
+                    the_post_thumbnail('videohub360-video-thumb', array('class' => 'videohub360-videos-thumb', 'alt' => get_the_title()));
                 } else { ?>
                     <div class="videohub360-videos-thumb videohub360-videos-thumb-fallback"></div>
                 <?php } ?>
