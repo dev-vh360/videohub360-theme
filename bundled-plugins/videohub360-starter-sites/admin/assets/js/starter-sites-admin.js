@@ -13,6 +13,11 @@
         currentImport: null,
         importRequestId: null,
         progressInterval: null,
+        statusPollTimer: null,
+        statusPollRequestId: null,
+        statusPollStartedAt: 0,
+        statusNotFoundCount: 0,
+        importTerminal: false,
         
         init: function() {
             this.bindEvents();
@@ -184,6 +189,7 @@
 
             this.currentImport = demoId;
             this.importRequestId = this.createRequestId();
+            this.importTerminal = false;
             var requestId = this.importRequestId;
             $('.vh360-ss-import-btn').prop('disabled', true).addClass('disabled');
             $('.vh360-ss-demos-grid').addClass('import-running');
@@ -206,22 +212,18 @@
                 timeout: 600000, // 10 minutes
                 success: function(response) {
                     if (!response.success && response.data && response.data.error_code === 'already_running_same_request') {
+                        self.pollImportRequestStatus(demoId, requestId);
                         return;
                     }
 
-                    if (self.importRequestId !== requestId) {
+                    if (self.importRequestId !== requestId || self.importTerminal) {
                         return;
                     }
 
-                    self.finishImport();
-                    if (response.success) {
-                        self.handleImportSuccess(response.data);
-                    } else {
-                        self.handleImportError(response.data);
-                    }
+                    self.completeImportRequest(requestId, response.success, response.data);
                 },
                 error: function(xhr, status, error) {
-                    if (self.importRequestId !== requestId) {
+                    if (self.importRequestId !== requestId || self.importTerminal) {
                         return;
                     }
 
@@ -252,11 +254,13 @@
                     errorData.ajax_status = status;
                     
                     if (errorData.error_code === 'already_running_same_request') {
+                        self.pollImportRequestStatus(demoId, requestId);
                         return;
                     }
 
-                    self.finishImport();
-                    self.handleImportError(errorData);
+                    // The server may still be importing after the HTTP connection
+                    // is interrupted, so recover the outcome by request ID.
+                    self.pollImportRequestStatus(demoId, requestId);
                 }
             });
             
@@ -276,7 +280,125 @@
             return Date.now().toString(36) + '-' + Math.random().toString(36).substring(2);
         },
 
+        pollImportRequestStatus: function(demoId, requestId) {
+            var self = this;
+
+            if (this.importTerminal || this.importRequestId !== requestId) {
+                return;
+            }
+
+            if (this.statusPollRequestId === requestId) {
+                return;
+            }
+
+            this.stopImportStatusPolling();
+            this.statusPollRequestId = requestId;
+            this.statusPollStartedAt = Date.now();
+            this.statusNotFoundCount = 0;
+
+            var poll = function() {
+                if (self.importTerminal || self.importRequestId !== requestId || self.statusPollRequestId !== requestId) {
+                    return;
+                }
+
+                if (Date.now() - self.statusPollStartedAt >= 900000) {
+                    self.failImportRecovery(requestId, 'Starter Sites timed out while recovering the final import status. Please check the site and import log.');
+                    return;
+                }
+
+                $.ajax({
+                    url: vh360StarterSites.ajaxUrl,
+                    type: 'POST',
+                    data: {
+                        action: 'vh360_ss_get_import_status',
+                        nonce: vh360StarterSites.nonce,
+                        demo_id: demoId,
+                        import_request_id: requestId
+                    },
+                    success: function(response) {
+                        if (self.importTerminal || self.importRequestId !== requestId || self.statusPollRequestId !== requestId) {
+                            return;
+                        }
+
+                        if (!response.success || !response.data) {
+                            self.scheduleImportStatusPoll(poll);
+                            return;
+                        }
+
+                        if (response.data.status === 'completed') {
+                            self.completeImportRequest(requestId, true, response.data.result || {});
+                            return;
+                        }
+
+                        if (response.data.status === 'failed') {
+                            self.completeImportRequest(requestId, false, response.data.result || {});
+                            return;
+                        }
+
+                        if (response.data.status === 'not_found') {
+                            self.statusNotFoundCount++;
+                            if (self.statusNotFoundCount >= 3) {
+                                self.failImportRecovery(requestId, 'Starter Sites could not determine the final import status. Please check the site and import log.');
+                                return;
+                            }
+                        } else {
+                            self.statusNotFoundCount = 0;
+                        }
+
+                        self.scheduleImportStatusPoll(poll);
+                    },
+                    error: function() {
+                        self.scheduleImportStatusPoll(poll);
+                    }
+                });
+            };
+
+            poll();
+        },
+
+        scheduleImportStatusPoll: function(callback) {
+            if (!this.statusPollRequestId || this.importTerminal) {
+                return;
+            }
+
+            this.statusPollTimer = setTimeout(callback, 2500);
+        },
+
+        stopImportStatusPolling: function() {
+            if (this.statusPollTimer) {
+                clearTimeout(this.statusPollTimer);
+            }
+            this.statusPollTimer = null;
+            this.statusPollRequestId = null;
+            this.statusPollStartedAt = 0;
+            this.statusNotFoundCount = 0;
+        },
+
+        completeImportRequest: function(requestId, success, data) {
+            if (this.importTerminal || this.importRequestId !== requestId) {
+                return;
+            }
+
+            this.importTerminal = true;
+            this.stopImportStatusPolling();
+            this.finishImport();
+
+            if (success) {
+                this.handleImportSuccess(data);
+            } else {
+                this.handleImportError(data);
+            }
+        },
+
+        failImportRecovery: function(requestId, message) {
+            this.completeImportRequest(requestId, false, {
+                message: message,
+                error_code: 'import_status_recovery_failed'
+            });
+        },
+
         finishImport: function() {
+            this.stopImportStatusPolling();
             this.currentImport = null;
             this.importRequestId = null;
             if (this.progressInterval) {

@@ -671,6 +671,118 @@ function vh360_ss_release_import_lock($request_id) {
 }
 
 /**
+ * Build the transient key for request-specific import recovery data.
+ *
+ * @param string $request_id Import request ID.
+ * @return string Transient key.
+ */
+function vh360_ss_get_import_request_status_key($request_id) {
+    return 'vh360_ss_import_request_' . hash('sha256', sanitize_text_field($request_id));
+}
+
+/**
+ * Mark an import request as running.
+ *
+ * @param string $request_id Import request ID.
+ * @param string $demo_id Demo ID.
+ * @return bool True when the state was stored.
+ */
+function vh360_ss_set_import_request_running($request_id, $demo_id) {
+    $now = time();
+
+    return set_transient(
+        vh360_ss_get_import_request_status_key($request_id),
+        array(
+            'request_id' => sanitize_text_field($request_id),
+            'demo_id'    => sanitize_key($demo_id),
+            'status'     => 'running',
+            'started_at' => $now,
+            'updated_at' => $now,
+            'result'     => null,
+        ),
+        30 * MINUTE_IN_SECONDS
+    );
+}
+
+/**
+ * Store a terminal result for an import request without overwriting completion.
+ *
+ * @param string $request_id Import request ID.
+ * @param string $demo_id Demo ID.
+ * @param string $status completed or failed.
+ * @param array  $result Existing AJAX result data.
+ * @return bool True when the state was stored.
+ */
+function vh360_ss_set_import_request_terminal($request_id, $demo_id, $status, $result) {
+    $existing = vh360_ss_get_import_request_status($request_id);
+
+    if (is_array($existing) && 'completed' === $existing['status']) {
+        return false;
+    }
+
+    $now = time();
+    $started_at = is_array($existing) && !empty($existing['started_at']) ? (int) $existing['started_at'] : $now;
+
+    return set_transient(
+        vh360_ss_get_import_request_status_key($request_id),
+        array(
+            'request_id'   => sanitize_text_field($request_id),
+            'demo_id'      => sanitize_key($demo_id),
+            'status'       => $status,
+            'started_at'   => $started_at,
+            'completed_at' => $now,
+            'updated_at'   => $now,
+            'result'       => is_array($result) ? $result : array(),
+        ),
+        30 * MINUTE_IN_SECONDS
+    );
+}
+
+/**
+ * Mark an import request as completed.
+ *
+ * @param string $request_id Import request ID.
+ * @param string $demo_id Demo ID.
+ * @param array  $result Successful importer response.
+ * @return bool True when stored.
+ */
+function vh360_ss_set_import_request_completed($request_id, $demo_id, $result) {
+    return vh360_ss_set_import_request_terminal($request_id, $demo_id, 'completed', $result);
+}
+
+/**
+ * Mark an import request as failed.
+ *
+ * @param string $request_id Import request ID.
+ * @param string $demo_id Demo ID.
+ * @param array  $result Sanitized error response.
+ * @return bool True when stored.
+ */
+function vh360_ss_set_import_request_failed($request_id, $demo_id, $result) {
+    return vh360_ss_set_import_request_terminal($request_id, $demo_id, 'failed', $result);
+}
+
+/**
+ * Get recovery state for an exact import request.
+ *
+ * @param string $request_id Import request ID.
+ * @return array|false Request state or false when it expired/does not exist.
+ */
+function vh360_ss_get_import_request_status($request_id) {
+    return get_transient(vh360_ss_get_import_request_status_key($request_id));
+}
+
+/**
+ * Delete recovery state for an import request.
+ *
+ * @param string $request_id Import request ID.
+ * @return bool True when deleted.
+ */
+function vh360_ss_delete_import_request_status($request_id) {
+    return delete_transient(vh360_ss_get_import_request_status_key($request_id));
+}
+
+/**
  * Get PHP memory limit in bytes
  *
  * @return int Memory limit in bytes
