@@ -840,6 +840,11 @@ function vh360_pwa_backfill_legacy_icons_from_generated() : void {
 		}
 	}
 	if ( ! empty( $updates ) ) {
-		vh360_pwa_update_options( $updates );
+		// Merge into the persisted option rather than the defaults/resolved view.
+		// The latter expands relative start/scope paths to absolute URLs and would
+		// make an otherwise portable configuration installation-specific.
+		$persisted = get_option( 'vh360_pwa_options', array() );
+		$persisted = is_array( $persisted ) ? $persisted : array();
+		update_option( 'vh360_pwa_options', array_merge( $persisted, $updates ) );
 	}
 }

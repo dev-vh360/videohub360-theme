@@ -110,15 +110,25 @@ class VH360_PWA_Portable_Settings {
 			}
 		}
 
+		$portable_changed = $old_raw !== $new || '' !== $master_path;
+		$final_options = $old_raw;
 		self::$importing = true;
-		update_option( 'vh360_pwa_options', $new );
-		self::$importing = false;
-		if ( $master_path ) {
-			self::regenerate_icons( $master_path, $result );
+		try {
+			update_option( 'vh360_pwa_options', $new );
+			if ( $portable_changed && function_exists( 'vh360_pwa_bump_asset_version' ) ) {
+				vh360_pwa_bump_asset_version();
+			}
+			if ( $master_path ) {
+				self::regenerate_icons( $master_path, $result );
+			}
+			$final_options = get_option( 'vh360_pwa_options', array() );
+			$final_options = is_array( $final_options ) ? $final_options : array();
+		} finally {
+			self::$importing = false;
 		}
-		if ( class_exists( 'VH360_PWA_Admin' ) ) {
+		if ( $portable_changed && class_exists( 'VH360_PWA_Admin' ) ) {
 			$flush = empty( $context['starter_sites'] );
-			VH360_PWA_Admin::refresh_after_options_update( $old_raw, $new, $flush );
+			VH360_PWA_Admin::refresh_after_options_update( $old_raw, $final_options, $flush );
 		}
 		return $result;
 	}
@@ -154,7 +164,7 @@ class VH360_PWA_Portable_Settings {
 		if ( '' === $value ) return '/';
 		$parts = wp_parse_url( $value );
 		if ( false === $parts || ! is_array( $parts ) ) return '/';
-		if ( isset( $parts['host'] ) && ! self::same_home_origin( $parts ) ) return '/';
+		if ( isset( $parts['host'] ) && ( ! self::same_home_origin( $parts ) || ! self::path_is_within_home( (string) ( $parts['path'] ?? '/' ) ) ) ) return '/';
 		$path = isset( $parts['path'] ) ? (string) $parts['path'] : '/';
 		if ( isset( $parts['host'] ) ) $path = self::remove_home_path( $path );
 		$path = '/' . ltrim( $path, '/' );
@@ -167,7 +177,8 @@ class VH360_PWA_Portable_Settings {
 			$line = trim( $line );
 			if ( '' === $line ) continue;
 			$parts = wp_parse_url( $line );
-			if ( false === $parts || ! is_array( $parts ) || ( isset( $parts['host'] ) && ! self::same_home_origin( $parts ) ) ) continue;
+			if ( false === $parts || ! is_array( $parts ) ) continue;
+			if ( isset( $parts['host'] ) && ( ! self::same_home_origin( $parts ) || ! self::path_is_within_home( (string) ( $parts['path'] ?? '/' ) ) ) ) continue;
 			$portable = self::portable_path( $line );
 			if ( vh360_pwa_url_is_public_cache_candidate( home_url( $portable ) ) ) $out[] = $portable;
 		}
@@ -190,6 +201,14 @@ class VH360_PWA_Portable_Settings {
 		return $path ?: '/';
 	}
 
+	private static function path_is_within_home( string $path ) : bool {
+		$home_path = rtrim( (string) wp_parse_url( home_url(), PHP_URL_PATH ), '/' );
+		if ( '' === $home_path ) {
+			return true;
+		}
+		return $path === $home_path || 0 === strpos( $path, $home_path . '/' );
+	}
+
 	private static function master_icon_descriptor( string $path ) : array {
 		if ( ! $path || ! is_readable( $path ) ) return array();
 		$uploads = wp_upload_dir();
@@ -209,8 +228,7 @@ class VH360_PWA_Portable_Settings {
 	private static function import_splash_logo( string $source, array $remap ) : string {
 		if ( isset( $remap[ $source ] ) ) {
 			$mapped = (string) $remap[ $source ];
-			$parts = wp_parse_url( $mapped );
-			if ( is_array( $parts ) && self::same_home_origin( $parts ) && self::is_transferable_image_url( $mapped ) ) {
+			if ( wp_http_validate_url( $mapped ) && self::is_transferable_image_url( $mapped ) ) {
 				return esc_url_raw( $mapped );
 			}
 		}
@@ -260,7 +278,6 @@ class VH360_PWA_Portable_Settings {
 		$generator = new VH360_PWA_Icon_Generator();
 		$requirements = $generator->check_requirements();
 		if ( empty( $requirements['available'] ) ) { $result['warnings'][] = __( 'The master icon was imported, but this server cannot generate PWA icons.', 'vh360-pwa-app' ); return; }
-		if ( function_exists( 'vh360_pwa_bump_asset_version' ) ) vh360_pwa_bump_asset_version();
 		$generator->clear_generated_icons();
 		$generated = $generator->generate_all_icons( $path );
 		if ( ! empty( $generated['generated'] ) && function_exists( 'vh360_pwa_backfill_legacy_icons_from_generated' ) ) vh360_pwa_backfill_legacy_icons_from_generated();
